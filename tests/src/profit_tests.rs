@@ -6,16 +6,19 @@ use finance::{
 };
 use platform::bank;
 use sdk::{
-    cosmwasm_ext::CustomMsg,
     cosmwasm_std::{from_binary, Addr, Event},
-    cw_multi_test::Executor as _,
+    cw_multi_test::AppResponse,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
     cwcoin,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
-    AppExt as _, Native, ADMIN, USER,
+    test_case::{
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
+    },
+    Native, ADMIN, USER,
 };
 
 #[test]
@@ -34,24 +37,26 @@ fn on_alarm_from_unknown() {
 
     let treasury_balance = test_case
         .app
-        .wrap()
+        .query()
         .query_all_balances(test_case.address_book.treasury().clone())
         .unwrap();
 
-    let res = test_case.app.execute_contract(
-        user_addr,
-        test_case.address_book.profit().clone(),
-        &profit::msg::ExecuteMsg::TimeAlarm {},
-        &[cwcoin::<Lpn, _>(40)],
-    );
-    assert!(res.is_err());
+    _ = test_case
+        .app
+        .execute(
+            user_addr,
+            test_case.address_book.profit().clone(),
+            &profit::msg::ExecuteMsg::TimeAlarm {},
+            &[cwcoin::<Lpn, _>(40)],
+        )
+        .unwrap_err();
 
     //assert that no transfer is made to treasury
     assert_eq!(
         treasury_balance,
         test_case
             .app
-            .wrap()
+            .query()
             .query_all_balances(test_case.address_book.treasury().clone())
             .unwrap()
     );
@@ -71,15 +76,17 @@ fn on_alarm_zero_balance() {
 
     test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
 
-    test_case
+    () = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
 }
 
 #[test]
@@ -95,12 +102,12 @@ fn on_alarm_native_only_transfer() {
 
     let init_balance_nls = bank::balance::<Native>(
         &test_case.address_book.treasury().clone(),
-        &test_case.app.wrap(),
+        &test_case.app.query(),
     )
     .unwrap();
     let init_balance_lpn = bank::balance::<Lpn>(
         &test_case.address_book.treasury().clone(),
-        &test_case.app.wrap(),
+        &test_case.app.query(),
     )
     .unwrap();
     let profit = Coin::<Native>::from(1000);
@@ -113,19 +120,20 @@ fn on_alarm_native_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
         Coin::ZERO,
     );
 
     let response = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(response.events.len(), 4, "{:?}", response.events);
@@ -176,17 +184,17 @@ fn on_alarm_native_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Native>(test_case.address_book.treasury(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Native>(test_case.address_book.treasury(), &test_case.app.query()).unwrap(),
         init_balance_nls + sent_profit,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
         Coin::ZERO,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.treasury(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.treasury(), &test_case.app.query()).unwrap(),
         init_balance_lpn,
     );
 }
@@ -211,13 +219,13 @@ fn on_alarm_foreign_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
         profit_lpn,
     );
 
-    let response = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
@@ -225,13 +233,14 @@ fn on_alarm_foreign_only_transfer() {
         )
         .unwrap();
 
-    assert!(matches!(
-        test_case
-            .message_receiver
-            .try_recv()
-            .expect("Expected IBC transfer message!"),
-        CustomMsg::IbcTransfer { .. }
-    ));
+    response.expect_ibc_transfer(
+        TestCase::PROFIT_ICA_CHANNEL,
+        cwcoin::<Lpn, _>(profit_lpn),
+        test_case.address_book.profit().as_str(),
+        TestCase::PROFIT_ICA_ADDR,
+    );
+
+    let response: AppResponse = response.unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
@@ -264,18 +273,18 @@ fn on_alarm_native_and_foreign_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Native>(test_case.address_book.profit(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Native>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
         profit_nls,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.wrap()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
         profit_lpn,
     );
 
-    let response = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
@@ -283,13 +292,14 @@ fn on_alarm_native_and_foreign_transfer() {
         )
         .unwrap();
 
-    assert!(matches!(
-        test_case
-            .message_receiver
-            .try_recv()
-            .expect("Expected IBC transfer message!"),
-        CustomMsg::IbcTransfer { .. }
-    ));
+    response.expect_ibc_transfer(
+        TestCase::PROFIT_ICA_CHANNEL,
+        cwcoin::<Lpn, _>(profit_lpn),
+        test_case.address_book.profit().as_str(),
+        TestCase::PROFIT_ICA_ADDR,
+    );
+
+    let response: AppResponse = response.unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
@@ -321,7 +331,7 @@ fn integration_with_time_alarms() {
 
     assert!(!test_case
         .app
-        .wrap()
+        .query()
         .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
         .unwrap()
         .amount
@@ -329,23 +339,26 @@ fn integration_with_time_alarms() {
 
     let resp = test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 10 },
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
+
     assert_eq!(
         from_binary(&resp.data.clone().unwrap()),
         Ok(DispatchAlarmsResponse(1))
     );
+
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 
     assert_eq!(
         test_case
             .app
-            .wrap()
+            .query()
             .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
             .unwrap()
             .amount

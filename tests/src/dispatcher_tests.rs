@@ -2,15 +2,12 @@ use currency::{lpn::Usdc, native::Nls, Currency};
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},
-    cw_multi_test::{AppResponse, ContractWrapper, Executor as _},
+    cw_multi_test::{AppResponse, ContractWrapper},
 };
 
 use crate::common::{
-    cwcoin,
-    lpp_wrapper::mock_lpp_query,
-    native_cwcoin,
-    oracle_wrapper::mock_oracle_query,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
+    cwcoin, lpp as lpp_mod, native_cwcoin, oracle as oracle_mod,
+    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -30,7 +27,7 @@ fn on_alarm_zero_reward() {
             ContractWrapper::new(
                 oracle::contract::execute,
                 oracle::contract::instantiate,
-                mock_oracle_query,
+                oracle_mod::mock_query,
             )
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),
@@ -50,7 +47,7 @@ fn on_alarm_zero_reward() {
 
     let err = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
@@ -72,7 +69,7 @@ fn on_alarm() {
                 ContractWrapper::new(
                     lpp::contract::execute,
                     lpp::contract::instantiate,
-                    mock_lpp_query,
+                    lpp_mod::mock_query,
                 )
                 .with_sudo(lpp::contract::sudo),
             ),
@@ -85,7 +82,7 @@ fn on_alarm() {
             ContractWrapper::new(
                 oracle::contract::execute,
                 oracle::contract::instantiate,
-                mock_oracle_query,
+                oracle_mod::mock_query,
             )
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),
@@ -104,7 +101,7 @@ fn on_alarm() {
     assert_eq!(
         test_case
             .app
-            .wrap()
+            .query()
             .query_balance(test_case.address_book.lpp().clone(), Nls::TICKER)
             .unwrap(),
         CwCoin::new(0, Nls::TICKER)
@@ -112,80 +109,71 @@ fn on_alarm() {
 
     let treasury_balance = test_case
         .app
-        .wrap()
+        .query()
         .query_all_balances(test_case.address_book.treasury().clone())
         .unwrap();
 
     println!("treasury_balance = {:?}", treasury_balance);
 
     // make a deposit to LPP from lenders address
-    let _res = test_case
+    () = test_case
         .app
-        .execute_contract(
+        .execute(
             lender.clone(),
             test_case.address_book.lpp().clone(),
             &lpp::msg::ExecuteMsg::Deposit {},
             &[cwcoin::<Lpn, _>(100)],
         )
-        .unwrap();
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
 
     // call dispatcher on alarm
-    let res = test_case
+    let res: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(res.events.len(), 8, "{:?}", res.events);
+    assert_eq!(res.events.len(), 6, "{:?}", res.events);
 
     let dispatcher_exec = &res.events[0];
-    assert_eq!(dispatcher_exec.ty.as_str(), "execute");
+    assert_eq!(dispatcher_exec.ty, "execute");
     assert_eq!(
         dispatcher_exec.attributes,
-        [(
-            "_contract_addr",
-            test_case.address_book.dispatcher().as_str()
-        )]
+        [("_contract_addr", test_case.address_book.dispatcher())]
     );
-    let treasury_exec = &res.events[1];
-    assert_eq!(treasury_exec.ty.as_str(), "wasm-tr-rewards");
+    let dispatcher_exec = &res.events[1];
+    assert_eq!(dispatcher_exec.ty.as_str(), "wasm-tr-rewards");
     assert_eq!(
-        treasury_exec.attributes,
+        dispatcher_exec.attributes,
         [
             (
                 "_contract_addr",
-                test_case.address_book.dispatcher().to_string()
+                test_case.address_book.dispatcher().as_str()
             ),
-            ("rewards-amount", String::from("11")),
-            ("rewards-symbol", String::from(Nls::TICKER)),
-            ("height", test_case.app.block_info().height.to_string()),
-            ("at", test_case.app.block_info().time.nanos().to_string()),
-            ("idx", String::from("0")),
-            ("to", test_case.address_book.lpp().to_string()),
+            ("height", &test_case.app.block_info().height.to_string()),
+            ("at", &test_case.app.block_info().time.nanos().to_string()),
+            ("idx", "0"),
+            ("to", test_case.address_book.lpp().as_str()),
+            ("rewards-amount", "11"),
+            ("rewards-symbol", Nls::TICKER),
         ]
     );
     let treasury_exec = &res.events[2];
     assert_eq!(treasury_exec.ty.as_str(), "execute");
     assert_eq!(
         treasury_exec.attributes,
-        [("_contract_addr", test_case.address_book.treasury().as_str())]
-    );
-    let treasury_wasm = &res.events[3];
-    assert_eq!(treasury_wasm.ty.as_str(), "wasm");
-    assert_eq!(
-        treasury_wasm.attributes,
-        [
-            ("_contract_addr", test_case.address_book.treasury().as_str()),
-            ("method", "try_send_rewards")
-        ]
+        [("_contract_addr", test_case.address_book.treasury())]
     );
 
-    let treasury_exec = &res.events[4];
+    let treasury_exec = &res.events[3];
     assert_eq!(treasury_exec.ty.as_str(), "transfer");
     assert_eq!(
         treasury_exec.attributes,
@@ -196,26 +184,24 @@ fn on_alarm() {
         ]
     );
 
-    let treasury_exec = &res.events[5];
-    assert_eq!(treasury_exec.ty.as_str(), "execute");
+    let lpp_exec = &res.events[4];
+    assert_eq!(lpp_exec.ty.as_str(), "execute");
     assert_eq!(
-        treasury_exec.attributes,
+        lpp_exec.attributes,
         [("_contract_addr", &test_case.address_book.lpp())]
     );
-    let treasury_exec = &res.events[6];
-    assert_eq!(treasury_exec.ty.as_str(), "wasm");
+
+    let time_alarms_exec = &res.events[5];
+    assert_eq!(time_alarms_exec.ty.as_str(), "execute");
     assert_eq!(
-        treasury_exec.attributes,
-        [
-            ("_contract_addr", test_case.address_book.lpp().as_str()),
-            ("method", "try_distribute_rewards")
-        ]
+        time_alarms_exec.attributes,
+        [("_contract_addr", &test_case.address_book.time_alarms())]
     );
 
     assert_eq!(
         test_case
             .app
-            .wrap()
+            .query()
             .query_balance(test_case.address_book.lpp().clone(), Native::BANK_SYMBOL)
             .unwrap(),
         native_cwcoin(11)
@@ -224,7 +210,7 @@ fn on_alarm() {
     //query calculated reward for the lender
     let resp: lpp::msg::RewardsResponse = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Rewards { address: lender },
@@ -243,11 +229,12 @@ fn test_config() {
 
     let response: AppResponse = test_case
         .app
-        .wasm_sudo(
+        .sudo(
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
@@ -334,7 +321,7 @@ fn query_config<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 ) -> ConfigResponse {
     test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::QueryMsg::Config {},

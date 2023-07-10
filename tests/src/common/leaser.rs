@@ -3,22 +3,15 @@ use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Per
 use lease::api::InterestPaymentSpec;
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, SudoMsg},
-    ContractError,
+    msg::{InstantiateMsg, QueryMsg, QuoteResponse},
 };
-use sdk::{
-    cosmwasm_std::{Addr, Uint64},
-    cw_multi_test::Executor,
-};
+use sdk::cosmwasm_std::{Addr, Uint64};
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-use super::ADMIN;
+pub(crate) struct Instantiator;
 
-pub struct LeaserWrapper {
-    contract_wrapper: LeaserContractWrapperReply,
-}
-impl LeaserWrapper {
+impl Instantiator {
     pub const INTEREST_RATE_MARGIN: Percent = Percent::from_permille(30);
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
@@ -39,15 +32,20 @@ impl LeaserWrapper {
 
     #[track_caller]
     pub fn instantiate(
-        self,
-        app: &mut MockApp,
+        app: &mut App,
         lease_code_id: u64,
         lpp_addr: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
         profit: Addr,
     ) -> Addr {
-        let code_id = app.store_code(self.contract_wrapper);
+        // TODO [Rust 1.70] Convert to static item with OnceCell
+        let endpoints = CwContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
+
+        let code_id = app.store_code(Box::new(endpoints));
+
         let msg = InstantiateMsg {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr,
@@ -62,39 +60,14 @@ impl LeaserWrapper {
             profit,
         };
 
-        app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
+        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
             .unwrap()
+            .unwrap_response()
     }
 }
 
-impl Default for LeaserWrapper {
-    fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
-type LeaserContractWrapperReply = Box<
-    ContractWrapper<
-        ExecuteMsg,
-        ContractError,
-        InstantiateMsg,
-        ContractError,
-        QueryMsg,
-        ContractError,
-        SudoMsg,
-        ContractError,
-        ContractError,
-    >,
->;
-
-pub fn query_quote<DownpaymentC, LeaseC>(
-    app: &mut MockApp,
+pub(crate) fn query_quote<DownpaymentC, LeaseC>(
+    app: &mut App,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
@@ -102,7 +75,7 @@ where
     DownpaymentC: Currency,
     LeaseC: Currency,
 {
-    app.wrap()
+    app.query()
         .query_wasm_smart(
             leaser,
             &QueryMsg::Quote {

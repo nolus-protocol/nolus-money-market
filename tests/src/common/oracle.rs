@@ -19,27 +19,37 @@ use oracle::{
 };
 use sdk::{
     cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
-    cw_multi_test::{AppResponse, Executor},
+    cw_multi_test::AppResponse,
+    testing::{CwContract, CwContractWrapper},
 };
 
-use super::{test_case::TestCase, ContractWrapper, MockApp, ADMIN};
+use super::{
+    test_case::{app::App, TestCase},
+    ADMIN,
+};
 
-pub struct MarketOracleWrapper {
-    contract_wrapper: Box<OracleContractWrapper>,
-}
+pub(crate) struct Instantiator;
 
-impl MarketOracleWrapper {
-    pub fn with_contract_wrapper(contract: OracleContractWrapper) -> Self {
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
+impl Instantiator {
     #[track_caller]
-    pub fn instantiate<BaseC>(self, app: &mut MockApp) -> Addr
+    pub fn instantiate_default<BaseC>(app: &mut App) -> Addr
     where
         BaseC: Currency,
     {
-        let code_id = app.store_code(self.contract_wrapper);
+        // TODO [Rust 1.70] Convert to static item with OnceCell
+        let endpoints = CwContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
+
+        Self::instantiate::<BaseC>(app, Box::new(endpoints))
+    }
+
+    #[track_caller]
+    pub fn instantiate<BaseC>(app: &mut App, endpoints: Box<CwContract>) -> Addr
+    where
+        BaseC: Currency,
+    {
+        let code_id = app.store_code(endpoints);
         let msg = InstantiateMsg {
             config: Config {
                 base_asset: BaseC::TICKER.into(),
@@ -53,7 +63,7 @@ impl MarketOracleWrapper {
             swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER), (13, Atom::TICKER)),
         };
 
-        app.instantiate_contract(
+        app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
@@ -62,22 +72,11 @@ impl MarketOracleWrapper {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 
-impl Default for MarketOracleWrapper {
-    fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
-pub fn mock_oracle_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
         QueryMsg::Prices {} => to_binary(&oracle::msg::PricesResponse {
@@ -90,19 +89,7 @@ pub fn mock_oracle_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
     Ok(res)
 }
 
-type OracleContractWrapper = ContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    ContractError,
-    SudoMsg,
-    ContractError,
-    ContractError,
->;
-
-pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: impl Into<String>,
 ) {
@@ -110,13 +97,14 @@ pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
 
     let response: AppResponse = test_case
         .app
-        .wasm_sudo(
+        .sudo(
             oracle,
             &SudoMsg::RegisterFeeder {
                 feeder_address: addr.into(),
             },
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     assert!(response.data.is_none());
 
@@ -126,7 +114,7 @@ pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     );
 }
 
-pub fn feed_a_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+pub(crate) fn feed_price_pair<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     price: Price<C1, C2>,
@@ -139,7 +127,7 @@ where
 
     test_case
         .app
-        .execute(
+        .execute_raw(
             addr,
             wasm_execute(
                 oracle,
@@ -148,13 +136,13 @@ where
                 },
                 vec![],
             )
-            .unwrap()
-            .into(),
+            .unwrap(),
         )
         .expect("Oracle not properly connected!")
+        .unwrap_response()
 }
 
-pub fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+pub(crate) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     base: Coin<C1>,
@@ -164,5 +152,5 @@ where
     C1: Currency,
     C2: Currency,
 {
-    feed_a_price(test_case, addr, price::total_of(base).is(quote))
+    feed_price_pair(test_case, addr, price::total_of(base).is(quote))
 }

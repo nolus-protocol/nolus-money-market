@@ -4,42 +4,22 @@ use lpp::{
     borrow::InterestRate,
     contract::sudo,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
-    cw_multi_test::Executor,
+    cw_multi_test::AppResponse,
+    testing::CwContract,
 };
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-use super::ADMIN;
+pub(crate) struct Instantiator;
 
-pub struct LppWrapper {
-    contract_wrapper: Box<LppContractWrapper>,
-}
-
-impl LppWrapper {
-    pub fn with_contract_wrapper(
-        contract: ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            ContractError,
-            SudoMsg,
-            ContractError,
-        >,
-    ) -> Self {
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
+impl Instantiator {
     #[track_caller]
-    pub fn instantiate<Lpn>(
-        self,
-        app: &mut MockApp,
+    pub fn instantiate_default<Lpn>(
+        app: &mut App,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
@@ -49,7 +29,39 @@ impl LppWrapper {
     where
         Lpn: Currency,
     {
-        let lpp_id = app.store_code(self.contract_wrapper);
+        // TODO [Rust 1.70] Convert to static item with OnceCell
+        let endpoints = CwContractWrapper::new(
+            lpp::contract::execute,
+            lpp::contract::instantiate,
+            lpp::contract::query,
+        )
+        .with_sudo(sudo);
+
+        Self::instantiate::<Lpn>(
+            app,
+            Box::new(endpoints),
+            lease_code_id,
+            init_balance,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
+    }
+
+    #[track_caller]
+    pub fn instantiate<Lpn>(
+        app: &mut App,
+        endpoints: Box<CwContract>,
+        lease_code_id: Uint64,
+        init_balance: &[CwCoin],
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> (Addr, u64)
+    where
+        Lpn: Currency,
+    {
+        let lpp_id = app.store_code(endpoints);
         let lease_code_admin = Addr::unchecked("contract5");
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
@@ -63,7 +75,7 @@ impl LppWrapper {
         };
 
         let lpp = app
-            .instantiate_contract(
+            .instantiate(
                 lpp_id,
                 Addr::unchecked(ADMIN),
                 &msg,
@@ -71,35 +83,23 @@ impl LppWrapper {
                 "lpp",
                 None,
             )
-            .unwrap();
-        app.execute_contract(
-            lease_code_admin,
-            lpp.clone(),
-            &ExecuteMsg::NewLeaseCode { lease_code_id },
-            &[],
-        )
-        .unwrap();
+            .unwrap()
+            .unwrap_response();
+        let _: AppResponse = app
+            .execute(
+                lease_code_admin,
+                lpp.clone(),
+                &ExecuteMsg::NewLeaseCode { lease_code_id },
+                &[],
+            )
+            .unwrap()
+            .unwrap_response();
 
         (lpp, lpp_id)
     }
 }
 
-impl Default for LppWrapper {
-    fn default() -> Self {
-        let contract = ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            lpp::contract::query,
-        )
-        .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
-pub fn mock_lpp_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),
@@ -113,7 +113,7 @@ pub fn mock_lpp_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary,
     Ok(res)
 }
 
-pub fn mock_lpp_quote_query(
+pub(crate) fn mock_quote_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg,
@@ -127,14 +127,3 @@ pub fn mock_lpp_quote_query(
 
     Ok(res)
 }
-
-type LppContractWrapper = ContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    ContractError,
-    SudoMsg,
-    ContractError,
->;

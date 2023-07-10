@@ -15,16 +15,16 @@ use leaser::msg::QueryMsg;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{next_block, AppResponse, ContractWrapper, Executor as _},
+    cw_multi_test::{next_block, AppResponse, ContractWrapper},
 };
 
 use crate::common::{
-    cwcoin,
-    lease_wrapper::complete_lease_initialization,
-    leaser_wrapper,
-    lpp_wrapper::mock_lpp_quote_query,
-    oracle_wrapper::{add_feeder, feed_price},
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
+    cwcoin, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod, oracle as oracle_mod,
+    test_case::{
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -87,7 +87,7 @@ fn open_lease_not_in_lease_currency() {
 
     let err = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -140,7 +140,7 @@ fn open_multiple_loans() {
 
     let resp: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
@@ -152,9 +152,9 @@ fn open_multiple_loans() {
 
     let mut loans = HashSet::new();
     for _ in 0..5 {
-        let res = test_case
+        let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
             .app
-            .execute_contract(
+            .execute(
                 user_addr.clone(),
                 test_case.address_book.leaser().clone(),
                 &leaser::msg::ExecuteMsg::OpenLease {
@@ -164,23 +164,22 @@ fn open_multiple_loans() {
                 &[cwcoin::<Lpn, _>(3)],
             )
             .unwrap();
+
+        response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+
+        let response: AppResponse = response.unwrap_response();
+
         test_case.app.update_block(next_block);
 
-        test_case
-            .message_receiver
-            .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
-
-        test_case.message_receiver.assert_empty();
-
-        let addr = lease_addr(&res.events);
+        let addr = lease_addr(&response.events);
         loans.insert(Addr::unchecked(addr));
     }
 
     assert_eq!(loans.len(), 5);
 
-    let res = test_case
+    let mut response = test_case
         .app
-        .execute_contract(
+        .execute(
             other_user_addr.clone(),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -190,19 +189,18 @@ fn open_multiple_loans() {
             &[cwcoin::<Lpn, _>(30)],
         )
         .unwrap();
+
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+
+    let response: AppResponse = response.unwrap_response();
+
     test_case.app.update_block(next_block);
 
-    test_case
-        .message_receiver
-        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
-
-    test_case.message_receiver.assert_empty();
-
-    let user1_lease_addr = lease_addr(&res.events);
+    let user1_lease_addr = lease_addr(&response.events);
 
     let resp: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
@@ -215,7 +213,7 @@ fn open_multiple_loans() {
 
     let user0_loans: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases { owner: user_addr },
@@ -248,7 +246,7 @@ fn test_quote() {
 
     let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(2.into()).is(1.into());
     let feeder = setup_feeder(&mut test_case);
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder,
         Coin::<LeaseCurrency>::new(2),
@@ -258,7 +256,7 @@ fn test_quote() {
     let leaser = test_case.address_book.leaser().clone();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         downpayment,
@@ -278,7 +276,7 @@ fn test_quote() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let leaser = test_case.address_book.leaser().clone();
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         Coin::new(15),
@@ -342,7 +340,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
 
     let feeder_addr = Addr::unchecked("feeder1");
 
-    add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
 
     let dpn_lpn_base = Coin::<Osmo>::new(1);
     let dpn_lpn_quote = Coin::<Lpn>::new(2);
@@ -352,15 +350,15 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     let lpn_asset_quote = Coin::<LeaseCurrency>::new(2);
     let lpn_asset_price = total_of(lpn_asset_base).is(lpn_asset_quote);
 
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder_addr.clone(),
         dpn_lpn_base,
         dpn_lpn_quote,
     );
-    feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
+    oracle_mod::feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
 
-    let resp = leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<Osmo, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -408,7 +406,7 @@ fn test_quote_fixed_rate() {
                 ContractWrapper::new(
                     lpp::contract::execute,
                     lpp::contract::instantiate,
-                    mock_lpp_quote_query,
+                    lpp_mod::mock_quote_query,
                 )
                 .with_sudo(lpp::contract::sudo),
             ),
@@ -424,13 +422,13 @@ fn test_quote_fixed_rate() {
         .into_generic();
 
     let feeder = setup_feeder(&mut test_case);
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder,
         Coin::<LeaseCurrency>::new(3),
         Coin::<Lpn>::new(1),
     );
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         Coin::<Downpayment>::new(100),
@@ -458,7 +456,7 @@ fn setup_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
 ) -> Addr {
     let feeder = Addr::unchecked("feeder_main");
-    add_feeder(test_case, &feeder);
+    oracle_mod::add_feeder(test_case, &feeder);
     feeder
 }
 
@@ -510,7 +508,7 @@ fn open_loans_lpp_fails() {
 
     let _res: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -519,7 +517,8 @@ fn open_loans_lpp_fails() {
             },
             &[downpayment],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 }
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
@@ -555,10 +554,10 @@ where
     let lease_addr: Addr = Addr::unchecked("contract6"); // 6 => lease
 
     if feed_prices {
-        add_feeder(&mut test_case, user_addr.clone());
+        oracle_mod::add_feeder(&mut test_case, user_addr.clone());
 
         if !currency::equal::<DownpaymentC, Lpn>() {
-            feed_price(
+            oracle_mod::feed_price(
                 &mut test_case,
                 user_addr.clone(),
                 Coin::<DownpaymentC>::new(1),
@@ -567,7 +566,7 @@ where
         }
 
         if !currency::equal::<LeaseC, Lpn>() {
-            feed_price(
+            oracle_mod::feed_price(
                 &mut test_case,
                 user_addr.clone(),
                 Coin::<LeaseC>::new(1),
@@ -577,7 +576,7 @@ where
     }
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
-    let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseC>(
+    let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
         &mut test_case.app,
         leaser_addr.clone(),
         downpayment,
@@ -585,9 +584,9 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 
-    test_case
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -596,11 +595,16 @@ where
             },
             &[cwcoin(downpayment)],
         )
-        .unwrap();
+        .unwrap()
+        .ignore_response();
 
-    complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+
+    () = response.unwrap_response();
+
+    lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
-        &test_case.message_receiver,
+        TestCase::LEASER_CONNECTION_ID,
         &lease_addr,
         downpayment,
         exp_borrow,
