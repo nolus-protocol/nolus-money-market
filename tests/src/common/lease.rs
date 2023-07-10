@@ -268,8 +268,8 @@ fn send_ibc_responses<DownpaymentC, Lpn>(
                 app,
                 lease_addr,
                 connection_id,
-                &ica_channel,
-                &ica_port,
+                ica_channel,
+                ica_port,
                 ica_addr,
             )
         },
