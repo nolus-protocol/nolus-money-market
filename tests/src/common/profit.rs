@@ -7,7 +7,6 @@ use sdk::cosmwasm_std::Addr;
 
 use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-
 pub(crate) struct Instantiator;
 
 impl Instantiator {

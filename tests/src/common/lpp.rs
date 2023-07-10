@@ -14,7 +14,6 @@ use sdk::{
 
 use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-
 pub(crate) struct Instantiator;
 
 impl Instantiator {
@@ -100,11 +99,7 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_query(
-    deps: Deps<'_>,
-    env: Env,
-    msg: QueryMsg,
-) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),

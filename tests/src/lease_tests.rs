@@ -22,8 +22,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
-    lease as lease_mod,
+    cwcoin, lease as lease_mod,
     leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
     oracle as oracle_mod,
     test_case::{

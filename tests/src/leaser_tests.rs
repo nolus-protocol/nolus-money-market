@@ -19,11 +19,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
-    lease as lease_mod,
-    leaser as leaser_mod,
-    lpp as lpp_mod,
-    oracle as oracle_mod,
+    cwcoin, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod, oracle as oracle_mod,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
@@ -260,7 +256,11 @@ fn test_quote() {
     let leaser = test_case.address_book.leaser().clone();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
-    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(&mut test_case.app, leaser, downpayment);
+    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        downpayment,
+    );
 
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
@@ -276,7 +276,11 @@ fn test_quote() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let leaser = test_case.address_book.leaser().clone();
-    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(&mut test_case.app, leaser, Coin::new(15));
+    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        Coin::new(15),
+    );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
     assert_eq!(
@@ -572,8 +576,11 @@ where
     }
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
-    let quote =
-        leaser_mod::query_quote::<DownpaymentC, LeaseC>(&mut test_case.app, leaser_addr.clone(), downpayment);
+    let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
+        &mut test_case.app,
+        leaser_addr.clone(),
+        downpayment,
+    );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 

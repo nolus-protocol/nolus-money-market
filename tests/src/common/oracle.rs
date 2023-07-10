@@ -23,8 +23,10 @@ use sdk::{
     testing::{CwContract, CwContractWrapper},
 };
 
-use super::{test_case::{app::App, TestCase}, ADMIN};
-
+use super::{
+    test_case::{app::App, TestCase},
+    ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
@@ -74,11 +76,7 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_query(
-    deps: Deps<'_>,
-    env: Env,
-    msg: QueryMsg,
-) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
         QueryMsg::Prices {} => to_binary(&oracle::msg::PricesResponse {

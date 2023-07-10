@@ -4,8 +4,7 @@ use timealarms::{
     msg::InstantiateMsg,
 };
 
-use super::{test_case::app::App, mock_query, CwContractWrapper, ADMIN};
-
+use super::{mock_query, test_case::app::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 

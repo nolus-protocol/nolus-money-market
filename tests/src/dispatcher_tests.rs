@@ -6,10 +6,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
-    lpp as lpp_mod,
-    native_cwcoin,
-    oracle as oracle_mod,
+    cwcoin, lpp as lpp_mod, native_cwcoin, oracle as oracle_mod,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
