@@ -21,19 +21,23 @@ use sdk::{
 };
 use swap::trx as swap_trx;
 
-use crate::common::test_case::app::App;
-use crate::common::test_case::response::{RemoteChain as _, ResponseWithInterChainMsgs};
-
-use super::{cwcoin, test_case::TestCase, CwContractWrapper, Native, ADMIN, USER};
+use super::{
+    cwcoin,
+    test_case::{
+        app::App,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
+    },
+    CwContractWrapper, ADMIN, USER,
+};
 
 pub(crate) struct Instantiator;
 
 impl Instantiator {
     pub fn store(app: &mut App) -> u64 {
-        let endpoints =
-            CwContractWrapper::new(execute, instantiate, query)
-                .with_reply(reply)
-                .with_sudo(sudo);
+        let endpoints = CwContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
 
         app.store_code(Box::new(endpoints))
     }

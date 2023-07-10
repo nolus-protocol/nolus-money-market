@@ -36,10 +36,9 @@ impl Instantiator {
         BaseC: Currency,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints =
-            CwContractWrapper::new(execute, instantiate, query)
-                .with_reply(reply)
-                .with_sudo(sudo);
+        let endpoints = CwContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
 
         Self::instantiate::<BaseC>(app, Box::new(endpoints))
     }
