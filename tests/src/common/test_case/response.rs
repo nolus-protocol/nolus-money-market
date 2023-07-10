@@ -11,7 +11,10 @@ pub(crate) struct ResponseWithInterChainMsgs<'r, T> {
 
 impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
     pub(super) fn new(receiver: &'r mut InterChainMsgReceiver, result: T) -> Self {
-        Self { receiver, response: result }
+        Self {
+            receiver,
+            response: result,
+        }
     }
 
     pub fn ignore_response(self) -> ResponseWithInterChainMsgs<'r, ()> {
