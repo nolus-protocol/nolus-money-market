@@ -2,7 +2,7 @@ use std::array::from_fn;
 
 use currency::{lpn::Usdc, native::Nls, Currency};
 use finance::{coin::Coin, duration::Duration};
-use platform::tests::{self};
+use platform::tests;
 use sdk::{
     cosmwasm_std::{coin, Addr, Attribute, Event, Timestamp},
     cw_multi_test::AppResponse,
@@ -35,8 +35,7 @@ mod mock_lease {
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::test_case::app::App;
-    use crate::common::ADMIN;
+    use crate::common::{test_case::app::App, ADMIN};
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");

@@ -37,7 +37,7 @@ use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
-    oracle::{add_feeder, feed_price},
+    oracle as oracle_mod,
     test_case::{
         app::App,
         builder::BlankBuilder as TestCaseBuilder,
@@ -99,16 +99,16 @@ fn register_feeder() {
     let _user = Addr::unchecked(USER);
     let _admin = Addr::unchecked(ADMIN);
 
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 }
 
 #[test]
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 
-    let response: AppResponse = feed_price(
+    let response: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
@@ -125,7 +125,7 @@ fn internal_test_integration_setup_test() {
 #[test]
 fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -147,7 +147,7 @@ fn feed_price_with_alarm_issue() {
         .ignore_response()
         .unwrap_response();
 
-    let _: AppResponse = feed_price(
+    let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
@@ -158,7 +158,7 @@ fn feed_price_with_alarm_issue() {
 #[test]
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -179,7 +179,7 @@ fn feed_price_with_alarm() {
         .ignore_response()
         .unwrap_response();
 
-    let _: AppResponse = feed_price(
+    let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<Cro>::new(1),
@@ -190,7 +190,7 @@ fn feed_price_with_alarm() {
 #[test]
 fn overwrite_alarm_and_dispatch() {
     let mut test_case = create_test_case();
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -229,7 +229,7 @@ fn overwrite_alarm_and_dispatch() {
         .unwrap_response();
 
     // If doesn't panic, then prices should be fed successfully.
-    let _: AppResponse = feed_price(
+    let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<Cro>::new(1),
@@ -343,17 +343,17 @@ fn test_config_update() {
     let base = 2;
     let quote = 10;
 
-    add_feeder(&mut test_case, &feeder1);
-    add_feeder(&mut test_case, &feeder2);
-    add_feeder(&mut test_case, &feeder3);
+    oracle_mod::add_feeder(&mut test_case, &feeder1);
+    oracle_mod::add_feeder(&mut test_case, &feeder2);
+    oracle_mod::add_feeder(&mut test_case, &feeder3);
 
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder1,
         Coin::<BaseC>::new(base),
         Coin::<Usdc>::new(quote),
     );
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder2,
         Coin::<BaseC>::new(base),
@@ -511,7 +511,7 @@ fn test_zero_price_dto() {
 
     let feeder1 = Addr::unchecked("feeder1");
 
-    add_feeder(&mut test_case, &feeder1);
+    oracle_mod::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
     let price: SpotPrice = from_str(
@@ -704,9 +704,9 @@ fn price_alarm_rescheduling() {
 
     let feeder_addr = Addr::unchecked("feeder");
 
-    add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
 
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
@@ -760,7 +760,7 @@ fn price_alarm_rescheduling() {
         response.events
     );
 
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(4),
@@ -827,9 +827,9 @@ fn price_alarm_rescheduling_with_failing() {
 
     let feeder_addr = Addr::unchecked("feeder");
 
-    add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
 
-    feed_price(
+    oracle_mod::feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),

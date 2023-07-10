@@ -23,9 +23,9 @@ use sdk::{
 
 use crate::common::{
     cwcoin,
-    lease::complete_lease_initialization,
-    leaser::{query_quote, Instantiator as LeaserInstantiator},
-    oracle::{add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price},
+    lease as lease_mod,
+    leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
+    oracle as oracle_mod,
     test_case::{
         builder::Builder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
@@ -60,10 +60,10 @@ fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
 ) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
-    oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), lease_price);
+    oracle_mod::feed_price_pair(test_case, Addr::unchecked(ADMIN), lease_price);
 
     let payment_price = price_lpn_of::<PaymentCurrency>();
-    oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), payment_price);
+    oracle_mod::feed_price_pair(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
 fn create_test_case<InitFundsC>() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>
@@ -98,7 +98,7 @@ where
         &[cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
     );
 
-    add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, ADMIN);
 
     feed_price(&mut test_case);
 
@@ -126,7 +126,7 @@ where
 
     let lease = get_lease_address(test_case);
 
-    let quote = query_quote::<DownpaymentC, LeaseCurrency>(
+    let quote = leaser_mod::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -134,7 +134,7 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
 
-    complete_lease_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
+    lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
         &lease,
@@ -545,7 +545,7 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    oracle_feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
+    oracle_mod::feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
     let response: AppResponse = test_case
         .app

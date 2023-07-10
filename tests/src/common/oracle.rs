@@ -23,9 +23,8 @@ use sdk::{
     testing::{CwContract, CwContractWrapper},
 };
 
-use crate::common::test_case::app::App;
+use super::{test_case::{app::App, TestCase}, ADMIN};
 
-use super::{test_case::TestCase, ADMIN};
 
 pub(crate) struct Instantiator;
 
@@ -75,7 +74,7 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_oracle_query(
+pub(crate) fn mock_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg,
@@ -117,7 +116,7 @@ pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     );
 }
 
-pub(crate) fn feed_a_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+pub(crate) fn feed_price_pair<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     price: Price<C1, C2>,
@@ -155,5 +154,5 @@ where
     C1: Currency,
     C2: Currency,
 {
-    feed_a_price(test_case, addr, price::total_of(base).is(quote))
+    feed_price_pair(test_case, addr, price::total_of(base).is(quote))
 }

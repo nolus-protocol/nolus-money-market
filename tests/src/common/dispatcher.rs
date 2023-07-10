@@ -5,9 +5,8 @@ use rewards_dispatcher::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use crate::common::test_case::app::App;
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-use super::{CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 

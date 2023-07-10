@@ -7,9 +7,9 @@ use sdk::{
 
 use crate::common::{
     cwcoin,
-    lpp::mock_lpp_query,
+    lpp as lpp_mod,
     native_cwcoin,
-    oracle::mock_oracle_query,
+    oracle as oracle_mod,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -30,7 +30,7 @@ fn on_alarm_zero_reward() {
             ContractWrapper::new(
                 oracle::contract::execute,
                 oracle::contract::instantiate,
-                mock_oracle_query,
+                oracle_mod::mock_query,
             )
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),
@@ -72,7 +72,7 @@ fn on_alarm() {
                 ContractWrapper::new(
                     lpp::contract::execute,
                     lpp::contract::instantiate,
-                    mock_lpp_query,
+                    lpp_mod::mock_query,
                 )
                 .with_sudo(lpp::contract::sudo),
             ),
@@ -85,7 +85,7 @@ fn on_alarm() {
             ContractWrapper::new(
                 oracle::contract::execute,
                 oracle::contract::instantiate,
-                mock_oracle_query,
+                oracle_mod::mock_query,
             )
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),

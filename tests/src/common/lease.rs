@@ -188,7 +188,7 @@ pub struct InstantiatorAddresses {
     pub profit: Addr,
 }
 
-pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
+pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
     app: &mut App,
     connection_id: &str,
     lease_addr: &Addr,

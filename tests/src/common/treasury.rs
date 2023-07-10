@@ -2,9 +2,8 @@ use currency::Currency;
 use sdk::cosmwasm_std::Addr;
 use treasury::{contract::sudo, msg::InstantiateMsg};
 
-use crate::common::test_case::app::App;
+use super::{test_case::app::App, cwcoin, mock_query, native_cwcoin, CwContractWrapper, ADMIN};
 
-use super::{cwcoin, mock_query, native_cwcoin, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator {
     rewards_dispatcher: Addr,

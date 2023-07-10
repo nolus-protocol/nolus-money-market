@@ -12,9 +12,8 @@ use sdk::{
     testing::CwContract,
 };
 
-use crate::common::test_case::app::App;
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-use super::{CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 
@@ -101,7 +100,7 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_lpp_query(
+pub(crate) fn mock_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg,
@@ -119,7 +118,7 @@ pub(crate) fn mock_lpp_query(
     Ok(res)
 }
 
-pub(crate) fn mock_lpp_quote_query(
+pub(crate) fn mock_quote_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg,
