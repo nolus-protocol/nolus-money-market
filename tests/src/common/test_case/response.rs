@@ -10,10 +10,10 @@ pub(crate) struct ResponseWithInterChainMsgs<'r, T> {
 }
 
 impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
-    pub(super) fn new(receiver: &'r mut InterChainMsgReceiver, result: T) -> Self {
+    pub(super) fn new(receiver: &'r mut InterChainMsgReceiver, response: T) -> Self {
         Self {
             receiver,
-            response: result,
+            response,
         }
     }
 
