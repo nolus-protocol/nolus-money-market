@@ -202,51 +202,21 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     let ica_port = format!("icacontroller-{ica_addr}");
     let ica_channel = format!("channel-{ica_addr}");
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
+    send_ibc_responses(
         app,
         lease_addr,
         connection_id,
-        &ica_channel,
-        &ica_port,
-        ica_addr,
-    )
-    .ignore_result();
-
-    response.expect_ibc_transfer(
-        TestCase::LEASER_IBC_CHANNEL,
-        cwcoin::<DownpaymentC, _>(downpayment),
-        lease_addr.as_str(),
-        ica_addr,
+        (&ica_channel, &ica_port, ica_addr),
+        downpayment,
+        exp_borrow,
     );
-
-    () = response.unwrap_response();
-
-    check_state_opening(app, lease_addr);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_blank_response(app, lease_addr).ignore_result();
 
-    response.expect_ibc_transfer(
-        TestCase::LEASER_IBC_CHANNEL,
-        cwcoin::<Lpn, _>(exp_borrow),
-        lease_addr.as_str(),
-        ica_addr,
-    );
+    let remote_tx_count: usize = 1 + usize::from(!currency::equal::<DownpaymentC, LeaseC>());
 
-    () = response.unwrap_response();
-
-    let mut response: ResponseWithInterChainMsgs<'_, ()> =
-        send_blank_response(app, lease_addr).ignore_result();
-
-    let remote_tx_count: usize = usize::from(!currency::equal::<Lpn, Native>())
-        + usize::from(
-            !(currency::equal::<DownpaymentC, LeaseC>()
-                || currency::equal::<DownpaymentC, Native>()),
-        );
-
-    if remote_tx_count != 0 {
-        response.expect_submit_tx(connection_id, "0", remote_tx_count);
-    }
+    response.expect_submit_tx(connection_id, "0", remote_tx_count);
 
     () = response.unwrap_response();
 
@@ -261,6 +231,67 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     send_swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
 
     check_state_opened(app, lease_addr);
+}
+
+fn send_ibc_responses<DownpaymentC, Lpn>(
+    app: &mut App,
+    lease_addr: &Addr,
+    connection_id: &str,
+    (ica_channel, ica_port, ica_addr): (&str, &str, &str),
+    downpayment: Coin<DownpaymentC>,
+    exp_borrow: Coin<Lpn>,
+) where
+    DownpaymentC: Currency,
+    Lpn: Currency,
+{
+    send_response_and_expect(
+        app,
+        |app: &mut App| {
+            send_open_ica_response(
+                app,
+                lease_addr,
+                connection_id,
+                &ica_channel,
+                &ica_port,
+                ica_addr,
+            )
+        },
+        lease_addr,
+        ica_addr,
+        downpayment,
+    );
+
+    send_response_and_expect(
+        app,
+        |app: &mut App| send_blank_response(app, lease_addr),
+        lease_addr,
+        ica_addr,
+        exp_borrow,
+    );
+}
+
+fn send_response_and_expect<F, C>(
+    app: &mut App,
+    send_response: F,
+    lease_addr: &Addr,
+    ica_addr: &str,
+    coin: Coin<C>,
+) where
+    F: for<'t> FnOnce(&'t mut App) -> ResponseWithInterChainMsgs<'t, AppResponse>,
+    C: Currency,
+{
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_response(app).ignore_result();
+
+    response.expect_ibc_transfer(
+        TestCase::LEASER_IBC_CHANNEL,
+        cwcoin::<C, _>(coin),
+        lease_addr.as_str(),
+        ica_addr,
+    );
+
+    () = response.unwrap_response();
+
+    check_state_opening(app, lease_addr);
 }
 
 fn send_open_ica_response<'r>(
