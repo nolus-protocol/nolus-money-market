@@ -202,7 +202,7 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     let ica_port = format!("icacontroller-{ica_addr}");
     let ica_channel = format!("channel-{ica_addr}");
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = open_ica(
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
         app,
         lease_addr,
         connection_id,
@@ -263,7 +263,7 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     check_state_opened(app, lease_addr);
 }
 
-fn open_ica<'r>(
+fn send_open_ica_response<'r>(
     app: &'r mut App,
     lease_addr: &Addr,
     connection_id: &str,
