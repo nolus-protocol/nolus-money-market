@@ -17,7 +17,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Lpp] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Lpp] Invalid config parameter! {0}")]
     InvalidConfigParameter(&'static str),

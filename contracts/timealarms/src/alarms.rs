@@ -115,7 +115,7 @@ mod tests {
     use platform::contract;
     use sdk::cosmwasm_std::{
         testing::{self, mock_dependencies, MockQuerier},
-        Addr, QuerierWrapper, Storage, Timestamp,
+        Addr, QuerierWrapper, Timestamp,
     };
 
     use crate::ContractError;
@@ -130,7 +130,7 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new(&mut *deps.storage as &mut dyn Storage)
+        assert!(TimeAlarms::new(&mut *deps.storage)
             .try_add(
                 &deps.querier,
                 &env,
@@ -143,7 +143,7 @@ mod tests {
             .unwrap_err()
             .into();
 
-        let result = TimeAlarms::new(deps.storage as &mut dyn Storage)
+        let result = TimeAlarms::new(deps.storage)
             .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
             .unwrap_err();
 

@@ -246,7 +246,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use access_control::SingleUserAccess;
+    use access_control::ContractOwnerAccess;
     use currency::test::Usdc;
     use finance::{duration::Duration, price};
     use platform::coin_legacy;
@@ -276,9 +276,7 @@ mod test {
         let lease_code_id = Uint64::new(123);
         let admin = Addr::unchecked("admin");
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
+        grant_admin_access(deps.as_mut(), &admin);
 
         Config::new(
             balance_mock.denom.clone(),
@@ -317,9 +315,7 @@ mod test {
 
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
+        grant_admin_access(deps.as_mut(), &admin);
 
         Config::new(
             balance_mock.denom,
@@ -401,9 +397,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
+        grant_admin_access(deps.as_mut(), &admin);
 
         Config::new(
             TheCurrency::TICKER.into(),
@@ -505,10 +499,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
-
+        grant_admin_access(deps.as_mut(), &admin);
         Config::new(
             TheCurrency::TICKER.into(),
             lease_code_id,
@@ -541,10 +532,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
-
+        grant_admin_access(deps.as_mut(), &admin);
         Config::new(
             TheCurrency::TICKER.into(),
             lease_code_id,
@@ -577,10 +565,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
-
+        grant_admin_access(deps.as_mut(), &admin);
         Config::new(
             TheCurrency::TICKER.into(),
             lease_code_id,
@@ -637,10 +622,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
-
+        grant_admin_access(deps.as_mut(), &admin);
         Config::new(
             TheCurrency::TICKER.into(),
             lease_code_id,
@@ -695,10 +677,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new_contract_owner(admin)
-            .store(deps.as_mut().storage)
-            .unwrap();
-
+        grant_admin_access(deps.as_mut(), &admin);
         Config::new(
             balance_mock.denom,
             lease_code_id,
@@ -819,5 +798,11 @@ mod test {
 
     fn coin_cw(amount: u128) -> CwCoin {
         coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
+    }
+
+    fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
+        ContractOwnerAccess::new(deps.storage)
+            .grant_to(admin)
+            .unwrap();
     }
 }

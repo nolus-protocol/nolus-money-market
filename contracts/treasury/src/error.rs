@@ -12,7 +12,7 @@ pub enum ContractError {
     PlatformError(#[from] platform::error::Error),
 
     #[error("[Treasury] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Treasury] Rewards dispatcher is not configured")]
     NotConfigured {},

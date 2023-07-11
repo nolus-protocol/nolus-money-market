@@ -1,4 +1,4 @@
-use access_control::SingleUserAccess;
+use access_control::ContractOwnerAccess;
 use cosmwasm_std::{Addr, Api, QuerierWrapper};
 use platform::{batch::Batch, reply::from_instantiate, response};
 #[cfg(feature = "contract-with-bindings")]
@@ -36,7 +36,7 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
+    ContractOwnerAccess::new(&mut *deps.storage).grant_to(&info.sender)?;
 
     let lease_code = msg.lease_code_id;
     Config::new(msg)?.store(deps.storage)?;
@@ -70,13 +70,18 @@ pub fn execute(
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
-        } => SingleUserAccess::check_owner_access(deps.storage, &info.sender).and_then(move |()| {
-            leaser::try_migrate_leases(deps.storage, new_code_id.u64(), max_leases)
-        }),
+        } => ContractOwnerAccess::new(&*deps.storage)
+            .check(&info.sender)
+            .map_err(Into::into)
+            .and_then(move |()| {
+                leaser::try_migrate_leases(deps.storage, new_code_id.u64(), max_leases)
+            }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
-        } => SingleUserAccess::check_owner_access(deps.storage, &info.sender)
+        } => ContractOwnerAccess::new(&*deps.storage)
+            .check(&info.sender)
+            .map_err(Into::into)
             .and_then(|()| validate(next_customer, deps.api, &deps.querier))
             .and_then(move |next_customer_validated| {
                 leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)

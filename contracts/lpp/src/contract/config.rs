@@ -9,8 +9,11 @@ pub(super) fn try_update_lease_code(
     info: MessageInfo,
     lease_code: Uint64,
 ) -> Result<MessageResponse> {
-    SingleUserAccess::load(deps.storage, crate::access_control::LEASE_CODE_ADMIN_KEY)?
-        .check_access(&info.sender)?;
+    SingleUserAccess::new(
+        &mut *deps.storage,
+        crate::access_control::LEASE_CODE_ADMIN_KEY,
+    )
+    .check(&info.sender)?;
 
     Config::update_lease_code(deps.storage, lease_code).map(|()| Default::default())
 }

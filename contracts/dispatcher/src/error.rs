@@ -28,13 +28,11 @@ pub enum ContractError {
     FromInfallible(#[from] Infallible),
 
     #[error("[Dispatcher] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("[Dispatcher] Invalid contract address {0}")]
     InvalidContractAddress(Addr),
 

@@ -20,7 +20,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Profit] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Profit] {0}")]
     TimeAlarm(#[from] timealarms::ContractError),
