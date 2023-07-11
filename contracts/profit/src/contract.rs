@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use access_control::{ContractOwnerAccess, SingleUserAccess};
 use dex::{ConnectionParams, Handler as _, Ics20Channel, Response as DexResponse};
 use oracle::stub::OracleRef;
@@ -24,7 +26,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -35,10 +37,10 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    ContractOwnerAccess::new(&mut *deps.storage).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     SingleUserAccess::new(
-        &mut *deps.storage,
+        deps.storage.deref_mut(),
         crate::access_control::TIMEALARMS_NAMESPACE,
     )
     .grant_to(&msg.timealarms)?;
@@ -69,13 +71,16 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(&*deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)
-                .check(&info.sender)?;
+            SingleUserAccess::new(
+                deps.storage.deref(),
+                crate::access_control::TIMEALARMS_NAMESPACE,
+            )
+            .check(&info.sender)?;
 
             try_time_alarm(deps, env).map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(&*deps.storage).check(&info.sender)?;
+            ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
 
             State::load(deps.storage)?
                 .try_update_config(cadence_hours)?

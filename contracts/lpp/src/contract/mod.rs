@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
@@ -35,14 +37,14 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(self) -> Result<()>
+    fn do_work<LPN>(mut self) -> Result<()>
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
         SingleUserAccess::new(
-            &mut *self.deps.storage,
+            self.deps.storage.deref_mut(),
             crate::access_control::LEASE_CODE_ADMIN_KEY,
         )
         .grant_to(&self.msg.lease_code_admin)?;

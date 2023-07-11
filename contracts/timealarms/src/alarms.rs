@@ -112,6 +112,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::ops::DerefMut;
+
     use platform::contract;
     use sdk::cosmwasm_std::{
         testing::{self, mock_dependencies, MockQuerier},
@@ -125,12 +127,12 @@ mod tests {
     #[test]
     fn try_add_invalid_contract_address() {
         let mut deps = mock_dependencies();
-        let deps = deps.as_mut();
+        let mut deps = deps.as_mut();
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new(&mut *deps.storage)
+        assert!(TimeAlarms::new(deps.storage.deref_mut())
             .try_add(
                 &deps.querier,
                 &env,

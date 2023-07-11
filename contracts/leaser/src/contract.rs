@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use access_control::ContractOwnerAccess;
 use cosmwasm_std::{Addr, Api, QuerierWrapper};
 use platform::{batch::Batch, reply::from_instantiate, response};
@@ -24,7 +26,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -36,7 +38,7 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    ContractOwnerAccess::new(&mut *deps.storage).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     let lease_code = msg.lease_code_id;
     Config::new(msg)?.store(deps.storage)?;
@@ -70,7 +72,7 @@ pub fn execute(
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
-        } => ContractOwnerAccess::new(&*deps.storage)
+        } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
             .and_then(move |()| {
@@ -79,7 +81,7 @@ pub fn execute(
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
-        } => ContractOwnerAccess::new(&*deps.storage)
+        } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
             .and_then(|()| validate(next_customer, deps.api, &deps.querier))
