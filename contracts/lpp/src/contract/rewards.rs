@@ -70,7 +70,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 
 #[cfg(test)]
 mod test {
-    use access_control::SingleUserAccess;
+    use access_control::ContractOwnerAccess;
     use currency::test::Usdc;
     use finance::{coin::Coin, percent::Percent};
     use platform::coin_legacy;
@@ -97,8 +97,8 @@ mod test {
         let mut lpp_balance = 0;
         let deposit = 20_000;
 
-        SingleUserAccess::new_contract_owner(Addr::unchecked("admin"))
-            .store(deps.as_mut().storage)
+        ContractOwnerAccess::new(deps.as_mut().storage)
+            .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
         LiquidityPool::<TheCurrency>::store(

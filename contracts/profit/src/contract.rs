@@ -1,4 +1,6 @@
-use access_control::SingleUserAccess;
+use std::ops::{Deref, DerefMut};
+
+use access_control::{ContractOwnerAccess, SingleUserAccess};
 use dex::{ConnectionParams, Handler as _, Ics20Channel, Response as DexResponse};
 use oracle::stub::OracleRef;
 use platform::{message::Response as MessageResponse, response};
@@ -17,7 +19,6 @@ use crate::{
     profit::Profit,
     result::ContractResult,
     state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
-    ContractError,
 };
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -25,7 +26,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -36,13 +37,13 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     SingleUserAccess::new(
+        deps.storage.deref_mut(),
         crate::access_control::TIMEALARMS_NAMESPACE,
-        msg.timealarms.clone(),
     )
-    .store(deps.storage)?;
+    .grant_to(&msg.timealarms)?;
 
     State::new(Config::new(
         msg.cadence_hours,
@@ -70,13 +71,16 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
-                .check_access(&info.sender)?;
+            SingleUserAccess::new(
+                deps.storage.deref(),
+                crate::access_control::TIMEALARMS_NAMESPACE,
+            )
+            .check(&info.sender)?;
 
             try_time_alarm(deps, env).map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
+            ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
 
             State::load(deps.storage)?
                 .try_update_config(cadence_hours)?

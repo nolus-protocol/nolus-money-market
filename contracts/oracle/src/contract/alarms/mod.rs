@@ -176,11 +176,11 @@ mod test {
     }
 
     fn add_alarms<'a>(
-        storage: &mut dyn Storage,
+        mut storage: &mut dyn Storage,
         mut alarms: impl Iterator<Item = (&'a str, AlarmDTO)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
-            MarketAlarms::new(&mut *storage)
+            MarketAlarms::new(storage.deref_mut())
                 .try_add_price_alarm::<Base>(Addr::unchecked(receiver), alarm)
         })
     }

@@ -32,7 +32,7 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    try_configure_reward_dispatcher(deps.storage, msg.rewards_dispatcher)?;
+    try_configure_reward_dispatcher(deps.storage, &msg.rewards_dispatcher)?;
 
     Ok(response::empty_response())
 }
@@ -69,7 +69,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
             platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
 
-            try_configure_reward_dispatcher(deps.storage, rewards_dispatcher)?;
+            try_configure_reward_dispatcher(deps.storage, &rewards_dispatcher)?;
 
             Ok(response::empty_response())
         }
@@ -78,14 +78,11 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 
 fn try_configure_reward_dispatcher(
     storage: &mut dyn Storage,
-    rewards_dispatcher: Addr,
+    rewards_dispatcher: &Addr,
 ) -> ContractResult<()> {
-    SingleUserAccess::new(
-        crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
-        rewards_dispatcher,
-    )
-    .store(storage)
-    .map_err(Into::into)
+    SingleUserAccess::new(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)
+        .grant_to(rewards_dispatcher)
+        .map_err(Into::into)
 }
 
 fn try_send_rewards<B>(
@@ -97,8 +94,8 @@ fn try_send_rewards<B>(
 where
     B: BankAccount,
 {
-    SingleUserAccess::load(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)?
-        .check_access(&sender)?;
+    SingleUserAccess::new(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)
+        .check(&sender)?;
 
     account.send(amount, &sender);
 

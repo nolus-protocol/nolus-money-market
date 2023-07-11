@@ -47,9 +47,9 @@ where
     OracleBase: Currency + DeserializeOwned,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
-        let tree = SupportedPairs::load(&*storage)?;
-        let feeders = Feeders::total_registered(&*storage)?;
-        let config = Config::load(&*storage)?;
+        let tree = SupportedPairs::load(storage.deref())?;
+        let feeders = Feeders::total_registered(storage.deref())?;
+        let config = Config::load(storage.deref())?;
         let feeds = Feeds::<OracleBase>::with(config.price_config);
 
         Ok(Self {

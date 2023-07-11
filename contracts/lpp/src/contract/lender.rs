@@ -107,7 +107,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 
 #[cfg(test)]
 mod test {
-    use access_control::SingleUserAccess;
+    use access_control::ContractOwnerAccess;
     use currency::lpn::Usdc;
     use finance::{percent::Percent, price};
     use platform::coin_legacy;
@@ -143,8 +143,8 @@ mod test {
         let rest_nlpn = 1000u128;
         let zero = 0u128;
 
-        SingleUserAccess::new_contract_owner(Addr::unchecked("admin"))
-            .store(deps.as_mut().storage)
+        ContractOwnerAccess::new(deps.as_mut().storage)
+            .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
         LiquidityPool::<TheCurrency>::store(

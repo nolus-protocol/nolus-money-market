@@ -26,9 +26,6 @@ pub enum ContractError {
     #[error("[Oracle] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("[Oracle] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
-
     #[error("[Oracle] Unsupported denom pairs")]
     UnsupportedDenomPairs {},
 

@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use access_control::SingleUserAccess;
 use finance::{duration::Duration, percent::Percent};
 use lpp::stub::LppRef;
@@ -31,7 +33,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -44,10 +46,10 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
 
     SingleUserAccess::new(
+        deps.storage.deref_mut(),
         crate::access_control::TIMEALARMS_NAMESPACE,
-        msg.timealarms.clone(),
     )
-    .store(deps.storage)?;
+    .grant_to(&msg.timealarms)?;
 
     Config::new(
         msg.cadence_hours,
@@ -83,8 +85,11 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
-                .check_access(&info.sender)?;
+            SingleUserAccess::new(
+                deps.storage.deref(),
+                crate::access_control::TIMEALARMS_NAMESPACE,
+            )
+            .check(&info.sender)?;
 
             try_dispatch(deps, env, info.sender).map(response::response_only_messages)
         }

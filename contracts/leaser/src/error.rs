@@ -25,7 +25,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Leaser] {0}")]
-    Unauthorized(#[from] access_control::Unauthorized),
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },

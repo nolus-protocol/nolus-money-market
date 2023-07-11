@@ -1,147 +1,112 @@
+use error::{Error, Result};
 use sdk::{
-    cosmwasm_std::{Addr, StdError, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
 };
+use std::ops::{Deref, DerefMut};
 
-const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
+mod contract_owner;
+pub use contract_owner::ContractOwnerAccess;
+pub mod error;
 
-pub struct SingleUserAccess<'r> {
-    storage_namespace: &'r str,
-    address: Addr,
+pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
+    if permitted_to == accessed_by {
+        Ok(())
+    } else {
+        Err(Error::Unauthorized {})
+    }
 }
 
-impl<'r> SingleUserAccess<'r> {
-    pub const fn new(storage_namespace: &'r str, address: Addr) -> Self {
+pub struct SingleUserAccess<'storage, 'namespace, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    storage: S,
+    storage_item: Item<'namespace, Addr>,
+}
+
+impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    pub const fn new(storage: S, storage_namespace: &'namespace str) -> Self {
         Self {
-            storage_namespace,
-            address,
+            storage,
+            storage_item: Item::new(storage_namespace),
         }
     }
 
-    pub fn load(storage: &dyn Storage, storage_namespace: &'r str) -> StdResult<Self> {
-        Item::new(storage_namespace)
-            .load(storage)
-            .map(|address| Self {
-                storage_namespace,
-                address,
-            })
-    }
-
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Item::new(self.storage_namespace).save(storage, &self.address)
-    }
-
-    pub fn remove(storage: &mut dyn Storage, storage_namespace: &'r str) {
-        Item::<()>::new(storage_namespace).remove(storage)
-    }
-
-    pub const fn address(&self) -> &Addr {
-        &self.address
-    }
-
-    pub fn check_access(&self, addr: &Addr) -> Result<(), Unauthorized> {
-        if self.address == addr {
-            Ok(())
-        } else {
-            Err(Unauthorized)
-        }
-    }
-
-    fn load_and_check_access<E>(
-        storage: &dyn Storage,
-        namespace: &'r str,
-        addr: &Addr,
-    ) -> Result<(), E>
-    where
-        StdError: Into<E>,
-        Unauthorized: Into<E>,
-    {
-        Self::load(storage, namespace)
-            .map_err(Into::into)?
-            .check_access(addr)
-            .map_err(|_| Unauthorized.into())
+    pub fn check(&self, user: &Addr) -> Result {
+        self.storage_item
+            .load(self.storage.deref())
+            .map_err(Into::into)
+            .and_then(|granted_to| check(&granted_to, user))
     }
 }
 
-impl SingleUserAccess<'static> {
-    pub const fn new_contract_owner(address: Addr) -> Self {
-        Self::new(CONTRACT_OWNER_NAMESPACE, address)
-    }
-
-    pub fn load_contract_owner(storage: &dyn Storage) -> StdResult<Self> {
-        Self::load(storage, CONTRACT_OWNER_NAMESPACE)
-    }
-
-    pub fn remove_contract_owner(storage: &mut dyn Storage) {
-        Self::remove(storage, CONTRACT_OWNER_NAMESPACE)
-    }
-
-    pub fn check_owner_access<E>(storage: &dyn Storage, addr: &Addr) -> Result<(), E>
-    where
-        StdError: Into<E>,
-        Unauthorized: Into<E>,
-    {
-        Self::load_and_check_access(storage, CONTRACT_OWNER_NAMESPACE, addr)
+impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+{
+    pub fn grant_to(&mut self, user: &Addr) -> Result {
+        self.storage_item
+            .save(self.storage.deref_mut(), user)
+            .map_err(Into::into)
     }
 }
-
-impl<'r> From<SingleUserAccess<'r>> for Addr {
-    fn from(value: SingleUserAccess<'r>) -> Self {
-        value.address
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
-#[error("[Access Control] Checked address doesn't match the one associated with access control variable!")]
-pub struct Unauthorized;
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::testing::MockStorage;
+    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
 
-    use super::*;
+    use crate::{
+        error::{Error, Result},
+        SingleUserAccess,
+    };
+
+    const NAMESPACE: &str = "my-nice-permission";
 
     #[test]
-    fn store_load() {
-        const NAMESPACE: &str = "ownership";
-
+    fn grant_check() {
         let mut storage = MockStorage::new();
+        let storage_ref: &mut dyn Storage = &mut storage;
+        let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
+        let user = Addr::unchecked("cosmic address");
 
-        let original = SingleUserAccess::new(NAMESPACE, Addr::unchecked("cosmic address"));
-
-        original.store(&mut storage).unwrap();
-
-        let loaded = SingleUserAccess::load(&storage, NAMESPACE).unwrap();
-
-        assert_eq!(loaded.storage_namespace, original.storage_namespace);
-        assert_eq!(loaded.address, original.address);
+        assert!(access.check(&user).is_err());
+        access.grant_to(&user).unwrap();
+        access.check(&user).unwrap();
     }
 
     #[test]
-    fn load_fail() {
-        const NAMESPACE: &str = "ownership";
+    fn check_no_grant() {
+        let mut storage = MockStorage::new();
+        let storage_ref: &dyn Storage = &mut storage;
+        let access = SingleUserAccess::new(storage_ref, NAMESPACE);
+        let not_authorized = Addr::unchecked("hacker");
 
-        let storage = MockStorage::new();
-
-        assert!(SingleUserAccess::load(&storage, NAMESPACE).is_err());
-    }
-
-    fn check_addr_template(store: &str, check: &str) -> Result<(), Unauthorized> {
-        SingleUserAccess::new("ownership", Addr::unchecked(store))
-            .check_access(&Addr::unchecked(check))
+        assert!(matches!(
+            access.check(&not_authorized).unwrap_err(),
+            Error::Std(_)
+        ));
     }
 
     #[test]
     fn check() {
-        const ADDRESS: &str = "cosmic address";
+        const ADDRESS: &str = "admin";
 
-        check_addr_template(ADDRESS, ADDRESS).unwrap();
+        check_permission(ADDRESS, ADDRESS).unwrap();
     }
+
     #[test]
     fn check_fail() {
         assert_eq!(
-            check_addr_template("cosmic address", "osmotic address").unwrap_err(),
-            Unauthorized
+            Error::Unauthorized {},
+            check_permission("user12", "user21").unwrap_err(),
         );
+    }
+
+    fn check_permission(granted_to: &str, asked_for: &str) -> Result {
+        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
     }
 }
