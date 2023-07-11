@@ -9,6 +9,14 @@ mod contract_owner;
 pub use contract_owner::ContractOwnerAccess;
 pub mod error;
 
+pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
+    if permitted_to == accessed_by {
+        Ok(())
+    } else {
+        Err(Error::Unauthorized {})
+    }
+}
+
 pub struct SingleUserAccess<'storage, 'namespace, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
@@ -32,7 +40,7 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| UserPermission::new(granted_to).check(user))
+            .and_then(|granted_to| check(&granted_to, user))
     }
 }
 
@@ -47,32 +55,13 @@ where
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-struct UserPermission {
-    user: Addr,
-}
-
-impl UserPermission {
-    pub fn check(&self, user: &Addr) -> Result {
-        if self.user == user {
-            Ok(())
-        } else {
-            Err(Error::Unauthorized {})
-        }
-    }
-
-    const fn new(user: Addr) -> Self {
-        Self { user }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
 
     use crate::{
         error::{Error, Result},
-        SingleUserAccess, UserPermission,
+        SingleUserAccess,
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -118,6 +107,6 @@ mod tests {
     }
 
     fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        UserPermission::new(Addr::unchecked(granted_to)).check(&Addr::unchecked(asked_for))
+        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
     }
 }
