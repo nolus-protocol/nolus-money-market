@@ -129,6 +129,7 @@ where
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
+        max_ltd,
     );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();

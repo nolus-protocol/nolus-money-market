@@ -260,6 +260,7 @@ fn test_quote() {
         &mut test_case.app,
         leaser,
         downpayment,
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
@@ -280,6 +281,7 @@ fn test_quote() {
         &mut test_case.app,
         leaser,
         Coin::new(15),
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
@@ -362,6 +364,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
+        None,
     );
 
     assert_eq!(
@@ -432,6 +435,7 @@ fn test_quote_fixed_rate() {
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         Coin::<Downpayment>::new(100),
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(185)));
@@ -580,6 +584,7 @@ where
         &mut test_case.app,
         leaser_addr.clone(),
         downpayment,
+        None,
     );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
