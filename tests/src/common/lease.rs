@@ -215,17 +215,24 @@ pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
         exp_borrow,
     );
 
-    do_swap(app, lease_addr, connection_id, downpayment, exp_lease);
+    do_swap(
+        app,
+        lease_addr,
+        ica_addr,
+        connection_id,
+        (downpayment, exp_borrow, exp_lease),
+    );
 }
 
-fn do_swap<DownpaymentC, LeaseC>(
+fn do_swap<DownpaymentC, Lpn, LeaseC>(
     app: &mut App,
     lease_addr: &Addr,
+    ica_addr: &str,
     connection_id: &str,
-    downpayment: Coin<DownpaymentC>,
-    exp_lease: Coin<LeaseC>,
+    (downpayment, exp_borrow, exp_lease): (Coin<DownpaymentC>, Coin<Lpn>, Coin<LeaseC>),
 ) where
     DownpaymentC: Currency,
+    Lpn: Currency,
     LeaseC: Currency,
 {
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
@@ -244,6 +251,24 @@ fn do_swap<DownpaymentC, LeaseC>(
     } else {
         exp_lease
     };
+
+    app.send_tokens(
+        Addr::unchecked(ica_addr),
+        Addr::unchecked(ADMIN),
+        &if currency::equal::<DownpaymentC, LeaseC>() {
+            vec![cwcoin(exp_borrow)]
+        } else {
+            vec![cwcoin(downpayment), cwcoin(exp_borrow)]
+        },
+    )
+    .unwrap();
+
+    app.send_tokens(
+        Addr::unchecked(ADMIN),
+        Addr::unchecked(ica_addr),
+        &[cwcoin(exp_swap_out)],
+    )
+    .unwrap();
 
     send_swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
 
@@ -297,6 +322,13 @@ fn send_response_and_expect<F, C>(
     F: for<'t> FnOnce(&'t mut App) -> ResponseWithInterChainMsgs<'t, AppResponse>,
     C: Currency,
 {
+    app.send_tokens(
+        lease_addr.clone(),
+        Addr::unchecked(ica_addr),
+        &[cwcoin(coin)],
+    )
+    .unwrap();
+
     let mut response: ResponseWithInterChainMsgs<'_, ()> = send_response(app).ignore_response();
 
     response.expect_ibc_transfer(
