@@ -1,6 +1,6 @@
 [package]
 name = "integration_tests"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
@@ -29,3 +29,5 @@ swap = { workspace = true, features = ["testing"] }
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde-json-wasm = { workspace = true }
+
+osmosis-std = { workspace = true }

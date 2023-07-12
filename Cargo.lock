@@ -593,7 +593,7 @@ dependencies = [
 
 [[package]]
 name = "integration_tests"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "access-control",
  "anyhow",
@@ -604,6 +604,7 @@ dependencies = [
  "lpp",
  "marketprice",
  "oracle",
+ "osmosis-std",
  "platform",
  "profit",
  "rewards_dispatcher",
