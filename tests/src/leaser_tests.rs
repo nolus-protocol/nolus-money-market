@@ -533,19 +533,23 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+        cwcoin::<Lpn, _>(1_000_000_000),
+        cwcoin::<LeaseC, _>(1_000_000_000),
+        cwcoin::<DownpaymentC, _>(1_000_000_000),
+    ])
+    .init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury_without_dispatcher()
+    .init_profit(24)
+    .init_leaser()
+    .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
 
