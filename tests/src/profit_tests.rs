@@ -242,6 +242,15 @@ fn on_alarm_foreign_only_transfer() {
 
     let response: AppResponse = response.unwrap_response();
 
+    test_case
+        .app
+        .send_tokens(
+            test_case.address_book.profit().clone(),
+            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
+            &[cwcoin(profit_lpn)],
+        )
+        .unwrap();
+
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
         response.events.as_slice(),
@@ -300,6 +309,15 @@ fn on_alarm_native_and_foreign_transfer() {
     );
 
     let response: AppResponse = response.unwrap_response();
+
+    test_case
+        .app
+        .send_tokens(
+            test_case.address_book.profit().clone(),
+            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
+            &[cwcoin(profit_lpn)],
+        )
+        .unwrap();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
