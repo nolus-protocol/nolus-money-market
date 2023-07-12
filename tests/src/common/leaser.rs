@@ -70,6 +70,7 @@ pub(crate) fn query_quote<DownpaymentC, LeaseC>(
     app: &mut App,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
+    max_ltd: Option<Percent>,
 ) -> QuoteResponse
 where
     DownpaymentC: Currency,
@@ -81,7 +82,7 @@ where
             &QueryMsg::Quote {
                 downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
                 lease_asset: LeaseC::TICKER.into(),
-                max_ltd: None,
+                max_ltd,
             },
         )
         .unwrap()
