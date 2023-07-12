@@ -258,7 +258,7 @@ where
 
 fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
-    contract_addr: &String,
+    contract_addr: &str,
 ) -> StateResponse {
     test_case
         .app
@@ -392,7 +392,7 @@ fn state_opened_when_partially_paid() {
     let lease_address = open_lease(&mut test_case, downpayment, None);
     repay(&mut test_case, &lease_address, partial_payment);
 
-    let query_result = state_query(&test_case, &lease_address.into_string());
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     assert_eq!(query_result, expected_result);
 }
@@ -436,7 +436,7 @@ fn state_opened_when_partially_paid_after_time() {
         unreachable!();
     }
 
-    let query_result = state_query(&test_case, &lease_address.into_string());
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     if let StateResponse::Opened {
         previous_margin_due,
@@ -478,7 +478,7 @@ fn state_paid() {
         amount: expected_amount.into(),
         in_progress: None,
     };
-    let query_result = state_query(&test_case, &lease_address.into_string());
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     assert_eq!(query_result, expected_result);
 }
@@ -492,14 +492,14 @@ fn state_paid_with_max_ltv() {
     let borrowed = Coin::new(percent.of(DOWNPAYMENT));
     let lease_address = open_lease(&mut test_case, downpayment, Some(percent));
 
-    repay(&mut test_case, &lease_address, borrowed);
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     let expected_amount = downpayment + borrowed;
     let expected_result = StateResponse::Paid {
         amount: expected_amount.into(),
         in_progress: None,
     };
-    let query_result = state_query(&test_case, &lease_address.into_string());
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     assert_eq!(query_result, expected_result);
 }
@@ -689,7 +689,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result = state_query(&test_case, &lease_address.into_string());
+    let query_result = state_query(&test_case, lease_address.as_str());
 
     if let StateResponse::Opened {
         amount,
