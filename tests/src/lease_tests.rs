@@ -346,10 +346,7 @@ mod repay_mod {
     ) -> AppResponse {
         test_case
             .app
-            .sudo(
-                contract_addr.clone(),
-                &construct_response(Binary::default()),
-            )
+            .sudo(contract_addr, &construct_response(Binary::default()))
             .unwrap()
             .unwrap_response()
     }
@@ -412,7 +409,7 @@ mod close_mod {
             .send_tokens(
                 Addr::unchecked("ica0"),
                 contract_addr.clone(),
-                &expected_funds,
+                expected_funds,
             )
             .unwrap();
     }
@@ -597,7 +594,7 @@ fn state_opened_when_partially_paid_after_time() {
         LeaserInstantiator::REPAYMENT_PERIOD.nanos() >> 1,
     ));
 
-    let query_result = state_query(&test_case, &lease_address.to_string());
+    let query_result = state_query(&test_case, lease_address.as_ref());
 
     let StateResponse::Opened {
         previous_margin_due,
@@ -882,7 +879,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    } = state_query(&test_case, &lease_address.to_string()) else {
+    } = state_query(&test_case, lease_address.as_ref()) else {
         unreachable!()
     };
     let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();
@@ -1059,7 +1056,7 @@ fn compare_state_with_manual_calculation() {
     let lease_address = open_lease(&mut test_case, downpayment, None);
     let quote_result = dbg!(quote_query(&test_case, downpayment));
 
-    let query_result = state_query(&test_case, &lease_address.to_string());
+    let query_result = state_query(&test_case, lease_address.as_ref());
     let expected_result =
         expected_newly_opened_state(&test_case, downpayment, create_payment_coin(0));
 
@@ -1093,7 +1090,7 @@ fn compare_state_with_lpp_state_implicit_time() {
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    let query_result = state_query(&test_case, &lease_address.to_string());
+    let query_result = state_query(&test_case, lease_address.as_ref());
     let expected_result =
         expected_newly_opened_state(&test_case, downpayment, create_payment_coin(0));
 
@@ -1146,7 +1143,7 @@ fn compare_state_with_lpp_state_explicit_time() {
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    let query_result = state_query(&test_case, &lease_address.to_string());
+    let query_result = state_query(&test_case, lease_address.as_ref());
     let expected_result =
         expected_newly_opened_state(&test_case, downpayment, create_payment_coin(0));
 
