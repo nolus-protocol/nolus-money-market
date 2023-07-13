@@ -143,7 +143,7 @@ where
     lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
-        &lease,
+        lease.clone(),
         downpayment,
         exp_borrow,
         exp_lease,
@@ -229,27 +229,19 @@ mod repay_mod {
 
         let swap_out_lpn: LpnCoin = price::total(payment, price_lpn_of());
 
-        let response: ResponseWithInterChainMsgs<'_, ()> = do_swap(
-            test_case,
-            contract_addr.clone(),
-            &cw_payment,
-            swap_out_lpn,
-        );
+        let response: ResponseWithInterChainMsgs<'_, ()> =
+            do_swap(test_case, contract_addr.clone(), &cw_payment, swap_out_lpn);
 
         expect_remote_ibc_transfer(response);
 
-        do_remote_ibc_transfer(
-            test_case,
-            contract_addr.clone(),
-            &cwcoin(swap_out_lpn),
-        )
+        do_remote_ibc_transfer(test_case, contract_addr, &cwcoin(swap_out_lpn))
     }
 
-    fn send_payment_and_transfer<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-        test_case: &'r mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+    fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+        test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
         contract_addr: Addr,
         cw_payment: CwCoin,
-    ) -> ResponseWithInterChainMsgs<'r, ()> {
+    ) -> ResponseWithInterChainMsgs<'_, ()> {
         let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
             .app
             .execute(
@@ -363,7 +355,8 @@ mod close_mod {
         contract_addr: Addr,
         expected_funds: &[CwCoin],
     ) -> AppResponse {
-        let response: ResponseWithInterChainMsgs<'_, ()> = send_close(test_case, contract_addr.clone());
+        let response: ResponseWithInterChainMsgs<'_, ()> =
+            send_close(test_case, contract_addr.clone());
 
         expect_remote_ibc_transfer(response);
 
@@ -386,9 +379,7 @@ mod close_mod {
             .ignore_response()
     }
 
-    fn expect_remote_ibc_transfer(
-        mut response: ResponseWithInterChainMsgs<'_, ()>,
-    ) {
+    fn expect_remote_ibc_transfer(mut response: ResponseWithInterChainMsgs<'_, ()>) {
         response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
 
         () = response.unwrap_response()
@@ -410,11 +401,7 @@ mod close_mod {
 
         test_case
             .app
-            .send_tokens(
-                Addr::unchecked("ica0"),
-                contract_addr.clone(),
-                funds,
-            )
+            .send_tokens(Addr::unchecked("ica0"), contract_addr.clone(), funds)
             .unwrap();
 
         assert_eq!(

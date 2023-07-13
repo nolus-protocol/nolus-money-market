@@ -614,7 +614,7 @@ where
     lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
-        &lease_addr,
+        lease_addr,
         downpayment,
         exp_borrow,
         exp_lease,
