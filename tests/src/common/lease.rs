@@ -235,10 +235,12 @@ fn do_swap<DownpaymentC, Lpn, LeaseC>(
     Lpn: Currency,
     LeaseC: Currency,
 {
+    let downpayment_equals_lease: bool = currency::equal::<DownpaymentC, LeaseC>();
+
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_blank_response(app, lease_addr).ignore_response();
 
-    let remote_tx_count: usize = 1 + usize::from(!currency::equal::<DownpaymentC, LeaseC>());
+    let remote_tx_count: usize = 1 + usize::from(!downpayment_equals_lease);
 
     response.expect_submit_tx(connection_id, "0", remote_tx_count);
 
@@ -246,7 +248,7 @@ fn do_swap<DownpaymentC, Lpn, LeaseC>(
 
     check_state_opening(app, lease_addr);
 
-    let exp_swap_out = if currency::equal::<DownpaymentC, LeaseC>() {
+    let exp_swap_out = if downpayment_equals_lease {
         exp_lease - price::total(downpayment, Price::identity())
     } else {
         exp_lease
@@ -255,7 +257,7 @@ fn do_swap<DownpaymentC, Lpn, LeaseC>(
     app.send_tokens(
         Addr::unchecked(ica_addr),
         Addr::unchecked(ADMIN),
-        &if currency::equal::<DownpaymentC, LeaseC>() {
+        &if downpayment_equals_lease {
             vec![cwcoin(exp_borrow)]
         } else {
             vec![cwcoin(downpayment), cwcoin(exp_borrow)]
