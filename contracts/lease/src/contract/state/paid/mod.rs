@@ -3,11 +3,7 @@ use serde::{Deserialize, Serialize};
 use dex::Enterable;
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
-use crate::{
-    api::StateResponse,
-    contract::Lease,
-    error::{ContractError, ContractResult},
-};
+use crate::{api::StateResponse, contract::Lease, error::ContractResult};
 
 use super::{Handler, Response};
 
@@ -43,9 +39,8 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        if self.lease.lease.customer != info.sender {
-            return Err(ContractError::Unauthorized {});
-        }
+        access_control::check(&self.lease.lease.customer, &info.sender)?;
+
         let start_transfer_in = transfer_in::start(self.lease);
         start_transfer_in
             .enter(env.block.time, &deps.querier)

@@ -22,6 +22,7 @@ migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
 testing = []
 
 [dependencies]
+access-control = { workspace = true }
 lpp = { workspace = true, features = ["stub"] }
 oracle = { workspace = true, features = ["convert"] }
 profit = { workspace = true, features = ["stub"] }

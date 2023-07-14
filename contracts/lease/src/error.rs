@@ -20,8 +20,8 @@ pub enum ContractError {
     #[error("[Lease] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("[Lease] Unauthorized")]
-    Unauthorized {},
+    #[error("[Lease] {0}")]
+    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Lease] {0}")]
     CurrencyError(#[from] CurrencyError),

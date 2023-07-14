@@ -648,6 +648,7 @@ dependencies = [
 name = "lease"
 version = "0.6.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "dex",
