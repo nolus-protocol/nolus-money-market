@@ -5,8 +5,7 @@ pub(crate) fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarm
     contract_addr: Addr,
     expected_funds: &[CwCoin],
 ) -> AppResponse {
-    let response: ResponseWithInterChainMsgs<'_, ()> =
-        send_close(test_case, contract_addr.clone());
+    let response: ResponseWithInterChainMsgs<'_, ()> = send_close(test_case, contract_addr.clone());
 
     expect_remote_ibc_transfer(response);
 
