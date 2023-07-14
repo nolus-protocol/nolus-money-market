@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
@@ -43,9 +45,9 @@ impl From<HostAccount> for String {
     }
 }
 
-impl AsRef<str> for HostAccount {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
+impl Display for HostAccount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_str(self.0.as_str())
     }
 }
 
