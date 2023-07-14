@@ -260,6 +260,7 @@ fn test_quote() {
         &mut test_case.app,
         leaser,
         downpayment,
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
@@ -280,6 +281,7 @@ fn test_quote() {
         &mut test_case.app,
         leaser,
         Coin::new(15),
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
@@ -362,6 +364,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
+        None,
     );
 
     assert_eq!(
@@ -432,6 +435,7 @@ fn test_quote_fixed_rate() {
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         Coin::<Downpayment>::new(100),
+        None,
     );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(185)));
@@ -529,19 +533,23 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+        cwcoin::<Lpn, _>(1_000_000_000),
+        cwcoin::<LeaseC, _>(1_000_000_000),
+        cwcoin::<DownpaymentC, _>(1_000_000_000),
+    ])
+    .init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury_without_dispatcher()
+    .init_profit(24)
+    .init_leaser()
+    .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
 
@@ -580,6 +588,7 @@ where
         &mut test_case.app,
         leaser_addr.clone(),
         downpayment,
+        None,
     );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
@@ -605,7 +614,7 @@ where
     lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
-        &lease_addr,
+        lease_addr,
         downpayment,
         exp_borrow,
         exp_lease,

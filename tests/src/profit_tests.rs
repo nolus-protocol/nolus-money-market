@@ -235,12 +235,21 @@ fn on_alarm_foreign_only_transfer() {
 
     response.expect_ibc_transfer(
         TestCase::PROFIT_ICA_CHANNEL,
-        cwcoin::<Lpn, _>(profit_lpn),
+        cwcoin(profit_lpn),
         test_case.address_book.profit().as_str(),
         TestCase::PROFIT_ICA_ADDR,
     );
 
     let response: AppResponse = response.unwrap_response();
+
+    test_case
+        .app
+        .send_tokens(
+            test_case.address_book.profit().clone(),
+            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
+            &[cwcoin(profit_lpn)],
+        )
+        .unwrap();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
@@ -294,12 +303,21 @@ fn on_alarm_native_and_foreign_transfer() {
 
     response.expect_ibc_transfer(
         TestCase::PROFIT_ICA_CHANNEL,
-        cwcoin::<Lpn, _>(profit_lpn),
+        cwcoin(profit_lpn),
         test_case.address_book.profit().as_str(),
         TestCase::PROFIT_ICA_ADDR,
     );
 
     let response: AppResponse = response.unwrap_response();
+
+    test_case
+        .app
+        .send_tokens(
+            test_case.address_book.profit().clone(),
+            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
+            &[cwcoin(profit_lpn)],
+        )
+        .unwrap();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(

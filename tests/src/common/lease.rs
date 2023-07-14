@@ -15,7 +15,7 @@ use lease::{
 };
 use platform::{coin_legacy, trx};
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Binary, QueryRequest, WasmQuery},
+    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, QueryRequest, WasmQuery},
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::{RequestPacket, SudoMsg},
 };
@@ -191,7 +191,7 @@ pub struct InstantiatorAddresses {
 pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
     app: &mut App,
     connection_id: &str,
-    lease_addr: &Addr,
+    lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
     exp_lease: Coin<LeaseC>,
@@ -200,105 +200,95 @@ pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
     DownpaymentC: Currency,
     LeaseC: Currency,
 {
-    check_state_opening(app, lease_addr);
+    check_state_opening(app, lease_addr.clone());
 
     let ica_addr = "ica0";
     let ica_port = format!("icacontroller-{ica_addr}");
     let ica_channel = format!("channel-{ica_addr}");
 
-    send_ibc_responses(
+    let response: ResponseWithInterChainMsgs<'_, ()> = confirm_ica_and_transfer_funds(
         app,
-        lease_addr,
+        lease_addr.clone(),
         connection_id,
         (&ica_channel, &ica_port, ica_addr),
-        downpayment,
-        exp_borrow,
+        (downpayment, exp_borrow),
     );
 
-    do_swap(app, lease_addr, connection_id, downpayment, exp_lease);
+    expect_swap(
+        response,
+        connection_id,
+        1 + usize::from(!currency::equal::<DownpaymentC, LeaseC>()),
+    );
+
+    check_state_opening(app, lease_addr.clone());
+
+    assert_eq!(
+        app.query().query_all_balances(lease_addr.clone()).unwrap(),
+        vec![],
+    );
+
+    do_swap(
+        app,
+        lease_addr,
+        ica_addr,
+        (downpayment, exp_borrow, exp_lease),
+    );
 }
 
-fn do_swap<DownpaymentC, LeaseC>(
-    app: &mut App,
-    lease_addr: &Addr,
-    connection_id: &str,
-    downpayment: Coin<DownpaymentC>,
-    exp_lease: Coin<LeaseC>,
-) where
-    DownpaymentC: Currency,
-    LeaseC: Currency,
-{
-    let mut response: ResponseWithInterChainMsgs<'_, ()> =
-        send_blank_response(app, lease_addr).ignore_response();
-
-    let remote_tx_count: usize = 1 + usize::from(!currency::equal::<DownpaymentC, LeaseC>());
-
-    response.expect_submit_tx(connection_id, "0", remote_tx_count);
-
-    () = response.unwrap_response();
-
-    check_state_opening(app, lease_addr);
-
-    let exp_swap_out = if currency::equal::<DownpaymentC, LeaseC>() {
-        exp_lease - price::total(downpayment, Price::identity())
-    } else {
-        exp_lease
-    };
-
-    send_swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
-
-    check_state_opened(app, lease_addr);
-}
-
-fn send_ibc_responses<DownpaymentC, Lpn>(
-    app: &mut App,
-    lease_addr: &Addr,
+fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
+    app: &'r mut App,
+    lease_addr: Addr,
     connection_id: &str,
     (ica_channel, ica_port, ica_addr): (&str, &str, &str),
-    downpayment: Coin<DownpaymentC>,
-    exp_borrow: Coin<Lpn>,
-) where
+    (downpayment, exp_borrow): (Coin<DownpaymentC>, Coin<Lpn>),
+) -> ResponseWithInterChainMsgs<'r, ()>
+where
     DownpaymentC: Currency,
     Lpn: Currency,
 {
-    send_response_and_expect(
+    let response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
         app,
-        |app: &mut App| {
-            send_open_ica_response(
-                app,
-                lease_addr,
-                connection_id,
-                ica_channel,
-                ica_port,
-                ica_addr,
-            )
-        },
-        lease_addr,
+        lease_addr.clone(),
+        connection_id,
+        ica_channel,
+        ica_port,
         ica_addr,
-        downpayment,
-    );
+    )
+    .ignore_response();
 
-    send_response_and_expect(
+    expect_ibc_transfer(response, &lease_addr, ica_addr, downpayment);
+
+    check_state_opening(app, lease_addr.clone());
+
+    let response: ResponseWithInterChainMsgs<'_, ()> = do_ibc_transfer(
         app,
-        |app: &mut App| send_blank_response(app, lease_addr),
+        lease_addr.clone(),
+        Addr::unchecked(ica_addr),
+        &cwcoin(downpayment),
+    )
+    .ignore_response();
+
+    expect_ibc_transfer(response, &lease_addr, ica_addr, exp_borrow);
+
+    check_state_opening(app, lease_addr.clone());
+
+    do_ibc_transfer(
+        app,
         lease_addr,
-        ica_addr,
-        exp_borrow,
-    );
+        Addr::unchecked(ica_addr),
+        &cwcoin(exp_borrow),
+    )
+    .ignore_response()
 }
 
-fn send_response_and_expect<F, C>(
-    app: &mut App,
-    send_response: F,
+fn expect_ibc_transfer<C>(
+    mut response: ResponseWithInterChainMsgs<'_, ()>,
     lease_addr: &Addr,
     ica_addr: &str,
     coin: Coin<C>,
 ) where
-    F: for<'t> FnOnce(&'t mut App) -> ResponseWithInterChainMsgs<'t, AppResponse>,
     C: Currency,
 {
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_response(app).ignore_response();
-
     response.expect_ibc_transfer(
         TestCase::LEASER_IBC_CHANNEL,
         cwcoin::<C, _>(coin),
@@ -306,21 +296,31 @@ fn send_response_and_expect<F, C>(
         ica_addr,
     );
 
-    () = response.unwrap_response();
+    response.unwrap_response()
+}
 
-    check_state_opening(app, lease_addr);
+fn do_ibc_transfer<'r>(
+    app: &'r mut App,
+    lease_addr: Addr,
+    ica_addr: Addr,
+    cw_coin: &CwCoin,
+) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+    app.send_tokens(lease_addr.clone(), ica_addr, std::slice::from_ref(cw_coin))
+        .unwrap();
+
+    send_blank_response(app, lease_addr)
 }
 
 fn send_open_ica_response<'r>(
     app: &'r mut App,
-    lease_addr: &Addr,
+    lease_addr: Addr,
     connection_id: &str,
     ica_channel: &str,
     ica_port: &str,
     ica_addr: &str,
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     app.sudo(
-        Addr::unchecked(lease_addr),
+        lease_addr,
         &SudoMsg::OpenAck {
             port_id: ica_port.to_string(),
             channel_id: ica_channel.to_string(),
@@ -341,79 +341,103 @@ fn send_open_ica_response<'r>(
     .unwrap()
 }
 
-fn fetch_state(app: &mut App, lease: &Addr) -> StateResponse {
-    app.query()
-        .query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: lease.to_string(),
-            msg: to_binary(&StateQuery {}).unwrap(),
-        }))
-        .unwrap()
+fn expect_swap(
+    mut response: ResponseWithInterChainMsgs<'_, ()>,
+    connection_id: &str,
+    remote_tx_count: usize,
+) {
+    response.expect_submit_tx(connection_id, "0", remote_tx_count);
+
+    response.unwrap_response()
 }
 
-fn check_state_opening(app: &mut App, lease: &Addr) {
-    if !matches!(fetch_state(app, lease), StateResponse::Opening { .. }) {
-        panic!("Opening lease failed! Lease is expected to be in opening state!");
-    }
-}
-
-fn check_state_opened(app: &mut App, lease: &Addr) {
-    if !matches!(fetch_state(app, lease), StateResponse::Opened { .. }) {
-        panic!("Opening lease failed! Lease is not yet it opened state!");
-    }
-}
-
-fn send_swap_response<DownpaymentC, LeaseC>(
+fn do_swap<DownpaymentC, Lpn, LeaseC>(
     app: &mut App,
-    lease: &Addr,
-    swap_out: Coin<LeaseC>,
-    expected_amounts_count: usize,
+    lease_addr: Addr,
+    ica_addr: &str,
+    (downpayment, exp_borrow, exp_lease): (Coin<DownpaymentC>, Coin<Lpn>, Coin<LeaseC>),
 ) where
     DownpaymentC: Currency,
+    Lpn: Currency,
     LeaseC: Currency,
 {
-    let amounts_out: Vec<Amount> = if currency::equal::<DownpaymentC, LeaseC>() {
-        vec![swap_out.into()]
+    let downpayment_equals_lease: bool = currency::equal::<DownpaymentC, LeaseC>();
+
+    let exp_swap_out: Coin<LeaseC> = if downpayment_equals_lease {
+        exp_lease - price::total(downpayment, Price::identity())
     } else {
-        let downpayment_out = 1;
-        let borrow_amount = Into::<Amount>::into(swap_out) - downpayment_out;
-        vec![downpayment_out, borrow_amount]
+        exp_lease
     };
 
-    assert_eq!(amounts_out.len(), expected_amounts_count);
+    app.send_tokens(
+        Addr::unchecked(ica_addr),
+        Addr::unchecked(ADMIN),
+        &[cwcoin(exp_borrow), cwcoin(downpayment)][..1 + usize::from(!downpayment_equals_lease)],
+    )
+    .unwrap();
 
-    check_state_opening(app, lease);
+    assert_eq!(
+        app.query().query_all_balances(ica_addr).unwrap().as_slice(),
+        &[cwcoin(downpayment)][..usize::from(downpayment_equals_lease)],
+    );
 
-    let swap_resp = swap_exact_in_resp(amounts_out);
+    app.send_tokens(
+        Addr::unchecked(ADMIN),
+        Addr::unchecked(ica_addr),
+        &[cwcoin(exp_swap_out)],
+    )
+    .unwrap();
 
-    () = send_response(app, lease, swap_resp)
-        .ignore_response()
-        .unwrap_response();
+    send_swap_response(
+        app,
+        lease_addr.clone(),
+        exp_swap_out,
+        downpayment_equals_lease,
+    );
+
+    check_state_opened(app, lease_addr);
 }
 
-fn swap_exact_in_resp<I>(amounts: I) -> Binary
-where
-    I: IntoIterator<Item = Amount>,
+fn send_swap_response<LeaseC>(
+    app: &mut App,
+    lease: Addr,
+    swap_out: Coin<LeaseC>,
+    downpayment_equals_lease: bool,
+) where
+    LeaseC: Currency,
 {
-    let msgs = amounts
-        .into_iter()
-        .map(swap_trx::build_exact_amount_in_resp);
-    trx::encode_msg_responses(msgs).into()
+    let downpayment_equals_lease_as_amount: Amount = (!downpayment_equals_lease).into();
+
+    let amounts_out = [
+        Amount::from(swap_out) - downpayment_equals_lease_as_amount,
+        downpayment_equals_lease_as_amount,
+    ]
+    .into_iter()
+    .filter(|&amount: &Amount| amount != 0);
+
+    send_response(
+        app,
+        lease,
+        trx::encode_msg_responses(amounts_out.map(swap_trx::build_exact_amount_in_resp)).into(),
+    )
+    .ignore_response()
+    .unwrap_response()
 }
 
-fn send_blank_response<'r>(
-    app: &'r mut App,
-    lease_addr: &Addr,
-) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+fn send_blank_response(
+    app: &mut App,
+    lease_addr: Addr,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     send_response(app, lease_addr, Default::default())
 }
 
-fn send_response<'r>(
-    app: &'r mut App,
-    lease_addr: &Addr,
+fn send_response(
+    app: &mut App,
+    lease_addr: Addr,
     resp: Binary,
-) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     app.sudo(
-        Addr::unchecked(lease_addr),
+        lease_addr,
         &SudoMsg::Response {
             // TODO fill-in with real/valid response data
             request: RequestPacket {
@@ -430,4 +454,25 @@ fn send_response<'r>(
         },
     )
     .unwrap()
+}
+
+fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
+    app.query()
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: lease.into_string(),
+            msg: to_binary(&StateQuery {}).unwrap(),
+        }))
+        .unwrap()
+}
+
+fn check_state_opening(app: &mut App, lease: Addr) {
+    if !matches!(fetch_state(app, lease), StateResponse::Opening { .. }) {
+        panic!("Opening lease failed! Lease is expected to be in opening state!");
+    }
+}
+
+fn check_state_opened(app: &mut App, lease: Addr) {
+    if !matches!(fetch_state(app, lease), StateResponse::Opened { .. }) {
+        panic!("Opening lease failed! Lease is not yet it opened state!");
+    }
 }

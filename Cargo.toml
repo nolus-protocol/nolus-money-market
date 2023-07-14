@@ -54,6 +54,7 @@ cosmos-sdk-proto = { version = "0.17", default-features = false }
 
 # Other
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", rev = "d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e" }
+osmosis-std = { version = "0.12", default-features = false }
 
 [profile.release]
 opt-level = "s"
