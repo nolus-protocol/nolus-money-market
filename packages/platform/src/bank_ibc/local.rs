@@ -24,6 +24,7 @@ pub struct Sender<'c> {
     ack_tip: CwCoin,
     timeout_tip: CwCoin,
     amounts: Vec<CwCoin>,
+    memo: String,
 }
 
 impl<'c> Sender<'c> {
@@ -34,6 +35,7 @@ impl<'c> Sender<'c> {
         timeout: Timestamp,
         ack_tip: Coin<C>,
         timeout_tip: Coin<C>,
+        memo: String,
     ) -> Self
     where
         C: Currency,
@@ -46,6 +48,7 @@ impl<'c> Sender<'c> {
             ack_tip: coin_legacy::to_cosmwasm_impl(ack_tip),
             timeout_tip: coin_legacy::to_cosmwasm_impl(timeout_tip),
             amounts: vec![],
+            memo,
         }
     }
 
@@ -61,13 +64,18 @@ impl<'c> Sender<'c> {
     }
 
     fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> + 'c {
-        let channel = self.channel;
-        let sender = self.sender;
-        let receiver = self.receiver;
-        let timeout = self.timeout;
-        let ack_tip = self.ack_tip;
-        let timeout_tip = self.timeout_tip;
-        self.amounts.into_iter().map(move |amount| {
+        let Self {
+            channel,
+            sender,
+            receiver,
+            timeout,
+            ack_tip,
+            timeout_tip,
+            amounts,
+            memo,
+        } = self;
+
+        amounts.into_iter().map(move |amount: CwCoin| {
             new_msg(
                 channel,
                 sender.clone(),
@@ -76,6 +84,7 @@ impl<'c> Sender<'c> {
                 timeout,
                 ack_tip.clone(),
                 timeout_tip.clone(),
+                memo.clone(),
             )
         })
     }
@@ -91,6 +100,7 @@ fn new_msg(
     timeout: Timestamp,
     ack_tip: CwCoin,
     timeout_tip: CwCoin,
+    memo: String,
 ) -> NeutronMsg {
     let timeout_height = RequestPacketTimeoutHeight {
         revision_height: None,
@@ -109,6 +119,7 @@ fn new_msg(
             ack_fee: vec![ack_tip],
             timeout_fee: vec![timeout_tip],
         },
+        memo,
     }
 }
 
@@ -151,6 +162,7 @@ mod test {
             timeout,
             ack_fee,
             timeout_fee,
+            "MEMO".into(),
         );
 
         let coin1: Coin<Dai> = 234214.into();
@@ -172,6 +184,7 @@ mod test {
                 timeout,
                 coin_legacy::to_cosmwasm_impl(ack_fee),
                 coin_legacy::to_cosmwasm_impl(timeout_fee),
+                "TODO MEMO".into(),
             ));
             batch.schedule_execute_no_reply(new_msg(
                 channel,
@@ -181,6 +194,7 @@ mod test {
                 timeout,
                 coin_legacy::to_cosmwasm_impl(ack_fee),
                 coin_legacy::to_cosmwasm_impl(timeout_fee),
+                "TODO MEMO".into(),
             ));
             batch
         });

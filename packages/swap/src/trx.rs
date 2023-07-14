@@ -1,6 +1,6 @@
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
-};
+use osmosis_std::types::osmosis::{gamm::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
+}, poolmanager::v1beta1::SwapAmountInRoute};
 
 use currency::{self, Group, Symbol};
 use finance::coin::{Amount, CoinDTO};
@@ -101,7 +101,7 @@ fn to_dex_symbol(ticker: Symbol<'_>) -> Result<Symbol<'_>> {
 
 #[cfg(test)]
 mod test {
-    use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
+    use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
     use currency::{
         lpn::{Lpns, Usdc},

@@ -55,6 +55,11 @@ impl Account {
             &self.owner,
             &self.host,
             now,
+            format!(
+                "Transfer out: {sender} -> {receiver}",
+                sender = self.owner,
+                receiver = self.host.as_ref()
+            ),
         )
     }
 
