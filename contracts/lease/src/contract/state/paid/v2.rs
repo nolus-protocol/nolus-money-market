@@ -61,12 +61,12 @@ impl TransferInInit {
 impl Migrate for TransferInInit {
     fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
         Ok(Response::no_msgs(DexState::from(Into::<
-            TransferInInitV3<TransferInSpec>,
+            TransferInInitV3<TransferInSpec, DexState>,
         >::into(self))))
     }
 }
 
-impl From<TransferInInit> for TransferInInitV3<TransferInSpec> {
+impl From<TransferInInit> for TransferInInitV3<TransferInSpec, DexState> {
     fn from(value: TransferInInit) -> Self {
         transfer_in::start(value.lease.into())
     }

@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
@@ -18,16 +19,18 @@ use crate::{
 use super::transfer_in_init::TransferInInit;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferInFinish<SwapTask>
+pub struct TransferInFinish<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
     spec: SwapTask,
     amount_in: CoinDTO<SwapTask::OutG>,
     timeout: Timestamp,
+    #[serde(skip)]
+    _state_enum: PhantomData<SEnum>,
 }
 
-impl<SwapTask> TransferInFinish<SwapTask>
+impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
@@ -49,14 +52,17 @@ where
             spec,
             amount_in,
             timeout,
+            _state_enum: Default::default(),
         }
     }
 }
 
-impl<SwapTask> TransferInFinish<SwapTask>
+impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
     SwapTask::OutG: Clone,
+    Self: Into<SEnum>,
+    TransferInInit<SwapTask, SEnum>: Into<SEnum>,
 {
     pub(super) fn try_complete(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
         transfer_in::check_received(&self.amount_in, &env.contract.address, &deps.querier)
@@ -98,12 +104,14 @@ where
     }
 }
 
-impl<SwapTask> Handler for TransferInFinish<SwapTask>
+impl<SwapTask, SEnum> Handler for TransferInFinish<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
     SwapTask::OutG: Clone,
+    Self: Into<SEnum>,
+    TransferInInit<SwapTask, SEnum>: Into<SEnum>,
 {
-    type Response = super::out_local::State<SwapTask>;
+    type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -111,7 +119,7 @@ where
     }
 }
 
-impl<SwapTask> Contract for TransferInFinish<SwapTask>
+impl<SwapTask, SEnum> Contract for TransferInFinish<SwapTask, SEnum>
 where
     SwapTask:
         SwapTaskT + ContractInSwap<TransferInFinishState, <SwapTask as SwapTaskT>::StateResponse>,
@@ -123,7 +131,7 @@ where
     }
 }
 
-impl<SwapTask> Display for TransferInFinish<SwapTask>
+impl<SwapTask, ForwardToInnerMsg> Display for TransferInFinish<SwapTask, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
 {

@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::{lease::LeaseGroup, Symbol};
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, SwapState, SwapTask,
-    TransferInFinishState, TransferInInitState, TransferOutState,
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
+    SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
@@ -16,7 +16,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, paid::ClosingTrx, StateResponse},
     contract::{
-        state::{closed::Closed, SwapResult},
+        state::{closed::Closed, resp_delivery::ForwardToDexEntry, SwapResult},
         Lease,
     },
     error::ContractResult,
@@ -24,8 +24,8 @@ use crate::{
 };
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState = dex::TransferInInit<TransferIn>;
-pub(in crate::contract::state) type DexState = dex::StateLocalOut<TransferIn>;
+pub(super) type StartState = StartTransferInState<TransferIn, ForwardToDexEntry>;
+pub(in crate::contract::state) type DexState = dex::StateLocalOut<TransferIn, ForwardToDexEntry>;
 
 pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
     let amount_in = lease.lease.amount.clone();

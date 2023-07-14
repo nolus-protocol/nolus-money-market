@@ -22,7 +22,7 @@ use crate::{
     swap_task::{CoinVisitor, IterNext},
     timeout,
     trx::TransferOutTrx,
-    Contract, ContractInSwap, TransferOutState,
+    Contract, ContractInSwap, TimeAlarm, TransferOutState,
 };
 
 use super::{
@@ -190,6 +190,15 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("TransferOut at {}", self.spec.label().into()))
+    }
+}
+
+impl<SwapTask, SEnum> TimeAlarm for TransferOut<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
+        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
     }
 }
 

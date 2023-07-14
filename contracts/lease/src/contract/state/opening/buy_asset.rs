@@ -19,7 +19,7 @@ use crate::{
     api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::{self, OpenLoanRespResult},
-        state::{opened::active::Active, SwapResult},
+        state::{opened::active::Active, resp_delivery::ForwardToDexEntry, SwapResult},
         Lease,
     },
     error::ContractResult,
@@ -28,8 +28,8 @@ use crate::{
 };
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState = StartLocalRemoteState<BuyAsset>;
-pub(in crate::contract::state) type DexState = dex::StateRemoteOut<BuyAsset>;
+pub(super) type StartState = StartLocalRemoteState<BuyAsset, ForwardToDexEntry>;
+pub(in crate::contract::state) type DexState = dex::StateRemoteOut<BuyAsset, ForwardToDexEntry>;
 
 pub(in crate::contract::state::opening) fn start(
     form: NewLeaseForm,
@@ -37,7 +37,7 @@ pub(in crate::contract::state::opening) fn start(
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
-) -> StartLocalRemoteState<BuyAsset> {
+) -> StartState {
     dex::start_local_remote(BuyAsset::new(form, dex_account, downpayment, loan, deps))
 }
 

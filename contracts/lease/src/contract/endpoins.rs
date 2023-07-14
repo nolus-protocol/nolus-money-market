@@ -139,6 +139,10 @@ fn process_execute(
         ExecuteMsg::Close() => state.close(deps, env, info),
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(deps.as_ref(), env, info),
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(deps.as_ref(), env, info),
+        ExecuteMsg::DexCallback() => {
+            access_control::check(&info.sender, &env.contract.address)?;
+            state.on_dex_inner(deps.as_ref(), env)
+        }
     }
 }
 

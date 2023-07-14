@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +13,9 @@ use crate::{
     swap_task::SwapTask as SwapTaskT,
     timeout,
     trx::IBC_TIMEOUT,
-    ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable, TransferInInitState,
+    ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm,
+    TransferInInitPostRecoverIca, TransferInInitPreRecoverIca, TransferInInitRecoverIca,
+    TransferInInitState,
 };
 
 use super::transfer_in_finish::TransferInFinish;
@@ -20,20 +23,26 @@ use super::transfer_in_finish::TransferInFinish;
 /// Transfer in a coin from DEX
 ///
 #[derive(Serialize, Deserialize)]
-pub struct TransferInInit<SwapTask>
+pub struct TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
     spec: SwapTask,
     amount_in: CoinDTO<SwapTask::OutG>,
+    #[serde(skip)]
+    _state_enum: PhantomData<SEnum>,
 }
 
-impl<SwapTask> TransferInInit<SwapTask>
+impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
     pub fn new(spec: SwapTask, amount_in: CoinDTO<SwapTask::OutG>) -> Self {
-        Self { spec, amount_in }
+        Self {
+            spec,
+            amount_in,
+            _state_enum: Default::default(),
+        }
     }
 
     #[cfg(feature = "migration")]
@@ -42,7 +51,7 @@ where
     }
 }
 
-impl<SwapTask> TransferInInit<SwapTask>
+impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
@@ -53,18 +62,24 @@ where
     }
 }
 
-impl<SwapTask> TransferInInit<SwapTask>
+impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
     SwapTask::OutG: Clone,
+    Self: Into<SEnum>,
+    TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
+    SEnum: From<TransferInInitPreRecoverIca<SwapTask, SEnum>>,
+    SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
+    SEnum: From<TransferInInitPostRecoverIca<SwapTask, SEnum>>,
 {
     fn on_response(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        let finish = TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
+        let finish: TransferInFinish<SwapTask, SEnum> =
+            TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
         finish.try_complete(deps, env).map_into()
     }
 }
 
-impl<SwapTask> DexConnectable for TransferInInit<SwapTask>
+impl<SwapTask, SEnum> DexConnectable for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
@@ -73,7 +88,7 @@ where
     }
 }
 
-impl<SwapTask> Enterable for TransferInInit<SwapTask>
+impl<SwapTask, SEnum> Enterable for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
@@ -82,12 +97,17 @@ where
     }
 }
 
-impl<SwapTask> Handler for TransferInInit<SwapTask>
+impl<SwapTask, SEnum> Handler for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
     SwapTask::OutG: Clone,
+    Self: Into<SEnum>,
+    TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
+    SEnum: From<TransferInInitPreRecoverIca<SwapTask, SEnum>>,
+    SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
+    SEnum: From<TransferInInitPostRecoverIca<SwapTask, SEnum>>,
 {
-    type Response = super::out_local::State<SwapTask>;
+    type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -101,7 +121,7 @@ where
     }
 }
 
-impl<SwapTask> Contract for TransferInInit<SwapTask>
+impl<SwapTask, SEnum> Contract for TransferInInit<SwapTask, SEnum>
 where
     SwapTask:
         SwapTaskT + ContractInSwap<TransferInInitState, <SwapTask as SwapTaskT>::StateResponse>,
@@ -113,7 +133,7 @@ where
     }
 }
 
-impl<SwapTask> Display for TransferInInit<SwapTask>
+impl<SwapTask, ForwardToInnerMsg> Display for TransferInInit<SwapTask, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
 {
@@ -122,5 +142,14 @@ where
             "TransferInInit at {}",
             self.spec.label().into()
         ))
+    }
+}
+
+impl<SwapTask, SEnum> TimeAlarm for TransferInInit<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
+        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
     }
 }

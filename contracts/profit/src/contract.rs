@@ -8,7 +8,7 @@ use platform::{message::Response as MessageResponse, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -88,6 +88,11 @@ pub fn execute(
 
             Ok(response::empty_response())
         }
+        ExecuteMsg::DexCallback() => {
+            access_control::check(&env.contract.address, &info.sender)?;
+
+            todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+        }
     }
 }
 
@@ -103,6 +108,11 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
     next_state.store(deps.storage)?;
 
     Ok(response::response_only_messages(response))
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn reply(mut _deps: DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<CwResponse> {
+    todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
 }
 
 fn try_handle_neutron_msg(

@@ -93,18 +93,16 @@ impl Batch {
         Ok(())
     }
 
-    pub fn schedule_execute_wasm_reply_error<M, C>(
+    pub fn schedule_execute_wasm_reply_error_no_funds<M>(
         &mut self,
         addr: &Addr,
         msg: M,
-        funds: Option<Coin<C>>,
         reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,
-        C: Currency,
     {
-        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
         let msg_cw = SubMsg::reply_on_error(wasm_msg, reply_id);
 
         self.msgs.push(msg_cw);

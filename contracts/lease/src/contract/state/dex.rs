@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
 use platform::state_machine;
-use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp,
+};
 
 use crate::{
     api::{self, StateResponse},
@@ -61,8 +63,19 @@ where
             .map_err(Into::into)
     }
 
+    fn on_dex_inner(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.on_inner(deps, env).into()
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
+    }
+
+    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+        self.handler
+            .reply(deps, env, msg)
+            .map(state_machine::from)
+            .map_err(Into::into)
     }
 
     fn on_time_alarm(

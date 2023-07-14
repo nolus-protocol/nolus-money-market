@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Api, Binary, Deps, Env};
+use sdk::cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -50,16 +50,30 @@ where
         Err(err(self, "handle open ica response", deps.api))
     }
 
+    /// The entry point of a response delivery
     fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle transaction response", deps.api)).into()
     }
 
+    /// The entry point of an error delivery
     fn on_error(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
         Err(err(self, "handle transaction error", deps.api))
     }
 
+    /// The entry point of a timeout delivery
     fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
         Err(err(self, "handle transaction timeout", deps.api))
+    }
+
+    /// The actual delivery of a response, error, and timeout
+    ///
+    /// Intended to act as a level of indirection allowing a common error handling
+    fn on_inner(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle inner", deps.api)).into()
+    }
+
+    fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
+        Err(err(self, "handle reply", deps.api))
     }
 
     fn on_time_alarm(self, deps: Deps<'_>, _env: Env) -> Result<Self> {

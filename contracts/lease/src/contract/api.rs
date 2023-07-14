@@ -40,6 +40,19 @@ where
         err("dex timeout")
     }
 
+    /// The inner entry point for safe delivery of a Dex response, error or timeout
+    ///
+    /// The aim is to plug another level in the Cosmwasm messages tree. That allows the code
+    /// to handle errors that might occur in the sub-messages, not only in the main one.
+    /// Cosmwasm guarantees that it would call `reply` when the sub-message is scheduled
+    /// with the correct flag, e.g. ReplyOn::Error or ReplyOn::Always.
+    /// Intended to be invoked always by the same contract instance.
+    /// The anticipated execution flow, for example when delivering a Dex response, is
+    /// `on_dex_response`, `on_dex_inner`, sub-message-1, ... sub-message-N, `reply`
+    fn on_dex_inner(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("dex inner")
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {

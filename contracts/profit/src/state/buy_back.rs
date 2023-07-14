@@ -24,7 +24,10 @@ use crate::{
     typedefs::CadenceHours,
 };
 
-use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
+use super::{
+    idle::Idle, resp_delivery::ForwardToDexEntry, Config, ConfigManagement, SetupDexHandler, State,
+    StateEnum,
+};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -131,7 +134,7 @@ impl SwapTask for BuyBack {
     }
 }
 
-impl ConfigManagement for StateLocalOut<BuyBack> {
+impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry> {
     fn try_update_config(self, _: CadenceHours) -> ContractResult<Self> {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",
@@ -145,7 +148,7 @@ impl ConfigManagement for StateLocalOut<BuyBack> {
     }
 }
 
-impl SetupDexHandler for StateLocalOut<BuyBack> {
+impl SetupDexHandler for StateLocalOut<BuyBack, ForwardToDexEntry> {
     type State = Self;
 }
 

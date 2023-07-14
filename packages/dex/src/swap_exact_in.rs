@@ -30,7 +30,7 @@ use crate::{
     timeout,
     transfer_in_init::TransferInInit,
     trx::SwapTrx,
-    ContractInSwap,
+    ContractInSwap, ForwardToInner, TimeAlarm,
 };
 
 use super::{Contract, SwapState};
@@ -154,11 +154,13 @@ where
     }
 }
 
-impl<SwapTask> Handler for SwapExactIn<SwapTask, super::out_local::State<SwapTask>>
+impl<SwapTask, ForwardToInnerMsg> Handler
+    for SwapExactIn<SwapTask, super::out_local::State<SwapTask, ForwardToInnerMsg>>
 where
     SwapTask: SwapTaskT,
+    ForwardToInnerMsg: ForwardToInner,
 {
-    type Response = super::out_local::State<SwapTask>;
+    type Response = super::out_local::State<SwapTask, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -180,11 +182,12 @@ where
     }
 }
 
-impl<SwapTask> Handler for SwapExactIn<SwapTask, super::out_remote::State<SwapTask>>
+impl<SwapTask, ForwardToInnerMsg> Handler
+    for SwapExactIn<SwapTask, super::out_remote::State<SwapTask, ForwardToInnerMsg>>
 where
     SwapTask: SwapTaskT,
 {
-    type Response = super::out_remote::State<SwapTask>;
+    type Response = super::out_remote::State<SwapTask, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -222,5 +225,14 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("SwapExactIn at {}", self.spec.label().into()))
+    }
+}
+
+impl<SwapTask, SEnum> TimeAlarm for SwapExactIn<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
+        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
     }
 }

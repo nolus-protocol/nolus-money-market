@@ -22,7 +22,14 @@ pub struct MigrateMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     TimeAlarm {},
-    Config { cadence_hours: CadenceHours },
+    Config {
+        cadence_hours: CadenceHours,
+    },
+
+    /// An entry point for safe delivery of a Dex response, error or timeout
+    ///
+    /// Invoked always by the same contract instance.
+    DexCallback(),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

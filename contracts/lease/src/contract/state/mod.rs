@@ -30,6 +30,7 @@ mod liquidated;
 mod opened;
 mod opening;
 mod paid;
+mod resp_delivery;
 #[cfg(feature = "migration")]
 mod v2;
 
