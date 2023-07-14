@@ -101,7 +101,7 @@ fn err<S>(state: S, op: &str, api: &dyn Api) -> Error
 where
     S: Display,
 {
-    let err = Error::unsupported_operation(format!("{op} on {state}"));
+    let err = Error::unsupported_operation(op, state);
     api.debug(&format!("{err}"));
     err
 }
