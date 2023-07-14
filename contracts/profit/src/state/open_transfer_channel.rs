@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use dex::{ConnectionParams, Handler, Response as DexResponse};
@@ -55,5 +57,11 @@ impl SetupDexHandler for OpenTransferChannel {
             response: PlatformResponse::messages_only(ica_connector.enter()),
             next_state: ica_connector,
         })
+    }
+}
+
+impl Display for OpenTransferChannel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("OpenTransferChannel"))
     }
 }

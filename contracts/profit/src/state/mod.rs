@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -220,6 +222,17 @@ impl Handler for State {
             StateEnum::OpenIca(ica) => ica.on_time_alarm(deps, env).map_into(),
             StateEnum::Idle(idle) => idle.on_time_alarm(deps, env).map_into(),
             StateEnum::BuyBack(buy_back) => buy_back.on_time_alarm(deps, env).map_into(),
+        }
+    }
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            StateEnum::OpenTransferChannel(transfer) => Display::fmt(&transfer, f),
+            StateEnum::OpenIca(ica) => Display::fmt(&ica, f),
+            StateEnum::Idle(idle) => Display::fmt(&idle, f),
+            StateEnum::BuyBack(buy_back) => Display::fmt(&buy_back, f),
         }
     }
 }

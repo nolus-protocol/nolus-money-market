@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, Contract as DexContract, DexConnectable, IcaConnectee};
@@ -69,5 +71,11 @@ impl DexContract for OpenIcaAccount {
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: OngoingTrx::OpenIcaAccount {},
         })
+    }
+}
+
+impl Display for OpenIcaAccount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("OpenIcaAccount"))
     }
 }

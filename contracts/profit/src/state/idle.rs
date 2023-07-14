@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -136,6 +139,12 @@ impl Handler for Idle {
 
 impl SetupDexHandler for Idle {
     type State = Self;
+}
+
+impl Display for Idle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("Idle"))
+    }
 }
 
 struct CoinToDTO<FilterC, G>(PhantomData<FilterC>, PhantomData<G>)

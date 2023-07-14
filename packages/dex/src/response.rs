@@ -1,4 +1,4 @@
-use std::result::Result as StdResult;
+use std::{fmt::Display, result::Result as StdResult};
 
 use platform::{
     message::Response as MessageResponse,
@@ -36,7 +36,7 @@ where
 
 pub trait Handler
 where
-    Self: Sized,
+    Self: Sized + Display,
 {
     type Response;
     type SwapResult;
@@ -47,23 +47,23 @@ where
         deps: Deps<'_>,
         _env: Env,
     ) -> ContinueResult<Self> {
-        Err(err("handle open ica response", deps.api))
+        Err(err(self, "handle open ica response", deps.api))
     }
 
     fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err("handle transaction response", deps.api)).into()
+        Err(err(self, "handle transaction response", deps.api)).into()
     }
 
     fn on_error(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err("handle transaction error", deps.api))
+        Err(err(self, "handle transaction error", deps.api))
     }
 
     fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err("handle transaction timeout", deps.api))
+        Err(err(self, "handle transaction timeout", deps.api))
     }
 
     fn on_time_alarm(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err("handle time alarm", deps.api)).into()
+        Err(err(self, "handle time alarm", deps.api)).into()
     }
 }
 
@@ -97,9 +97,12 @@ where
     }
 }
 
-fn err(op: &str, api: &dyn Api) -> Error {
-    let err = Error::unsupported_operation(op);
-    api.debug(&format!("{:?}", op));
+fn err<S>(state: S, op: &str, api: &dyn Api) -> Error
+where
+    S: Display,
+{
+    let err = Error::unsupported_operation(format!("{op} on {state}"));
+    api.debug(&format!("{err}"));
     err
 }
 

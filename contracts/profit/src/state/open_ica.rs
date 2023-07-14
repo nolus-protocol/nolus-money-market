@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
@@ -35,6 +37,12 @@ impl IcaConnectee for OpenIca {
 impl DexConnectable for OpenIca {
     fn dex(&self) -> &ConnectionParams {
         &self.dex
+    }
+}
+
+impl Display for OpenIca {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("Idle"))
     }
 }
 

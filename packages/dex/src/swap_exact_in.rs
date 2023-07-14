@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -210,5 +213,14 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
+    }
+}
+
+impl<SwapTask, SEnum> Display for SwapExactIn<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("SwapExactIn at {}", self.spec.label().into()))
     }
 }

@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -65,5 +68,14 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.state.state(now, querier)
+    }
+}
+
+impl<S, SEnum> Display for InRecovery<S, SEnum>
+where
+    S: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("InRecovery({})", self.state))
     }
 }

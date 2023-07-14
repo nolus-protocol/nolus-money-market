@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
@@ -118,5 +120,17 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
+    }
+}
+
+impl<SwapTask> Display for TransferInFinish<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!(
+            "TransferInFinish at {}",
+            self.spec.label().into()
+        ))
     }
 }

@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -90,7 +93,7 @@ where
 
 impl<Connectee, SwapResult> Handler for IcaConnector<Connectee, SwapResult>
 where
-    Connectee: IcaConnectee + DexConnectable,
+    Connectee: IcaConnectee + DexConnectable + Display,
 {
     type Response = Connectee::State;
     type SwapResult = SwapResult;
@@ -122,5 +125,14 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.connectee.state(now, querier)
+    }
+}
+
+impl<Connectee, SwapResult> Display for IcaConnector<Connectee, SwapResult>
+where
+    Connectee: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("IcaConnector({})", self.connectee))
     }
 }

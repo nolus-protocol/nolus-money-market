@@ -1,4 +1,8 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -177,6 +181,15 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
+    }
+}
+
+impl<SwapTask, SEnum> Display for TransferOut<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("TransferOut at {}", self.spec.label().into()))
     }
 }
 

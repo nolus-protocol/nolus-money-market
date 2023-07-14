@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
@@ -71,5 +73,14 @@ where
 
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.enterable.state(now, querier)
+    }
+}
+
+impl<Connectee> Display for EntryDelay<Connectee>
+where
+    Connectee: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("EntryDelay({})", self.enterable))
     }
 }

@@ -212,3 +212,25 @@ mod impl_contract {
         }
     }
 }
+
+mod impl_display {
+    use std::fmt::Display;
+
+    use super::State;
+    use crate::swap_task::SwapTask as SwapTaskT;
+
+    impl<SwapTask> Display for State<SwapTask>
+    where
+        SwapTask: SwapTaskT,
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                State::TransferOut(inner) => Display::fmt(inner, f),
+                State::SwapExactIn(inner) => Display::fmt(inner, f),
+                State::SwapExactInPreRecoverIca(inner) => Display::fmt(inner, f),
+                State::SwapExactInRecoverIca(inner) => Display::fmt(inner, f),
+                State::SwapExactInPostRecoverIca(inner) => Display::fmt(inner, f),
+            }
+        }
+    }
+}
