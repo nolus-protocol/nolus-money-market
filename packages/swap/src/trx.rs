@@ -1,6 +1,7 @@
-use osmosis_std::types::osmosis::{gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
-}, poolmanager::v1beta1::SwapAmountInRoute};
+use osmosis_std::types::osmosis::{
+    gamm::v1beta1::{MsgSwapExactAmountIn, MsgSwapExactAmountInResponse},
+    poolmanager::v1beta1::SwapAmountInRoute,
+};
 
 use currency::{self, Group, Symbol};
 use finance::coin::{Amount, CoinDTO};
