@@ -24,10 +24,10 @@ use crate::common::{
 
 use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency};
 
-pub(super) use self::{close_mod::close, repay_mod::repay};
+pub(super) use self::{close::close, repay::repay};
 
-mod close_mod;
-mod repay_mod;
+mod close;
+mod repay;
 
 pub(super) fn create_payment_coin(amount: u128) -> PaymentCoin {
     PaymentCoin::new(amount)
