@@ -43,17 +43,17 @@ anyhow = "1"
 enum_dispatch = { version = "0.3", default-features = false }
 
 # CosmWasm
-cosmwasm-std = { version = "1.1", default-features = false }
-cosmwasm-storage = "1.1"
-cosmwasm-schema = "1.1"
-cw-storage-plus = "1"
+cosmwasm-std = { version = "1.2", default-features = false }
+cosmwasm-storage = "1.2"
+cosmwasm-schema = "1.2"
+cw-storage-plus = "1.1"
 cw-multi-test = "0.16.1"
 
 # Cosmos-sdk
-cosmos-sdk-proto = { version = "0.17", default-features = false }
+cosmos-sdk-proto = { version = "0.18", default-features = false }
 
 # Other
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", rev = "d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e" }
+neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.0" }
 osmosis-std = { version = "0.12", default-features = false }
 
 [profile.release]

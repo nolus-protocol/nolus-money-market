@@ -163,13 +163,13 @@ dependencies = [
 
 [[package]]
 name = "cosmos-sdk-proto"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ade369159e0256ae10c6fb5f16decc37129d6b2416710456185daacfa65bdfae"
+checksum = "cb581177a703987352eeabf6ae6989b1c6681e92ef8b9f284b6016ab90d3dc67"
 dependencies = [
  "prost 0.11.9",
  "prost-types",
- "tendermint-proto 0.30.0",
+ "tendermint-proto 0.31.1",
 ]
 
 [[package]]
@@ -725,8 +725,8 @@ dependencies = [
 
 [[package]]
 name = "neutron-sdk"
-version = "0.1.0"
-source = "git+https://github.com/neutron-org/neutron-sdk?rev=d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e#d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e"
+version = "0.6.0"
+source = "git+https://github.com/neutron-org/neutron-sdk?tag=v0.6.0#16be78cd19d4a209f37cceead67da8547a2a19af"
 dependencies = [
  "base64 0.20.0",
  "bech32",
@@ -797,9 +797,9 @@ dependencies = [
 
 [[package]]
 name = "osmosis-std"
-version = "0.12.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b3792977036dc49cfc9af9fd7a6c021fd48dfffc8ebf09324201506c65a47a"
+checksum = "c254b73ab62f7e7a19eb7249cf1443e49999ecc8169bb4535a855b6e87d55498"
 dependencies = [
  "chrono",
  "cosmwasm-std",
@@ -813,12 +813,13 @@ dependencies = [
 
 [[package]]
 name = "osmosis-std-derive"
-version = "0.12.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c501f2b8ff88b1c60ab671d7b808e947f384fa2524fe4ec8c06f63ef4be29979"
+checksum = "67a6feeb2c5de684262032a6719ff58cfecfdffa5f31eba1835faa857ac3a762"
 dependencies = [
  "itertools",
  "proc-macro2",
+ "prost-types",
  "quote",
  "syn 1.0.109",
 ]
@@ -1063,7 +1064,7 @@ name = "sdk"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "cosmos-sdk-proto 0.17.0",
+ "cosmos-sdk-proto 0.18.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -1291,9 +1292,9 @@ dependencies = [
 
 [[package]]
 name = "tendermint-proto"
-version = "0.30.0"
+version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e553ed65874c3f35a71eb60d255edfea956274b5af37a0297d54bba039fe45e3"
+checksum = "a1f15666993e193fa4d2b2479aa1e4f1bbe41283c820812df8dd618f41ca3f7a"
 dependencies = [
  "bytes",
  "flex-error",
