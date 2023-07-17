@@ -184,7 +184,7 @@ mod test {
                     coin_legacy::to_cosmwasm_impl(ack_fee),
                     coin_legacy::to_cosmwasm_impl(timeout_fee),
                 ),
-                "TODO MEMO".into(),
+                "MEMO".into(),
             ));
             batch.schedule_execute_no_reply(new_msg(
                 channel,
@@ -196,7 +196,7 @@ mod test {
                     coin_legacy::to_cosmwasm_impl(ack_fee),
                     coin_legacy::to_cosmwasm_impl(timeout_fee),
                 ),
-                "TODO MEMO".into(),
+                "MEMO".into(),
             ));
             batch
         });
