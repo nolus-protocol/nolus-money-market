@@ -284,10 +284,10 @@ define_currency!(Juno, JUNO);
 define_symbol! {
     EVMOS {
         ["dev", "test"]: {
-            /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
-            bank: "ibc/E716E3AA644A2225D13AC25196F13A4B9BBB518EF059F31ED6CAF26D157C4870",
-            /// full ibc route: transfer/channel-227/atevmos
-            dex: "ibc/3A7AC1F623B3475EE1F3CF849FBC4751FCEB956327ED4E5D49C676828EF9533E",
+            /// full ibc route: transfer/channel-0/transfer/channel-??/aevmos
+            bank: "ibc/NA_EVMOS",
+            /// full ibc route: transfer/channel-??/aevmos
+            dex: "ibc/NA_EVMOS",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-204/aevmos
@@ -297,7 +297,6 @@ define_symbol! {
         },
     }
 }
-#[cfg(feature = "testing")]
 define_currency!(Evmos, EVMOS);
 
 define_symbol! {
@@ -340,12 +339,11 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Inj, _>(ticker, v))
             .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
             .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Juno, _>(ticker, v));
+            .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Evmos, _>(ticker, v));
 
         #[cfg(feature = "testing")]
-        let r = r
-            .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Stars, _>(ticker, v));
+        let r = r.or_else(|v| maybe_visit::<Stars, _>(ticker, v));
 
         r.map_err(|v| v.0)
     }
@@ -371,12 +369,11 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Inj, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
-        let r = r
-            .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v));
+        let r = r.or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v));
 
         r.map_err(|v| v.0)
     }
