@@ -156,6 +156,24 @@ define_symbol! {
 define_currency!(Axl, AXL);
 
 define_symbol! {
+    Q_ATOM {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-??/uqatom
+            bank: "ibc/NA_Q_ATOM",
+            /// full ibc route: transfer/channel-??/uqatom
+            dex: "ibc/NA_Q_ATOM",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-522/uqatom
+            bank: "ibc/317FCA2D7554F55BBCD0019AB36F7FEA18B6D161F462AF5E565068C719A29F20",
+            /// full ibc route: transfer/channel-522/uqatom
+            dex: "ibc/FA602364BEC305A696CBDF987058E99D8B479F0318E47314C49173E8838C5BAC0",
+        },
+    }
+}
+define_currency!(QAtom, Q_ATOM);
+
+define_symbol! {
     EVMOS {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
@@ -246,7 +264,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
             .or_else(|v| maybe_visit::<Akt, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Axl, _>(ticker, v));
+            .or_else(|v| maybe_visit::<Axl, _>(ticker, v))
+            .or_else(|v| maybe_visit::<QAtom, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
@@ -273,7 +292,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Axl, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Axl, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<QAtom, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
