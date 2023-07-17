@@ -224,7 +224,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<StOsmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v));
+            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Akt, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
@@ -249,7 +250,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<StOsmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
