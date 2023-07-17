@@ -82,8 +82,7 @@ impl<'c> Sender<'c> {
                 receiver.clone(),
                 amount,
                 timeout,
-                ack_tip.clone(),
-                timeout_tip.clone(),
+                (ack_tip.clone(), timeout_tip.clone()),
                 memo.clone(),
             )
         })
@@ -98,8 +97,7 @@ fn new_msg(
     receiver: HostAccount,
     amount: CwCoin,
     timeout: Timestamp,
-    ack_tip: CwCoin,
-    timeout_tip: CwCoin,
+    (ack_tip, timeout_tip): (CwCoin, CwCoin),
     memo: String,
 ) -> NeutronMsg {
     let timeout_height = RequestPacketTimeoutHeight {
@@ -182,8 +180,10 @@ mod test {
                 receiver.clone(),
                 coin_legacy::to_cosmwasm_impl(coin1),
                 timeout,
-                coin_legacy::to_cosmwasm_impl(ack_fee),
-                coin_legacy::to_cosmwasm_impl(timeout_fee),
+                (
+                    coin_legacy::to_cosmwasm_impl(ack_fee),
+                    coin_legacy::to_cosmwasm_impl(timeout_fee),
+                ),
                 "TODO MEMO".into(),
             ));
             batch.schedule_execute_no_reply(new_msg(
@@ -192,8 +192,10 @@ mod test {
                 receiver,
                 coin_legacy::to_cosmwasm_impl(coin2),
                 timeout,
-                coin_legacy::to_cosmwasm_impl(ack_fee),
-                coin_legacy::to_cosmwasm_impl(timeout_fee),
+                (
+                    coin_legacy::to_cosmwasm_impl(ack_fee),
+                    coin_legacy::to_cosmwasm_impl(timeout_fee),
+                ),
                 "TODO MEMO".into(),
             ));
             batch
