@@ -158,9 +158,9 @@ define_currency!(Axl, AXL);
 define_symbol! {
     Q_ATOM {
         ["dev", "test"]: {
-            /// full ibc route: transfer/channel-0/transfer/channel-???/uqatom
+            /// full ibc route: transfer/channel-0/transfer/channel-??/uqatom
             bank: "ibc/NA_Q_ATOM",
-            /// full ibc route: transfer/channel-???/uqatom
+            /// full ibc route: transfer/channel-??/uqatom
             dex: "ibc/NA_Q_ATOM",
         },
         ["main"]: {
