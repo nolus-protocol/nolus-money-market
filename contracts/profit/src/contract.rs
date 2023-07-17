@@ -95,7 +95,7 @@ pub fn execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(&env.contract.address, &info.sender)?;
 
-            try_handle_execute_message(deps, env, State::on_time_alarm)
+            try_handle_execute_message(deps, env, State::on_inner)
                 .map(response::response_only_messages)
         }
     }
