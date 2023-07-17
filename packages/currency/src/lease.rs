@@ -136,6 +136,24 @@ define_symbol! {
 define_currency!(Akt, AKT);
 
 define_symbol! {
+    AXL {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-3/uaxl
+            bank: "ibc/F0B59ED58DAA6E2ADDDBCC7A432E42301E89F2E60A49D5DBC5A011FD8498A6C9",
+            /// full ibc route: transfer/channel-3/uaxl
+            dex: "ibc/9463E39D230614B313B487836D13A392BD1731928713D4C8427A083627048DB3",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-208/uaxl
+            bank: "ibc/1B03A71B8E6F6EF424411DC9326A8E0D25D096E4D2616425CFAF2AF06F0FE717",
+            /// full ibc route: transfer/channel-208/uaxl
+            dex: "ibc/903A61A498756EA560B85A85132D3AEE21B5DEDD41213725D22ABF276EA6945E",
+        },
+    }
+}
+define_currency!(Axl, AXL);
+
+define_symbol! {
     EVMOS {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
@@ -225,7 +243,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<StOsmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Akt, _>(ticker, v));
+            .or_else(|v| maybe_visit::<Akt, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Axl, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
@@ -251,7 +270,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<StOsmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Axl, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
