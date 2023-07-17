@@ -317,6 +317,24 @@ define_symbol! {
 }
 define_currency!(Evmos, EVMOS);
 
+define_symbol! {
+    MARS {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-24/umars
+            bank: "ibc/1CC042AD599E184C0F77DC5D89443C82F8A16B6E13DEC650A7A50A5D0AA330C3",
+            /// full ibc route: transfer/channel-24/umars
+            dex: "ibc/2E7368A14AC9AB7870F32CFEA687551C5064FA861868EDF7437BC877358A81F9",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-557/umars
+            bank: "ibc/783F5F8F6B41874487C3B09A2306FD5E59B9B740F930A39DD55B08CF7CB8CBF0",
+            /// full ibc route: transfer/channel-557/umars
+            dex: "ibc/573FCD90FACEE750F55A8864EF7D38265F07E5A9273FA0E8DAFD39951332B580",
+        },
+    }
+}
+define_currency!(Mars, MARS);
+
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct LeaseGroup {}
@@ -347,6 +365,7 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
             .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
             .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Mars, _>(ticker, v))
             .map_err(|v| v.0)
     }
 
@@ -374,6 +393,7 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Mars, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }
 }
