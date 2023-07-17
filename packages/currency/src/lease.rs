@@ -167,7 +167,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-522/uqatom
             bank: "ibc/317FCA2D7554F55BBCD0019AB36F7FEA18B6D161F462AF5E565068C719A29F20",
             /// full ibc route: transfer/channel-522/uqatom
-            dex: "ibc/FA602364BEC305A696CBDF987058E99D8B479F0318E47314C49173E8838C5BAC0",
+            dex: "ibc/FA602364BEC305A696CBDF987058E99D8B479F0318E47314C49173E8838C5BAC",
         },
     }
 }
