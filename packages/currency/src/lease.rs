@@ -246,6 +246,24 @@ define_symbol! {
 define_currency!(Secret, SCRT);
 
 define_symbol! {
+    STARS {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-??/ustars
+            bank: "ibc/NA_STARS",
+            /// full ibc route: transfer/channel-??/ustars
+            dex: "ibc/NA_STARS",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-75/ustars
+            bank: "ibc/11E3CF372E065ACB1A39C531A3C7E7E03F60B5D0653AD2139D31128ACD2772B5",
+            /// full ibc route: transfer/channel-75/ustars
+            dex: "ibc/987C17B11ABC2B20019178ACE62929FE9840202CE79498E29FE8E5CB02B7C0A4",
+        },
+    }
+}
+define_currency!(Stars, STARS);
+
+define_symbol! {
     CRO {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/basecro
@@ -299,19 +317,6 @@ define_symbol! {
 }
 define_currency!(Evmos, EVMOS);
 
-define_symbol! {
-    STARS {
-        ["dev", "test", "main"]: {
-            /// full ibc route: transfer/channel-0/transfer/channel-75/ustars
-            bank: "ibc/11E3CF372E065ACB1A39C531A3C7E7E03F60B5D0653AD2139D31128ACD2772B5",
-            /// full ibc route: transfer/channel-75/ustars
-            dex: "ibc/987C17B11ABC2B20019178ACE62929FE9840202CE79498E29FE8E5CB02B7C0A4",
-        },
-    }
-}
-#[cfg(feature = "testing")]
-define_currency!(Stars, STARS);
-
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct LeaseGroup {}
@@ -325,7 +330,7 @@ impl Group for LeaseGroup {
     {
         use crate::currency::maybe_visit_on_ticker as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
-        let r = maybe_visit::<Atom, _>(ticker, v)
+        maybe_visit::<Atom, _>(ticker, v)
             .or_else(|v| maybe_visit::<StAtom, _>(ticker, v))
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<StOsmo, _>(ticker, v))
@@ -338,14 +343,11 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Strd, _>(ticker, v))
             .or_else(|v| maybe_visit::<Inj, _>(ticker, v))
             .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Stars, _>(ticker, v))
             .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
             .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Evmos, _>(ticker, v));
-
-        #[cfg(feature = "testing")]
-        let r = r.or_else(|v| maybe_visit::<Stars, _>(ticker, v));
-
-        r.map_err(|v| v.0)
+            .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
+            .map_err(|v| v.0)
     }
 
     fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
@@ -355,7 +357,7 @@ impl Group for LeaseGroup {
     {
         use crate::currency::maybe_visit_on_bank_symbol as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
-        let r = maybe_visit::<Atom, _>(bank_symbol, v)
+        maybe_visit::<Atom, _>(bank_symbol, v)
             .or_else(|v| maybe_visit::<StAtom, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<StOsmo, _>(bank_symbol, v))
@@ -368,14 +370,11 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Strd, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Inj, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v));
-
-        #[cfg(feature = "testing")]
-        let r = r.or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v));
-
-        r.map_err(|v| v.0)
+            .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
+            .map_err(|v| v.0)
     }
 }
 
