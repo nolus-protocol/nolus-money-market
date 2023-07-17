@@ -264,6 +264,24 @@ define_symbol! {
 define_currency!(Cro, CRO);
 
 define_symbol! {
+    JUNO {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-1/ujunox
+            bank: "ibc/8FB044422997A8A77891DE729EC28638DDE4C81A54398F68149A058AA9B74D9F",
+            /// full ibc route: transfer/channel-1/ujunox
+            dex: "ibc/8E2FEFCBD754FA3C97411F0126B9EC76191BAA1B3959CB73CECF396A4037BBF0",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-42/ujuno
+            bank: "ibc/4F3E83AB35529435E4BFEA001F5D935E7250133347C4E1010A9C77149EF0394C",
+            /// full ibc route: transfer/channel-42/ujuno
+            dex: "ibc/46B44899322F3CD854D2D46DEEF881958467CDD4B3B10086DA49296BBED94BED",
+        },
+    }
+}
+define_currency!(Juno, JUNO);
+
+define_symbol! {
     EVMOS {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
@@ -281,19 +299,6 @@ define_symbol! {
 }
 #[cfg(feature = "testing")]
 define_currency!(Evmos, EVMOS);
-
-define_symbol! {
-    JUNO {
-        ["dev", "test", "main"]: {
-            /// full ibc route: transfer/channel-0/transfer/channel-42/ujuno
-            bank: "ibc/4F3E83AB35529435E4BFEA001F5D935E7250133347C4E1010A9C77149EF0394C",
-            /// full ibc route: transfer/channel-42/ujuno
-            dex: "ibc/46B44899322F3CD854D2D46DEEF881958467CDD4B3B10086DA49296BBED94BED",
-        },
-    }
-}
-#[cfg(feature = "testing")]
-define_currency!(Juno, JUNO);
 
 define_symbol! {
     STARS {
@@ -334,12 +339,12 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Strd, _>(ticker, v))
             .or_else(|v| maybe_visit::<Inj, _>(ticker, v))
             .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Cro, _>(ticker, v));
+            .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Juno, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
             .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
             .or_else(|v| maybe_visit::<Stars, _>(ticker, v));
 
         r.map_err(|v| v.0)
@@ -365,12 +370,12 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Strd, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Inj, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
             .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v));
 
         r.map_err(|v| v.0)
