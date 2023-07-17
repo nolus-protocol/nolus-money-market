@@ -139,9 +139,11 @@ define_symbol! {
     AXL {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-3/uaxl
-            bank: "ibc/F0B59ED58DAA6E2ADDDBCC7A432E42301E89F2E60A49D5DBC5A011FD8498A6C9",
+            /// not in use due to the lack of a pool
+            bank: "ibc/NA_AXL",
             /// full ibc route: transfer/channel-3/uaxl
-            dex: "ibc/9463E39D230614B313B487836D13A392BD1731928713D4C8427A083627048DB3",
+            /// not in use due to the lack of a pool
+            dex: "ibc/NA_AXL",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-208/uaxl
