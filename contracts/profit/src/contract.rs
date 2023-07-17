@@ -1,7 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
-use dex::{ConnectionParams, Handler as _, Ics20Channel, Response as DexResponse};
+use dex::{
+    ConnectionParams, ContinueResult as DexResult, Handler as _, Ics20Channel,
+    Response as DexResponse, Result as DexStateResult,
+};
 use oracle::stub::OracleRef;
 use platform::{message::Response as MessageResponse, response};
 #[cfg(feature = "contract-with-bindings")]
@@ -77,7 +80,8 @@ pub fn execute(
             )
             .check(&info.sender)?;
 
-            try_time_alarm(deps, env).map(response::response_only_messages)
+            try_handle_execute_message(deps, env, State::on_time_alarm)
+                .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
             ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
@@ -91,7 +95,8 @@ pub fn execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(&env.contract.address, &info.sender)?;
 
-            todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+            try_handle_execute_message(deps, env, State::on_time_alarm)
+                .map(response::response_only_messages)
         }
     }
 }
@@ -111,8 +116,8 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(mut _deps: DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<CwResponse> {
-    todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
+    try_handle_reply_message(deps, env, msg, State::reply).map(response::response_only_messages)
 }
 
 fn try_handle_neutron_msg(
@@ -153,17 +158,47 @@ fn try_handle_neutron_msg(
     }
 }
 
-fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse> {
+fn try_handle_execute_message<F>(
+    deps: DepsMut<'_>,
+    env: Env,
+    handler: F,
+) -> ContractResult<MessageResponse>
+where
+    F: FnOnce(State, Deps<'_>, Env) -> DexStateResult<State>,
+{
     let state: State = State::load(deps.storage)?;
 
     let DexResponse::<State> {
         response,
         next_state,
-    } = Result::from(state.on_time_alarm(deps.as_ref(), env))?;
+    } = Result::from(handler(state, deps.as_ref(), env))?;
 
-    next_state.store(deps.storage)?;
+    next_state
+        .store(deps.storage)
+        .map(|()| response)
+        .map_err(Into::into)
+}
 
-    Ok(response)
+fn try_handle_reply_message<F>(
+    mut deps: DepsMut<'_>,
+    env: Env,
+    msg: Reply,
+    handler: F,
+) -> ContractResult<MessageResponse>
+where
+    F: FnOnce(State, &mut DepsMut<'_>, Env, Reply) -> DexResult<State>,
+{
+    let state: State = State::load(deps.storage)?;
+
+    let DexResponse::<State> {
+        response,
+        next_state,
+    } = handler(state, &mut deps, env, msg)?;
+
+    next_state
+        .store(deps.storage)
+        .map(|()| response)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

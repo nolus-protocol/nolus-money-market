@@ -8,7 +8,7 @@ use dex::{
 };
 use platform::state_machine::{self, Response as StateMachineResponse};
 use sdk::{
-    cosmwasm_std::{Binary, Deps, Env, Storage},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage},
     cw_storage_plus::Item,
 };
 
@@ -213,6 +213,26 @@ impl Handler for State {
             StateEnum::OpenIca(ica) => ica.on_timeout(deps, env).map(state_machine::from),
             StateEnum::Idle(idle) => idle.on_timeout(deps, env).map(state_machine::from),
             StateEnum::BuyBack(buy_back) => buy_back.on_timeout(deps, env).map(state_machine::from),
+        }
+    }
+
+    fn on_inner(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => transfer.on_inner(deps, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.on_inner(deps, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_inner(deps, env).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.on_inner(deps, env).map_into(),
+        }
+    }
+
+    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: CwReply) -> ContinueResult<Self> {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
+                transfer.reply(deps, env, msg).map(state_machine::from)
+            }
+            StateEnum::OpenIca(ica) => ica.reply(deps, env, msg).map(state_machine::from),
+            StateEnum::Idle(idle) => idle.reply(deps, env, msg).map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => buy_back.reply(deps, env, msg).map(state_machine::from),
         }
     }
 
