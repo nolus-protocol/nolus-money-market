@@ -192,6 +192,24 @@ define_symbol! {
 define_currency!(StkAtom, STK_ATOM);
 
 define_symbol! {
+    STRD {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-??/ustrd
+            bank: "ibc/NA_STRD",
+            /// full ibc route: transfer/channel-??/ustrd
+            dex: "ibc/NA_STRD",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-326/ustrd
+            bank: "ibc/04CA9067228BB51F1C39A506DA00DF07E1496D8308DD21E8EF66AD6169FA722B",
+            /// full ibc route: transfer/channel-326/ustrd
+            dex: "ibc/A8CA5EE328FA10C9519DF6057DA1F69682D28F7D0F5CCC7ECB72E3DCA2D157A4",
+        },
+    }
+}
+define_currency!(Strd, STRD);
+
+define_symbol! {
     EVMOS {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
@@ -284,7 +302,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Akt, _>(ticker, v))
             .or_else(|v| maybe_visit::<Axl, _>(ticker, v))
             .or_else(|v| maybe_visit::<QAtom, _>(ticker, v))
-            .or_else(|v| maybe_visit::<StkAtom, _>(ticker, v));
+            .or_else(|v| maybe_visit::<StkAtom, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Strd, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
@@ -313,7 +332,8 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Axl, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<QAtom, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<StkAtom, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<StkAtom, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Strd, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
