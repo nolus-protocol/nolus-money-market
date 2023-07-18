@@ -143,6 +143,10 @@ fn process_execute(
             access_control::check(&info.sender, &env.contract.address)?;
             state.on_dex_inner(deps.as_ref(), env)
         }
+        ExecuteMsg::DexCallbackContinue() => {
+            access_control::check(&info.sender, &env.contract.address)?;
+            state.on_dex_inner_continue(deps.as_ref(), env)
+        }
     }
 }
 

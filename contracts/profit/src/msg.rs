@@ -26,10 +26,15 @@ pub enum ExecuteMsg {
         cadence_hours: CadenceHours,
     },
 
-    /// An entry point for safe delivery of a Dex response, error or timeout
+    /// An entry point for safe delivery of a Dex response
     ///
     /// Invoked always by the same contract instance.
     DexCallback(),
+
+    /// An entry point for safe delivery of a ICA Open response, error or timeout
+    ///
+    /// Invoked always by the same contract instance.
+    DexCallbackContinue(),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

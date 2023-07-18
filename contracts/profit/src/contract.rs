@@ -93,6 +93,11 @@ pub fn execute(
 
             todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
         }
+        ExecuteMsg::DexCallbackContinue() => {
+            access_control::check(&env.contract.address, &info.sender)?;
+
+            todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+        }
     }
 }
 

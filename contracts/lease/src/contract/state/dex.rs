@@ -67,6 +67,13 @@ where
         self.handler.on_inner(deps, env).into()
     }
 
+    fn on_dex_inner_continue(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler
+            .on_inner_continue(deps, env)
+            .map(state_machine::from)
+            .map_err(Into::into)
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
     }

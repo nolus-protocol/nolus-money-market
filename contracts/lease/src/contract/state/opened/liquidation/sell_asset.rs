@@ -14,15 +14,21 @@ use crate::{
     api::{self, opened::LiquidateTrx},
     contract::{
         cmd::LiquidationDTO,
-        state::{opened::active::Active, resp_delivery::ForwardToDexEntry, SwapResult},
+        state::{
+            opened::active::Active,
+            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            SwapResult,
+        },
         Lease,
     },
     error::ContractResult,
     event::Type,
 };
 
-pub(super) type StartState = StartRemoteLocalState<SellAsset, ForwardToDexEntry>;
-pub(crate) type DexState = dex::StateLocalOut<SellAsset, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartRemoteLocalState<SellAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(crate) type DexState =
+    dex::StateLocalOut<SellAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state) fn start(lease: Lease, liquidation: LiquidationDTO) -> StartState {
     dex::start_remote_local(SellAsset::new(lease, liquidation))

@@ -15,7 +15,7 @@ use crate::{
     contract::{
         state::{
             opened::{active::Active, repay},
-            resp_delivery::ForwardToDexEntry,
+            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
             SwapResult,
         },
         Lease,
@@ -24,8 +24,9 @@ use crate::{
     event::Type,
 };
 
-pub(super) type StartState = StartLocalLocalState<BuyLpn, ForwardToDexEntry>;
-pub(crate) type DexState = dex::StateLocalOut<BuyLpn, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartLocalLocalState<BuyLpn, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(crate) type DexState = dex::StateLocalOut<BuyLpn, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
     dex::start_local_local(BuyLpn::new(lease, payment))

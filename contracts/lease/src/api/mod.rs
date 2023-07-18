@@ -33,8 +33,12 @@ pub enum ExecuteMsg {
     // that is a limitation of cosmjs library
     PriceAlarm(),
     TimeAlarm {},
-    /// An entry point for safe delivery of a Dex response, error or timeout
+    /// An entry point for safe delivery of a Dex response
     ///
     /// Invoked always by the same contract instance.
     DexCallback(),
+    /// An entry point for safe delivery of an ICA open response, error or timeout
+    ///
+    /// Invoked always by the same contract instance.
+    DexCallbackContinue(),
 }
