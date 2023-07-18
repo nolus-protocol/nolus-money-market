@@ -34,7 +34,7 @@ pub struct Lease<Lpn, Asset, Lpp, Oracle> {
     addr: Addr,
     customer: Addr,
     amount: Coin<Asset>,
-    liability: Liability,
+    liability: Liability<Lpn>,
     loan: Loan<Lpn, Lpp>,
     oracle: Oracle,
 }
@@ -56,7 +56,7 @@ where
         addr: Addr,
         customer: Addr,
         amount: Coin<Asset>,
-        liability: Liability,
+        liability: Liability<Lpn>,
         loan: Loan<Lpn, LppLoan>,
         oracle: Oracle,
     ) -> Self {
@@ -74,18 +74,24 @@ where
         }
     }
 
-    pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
+    pub(super) fn from_dto(
+        dto: LeaseDTO,
+        lpp_loan: LppLoan,
+        oracle: Oracle,
+    ) -> ContractResult<Self> {
         let amount = dto.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
-        Self {
+        let liability = Liability::<Lpn>::try_from(dto.liability)?;
+
+        Ok(Self {
             addr: dto.addr,
             customer: dto.customer,
             amount,
-            liability: dto.liability,
+            liability,
             loan: Loan::from_dto(dto.loan, lpp_loan),
             oracle,
-        }
+        })
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
@@ -124,7 +130,7 @@ where
                 self.addr,
                 self.customer,
                 self.amount.into(),
-                self.liability,
+                self.liability.into(),
                 loan_dto,
                 time_alarms,
                 self.oracle.into(),
@@ -302,13 +308,15 @@ mod tests {
             lease,
             Addr::unchecked(CUSTOMER),
             amount,
-            Liability::new(
+            Liability::<TestLpn>::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
                 Percent::from_percent(10),
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
+                Coin::<TestLpn>::new(10_000),
+                Coin::<TestLpn>::new(15_000_000),
                 RECALC_TIME,
             ),
             loan,

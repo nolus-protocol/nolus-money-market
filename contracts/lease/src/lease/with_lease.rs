@@ -80,10 +80,7 @@ where
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        self.cmd.exec(Lease::<_, Asset, _, _>::from_dto(
-            self.lease_dto,
-            lpp_loan,
-            oracle,
-        ))
+        let lease = Lease::<_, Asset, _, _>::from_dto(self.lease_dto, lpp_loan, oracle).unwrap();
+        self.cmd.exec(lease)
     }
 }

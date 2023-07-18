@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use currency::{native::Nls, SymbolOwned};
-use finance::{liability::Liability, percent::Percent};
+use finance::{liability::dto::LiabilityDTO, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
@@ -76,7 +76,7 @@ pub(super) fn try_setup_dex(
 pub(super) fn try_configure(
     storage: &mut dyn Storage,
     lease_interest_rate_margin: Percent,
-    liability: Liability,
+    liability: LiabilityDTO,
     lease_interest_payment: InterestPaymentSpec,
 ) -> ContractResult<MessageResponse> {
     Config::update(

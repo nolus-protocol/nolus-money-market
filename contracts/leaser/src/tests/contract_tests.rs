@@ -1,7 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{test::Usdc, Currency};
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use currency::{lpn::Lpns, test::Usdc, Currency};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+    liability::dto::LiabilityDTO,
+    percent::Percent,
+};
 use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};
 use sdk::{
     cosmwasm_ext::Response,
@@ -10,7 +15,6 @@ use sdk::{
         testing::{mock_env, mock_info},
         to_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
     },
-    schemars::{self, JsonSchema},
     testing::mock_deps_with_contracts,
 };
 
@@ -30,6 +34,8 @@ const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 
 type TheCurrency = Usdc;
+type LpnCoin = Coin<TheCurrency>;
+type LpnCoinDTO = CoinDTO<Lpns>;
 
 const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
@@ -39,13 +45,15 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
-        liability: Liability::new(
+        liability: LiabilityDTO::new(
             Percent::from_percent(65),
             Percent::from_percent(5),
             Percent::from_percent(10),
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
+            LpnCoin::new(10_000).into(),
+            LpnCoin::new(15_000_000).into(),
             Duration::from_hours(1),
         ),
         lease_interest_payment: InterestPaymentSpec::new(
@@ -121,13 +129,15 @@ fn proper_initialization() {
 fn test_update_config() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
-    let expected_liability = Liability::new(
+    let expected_liability = LiabilityDTO::new(
         Percent::from_percent(55),
         Percent::from_percent(5),
         Percent::from_percent(5),
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),
+        LpnCoin::new(10_000).into(),
+        LpnCoin::new(15_000_000).into(),
         Duration::from_hours(12),
     );
     let expected_repaiment =
@@ -137,7 +147,7 @@ fn test_update_config() {
 
     let msg = SudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        liability: expected_liability,
+        liability: expected_liability.clone(),
         lease_interest_payment: expected_repaiment.clone(),
     };
 
@@ -153,7 +163,7 @@ fn test_update_config() {
 fn test_update_config_invalid_liability() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     #[serde(rename_all = "snake_case")]
     pub struct Liability {
         initial: Percent,
@@ -162,10 +172,12 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent,
         second_liq_warn: Percent,
         third_liq_warn: Percent,
+        min_liq_amount: LpnCoinDTO,
+        min_asset_amount: LpnCoinDTO,
         recalc_time: Duration,
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     #[serde(rename_all = "snake_case")]
     pub enum MockSudoMsg {
         Config {
@@ -182,6 +194,8 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent::from_percent(55),
         second_liq_warn: Percent::from_percent(55),
         third_liq_warn: Percent::from_percent(55),
+        min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
+        min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
         recalc_time: Duration::from_secs(100),
     };
     let mock_msg = MockSudoMsg::Config {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::liability::Liability;
+use finance::liability::dto::LiabilityDTO;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
@@ -13,7 +13,7 @@ pub struct LeaseDTO {
     pub(crate) addr: Addr,
     pub(crate) customer: Addr,
     pub(crate) amount: LeaseCoin,
-    pub(crate) liability: Liability,
+    pub(crate) liability: LiabilityDTO,
     pub(crate) loan: LoanDTO,
     pub(crate) time_alarms: TimeAlarmsRef,
     pub(crate) oracle: OracleRef,
@@ -24,7 +24,7 @@ impl LeaseDTO {
         addr: Addr,
         customer: Addr,
         amount: LeaseCoin,
-        liability: Liability,
+        liability: LiabilityDTO,
         loan: LoanDTO,
         time_alarms: TimeAlarmsRef,
         oracle: OracleRef,

@@ -25,8 +25,7 @@ define_symbol! {
 }
 define_currency!(Usdc, USDC);
 
-#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize, Debug)]
 pub struct Lpns {}
 
 impl Group for Lpns {

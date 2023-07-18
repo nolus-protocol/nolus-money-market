@@ -6,7 +6,12 @@ use currency::{
     lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, Group,
     SymbolOwned,
 };
-use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
+use finance::{
+    coin::Coin,
+    liability::{dto::LiabilityDTO, Liability},
+    percent::Percent,
+    price::total,
+};
 use lease::api::DownpaymentCoin;
 use lpp::{
     msg::QueryQuoteResponse,
@@ -33,7 +38,7 @@ impl<'r> WithLppLender for Quote<'r> {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
                 lpp_quote: LppQuote::new(lpp)?,
-                liability: self.liability,
+                liability: Liability::<Lpn>::try_from(self.liability)?,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
             },
@@ -48,7 +53,7 @@ impl<'r> Quote<'r> {
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
         oracle: OracleRef,
-        liability: Liability,
+        liability: LiabilityDTO,
         lease_interest_rate_margin: Percent,
         max_ltd: Option<Percent>,
     ) -> Self {
@@ -103,7 +108,7 @@ where
     downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
-    liability: Liability,
+    liability: Liability<Lpn>,
     lease_interest_rate_margin: Percent,
     max_ltd: Option<Percent>,
 }
@@ -150,7 +155,7 @@ where
     lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
-    liability: Liability,
+    liability: Liability<Lpn>,
     lease_interest_rate_margin: Percent,
     max_ltd: Option<Percent>,
 }
@@ -197,7 +202,7 @@ where
     downpayment: Coin<Dpc>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
-    liability: Liability,
+    liability: Liability<Lpn>,
     lease_interest_rate_margin: Percent,
     max_ltd: Option<Percent>,
 }

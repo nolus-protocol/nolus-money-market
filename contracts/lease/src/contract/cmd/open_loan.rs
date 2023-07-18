@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::{payment::PaymentGroup, Currency};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
-    liability::Liability,
+    liability::{dto::LiabilityDTO, Liability},
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub struct OpenLoanReq<'a> {
-    liability: &'a Liability,
+    liability: &'a LiabilityDTO,
     funds_in: Vec<CwCoin>,
     max_ltd: Option<Percent>,
     oracle: OracleRef,
@@ -28,7 +28,7 @@ pub struct OpenLoanReq<'a> {
 
 impl<'a> OpenLoanReq<'a> {
     pub fn new(
-        liability: &'a Liability,
+        liability: &'a LiabilityDTO,
         funds_in: Vec<CwCoin>,
         max_ltd: Option<Percent>,
         oracle: OracleRef,
@@ -68,9 +68,9 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
             return Err(Self::Error::InsufficientPayment(downpayment));
         }
 
-        let borrow_lpn = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd);
+        let liability_domain =
+            Liability::<Lpn>::try_from(self.liability).and_then(|liability| Ok(liability))?;
+        let borrow_lpn = liability_domain.init_borrow_amount(downpayment_lpn, self.max_ltd);
 
         lpp.open_loan_req(borrow_lpn)?;
 

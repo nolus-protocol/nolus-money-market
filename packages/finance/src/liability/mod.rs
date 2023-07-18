@@ -1,10 +1,9 @@
 use std::ops::Sub;
 
-use serde::{Deserialize, Serialize};
-
-use sdk::schemars::{self, JsonSchema};
+use currency::Currency;
 
 use crate::{
+    coin::Coin,
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
@@ -21,15 +20,13 @@ pub use self::liquidation::Liquidation;
 pub use self::liquidation::Status;
 pub use self::zone::Zone;
 
+pub mod dto;
 mod level;
 mod liquidation;
-mod unchecked;
 mod zone;
 
-#[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[serde(try_from = "unchecked::Liability")]
-pub struct Liability {
+#[derive(Copy, Clone, Debug)]
+pub struct Liability<Lpn> {
     /// The initial percentage of the amount due versus the locked collateral
     /// initial > 0
     initial: Percent,
@@ -45,13 +42,20 @@ pub struct Liability {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
     max: Percent,
+    /// The minimum overdue amount that could be collected
+    min_liq_amount: Coin<Lpn>,
+    //  The minimum amount a lease should have before being liquidated fully
+    min_asset_amount: Coin<Lpn>,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
     recalc_time: Duration,
 }
 
-impl Liability {
+impl<Lpn> Liability<Lpn>
+where
+    Lpn: Currency,
+{
     #[track_caller]
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
@@ -61,6 +65,8 @@ impl Liability {
         minus_delta_of_first_liq_warn: Percent,
         minus_delta_of_second_liq_warn: Percent,
         minus_delta_of_third_liq_warn: Percent,
+        min_liq_amount: Coin<Lpn>,
+        min_asset_amount: Coin<Lpn>,
         recalc_time: Duration,
     ) -> Self {
         let healthy = initial + delta_to_healthy;
@@ -75,6 +81,8 @@ impl Liability {
             first_liq_warn: first_liquidity_warning,
             second_liq_warn: second_liquidity_warning,
             third_liq_warn: third_liquidity_warning,
+            min_liq_amount,
+            min_asset_amount,
             recalc_time,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
@@ -156,31 +164,31 @@ impl Liability {
     }
 
     fn invariant_held(&self) -> Result<()> {
-        check(self.initial > Percent::ZERO, "Initial % should not be zero")?;
+        check::<Lpn>(self.initial > Percent::ZERO, "Initial % should not be zero")?;
 
-        check(
+        check::<Lpn>(
             self.initial <= self.healthy,
             "Initial % should be <= healthy %",
         )?;
 
-        check(
+        check::<Lpn>(
             self.healthy < self.first_liq_warn,
             "Healthy % should be < first liquidation %",
         )?;
-        check(
+        check::<Lpn>(
             self.first_liq_warn < self.second_liq_warn,
             "First liquidation % should be < second liquidation %",
         )?;
-        check(
+        check::<Lpn>(
             self.second_liq_warn < self.third_liq_warn,
             "Second liquidation % should be < third liquidation %",
         )?;
-        check(
+        check::<Lpn>(
             self.third_liq_warn < self.max,
             "Third liquidation % should be < max %",
         )?;
-        check(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
-        check(
+        check::<Lpn>(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
+        check::<Lpn>(
             self.recalc_time >= Duration::HOUR,
             "Recalculation cadence should be >= 1h",
         )?;
@@ -189,13 +197,16 @@ impl Liability {
     }
 }
 
-fn check(invariant: bool, msg: &str) -> Result<()> {
-    Error::broken_invariant_if::<Liability>(!invariant, msg)
+fn check<Lpn>(invariant: bool, msg: &str) -> Result<()>
+where
+    Lpn: Currency,
+{
+    Error::broken_invariant_if::<Liability<Lpn>>(!invariant, msg)
 }
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::{from_slice, StdError};
+    use currency::lpn::Usdc;
 
     use crate::{
         coin::{Amount, Coin},
@@ -206,101 +217,20 @@ mod test {
     };
 
     use super::{Liability, Zone};
-    use currency::test::Usdc;
 
-    #[test]
-    fn new_valid() {
-        let exp = Liability {
-            initial: Percent::from_percent(10),
-            healthy: Percent::from_percent(10),
-            first_liq_warn: Percent::from_percent(12),
-            second_liq_warn: Percent::from_percent(13),
-            third_liq_warn: Percent::from_percent(14),
-            max: Percent::from_percent(15),
-            recalc_time: Duration::from_hours(10),
-        };
-        assert_load_ok(br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#,
-        exp);
-    }
-
-    #[test]
-    fn new_edge_case() {
-        let exp = Liability {
-            initial: Percent::from_percent(1),
-            healthy: Percent::from_percent(1),
-            first_liq_warn: Percent::from_permille(11),
-            second_liq_warn: Percent::from_permille(12),
-            third_liq_warn: Percent::from_permille(13),
-            max: Percent::from_permille(14),
-            recalc_time: Duration::HOUR,
-        };
-
-        assert_load_ok(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, exp);
-    }
-
-    #[test]
-    fn new_invalid_init_percent() {
-        assert_load_err(br#"{"initial":0,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, "should not be zero");
-    }
-
-    #[test]
-    fn new_overflow_percent() {
-        const ERR_MSG: &str = "Invalid number";
-
-        assert_load_err(br#"{"initial":4294967296,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":4294967296,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":4294967296,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":4294967296,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":4294967296,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":4294967296,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
-
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":18446744073709551616}"#, ERR_MSG);
-        // u64::MAX + 1
-    }
-
-    #[test]
-    fn new_invalid_percents_relations() {
-        assert_load_err(br#"{"initial":10,"healthy":9,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, "<= healthy %");
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":10,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, "< first liquidation %");
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":11,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, "< second liquidation %");
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":12,
-                        "max":14,"recalc_time":3600000000000}"#, "< third liquidation %");
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":13,"recalc_time":3600000000000}"#, "< max %");
-    }
-
-    #[test]
-    fn new_invalid_recalc_hours() {
-        assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3599999999999}"#, ">= 1h");
-    }
+    pub type TestLpn = Usdc;
 
     #[test]
     fn test_zone_of() {
-        let l = Liability {
+        let l = Liability::<TestLpn> {
             initial: Percent::from_percent(60),
             healthy: Percent::from_percent(65),
             max: Percent::from_percent(85),
             first_liq_warn: Percent::from_permille(792),
             second_liq_warn: Percent::from_permille(815),
             third_liq_warn: Percent::from_permille(826),
+            min_liq_amount: Coin::<TestLpn>::new(10_000),
+            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         };
         assert_eq!(zone_of(&l, 0), Zone::no_warnings(l.first_liq_warn()));
@@ -358,13 +288,15 @@ mod test {
     fn amount_to_liquidate() {
         let healthy = 85;
         let max = 90;
-        let liability = Liability {
+        let liability = Liability::<TestLpn> {
             initial: Percent::from_percent(60),
             healthy: Percent::from_percent(healthy),
             max: Percent::from_percent(max),
             first_liq_warn: Percent::from_permille(860),
             second_liq_warn: Percent::from_permille(865),
             third_liq_warn: Percent::from_permille(870),
+            min_liq_amount: Coin::<TestLpn>::new(10_000),
+            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
@@ -386,7 +318,12 @@ mod test {
     }
 
     #[track_caller]
-    fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
+    fn amount_to_liquidate_int(
+        liability: Liability<TestLpn>,
+        lease: Amount,
+        due: Amount,
+        exp: Amount,
+    ) {
         let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
@@ -401,41 +338,26 @@ mod test {
         }
     }
 
-    fn assert_load_ok(json: &[u8], exp: Liability) {
-        assert_eq!(Ok(exp), from_slice::<Liability>(json));
-    }
-
-    #[track_caller]
-    fn assert_load_err(json: &[u8], msg: &str) {
-        assert!(matches!(
-            from_slice::<Liability>(json),
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg
-            }) if target_type.contains("Liability") && real_msg.contains(msg)
-        ));
-    }
-
-    fn zone_of(l: &Liability, permilles: Units) -> Zone {
+    fn zone_of(l: &Liability<TestLpn>, permilles: Units) -> Zone {
         l.zone_of(Percent::from_permille(permilles))
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
-        type Currency = Usdc;
-
-        let downpayment = Coin::<Currency>::new(d);
+        let downpayment = Coin::<TestLpn>::new(d);
         let percent = Percent::from_percent(p);
-        let calculated = Liability {
+        let calculated = Liability::<TestLpn> {
             initial: percent,
             healthy: Percent::from_percent(99),
             max: Percent::from_percent(100),
             first_liq_warn: Percent::from_permille(992),
             second_liq_warn: Percent::from_permille(995),
             third_liq_warn: Percent::from_permille(998),
+            min_liq_amount: Coin::<TestLpn>::new(10_000),
+            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         }
         .init_borrow_amount(downpayment, max_p);
 
-        assert_eq!(calculated, Coin::<Currency>::new(exp));
+        assert_eq!(calculated, Coin::<TestLpn>::new(exp));
     }
 }

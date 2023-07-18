@@ -1,5 +1,5 @@
 use currency::SymbolOwned;
-use finance::{liability::Liability, percent::Percent};
+use finance::{liability::dto::LiabilityDTO, percent::Percent};
 use lease::api::DownpaymentCoin;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -12,7 +12,7 @@ pub struct Quote<'r> {
     lease_asset: SymbolOwned,
     downpayment: DownpaymentCoin,
     oracle: OracleRef,
-    liability: Liability,
+    liability: LiabilityDTO,
     lease_interest_rate_margin: Percent,
     max_ltd: Option<Percent>,
 }

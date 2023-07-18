@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use currency::Currency;
-use finance::coin::Coin;
+use finance::{coin::Coin, liability::Liability};
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
@@ -73,7 +73,8 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let liability = self.form.liability;
+        let liability =
+            Liability::<Lpn>::try_from(self.form.liability).and_then(|liability| Ok(liability))?;
 
         let loan = Loan::new(
             self.start_at,

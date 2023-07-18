@@ -1,5 +1,11 @@
-use currency::Currency;
-use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
+use currency::{lpn::Usdc, Currency};
+use finance::{
+    coin::Coin,
+    duration::Duration,
+    liability::{dto::LiabilityDTO, Liability},
+    percent::Percent,
+    test,
+};
 use lease::api::InterestPaymentSpec;
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
@@ -18,14 +24,16 @@ impl Instantiator {
 
     pub const GRACE_PERIOD: Duration = Duration::from_days(10);
 
-    pub fn liability() -> Liability {
-        Liability::new(
+    pub fn liability() -> Liability<Usdc> {
+        Liability::<Usdc>::new(
             Percent::from_percent(65),
             Percent::from_percent(5),
             Percent::from_percent(10),
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
+            Coin::<Usdc>::new(10_000),
+            Coin::<Usdc>::new(15_000_000),
             Duration::from_hours(1),
         )
     }
@@ -50,7 +58,7 @@ impl Instantiator {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
-            liability: Self::liability(),
+            liability: LiabilityDTO::from(Self::liability()),
             lease_interest_payment: InterestPaymentSpec::new(
                 Self::REPAYMENT_PERIOD,
                 Self::GRACE_PERIOD,
