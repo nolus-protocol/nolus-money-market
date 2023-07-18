@@ -17,32 +17,40 @@ use crate::{
     Handler, TimeAlarm,
 };
 
+use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
+
 use super::Response;
+mod adapter;
 
 const REPLY_ID: u64 = 12345678901;
+
+pub type ResponseDelivery<H, ForwardToInnerMsg> =
+    ResponseDeliveryImpl<H, ForwardToInnerMsg, Binary, ResponseDeliveryAdapter>;
 
 /// Provides guaranteed response delivery
 ///
 /// If the first delivery fails the `ResponseDelivery` leverages the time alarms' guaranteed delivery
 /// scheduling a time alarm to make a delivery attempt on the next alarms dispatch cycle.
 #[derive(Serialize, Deserialize)]
-pub struct ResponseDelivery<H, ForwardToInnerMsg> {
+pub struct ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery> {
     handler: H,
-    response: Binary,
+    response: R,
     _forward_to_inner_msg: PhantomData<ForwardToInnerMsg>,
+    _delivery_adapter: PhantomData<Delivery>,
 }
 
-impl<H, ForwardToInnerMsg> ResponseDelivery<H, ForwardToInnerMsg> {
-    pub fn new(handler: H, response: Binary) -> Self {
+impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery> {
+    pub fn new(handler: H, response: R) -> Self {
         Self {
             handler,
             response,
             _forward_to_inner_msg: PhantomData::default(),
+            _delivery_adapter: PhantomData::default(),
         }
     }
 }
 
-impl<H, ForwardToInnerMsg> ResponseDelivery<H, ForwardToInnerMsg>
+impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
     ForwardToInnerMsg: ForwardToInner,
 {
@@ -57,17 +65,16 @@ where
     }
 }
 
-impl<H, ForwardToInnerMsg> ResponseDelivery<H, ForwardToInnerMsg>
+impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
     H: Handler + TimeAlarm,
     Self: Into<H::Response>,
+    Delivery: DeliveryAdapter<H, R>,
 {
     const RIGHT_AFTER_NOW: Duration = Duration::from_nanos(1);
 
     fn do_deliver(self, deps: Deps<'_>, env: Env) -> Result<Self> {
-        self.handler
-            .on_response(self.response, deps, env)
-            .map_into()
+        Delivery::deliver(self.handler, self.response, deps, env).map_into()
     }
 
     fn setup_next_delivery(self, now: Timestamp) -> ContinueResult<Self> {
@@ -84,10 +91,12 @@ where
     }
 }
 
-impl<H, ForwardToInnerMsg> Handler for ResponseDelivery<H, ForwardToInnerMsg>
+impl<H, ForwardToInnerMsg, R, Delivery> Handler
+    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
     H: Handler + TimeAlarm,
     Self: Into<H::Response>,
+    Delivery: DeliveryAdapter<H, R>,
 {
     type Response = H::Response;
     type SwapResult = H::SwapResult;
@@ -111,7 +120,8 @@ where
     }
 }
 
-impl<H, ForwardToInnerMsg> Contract for ResponseDelivery<H, ForwardToInnerMsg>
+impl<H, ForwardToInnerMsg, R, Delivery> Contract
+    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
     H: Contract,
 {
@@ -122,7 +132,8 @@ where
     }
 }
 
-impl<H, ForwardToInnerMsg> Display for ResponseDelivery<H, ForwardToInnerMsg>
+impl<H, ForwardToInnerMsg, R, Delivery> Display
+    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
     H: Display,
 {
