@@ -17,7 +17,7 @@ use crate::{
     Handler, TimeAlarm,
 };
 
-use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
+use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
 
 use super::Response;
 mod adapter;
@@ -26,6 +26,9 @@ const REPLY_ID: u64 = 12345678901;
 
 pub type ResponseDelivery<H, ForwardToInnerMsg> =
     ResponseDeliveryImpl<H, ForwardToInnerMsg, Binary, ResponseDeliveryAdapter>;
+
+pub type ICAOpenResponseDelivery<H, ForwardToInnerMsg> =
+    ResponseDeliveryImpl<H, ForwardToInnerMsg, String, ICAOpenDeliveryAdapter>;
 
 /// Provides guaranteed response delivery
 ///
@@ -77,6 +80,10 @@ where
         Delivery::deliver(self.handler, self.response, deps, env).map_into()
     }
 
+    fn do_deliver_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+        Delivery::deliver_continue(self.handler, self.response, deps, env)
+    }
+
     fn setup_next_delivery(self, now: Timestamp) -> ContinueResult<Self> {
         self.handler
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
@@ -105,6 +112,11 @@ where
         // the errors from the response delivery herebelow and from a sub-message would be
         // reported in the `fn reply`
         self.do_deliver(deps, env)
+    }
+
+    fn on_inner_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+        // see the `on_inner` comment
+        self.do_deliver_continue(deps, env)
     }
 
     fn reply(self, _deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {

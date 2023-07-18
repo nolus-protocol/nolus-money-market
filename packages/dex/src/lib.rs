@@ -1,5 +1,5 @@
 use platform::batch::Batch;
-use resp_delivery::ResponseDelivery;
+use resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery};
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 use serde::ser::Serialize;
 
@@ -63,6 +63,9 @@ pub type SwapExactInPreRecoverIca<SwapTask, SEnum> =
 pub type SwapExactInRecoverIca<SwapTask, SEnum> =
     IcaConnector<InRecovery<SwapExactIn<SwapTask, SEnum>, SEnum>, <SwapTask as SwapTaskT>::Result>;
 
+pub type SwapExactInRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<SwapExactInRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
+
 pub type SwapExactInPostRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactIn<SwapTask, SEnum>>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
@@ -75,6 +78,9 @@ pub type TransferInInitRecoverIca<SwapTask, SEnum> = IcaConnector<
     InRecovery<TransferInInit<SwapTask, SEnum>, SEnum>,
     <SwapTask as SwapTaskT>::Result,
 >;
+
+pub type TransferInInitRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<TransferInInitRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
 
 pub type TransferInInitPostRecoverIca<SwapTask, SEnum> =
     EntryDelay<TransferInInit<SwapTask, SEnum>>;
