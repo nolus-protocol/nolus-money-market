@@ -93,10 +93,10 @@ jobs:
         run: "cargo install cosmwasm-check"
       - name: "Building WASM binaries"
         shell: "sh"
-        run: "cargo workspaces exec cargo build --target wasm32-unknown-unknown"
+        run: "cargo workspaces exec cargo build --release --target wasm32-unknown-unknown"
       - name: "Checking WASM binaries"
         shell: "sh"
-        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
+        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/release/*.wasm"
   build_optimized_dev_net:
     runs-on: "ubuntu-latest"
     needs:
