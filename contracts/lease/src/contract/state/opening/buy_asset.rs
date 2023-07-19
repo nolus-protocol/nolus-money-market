@@ -31,11 +31,13 @@ use crate::{
     lease::IntoDTOResult,
 };
 
+use super::open_ica::OpenIcaAccount;
+
 type AssetGroup = LeaseGroup;
 pub(super) type StartState =
-    StartLocalRemoteState<BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+    StartLocalRemoteState<OpenIcaAccount, BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
 pub(in crate::contract::state) type DexState =
-    dex::StateRemoteOut<BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+    dex::StateRemoteOut<OpenIcaAccount, BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state::opening) fn start(
     form: NewLeaseForm,

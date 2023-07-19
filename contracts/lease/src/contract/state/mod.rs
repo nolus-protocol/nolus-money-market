@@ -36,8 +36,6 @@ mod v2;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
-type OpenIcaAccount = DexState<::dex::IcaConnector<opening::open_ica::OpenIcaAccount, SwapResult>>;
-
 type BuyAsset = DexState<opening::buy_asset::DexState>;
 
 type OpenedActive = LeaseState<opened::active::Active>;
@@ -60,7 +58,6 @@ type SwapResult = ContractResult<Response>;
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,
-    OpenIcaAccount,
     BuyAsset,
     OpenedActive,
     BuyLpn,

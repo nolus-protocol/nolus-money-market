@@ -185,16 +185,16 @@ where
     }
 }
 
-impl<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
+impl<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_remote::State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
+        super::out_remote::State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
     >
 where
     SwapTask: SwapTaskT,
 {
     type Response =
-        super::out_remote::State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
+        super::out_remote::State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {

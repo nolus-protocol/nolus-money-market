@@ -481,6 +481,46 @@ mod impl_handler {
             }
         }
 
+        fn on_inner_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+            match self {
+                State::TransferOut(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::SwapExactIn(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::SwapExactInRespDelivery(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::SwapExactInPreRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::SwapExactInRecoverIca(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::SwapExactInPostRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInInit(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::TransferInInitRespDelivery(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInInitPreRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInInitRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInInitRecoverIcaRespDelivery(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInInitPostRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, deps, env)
+                }
+                State::TransferInFinish(inner) => Handler::on_inner_continue(inner, deps, env),
+            }
+        }
+
         fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
                 State::TransferOut(inner) => Handler::reply(inner, deps, env, msg),

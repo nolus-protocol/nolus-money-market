@@ -22,7 +22,7 @@ use crate::{
     event::Type,
 };
 
-use super::open_ica::OpenIcaAccount;
+use super::{buy_asset::DexState, open_ica::OpenIcaAccount};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct RequestLoan {
@@ -80,7 +80,7 @@ impl RequestLoan {
         ));
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_events(open_ica.enter(), emitter),
-            LeaseDexState::new(open_ica),
+            LeaseDexState::new(Into::<DexState>::into(open_ica)),
         ))
     }
 

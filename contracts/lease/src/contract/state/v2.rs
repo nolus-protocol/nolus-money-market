@@ -1,7 +1,7 @@
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize, Serializer};
 
-use dex::{Account as AccountV3, ConnectionParams, IcaConnector as IcaConnectorV3};
+use dex::{Account as AccountV3, ConnectionParams};
 use platform::{ica::HostAccount, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -17,7 +17,7 @@ use crate::{
     lease::LeaseDTO,
 };
 
-use super::{opened, opening::v2::RequestLoan, OpenIcaAccount as OpenIcaAccountV3, Response};
+use super::{opened, opening::v2::RequestLoan, Response};
 
 type OpenIcaAccount = IcaConnector<super::opening::v2::OpenIcaAccount>;
 type OpeningTransferOut = super::opening::v2::Transfer;
@@ -84,10 +84,9 @@ pub(in crate::contract) struct IcaConnector<Connectee> {
 }
 
 impl Migrate for OpenIcaAccount {
+    // Into::<            opening::buy_asset::DexState,
     fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
-        Ok(Response::no_msgs(OpenIcaAccountV3::new(
-            IcaConnectorV3::new(self.connectee.into()),
-        )))
+        Ok(Response::no_msgs(BuyAssetV3::new(self.connectee.into())))
     }
 }
 

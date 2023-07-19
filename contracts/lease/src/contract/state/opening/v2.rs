@@ -61,11 +61,12 @@ pub(in crate::contract) struct OpenIcaAccount {
     deps: (LppLenderRef, OracleRef),
 }
 
-impl From<OpenIcaAccount> for OpenIcaAccountV3 {
+impl From<OpenIcaAccount> for DexState {
     fn from(value: OpenIcaAccount) -> Self {
         let timealarms = TimeAlarmsRef::unchecked(value.new_lease.form.time_alarms.clone());
         let deps = (value.deps.0.into(), value.deps.1, timealarms);
-        Self::new(value.new_lease, value.downpayment, value.loan, deps)
+        let open_ica = OpenIcaAccountV3::new(value.new_lease, value.downpayment, value.loan, deps);
+        IcaConnector::new(open_ica).into()
     }
 }
 

@@ -2,9 +2,13 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, ConnectionParams, Contract as DexContract, DexConnectable, IcaConnectee};
+use dex::{
+    Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
+    TimeAlarm,
+};
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
+use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -77,5 +81,11 @@ impl DexContract for OpenIcaAccount {
 impl Display for OpenIcaAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("OpenIcaAccount"))
+    }
+}
+
+impl TimeAlarm for OpenIcaAccount {
+    fn setup_alarm(&self, forr: Timestamp) -> DexResult<Batch> {
+        self.deps.2.setup_alarm(forr).map_err(Into::into)
     }
 }
