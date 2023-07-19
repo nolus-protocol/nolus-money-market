@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
+use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
@@ -10,7 +11,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     account::Account, connectable::DexConnectable, connection::ConnectionParams,
-    entry_delay::EntryDelay, Contract,
+    entry_delay::EntryDelay, error::Result as DexResult, Contract, TimeAlarm,
 };
 
 use super::ica_connector::{Enterable, IcaConnectee};
@@ -77,5 +78,11 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("InRecovery({})", self.state))
+    }
+}
+
+impl<S, SEnum> TimeAlarm for InRecovery<S, SEnum> {
+    fn setup_alarm(&self, forr: Timestamp) -> DexResult<Batch> {
+        self.time_alarms.setup_alarm(forr).map_err(Into::into)
     }
 }

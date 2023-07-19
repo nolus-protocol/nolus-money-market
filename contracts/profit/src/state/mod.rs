@@ -18,8 +18,11 @@ use crate::{
 
 pub(crate) use self::config::Config;
 use self::{
-    buy_back::BuyBack, idle::Idle, open_ica::OpenIca, open_transfer_channel::OpenTransferChannel,
-    resp_delivery::ForwardToDexEntry,
+    buy_back::BuyBack,
+    idle::Idle,
+    open_ica::OpenIca,
+    open_transfer_channel::OpenTransferChannel,
+    resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
 };
 
 mod buy_back;
@@ -65,7 +68,7 @@ enum StateEnum {
     OpenTransferChannel(OpenTransferChannel),
     OpenIca(IcaConnector),
     Idle(Idle),
-    BuyBack(StateLocalOut<BuyBack, ForwardToDexEntry>),
+    BuyBack(StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue>),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -131,8 +134,8 @@ impl From<Idle> for State {
     }
 }
 
-impl From<StateLocalOut<BuyBack, ForwardToDexEntry>> for State {
-    fn from(value: StateLocalOut<BuyBack, ForwardToDexEntry>) -> Self {
+impl From<StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue>> for State {
+    fn from(value: StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue>) -> Self {
         Self(StateEnum::BuyBack(value))
     }
 }

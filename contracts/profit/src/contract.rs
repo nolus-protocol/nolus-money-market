@@ -98,6 +98,11 @@ pub fn execute(
             try_handle_execute_message(deps, env, State::on_inner)
                 .map(response::response_only_messages)
         }
+        ExecuteMsg::DexCallbackContinue() => {
+            access_control::check(&env.contract.address, &info.sender)?;
+
+            todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+        }
     }
 }
 

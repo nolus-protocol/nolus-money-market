@@ -17,7 +17,7 @@ use crate::{
     connectable::DexConnectable,
     error::Result,
     response::{ContinueResult, Handler},
-    Contract, Response,
+    Contract, Response, TimeAlarm,
 };
 
 pub trait Enterable {
@@ -134,5 +134,14 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("IcaConnector({})", self.connectee))
+    }
+}
+
+impl<Connectee, SwapResult> TimeAlarm for IcaConnector<Connectee, SwapResult>
+where
+    Connectee: TimeAlarm,
+{
+    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
+        self.connectee.setup_alarm(forr).map_err(Into::into)
     }
 }

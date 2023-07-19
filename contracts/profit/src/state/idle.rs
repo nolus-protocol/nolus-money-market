@@ -24,8 +24,9 @@ use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
 
 use super::{
-    buy_back::BuyBack, resp_delivery::ForwardToDexEntry, CadenceHours, Config, ConfigManagement,
-    SetupDexHandler, State, StateEnum,
+    buy_back::BuyBack,
+    resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -88,9 +89,13 @@ impl Idle {
         now: Timestamp,
         balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<DexResponse<Self>> {
-        let state: StartLocalLocalState<BuyBack, ForwardToDexEntry> = dex::start_local_local(
-            BuyBack::new(profit_addr, self.config, self.account, balances),
-        );
+        let state: StartLocalLocalState<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> =
+            dex::start_local_local(BuyBack::new(
+                profit_addr,
+                self.config,
+                self.account,
+                balances,
+            ));
 
         state
             .enter(now, querier)

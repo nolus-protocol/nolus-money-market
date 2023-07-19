@@ -16,7 +16,11 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, paid::ClosingTrx, StateResponse},
     contract::{
-        state::{closed::Closed, resp_delivery::ForwardToDexEntry, SwapResult},
+        state::{
+            closed::Closed,
+            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            SwapResult,
+        },
         Lease,
     },
     error::ContractResult,
@@ -24,8 +28,10 @@ use crate::{
 };
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState = StartTransferInState<TransferIn, ForwardToDexEntry>;
-pub(in crate::contract::state) type DexState = dex::StateLocalOut<TransferIn, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartTransferInState<TransferIn, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(in crate::contract::state) type DexState =
+    dex::StateLocalOut<TransferIn, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
     let amount_in = lease.lease.amount.clone();

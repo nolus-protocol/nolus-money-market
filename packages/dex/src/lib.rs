@@ -1,5 +1,5 @@
 use platform::batch::Batch;
-use resp_delivery::ResponseDelivery;
+use resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery};
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 use serde::ser::Serialize;
 
@@ -63,6 +63,9 @@ pub type SwapExactInPreRecoverIca<SwapTask, SEnum> =
 pub type SwapExactInRecoverIca<SwapTask, SEnum> =
     IcaConnector<InRecovery<SwapExactIn<SwapTask, SEnum>, SEnum>, <SwapTask as SwapTaskT>::Result>;
 
+pub type SwapExactInRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<SwapExactInRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
+
 pub type SwapExactInPostRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactIn<SwapTask, SEnum>>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
@@ -75,6 +78,9 @@ pub type TransferInInitRecoverIca<SwapTask, SEnum> = IcaConnector<
     InRecovery<TransferInInit<SwapTask, SEnum>, SEnum>,
     <SwapTask as SwapTaskT>::Result,
 >;
+
+pub type TransferInInitRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<TransferInInitRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
 
 pub type TransferInInitPostRecoverIca<SwapTask, SEnum> =
     EntryDelay<TransferInInit<SwapTask, SEnum>>;
@@ -126,6 +132,23 @@ where
         .enter(env.contract.address)
         .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
         .into()
+}
+
+pub(crate) fn forward_to_inner_ica<H, ForwardToInnerContinueMsg, SEnum>(
+    inner: H,
+    counterparty_version: String,
+    env: Env,
+) -> ContinueResult<SEnum>
+where
+    ForwardToInnerContinueMsg: ForwardToInner,
+    SEnum: Handler,
+    ICAOpenResponseDelivery<H, ForwardToInnerContinueMsg>: Into<SEnum::Response>,
+{
+    let next_state =
+        ICAOpenResponseDelivery::<H, ForwardToInnerContinueMsg>::new(inner, counterparty_version);
+    next_state
+        .enter(env.contract.address)
+        .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
 }
 
 pub trait TimeAlarm {

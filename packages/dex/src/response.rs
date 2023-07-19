@@ -65,11 +65,18 @@ where
         Err(err(self, "handle transaction timeout", deps.api))
     }
 
-    /// The actual delivery of a response, error, and timeout
+    /// The actual delivery of a response
     ///
     /// Intended to act as a level of indirection allowing a common error handling
     fn on_inner(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle inner", deps.api)).into()
+    }
+
+    /// The actual delivery of an ICA open response, error, and timeout
+    ///
+    /// Intended to act as a level of indirection allowing a common error handling
+    fn on_inner_continue(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
+        Err(err(self, "handle inner to 'Continue' response", deps.api))
     }
 
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
@@ -111,7 +118,7 @@ where
     }
 }
 
-fn err<S>(state: S, op: &str, api: &dyn Api) -> Error
+pub(crate) fn err<S>(state: S, op: &str, api: &dyn Api) -> Error
 where
     S: Display,
 {
