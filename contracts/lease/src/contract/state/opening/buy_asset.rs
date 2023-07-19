@@ -19,7 +19,11 @@ use crate::{
     api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::{self, OpenLoanRespResult},
-        state::{opened::active::Active, resp_delivery::ForwardToDexEntry, SwapResult},
+        state::{
+            opened::active::Active,
+            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            SwapResult,
+        },
         Lease,
     },
     error::ContractResult,
@@ -28,8 +32,10 @@ use crate::{
 };
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState = StartLocalRemoteState<BuyAsset, ForwardToDexEntry>;
-pub(in crate::contract::state) type DexState = dex::StateRemoteOut<BuyAsset, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartLocalRemoteState<BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(in crate::contract::state) type DexState =
+    dex::StateRemoteOut<BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state::opening) fn start(
     form: NewLeaseForm,

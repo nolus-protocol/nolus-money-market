@@ -272,6 +272,7 @@ mod impl_handler {
         SwapTask: SwapTaskT,
         SwapTask::OutG: Clone,
         ForwardToInnerMsg: ForwardToInner,
+        ForwardToInnerContinueMsg: ForwardToInner,
     {
         type Response = Self;
         type SwapResult = SwapTask::Result;
@@ -279,8 +280,8 @@ mod impl_handler {
         fn on_open_ica(
             self,
             counterparty_version: String,
-            deps: sdk::cosmwasm_std::Deps<'_>,
-            env: sdk::cosmwasm_std::Env,
+            deps: Deps<'_>,
+            env: Env,
         ) -> ContinueResult<Self> {
             match self {
                 State::TransferOut(inner) => {
@@ -299,8 +300,11 @@ mod impl_handler {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
                 State::SwapExactInRecoverIca(inner) => {
-                    // TODO do go through RespDelivery
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    crate::forward_to_inner_ica::<_, ForwardToInnerContinueMsg, Self>(
+                        inner,
+                        counterparty_version,
+                        env,
+                    )
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
@@ -318,8 +322,11 @@ mod impl_handler {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    // TODO do go through RespDelivery
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    crate::forward_to_inner_ica::<_, ForwardToInnerContinueMsg, Self>(
+                        inner,
+                        counterparty_version,
+                        env,
+                    )
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
@@ -335,11 +342,15 @@ mod impl_handler {
 
         fn on_response(self, response: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
             match self {
-                State::TransferOut(inner) => crate::forward_to_inner(inner, response, env),
+                State::TransferOut(inner) => {
+                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                }
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_response(inner, response, deps, env).map_into()
                 }
-                State::SwapExactIn(inner) => crate::forward_to_inner(inner, response, env),
+                State::SwapExactIn(inner) => {
+                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                }
                 State::SwapExactInRespDelivery(inner) => {
                     Handler::on_response(inner, response, deps, env).map_into()
                 }
@@ -355,7 +366,9 @@ mod impl_handler {
                 State::SwapExactInPostRecoverIca(inner) => {
                     Handler::on_response(inner, response, deps, env).map_into()
                 }
-                State::TransferInInit(inner) => crate::forward_to_inner(inner, response, env),
+                State::TransferInInit(inner) => {
+                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                }
 
                 State::TransferInInitRespDelivery(inner) => {
                     Handler::on_response(inner, response, deps, env).map_into()

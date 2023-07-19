@@ -134,6 +134,23 @@ where
         .into()
 }
 
+pub(crate) fn forward_to_inner_ica<H, ForwardToInnerContinueMsg, SEnum>(
+    inner: H,
+    counterparty_version: String,
+    env: Env,
+) -> ContinueResult<SEnum>
+where
+    ForwardToInnerContinueMsg: ForwardToInner,
+    SEnum: Handler,
+    ICAOpenResponseDelivery<H, ForwardToInnerContinueMsg>: Into<SEnum::Response>,
+{
+    let next_state =
+        ICAOpenResponseDelivery::<H, ForwardToInnerContinueMsg>::new(inner, counterparty_version);
+    next_state
+        .enter(env.contract.address)
+        .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
+}
+
 pub trait TimeAlarm {
     fn setup_alarm(&self, forr: Timestamp) -> DexResult<Batch>;
 }
