@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    resp_delivery::ICAOpenResponseDelivery, IcaConnector, SwapExactIn, SwapExactInPostRecoverIca,
-    SwapExactInPreRecoverIca, SwapExactInRecoverIca, SwapExactInRecoverIcaRespDelivery,
-    SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
+    resp_delivery::ICAOpenResponseDelivery, DexConnectable, IcaConnectee, IcaConnector,
+    SwapExactIn, SwapExactInPostRecoverIca, SwapExactInPreRecoverIca, SwapExactInRecoverIca,
+    SwapExactInRecoverIcaRespDelivery, SwapExactInRespDelivery, TransferOut,
+    TransferOutRespDelivery,
 };
 
 use super::swap_task::SwapTask as SwapTaskT;
@@ -32,16 +33,15 @@ where
     SwapExactInPostRecoverIca(SwapExactInPostRecoverIca<SwapTask, Self>),
 }
 
-pub type StartLocalRemoteState<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> =
-    TransferOut<SwapTask, State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>>;
+pub type StartLocalRemoteState<OpenIca, SwapTask> =
+    IcaConnector<OpenIca, <SwapTask as SwapTaskT>::Result>;
 
-pub fn start<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>(
-    spec: SwapTask,
-) -> StartLocalRemoteState<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+pub fn start<OpenIca, SwapTask>(connectee: OpenIca) -> StartLocalRemoteState<OpenIca, SwapTask>
 where
+    OpenIca: IcaConnectee + DexConnectable,
     SwapTask: SwapTaskT,
 {
-    StartLocalRemoteState::new(spec)
+    StartLocalRemoteState::<OpenIca, SwapTask>::new(connectee)
 }
 
 mod impl_into {

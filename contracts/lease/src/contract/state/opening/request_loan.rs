@@ -1,7 +1,6 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use dex::IcaConnector;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{
@@ -16,13 +15,13 @@ use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
-        state::{dex::State as LeaseDexState, Handler, Response},
+        state::{Handler, Response},
     },
     error::ContractResult,
     event::Type,
 };
 
-use super::{buy_asset::DexState, open_ica::OpenIcaAccount};
+use super::buy_asset::DexState;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct RequestLoan {
@@ -72,15 +71,10 @@ impl RequestLoan {
 
         let emitter = self.emit_ok(env.contract.address);
 
-        let open_ica = IcaConnector::new(OpenIcaAccount::new(
-            self.new_lease,
-            self.downpayment,
-            loan,
-            self.deps,
-        ));
+        let open_ica = super::buy_asset::start(self.new_lease, self.downpayment, loan, self.deps);
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_events(open_ica.enter(), emitter),
-            LeaseDexState::new(Into::<DexState>::into(open_ica)),
+            Into::<DexState>::into(open_ica),
         ))
     }
 

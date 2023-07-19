@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use dex::{
     Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
-    TimeAlarm,
+    TimeAlarm, TransferOut,
 };
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
@@ -18,7 +18,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::buy_asset::{self, DexState, StartState};
+use super::buy_asset::{BuyAsset, DexState};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct OpenIcaAccount {
@@ -46,16 +46,16 @@ impl OpenIcaAccount {
 
 impl IcaConnectee for OpenIcaAccount {
     type State = DexState;
-    type NextState = StartState;
+    type NextState = TransferOut<BuyAsset, Self::State>;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
-        buy_asset::start(
+        TransferOut::new(BuyAsset::new(
             self.new_lease.form,
             dex_account,
             self.downpayment,
             self.loan,
             self.deps,
-        )
+        ))
     }
 }
 

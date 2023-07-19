@@ -54,7 +54,7 @@ where
         Self::new_with_index(spec, coin_index, last_coin_index)
     }
 
-    pub(super) fn new(spec: SwapTask) -> Self {
+    pub fn new(spec: SwapTask) -> Self {
         let first_index = Default::default();
         let last_coin_index = Self::last_coin_index(&spec);
         Self::new_with_index(spec, first_index, last_coin_index)

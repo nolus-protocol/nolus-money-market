@@ -16,7 +16,9 @@ use platform::{
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
+    api::{
+        self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, NewLeaseForm, StateResponse,
+    },
     contract::{
         cmd::{self, OpenLoanRespResult},
         state::{
@@ -34,19 +36,17 @@ use crate::{
 use super::open_ica::OpenIcaAccount;
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState =
-    StartLocalRemoteState<OpenIcaAccount, BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in crate::contract::state) type DexState =
     dex::StateRemoteOut<OpenIcaAccount, BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state::opening) fn start(
-    form: NewLeaseForm,
-    dex_account: Account,
+    new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> StartState {
-    dex::start_local_remote(BuyAsset::new(form, dex_account, downpayment, loan, deps))
+    dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(new_lease, downpayment, loan, deps))
 }
 
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
@@ -72,7 +72,7 @@ impl BuyAsset {
         Self::new(form, dex_account, downpayment, loan, deps)
     }
 
-    fn new(
+    pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,
         downpayment: DownpaymentCoin,
