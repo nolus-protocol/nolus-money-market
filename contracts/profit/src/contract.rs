@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use access_control::{ContractOwnerAccess, SingleUserAccess};
 use dex::{
     ConnectionParams, ContinueResult as DexResult, Handler as _, Ics20Channel,
-    Response as DexResponse, Result as DexStateResult,
+    Response as DexResponse,
 };
 use oracle::stub::OracleRef;
 use platform::{message::Response as MessageResponse, response};
@@ -18,6 +18,7 @@ use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
 use crate::{
+    error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
@@ -101,7 +102,8 @@ pub fn execute(
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(&env.contract.address, &info.sender)?;
 
-            todo!("implement similarly to contracts/lease/src/state/endpoints.rs")
+            try_handle_execute_message(deps, env, State::on_inner_continue)
+                .map(response::response_only_messages)
         }
     }
 }
@@ -163,20 +165,22 @@ fn try_handle_neutron_msg(
     }
 }
 
-fn try_handle_execute_message<F>(
+fn try_handle_execute_message<F, R, E>(
     deps: DepsMut<'_>,
     env: Env,
     handler: F,
 ) -> ContractResult<MessageResponse>
 where
-    F: FnOnce(State, Deps<'_>, Env) -> DexStateResult<State>,
+    F: FnOnce(State, Deps<'_>, Env) -> R,
+    R: Into<Result<DexResponse<State>, E>>,
+    ContractError: From<E>,
 {
     let state: State = State::load(deps.storage)?;
 
     let DexResponse::<State> {
         response,
         next_state,
-    } = Result::from(handler(state, deps.as_ref(), env))?;
+    } = handler(state, deps.as_ref(), env).into()?;
 
     next_state
         .store(deps.storage)
