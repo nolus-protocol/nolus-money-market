@@ -1,3 +1,5 @@
+use std::slice::Iter as SliceIter;
+
 use serde::{Deserialize, Serialize};
 
 use currency::{
@@ -96,13 +98,15 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
+        let mut coins_iter: SliceIter<'_, CoinDTO<PaymentGroup>> = self.coins.iter();
+
+        TryFind::try_find(&mut coins_iter, |coin: &&CoinDTO<PaymentGroup>| {
             visitor
                 .visit(coin)
                 .map(|result: IterNext| matches!(result, IterNext::Stop))
         })
-        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
-            if maybe_coin.is_some() {
+        .map(|_| {
+            if coins_iter.as_slice().is_empty() {
                 IterState::Complete
             } else {
                 IterState::Incomplete
