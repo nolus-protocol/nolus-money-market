@@ -35,6 +35,7 @@ impl<'a> TransferOutTrx<'a> {
         sender: &Addr,
         receiver: &HostAccount,
         now: Timestamp,
+        memo: String,
     ) -> Self {
         let sender = LocalSender::new(
             channel,
@@ -43,6 +44,7 @@ impl<'a> TransferOutTrx<'a> {
             now + IBC_TIMEOUT,
             ICA_TRANSFER_ACK_TIP,
             ICA_TRANSFER_TIMEOUT_TIP,
+            memo,
         );
 
         TransferOutTrx { sender }

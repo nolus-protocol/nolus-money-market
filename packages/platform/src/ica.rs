@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
@@ -25,6 +27,7 @@ const ICA_ACCOUNT_ID: &str = "0";
 /// Holds the address on the ICA host network
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HostAccount(String);
+
 impl TryFrom<String> for HostAccount {
     type Error = Error;
     fn try_from(addr: String) -> Result<Self> {
@@ -39,6 +42,12 @@ impl TryFrom<String> for HostAccount {
 impl From<HostAccount> for String {
     fn from(account: HostAccount) -> Self {
         account.0
+    }
+}
+
+impl Display for HostAccount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_str(self.0.as_str())
     }
 }
 
