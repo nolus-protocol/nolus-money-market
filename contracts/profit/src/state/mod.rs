@@ -228,6 +228,19 @@ impl Handler for State {
         }
     }
 
+    fn on_inner_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => transfer
+                .on_inner_continue(deps, env)
+                .map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.on_inner_continue(deps, env).map(state_machine::from),
+            StateEnum::Idle(idle) => idle.on_inner_continue(deps, env).map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => buy_back
+                .on_inner_continue(deps, env)
+                .map(state_machine::from),
+        }
+    }
+
     fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: CwReply) -> ContinueResult<Self> {
         match self.0 {
             StateEnum::OpenTransferChannel(transfer) => {
