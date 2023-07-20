@@ -20,8 +20,8 @@ use super::state::Migrate;
 use super::state::{self, Response, State};
 
 #[cfg(feature = "migration")]
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 4;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 4;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 5;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(

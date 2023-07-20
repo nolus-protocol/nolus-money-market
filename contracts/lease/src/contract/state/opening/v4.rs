@@ -16,7 +16,7 @@ use crate::{
     contract::{
         cmd::OpenLoanRespResult,
         state::{
-            v2::{Account as AccountV2, Migrate},
+            v4::{Account as AccountV2, Migrate},
             Response,
         },
     },

@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LpnCoin, PaymentCoin},
-    contract::state::{v2::Lease as LeaseV2, v2::Migrate, Response},
+    contract::state::{v4::Lease as LeaseV2, v4::Migrate, Response},
     error::ContractResult,
 };
 

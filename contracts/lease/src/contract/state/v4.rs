@@ -17,32 +17,32 @@ use crate::{
     lease::LeaseDTO,
 };
 
-use super::{opened, opening::v2::RequestLoan, Response};
+use super::{opened, opening::v4::RequestLoan, Response};
 
-type OpenIcaAccount = IcaConnector<super::opening::v2::OpenIcaAccount>;
-type OpeningTransferOut = super::opening::v2::Transfer;
-type BuyAsset = super::opening::v2::Swap;
+type OpenIcaAccount = IcaConnector<super::opening::v4::OpenIcaAccount>;
+type OpeningTransferOut = super::opening::v4::Transfer;
+type BuyAsset = super::opening::v4::Swap;
 type BuyAssetRecoverIca = IcaConnector<InRecovery<BuyAsset>>;
 type BuyAssetPostRecoverIca = PostConnector<InRecovery<BuyAsset>>;
 
-type OpenedActive = opened::v2::Active;
+type OpenedActive = opened::v4::Active;
 
-type RepaymentTransferOut = super::opened::repay::v2::TransferOut;
-type BuyLpn = super::opened::repay::v2::Swap;
+type RepaymentTransferOut = super::opened::repay::v4::TransferOut;
+type BuyLpn = super::opened::repay::v4::Swap;
 type BuyLpnRecoverIca = IcaConnector<InRecovery<BuyLpn>>;
 type BuyLpnPostRecoverIca = PostConnector<InRecovery<BuyLpn>>;
-type RepaymentTransferInInit = super::opened::repay::v2::TransferInInit;
+type RepaymentTransferInInit = super::opened::repay::v4::TransferInInit;
 type RepaymentTransferInInitRecoverIca = IcaConnector<InRecovery<RepaymentTransferInInit>>;
 type RepaymentTransferInInitPostRecoverIca = PostConnector<InRecovery<RepaymentTransferInInit>>;
 
-type RepaymentTransferInFinish = super::opened::repay::v2::TransferInFinish;
+type RepaymentTransferInFinish = super::opened::repay::v4::TransferInFinish;
 
-type PaidActive = super::paid::v2::Active;
+type PaidActive = super::paid::v4::Active;
 
-type ClosingTransferInInit = super::paid::v2::TransferInInit;
+type ClosingTransferInInit = super::paid::v4::TransferInInit;
 type ClosingTransferInInitRecoverIca = IcaConnector<InRecovery<ClosingTransferInInit>>;
 type ClosingTransferInInitPostRecoverIca = PostConnector<InRecovery<ClosingTransferInInit>>;
-type ClosingTransferInFinish = super::paid::v2::TransferInFinish;
+type ClosingTransferInFinish = super::paid::v4::TransferInFinish;
 
 #[enum_dispatch]
 pub(crate) trait Migrate

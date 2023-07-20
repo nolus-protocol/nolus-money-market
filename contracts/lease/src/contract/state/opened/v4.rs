@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     contract::state::{
-        v2::{Lease, Migrate},
+        v4::{Lease, Migrate},
         Response,
     },
     error::ContractResult,

@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     contract::{
-        state::{v2::Lease as LeaseV2, v2::Migrate, Response},
+        state::{v4::Lease as LeaseV2, v4::Migrate, Response},
         Lease as LeaseV3,
     },
     error::ContractResult,

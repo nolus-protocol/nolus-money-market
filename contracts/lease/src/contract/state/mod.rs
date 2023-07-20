@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
-pub(in crate::contract) use self::v2::{Migrate, StateV2};
+pub(in crate::contract) use self::v4::{Migrate, StateV2};
 use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
@@ -32,7 +32,7 @@ mod opening;
 mod paid;
 mod resp_delivery;
 #[cfg(feature = "migration")]
-mod v2;
+mod v4;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
