@@ -11,21 +11,24 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
 };
 
-use lease::api::{ExecuteMsg, StateResponse};
+use ::lease::api::{ExecuteMsg, StateResponse};
 
 use sdk::{
     cosmwasm_std::{Addr, Binary, Coin as CwCoin, Timestamp},
     cw_multi_test::AppResponse,
 };
 
-use crate::common::{
-    cwcoin,
-    leaser::Instantiator as LeaserInstantiator,
-    test_case::{
-        response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase,
+use crate::{
+    common::{
+        cwcoin,
+        leaser::Instantiator as LeaserInstantiator,
+        test_case::{
+            response::{RemoteChain as _, ResponseWithInterChainMsgs},
+            TestCase,
+        },
+        ADMIN, USER,
     },
-    ADMIN, USER,
+    lease,
 };
 
 use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
@@ -217,8 +220,8 @@ fn full_repay_with_excess() {
     assert_eq!(
         test_case.app.query().query_all_balances("ica0").unwrap(),
         &[cwcoin::<LeaseCurrency, _>(price::total(
-            price::total(downpayment + borrowed, super::price_lpn_of()),
-            super::price_lpn_of().inv(),
+            price::total(downpayment + borrowed, lease::price_lpn_of()),
+            lease::price_lpn_of().inv(),
         ))],
     );
 
@@ -226,8 +229,8 @@ fn full_repay_with_excess() {
         query_result,
         StateResponse::Paid {
             amount: LeaseCoin::into(price::total(
-                price::total(downpayment + borrowed, super::price_lpn_of()),
-                super::price_lpn_of().inv(),
+                price::total(downpayment + borrowed, lease::price_lpn_of()),
+                lease::price_lpn_of().inv(),
             )),
             in_progress: None,
         }

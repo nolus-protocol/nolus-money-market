@@ -1,7 +1,7 @@
+use ::lease::api::StateResponse;
 use finance::{coin::Coin, duration::Duration};
-use lease::api::StateResponse;
 
-use crate::common::leaser::Instantiator as LeaserInstantiator;
+use crate::{common::leaser::Instantiator as LeaserInstantiator, lease};
 
 use super::{LeaseCurrency, Lpn, LpnCoin, PaymentCurrency, DOWNPAYMENT};
 
@@ -10,7 +10,7 @@ fn manual_calculation() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = super::create_payment_coin(DOWNPAYMENT);
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
-    let quote_result = dbg!(super::quote_query(&test_case, downpayment));
+    let quote_result = dbg!(lease::quote_query(&test_case, downpayment));
 
     let query_result = super::state_query(&test_case, lease_address.as_ref());
     let expected_result =
@@ -135,6 +135,6 @@ fn lpp_state_explicit_time() {
 
     assert_eq!(
         query_result,
-        loan.interest_due(super::block_time(&test_case))
+        loan.interest_due(lease::block_time(&test_case))
     );
 }

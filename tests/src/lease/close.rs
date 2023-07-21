@@ -14,7 +14,7 @@ use crate::{
         },
         USER,
     },
-    lease_tests::repay,
+    lease::repay,
 };
 
 use super::{LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
