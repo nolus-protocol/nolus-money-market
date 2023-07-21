@@ -11,34 +11,37 @@ use sdk::{
     cw_multi_test::AppResponse,
 };
 
-use crate::common::{
-    cwcoin,
-    leaser::Instantiator as LeaserInstantiator,
-    test_case::{
-        response::{RemoteChain, ResponseWithInterChainMsgs},
-        TestCase,
+use crate::{
+    common::{
+        cwcoin,
+        leaser::Instantiator as LeaserInstantiator,
+        test_case::{
+            response::{RemoteChain, ResponseWithInterChainMsgs},
+            TestCase,
+        },
+        ADMIN,
     },
-    ADMIN,
+    lease_tests,
 };
 
-use super::{helpers, LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
-    let mut test_case = helpers::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = helpers::create_payment_coin(DOWNPAYMENT);
-    let lease_address = helpers::open_lease(&mut test_case, downpayment, None);
+    let mut test_case = lease_tests::create_test_case::<PaymentCurrency>();
+    let downpayment: PaymentCoin = lease_tests::create_payment_coin(DOWNPAYMENT);
+    let lease_address = lease_tests::open_lease(&mut test_case, downpayment, None);
 
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    } = helpers::state_query(&test_case, lease_address.as_ref()) else {
+    } = lease_tests::state_query(&test_case, lease_address.as_ref()) else {
         unreachable!()
     };
     let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();
 
     test_case.app.time_shift(time_pass);
 
-    helpers::feed_price(&mut test_case);
+    lease_tests::feed_price(&mut test_case);
 
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
@@ -71,7 +74,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         )
         .unwrap();
 
-    let liquidated_in_lpn: LpnCoin = price::total(liquidation_amount, helpers::price_lpn_of());
+    let liquidated_in_lpn: LpnCoin = price::total(liquidation_amount, lease_tests::price_lpn_of());
 
     test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
 
@@ -158,7 +161,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result = helpers::state_query(&test_case, lease_address.as_str());
+    let query_result = lease_tests::state_query(&test_case, lease_address.as_str());
 
     let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
         .parse::<Amount>()

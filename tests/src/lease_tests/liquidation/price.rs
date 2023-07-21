@@ -3,14 +3,17 @@ use finance::percent::Percent;
 use lease::api::ExecuteMsg;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
-use crate::common::{self, leaser::Instantiator as LeaserInstantiator, ADMIN, USER};
+use crate::{
+    common::{self, leaser::Instantiator as LeaserInstantiator, ADMIN, USER},
+    lease_tests,
+};
 
-use super::{helpers, LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
 
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
-    let mut test_case = helpers::create_test_case::<PaymentCurrency>();
-    let downpayment = helpers::create_payment_coin(DOWNPAYMENT);
-    let lease_address = helpers::open_lease(&mut test_case, downpayment, None);
+    let mut test_case = lease_tests::create_test_case::<PaymentCurrency>();
+    let downpayment = lease_tests::create_payment_coin(DOWNPAYMENT);
+    let lease_address = lease_tests::open_lease(&mut test_case, downpayment, None);
 
     common::oracle::feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
