@@ -19,7 +19,7 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub"]
 stub = []
-testing = []
+testing = ["platform/testing"]
 
 [dependencies]
 platform = { workspace = true }

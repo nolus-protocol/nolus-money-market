@@ -5,6 +5,17 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+migration = []
+testing = [
+    "currency/testing",
+    "finance/testing",
+    "oracle/testing",
+    "timealarms/testing",
+    "platform/testing",
+    "swap/testing",
+]
+
 [dependencies]
 currency = { workspace = true }
 finance = { workspace = true }
@@ -18,4 +29,4 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-finance = { workspace = true, features = ["testing"]}
+finance = { workspace = true, features = ["testing"] }

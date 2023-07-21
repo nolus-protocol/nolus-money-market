@@ -16,7 +16,14 @@ test = true
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
-testing = []
+testing = [
+    "currency/testing",
+    "finance/testing",
+    "lease/testing",
+    "lpp/testing",
+    "platform/testing",
+    "oracle/testing",
+]
 
 [dependencies]
 lease = { workspace = true }

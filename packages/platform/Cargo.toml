@@ -6,7 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-testing = ["sdk/testing"]
+testing = ["currency/testing", "finance/testing", "sdk/testing"]
 
 [dependencies]
 currency = { workspace = true }

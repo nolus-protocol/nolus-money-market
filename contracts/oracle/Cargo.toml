@@ -19,7 +19,14 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub", "convert"]
 convert = ["stub"]
-testing = ["stub"]
+testing = [
+    "stub",
+    "currency/testing",
+    "finance/testing",
+    "marketprice/testing",
+    "swap/testing",
+    "tree/testing",
+]
 stub = []
 
 [dependencies]

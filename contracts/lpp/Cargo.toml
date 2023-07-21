@@ -17,7 +17,8 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub"]
 stub = []
-testing = []
+migration = []
+testing = ["currency/testing", "finance/testing", "platform/testing"]
 
 [dependencies]
 access-control = { workspace = true }
