@@ -2,7 +2,7 @@
 
 mod common;
 mod dispatcher_tests;
-mod lease_tests;
+mod lease;
 mod leaser_tests;
 mod lpp_tests;
 mod oracle_tests;
