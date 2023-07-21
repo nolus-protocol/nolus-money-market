@@ -54,11 +54,6 @@ impl LppRef {
         Ok(Self { addr, currency })
     }
 
-    #[cfg(feature = "migration")]
-    pub fn new(addr: Addr, currency: SymbolOwned) -> Self {
-        Self { addr, currency }
-    }
-
     pub fn addr(&self) -> &Addr {
         &self.addr
     }

@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
-pub(in crate::contract) use self::v4::{Migrate, StateV2};
+pub(in crate::contract) use self::v4::{Migrate, StateV4};
 use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
@@ -75,7 +75,7 @@ pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
 }
 
 #[cfg(feature = "migration")]
-pub(super) fn load_v2(storage: &dyn Storage) -> ContractResult<StateV2> {
+pub(super) fn load_v4(storage: &dyn Storage) -> ContractResult<StateV4> {
     Item::new("state").load(storage).map_err(Into::into)
 }
 

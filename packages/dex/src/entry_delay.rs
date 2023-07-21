@@ -20,21 +20,11 @@ pub struct EntryDelay<Enterable> {
 impl<Enterable> EntryDelay<Enterable> {
     const RIGHT_AFTER_NOW: Duration = Duration::from_nanos(1);
 
-    #[cfg(feature = "migration")]
-    pub fn new_migrate(enterable: Enterable, time_alarms: TimeAlarmsRef) -> Self {
-        Self::new(enterable, time_alarms)
-    }
-
     pub(super) fn new(enterable: Enterable, time_alarms: TimeAlarmsRef) -> Self {
         Self {
             enterable,
             time_alarms,
         }
-    }
-
-    #[cfg(feature = "migration")]
-    pub fn enter_migrate(&self, now: Timestamp) -> DexResult<Batch> {
-        self.enter(now)
     }
 
     pub(super) fn enter(&self, now: Timestamp) -> DexResult<Batch> {

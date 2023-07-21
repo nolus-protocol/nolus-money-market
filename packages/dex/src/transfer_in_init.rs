@@ -44,11 +44,6 @@ where
             _state_enum: Default::default(),
         }
     }
-
-    #[cfg(feature = "migration")]
-    pub fn migrate_from(spec: SwapTask, amount_in: CoinDTO<SwapTask::OutG>) -> Self {
-        Self::new(spec, amount_in)
-    }
 }
 
 impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>

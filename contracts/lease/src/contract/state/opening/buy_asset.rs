@@ -61,17 +61,6 @@ pub(crate) struct BuyAsset {
 }
 
 impl BuyAsset {
-    #[cfg(feature = "migration")]
-    pub(super) fn migrate_to(
-        form: NewLeaseForm,
-        dex_account: Account,
-        downpayment: DownpaymentCoin,
-        loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef),
-    ) -> Self {
-        Self::new(form, dex_account, downpayment, loan, deps)
-    }
-
     pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,

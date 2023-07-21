@@ -52,11 +52,6 @@ where
             _state_enum: PhantomData,
         }
     }
-
-    #[cfg(feature = "migration")]
-    pub fn migrate_from(spec: SwapTask) -> Self {
-        Self::new(spec)
-    }
 }
 
 impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum>

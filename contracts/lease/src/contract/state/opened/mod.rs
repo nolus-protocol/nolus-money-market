@@ -11,8 +11,6 @@ pub mod active;
 mod event;
 pub mod liquidation;
 pub mod repay;
-#[cfg(feature = "migration")]
-pub mod v4;
 
 fn lease_state(
     lease: LeaseDTO,
