@@ -742,7 +742,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
                 data: Binary(platform::trx::encode_msg_responses(
                     [platform::trx::encode_msg_response(
                         MsgSwapExactAmountInResponse {
-                            token_out_amount: Amount::from(liquidation_amount).to_string(),
+                            token_out_amount: Amount::from(liquidated_in_lpn).to_string(),
                         },
                         MsgSwapExactAmountIn::TYPE_URL,
                     )]
@@ -787,6 +787,15 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .unwrap()
         .ignore_response()
         .unwrap_response();
+
+    assert_eq!(
+        test_case
+            .app
+            .query()
+            .query_all_balances(lease_address.clone())
+            .unwrap(),
+        &[],
+    );
 
     let liquidation_attributes: HashMap<String, String> = liquidation_start_response
         .events
