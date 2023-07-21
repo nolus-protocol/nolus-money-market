@@ -284,6 +284,10 @@ fn try_full_liquidation(
         FullLiquidation::new(liquidation_lpn, env.block.time, profit, time_alarms),
         querier,
     )?;
+    debug_assert!(
+        receipt.close,
+        "The full-liquidation payment should have repaid the total outstanding liability!"
+    );
 
     let liquidate_response = MessageResponse::messages_with_events(
         liquidate_messages,

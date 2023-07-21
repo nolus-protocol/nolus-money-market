@@ -2,7 +2,7 @@ use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
-use profit::stub::ProfitRef;
+use profit::stub::{Profit, ProfitRef};
 use sdk::cosmwasm_std::Timestamp;
 use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
@@ -65,6 +65,8 @@ impl WithLease for Liquidate {
         if !receipt.close() {
             return Err(ContractError::InsufficientLiquidation()); //issue #92
         }
+
+        profit.send(receipt.change());
 
         lease.try_into_dto(self.profit, self.time_alarms).map(
             |IntoDTOResult {
