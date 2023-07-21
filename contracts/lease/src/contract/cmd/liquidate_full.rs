@@ -73,7 +73,7 @@ impl WithLease for Liquidate {
              }| Self::Output {
                 lease,
                 receipt: receipt.into(),
-                messages,
+                messages: messages.merge(profit.into()),
             },
         )
     }
