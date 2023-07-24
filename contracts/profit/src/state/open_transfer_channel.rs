@@ -8,9 +8,12 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Deps, Env};
 
-use crate::{msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
-use super::{open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
+use super::{
+    open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State,
+    StateAndResponse,
+};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct OpenTransferChannel {
@@ -29,10 +32,19 @@ impl Handler for OpenTransferChannel {
 }
 
 impl ConfigManagement for OpenTransferChannel {
-    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
-        Ok(Self {
-            config: self.config.update(cadence_hours),
-        })
+    fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
+    where
+        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>,
+    {
+        f(self.config).map(
+            |StateAndResponse {
+                 state: config,
+                 response,
+             }| StateAndResponse {
+                state: Self { config },
+                response,
+            },
+        )
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
