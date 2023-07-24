@@ -19,14 +19,7 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub", "convert"]
 convert = ["stub"]
-testing = [
-    "stub",
-    "currency/testing",
-    "finance/testing",
-    "marketprice/testing",
-    "swap/testing",
-    "tree/testing",
-]
+testing = ["stub", "marketprice/testing"]
 stub = []
 
 [dependencies]
@@ -48,7 +41,7 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-finance = { workspace = true, features = ["testing"] }
+finance = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 marketprice = { workspace = true, features = ["testing"] }

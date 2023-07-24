@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 trx = ["sdk/cosmos", "dep:osmosis-std"]
-testing = ["currency/testing", "finance/testing", "platform/testing"]
+testing = []
 
 [dependencies]
 currency = { workspace = true }

@@ -19,14 +19,7 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub"]
 stub = []
-testing = [
-    "currency/testing",
-    "dex/testing",
-    "finance/testing",
-    "oracle/testing",
-    "platform/testing",
-    "timealarms/testing",
-]
+testing = []
 
 [dependencies]
 access-control = { workspace = true }
@@ -46,8 +39,9 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+currency = { workspace = true, features = ["testing"] }
 dex = { workspace = true, features = ["testing"] }
-finance = { workspace = true, features = ["testing"] }
+finance = { workspace = true }
 oracle = { workspace = true, features = ["testing"] }
 timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
