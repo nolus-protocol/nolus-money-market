@@ -15,3 +15,6 @@ sdk = { workspace = true, features = ["cosmos", "schema"] }
 gcd = "2.1"
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+currency = { workspace = true, features = ["testing"] }

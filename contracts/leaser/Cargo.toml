@@ -16,7 +16,7 @@ test = true
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
-testing = []
+testing = ["currency/testing"]
 
 [dependencies]
 lease = { workspace = true }

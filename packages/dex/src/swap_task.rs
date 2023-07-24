@@ -41,14 +41,14 @@ pub trait SwapTask {
 }
 
 #[derive(PartialEq, Eq)]
-#[cfg_attr(any(debug_assertions, test), derive(Debug))]
+#[cfg_attr(any(debug_assertions, test, feature = "testing"), derive(Debug))]
 pub enum IterState {
     Complete,
     Incomplete,
 }
 
 #[derive(PartialEq, Eq)]
-#[cfg_attr(test, derive(Clone, Debug))]
+#[cfg_attr(any(debug_assertions, test, feature = "testing"), derive(Clone, Debug))]
 pub enum IterNext {
     Stop,
     Continue,

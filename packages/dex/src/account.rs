@@ -75,6 +75,11 @@ impl Account {
             now,
         )
     }
+
+    #[cfg(feature = "testing")]
+    pub fn unchecked(owner: Addr, host: HostAccount, dex: ConnectionParams) -> Self {
+        Self { owner, host, dex }
+    }
 }
 
 impl From<Account> for HostAccount {

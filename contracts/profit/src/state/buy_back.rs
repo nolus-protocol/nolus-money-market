@@ -1,3 +1,5 @@
+use std::slice::Iter as SliceIter;
+
 use serde::{Deserialize, Serialize};
 
 use currency::{
@@ -96,13 +98,15 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
+        let mut coins_iter: SliceIter<'_, CoinDTO<PaymentGroup>> = self.coins.iter();
+
+        TryFind::try_find(&mut coins_iter, |coin: &&CoinDTO<PaymentGroup>| {
             visitor
                 .visit(coin)
                 .map(|result: IterNext| matches!(result, IterNext::Stop))
         })
-        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
-            if maybe_coin.is_some() {
+        .map(|_| {
+            if coins_iter.as_slice().is_empty() {
                 IterState::Complete
             } else {
                 IterState::Incomplete
@@ -172,3 +176,119 @@ where
 }
 
 impl<I> TryFind for I where I: Iterator + ?Sized {}
+
+#[cfg(test)]
+mod tests {
+    use currency::{
+        payment::PaymentGroup,
+        test::{Dai, Usdc},
+    };
+    use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
+    use finance::coin::{Coin, CoinDTO};
+    use platform::never::Never;
+
+    use super::BuyBack;
+
+    fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
+        use dex::{Account, ConnectionParams, Ics20Channel};
+        use oracle::stub::OracleRef;
+        use platform::ica::HostAccount;
+        use sdk::cosmwasm_std::Addr;
+        use timealarms::stub::TimeAlarmsRef;
+
+        use crate::state::Config;
+
+        BuyBack::new(
+            Addr::unchecked("DEADCODE"),
+            Config::new(
+                24,
+                Addr::unchecked("DEADCODE"),
+                OracleRef::unchecked::<_, Usdc>("DEADCODE"),
+                TimeAlarmsRef::unchecked("DEADCODE"),
+            ),
+            Account::unchecked(
+                Addr::unchecked("DEADCODE"),
+                HostAccount::try_from(String::from("DEADCODE")).unwrap(),
+                ConnectionParams {
+                    connection_id: String::from("DEADCODE"),
+                    transfer_channel: Ics20Channel {
+                        local_endpoint: String::from("DEADCODE"),
+                        remote_endpoint: String::from("DEADCODE"),
+                    },
+                },
+            ),
+            coins,
+        )
+    }
+
+    #[repr(transparent)]
+    struct Visitor {
+        stop_after: Option<usize>,
+    }
+
+    impl Visitor {
+        fn new(stop_after: Option<usize>) -> Self {
+            Self { stop_after }
+        }
+    }
+
+    impl CoinVisitor for Visitor {
+        type Result = IterNext;
+
+        type Error = Never;
+
+        fn visit<G>(&mut self, _: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+        where
+            G: currency::Group,
+        {
+            if let Some(stop_after) = &mut self.stop_after {
+                if *stop_after == 0 {
+                    return Ok(IterNext::Stop);
+                }
+
+                *stop_after -= 1;
+            }
+
+            Ok(IterNext::Continue)
+        }
+    }
+
+    #[test]
+    fn always_continue() {
+        let buy_back: BuyBack = buy_back_instance(vec![
+            Coin::<Dai>::new(100).into(),
+            Coin::<Usdc>::new(200).into(),
+        ]);
+
+        assert_eq!(
+            buy_back.on_coins(&mut Visitor::new(None)).unwrap(),
+            IterState::Complete
+        );
+    }
+
+    #[test]
+    fn stop_on_first() {
+        let buy_back: BuyBack = buy_back_instance(vec![
+            Coin::<Dai>::new(100).into(),
+            Coin::<Usdc>::new(200).into(),
+        ]);
+
+        assert_eq!(
+            buy_back.on_coins(&mut Visitor::new(Some(0))).unwrap(),
+            IterState::Incomplete
+        );
+    }
+
+    #[test]
+    fn stop_on_second() {
+        let buy_back: BuyBack = buy_back_instance(vec![
+            Coin::<Dai>::new(100).into(),
+            Coin::<Usdc>::new(200).into(),
+        ]);
+
+        assert_eq!(
+            buy_back.on_coins(&mut Visitor::new(Some(1))).unwrap(),
+            IterState::Complete
+        );
+    }
+}

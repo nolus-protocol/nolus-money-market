@@ -1,9 +1,13 @@
 [package]
 name = "dex"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+
+[features]
+migration = []
+testing = []
 
 [dependencies]
 currency = { workspace = true }
@@ -18,4 +22,4 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-finance = { workspace = true, features = ["testing"]}
+currency = { workspace = true, features = ["testing"] }
