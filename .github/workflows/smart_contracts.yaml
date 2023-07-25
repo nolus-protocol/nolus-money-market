@@ -36,20 +36,20 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
-      - uses: "Nolus-Protocol/rust-ci-actions/check_formatting@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_formatting@v1.2"
   check_codebase:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
-      - uses: "Nolus-Protocol/rust-ci-actions/check_codebase@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_codebase@v1.2"
   audit_dependencies:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
-      - uses: "Nolus-Protocol/rust-ci-actions/audit_dependencies@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/audit_dependencies@v1.2"
   linting:
     runs-on: "ubuntu-latest"
     needs:
@@ -58,7 +58,7 @@ jobs:
       - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - name: "Run linter"
         shell: "sh"
         run: "./lint.sh"
@@ -70,25 +70,37 @@ jobs:
       - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
-      - uses: "Nolus-Protocol/rust-ci-actions/check_features@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_features@v1.2"
+  check_unused_deps:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "check_formatting"
+      - "check_codebase"
+      - "audit_dependencies"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_unused_deps@v1.2"
   code_coverage:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
       - "check_features"
+      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
-      - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1.2"
   test_release_profile:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
       - "check_features"
+      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - name: "Run tests in release profile"
         shell: "sh"
         run: "cargo test --release"
@@ -97,9 +109,10 @@ jobs:
     needs:
       - "linting"
       - "check_features"
+      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - shell: "sh"
         run: "cargo install cargo-workspaces"
       - shell: "sh"
