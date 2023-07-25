@@ -4,7 +4,7 @@ use currency::Currency;
 use finance::{
     coin::Coin,
     liability::{self, Status},
-    price::{self, Price},
+    price::Price,
     zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
