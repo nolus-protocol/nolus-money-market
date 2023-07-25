@@ -66,4 +66,8 @@ where
     ) -> ContractResult<Response> {
         self.handler.on_price_alarm(deps, env, info)
     }
+
+    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.heal(deps, env)
+    }
 }

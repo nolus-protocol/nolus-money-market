@@ -1,3 +1,5 @@
+use crate::lease::heal;
+
 use super::{LeaseCoin, LeaseCurrency, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
@@ -14,10 +16,12 @@ fn open_downpayment_lease_currency() {
     let downpayment = LeaseCoin::new(100);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease.into_string());
+    let query_result = super::state_query(&test_case, &lease.clone().into_string());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
+
+    heal::heal_no_inconsistency(&mut test_case, lease);
 }
 
 #[test]
@@ -26,8 +30,10 @@ fn open_downpayment_different_than_lease_currency() {
     let downpayment = super::create_payment_coin(DOWNPAYMENT);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease.into_string());
+    let query_result = super::state_query(&test_case, &lease.clone().into_string());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
+
+    heal::heal_no_inconsistency(&mut test_case, lease);
 }

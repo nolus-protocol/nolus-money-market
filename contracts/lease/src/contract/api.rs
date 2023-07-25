@@ -66,6 +66,10 @@ where
         err("dex inner continue")
     }
 
+    fn heal(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("heal")
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {

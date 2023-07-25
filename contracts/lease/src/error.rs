@@ -62,8 +62,11 @@ pub enum ContractError {
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),
 
-    #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
+    #[error("[Lease] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
+
+    #[error("[Lease] Inconsistency not detected")]
+    InconsistencyNotDetected(),
 }
 
 impl ContractError {

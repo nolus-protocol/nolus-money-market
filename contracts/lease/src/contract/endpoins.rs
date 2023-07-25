@@ -147,6 +147,7 @@ fn process_execute(
             access_control::check(&info.sender, &env.contract.address)?;
             state.on_dex_inner_continue(deps.as_ref(), env)
         }
+        ExecuteMsg::Heal() => state.heal(deps.as_ref(), env),
     }
 }
 

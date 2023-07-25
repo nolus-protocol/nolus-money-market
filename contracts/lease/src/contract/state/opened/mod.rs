@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub mod active;
+mod balance;
 mod event;
 pub mod liquidation;
 pub mod repay;

@@ -27,6 +27,7 @@ use crate::common::{
 
 mod close;
 mod compare_with_lpp;
+mod heal;
 mod liquidation;
 mod open;
 mod repay;
@@ -256,23 +257,25 @@ pub(super) fn expected_open_state<
     Oracle,
     TimeAlarms,
     DownpaymentC,
+    PaymentC,
 >(
     test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
-    payments: PaymentCoin,
+    payments: Coin<PaymentC>,
     last_paid: Timestamp,
     current_period_start: Timestamp,
     now: Timestamp,
 ) -> StateResponse
 where
     DownpaymentC: Currency,
+    PaymentC: Currency,
 {
     let quote_result = quote_query(test_case, downpayment);
     let total: LeaseCoin = quote_result.total.try_into().unwrap();
     let total_lpn: LpnCoin = price::total(total, price_lpn_of::<LeaseCurrency>());
     let expected: LpnCoin = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
-        - price::total(payments, price_lpn_of::<PaymentCurrency>());
+        - price::total(payments, price_lpn_of::<PaymentC>());
     let (overdue, due) = (
         current_period_start
             .nanos()
@@ -317,13 +320,15 @@ pub(super) fn expected_newly_opened_state<
     Oracle,
     TimeAlarms,
     DownpaymentC,
+    PaymentC,
 >(
     test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
-    payments: PaymentCoin,
+    payments: Coin<PaymentC>,
 ) -> StateResponse
 where
     DownpaymentC: Currency,
+    PaymentC: Currency,
 {
     expected_open_state(
         test_case,

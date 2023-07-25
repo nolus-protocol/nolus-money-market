@@ -17,7 +17,7 @@ use crate::{
     lease::repay,
 };
 
-use super::{LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{heal, LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn state_closed() {
@@ -53,6 +53,8 @@ fn state_closed() {
         platform::bank::balance(&Addr::unchecked(USER), &test_case.app.query()).unwrap(),
         user_balance + lease_amount
     );
+
+    heal::heal_unsupported(&mut test_case, lease_address);
 }
 
 fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(

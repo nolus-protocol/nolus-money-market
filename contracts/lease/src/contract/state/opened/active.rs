@@ -28,7 +28,7 @@ use crate::{
 };
 
 use super::{
-    event,
+    balance, event,
     liquidation::sell_asset::{self, DexState as SellAssetState},
     repay::buy_lpn::{self, DexState as BuyLpnState},
 };
@@ -362,5 +362,20 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.try_on_price_alarm(&deps.querier, &env, info)
+    }
+    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        let lease_addr = self.lease.lease.addr.clone();
+        balance::balance(
+            &lease_addr,
+            self.lease.lease.loan.lpp().currency(),
+            &deps.querier,
+        )
+        .and_then(|balance| {
+            if balance.is_zero() {
+                Err(ContractError::InconsistencyNotDetected())
+            } else {
+                Self::try_repay_lpn(self.lease, balance, &deps.querier, &env)
+            }
+        })
     }
 }

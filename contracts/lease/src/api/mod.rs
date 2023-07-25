@@ -33,12 +33,21 @@ pub enum ExecuteMsg {
     // that is a limitation of cosmjs library
     PriceAlarm(),
     TimeAlarm {},
+
     /// An entry point for safe delivery of a Dex response
     ///
     /// Invoked always by the same contract instance.
     DexCallback(),
+
     /// An entry point for safe delivery of an ICA open response, error or timeout
     ///
     /// Invoked always by the same contract instance.
     DexCallbackContinue(),
+
+    /// Heal a lease past a middleware failure
+    ///
+    /// It cures a lease in the following cases:
+    /// - on the final repay transaction, when an error, usually an out-of-gas, occurs on the Lpp's ExecuteMsg::RepayLoan sub-message
+    /// - on the final repay transaction, when an error occurs on the Lease's SudoMsg::Response message
+    Heal(),
 }

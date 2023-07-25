@@ -57,6 +57,10 @@ where
     ) -> ContractResult<Response> {
         err("on price alarm", deps.api)
     }
+
+    fn heal(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("heal", deps.api)
+    }
 }
 
 fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {
