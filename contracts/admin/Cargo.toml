@@ -20,12 +20,6 @@ contract-with-bindings = ["contract"]
 contract = []
 
 [dependencies]
-lpp = { workspace = true, features = ["stub"] }
-oracle = { workspace = true, features = ["stub", "convert"] }
-timealarms = { workspace = true }
-treasury = { workspace = true }
-
-access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
