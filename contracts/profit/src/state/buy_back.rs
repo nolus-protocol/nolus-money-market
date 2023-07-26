@@ -139,7 +139,7 @@ impl SwapTask for BuyBack {
 impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
     fn with_config<F>(self, _: F) -> ContractResult<super::StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<super::StateAndResponse<Config>>,
+        F: FnOnce(Config) -> ContractResult<super::ConfigAndResponse>,
     {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",

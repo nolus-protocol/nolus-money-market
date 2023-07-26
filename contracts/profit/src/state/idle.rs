@@ -26,7 +26,8 @@ use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, Contrac
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, SetupDexHandler, State, StateAndResponse, StateEnum,
+    Config, ConfigAndResponse, ConfigManagement, SetupDexHandler, State, StateAndResponse,
+    StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -119,17 +120,12 @@ impl Enterable for Idle {
 impl ConfigManagement for Idle {
     fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>,
+        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
     {
-        f(self.config).map(
-            |StateAndResponse {
-                 state: config,
-                 response,
-             }| StateAndResponse {
-                state: Self { config, ..self },
-                response,
-            },
-        )
+        f(self.config).map(|ConfigAndResponse { config, response }| StateAndResponse {
+            state: Self { config, ..self },
+            response,
+        })
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {

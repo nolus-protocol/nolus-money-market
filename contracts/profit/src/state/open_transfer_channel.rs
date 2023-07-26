@@ -11,8 +11,8 @@ use sdk::cosmwasm_std::{Deps, Env};
 use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{
-    open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State,
-    StateAndResponse,
+    open_ica::OpenIca, Config, ConfigAndResponse, ConfigManagement, IcaConnector, SetupDexHandler,
+    State, StateAndResponse,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -34,17 +34,12 @@ impl Handler for OpenTransferChannel {
 impl ConfigManagement for OpenTransferChannel {
     fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>,
+        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
     {
-        f(self.config).map(
-            |StateAndResponse {
-                 state: config,
-                 response,
-             }| StateAndResponse {
-                state: Self { config },
-                response,
-            },
-        )
+        f(self.config).map(|ConfigAndResponse { config, response }| StateAndResponse {
+            state: Self { config },
+            response,
+        })
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {

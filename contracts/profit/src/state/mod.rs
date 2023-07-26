@@ -38,9 +38,14 @@ const STATE: Item<'static, State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
 
+pub(crate) struct ConfigAndResponse {
+    pub config: Config,
+    pub response: PlatformResponse,
+}
+
 pub(crate) struct StateAndResponse<T> {
     pub state: T,
-    pub response: platform::message::Response,
+    pub response: PlatformResponse,
 }
 
 impl<T> StateAndResponse<T> {
@@ -61,7 +66,7 @@ where
 {
     fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>;
+        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>;
 
     fn try_update_config(
         self,
@@ -72,8 +77,8 @@ where
             config
                 .time_alarms()
                 .setup_alarm(now + Duration::from_hours(cadence_hours))
-                .map(|messages: Batch| StateAndResponse {
-                    state: config.update(cadence_hours),
+                .map(|messages: Batch| ConfigAndResponse {
+                    config: config.update(cadence_hours),
                     response: PlatformResponse::messages_only(messages),
                 })
                 .map_err(Into::into)
@@ -117,7 +122,7 @@ pub(crate) struct State(StateEnum);
 impl ConfigManagement for State {
     fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>,
+        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
     {
         match self.0 {
             StateEnum::OpenTransferChannel(transfer) => {

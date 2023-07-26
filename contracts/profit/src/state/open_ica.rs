@@ -7,7 +7,8 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
 use super::{
-    idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State, StateAndResponse,
+    idle::Idle, Config, ConfigAndResponse, ConfigManagement, IcaConnector, SetupDexHandler, State,
+    StateAndResponse,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,7 +50,7 @@ impl Display for OpenIca {
 impl ConfigManagement for IcaConnector {
     fn with_config<F>(self, _: F) -> ContractResult<StateAndResponse<Self>>
     where
-        F: FnOnce(Config) -> ContractResult<StateAndResponse<Config>>,
+        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
     {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",
