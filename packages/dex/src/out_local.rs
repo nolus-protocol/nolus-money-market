@@ -521,6 +521,42 @@ mod impl_handler {
             }
         }
 
+        fn heal(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+            match self {
+                State::TransferOut(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferOutRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactIn(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::SwapExactInPreRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::SwapExactInRecoverIca(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInPostRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInInit(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferInInitRespDelivery(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInInitRecoverIcaRespDelivery(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInInitPreRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInInitRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInInitPostRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::TransferInFinish(inner) => Handler::heal(inner, deps, env).map_into(),
+            }
+        }
+
         fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
                 State::TransferOut(inner) => Handler::reply(inner, deps, env, msg),

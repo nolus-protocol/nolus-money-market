@@ -79,6 +79,10 @@ where
         Err(err(self, "handle inner to 'Continue' response", deps.api))
     }
 
+    fn heal(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle heal", deps.api)).into()
+    }
+
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
         Err(err(self, "handle reply", deps.api))
     }

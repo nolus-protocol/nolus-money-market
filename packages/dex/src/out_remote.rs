@@ -359,6 +359,27 @@ mod impl_handler {
             }
         }
 
+        fn heal(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+            match self {
+                State::OpenIca(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::OpenIcaRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferOut(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferOutRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactIn(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::SwapExactInPreRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+                State::SwapExactInRecoverIca(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInPostRecoverIca(inner) => {
+                    Handler::heal(inner, deps, env).map_into()
+                }
+            }
+        }
+
         fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
                 State::OpenIca(inner) => Handler::reply(inner, deps, env, msg),

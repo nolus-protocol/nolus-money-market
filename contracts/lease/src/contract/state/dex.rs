@@ -82,6 +82,10 @@ where
             .map_err(Into::into)
     }
 
+    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.heal(deps, env).into()
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
     }

@@ -114,6 +114,9 @@ where
         let timealarms = self.spec.time_alarm().clone();
         timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
     }
+    fn heal(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+        self.on_response(deps, env)
+    }
 }
 
 impl<SwapTask, SEnum> Contract for TransferInInit<SwapTask, SEnum>
