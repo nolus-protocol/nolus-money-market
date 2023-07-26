@@ -40,10 +40,8 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn as_stub(&self) -> ProfitStub<LazySenderStub> {
-        ProfitStub {
-            sender: LazySenderStub::new(self.addr.clone()),
-        }
+    pub fn as_stub(&self) -> impl FixedAddressSender {
+        LazySenderStub::new(self.addr.clone())
     }
 }
 
@@ -56,30 +54,5 @@ impl ProfitRef {
         Self {
             addr: Addr::unchecked(addr),
         }
-    }
-}
-
-pub struct ProfitStub<Sender> {
-    sender: Sender,
-}
-
-impl<Sender> Profit for ProfitStub<Sender>
-where
-    Sender: FixedAddressSender,
-{
-    fn send<C>(&mut self, amount: Coin<C>)
-    where
-        C: Currency,
-    {
-        self.sender.send(amount);
-    }
-}
-
-impl<Sender> From<ProfitStub<Sender>> for Batch
-where
-    Sender: FixedAddressSender,
-{
-    fn from(stub: ProfitStub<Sender>) -> Self {
-        stub.sender.into()
     }
 }

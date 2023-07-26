@@ -1,10 +1,10 @@
+use platform::bank::FixedAddressSender;
 use serde::Serialize;
 
 use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
@@ -23,7 +23,7 @@ where
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
-        Profit: ProfitTrait,
+        Profit: FixedAddressSender,
     {
         self.loan.repay(payment, now, profit)
     }
@@ -36,7 +36,7 @@ where
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
-        Profit: ProfitTrait,
+        Profit: FixedAddressSender,
     {
         debug_assert!(
             asset < self.amount,

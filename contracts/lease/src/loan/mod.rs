@@ -14,8 +14,8 @@ use lpp::{
     loan::RepayShares,
     stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
 };
-use platform::batch::Batch;
-use profit::stub::{Profit as ProfitTrait, ProfitRef};
+use platform::{bank::FixedAddressSender, batch::Batch};
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
@@ -149,7 +149,7 @@ where
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
-        Profit: ProfitTrait,
+        Profit: FixedAddressSender,
     {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
@@ -399,8 +399,8 @@ mod tests {
         msg::LoanResponse,
         stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
     };
-    use platform::bank::LazySenderStub;
-    use profit::stub::{ProfitRef, ProfitStub};
+    use platform::bank::FixedAddressSender;
+    use profit::stub::ProfitRef;
     use serde::{Deserialize, Serialize};
 
     use crate::api::InterestPaymentSpec;
@@ -1249,7 +1249,7 @@ mod tests {
         )
     }
 
-    fn profit_stub() -> ProfitStub<LazySenderStub> {
+    fn profit_stub() -> impl FixedAddressSender {
         ProfitRef::unchecked(PROFIT_ADDR).as_stub()
     }
 }

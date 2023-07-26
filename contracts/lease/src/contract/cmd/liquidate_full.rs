@@ -1,8 +1,8 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::batch::Batch;
-use profit::stub::{Profit, ProfitRef};
+use platform::{bank::FixedAddressSender, batch::Batch};
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
