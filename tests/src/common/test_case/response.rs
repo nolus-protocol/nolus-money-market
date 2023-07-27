@@ -1,5 +1,6 @@
 use sdk::{
-    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin, testing::InterChainMsgReceiver,
+    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin,
+    neutron_sdk::bindings::types::ProtobufAny, testing::InterChainMsgReceiver,
 };
 
 #[must_use]
@@ -45,7 +46,7 @@ pub(crate) trait RemoteChain {
         &mut self,
         expected_connection_id: &str,
         expected_ica_id: &str,
-        expected_tx_count: usize,
+        type_urls: &[&'static str],
     );
 }
 
@@ -103,8 +104,10 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
         &mut self,
         expected_connection_id: &str,
         expected_ica_id: &str,
-        expected_tx_count: usize,
+        type_urls: &[&'static str],
     ) {
+        assert!(!type_urls.is_empty());
+
         let message = self
             .receiver
             .try_recv()
@@ -119,7 +122,23 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
         {
             assert_eq!(connection_id, expected_connection_id);
             assert_eq!(interchain_account_id, expected_ica_id);
-            assert_eq!(msgs.len(), expected_tx_count, "{msgs:?}");
+
+            let mut index: usize = 0;
+
+            msgs.into_iter().for_each(|msg: ProtobufAny| {
+                if index == type_urls.len() {
+                    panic!("More messages than provided type URLs encountered! Message's type URL is: {}", msg.type_url);
+                }
+
+                assert_eq!(
+                    msg.type_url, type_urls[index],
+                    "Type URL mismatch on message with index {index}"
+                );
+
+                index += 1;
+            });
+
+            assert_eq!(index, type_urls.len());
         } else {
             panic!("Expected message for ICA registration, got {message:?}!");
         }

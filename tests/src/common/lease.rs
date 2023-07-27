@@ -360,7 +360,11 @@ fn expect_swap(
     connection_id: &str,
     remote_tx_count: usize,
 ) {
-    response.expect_submit_tx(connection_id, "0", remote_tx_count);
+    response.expect_submit_tx(
+        connection_id,
+        "0",
+        &[MsgSwapExactAmountIn::TYPE_URL; 2][..remote_tx_count],
+    );
 
     response.unwrap_response()
 }
