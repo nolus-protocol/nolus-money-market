@@ -5,7 +5,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 };
 
 use finance::{coin::Amount, duration::Duration, price};
-use ::lease::api::{ExecuteMsg, StateResponse};
+use lease::api::{ExecuteMsg, StateResponse};
 use sdk::{
     cosmos_sdk_proto::{ibc::applications::transfer::v1::MsgTransfer, traits::TypeUrl as _},
     cosmwasm_std::{Addr, Binary, Event},
@@ -22,27 +22,27 @@ use crate::{
         },
         ADMIN,
     },
-    lease,
+    lease as lease_mod,
 };
 
 use super::{LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
-    let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = lease::create_payment_coin(DOWNPAYMENT);
-    let lease_address = lease::open_lease(&mut test_case, downpayment, None);
+    let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
+    let downpayment: PaymentCoin = lease_mod::create_payment_coin(DOWNPAYMENT);
+    let lease_address = lease_mod::open_lease(&mut test_case, downpayment, None);
 
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    } = lease::state_query(&test_case, lease_address.as_ref()) else {
+    } = lease_mod::state_query(&test_case, lease_address.as_ref()) else {
         unreachable!()
     };
     let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();
 
     test_case.app.time_shift(time_pass);
 
-    lease::feed_price(&mut test_case);
+    lease_mod::feed_price(&mut test_case);
 
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
@@ -79,7 +79,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         )
         .unwrap();
 
-    let liquidated_in_lpn: LpnCoin = price::total(liquidation_amount, lease::price_lpn_of());
+    let liquidated_in_lpn: LpnCoin = price::total(liquidation_amount, lease_mod::price_lpn_of());
 
     test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
 
@@ -170,7 +170,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result = lease::state_query(&test_case, lease_address.as_str());
+    let query_result = lease_mod::state_query(&test_case, lease_address.as_str());
 
     let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
         .parse::<Amount>()
