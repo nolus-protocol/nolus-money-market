@@ -14,19 +14,14 @@ dependencies = [
 name = "admin_contract"
 version = "0.1.2"
 dependencies = [
- "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
- "lpp",
- "oracle",
  "platform",
  "schema",
  "sdk",
  "serde",
  "thiserror",
- "timealarms",
- "treasury",
  "versioning",
 ]
 
@@ -780,7 +775,6 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 name = "oracle"
 version = "0.5.5"
 dependencies = [
- "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -1358,7 +1352,6 @@ dependencies = [
 name = "time-oracle"
 version = "0.2.0"
 dependencies = [
- "platform",
  "sdk",
  "serde",
  "thiserror",

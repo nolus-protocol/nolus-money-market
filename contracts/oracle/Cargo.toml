@@ -23,7 +23,6 @@ testing = ["stub", "marketprice/testing"]
 stub = []
 
 [dependencies]
-access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }

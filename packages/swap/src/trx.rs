@@ -64,7 +64,7 @@ where
     Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
 }
 
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub fn build_exact_amount_in_resp(amount_out: Amount) -> MsgData {
     use sdk::cosmos_sdk_proto::traits::Message as _;
 

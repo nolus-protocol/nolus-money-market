@@ -9,8 +9,7 @@ license.workspace = true
 migrate = []
 
 [dependencies]
-platform = { workspace = true }
-sdk = { workspace = true, features = ["storage"] }
+sdk = { workspace = true, features = ["cosmos", "storage"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

@@ -1,12 +1,14 @@
-use error::{Error, Result};
+use std::ops::{Deref, DerefMut};
+
 use sdk::{
     cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
 };
-use std::ops::{Deref, DerefMut};
+
+pub use self::contract_owner::ContractOwnerAccess;
+use self::error::{Error, Result};
 
 mod contract_owner;
-pub use contract_owner::ContractOwnerAccess;
 pub mod error;
 
 pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {

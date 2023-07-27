@@ -12,7 +12,7 @@ use sdk::cosmwasm_std::{Addr, Deps, StdResult, Storage};
 use crate::{
     cmd::Quote,
     error::ContractError,
-    migrate::{self},
+    migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
