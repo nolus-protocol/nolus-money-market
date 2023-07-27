@@ -14,8 +14,7 @@ test = true
 
 [features]
 default = ["contract-with-bindings"]
-contract-with-bindings = ["contract"]
-contract = []
+contract-with-bindings = []
 testing = ["currency/testing"]
 
 [dependencies]

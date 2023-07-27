@@ -9,11 +9,11 @@ license.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 lease = { workspace = true, features = ["contract", "migration", "testing"] }
-leaser = { workspace = true, features = ["contract", "testing"] }
+leaser = { workspace = true, features = ["testing"] }
 lpp = { workspace = true, features = ["contract", "testing"] }
 oracle = { workspace = true, features = ["contract", "testing"] }
 profit = { workspace = true, features = ["contract"] }
-rewards_dispatcher = { workspace = true, features = ["contract"] }
+rewards_dispatcher = { workspace = true, features = [] }
 timealarms = { workspace = true, features = ["contract"] }
 treasury = { workspace = true, features = ["contract"] }
 
