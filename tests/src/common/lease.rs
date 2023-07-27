@@ -342,13 +342,13 @@ where
             counterparty_version: format!(
                 // TODO fill-in with real/valid `OpenAck` data
                 r#"{{
-                        "version":"???",
-                        "controller_connection_id":"{connection_id}",
-                        "host_connection_id":"???",
-                        "address":"{ica_addr}",
-                        "encoding":"???",
-                        "tx_type":"???"
-                    }}"#
+                    "version":"???",
+                    "controller_connection_id":"{connection_id}",
+                    "host_connection_id":"???",
+                    "address":"{ica_addr}",
+                    "encoding":"???",
+                    "tx_type":"???"
+                }}"#
             ),
         },
     )
