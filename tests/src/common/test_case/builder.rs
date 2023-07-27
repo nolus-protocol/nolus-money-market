@@ -12,58 +12,86 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
-    dispatcher::Instantiator as DispatcherInstantiator,
-    leaser::Instantiator as LeaserInstantiator,
-    lpp::Instantiator as LppInstantiator,
-    oracle::Instantiator as OracleInstantiator,
-    profit::Instantiator as ProfitInstantiator,
-    test_case::response::{RemoteChain, ResponseWithInterChainMsgs},
-    test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
+    cwcoin, dispatcher::Instantiator as DispatcherInstantiator,
+    leaser::Instantiator as LeaserInstantiator, lpp::Instantiator as LppInstantiator,
+    oracle::Instantiator as OracleInstantiator, profit::Instantiator as ProfitInstantiator,
     timealarms::Instantiator as TimeAlarmsInstantiator,
     treasury::Instantiator as TreasuryInstantiator,
 };
 
-pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), ()>;
+use super::{
+    app::{default_wasm, DefaultWasm, Wasm as WasmTrait},
+    response::{RemoteChain, ResponseWithInterChainMsgs},
+    OptionalLppEndpoints, OptionalOracleWrapper, TestCase,
+};
 
-pub(crate) struct Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-    test_case: TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(crate) type BlankBuilder<Wasm, Lpn> = Builder<Wasm, Lpn, (), (), (), (), (), (), ()>;
+
+pub(crate) struct Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Wasm: WasmTrait,
+{
+    test_case: TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     _lpn: PhantomData<Lpn>,
 }
 
-impl<Lpn> Builder<Lpn, (), (), (), (), (), (), ()>
+impl<Wasm, Lpn> Builder<Wasm, Lpn, (), (), (), (), (), (), ()>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
-    pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
+    pub fn new<WasmF>(wasm_f: WasmF) -> Self
+    where
+        WasmF: FnOnce() -> (Wasm, Wasm::CounterPart),
+    {
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)], wasm_f)
     }
 
-    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
+    pub fn with_reserve<WasmF>(reserve: &[CwCoin], wasm_f: WasmF) -> Self
+    where
+        WasmF: FnOnce() -> (Wasm, Wasm::CounterPart),
+    {
         Self {
-            test_case: TestCase::with_reserve(reserve),
+            test_case: TestCase::with_reserve(reserve, wasm_f),
             _lpn: PhantomData,
         }
     }
 }
 
-impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<Lpn> Builder<DefaultWasm, Lpn, (), (), (), (), (), (), ()>
 where
+    Lpn: Currency,
+{
+    pub fn with_default_wasm() -> Self {
+        Self::new(default_wasm)
+    }
+
+    pub fn with_reserve_and_default_wasm(reserve: &[CwCoin]) -> Self {
+        Self::with_reserve(reserve, default_wasm)
+    }
+}
+
+impl<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     pub fn into_generic(
         self,
-    ) -> TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    ) -> TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
         self.test_case
     }
 }
 
-impl<Lpn, Profit, Leaser> Builder<Lpn, (), Addr, Profit, Leaser, Addr, Addr, Addr>
+impl<Wasm, Lpn, Profit, Leaser> Builder<Wasm, Lpn, (), Addr, Profit, Leaser, Addr, Addr, Addr>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
-    pub fn init_dispatcher(self) -> Builder<Lpn, Addr, Addr, Profit, Leaser, Addr, Addr, Addr> {
+    pub fn init_dispatcher(
+        self,
+    ) -> Builder<Wasm, Lpn, Addr, Addr, Profit, Leaser, Addr, Addr, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -103,34 +131,35 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    Builder<Lpn, Dispatcher, (), Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<Wasm, Lpn, Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<Wasm, Lpn, Dispatcher, (), Profit, Leaser, Lpp, Oracle, TimeAlarms>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     pub fn init_treasury_without_dispatcher(
         self,
-    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
         self.init_treasury(TreasuryInstantiator::new_with_no_dispatcher())
     }
 
     pub fn init_treasury_with_dispatcher(
         self,
         rewards_dispatcher: Addr,
-    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
         self.init_treasury(TreasuryInstantiator::new(rewards_dispatcher))
     }
 
     fn init_treasury(
         self,
         treasury: TreasuryInstantiator,
-    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
         let Self {
             mut test_case,
             _lpn,
         } = self;
 
-        let treasury_addr: Addr = treasury.instantiate::<Lpn>(&mut test_case.app);
+        let treasury_addr: Addr = treasury.instantiate::<Wasm, Lpn>(&mut test_case.app);
 
         test_case.app.update_block(next_block);
 
@@ -144,8 +173,10 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Leaser, Lpp> Builder<Lpn, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>
+impl<Wasm, Lpn, Dispatcher, Leaser, Lpp>
+    Builder<Wasm, Lpn, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     const PROFIT_CONNECTION_ID: &str = "dex-connection";
@@ -153,7 +184,7 @@ where
     pub fn init_profit(
         self,
         cadence_hours: u16,
-    ) -> Builder<Lpn, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -181,7 +212,7 @@ where
     }
 
     fn initialize(
-        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        test_case: &mut TestCase<Wasm, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
         profit_addr: &Addr,
         cadence_hours: u16,
     ) {
@@ -203,7 +234,7 @@ where
     }
 
     fn send_open_channel_response(
-        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        test_case: &mut TestCase<Wasm, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
         profit_addr: &Addr,
     ) {
         let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
@@ -225,7 +256,7 @@ where
     }
 
     fn send_open_ica_response(
-        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        test_case: &mut TestCase<Wasm, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
         profit_addr: &Addr,
     ) {
         test_case
@@ -253,11 +284,15 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Treasury> Builder<Lpn, Dispatcher, Treasury, Addr, (), Addr, Addr, Addr>
+impl<Wasm, Lpn, Dispatcher, Treasury>
+    Builder<Wasm, Lpn, Dispatcher, Treasury, Addr, (), Addr, Addr, Addr>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
-    pub fn init_leaser(self) -> Builder<Lpn, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
+    pub fn init_leaser(
+        self,
+    ) -> Builder<Wasm, Lpn, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -300,9 +335,10 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
-    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, (), Oracle, TimeAlarms>
+impl<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
+    Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, (), Oracle, TimeAlarms>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     pub fn init_lpp(
@@ -311,7 +347,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         self.init_lpp_with_funds(
             custom_wrapper,
             &[CwCoin::new(400, Lpn::BANK_SYMBOL)],
@@ -328,7 +364,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         let Self {
             mut test_case,
             _lpn,
@@ -337,7 +373,7 @@ where
         let lease_code_id: Uint64 = Uint64::new(test_case.address_book.lease_code_id());
 
         let lpp_addr: Addr = if let Some(endpoints) = endpoints {
-            LppInstantiator::instantiate::<Lpn>(
+            LppInstantiator::instantiate::<Wasm, Lpn>(
                 &mut test_case.app,
                 Box::new(endpoints),
                 lease_code_id,
@@ -347,7 +383,7 @@ where
                 addon_optimal_interest_rate,
             )
         } else {
-            LppInstantiator::instantiate_default::<Lpn>(
+            LppInstantiator::instantiate_default::<Wasm, Lpn>(
                 &mut test_case.app,
                 lease_code_id,
                 init_balance,
@@ -370,24 +406,25 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
-    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, (), TimeAlarms>
+impl<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
+    Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, (), TimeAlarms>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     pub fn init_oracle(
         self,
         custom_wrapper: OptionalOracleWrapper,
-    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms> {
         let Self {
             mut test_case,
             _lpn,
         } = self;
 
         let oracle_addr: Addr = if let Some(contract) = custom_wrapper {
-            OracleInstantiator::instantiate::<Lpn>(&mut test_case.app, Box::new(contract))
+            OracleInstantiator::instantiate::<Wasm, Lpn>(&mut test_case.app, Box::new(contract))
         } else {
-            OracleInstantiator::instantiate_default::<Lpn>(&mut test_case.app)
+            OracleInstantiator::instantiate_default::<Wasm, Lpn>(&mut test_case.app)
         };
 
         test_case.app.update_block(next_block);
@@ -402,14 +439,15 @@ where
     }
 }
 
-impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
-    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, ()>
+impl<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
+    Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, ()>
 where
+    Wasm: WasmTrait,
     Lpn: Currency,
 {
     pub fn init_time_alarms(
         self,
-    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr> {
+    ) -> Builder<Wasm, Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr> {
         let Self {
             mut test_case,
             _lpn,

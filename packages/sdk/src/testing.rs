@@ -13,8 +13,8 @@ use crate::cosmwasm_ext::InterChainMsg;
 
 use self::custom_msg::Module as CustomMsgModule;
 
-pub type CwApp<Exec = InterChainMsg, Query = Empty> =
-    cw_multi_test::App<BankKeeper, MockApi, MockStorage, CustomMsgModule, WasmKeeper<Exec, Query>>;
+pub type CwApp<Wasm = WasmKeeper<InterChainMsg, Empty>> =
+    cw_multi_test::App<BankKeeper, MockApi, MockStorage, CustomMsgModule, Wasm>;
 
 pub type CwAppBuilder<Exec = InterChainMsg, Query = Empty> = cw_multi_test::AppBuilder<
     BankKeeper,
