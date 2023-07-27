@@ -37,6 +37,7 @@ mod heal;
 mod liquidation;
 mod open;
 mod repay;
+mod safe_delivery;
 
 type Lpn = Usdc;
 type LpnCoin = Coin<Lpn>;
