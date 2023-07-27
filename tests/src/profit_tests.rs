@@ -26,12 +26,13 @@ fn on_alarm_from_unknown() {
     type Lpn = Usdc;
     let user_addr: Addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(2)
+            .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
 
@@ -67,12 +68,13 @@ fn on_alarm_zero_balance() {
     type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(2)
+            .into_generic();
 
     test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
 
@@ -93,12 +95,13 @@ fn on_alarm_zero_balance() {
 fn on_alarm_native_only_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(2)
+            .into_generic();
 
     let init_balance_nls = bank::balance::<Native>(
         &test_case.address_book.treasury().clone(),
@@ -203,12 +206,13 @@ fn on_alarm_native_only_transfer() {
 fn on_alarm_foreign_only_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(2)
+            .into_generic();
 
     let profit_lpn = Coin::<Lpn>::from(100);
 
@@ -262,12 +266,13 @@ fn on_alarm_foreign_only_transfer() {
 fn on_alarm_native_and_foreign_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(2)
+            .into_generic();
 
     let profit_nls = Coin::<Native>::from(100);
     let profit_lpn = Coin::<Lpn>::from(100);
@@ -331,12 +336,13 @@ fn integration_with_time_alarms() {
     type Lpn = Usdc;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(CADENCE_HOURS)
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_treasury_without_dispatcher()
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_profit(CADENCE_HOURS)
+            .into_generic();
 
     test_case
         .app

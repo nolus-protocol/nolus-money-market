@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use currency::{
     lease::{Atom, Cro},
     lpn::Usdc,
@@ -17,11 +19,15 @@ use sdk::{
     cosmwasm_std::{coin, Addr, Binary, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
-use std::collections::HashSet;
 
 use crate::common::{
     self, cwcoin,
-    test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
+    test_case::{
+        app::{default_wasm, DefaultWasm, Wasm as WasmTrait},
+        builder::BlankBuilder as TestCaseBuilder,
+        response::RemoteChain,
+        TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -54,9 +60,11 @@ where
     Price::identity()
 }
 
-pub(super) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
-) {
+pub(super) fn feed_price<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+) where
+    Wasm: WasmTrait,
+{
     let lease_price = price_lpn_of::<LeaseCurrency>();
     common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), lease_price);
 
@@ -64,17 +72,32 @@ pub(super) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
-pub(super) fn create_test_case<InitFundsC>() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>
+pub(super) fn create_test_case<InitFundsC>(
+) -> TestCase<DefaultWasm, (), Addr, Addr, Addr, Addr, Addr, Addr>
 where
     InitFundsC: Currency,
 {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn, _, _, _, _, _, _, _>::with_reserve(&[
-            cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
-        ])
+    create_test_case_with_wasm::<_, _, InitFundsC>(default_wasm)
+}
+
+pub(super) fn create_test_case_with_wasm<Wasm, WasmF, InitFundsC>(
+    wasm_f: WasmF,
+) -> TestCase<Wasm, (), Addr, Addr, Addr, Addr, Addr, Addr>
+where
+    Wasm: WasmTrait,
+    WasmF: FnOnce() -> (Wasm, Wasm::CounterPart),
+    InitFundsC: Currency,
+{
+    let mut test_case: TestCase<Wasm, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<Wasm, Lpn>::with_reserve(
+            &[
+                cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+                cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
+                cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+                cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
+            ],
+            wasm_f,
+        )
         .init_lpp_with_funds(
             None,
             &[coin(
@@ -117,19 +140,29 @@ pub(super) fn calculate_interest(
         .interest(principal)
 }
 
-pub(super) fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn open_lease<
+    Wasm,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
 ) -> Addr
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
 {
     try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
 
-    let quote = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
+    let quote = common::leaser::query_quote::<Wasm, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -138,7 +171,7 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
 
-    common::lease::complete_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
+    common::lease::complete_initialization::<Wasm, Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
         lease.clone(),
@@ -150,11 +183,12 @@ where
     lease
 }
 
-pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn try_init_lease<Wasm, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
 ) where
+    Wasm: WasmTrait,
     D: Currency,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
@@ -177,9 +211,12 @@ pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlar
     () = response.ignore_response().unwrap_response();
 }
 
-pub(super) fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
-) -> Addr {
+pub(super) fn get_lease_address<Wasm, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+) -> Addr
+where
+    Wasm: WasmTrait,
+{
     let query_response: HashSet<Addr> = test_case
         .app
         .query()
@@ -210,18 +247,31 @@ pub(super) fn construct_response(data: Binary) -> NeutronSudoMsg {
     }
 }
 
-pub(super) fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn quote_borrow<Wasm, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: PaymentCoin,
-) -> LpnCoin {
+) -> LpnCoin
+where
+    Wasm: WasmTrait,
+{
     LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
-pub(super) fn quote_query<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn quote_query<
+    Wasm,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
 {
     test_case
@@ -238,10 +288,13 @@ where
         .unwrap()
 }
 
-pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn state_query<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: &str,
-) -> StateResponse {
+) -> StateResponse
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .query()
@@ -250,6 +303,7 @@ pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Tim
 }
 
 pub(super) fn expected_open_state<
+    Wasm,
     Dispatcher,
     Treasury,
     Profit,
@@ -259,7 +313,7 @@ pub(super) fn expected_open_state<
     DownpaymentC,
     PaymentC,
 >(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
     last_paid: Timestamp,
@@ -267,6 +321,7 @@ pub(super) fn expected_open_state<
     now: Timestamp,
 ) -> StateResponse
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
     PaymentC: Currency,
 {
@@ -313,6 +368,7 @@ where
 }
 
 pub(super) fn expected_newly_opened_state<
+    Wasm,
     Dispatcher,
     Treasury,
     Profit,
@@ -322,11 +378,12 @@ pub(super) fn expected_newly_opened_state<
     DownpaymentC,
     PaymentC,
 >(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
 ) -> StateResponse
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
     PaymentC: Currency,
 {
@@ -340,8 +397,11 @@ where
     )
 }
 
-pub(super) fn block_time<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
-) -> Timestamp {
+pub(super) fn block_time<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+) -> Timestamp
+where
+    Wasm: WasmTrait,
+{
     test_case.app.block_info().time
 }

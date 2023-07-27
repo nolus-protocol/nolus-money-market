@@ -1,6 +1,7 @@
 use finance::price;
 use lease::api::{ExecuteMsg, StateResponse};
 use sdk::{
+    cosmos_sdk_proto::{ibc::applications::transfer::v1::MsgTransfer, traits::TypeUrl as _},
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
 };
@@ -9,6 +10,7 @@ use crate::{
     common::{
         cwcoin,
         test_case::{
+            app::Wasm as WasmTrait,
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
             TestCase,
         },
@@ -57,11 +59,14 @@ fn state_closed() {
     heal::heal_unsupported(&mut test_case, lease_address);
 }
 
-fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn close<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: Addr,
     expected_funds: &[CwCoin],
-) -> AppResponse {
+) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     let response: ResponseWithInterChainMsgs<'_, ()> = send_close(test_case, contract_addr.clone());
 
     expect_remote_ibc_transfer(response);
@@ -69,10 +74,13 @@ fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     do_remote_ibc_transfer(test_case, contract_addr, expected_funds)
 }
 
-fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn send_close<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: Addr,
-) -> ResponseWithInterChainMsgs<'_, ()> {
+) -> ResponseWithInterChainMsgs<'_, ()>
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .execute(
@@ -86,16 +94,23 @@ fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 }
 
 fn expect_remote_ibc_transfer(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+    response.expect_submit_tx(
+        TestCase::LEASER_CONNECTION_ID,
+        "0",
+        &[MsgTransfer::TYPE_URL],
+    );
 
     () = response.unwrap_response()
 }
 
-fn do_remote_ibc_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn do_remote_ibc_transfer<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: Addr,
     funds: &[CwCoin],
-) -> AppResponse {
+) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     assert_eq!(
         test_case
             .app

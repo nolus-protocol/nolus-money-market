@@ -39,7 +39,7 @@ use tree::HumanReadableTree;
 use crate::common::{
     oracle as oracle_mod,
     test_case::{
-        app::App,
+        app::{App, DefaultWasm, Wasm as WasmTrait},
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
@@ -59,24 +59,26 @@ where
     coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr> {
-    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
-        .init_lpp_with_funds(
-            None,
-            &[coin(
-                5_000_000_000_000_000_000_000_000_000,
-                Lpn::BANK_SYMBOL,
-            )],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic()
+fn create_test_case() -> TestCase<DefaultWasm, (), Addr, Addr, Addr, Addr, Addr, Addr> {
+    TestCaseBuilder::<_, Lpn>::with_reserve_and_default_wasm(&[cw_coin(
+        10_000_000_000_000_000_000_000_000_000,
+    )])
+    .init_lpp_with_funds(
+        None,
+        &[coin(
+            5_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury_without_dispatcher()
+    .init_profit(24)
+    .init_leaser()
+    .into_generic()
 }
 
 #[test]
@@ -263,10 +265,13 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+fn open_lease<Wasm, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: TheCoin,
-) -> Addr {
+) -> Addr
+where
+    Wasm: WasmTrait,
+{
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
@@ -287,9 +292,12 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
     get_lease_address(test_case)
 }
 
-fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
-) -> Addr {
+fn get_lease_address<Wasm, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+) -> Addr
+where
+    Wasm: WasmTrait,
+{
     let query_response: HashSet<Addr> = test_case
         .app
         .query()
@@ -631,12 +639,15 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     ))
 }
 
-fn instantiate_dummy_contract(
-    app: &mut App,
+fn instantiate_dummy_contract<Wasm>(
+    app: &mut App<Wasm>,
     dummy_code: u64,
     oracle: Addr,
     should_fail: bool,
-) -> Addr {
+) -> Addr
+where
+    Wasm: WasmTrait,
+{
     app.instantiate(
         dummy_code,
         Addr::unchecked(ADMIN),
@@ -652,7 +663,10 @@ fn instantiate_dummy_contract(
     .unwrap_response()
 }
 
-fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
+fn dispatch_alarms<Wasm>(app: &mut App<Wasm>, oracle: Addr, max_count: AlarmsCount) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     app.execute(
         Addr::unchecked("unlisted_client"),
         oracle,
@@ -663,7 +677,10 @@ fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppRe
     .unwrap_response()
 }
 
-fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
+fn set_should_fail<Wasm>(app: &mut App<Wasm>, dummy_contract: Addr, should_fail: bool)
+where
+    Wasm: WasmTrait,
+{
     () = app
         .execute(
             Addr::unchecked(ADMIN),

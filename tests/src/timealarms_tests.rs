@@ -11,7 +11,11 @@ use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
     cwcoin,
-    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{
+        app::{DefaultWasm, Wasm as WasmTrait},
+        builder::BlankBuilder as TestCaseBuilder,
+        TestCase,
+    },
     ADMIN,
 };
 
@@ -35,7 +39,10 @@ mod mock_lease {
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{test_case::app::App, ADMIN};
+    use crate::common::{
+        test_case::app::{App, Wasm as WasmTrait},
+        ADMIN,
+    };
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
@@ -143,7 +150,10 @@ mod mock_lease {
         Box::new(contract)
     }
 
-    pub(crate) fn instantiate_no_reschedule_contract(app: &mut App) -> Addr {
+    pub(crate) fn instantiate_no_reschedule_contract<Wasm>(app: &mut App<Wasm>) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         proper_instantiate(
             app,
             contract_no_reschedule_endpoints(),
@@ -151,7 +161,10 @@ mod mock_lease {
         )
     }
 
-    pub(crate) fn instantiate_may_fail_contract(app: &mut App) -> Addr {
+    pub(crate) fn instantiate_may_fail_contract<Wasm>(app: &mut App<Wasm>) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         proper_instantiate(
             app,
             contract_may_fail_endpoints(),
@@ -159,18 +172,24 @@ mod mock_lease {
         )
     }
 
-    pub(crate) fn instantiate_reschedule_contract(
-        app: &mut App,
+    pub(crate) fn instantiate_reschedule_contract<Wasm>(
+        app: &mut App<Wasm>,
         timealarms_contract: Addr,
-    ) -> Addr {
+    ) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         proper_instantiate(app, contract_reschedule_endpoints(), timealarms_contract)
     }
 
-    fn proper_instantiate(
-        app: &mut App,
+    fn proper_instantiate<Wasm>(
+        app: &mut App<Wasm>,
         endpoints: Box<CwContract>,
         timealarms_contract: Addr,
-    ) -> Addr {
+    ) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         let cw_template_id = app.store_code(endpoints);
         app.instantiate(
             cw_template_id,
@@ -202,9 +221,9 @@ fn test_lease_serde() {
         serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn>::with_reserve(&[coin(
+fn test_case() -> TestCase<DefaultWasm, (), (), (), (), (), (), Addr> {
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_reserve_and_default_wasm(&[coin(
             10_000_000_000_000_000_000_000_000_000,
             Lpn::BANK_SYMBOL,
         )])
@@ -218,11 +237,13 @@ fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {
     test_case
 }
 
-fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn add_alarm<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     recv: &Addr,
     time_secs: u64,
-) {
+) where
+    Wasm: WasmTrait,
+{
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
         time: Timestamp::from_seconds(time_secs),
     };
@@ -239,10 +260,13 @@ fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
         .unwrap_response();
 }
 
-fn dispatch<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn dispatch<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     max_count: u32,
-) -> AppResponse {
+) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
@@ -527,15 +551,16 @@ fn test_time_notify() {
 
 #[test]
 fn test_profit_alarms() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin(Coin::<Lpn>::new(1_000_000)),
-        cwcoin(Coin::<Nls>::new(1_000_000)),
-    ])
-    .init_time_alarms()
-    .init_oracle(None)
-    .init_treasury_without_dispatcher()
-    .init_profit(1)
-    .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_reserve_and_default_wasm(&[
+            cwcoin(Coin::<Lpn>::new(1_000_000)),
+            cwcoin(Coin::<Nls>::new(1_000_000)),
+        ])
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(1)
+        .into_generic();
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),

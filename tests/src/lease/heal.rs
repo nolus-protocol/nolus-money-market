@@ -5,6 +5,7 @@ use crate::{
     common::{
         cwcoin,
         test_case::{
+            app::Wasm as WasmTrait,
             response::{RemoteChain, ResponseWithInterChainMsgs},
             TestCase,
         },
@@ -40,16 +41,20 @@ fn active_state() {
     assert_eq!(query_result, expected_result);
 }
 
-pub(super) fn try_heal<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn try_heal<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     lease: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
 }
 
 pub(super) fn heal_no_inconsistency<
+    Wasm,
     Dispatcher,
     Treasury,
     Profit,
@@ -58,18 +63,31 @@ pub(super) fn heal_no_inconsistency<
     Oracle,
     TimeAlarms,
 >(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     lease: Addr,
-) {
+) where
+    Wasm: WasmTrait,
+{
     let err = try_heal(test_case, lease).unwrap_err();
     let heal_err = err.downcast_ref::<ContractError>();
     assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
 }
 
-pub(super) fn heal_unsupported<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn heal_unsupported<
+    Wasm,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     lease: Addr,
-) {
+) where
+    Wasm: WasmTrait,
+{
     let err = try_heal(test_case, lease).unwrap_err();
     let heal_err = err.downcast_ref::<ContractError>();
     assert_eq!(
@@ -78,10 +96,12 @@ pub(super) fn heal_unsupported<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle
     );
 }
 
-pub(super) fn heal_done<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn heal_done<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     lease: Addr,
-) {
+) where
+    Wasm: WasmTrait,
+{
     let mut response = try_heal(test_case, lease).unwrap();
     response.expect_empty();
 

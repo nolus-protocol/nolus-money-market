@@ -21,6 +21,7 @@ use sdk::{
 use crate::common::{
     cwcoin, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod, oracle as oracle_mod,
     test_case::{
+        app::Wasm as WasmTrait,
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
@@ -51,7 +52,7 @@ fn open_lease_unsupported_currency_by_oracle() {
 fn init_lpp_with_unknown_currency() {
     type NotLpn = Osmo;
 
-    TestCaseBuilder::<NotLpn>::new().init_lpp(
+    TestCaseBuilder::<_, NotLpn>::with_default_wasm().init_lpp(
         None,
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -67,19 +68,20 @@ fn open_lease_not_in_lease_currency() {
 
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                None,
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_treasury_without_dispatcher()
+            .init_profit(24)
+            .init_leaser()
+            .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
 
@@ -120,19 +122,20 @@ fn open_multiple_loans() {
     let user_addr = Addr::unchecked(USER);
     let other_user_addr = Addr::unchecked("other_user");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                None,
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_treasury_without_dispatcher()
+            .init_profit(24)
+            .init_leaser()
+            .into_generic();
 
     test_case
         .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)])
@@ -228,19 +231,20 @@ fn test_quote() {
     type Downpayment = Lpn;
     type LeaseCurrency = Osmo;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                None,
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_treasury_without_dispatcher()
+            .init_profit(24)
+            .init_leaser()
+            .into_generic();
 
     test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin::<Lpn, _>(500)]);
 
@@ -256,7 +260,7 @@ fn test_quote() {
     let leaser = test_case.address_book.leaser().clone();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
-    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<_, Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         downpayment,
@@ -277,7 +281,7 @@ fn test_quote() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let leaser = test_case.address_book.leaser().clone();
-    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<_, Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         Coin::new(15),
@@ -311,32 +315,33 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
 
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&{
-        let mut reserve = vec![cwcoin::<Lpn, _>(1_000_000_000)];
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_reserve_and_default_wasm(&{
+            let mut reserve = vec![cwcoin::<Lpn, _>(1_000_000_000)];
 
-        reserve.extend_from_slice(&lpp_reserve);
+            reserve.extend_from_slice(&lpp_reserve);
 
-        reserve.extend_from_slice(&[user_reserve.clone()]);
+            reserve.extend_from_slice(&[user_reserve.clone()]);
 
-        reserve
-    })
-    .init_lpp_with_funds(
-        None,
-        &[
-            coin(LPNS, Lpn::BANK_SYMBOL),
-            coin(OSMOS, Osmo::BANK_SYMBOL),
-            coin(CROS, LeaseCurrency::BANK_SYMBOL),
-        ],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    )
-    .init_time_alarms()
-    .init_oracle(None)
-    .init_treasury_without_dispatcher()
-    .init_profit(24)
-    .init_leaser()
-    .into_generic();
+            reserve
+        })
+        .init_lpp_with_funds(
+            None,
+            &[
+                coin(LPNS, Lpn::BANK_SYMBOL),
+                coin(OSMOS, Osmo::BANK_SYMBOL),
+                coin(CROS, LeaseCurrency::BANK_SYMBOL),
+            ],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
 
     test_case.send_funds_from_admin(user_addr, &[user_reserve]);
 
@@ -360,7 +365,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     );
     oracle_mod::feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
 
-    let resp = leaser_mod::query_quote::<Osmo, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<_, _, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -403,26 +408,27 @@ fn test_quote_fixed_rate() {
     type Downpayment = Lpn;
     type LeaseCurrency = Osmo;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            Some(
-                ContractWrapper::new(
-                    lpp::contract::execute,
-                    lpp::contract::instantiate,
-                    lpp_mod::mock_quote_query,
-                )
-                .with_sudo(lpp::contract::sudo),
-            ),
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                Some(
+                    ContractWrapper::new(
+                        lpp::contract::execute,
+                        lpp::contract::instantiate,
+                        lpp_mod::mock_quote_query,
+                    )
+                    .with_sudo(lpp::contract::sudo),
+                ),
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_treasury_without_dispatcher()
+            .init_profit(24)
+            .init_leaser()
+            .into_generic();
 
     let feeder = setup_feeder(&mut test_case);
     oracle_mod::feed_price(
@@ -431,10 +437,10 @@ fn test_quote_fixed_rate() {
         Coin::<LeaseCurrency>::new(3),
         Coin::<Lpn>::new(1),
     );
-    let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<_, Downpayment, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
-        Coin::<Downpayment>::new(100),
+        Coin::new(100),
         None,
     );
 
@@ -456,9 +462,12 @@ fn test_quote_fixed_rate() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
 }
 
-fn setup_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
-) -> Addr {
+fn setup_feeder<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+) -> Addr
+where
+    Wasm: WasmTrait,
+{
     let feeder = Addr::unchecked("feeder_main");
     oracle_mod::add_feeder(test_case, &feeder);
     feeder
@@ -487,26 +496,27 @@ fn open_loans_lpp_fails() {
         }
     }
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            Some(
-                ContractWrapper::new(
-                    mock_lpp_execute,
-                    lpp::contract::instantiate,
-                    lpp::contract::query,
-                )
-                .with_sudo(lpp::contract::sudo),
-            ),
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                Some(
+                    ContractWrapper::new(
+                        mock_lpp_execute,
+                        lpp::contract::instantiate,
+                        lpp::contract::query,
+                    )
+                    .with_sudo(lpp::contract::sudo),
+                ),
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .init_time_alarms()
+            .init_oracle(None)
+            .init_treasury_without_dispatcher()
+            .init_profit(24)
+            .init_leaser()
+            .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), std::slice::from_ref(&downpayment));
 
@@ -533,23 +543,24 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin::<Lpn, _>(1_000_000_000),
-        cwcoin::<LeaseC, _>(1_000_000_000),
-        cwcoin::<DownpaymentC, _>(1_000_000_000),
-    ])
-    .init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    )
-    .init_time_alarms()
-    .init_oracle(None)
-    .init_treasury_without_dispatcher()
-    .init_profit(24)
-    .init_leaser()
-    .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_reserve_and_default_wasm(&[
+            cwcoin::<Lpn, _>(1_000_000_000),
+            cwcoin::<LeaseC, _>(1_000_000_000),
+            cwcoin::<DownpaymentC, _>(1_000_000_000),
+        ])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
 
@@ -584,7 +595,7 @@ where
     }
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
-    let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
+    let quote = leaser_mod::query_quote::<_, _, LeaseC>(
         &mut test_case.app,
         leaser_addr.clone(),
         downpayment,
@@ -611,7 +622,7 @@ where
 
     () = response.unwrap_response();
 
-    lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseC>(
+    lease_mod::complete_initialization(
         &mut test_case.app,
         TestCase::LEASER_CONNECTION_ID,
         lease_addr,

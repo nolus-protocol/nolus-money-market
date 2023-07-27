@@ -1,3 +1,7 @@
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
+};
+
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -6,14 +10,9 @@ use finance::{
     price::{self, Price},
     zero::Zero,
 };
-
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
-};
-
-use ::lease::api::{ExecuteMsg, StateResponse};
-
+use lease::api::{ExecuteMsg, StateResponse};
 use sdk::{
+    cosmos_sdk_proto::{ibc::applications::transfer::v1::MsgTransfer, traits::TypeUrl as _},
     cosmwasm_std::{Addr, Binary, Coin as CwCoin, Timestamp},
     cw_multi_test::AppResponse,
 };
@@ -23,12 +22,13 @@ use crate::{
         cwcoin,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
+            app::Wasm as WasmTrait,
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
             TestCase,
         },
         ADMIN, USER,
     },
-    lease,
+    lease as lease_mod,
 };
 
 use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
@@ -220,8 +220,8 @@ fn full_repay_with_excess() {
     assert_eq!(
         test_case.app.query().query_all_balances("ica0").unwrap(),
         &[cwcoin::<LeaseCurrency, _>(price::total(
-            price::total(downpayment + borrowed, lease::price_lpn_of()),
-            lease::price_lpn_of().inv(),
+            price::total(downpayment + borrowed, lease_mod::price_lpn_of()),
+            lease_mod::price_lpn_of().inv(),
         ))],
     );
 
@@ -229,19 +229,22 @@ fn full_repay_with_excess() {
         query_result,
         StateResponse::Paid {
             amount: LeaseCoin::into(price::total(
-                price::total(downpayment + borrowed, lease::price_lpn_of()),
-                lease::price_lpn_of().inv(),
+                price::total(downpayment + borrowed, lease_mod::price_lpn_of()),
+                lease_mod::price_lpn_of().inv(),
             )),
             in_progress: None,
         }
     );
 }
 
-pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+pub(crate) fn repay<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     payment: PaymentCoin,
-) -> AppResponse {
+) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     let cw_payment: CwCoin = cwcoin(payment);
 
     let response: ResponseWithInterChainMsgs<'_, ()> =
@@ -259,11 +262,14 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     do_remote_ibc_transfer(test_case, contract_addr, &cwcoin(swap_out_lpn))
 }
 
-fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn send_payment_and_transfer<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     cw_payment: CwCoin,
-) -> ResponseWithInterChainMsgs<'_, ()> {
+) -> ResponseWithInterChainMsgs<'_, ()>
+where
+    Wasm: WasmTrait,
+{
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .execute(
@@ -301,17 +307,24 @@ fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
 }
 
 fn expect_swap(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+    response.expect_submit_tx(
+        TestCase::LEASER_CONNECTION_ID,
+        "0",
+        &[MsgSwapExactAmountIn::TYPE_URL],
+    );
 
     response.unwrap_response()
 }
 
-fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &'r mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn do_swap<'r, Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &'r mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     cw_payment: &CwCoin,
     swap_out_lpn: LpnCoin,
-) -> ResponseWithInterChainMsgs<'r, ()> {
+) -> ResponseWithInterChainMsgs<'r, ()>
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .send_tokens(
@@ -342,16 +355,23 @@ fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
 }
 
 fn expect_remote_ibc_transfer(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+    response.expect_submit_tx(
+        TestCase::LEASER_CONNECTION_ID,
+        "0",
+        &[MsgTransfer::TYPE_URL],
+    );
 
     response.unwrap_response()
 }
 
-fn do_remote_ibc_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn do_remote_ibc_transfer<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     cw_swap_out_lpn: &CwCoin,
-) -> AppResponse {
+) -> AppResponse
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .send_tokens(

@@ -4,9 +4,10 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
 };
 
-use ::lease::api::{ExecuteMsg, StateResponse};
 use finance::{coin::Amount, duration::Duration, price};
+use ::lease::api::{ExecuteMsg, StateResponse};
 use sdk::{
+    cosmos_sdk_proto::{ibc::applications::transfer::v1::MsgTransfer, traits::TypeUrl as _},
     cosmwasm_std::{Addr, Binary, Event},
     cw_multi_test::AppResponse,
 };
@@ -54,7 +55,11 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .unwrap();
 
     if liquidation_amount.is_some() {
-        response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+        response.expect_submit_tx(
+            TestCase::LEASER_CONNECTION_ID,
+            "0",
+            &[MsgSwapExactAmountIn::TYPE_URL],
+        );
     }
 
     let liquidation_start_response: AppResponse = response.unwrap_response();
@@ -107,7 +112,11 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .unwrap()
         .ignore_response();
 
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+    response.expect_submit_tx(
+        TestCase::LEASER_CONNECTION_ID,
+        "0",
+        &[MsgTransfer::TYPE_URL],
+    );
 
     () = response.unwrap_response();
 

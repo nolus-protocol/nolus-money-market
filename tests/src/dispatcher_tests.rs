@@ -7,7 +7,11 @@ use sdk::{
 
 use crate::common::{
     cwcoin, lpp as lpp_mod, native_cwcoin, oracle as oracle_mod,
-    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{
+        app::{DefaultWasm, Wasm as WasmTrait},
+        builder::BlankBuilder as TestCaseBuilder,
+        TestCase,
+    },
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -15,26 +19,27 @@ type Lpn = Usdc;
 
 #[test]
 fn on_alarm_zero_reward() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(Some(
-            ContractWrapper::new(
-                oracle::contract::execute,
-                oracle::contract::instantiate,
-                oracle_mod::mock_query,
+    let mut test_case: TestCase<DefaultWasm, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                None,
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
             )
-            .with_reply(oracle::contract::reply)
-            .with_sudo(oracle::contract::sudo),
-        ))
-        .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
-        .init_dispatcher()
-        .into_generic();
+            .init_time_alarms()
+            .init_oracle(Some(
+                ContractWrapper::new(
+                    oracle::contract::execute,
+                    oracle::contract::instantiate,
+                    oracle_mod::mock_query,
+                )
+                .with_reply(oracle::contract::reply)
+                .with_sudo(oracle::contract::sudo),
+            ))
+            .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
+            .init_dispatcher()
+            .into_generic();
 
     test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin::<Lpn, _>(500)]);
 
@@ -62,33 +67,34 @@ fn on_alarm_zero_reward() {
 fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            Some(
-                ContractWrapper::new(
-                    lpp::contract::execute,
-                    lpp::contract::instantiate,
-                    lpp_mod::mock_query,
-                )
-                .with_sudo(lpp::contract::sudo),
-            ),
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_time_alarms()
-        .init_oracle(Some(
-            ContractWrapper::new(
-                oracle::contract::execute,
-                oracle::contract::instantiate,
-                oracle_mod::mock_query,
+    let mut test_case: TestCase<DefaultWasm, _, _, _, _, _, _, _> =
+        TestCaseBuilder::<_, Lpn>::with_default_wasm()
+            .init_lpp(
+                Some(
+                    ContractWrapper::new(
+                        lpp::contract::execute,
+                        lpp::contract::instantiate,
+                        lpp_mod::mock_query,
+                    )
+                    .with_sudo(lpp::contract::sudo),
+                ),
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
             )
-            .with_reply(oracle::contract::reply)
-            .with_sudo(oracle::contract::sudo),
-        ))
-        .init_treasury_without_dispatcher()
-        .init_dispatcher()
-        .into_generic();
+            .init_time_alarms()
+            .init_oracle(Some(
+                ContractWrapper::new(
+                    oracle::contract::execute,
+                    oracle::contract::instantiate,
+                    oracle_mod::mock_query,
+                )
+                .with_reply(oracle::contract::reply)
+                .with_sudo(oracle::contract::sudo),
+            ))
+            .init_treasury_without_dispatcher()
+            .init_dispatcher()
+            .into_generic();
 
     test_case
         .send_funds_from_admin(
@@ -300,8 +306,8 @@ fn test_config() {
 //     );
 // }
 
-fn new_test_case() -> TestCase<Addr, Addr, (), (), Addr, Addr, Addr> {
-    TestCaseBuilder::<Lpn>::new()
+fn new_test_case() -> TestCase<DefaultWasm, Addr, Addr, (), (), Addr, Addr, Addr> {
+    TestCaseBuilder::<_, Lpn>::with_default_wasm()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -315,9 +321,12 @@ fn new_test_case() -> TestCase<Addr, Addr, (), (), Addr, Addr, Addr> {
         .into_generic()
 }
 
-fn query_config<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Addr, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
-) -> ConfigResponse {
+fn query_config<Wasm, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Wasm, Addr, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+) -> ConfigResponse
+where
+    Wasm: WasmTrait,
+{
     test_case
         .app
         .query()
