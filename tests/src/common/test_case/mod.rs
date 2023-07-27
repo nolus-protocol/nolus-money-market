@@ -1,7 +1,4 @@
-use address_book::AddressBook;
-use app::App;
 use currency::{Currency, Symbol};
-
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
@@ -14,6 +11,11 @@ use super::{
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
     mock_app, CwContractWrapper, ADMIN,
+};
+
+use self::{
+    address_book::AddressBook,
+    app::{App, DefaultWasm, Wasm as WasmTrait},
 };
 
 pub mod address_book;
@@ -49,26 +51,40 @@ type OptionalOracleWrapper = Option<
 >;
 
 #[must_use]
-pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-    pub app: App,
+pub(crate) struct TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Wasm: WasmTrait,
+{
+    pub app: App<Wasm>,
     pub address_book: AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
 }
 
-impl TestCase<(), (), (), (), (), (), ()> {
+impl TestCase<DefaultWasm, (), (), (), (), (), (), ()> {
     pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
     pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
 
     pub const PROFIT_ICA_CHANNEL: &'static str = "channel-0";
     pub const PROFIT_ICA_ADDR: &'static str = "ica1";
+}
 
-    fn with_reserve(reserve: &[CwCoin]) -> Self {
+impl<Wasm> TestCase<Wasm, (), (), (), (), (), (), ()>
+where
+    Wasm: WasmTrait,
+{
+    fn with_reserve<WasmF>(reserve: &[CwCoin], wasm_f: WasmF) -> Self
+    where
+        WasmF: FnOnce() -> (Wasm, Wasm::CounterPart),
+    {
         let (custom_message_sender, custom_message_receiver): (
             InterChainMsgSender,
             InterChainMsgReceiver,
         ) = new_inter_chain_msg_queue();
 
-        let mut app: App = App::new(
-            mock_app(custom_message_sender, reserve),
+        let (wasm, wasm_counter_part): (Wasm, Wasm::CounterPart) = wasm_f();
+
+        let mut app: App<Wasm> = App::new(
+            mock_app(custom_message_sender, reserve, wasm),
+            wasm_counter_part,
             custom_message_receiver,
         );
 
@@ -81,8 +97,10 @@ impl TestCase<(), (), (), (), (), (), ()> {
     }
 }
 
-impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Wasm: WasmTrait,
 {
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         let _: AppResponse = self
@@ -95,12 +113,16 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     }
 }
 
-impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr> {
+impl<Wasm, Dispatcher, Treasury, Leaser>
+    TestCase<Wasm, Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr>
+where
+    Wasm: WasmTrait,
+{
     pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
     {
-        LeaseInstantiator::instantiate::<D>(
+        LeaseInstantiator::instantiate::<Wasm, D>(
             &mut self.app,
             self.address_book.lease_code_id(),
             InstantiatorAddresses {

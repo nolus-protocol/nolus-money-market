@@ -1,3 +1,5 @@
+use osmosis_std::types::osmosis::gamm::v1beta1::MsgSwapExactAmountIn;
+
 use currency::{self, Currency};
 use finance::{
     coin::{Amount, Coin},
@@ -24,7 +26,7 @@ use swap::trx as swap_trx;
 use super::{
     cwcoin,
     test_case::{
-        app::App,
+        app::{App, Wasm as WasmTrait},
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
     },
@@ -34,7 +36,10 @@ use super::{
 pub(crate) struct Instantiator;
 
 impl Instantiator {
-    pub fn store(app: &mut App) -> u64 {
+    pub fn store<Wasm>(app: &mut App<Wasm>) -> u64
+    where
+        Wasm: WasmTrait,
+    {
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
@@ -43,8 +48,8 @@ impl Instantiator {
     }
 
     #[track_caller]
-    pub fn instantiate<D>(
-        app: &mut App,
+    pub fn instantiate<Wasm, D>(
+        app: &mut App<Wasm>,
         code_id: u64,
         addresses: InstantiatorAddresses,
         lease_config: InitConfig<'_, D>,
@@ -52,6 +57,7 @@ impl Instantiator {
         leaser_connection_id: &str,
     ) -> Addr
     where
+        Wasm: WasmTrait,
         D: Currency,
     {
         let msg = Self::lease_instantiate_msg(
@@ -188,14 +194,15 @@ pub struct InstantiatorAddresses {
     pub profit: Addr,
 }
 
-pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
-    app: &mut App,
+pub(crate) fn complete_initialization<Wasm, Lpn, DownpaymentC, LeaseC>(
+    app: &mut App<Wasm>,
     connection_id: &str,
     lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
     exp_lease: Coin<LeaseC>,
 ) where
+    Wasm: WasmTrait,
     Lpn: Currency,
     DownpaymentC: Currency,
     LeaseC: Currency,
@@ -235,14 +242,15 @@ pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(
     );
 }
 
-fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
-    app: &'r mut App,
+fn confirm_ica_and_transfer_funds<'r, Wasm, DownpaymentC, Lpn>(
+    app: &'r mut App<Wasm>,
     lease_addr: Addr,
     connection_id: &str,
     (ica_channel, ica_port, ica_addr): (&str, &str, &str),
     (downpayment, exp_borrow): (Coin<DownpaymentC>, Coin<Lpn>),
 ) -> ResponseWithInterChainMsgs<'r, ()>
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
     Lpn: Currency,
 {
@@ -299,26 +307,32 @@ fn expect_ibc_transfer<C>(
     response.unwrap_response()
 }
 
-fn do_ibc_transfer<'r>(
-    app: &'r mut App,
+fn do_ibc_transfer<'r, Wasm>(
+    app: &'r mut App<Wasm>,
     lease_addr: Addr,
     ica_addr: Addr,
     cw_coin: &CwCoin,
-) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+) -> ResponseWithInterChainMsgs<'r, AppResponse>
+where
+    Wasm: WasmTrait,
+{
     app.send_tokens(lease_addr.clone(), ica_addr, std::slice::from_ref(cw_coin))
         .unwrap();
 
     send_blank_response(app, lease_addr)
 }
 
-fn send_open_ica_response<'r>(
-    app: &'r mut App,
+fn send_open_ica_response<'r, Wasm>(
+    app: &'r mut App<Wasm>,
     lease_addr: Addr,
     connection_id: &str,
     ica_channel: &str,
     ica_port: &str,
     ica_addr: &str,
-) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+) -> ResponseWithInterChainMsgs<'r, AppResponse>
+where
+    Wasm: WasmTrait,
+{
     app.sudo(
         lease_addr,
         &SudoMsg::OpenAck {
@@ -351,12 +365,13 @@ fn expect_swap(
     response.unwrap_response()
 }
 
-fn do_swap<DownpaymentC, Lpn, LeaseC>(
-    app: &mut App,
+fn do_swap<Wasm, DownpaymentC, Lpn, LeaseC>(
+    app: &mut App<Wasm>,
     lease_addr: Addr,
     ica_addr: &str,
     (downpayment, exp_borrow, exp_lease): (Coin<DownpaymentC>, Coin<Lpn>, Coin<LeaseC>),
 ) where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
     Lpn: Currency,
     LeaseC: Currency,
@@ -398,12 +413,13 @@ fn do_swap<DownpaymentC, Lpn, LeaseC>(
     check_state_opened(app, lease_addr);
 }
 
-fn send_swap_response<LeaseC>(
-    app: &mut App,
+fn send_swap_response<Wasm, LeaseC>(
+    app: &mut App<Wasm>,
     lease: Addr,
     swap_out: Coin<LeaseC>,
     downpayment_equals_lease: bool,
 ) where
+    Wasm: WasmTrait,
     LeaseC: Currency,
 {
     let downpayment_equals_lease_as_amount: Amount = (!downpayment_equals_lease).into();
@@ -424,18 +440,24 @@ fn send_swap_response<LeaseC>(
     .unwrap_response()
 }
 
-fn send_blank_response(
-    app: &mut App,
+fn send_blank_response<Wasm>(
+    app: &mut App<Wasm>,
     lease_addr: Addr,
-) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+) -> ResponseWithInterChainMsgs<'_, AppResponse>
+where
+    Wasm: WasmTrait,
+{
     send_response(app, lease_addr, Default::default())
 }
 
-fn send_response(
-    app: &mut App,
+fn send_response<Wasm>(
+    app: &mut App<Wasm>,
     lease_addr: Addr,
     resp: Binary,
-) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+) -> ResponseWithInterChainMsgs<'_, AppResponse>
+where
+    Wasm: WasmTrait,
+{
     app.sudo(
         lease_addr,
         &SudoMsg::Response {
@@ -456,7 +478,10 @@ fn send_response(
     .unwrap()
 }
 
-fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
+fn fetch_state<Wasm>(app: &mut App<Wasm>, lease: Addr) -> StateResponse
+where
+    Wasm: WasmTrait,
+{
     app.query()
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: lease.into_string(),
@@ -465,13 +490,19 @@ fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
         .unwrap()
 }
 
-fn check_state_opening(app: &mut App, lease: Addr) {
+fn check_state_opening<Wasm>(app: &mut App<Wasm>, lease: Addr)
+where
+    Wasm: WasmTrait,
+{
     if !matches!(fetch_state(app, lease), StateResponse::Opening { .. }) {
         panic!("Opening lease failed! Lease is expected to be in opening state!");
     }
 }
 
-fn check_state_opened(app: &mut App, lease: Addr) {
+fn check_state_opened<Wasm>(app: &mut App<Wasm>, lease: Addr)
+where
+    Wasm: WasmTrait,
+{
     if !matches!(fetch_state(app, lease), StateResponse::Opened { .. }) {
         panic!("Opening lease failed! Lease is not yet it opened state!");
     }

@@ -24,7 +24,10 @@ use sdk::{
 };
 
 use super::{
-    test_case::{app::App, TestCase},
+    test_case::{
+        app::{App, Wasm as WasmTrait},
+        TestCase,
+    },
     ADMIN,
 };
 
@@ -32,8 +35,9 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate_default<BaseC>(app: &mut App) -> Addr
+    pub fn instantiate_default<Wasm, BaseC>(app: &mut App<Wasm>) -> Addr
     where
+        Wasm: WasmTrait,
         BaseC: Currency,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
@@ -41,12 +45,13 @@ impl Instantiator {
             .with_reply(reply)
             .with_sudo(sudo);
 
-        Self::instantiate::<BaseC>(app, Box::new(endpoints))
+        Self::instantiate::<Wasm, BaseC>(app, Box::new(endpoints))
     }
 
     #[track_caller]
-    pub fn instantiate<BaseC>(app: &mut App, endpoints: Box<CwContract>) -> Addr
+    pub fn instantiate<Wasm, BaseC>(app: &mut App<Wasm>, endpoints: Box<CwContract>) -> Addr
     where
+        Wasm: WasmTrait,
         BaseC: Currency,
     {
         let code_id = app.store_code(endpoints);
@@ -89,10 +94,12 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
     Ok(res)
 }
 
-pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn add_feeder<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: impl Into<String>,
-) {
+) where
+    Wasm: WasmTrait,
+{
     let oracle = test_case.address_book.oracle().clone();
 
     let response: AppResponse = test_case
@@ -114,12 +121,13 @@ pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     );
 }
 
-pub(crate) fn feed_price_pair<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn feed_price_pair<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
 where
+    Wasm: WasmTrait,
     C1: Currency,
     C2: Currency,
 {
@@ -142,13 +150,14 @@ where
         .unwrap_response()
 }
 
-pub(crate) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn feed_price<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+    test_case: &mut TestCase<Wasm, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,
 ) -> AppResponse
 where
+    Wasm: WasmTrait,
     C1: Currency,
     C2: Currency,
 {

@@ -7,7 +7,10 @@ use leaser::{
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::app::{App, Wasm as WasmTrait},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
@@ -31,14 +34,17 @@ impl Instantiator {
     }
 
     #[track_caller]
-    pub fn instantiate(
-        app: &mut App,
+    pub fn instantiate<Wasm>(
+        app: &mut App<Wasm>,
         lease_code_id: u64,
         lpp_addr: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
         profit: Addr,
-    ) -> Addr {
+    ) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
@@ -66,13 +72,14 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn query_quote<DownpaymentC, LeaseC>(
-    app: &mut App,
+pub(crate) fn query_quote<Wasm, DownpaymentC, LeaseC>(
+    app: &mut App<Wasm>,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
 ) -> QuoteResponse
 where
+    Wasm: WasmTrait,
     DownpaymentC: Currency,
     LeaseC: Currency,
 {

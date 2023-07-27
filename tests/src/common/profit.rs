@@ -5,19 +5,25 @@ use profit::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::app::{App, Wasm as WasmTrait},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate(
-        app: &mut App,
+    pub fn instantiate<Wasm>(
+        app: &mut App<Wasm>,
         cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
         timealarms: Addr,
-    ) -> Addr {
+    ) -> Addr
+    where
+        Wasm: WasmTrait,
+    {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query).with_sudo(sudo);
 

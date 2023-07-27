@@ -9,8 +9,12 @@ use sdk::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
         StdResult, Timestamp,
     },
+    cw_multi_test::FailingModule,
+    neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
     testing::{self, new_app, CwApp, InterChainMsgSender},
 };
+
+use self::test_case::app::Wasm as WasmTrait;
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
 pub(crate) const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
@@ -82,9 +86,14 @@ fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binar
     to_binary(&MockResponse {})
 }
 
-pub(crate) type MockApp = CwApp<InterChainMsg, Empty>;
-
-pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin]) -> MockApp {
+pub(crate) fn mock_app<Wasm>(
+    message_sender: InterChainMsgSender,
+    init_funds: &[CwCoin],
+    wasm: Wasm,
+) -> CwApp<Wasm>
+where
+    Wasm: WasmTrait,
+{
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -97,6 +106,7 @@ pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin
     funds.append(&mut init_funds.to_vec());
 
     new_app(message_sender)
+        .with_wasm::<FailingModule<InterChainMsg, Empty, NeutronSudoMsg>, Wasm>(wasm)
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router
@@ -110,7 +120,10 @@ pub(crate) trait AppExt {
     fn time_shift(&mut self, t: Duration);
 }
 
-impl AppExt for MockApp {
+impl<Wasm> AppExt for CwApp<Wasm>
+where
+    Wasm: WasmTrait,
+{
     fn time_shift(&mut self, t: Duration) {
         self.update_block(|block| {
             let ct = block.time.nanos();

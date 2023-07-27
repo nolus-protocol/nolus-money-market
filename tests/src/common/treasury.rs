@@ -2,7 +2,11 @@ use currency::Currency;
 use sdk::cosmwasm_std::Addr;
 use treasury::{contract::sudo, msg::InstantiateMsg};
 
-use super::{cwcoin, mock_query, native_cwcoin, test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    cwcoin, mock_query, native_cwcoin,
+    test_case::app::{App, Wasm as WasmTrait},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator {
     rewards_dispatcher: Addr,
@@ -18,8 +22,9 @@ impl Instantiator {
     }
 
     #[track_caller]
-    pub fn instantiate<Lpn>(self, app: &mut App) -> Addr
+    pub fn instantiate<Wasm, Lpn>(self, app: &mut App<Wasm>) -> Addr
     where
+        Wasm: WasmTrait,
         Lpn: Currency,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell

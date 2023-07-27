@@ -12,14 +12,17 @@ use sdk::{
     testing::CwContract,
 };
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::app::{App, Wasm as WasmTrait},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate_default<Lpn>(
-        app: &mut App,
+    pub fn instantiate_default<Wasm, Lpn>(
+        app: &mut App<Wasm>,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
@@ -27,6 +30,7 @@ impl Instantiator {
         addon_optimal_interest_rate: Percent,
     ) -> (Addr, u64)
     where
+        Wasm: WasmTrait,
         Lpn: Currency,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
@@ -37,7 +41,7 @@ impl Instantiator {
         )
         .with_sudo(sudo);
 
-        Self::instantiate::<Lpn>(
+        Self::instantiate::<Wasm, Lpn>(
             app,
             Box::new(endpoints),
             lease_code_id,
@@ -49,8 +53,8 @@ impl Instantiator {
     }
 
     #[track_caller]
-    pub fn instantiate<Lpn>(
-        app: &mut App,
+    pub fn instantiate<Wasm, Lpn>(
+        app: &mut App<Wasm>,
         endpoints: Box<CwContract>,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
@@ -59,6 +63,7 @@ impl Instantiator {
         addon_optimal_interest_rate: Percent,
     ) -> (Addr, u64)
     where
+        Wasm: WasmTrait,
         Lpn: Currency,
     {
         let lpp_id = app.store_code(endpoints);
