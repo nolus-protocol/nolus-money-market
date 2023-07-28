@@ -6,7 +6,9 @@ use dex::{
     Response as DexResponse,
 };
 use oracle::stub::OracleRef;
-use platform::{message::Response as MessageResponse, response};
+use platform::{
+    message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -17,7 +19,6 @@ use sdk::{
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
-use crate::state::StateAndResponse;
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
@@ -88,10 +89,12 @@ pub fn execute(
         ExecuteMsg::Config { cadence_hours } => {
             ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
 
-            let StateAndResponse { state, response } =
-                State::load(deps.storage)?.try_update_config(env.block.time, cadence_hours)?;
+            let StateMachineResponse {
+                response,
+                next_state,
+            } = State::load(deps.storage)?.try_update_config(env.block.time, cadence_hours)?;
 
-            state.store(deps.storage)?;
+            next_state.store(deps.storage)?;
 
             Ok(response::response_only_messages(response))
         }

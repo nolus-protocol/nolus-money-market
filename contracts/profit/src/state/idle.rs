@@ -18,16 +18,19 @@ use platform::{
     bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
     message::Response as PlatformResponse,
+    state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
+use crate::{
+    msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours,
+    ContractError,
+};
 
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigAndResponse, ConfigManagement, SetupDexHandler, State, StateAndResponse,
-    StateEnum,
+    Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -118,13 +121,18 @@ impl Enterable for Idle {
 }
 
 impl ConfigManagement for Idle {
-    fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
-    {
-        f(self.config).map(|ConfigAndResponse { config, response }| StateAndResponse {
-            state: Self { config, ..self },
-            response,
+    fn try_update_config(
+        self,
+        now: Timestamp,
+        cadence_hours: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
+        let config: Config = self.config.update(cadence_hours);
+
+        super::on_config_update(&config, now).map(|response: PlatformResponse| {
+            StateMachineResponse {
+                response,
+                next_state: Self { config, ..self },
+            }
         })
     }
 

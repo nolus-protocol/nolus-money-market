@@ -17,11 +17,15 @@ use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
     never::Never,
+    state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
+use crate::{
+    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
+    typedefs::CadenceHours,
+};
 
 use super::{
     idle::Idle,
@@ -137,10 +141,11 @@ impl SwapTask for BuyBack {
 }
 
 impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
-    fn with_config<F>(self, _: F) -> ContractResult<super::StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<super::ConfigAndResponse>,
-    {
+    fn try_update_config(
+        self,
+        _: Timestamp,
+        _: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",
         )))

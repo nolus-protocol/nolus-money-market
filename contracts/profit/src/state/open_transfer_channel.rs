@@ -6,14 +6,11 @@ use dex::{ConnectionParams, Handler, Response as DexResponse};
 use platform::{
     message::Response as PlatformResponse, state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Deps, Env};
+use sdk::cosmwasm_std::{Deps, Env, Timestamp};
 
-use crate::{msg::ConfigResponse, result::ContractResult};
+use crate::{msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours};
 
-use super::{
-    open_ica::OpenIca, Config, ConfigAndResponse, ConfigManagement, IcaConnector, SetupDexHandler,
-    State, StateAndResponse,
-};
+use super::{open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct OpenTransferChannel {
@@ -32,13 +29,18 @@ impl Handler for OpenTransferChannel {
 }
 
 impl ConfigManagement for OpenTransferChannel {
-    fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
-    {
-        f(self.config).map(|ConfigAndResponse { config, response }| StateAndResponse {
-            state: Self { config },
-            response,
+    fn try_update_config(
+        self,
+        now: Timestamp,
+        cadence_hours: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
+        let config: Config = self.config.update(cadence_hours);
+
+        super::on_config_update(&config, now).map(|response: PlatformResponse| {
+            StateMachineResponse {
+                response,
+                next_state: Self { config },
+            }
         })
     }
 

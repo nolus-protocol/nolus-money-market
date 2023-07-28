@@ -3,13 +3,14 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
+use platform::state_machine::Response as StateMachineResponse;
+use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
-
-use super::{
-    idle::Idle, Config, ConfigAndResponse, ConfigManagement, IcaConnector, SetupDexHandler, State,
-    StateAndResponse,
+use crate::{
+    error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
 };
+
+use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
@@ -48,10 +49,11 @@ impl Display for OpenIca {
 }
 
 impl ConfigManagement for IcaConnector {
-    fn with_config<F>(self, _: F) -> ContractResult<StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
-    {
+    fn try_update_config(
+        self,
+        _: Timestamp,
+        _: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",
         )))

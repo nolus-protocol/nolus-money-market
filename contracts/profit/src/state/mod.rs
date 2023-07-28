@@ -1,14 +1,16 @@
 use std::fmt::{Display, Formatter};
 
-use finance::duration::Duration;
-use platform::{batch::Batch, message::Response as PlatformResponse};
 use serde::{Deserialize, Serialize};
 
 use dex::{
     ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
 };
-use platform::state_machine::{self, Response as StateMachineResponse};
+use finance::duration::Duration;
+use platform::{
+    message::Response as PlatformResponse,
+    state_machine::{self, Response as StateMachineResponse},
+};
 use sdk::{
     cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
@@ -38,52 +40,23 @@ const STATE: Item<'static, State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
 
-pub(crate) struct ConfigAndResponse {
-    pub config: Config,
-    pub response: PlatformResponse,
-}
-
-pub(crate) struct StateAndResponse<T> {
-    pub state: T,
-    pub response: PlatformResponse,
-}
-
-impl<T> StateAndResponse<T> {
-    pub fn map_state<U>(self) -> StateAndResponse<U>
-    where
-        T: Into<U>,
-    {
-        StateAndResponse {
-            state: self.state.into(),
-            response: self.response,
-        }
-    }
+fn on_config_update(new_config: &Config, now: Timestamp) -> ContractResult<PlatformResponse> {
+    new_config
+        .time_alarms()
+        .setup_alarm(now + Duration::from_hours(new_config.cadence_hours()))
+        .map(PlatformResponse::messages_only)
+        .map_err(Into::into)
 }
 
 pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
-    fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>;
-
     fn try_update_config(
         self,
         now: Timestamp,
         cadence_hours: CadenceHours,
-    ) -> ContractResult<StateAndResponse<Self>> {
-        self.with_config(|config: Config| {
-            config
-                .time_alarms()
-                .setup_alarm(now + Duration::from_hours(cadence_hours))
-                .map(|messages: Batch| ConfigAndResponse {
-                    config: config.update(cadence_hours),
-                    response: PlatformResponse::messages_only(messages),
-                })
-                .map_err(Into::into)
-        })
-    }
+    ) -> ContractResult<StateMachineResponse<Self>>;
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
@@ -120,19 +93,24 @@ enum StateEnum {
 pub(crate) struct State(StateEnum);
 
 impl ConfigManagement for State {
-    fn with_config<F>(self, f: F) -> ContractResult<StateAndResponse<Self>>
-    where
-        F: FnOnce(Config) -> ContractResult<ConfigAndResponse>,
-    {
+    fn try_update_config(
+        self,
+        now: Timestamp,
+        cadence_hours: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
         match self.0 {
-            StateEnum::OpenTransferChannel(transfer) => {
-                transfer.with_config(f).map(StateAndResponse::map_state)
-            }
-            StateEnum::OpenIca(ica) => ica.with_config(f).map(StateAndResponse::map_state),
-            StateEnum::Idle(idle) => idle.with_config(f).map(StateAndResponse::map_state),
-            StateEnum::BuyBack(buy_back) => {
-                buy_back.with_config(f).map(StateAndResponse::map_state)
-            }
+            StateEnum::OpenTransferChannel(transfer) => transfer
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::Idle(idle) => idle
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => buy_back
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
         }
     }
 
