@@ -37,7 +37,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!(Usdc::TICKER, (1, Cro::TICKER)),
+            swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER)),
         );
         let (mut deps, _info) = setup_test(msg);
 
@@ -83,7 +83,7 @@ mod tests {
     fn config_supported_pairs() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = swap_tree!((1, Cro::TICKER), (2, Osmo::TICKER));
+        let test_tree = swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER), (2, Osmo::TICKER));
 
         let res = sudo(
             deps.as_mut(),
@@ -127,7 +127,7 @@ mod tests {
     fn invalid_supported_pairs() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = swap_tree!((1, Cro::TICKER), (2, Cro::TICKER));
+        let test_tree = swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER), (2, Cro::TICKER));
 
         let Response {
             messages,

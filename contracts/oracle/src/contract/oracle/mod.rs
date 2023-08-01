@@ -257,10 +257,12 @@ mod tests {
             .store(storage)
             .unwrap();
 
-        SupportedPairs::<BaseCurrency>::new(swap_tree!(Usdc::TICKER, (1, Nls::TICKER)).into_tree())
-            .unwrap()
-            .save(storage)
-            .unwrap();
+        SupportedPairs::<BaseCurrency>::new(
+            swap_tree!({ base: Usdc::TICKER }, (1, Nls::TICKER)).into_tree(),
+        )
+        .unwrap()
+        .save(storage)
+        .unwrap();
     }
 
     #[track_caller]

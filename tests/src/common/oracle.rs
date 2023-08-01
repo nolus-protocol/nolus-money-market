@@ -60,7 +60,12 @@ impl Instantiator {
                     Percent::from_percent(75),
                 ),
             },
-            swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER), (13, Atom::TICKER)),
+            swap_tree: oracle::swap_tree!(
+                { base: Usdc::TICKER },
+                (1, Osmo::TICKER),
+                (3, Cro::TICKER),
+                (13, Atom::TICKER)
+            ),
         };
 
         app.instantiate(
