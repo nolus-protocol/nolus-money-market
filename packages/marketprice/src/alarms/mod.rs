@@ -235,7 +235,7 @@ where
             .may_load(self.storage.deref(), subscriber.clone())?;
 
         if let Some(above) = &above {
-            self.alarms_below.replace(
+            self.alarms_above_or_equal.replace(
                 self.storage.deref_mut(),
                 subscriber.clone(),
                 None,
