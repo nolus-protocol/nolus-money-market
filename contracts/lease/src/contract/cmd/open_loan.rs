@@ -68,8 +68,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
             return Err(Self::Error::InsufficientPayment(downpayment));
         }
 
-        let liability_domain =
-            Liability::<Lpn>::try_from(self.liability).and_then(|liability| Ok(liability))?;
+        let liability_domain = Liability::<Lpn>::try_from(self.liability)?;
         let borrow_lpn = liability_domain.init_borrow_amount(downpayment_lpn, self.max_ltd);
 
         lpp.open_loan_req(borrow_lpn)?;
