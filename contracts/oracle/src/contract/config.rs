@@ -37,7 +37,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!((1, Cro::TICKER)),
+            swap_tree!(Usdc::TICKER, (1, Cro::TICKER)),
         );
         let (mut deps, _info) = setup_test(msg);
 

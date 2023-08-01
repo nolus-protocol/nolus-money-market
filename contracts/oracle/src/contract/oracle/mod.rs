@@ -258,7 +258,7 @@ mod tests {
             .unwrap();
 
         SupportedPairs::<BaseCurrency>::new(
-            swap_tree!((1, Nls::TICKER)).into_tree(),
+            swap_tree!(Usdc::TICKER, (1, Nls::TICKER)).into_tree(),
         )
         .unwrap()
         .save(storage)

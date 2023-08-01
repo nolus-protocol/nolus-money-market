@@ -171,7 +171,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!((1, Osmo::TICKER)),
+            swap_tree!(Usdc::TICKER, (1, Osmo::TICKER)),
         );
         let (deps, _info) = setup_test(msg);
 
