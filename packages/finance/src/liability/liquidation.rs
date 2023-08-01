@@ -914,7 +914,7 @@ mod tests {
 
     fn price() -> Price<TestLpn, TestCurrency> {
         let amount_test_lpn: Coin<TestLpn> = Coin::new(1_000);
-        let amount_test_currency: Coin<TestCurrency> = Coin::new(100000);
+        let amount_test_currency: Coin<TestCurrency> = Coin::new(1_000);
         price::total_of(amount_test_lpn).is(amount_test_currency)
     }
 

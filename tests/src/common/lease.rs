@@ -1,8 +1,12 @@
-use currency::{self, Currency};
+use currency::{
+    self,
+    lpn::{Lpns, Usdc},
+    Currency,
+};
 use finance::{
-    coin::{Amount, Coin},
+    coin::{Amount, Coin, CoinDTO},
     duration::Duration,
-    liability::Liability,
+    liability::dto::LiabilityDTO,
     percent::Percent,
     price::{self, Price},
 };
@@ -30,6 +34,10 @@ use super::{
     },
     CwContractWrapper, ADMIN, USER,
 };
+
+type TheCurrency = Usdc;
+type LpnCoin = Coin<TheCurrency>;
+type LpnCoinDTO = CoinDTO<Lpns>;
 
 pub(crate) struct Instantiator;
 
@@ -88,13 +96,15 @@ impl Instantiator {
                 customer: config.customer,
                 currency: lease_currency.into(),
                 max_ltd,
-                liability: Liability::new(
+                liability: LiabilityDTO::new(
                     config.liability_init_percent,
                     config.liability_delta_to_healthy_percent,
                     config.liability_delta_to_max_percent,
                     config.liability_minus_delta_to_first_liq_warn,
                     config.liability_minus_delta_to_second_liq_warn,
                     config.liability_minus_delta_to_third_liq_warn,
+                    config.liability_min_liq_amount,
+                    config.liability_min_asset_amount,
                     config.liability_recalc_time,
                 ),
                 loan: LoanForm {
@@ -143,6 +153,8 @@ pub(crate) struct InstantiatorConfig {
     pub liability_minus_delta_to_first_liq_warn: Percent,
     pub liability_minus_delta_to_second_liq_warn: Percent,
     pub liability_minus_delta_to_third_liq_warn: Percent,
+    pub liability_min_liq_amount: CoinDTO<Lpns>,
+    pub liability_min_asset_amount: CoinDTO<Lpns>,
     pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
@@ -161,6 +173,8 @@ impl Default for InstantiatorConfig {
             liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
             liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
             liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
+            liability_min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
+            liability_min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
             liability_recalc_time: Duration::from_days(20),
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
