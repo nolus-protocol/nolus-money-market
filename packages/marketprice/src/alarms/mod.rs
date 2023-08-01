@@ -396,6 +396,68 @@ pub mod tests {
     }
 
     #[test]
+    fn test_out_for_delivery_removes_above() {
+        const PRICE_BASE: Amount = 1;
+        const PRICE_QUOTE: Amount = if let Some(quote) = PRICE_BASE.checked_add(1) {
+            quote
+        } else {
+            panic!()
+        };
+
+        const LOWER_PRICE_BASE: Amount = PRICE_BASE;
+        const LOWER_PRICE_QUOTE: Amount = if let Some(quote) = PRICE_QUOTE.checked_sub(1) {
+            quote
+        } else {
+            panic!()
+        };
+
+        type QuoteCurrency = Atom;
+        type BaseCoin = Coin<Base>;
+        type QuoteCoin = Coin<QuoteCurrency>;
+
+        let mut storage: MockStorage = MockStorage::new();
+        let mut alarms: PriceAlarms<'_, &mut dyn Storage> = alarms(&mut storage);
+
+        let subscriber: Addr = Addr::unchecked("addr1");
+
+        let price: Price<Base, QuoteCurrency> =
+            price::total_of(BaseCoin::new(PRICE_BASE)).is(QuoteCoin::new(PRICE_QUOTE));
+
+        let lower_price: Price<Base, QuoteCurrency> =
+            price::total_of(BaseCoin::new(LOWER_PRICE_BASE)).is(QuoteCoin::new(LOWER_PRICE_QUOTE));
+
+        alarms.add_alarm_below(subscriber.clone(), price).unwrap();
+        alarms
+            .add_alarm_above_or_equal(subscriber.clone(), price)
+            .unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms.out_for_delivery(subscriber).unwrap();
+
+        // Catch below
+        assert_eq!(alarms.alarms(lower_price).count(), 0);
+
+        // Catch above or equal
+        assert_eq!(alarms.alarms(price).count(), 0);
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_delivered().unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        // Catch below
+        assert_eq!(alarms.alarms(lower_price).count(), 0);
+
+        // Catch above or equal
+        assert_eq!(alarms.alarms(price).count(), 0);
+    }
+
+    #[test]
     fn test_add_remove() {
         let mut storage = MockStorage::new();
         let mut alarms = alarms(&mut storage);

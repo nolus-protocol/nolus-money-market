@@ -155,3 +155,214 @@ where
         assert_eq!(set.len(), subscribers.len());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use currency::{lpn::Usdc, native::Nls, Currency as _};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent,
+        price,
+    };
+    use marketprice::{config::Config as PriceConfig, SpotPrice};
+    use sdk::cosmwasm_std::{
+        testing::{MockApi, MockQuerier, MockStorage},
+        Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+    };
+
+    use crate::{
+        alarms::Alarm,
+        contract::alarms::MarketAlarms,
+        state::{config::Config, supported_pairs::SupportedPairs},
+        swap_tree,
+    };
+
+    use super::{feed::Feeds, feeder::Feeders, Oracle};
+
+    type BaseCurrency = Usdc;
+
+    type NlsCoin = Coin<Nls>;
+    type UsdcCoin = Coin<Usdc>;
+
+    #[test]
+    fn test() {
+        const SAMPLE_PERIOD_SECS: u32 = 3;
+        const _: () = if SAMPLE_PERIOD_SECS < 3 {
+            panic!("Bug is reproduced with minimum of 3 seconds for the sample period.");
+        };
+
+        let mut storage: MockStorage = MockStorage::new();
+
+        let price_config: PriceConfig = PriceConfig::new(
+            Percent::HUNDRED,
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            1,
+            Percent::HUNDRED,
+        );
+
+        let mut now_seconds: u64 = 1;
+
+        init(&mut storage, &price_config);
+
+        add_higher_alarm(&mut storage);
+
+        feed_below_price(&price_config, &mut storage, now_seconds);
+
+        now_seconds += 1;
+
+        dispatch_1(&mut storage, now_seconds);
+
+        add_lower_alarm(&mut storage);
+
+        now_seconds += 1;
+
+        for _ in 0..SAMPLE_PERIOD_SECS.checked_add(1).unwrap() {
+            dispatch_0(&mut storage, now_seconds);
+
+            now_seconds += 1;
+        }
+
+        feed_normal_price(&price_config, &mut storage, now_seconds);
+
+        now_seconds += 1;
+
+        dispatch_1(&mut storage, now_seconds);
+
+        now_seconds += 1;
+
+        // Bug happens on this step.
+        dispatch_0(&mut storage, now_seconds);
+
+        feed_below_price(&price_config, &mut storage, now_seconds);
+
+        now_seconds += 1;
+
+        dispatch_0(&mut storage, now_seconds);
+    }
+
+    #[track_caller]
+    fn init(storage: &mut dyn Storage, price_config: &PriceConfig) {
+        Feeders::try_register(
+            DepsMut {
+                storage,
+                api: &MockApi::default(),
+                querier: QuerierWrapper::new(&MockQuerier::<Empty>::new(&[])),
+            },
+            String::from("feeder"),
+        )
+        .unwrap();
+
+        Config::new(String::from(BaseCurrency::TICKER), price_config.clone())
+            .store(storage)
+            .unwrap();
+
+        SupportedPairs::<BaseCurrency>::new(
+            swap_tree!((1, Nls::TICKER)).into_tree(),
+        )
+        .unwrap()
+        .save(storage)
+        .unwrap();
+    }
+
+    #[track_caller]
+    fn add_alarm(storage: &mut dyn Storage, below_nls_to_2: Amount, above_1_to_usdc: Amount) {
+        let storage: &mut dyn Storage = storage;
+
+        let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
+
+        alarms
+            .try_add_price_alarm::<BaseCurrency>(
+                Addr::unchecked("1"),
+                Alarm::new(
+                    SpotPrice::new(NlsCoin::new(below_nls_to_2).into(), UsdcCoin::new(2).into()),
+                    Some(SpotPrice::new(
+                        NlsCoin::new(1).into(),
+                        UsdcCoin::new(above_1_to_usdc).into(),
+                    )),
+                ),
+            )
+            .unwrap();
+    }
+
+    #[track_caller]
+    fn add_higher_alarm(storage: &mut dyn Storage) {
+        add_alarm(storage, 1, 3)
+    }
+
+    #[track_caller]
+    fn add_lower_alarm(storage: &mut dyn Storage) {
+        add_alarm(storage, 2, 2)
+    }
+
+    #[track_caller]
+    fn feed_price(
+        price_config: &PriceConfig,
+        storage: &mut dyn Storage,
+        now_seconds: u64,
+        nls: Amount,
+        usdc: Amount,
+    ) {
+        Feeds::<BaseCurrency>::with(price_config.clone())
+            .feed_prices(
+                storage,
+                Timestamp::from_seconds(now_seconds),
+                &Addr::unchecked("feeder"),
+                &[price::total_of(NlsCoin::new(nls))
+                    .is(UsdcCoin::new(usdc))
+                    .into()],
+            )
+            .unwrap();
+    }
+
+    #[track_caller]
+    fn feed_below_price(price_config: &PriceConfig, storage: &mut dyn Storage, now_seconds: u64) {
+        feed_price(price_config, storage, now_seconds, 1, 1)
+    }
+
+    #[track_caller]
+    fn feed_normal_price(price_config: &PriceConfig, storage: &mut dyn Storage, now_seconds: u64) {
+        feed_price(price_config, storage, now_seconds, 1, 2)
+    }
+
+    #[track_caller]
+    fn dispatch(storage: &mut dyn Storage, now_seconds: u64, expected_count: u32) {
+        let mut oracle: Oracle<'_, &mut dyn Storage, _> =
+            Oracle::<'_, _, BaseCurrency>::load(storage).unwrap();
+
+        let alarms: u32 = oracle
+            .try_notify_alarms(Timestamp::from_seconds(now_seconds), 16)
+            .unwrap()
+            .0;
+
+        assert_eq!(alarms, expected_count);
+    }
+
+    #[track_caller]
+    fn deliver(storage: &mut dyn Storage, count: u32) {
+        let storage: &mut dyn Storage = storage;
+
+        let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
+
+        for _ in 0..count {
+            alarms.last_delivered().unwrap();
+        }
+    }
+
+    #[track_caller]
+    fn dispatch_and_deliver(storage: &mut dyn Storage, now_seconds: u64, expected_count: u32) {
+        dispatch(storage, now_seconds, expected_count);
+
+        deliver(storage, expected_count)
+    }
+
+    #[track_caller]
+    fn dispatch_0(storage: &mut dyn Storage, now_seconds: u64) {
+        dispatch_and_deliver(storage, now_seconds, 0)
+    }
+
+    #[track_caller]
+    fn dispatch_1(storage: &mut dyn Storage, now_seconds: u64) {
+        dispatch_and_deliver(storage, now_seconds, 1)
+    }
+}
