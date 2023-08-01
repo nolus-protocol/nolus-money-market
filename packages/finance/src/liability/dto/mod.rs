@@ -50,18 +50,16 @@ impl LiabilityDTO {
         initial: Percent,
         delta_to_healthy: Percent,
         delta_to_max: Percent,
-        minus_delta_of_first_liq_warn: Percent,
-        minus_delta_of_second_liq_warn: Percent,
-        minus_delta_of_third_liq_warn: Percent,
+        minus_delta_of_liq_warns: (Percent, Percent, Percent),
         min_liq_amount: LpnCoin,
         min_asset_amount: LpnCoin,
         recalc_time: Duration,
     ) -> Self {
         let healthy = initial + delta_to_healthy;
         let max = healthy + delta_to_max;
-        let third_liquidity_warning = max - minus_delta_of_third_liq_warn;
-        let second_liquidity_warning = third_liquidity_warning - minus_delta_of_second_liq_warn;
-        let first_liquidity_warning = second_liquidity_warning - minus_delta_of_first_liq_warn;
+        let third_liquidity_warning = max - minus_delta_of_liq_warns.2;
+        let second_liquidity_warning = third_liquidity_warning - minus_delta_of_liq_warns.1;
+        let first_liquidity_warning = second_liquidity_warning - minus_delta_of_liq_warns.0;
         let obj = Self {
             initial,
             healthy,
