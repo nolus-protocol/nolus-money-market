@@ -4,7 +4,7 @@ use treasury::{contract::sudo, msg::InstantiateMsg};
 
 use super::{
     cwcoin, mock_query, native_cwcoin,
-    test_case::app::{App, Wasm as WasmTrait},
+    test_case::{app::App, wasm::Wasm as WasmTrait},
     CwContractWrapper, ADMIN,
 };
 

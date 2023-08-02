@@ -22,8 +22,8 @@ use crate::{
         cwcoin,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
-            app::Wasm as WasmTrait,
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
+            wasm::Wasm as WasmTrait,
             TestCase,
         },
         ADMIN, USER,

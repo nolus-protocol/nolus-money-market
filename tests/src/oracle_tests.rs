@@ -39,9 +39,10 @@ use tree::HumanReadableTree;
 use crate::common::{
     oracle as oracle_mod,
     test_case::{
-        app::{App, DefaultWasm, Wasm as WasmTrait},
+        app::App,
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        wasm::{DefaultWasm, Wasm as WasmTrait},
         TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,

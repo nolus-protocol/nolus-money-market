@@ -18,8 +18,8 @@ use sdk::{
 use crate::common::{
     cwcoin,
     test_case::{
-        app::{Action, ConfigurableWasmBuilder, Request, Wasm as WasmTrait},
         response::{RemoteChain, ResponseWithInterChainMsgs},
+        wasm::{Action, ConfigurableWasmBuilder, Request, Wasm as WasmTrait},
         TestCase,
     },
     ADMIN, USER,

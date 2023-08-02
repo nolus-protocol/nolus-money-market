@@ -24,10 +24,7 @@ use sdk::{
 };
 
 use super::{
-    test_case::{
-        app::{App, Wasm as WasmTrait},
-        TestCase,
-    },
+    test_case::{app::App, wasm::Wasm as WasmTrait, TestCase},
     ADMIN,
 };
 

@@ -8,8 +8,8 @@ use sdk::{
 use crate::common::{
     cwcoin, lpp as lpp_mod, native_cwcoin, oracle as oracle_mod,
     test_case::{
-        app::{DefaultWasm, Wasm as WasmTrait},
         builder::BlankBuilder as TestCaseBuilder,
+        wasm::{DefaultWasm, Wasm as WasmTrait},
         TestCase,
     },
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,

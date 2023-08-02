@@ -15,13 +15,15 @@ use super::{
 
 use self::{
     address_book::AddressBook,
-    app::{App, DefaultWasm, Wasm as WasmTrait},
+    app::App,
+    wasm::{DefaultWasm, Wasm as WasmTrait},
 };
 
 pub mod address_book;
 pub mod app;
 pub mod builder;
 pub mod response;
+pub mod wasm;
 
 type OptionalLppEndpoints = Option<
     CwContractWrapper<

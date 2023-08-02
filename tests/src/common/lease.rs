@@ -26,8 +26,9 @@ use swap::trx as swap_trx;
 use super::{
     cwcoin,
     test_case::{
-        app::{App, Wasm as WasmTrait},
+        app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        wasm::Wasm as WasmTrait,
         TestCase,
     },
     CwContractWrapper, ADMIN, USER,

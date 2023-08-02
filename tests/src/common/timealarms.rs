@@ -6,7 +6,7 @@ use timealarms::{
 
 use super::{
     mock_query,
-    test_case::app::{App, Wasm as WasmTrait},
+    test_case::{app::App, wasm::Wasm as WasmTrait},
     CwContractWrapper, ADMIN,
 };
 

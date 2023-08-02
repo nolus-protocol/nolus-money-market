@@ -12,8 +12,8 @@ use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 use crate::common::{
     cwcoin,
     test_case::{
-        app::{DefaultWasm, Wasm as WasmTrait},
         builder::BlankBuilder as TestCaseBuilder,
+        wasm::{DefaultWasm, Wasm as WasmTrait},
         TestCase,
     },
     ADMIN,
@@ -39,10 +39,8 @@ mod mock_lease {
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{
-        test_case::app::{App, Wasm as WasmTrait},
-        ADMIN,
-    };
+    use crate::common::test_case::wasm::Wasm as WasmTrait;
+    use crate::common::{test_case::app::App, ADMIN};
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");

@@ -20,8 +20,8 @@ use crate::common::{
 };
 
 use super::{
-    app::{default_wasm, DefaultWasm, Wasm as WasmTrait},
     response::{RemoteChain, ResponseWithInterChainMsgs},
+    wasm::{default_wasm, DefaultWasm, Wasm as WasmTrait},
     OptionalLppEndpoints, OptionalOracleWrapper, TestCase,
 };
 

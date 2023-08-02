@@ -14,7 +14,7 @@ use sdk::{
     testing::{self, new_app, CwApp, InterChainMsgSender},
 };
 
-use self::test_case::app::Wasm as WasmTrait;
+use self::test_case::wasm::Wasm as WasmTrait;
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
 pub(crate) const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

@@ -21,9 +21,9 @@ use sdk::{
 use crate::common::{
     cwcoin, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod, oracle as oracle_mod,
     test_case::{
-        app::Wasm as WasmTrait,
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        wasm::Wasm as WasmTrait,
         TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,

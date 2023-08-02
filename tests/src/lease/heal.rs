@@ -5,8 +5,8 @@ use crate::{
     common::{
         cwcoin,
         test_case::{
-            app::Wasm as WasmTrait,
             response::{RemoteChain, ResponseWithInterChainMsgs},
+            wasm::Wasm as WasmTrait,
             TestCase,
         },
         USER,

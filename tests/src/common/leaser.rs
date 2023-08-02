@@ -8,7 +8,7 @@ use leaser::{
 use sdk::cosmwasm_std::{Addr, Uint64};
 
 use super::{
-    test_case::app::{App, Wasm as WasmTrait},
+    test_case::{app::App, wasm::Wasm as WasmTrait},
     CwContractWrapper, ADMIN,
 };
 

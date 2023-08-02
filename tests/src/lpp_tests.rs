@@ -30,9 +30,7 @@ use crate::common::{
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
     test_case::{
-        app::{App, Wasm as WasmTrait},
-        builder::BlankBuilder as TestCaseBuilder,
-        TestCase,
+        app::App, builder::BlankBuilder as TestCaseBuilder, wasm::Wasm as WasmTrait, TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };

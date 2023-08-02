@@ -10,8 +10,8 @@ use crate::{
     common::{
         cwcoin,
         test_case::{
-            app::Wasm as WasmTrait,
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
+            wasm::Wasm as WasmTrait,
             TestCase,
         },
         USER,

@@ -6,7 +6,7 @@ use profit::{
 use sdk::cosmwasm_std::Addr;
 
 use super::{
-    test_case::app::{App, Wasm as WasmTrait},
+    test_case::{app::App, wasm::Wasm as WasmTrait},
     CwContractWrapper, ADMIN,
 };
 

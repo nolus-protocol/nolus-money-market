@@ -23,9 +23,9 @@ use sdk::{
 use crate::common::{
     self, cwcoin,
     test_case::{
-        app::{default_wasm, DefaultWasm, Wasm as WasmTrait},
         builder::BlankBuilder as TestCaseBuilder,
         response::RemoteChain,
+        wasm::{default_wasm, DefaultWasm, Wasm as WasmTrait},
         TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
