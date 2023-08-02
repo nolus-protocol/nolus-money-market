@@ -8,10 +8,6 @@ use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[cfg(feature = "testing")]
-    #[error("[Oracle] [Std] {0}")]
-    Std(#[from] StdError),
-
     #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
     StubConfigQuery(StdError),
 
