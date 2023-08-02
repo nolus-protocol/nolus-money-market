@@ -2,6 +2,7 @@ use std::ops::{Add, AddAssign, Mul};
 
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -11,7 +12,6 @@ use crate::{
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
-use currency::{self, Currency};
 
 pub mod base;
 pub mod dto;
@@ -66,21 +66,43 @@ where
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
-        let res = Self {
-            amount: amount_normalized,
-            amount_quote: amount_quote_normalized,
-        };
-        debug_assert_eq!(Ok(()), res.invariant_held());
+        let res: Self = Self::new_inner(amount, amount_quote);
+
+        #[cfg(debug_assertions)]
+        res.invariant_held().unwrap();
+
         res
     }
 
+    #[cfg(feature = "testing")]
+    pub const fn unchecked(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+        Self::new_inner(amount, amount_quote)
+    }
+
+    const fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+        let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
+            amount.into_coprime_with(amount_quote);
+
+        Self {
+            amount: amount_normalized,
+            amount_quote: amount_quote_normalized,
+        }
+    }
+
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
-    pub fn identity() -> Self {
+    pub const fn identity() -> Self {
         Self {
             amount: Coin::new(1),
             amount_quote: Coin::new(1),
         }
+    }
+
+    pub const fn base_amount(&self) -> Coin<C> {
+        self.amount
+    }
+
+    pub const fn quote_amount(&self) -> Coin<QuoteC> {
+        self.amount_quote
     }
 
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
