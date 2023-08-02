@@ -80,16 +80,21 @@ where
     where
         OtherC: Currency,
     {
-        debug_assert!(!self.is_zero() && !other.is_zero());
+        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
+        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
+
         let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
+
         debug_assert!(gcd > 0);
 
-        #[cfg(debug_assertions)]
-        if self.amount % gcd != 0 {
-            panic!("LHS-value's amount is not divisible by the GCD!");
-        } else if other.amount % gcd != 0 {
-            panic!("RHS-value's amount is not divisible by the GCD!");
-        }
+        debug_assert!(
+            self.amount % gcd != 0,
+            "LHS-value's amount is not divisible by the GCD!"
+        );
+        debug_assert!(
+            other.amount % gcd != 0,
+            "RHS-value's amount is not divisible by the GCD!"
+        );
 
         (
             Self::new(self.amount / gcd),
