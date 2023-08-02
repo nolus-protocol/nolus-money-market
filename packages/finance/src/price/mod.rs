@@ -97,14 +97,6 @@ where
         }
     }
 
-    pub const fn base_amount(&self) -> Coin<C> {
-        self.amount
-    }
-
-    pub const fn quote_amount(&self) -> Coin<QuoteC> {
-        self.amount_quote
-    }
-
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).

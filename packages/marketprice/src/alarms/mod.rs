@@ -401,11 +401,7 @@ pub mod tests {
         type PriceBaseQuote = Price<BaseCurrency, QuoteCurrency>;
 
         const PRICE: PriceBaseQuote = Price::unchecked(Coin::new(1), Coin::new(2));
-
-        const LOWER_PRICE: PriceBaseQuote = Price::unchecked(
-            PRICE.base_amount(),
-            Coin::new(PRICE.quote_amount().into_amount() - 1),
-        );
+        const LOWER_PRICE: PriceBaseQuote = Price::identity();
 
         fn expect_no_alarms<'storage>(
             alarms: &PriceAlarms<'storage, &mut (dyn Storage + 'storage)>,

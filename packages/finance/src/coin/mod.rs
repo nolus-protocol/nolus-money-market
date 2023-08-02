@@ -43,10 +43,6 @@ where
         self.amount == Zero::ZERO
     }
 
-    pub const fn into_amount(self) -> Amount {
-        self.amount
-    }
-
     #[track_caller]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
         let may_amount = self.amount.checked_add(rhs.amount);
