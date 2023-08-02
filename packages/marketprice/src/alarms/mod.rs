@@ -345,7 +345,7 @@ pub mod tests {
 
     use super::*;
 
-    type Base = Usdc;
+    type BaseCurrency = Usdc;
 
     #[test]
     fn test_below_exclusive() {
@@ -354,7 +354,7 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm_below(addr1, price).unwrap();
 
         assert_eq!(None, alarms.alarms(price).next());
@@ -367,7 +367,7 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms
             .add_alarm_above_or_equal(addr1.clone(), price)
             .unwrap();
@@ -384,7 +384,7 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm_below(addr1.clone(), price).unwrap();
         alarms
             .add_alarm_above_or_equal(addr1.clone(), price)
@@ -397,64 +397,57 @@ pub mod tests {
 
     #[test]
     fn test_out_for_delivery_removes_above() {
-        const PRICE_BASE: Amount = 1;
-        const PRICE_QUOTE: Amount = if let Some(quote) = PRICE_BASE.checked_add(1) {
-            quote
-        } else {
-            panic!()
-        };
-
-        const LOWER_PRICE_BASE: Amount = PRICE_BASE;
-        const LOWER_PRICE_QUOTE: Amount = if let Some(quote) = PRICE_QUOTE.checked_sub(1) {
-            quote
-        } else {
-            panic!()
-        };
-
         type QuoteCurrency = Atom;
-        type BaseCoin = Coin<Base>;
-        type QuoteCoin = Coin<QuoteCurrency>;
+        type PriceBaseQuote = Price<BaseCurrency, QuoteCurrency>;
+
+        const PRICE: PriceBaseQuote = Price::unchecked(Coin::new(1), Coin::new(2));
+
+        const LOWER_PRICE: PriceBaseQuote = Price::unchecked(
+            PRICE.base_amount(),
+            Coin::new(PRICE.quote_amount().into_amount() - 1),
+        );
+
+        fn expect_no_alarms<'storage>(
+            alarms: &PriceAlarms<'storage, &mut (dyn Storage + 'storage)>,
+        ) {
+            // Catch below
+            assert_eq!(alarms.alarms(LOWER_PRICE).count(), 0);
+
+            // Catch above or equal
+            assert_eq!(alarms.alarms(PRICE).count(), 0);
+        }
+
+        /* TEST START */
 
         let mut storage: MockStorage = MockStorage::new();
         let mut alarms: PriceAlarms<'_, &mut dyn Storage> = alarms(&mut storage);
 
         let subscriber: Addr = Addr::unchecked("addr1");
 
-        let price: Price<Base, QuoteCurrency> =
-            price::total_of(BaseCoin::new(PRICE_BASE)).is(QuoteCoin::new(PRICE_QUOTE));
-
-        let lower_price: Price<Base, QuoteCurrency> =
-            price::total_of(BaseCoin::new(LOWER_PRICE_BASE)).is(QuoteCoin::new(LOWER_PRICE_QUOTE));
-
-        alarms.add_alarm_below(subscriber.clone(), price).unwrap();
+        // Add alarms
+        alarms.add_alarm_below(subscriber.clone(), PRICE).unwrap();
         alarms
-            .add_alarm_above_or_equal(subscriber.clone(), price)
+            .add_alarm_above_or_equal(subscriber.clone(), PRICE)
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
+        // Queue for delivery
         alarms.out_for_delivery(subscriber).unwrap();
 
-        // Catch below
-        assert_eq!(alarms.alarms(lower_price).count(), 0);
-
-        // Catch above or equal
-        assert_eq!(alarms.alarms(price).count(), 0);
+        expect_no_alarms(&alarms);
 
         assert!(matches!(
             alarms.ensure_no_in_delivery().unwrap_err(),
             AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
         ));
 
+        // Mark as delivered
         alarms.last_delivered().unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
-        // Catch below
-        assert_eq!(alarms.alarms(lower_price).count(), 0);
-
-        // Catch above or equal
-        assert_eq!(alarms.alarms(price).count(), 0);
+        expect_no_alarms(&alarms);
     }
 
     #[test]
@@ -469,26 +462,26 @@ pub mod tests {
         alarms
             .add_alarm_below(
                 addr1.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
             )
             .unwrap();
 
         alarms
             .add_alarm_below(
                 addr2.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(5)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(5)),
             )
             .unwrap();
         alarms
             .add_alarm_above_or_equal(
                 addr2.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
             )
             .unwrap();
         alarms
             .add_alarm_below(
                 addr3.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
             )
             .unwrap();
 
@@ -496,7 +489,7 @@ pub mod tests {
         alarms.remove_all(addr2).unwrap();
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(15)))
+            .alarms(price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(15)))
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3)]);
@@ -516,54 +509,54 @@ pub mod tests {
         alarms
             .add_alarm_below(
                 addr1,
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
             )
             .unwrap();
         alarms
             .add_alarm_below(
                 addr2.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
             )
             .unwrap();
         alarms
             .add_alarm_below(
                 addr3.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(30)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(30)),
             )
             .unwrap();
         alarms
             .add_alarm_below(
                 addr4.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
             )
             .unwrap();
         alarms
             .add_alarm_above_or_equal(
                 addr4.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(25)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(25)),
             )
             .unwrap();
         alarms
             .add_alarm_below(
                 addr5.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
             )
             .unwrap();
         alarms
             .add_alarm_above_or_equal(
                 addr5,
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(35)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(35)),
             )
             .unwrap();
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(15)))
+            .alarms(price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(15)))
             .collect();
 
         assert_eq!(resp, vec![Ok(addr2)]);
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(26)))
+            .alarms(price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(26)))
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
@@ -580,24 +573,24 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber1.clone(), Price::<Atom, Base>::identity())
+            .add_alarm_below(subscriber1.clone(), Price::<Atom, BaseCurrency>::identity())
             .unwrap();
         alarms
             .add_alarm_below(
                 subscriber1.clone(),
-                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+                price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
             )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber2.clone(), Price::<Atom, Base>::identity())
+            .add_alarm_below(subscriber2.clone(), Price::<Atom, BaseCurrency>::identity())
             .unwrap();
         alarms
             .add_alarm_below(
                 subscriber2.clone(),
-                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+                price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
             )
             .unwrap();
 
@@ -631,18 +624,18 @@ pub mod tests {
         let subscriber1 = Addr::unchecked("subscriber1");
         let subscriber2 = Addr::unchecked("subscriber2");
 
-        let subscriber2_below_price = Price::<Atom, Base>::identity();
-        let subscriber2_above_or_equal_price = Price::<Atom, Base>::identity();
+        let subscriber2_below_price = Price::<Atom, BaseCurrency>::identity();
+        let subscriber2_above_or_equal_price = Price::<Atom, BaseCurrency>::identity();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber1.clone(), Price::<Atom, Base>::identity())
+            .add_alarm_below(subscriber1.clone(), Price::<Atom, BaseCurrency>::identity())
             .unwrap();
         alarms
             .add_alarm_above_or_equal(
                 subscriber1.clone(),
-                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+                price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
             )
             .unwrap();
 
