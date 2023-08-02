@@ -100,13 +100,13 @@ pub fn update_software<ContractError, MapErrorFunctor>(
     map_error: MapErrorFunctor,
 ) -> Result<ReleaseLabel, ContractError>
 where
-    MapErrorFunctor: Fn(StdError) -> ContractError,
+    MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
-        .map_err(&map_error)
-        .and_then(|current| release::allow_software_update(&current, &new).map_err(&map_error))
-        .and_then(|()| save_version(storage, &new).map_err(map_error))
+        .and_then(|current| release::allow_software_update(&current, &new))
+        .and_then(|()| save_version(storage, &new))
         .map(|()| release::label())
+        .map_err(map_error)
 }
 
 pub fn update_software_and_storage<
@@ -124,16 +124,14 @@ pub fn update_software_and_storage<
 where
     MigrateStorageFunctor:
         FnOnce(&mut dyn Storage) -> Result<MigrateStorageFunctorResponse, ContractError>,
-    MapErrorFunctor: Fn(StdError) -> ContractError,
+    MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
-        .map_err(&map_error)
         .and_then(|current| {
             release::allow_software_and_storage_update::<FROM_STORAGE_VERSION>(&current, &new)
-                .map_err(&map_error)
         })
-        .and_then(|()| save_version(storage, &new).map_err(&map_error))
-        .map_err(Into::into)
+        .and_then(|()| save_version(storage, &new))
+        .map_err(map_error)
         .and_then(|()| migrate_storage(storage))
         .map(|response| (release::label(), response))
 }
