@@ -16,7 +16,7 @@ use crate::{
 pub mod base;
 pub mod dto;
 
-pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
+pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
     C: Currency,
 {
@@ -66,27 +66,17 @@ where
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        let res: Self = Self::new_inner(amount, amount_quote);
-
-        #[cfg(debug_assertions)]
-        res.invariant_held().unwrap();
-
-        res
-    }
-
-    #[cfg(feature = "testing")]
-    pub const fn unchecked(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        Self::new_inner(amount, amount_quote)
-    }
-
-    const fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
             amount.into_coprime_with(amount_quote);
 
-        Self {
+        let res: Self = Self {
             amount: amount_normalized,
             amount_quote: amount_quote_normalized,
-        }
+        };
+
+        debug_assert_eq!(Ok(()), res.invariant_held());
+
+        res
     }
 
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
