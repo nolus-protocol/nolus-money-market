@@ -87,8 +87,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
-        .map_err(Into::into)
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
         .and_then(response::response)
 }
 
