@@ -231,8 +231,6 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn add_alarm(storage: &mut dyn Storage) {
-        let storage: &mut dyn Storage = storage;
-
         let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
 
         alarms
@@ -273,8 +271,6 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn deliver(storage: &mut dyn Storage, count: u32) {
-        let storage: &mut dyn Storage = storage;
-
         let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
 
         for _ in 0..count {
