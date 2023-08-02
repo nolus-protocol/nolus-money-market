@@ -88,11 +88,11 @@ where
         debug_assert!(gcd > 0);
 
         debug_assert!(
-            self.amount % gcd != 0,
+            self.amount % gcd == 0,
             "LHS-value's amount is not divisible by the GCD!"
         );
         debug_assert!(
-            other.amount % gcd != 0,
+            other.amount % gcd == 0,
             "RHS-value's amount is not divisible by the GCD!"
         );
 
