@@ -182,6 +182,9 @@ mod test_normalized_price_not_found {
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
 
+    const PRICE_BASE: NlsCoin = Coin::new(1);
+    const PRICE_QUOTE: UsdcCoin = Coin::new(1);
+
     #[test]
     fn test() {
         let mut storage: MockStorage = MockStorage::new();
@@ -237,11 +240,8 @@ mod test_normalized_price_not_found {
             .try_add_price_alarm::<BaseCurrency>(
                 Addr::unchecked("1"),
                 Alarm::new(
-                    SpotPrice::new(NlsCoin::new(1).into(), UsdcCoin::new(1).into()),
-                    Some(SpotPrice::new(
-                        NlsCoin::new(1).into(),
-                        UsdcCoin::new(2).into(),
-                    )),
+                    SpotPrice::new(PRICE_BASE.into(), PRICE_QUOTE.into()),
+                    Some(SpotPrice::new(PRICE_BASE.into(), PRICE_QUOTE.into())),
                 ),
             )
             .unwrap();
@@ -254,7 +254,7 @@ mod test_normalized_price_not_found {
                 storage,
                 NOW,
                 &Addr::unchecked("feeder"),
-                &[price::total_of(NlsCoin::new(1)).is(UsdcCoin::new(2)).into()],
+                &[price::total_of(PRICE_BASE).is(PRICE_QUOTE).into()],
             )
             .unwrap();
     }
