@@ -53,8 +53,8 @@ where
     }
 
     #[track_caller]
-    pub const fn saturating_sub(self, rhs: Self) -> Self {
-        Self::new(self.amount.saturating_sub(rhs.amount))
+    pub fn saturating_sub(self, rhs: Self) -> Self {
+        self.amount.saturating_sub(rhs.amount).into()
     }
 
     #[track_caller]
