@@ -69,7 +69,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     #[cfg(not(feature = "migration"))]
     let resp = versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
         .and_then(response::response);
-    resp
+    resp.or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
