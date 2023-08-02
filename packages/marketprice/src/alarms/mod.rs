@@ -400,17 +400,20 @@ pub mod tests {
         type QuoteCurrency = Atom;
         type PriceBaseQuote = Price<BaseCurrency, QuoteCurrency>;
 
-        const PRICE: PriceBaseQuote = Price::unchecked(Coin::new(1), Coin::new(2));
-        const LOWER_PRICE: PriceBaseQuote = Price::identity();
+        const PRICE_BASE: Coin<BaseCurrency> = Coin::new(1);
+        const PRICE_QUOTE: Coin<QuoteCurrency> = Coin::new(2);
+        const PRICE: fn() -> PriceBaseQuote = || price::total_of(PRICE_BASE).is(PRICE_QUOTE);
+        const LOWER_PRICE: fn() -> PriceBaseQuote =
+            || price::total_of(PRICE_BASE).is(PRICE_QUOTE - Coin::new(1));
 
         fn expect_no_alarms<'storage>(
             alarms: &PriceAlarms<'storage, &mut (dyn Storage + 'storage)>,
         ) {
             // Catch below
-            assert_eq!(alarms.alarms(LOWER_PRICE).count(), 0);
+            assert_eq!(alarms.alarms(LOWER_PRICE()).count(), 0);
 
             // Catch above or equal
-            assert_eq!(alarms.alarms(PRICE).count(), 0);
+            assert_eq!(alarms.alarms(PRICE()).count(), 0);
         }
 
         /* TEST START */
@@ -421,9 +424,9 @@ pub mod tests {
         let subscriber: Addr = Addr::unchecked("addr1");
 
         // Add alarms
-        alarms.add_alarm_below(subscriber.clone(), PRICE).unwrap();
+        alarms.add_alarm_below(subscriber.clone(), PRICE()).unwrap();
         alarms
-            .add_alarm_above_or_equal(subscriber.clone(), PRICE)
+            .add_alarm_above_or_equal(subscriber.clone(), PRICE())
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
