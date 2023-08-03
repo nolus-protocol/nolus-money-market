@@ -98,6 +98,7 @@ fn update_config_unauthorized() {
             &[],
         )
         .unwrap_err()
+        .root_cause()
         .to_string()
         .contains("Unauthorized"));
 }
