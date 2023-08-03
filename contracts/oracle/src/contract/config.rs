@@ -3,9 +3,9 @@ use sdk::cosmwasm_std::Storage;
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
-    let config = Config::load(storage)?;
-
-    Ok(ConfigResponse { config })
+    Config::load(storage)
+        .map_err(ContractError::LoadConfig)
+        .map(|config| ConfigResponse { config })
 }
 
 #[cfg(test)]

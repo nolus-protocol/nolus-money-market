@@ -33,21 +33,15 @@ impl<'f> PriceFeeders<'f> {
     }
 
     pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        if self.0.may_load(storage)?.is_none() {
-            return Ok(HashSet::new());
-        }
-
-        self.0.load(storage)
+        self.0.may_load(storage).map(Option::unwrap_or_default)
     }
 
     pub fn is_registered(&self, storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
-        if self.0.may_load(storage)?.is_none() {
-            return Ok(false);
-        }
-
-        let addrs = self.0.load(storage)?;
-
-        Ok(addrs.contains(address))
+        self.0
+            .may_load(storage)
+            .map(|maybe_addrs: Option<HashSet<Addr>>| {
+                maybe_addrs.map_or(false, |addrs: HashSet<Addr>| addrs.contains(address))
+            })
     }
 
     pub fn register(&self, deps: DepsMut<'_>, address: Addr) -> Result<(), PriceFeedersError> {

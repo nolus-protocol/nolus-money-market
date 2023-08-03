@@ -39,9 +39,10 @@ impl<'alarms> Iterator for AlarmsIterator<'alarms> {
     type Item = Result<Addr, AlarmError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0
-            .next()
-            .map(|res| res.map(|pair| pair.0).map_err(Into::into))
+        self.0.next().map(|res| {
+            res.map(|pair| pair.0)
+                .map_err(AlarmError::IteratorLoadFailed)
+        })
     }
 }
 
@@ -139,12 +140,12 @@ where
     }
 
     pub fn ensure_no_in_delivery(&self) -> Result<(), AlarmError> {
-        if self.in_delivery.is_empty(self.storage.deref())? {
-            Ok(())
-        } else {
-            Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
+        match self.in_delivery.is_empty(self.storage.deref()) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
                 "Assertion requested",
-            )))
+            ))),
+            Err(error) => Err(AlarmError::InDeliveryIsEmptyFailed(error)),
         }
     }
 
@@ -208,39 +209,45 @@ where
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_above_or_equal
             .remove(self.storage.deref_mut(), subscriber)
-            .map_err(Into::into)
+            .map_err(AlarmError::RemoveAboveOrEqual)
     }
 
     pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), subscriber.clone())
-            .map_err(Into::into)
+            .map_err(AlarmError::RemoveBelow)
             .and_then(|()| self.remove_above_or_equal(subscriber))
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         let below: NormalizedPrice = self
             .alarms_below
-            .load(self.storage.deref(), subscriber.clone())?;
+            .load(self.storage.deref(), subscriber.clone())
+            .map_err(AlarmError::InDeliveryLoadBelow)?;
 
-        self.alarms_below.replace(
-            self.storage.deref_mut(),
-            subscriber.clone(),
-            None,
-            Some(&below),
-        )?;
-
-        let above: Option<NormalizedPrice> = self
-            .alarms_above_or_equal
-            .may_load(self.storage.deref(), subscriber.clone())?;
-
-        if let Some(above) = &above {
-            self.alarms_above_or_equal.replace(
+        self.alarms_below
+            .replace(
                 self.storage.deref_mut(),
                 subscriber.clone(),
                 None,
-                Some(above),
-            )?;
+                Some(&below),
+            )
+            .map_err(AlarmError::InDeliveryRemoveBelow)?;
+
+        let above: Option<NormalizedPrice> = self
+            .alarms_above_or_equal
+            .may_load(self.storage.deref(), subscriber.clone())
+            .map_err(AlarmError::InDeliveryLoadAboveOrEqual)?;
+
+        if let Some(above) = &above {
+             self.alarms_above_or_equal.replace(
+                .replace(
+                    self.storage.deref_mut(),
+                    subscriber.clone(),
+                    None,
+                    Some(above),
+                )
+                .map_err(AlarmError::InDeliveryRemoveAboveOrEqual)?;
         }
 
         self.in_delivery
@@ -252,13 +259,13 @@ where
                     above,
                 },
             )
-            .map_err(Into::into)
+            .map_err(AlarmError::InDeliveryAppend)
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(Into::into)
+            .map_err(AlarmError::LastDeliveredRemove)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 maybe_alarm.map(|_: AlarmWithSubscriber| ()).ok_or_else(|| {
                     AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
@@ -271,7 +278,7 @@ where
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(Into::into)
+            .map_err(AlarmError::LastFailedRemove)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 maybe_alarm.ok_or_else(|| {
                     AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
@@ -323,7 +330,9 @@ where
         subscriber: Addr,
         alarm: &NormalizedPrice,
     ) -> Result<(), AlarmError> {
-        alarms.save(storage, subscriber, alarm).map_err(Into::into)
+        alarms
+            .save(storage, subscriber, alarm)
+            .map_err(AlarmError::AddAlarmInternal)
     }
 }
 

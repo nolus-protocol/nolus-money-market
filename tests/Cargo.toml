@@ -27,6 +27,7 @@ tree = { workspace = true, features = ["testing"] }
 swap = { workspace = true, features = ["testing"] }
 
 anyhow = { workspace = true }
+thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde-json-wasm = { workspace = true }
 

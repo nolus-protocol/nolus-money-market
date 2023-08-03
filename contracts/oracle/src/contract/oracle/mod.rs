@@ -48,8 +48,9 @@ where
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
         let tree = SupportedPairs::load(storage.deref())?;
-        let feeders = Feeders::total_registered(storage.deref())?;
-        let config = Config::load(storage.deref())?;
+        let feeders =
+            Feeders::total_registered(storage.deref()).map_err(ContractError::LoadFeeders)?;
+        let config = Config::load(storage.deref()).map_err(ContractError::LoadConfig)?;
         let feeds = Feeds::<OracleBase>::with(config.price_config);
 
         Ok(Self {
