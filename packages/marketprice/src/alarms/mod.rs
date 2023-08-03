@@ -240,7 +240,7 @@ where
             .map_err(AlarmError::InDeliveryLoadAboveOrEqual)?;
 
         if let Some(above) = &above {
-             self.alarms_above_or_equal.replace(
+            self.alarms_above_or_equal
                 .replace(
                     self.storage.deref_mut(),
                     subscriber.clone(),
