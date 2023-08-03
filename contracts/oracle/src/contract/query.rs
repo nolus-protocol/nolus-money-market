@@ -21,8 +21,11 @@ impl<'a> QueryWithOracleBase<'a> {
     pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
         let visitor = Self { deps, env, msg };
 
-        let config = Config::load(visitor.deps.storage)?;
-        currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+        Config::load(visitor.deps.storage)
+            .map_err(ContractError::LoadConfig)
+            .and_then(|config: Config| {
+                currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+            })
     }
 }
 
@@ -67,6 +70,6 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 unreachable!() // should be done already
             }
         }
-        .map_err(Into::into)
+        .map_err(ContractError::ConvertToBinary)
     }
 }

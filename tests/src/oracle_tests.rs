@@ -20,14 +20,13 @@ use oracle::{
     alarms::Alarm,
     msg::{AlarmsCount, QueryMsg as OracleQ},
     result::ContractResult,
-    ContractError,
 };
 use platform::{batch::Batch, coin_legacy};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
         coin, wasm_execute, Addr, Attribute, Binary, Coin as CwCoin, Deps, DepsMut, Env, Event,
-        MessageInfo, StdError as CwError, Storage, Timestamp,
+        MessageInfo, Storage, Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
@@ -566,7 +565,7 @@ fn schedule_alarm(
             let mut batch: Batch = Batch::default();
 
             batch.schedule_execute_wasm_no_reply::<_, BaseC>(
-                &ORACLE_ADDR.load(storage)?,
+                &ORACLE_ADDR.load(storage).unwrap(),
                 oracle::msg::ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
                         price::total_of::<BaseC>(base.into()).is::<Usdc>(quote.into()),
@@ -586,15 +585,17 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
     _: Env,
     _: MessageInfo,
     msg: DummyExecMsg,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse, DummyContractError> {
     match msg {
         DummyExecMsg::PriceAlarm() => {
-            if SHOULD_FAIL.load(storage)? {
-                Err(ContractError::Std(CwError::generic_err(
-                    "Error while delivering price alarm!",
+            if SHOULD_FAIL.load(storage).map_err(anyhow::Error::from)? {
+                Err(DummyContractError(anyhow::anyhow!(
+                    "Error while delivering price alarm!"
                 )))
             } else if RESCHEDULE {
                 schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
+                    .map_err(anyhow::Error::from)
+                    .map_err(DummyContractError)
             } else {
                 Ok(CwResponse::new())
             }
@@ -602,11 +603,17 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
         DummyExecMsg::ShouldFail(value) => SHOULD_FAIL
             .save(storage, &value)
             .map(|()| CwResponse::new())
-            .map_err(Into::into),
+            .map_err(anyhow::Error::from)
+            .map_err(DummyContractError),
     }
 }
 
-type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> ContractResult<CwResponse>;
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+struct DummyContractError(#[from] anyhow::Error);
+
+type ExecFn =
+    fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> Result<CwResponse, DummyContractError>;
 
 fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     execute: ExecFn,
@@ -620,14 +627,22 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
              oracle,
              should_fail,
          }: DummyInstMsg|
-         -> ContractResult<CwResponse> {
-            ORACLE_ADDR.save(storage, &oracle)?;
+         -> Result<CwResponse, DummyContractError> {
+            ORACLE_ADDR
+                .save(storage, &oracle)
+                .map_err(anyhow::Error::from)?;
 
-            SHOULD_FAIL.save(storage, &should_fail)?;
+            SHOULD_FAIL
+                .save(storage, &should_fail)
+                .map_err(anyhow::Error::from)?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
+                .map_err(anyhow::Error::from)
+                .map_err(DummyContractError)
         },
-        move |_: Deps<'_>, _: Env, (): ()| -> ContractResult<Binary> { unimplemented!() },
+        move |_: Deps<'_>, _: Env, (): ()| -> Result<Binary, DummyContractError> {
+            unimplemented!()
+        },
     ))
 }
 

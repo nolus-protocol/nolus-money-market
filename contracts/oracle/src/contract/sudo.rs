@@ -20,8 +20,11 @@ impl<'a> SudoWithOracleBase<'a> {
     pub fn cmd(deps: DepsMut<'a>, msg: SudoMsg) -> ContractResult<<Self as AnyVisitor>::Output> {
         let visitor = Self { deps, msg };
 
-        let config = Config::load(visitor.deps.storage)?;
-        currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+        Config::load(visitor.deps.storage)
+            .map_err(ContractError::LoadConfig)
+            .and_then(|config: Config| {
+                currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+            })
     }
 }
 

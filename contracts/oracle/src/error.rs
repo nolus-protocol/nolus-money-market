@@ -8,8 +8,47 @@ use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle] [Std] {0}")]
-    Std(#[from] StdError),
+    #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
+    StubConfigQuery(StdError),
+
+    #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
+    StubSwapPathQuery(StdError),
+
+    #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
+    StubAddAlarm(StdError),
+
+    #[error("[Oracle] Failed to initialize versioning module! Cause: {0}")]
+    InitializeVersioning(StdError),
+
+    #[error("[Oracle] Failed to validate address while trying to register feeder! Cause: {0}")]
+    RegisterFeederAddressValidation(StdError),
+
+    #[error("[Oracle] Failed to validate address while trying to unregister feeder! Cause: {0}")]
+    UnregisterFeederAddressValidation(StdError),
+
+    #[error("[Oracle] Failed to update software! Cause: {0}")]
+    UpdateSoftware(StdError),
+
+    #[error("[Oracle] Failed to load feeders! Cause: {0}")]
+    LoadFeeders(StdError),
+
+    #[error("[Oracle] Failed to load configuration! Cause: {0}")]
+    LoadConfig(StdError),
+
+    #[error("[Oracle] Failed to update configuration! Cause: {0}")]
+    UpdateConfig(StdError),
+
+    #[error("[Oracle] Failed to store configuration! Cause: {0}")]
+    StoreConfig(StdError),
+
+    #[error("[Oracle] Failed to load supported pairs! Cause: {0}")]
+    LoadSupportedPairs(StdError),
+
+    #[error("[Oracle] Failed to store supported pairs! Cause: {0}")]
+    StoreSupportedPairs(StdError),
+
+    #[error("[Oracle] Failed to convert query response to binary! Cause: {0}")]
+    ConvertToBinary(StdError),
 
     #[error("[Oracle] {0}")]
     PriceFeedersError(#[from] PriceFeedersError),
