@@ -156,3 +156,133 @@ where
         assert_eq!(set.len(), subscribers.len());
     }
 }
+
+#[cfg(test)]
+mod test_normalized_price_not_found {
+    use currency::{lpn::Usdc, native::Nls, Currency as _};
+    use finance::{coin::Coin, duration::Duration, percent::Percent, price};
+    use marketprice::{config::Config as PriceConfig, SpotPrice};
+    use sdk::cosmwasm_std::{
+        testing::{MockApi, MockQuerier, MockStorage},
+        Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+    };
+
+    use crate::{
+        alarms::Alarm,
+        contract::alarms::MarketAlarms,
+        state::{config::Config, supported_pairs::SupportedPairs},
+        swap_tree,
+    };
+
+    use super::{feed::Feeds, feeder::Feeders, Oracle};
+
+    type BaseCurrency = Usdc;
+
+    type NlsCoin = Coin<Nls>;
+    type UsdcCoin = Coin<Usdc>;
+
+    const NOW: Timestamp = Timestamp::from_seconds(1);
+
+    const PRICE_BASE: NlsCoin = Coin::new(1);
+    const PRICE_QUOTE: UsdcCoin = Coin::new(1);
+
+    #[test]
+    fn test() {
+        let mut storage: MockStorage = MockStorage::new();
+
+        let price_config: PriceConfig = PriceConfig::new(
+            Percent::HUNDRED,
+            Duration::from_secs(1),
+            1,
+            Percent::HUNDRED,
+        );
+
+        init(&mut storage, &price_config);
+
+        add_alarm(&mut storage);
+
+        feed_price(&price_config, &mut storage);
+
+        dispatch_and_deliver(&mut storage, 1);
+
+        // Bug happens on this step.
+        dispatch_and_deliver(&mut storage, 0);
+    }
+
+    #[track_caller]
+    fn init(storage: &mut dyn Storage, price_config: &PriceConfig) {
+        Feeders::try_register(
+            DepsMut {
+                storage,
+                api: &MockApi::default(),
+                querier: QuerierWrapper::new(&MockQuerier::<Empty>::new(&[])),
+            },
+            String::from("feeder"),
+        )
+        .unwrap();
+
+        Config::new(String::from(BaseCurrency::TICKER), price_config.clone())
+            .store(storage)
+            .unwrap();
+
+        SupportedPairs::<BaseCurrency>::new(
+            swap_tree!({ base: Usdc::TICKER }, (1, Nls::TICKER)).into_tree(),
+        )
+        .unwrap()
+        .save(storage)
+        .unwrap();
+    }
+
+    #[track_caller]
+    fn add_alarm(storage: &mut dyn Storage) {
+        let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
+
+        alarms
+            .try_add_price_alarm::<BaseCurrency>(
+                Addr::unchecked("1"),
+                Alarm::new(
+                    SpotPrice::new(PRICE_BASE.into(), PRICE_QUOTE.into()),
+                    Some(SpotPrice::new(PRICE_BASE.into(), PRICE_QUOTE.into())),
+                ),
+            )
+            .unwrap();
+    }
+
+    #[track_caller]
+    fn feed_price(price_config: &PriceConfig, storage: &mut dyn Storage) {
+        Feeds::<BaseCurrency>::with(price_config.clone())
+            .feed_prices(
+                storage,
+                NOW,
+                &Addr::unchecked("feeder"),
+                &[price::total_of(PRICE_BASE).is(PRICE_QUOTE).into()],
+            )
+            .unwrap();
+    }
+
+    #[track_caller]
+    fn dispatch(storage: &mut dyn Storage, expected_count: u32) {
+        let mut oracle: Oracle<'_, &mut dyn Storage, _> =
+            Oracle::<'_, _, BaseCurrency>::load(storage).unwrap();
+
+        let alarms: u32 = oracle.try_notify_alarms(NOW, 16).unwrap().0;
+
+        assert_eq!(alarms, expected_count);
+    }
+
+    #[track_caller]
+    fn deliver(storage: &mut dyn Storage, count: u32) {
+        let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
+
+        for _ in 0..count {
+            alarms.last_delivered().unwrap();
+        }
+    }
+
+    #[track_caller]
+    fn dispatch_and_deliver(storage: &mut dyn Storage, expected_count: u32) {
+        dispatch(storage, expected_count);
+
+        deliver(storage, expected_count)
+    }
+}

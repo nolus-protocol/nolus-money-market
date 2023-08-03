@@ -6,12 +6,11 @@ use std::{
 };
 
 use ::serde::{Deserialize, Serialize};
-use gcd::Gcd;
 
+use currency::Currency;
 use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
-use currency::Currency;
 
 pub use self::coinc::{from_amount_ticker, CoinDTO, IntoDTO};
 
@@ -40,7 +39,7 @@ where
         }
     }
 
-    pub fn is_zero(&self) -> bool {
+    pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
     }
 
@@ -77,16 +76,26 @@ where
     }
 
     #[track_caller]
-    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
+    pub(super) const fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
         OtherC: Currency,
     {
-        debug_assert!(!self.is_zero() && !other.is_zero());
-        let gcd = self.amount.gcd(other.amount);
+        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
+        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
+
+        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
+
         debug_assert!(gcd > 0);
 
-        debug_assert_eq!(self.amount % gcd, 0);
-        debug_assert_eq!(other.amount % gcd, 0);
+        debug_assert!(
+            self.amount % gcd == 0,
+            "LHS-value's amount is not divisible by the GCD!"
+        );
+        debug_assert!(
+            other.amount % gcd == 0,
+            "RHS-value's amount is not divisible by the GCD!"
+        );
+
         (
             Self::new(self.amount / gcd),
             Coin::<OtherC>::new(other.amount / gcd),

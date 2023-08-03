@@ -2,6 +2,7 @@ use std::ops::{Add, AddAssign, Mul};
 
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -11,12 +12,11 @@ use crate::{
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
-use currency::{self, Currency};
 
 pub mod base;
 pub mod dto;
 
-pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
+pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
     C: Currency,
 {
@@ -66,17 +66,21 @@ where
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
-        let res = Self {
+        let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
+            amount.into_coprime_with(amount_quote);
+
+        let res: Self = Self {
             amount: amount_normalized,
             amount_quote: amount_quote_normalized,
         };
+
         debug_assert_eq!(Ok(()), res.invariant_held());
+
         res
     }
 
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
-    pub fn identity() -> Self {
+    pub const fn identity() -> Self {
         Self {
             amount: Coin::new(1),
             amount_quote: Coin::new(1),
