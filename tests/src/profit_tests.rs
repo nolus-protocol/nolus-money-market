@@ -5,6 +5,7 @@ use finance::{
     zero::Zero as _,
 };
 use platform::bank;
+use profit::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
 use sdk::{
     cosmwasm_std::{from_binary, Addr, Event},
     cw_multi_test::AppResponse,
@@ -20,6 +21,86 @@ use crate::common::{
     },
     Native, ADMIN, USER,
 };
+
+#[test]
+fn update_config() {
+    type Lpn = Usdc;
+
+    const INITIAL_CACDENCE_HOURS: u16 = 2;
+    const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
+
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+        .init_treasury_without_dispatcher()
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_profit(INITIAL_CACDENCE_HOURS)
+        .into_generic();
+
+    let ConfigResponse { cadence_hours } = test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            test_case.address_book.profit().clone(),
+            &QueryMsg::Config {},
+        )
+        .unwrap();
+
+    assert_eq!(cadence_hours, INITIAL_CACDENCE_HOURS);
+
+    () = test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            test_case.address_book.profit().clone(),
+            &ExecuteMsg::Config {
+                cadence_hours: UPDATED_CACDENCE_HOURS,
+            },
+            &[],
+        )
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
+
+    let ConfigResponse { cadence_hours } = test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            test_case.address_book.profit().clone(),
+            &QueryMsg::Config {},
+        )
+        .unwrap();
+
+    assert_eq!(cadence_hours, UPDATED_CACDENCE_HOURS);
+}
+
+#[test]
+fn update_config_unauthorized() {
+    type Lpn = Usdc;
+
+    const INITIAL_CACDENCE_HOURS: u16 = 2;
+    const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
+
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+        .init_treasury_without_dispatcher()
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_profit(INITIAL_CACDENCE_HOURS)
+        .into_generic();
+
+    assert!(test_case
+        .app
+        .execute(
+            Addr::unchecked(USER),
+            test_case.address_book.profit().clone(),
+            &ExecuteMsg::Config {
+                cadence_hours: UPDATED_CACDENCE_HOURS
+            },
+            &[],
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("Unauthorized"));
+}
 
 #[test]
 fn on_alarm_from_unknown() {
