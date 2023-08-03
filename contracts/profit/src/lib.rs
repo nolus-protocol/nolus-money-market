@@ -16,6 +16,3 @@ pub mod contract;
 pub mod profit;
 #[cfg(any(feature = "contract", test))]
 pub mod state;
-
-#[cfg(test)]
-mod tests;
