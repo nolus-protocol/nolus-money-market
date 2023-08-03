@@ -29,17 +29,20 @@ runs:
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        find_files_cmd="find \"artifacts/\" -size +1500k | wc -l"
+        large_files=`find "artifacts/" -size +3M`
 
-        large_files_count=$(eval "${find_files_cmd}")
+        large_files_count=`wc -l < EOF
+          ${large_files}
+          EOF`
 
         if ! test "${large_files_count}" = "0";
           then (
             (
               echo "There are ${large_files_count} files with size larger than allowed limit!"
               echo "Those are files are the following:"
-              eval "${find_files_cmd}"
+              echo "${large_files}"
             ) >> "${GITHUB_STEP_SUMMARY}"
+
             exit 1
           );
         fi
