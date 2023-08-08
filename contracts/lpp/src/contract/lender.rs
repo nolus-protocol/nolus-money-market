@@ -314,7 +314,7 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         let info = mock_info("lender1", &[cwcoin(deposit)]);
-        _ = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
+        _ = try_deposit::<TheCurrency>(deps.as_mut(), env, info).unwrap();
     }
 
     fn cwcoin<A>(amount: A) -> CwCoin
