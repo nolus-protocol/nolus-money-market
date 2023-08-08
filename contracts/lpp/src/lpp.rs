@@ -65,10 +65,9 @@ where
     Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
     pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
-        config.store(storage)?;
-        Total::<Lpn>::new().store(storage)?;
-
-        Ok(())
+        config
+            .store(storage)
+            .and_then(|()| Total::<Lpn>::new().store(storage).map_err(Into::into))
     }
 
     pub fn load(storage: &dyn Storage) -> Result<Self> {
@@ -79,11 +78,12 @@ where
     }
 
     pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<Lpn>> {
-        let res = self.balance(&env.contract.address, &deps.querier)?
-            + self.total.total_principal_due()
-            + self.total.total_interest_due_by_now(env.block.time);
-
-        Ok(res)
+        self.balance(&env.contract.address, &deps.querier)
+            .map(|balance: Coin<Lpn>| {
+                balance
+                    + self.total.total_principal_due()
+                    + self.total.total_interest_due_by_now(env.block.time)
+            })
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse<Lpn>> {
