@@ -90,9 +90,9 @@ impl Config {
             .map(|_| ())
     }
 
-    pub fn initial_derivative_price<LPN>() -> Price<NLpn, LPN>
+    pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
     where
-        LPN: Currency + Serialize + DeserializeOwned,
+        Lpn: Currency + Serialize + DeserializeOwned,
     {
         Price::identity()
     }

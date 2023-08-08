@@ -52,11 +52,11 @@ pub(super) fn try_claim_rewards(
     Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<LPN>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<LPN>>
+pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<Lpn>>
 where
-    LPN: 'static + Currency + DeserializeOwned + Serialize,
+    Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     lpp.query_lpp_balance(&deps, &env)
 }
 

@@ -37,9 +37,9 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(mut self) -> Result<()>
+    fn do_work<Lpn>(mut self) -> Result<()>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
@@ -49,7 +49,7 @@ impl<'a> InstantiateWithLpn<'a> {
         )
         .grant_to(&self.msg.lease_code_admin)?;
 
-        LiquidityPool::<LPN>::store(self.deps.storage, self.msg.into())
+        LiquidityPool::<Lpn>::store(self.deps.storage, self.msg.into())
     }
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
@@ -63,11 +63,11 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     type Output = ();
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 
@@ -99,9 +99,9 @@ struct ExecuteWithLpn<'a> {
 }
 
 impl<'a> ExecuteWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<CwResponse>
+    fn do_work<Lpn>(self) -> Result<CwResponse>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         match self.msg {
@@ -109,7 +109,7 @@ impl<'a> ExecuteWithLpn<'a> {
                 .try_into()
                 .map_err(Into::into)
                 .and_then(|amount_lpn| {
-                    borrow::try_open_loan::<LPN>(self.deps, self.env, self.info, amount_lpn)
+                    borrow::try_open_loan::<Lpn>(self.deps, self.env, self.info, amount_lpn)
                 })
                 .and_then(|(loan_resp, message_response)| {
                     response::response_with_messages::<_, _, ContractError>(
@@ -117,7 +117,7 @@ impl<'a> ExecuteWithLpn<'a> {
                         message_response,
                     )
                 }),
-            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<LPN>(
+            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<Lpn>(
                 self.deps, self.env, self.info,
             )
             .and_then(|(excess_amount, message_response)| {
@@ -126,10 +126,10 @@ impl<'a> ExecuteWithLpn<'a> {
                     message_response,
                 )
             }),
-            ExecuteMsg::Deposit() => lender::try_deposit::<LPN>(self.deps, self.env, self.info)
+            ExecuteMsg::Deposit() => lender::try_deposit::<Lpn>(self.deps, self.env, self.info)
                 .map(response::response_only_messages),
             ExecuteMsg::Burn { amount } => {
-                lender::try_withdraw::<LPN>(self.deps, self.env, self.info, amount)
+                lender::try_withdraw::<Lpn>(self.deps, self.env, self.info, amount)
                     .map(response::response_only_messages)
             }
             _ => {
@@ -161,11 +161,11 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     type Output = CwResponse;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 
@@ -212,25 +212,25 @@ struct QueryWithLpn<'a> {
 }
 
 impl<'a> QueryWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<Binary>
+    fn do_work<Lpn>(self) -> Result<Binary>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         let res = match self.msg {
             QueryMsg::Quote { amount } => {
                 let quote = amount.try_into()?;
 
-                to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
+                to_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
             }
             QueryMsg::Loan { lease_addr } => {
-                to_binary(&borrow::query_loan::<LPN>(self.deps.storage, lease_addr)?)
+                to_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
             }
             QueryMsg::LppBalance() => {
-                to_binary(&rewards::query_lpp_balance::<LPN>(self.deps, self.env)?)
+                to_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
             }
             QueryMsg::Price() => {
-                to_binary(&lender::query_ntoken_price::<LPN>(self.deps, self.env)?)
+                to_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
             }
             _ => unreachable!("Variants should have been exhausted!"),
         }?;
@@ -251,11 +251,11 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 

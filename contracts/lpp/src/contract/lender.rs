@@ -17,18 +17,18 @@ use crate::{
     state::Deposit,
 };
 
-pub(super) fn try_deposit<LPN>(
+pub(super) fn try_deposit<Lpn>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
 ) -> Result<MessageResponse>
 where
-    LPN: 'static + Currency + DeserializeOwned + Serialize,
+    Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lender_addr = info.sender;
     let amount = bank::received_one(info.funds)?;
 
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
     lpp.check_utilization_rate(&deps.querier, &env)?;
 
@@ -43,14 +43,14 @@ where
     Ok(event::emit_deposit(env, lender_addr, amount, receipts).into())
 }
 
-pub(super) fn try_withdraw<LPN>(
+pub(super) fn try_withdraw<Lpn>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     amount_nlpn: Uint128,
 ) -> Result<MessageResponse>
 where
-    LPN: 'static + Currency + DeserializeOwned + Serialize,
+    Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     if amount_nlpn.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
@@ -59,7 +59,7 @@ where
     let lender_addr = info.sender;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
 
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
 
     let maybe_reward = Deposit::may_load(deps.storage, lender_addr.clone())?
@@ -88,11 +88,11 @@ where
     ))
 }
 
-pub fn query_ntoken_price<LPN>(deps: Deps<'_>, env: Env) -> Result<PriceResponse<LPN>>
+pub fn query_ntoken_price<Lpn>(deps: Deps<'_>, env: Env) -> Result<PriceResponse<Lpn>>
 where
-    LPN: Currency + DeserializeOwned + Serialize,
+    Lpn: Currency + DeserializeOwned + Serialize,
 {
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     let price = lpp.calculate_price(&deps, &env, Coin::new(0))?.into();
 
     Ok(price)

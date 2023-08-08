@@ -5,14 +5,14 @@ use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::nlpn::NLpn;
 
-pub fn emit_deposit<LPN>(
+pub fn emit_deposit<Lpn>(
     env: Env,
     lender_addr: Addr,
-    deposited_amount: Coin<LPN>,
+    deposited_amount: Coin<Lpn>,
     receipts: Coin<NLpn>,
 ) -> Emitter
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
     Emitter::of_type("lp-deposit")
         .emit_tx_info(&env)
@@ -22,15 +22,15 @@ where
         .emit_coin_amount("receipts", receipts)
 }
 
-pub fn emit_withdraw<LPN>(
+pub fn emit_withdraw<Lpn>(
     env: Env,
     lender_addr: Addr,
-    payment_lpn: Coin<LPN>,
+    payment_lpn: Coin<Lpn>,
     receipts: Coin<NLpn>,
     close_flag: bool,
 ) -> Emitter
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
     Emitter::of_type("lp-withdraw")
         .emit_tx_info(&env)
