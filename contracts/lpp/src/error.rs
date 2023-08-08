@@ -61,6 +61,9 @@ pub enum ContractError {
     #[error("[Lpp] Insufficient balance")]
     InsufficientBalance,
 
+    #[error("[Lpp] Utilization is below the set minimal rate")]
+    UtilizationBelowMinimalRates,
+
     #[error("[Lpp] Balance overflow")]
     OverflowError,
 

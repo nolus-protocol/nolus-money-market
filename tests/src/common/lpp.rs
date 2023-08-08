@@ -22,9 +22,8 @@ impl Instantiator {
         app: &mut App,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
+        borrow_rate: InterestRate,
+        min_utilization: Percent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
@@ -42,9 +41,8 @@ impl Instantiator {
             Box::new(endpoints),
             lease_code_id,
             init_balance,
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+            borrow_rate,
+            min_utilization,
         )
     }
 
@@ -54,9 +52,8 @@ impl Instantiator {
         endpoints: Box<CwContract>,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
+        borrow_rate: InterestRate,
+        min_utilization: Percent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
@@ -66,12 +63,8 @@ impl Instantiator {
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_admin: lease_code_admin.clone(),
-            borrow_rate: InterestRate::new(
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
-            )
-            .expect("Couldn't construct interest rate value!"),
+            borrow_rate,
+            min_utilization,
         };
 
         let lpp = app

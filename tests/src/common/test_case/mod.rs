@@ -2,6 +2,7 @@ use address_book::AddressBook;
 use app::App;
 use currency::{Currency, Symbol};
 
+use finance::percent::Percent;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
@@ -60,6 +61,8 @@ impl TestCase<(), (), (), (), (), (), ()> {
 
     pub const PROFIT_ICA_CHANNEL: &'static str = "channel-0";
     pub const PROFIT_ICA_ADDR: &'static str = "ica1";
+
+    pub const DEFAULT_LPP_MIN_UTILIZATION: Percent = Percent::from_permille(250);
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (

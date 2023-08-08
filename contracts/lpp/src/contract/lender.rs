@@ -30,6 +30,8 @@ where
 
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
+    lpp.check_utilization_rate(&deps.querier, &env)?;
+
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
     let receipts = Deposit::load_or_default(deps.storage, lender_addr.clone())?.deposit(
@@ -158,6 +160,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                Percent::from_permille(250),
             ),
         )
         .unwrap();

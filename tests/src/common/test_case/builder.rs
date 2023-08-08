@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use currency::Currency;
 use finance::percent::Percent;
 use lease::api::{ConnectionParams, Ics20Channel};
+use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
 use sdk::{
@@ -311,6 +312,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
+        min_utilization: Percent,
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         self.init_lpp_with_funds(
             custom_wrapper,
@@ -318,6 +320,7 @@ where
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,
+            min_utilization,
         )
     }
 
@@ -328,6 +331,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
+        min_utilization: Percent,
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         let Self {
             mut test_case,
@@ -336,24 +340,29 @@ where
 
         let lease_code_id: Uint64 = Uint64::new(test_case.address_book.lease_code_id());
 
+        let borrow_rate = InterestRate::new(
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
+        .expect("Couldn't construct interest rate value!");
+
         let lpp_addr: Addr = if let Some(endpoints) = endpoints {
             LppInstantiator::instantiate::<Lpn>(
                 &mut test_case.app,
                 Box::new(endpoints),
                 lease_code_id,
                 init_balance,
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
+                borrow_rate,
+                min_utilization,
             )
         } else {
             LppInstantiator::instantiate_default::<Lpn>(
                 &mut test_case.app,
                 lease_code_id,
                 init_balance,
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
+                borrow_rate,
+                min_utilization,
             )
         }
         .0;

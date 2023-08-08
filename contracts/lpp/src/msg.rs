@@ -20,6 +20,7 @@ pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
     pub borrow_rate: InterestRate,
+    pub min_utilization: Percent,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -46,7 +47,10 @@ pub enum ExecuteMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    NewBorrowRate { borrow_rate: InterestRate },
+    UpdateParameters {
+        borrow_rate: InterestRate,
+        min_utilization: Percent,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

@@ -77,12 +77,33 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<Lpn>> {
-        self.balance(&env.contract.address, &deps.querier)
+    pub fn total_lpn(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Coin<Lpn>> {
+        self.balance(&env.contract.address, querier)
             .map(|balance: Coin<Lpn>| {
                 balance
                     + self.total.total_principal_due()
                     + self.total.total_interest_due_by_now(env.block.time)
+            })
+    }
+
+    pub fn utilization(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Percent> {
+        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
+            if total_lpn.is_zero() {
+                Percent::HUNDRED
+            } else {
+                Percent::from_ratio(self.total.total_principal_due(), total_lpn)
+            }
+        })
+    }
+
+    pub fn check_utilization_rate(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<()> {
+        self.utilization(querier, env)
+            .and_then(|utilization: Percent| {
+                if utilization < self.config.min_utilization() {
+                    Err(ContractError::UtilizationBelowMinimalRates)
+                } else {
+                    Ok(())
+                }
             })
     }
 
@@ -114,7 +135,7 @@ where
         let price = if balance_nlpn.is_zero() {
             Config::initial_derivative_price()
         } else {
-            price::total_of(balance_nlpn).is(self.total_lpn(deps, env)? - received)
+            price::total_of(balance_nlpn).is(self.total_lpn(&deps.querier, env)? - received)
         };
 
         debug_assert!(
@@ -265,6 +286,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent = Percent::from_permille(250);
 
     #[test]
     fn test_balance() {
@@ -285,6 +307,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -324,6 +347,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -406,6 +430,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -507,6 +532,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -540,6 +566,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -573,6 +600,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -630,6 +658,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
@@ -685,12 +714,13 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
 
         // simplify calculation
-        Config::update_borrow_rate(
+        Config::update_parameters(
             deps.as_mut().storage,
             InterestRate::new(
                 Percent::from_percent(18),
@@ -698,6 +728,7 @@ mod test {
                 Percent::from_percent(2),
             )
             .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
         )
         .expect("should update config");
 
@@ -742,7 +773,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(Duration::YEAR.nanos());
 
         let total_lpn = lpp
-            .total_lpn(&deps.as_ref(), &env)
+            .total_lpn(&deps.as_ref().querier, &env)
             .expect("should query total_lpn");
         assert_eq!(total_lpn, 11_100_000u128.into());
 
@@ -773,7 +804,7 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
         let total_lpn = lpp
-            .total_lpn(&deps.as_ref(), &env)
+            .total_lpn(&deps.as_ref().querier, &env)
             .expect("should query total_lpn");
         assert_eq!(total_lpn, 11_100_000u128.into());
 

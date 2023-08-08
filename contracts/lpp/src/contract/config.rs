@@ -1,6 +1,7 @@
 use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
+use finance::percent::Percent;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Deps, DepsMut, MessageInfo, Uint64};
 
@@ -22,9 +23,11 @@ pub(super) fn try_update_lease_code(
 
 pub(super) fn try_update_parameters(
     deps: DepsMut<'_>,
-    interest_rate: InterestRate,
+    borrow_rate: InterestRate,
+    min_utilization: Percent,
 ) -> Result<MessageResponse> {
-    Config::update_borrow_rate(deps.storage, interest_rate).map(|()| Default::default())
+    Config::update_parameters(deps.storage, borrow_rate, min_utilization)
+        .map(|()| Default::default())
 }
 
 pub(super) fn query_config(deps: &Deps<'_>) -> Result<Config> {

@@ -62,6 +62,12 @@ fn config_update_parameters() {
     let base_interest_rate = Percent::from_percent(21);
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
+    let min_utilization = Percent::from_percent(500);
+
+    assert_ne!(base_interest_rate, BASE_INTEREST_RATE);
+    assert_ne!(addon_optimal_interest_rate, ADDON_OPTIMAL_INTEREST_RATE);
+    assert_ne!(utilization_optimal, UTILIZATION_OPTIMAL);
+    assert_ne!(min_utilization, TestCase::DEFAULT_LPP_MIN_UTILIZATION);
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
@@ -72,6 +78,7 @@ fn config_update_parameters() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .into_generic();
 
@@ -79,13 +86,14 @@ fn config_update_parameters() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::NewBorrowRate {
+            &SudoMsg::UpdateParameters {
                 borrow_rate: InterestRate::new(
                     base_interest_rate,
                     utilization_optimal,
                     addon_optimal_interest_rate,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                min_utilization,
             },
         )
         .unwrap()
@@ -112,6 +120,7 @@ fn config_update_parameters() {
         quote.borrow_rate().addon_optimal_interest_rate(),
         addon_optimal_interest_rate
     );
+    assert_eq!(quote.min_utilization(), min_utilization);
 }
 
 #[test]
@@ -123,6 +132,7 @@ fn open_loan_unauthorized_contract_id() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -154,6 +164,7 @@ fn open_loan_no_liquidity() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -206,6 +217,7 @@ fn deposit_and_withdraw() {
                 BASE_INTEREST_RATE,
                 UTILIZATION_OPTIMAL,
                 ADDON_OPTIMAL_INTEREST_RATE,
+                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             )
             .init_time_alarms()
             .init_oracle(None)
@@ -488,6 +500,7 @@ fn loan_open_wrong_id() {
                 BASE_INTEREST_RATE,
                 UTILIZATION_OPTIMAL,
                 ADDON_OPTIMAL_INTEREST_RATE,
+                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             )
             .into_generic();
 
@@ -555,6 +568,7 @@ fn loan_open_and_repay() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
@@ -590,13 +604,14 @@ fn loan_open_and_repay() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::NewBorrowRate {
+            &SudoMsg::UpdateParameters {
                 borrow_rate: InterestRate::new(
                     LOCAL_BASE_INTEREST_RATE,
                     LOCAL_UTILIZATION_OPTIMAL_RATE,
                     LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                min_utilization: TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             },
         )
         .unwrap()
@@ -911,6 +926,7 @@ fn compare_lpp_states() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
@@ -939,13 +955,14 @@ fn compare_lpp_states() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::NewBorrowRate {
+            &SudoMsg::UpdateParameters {
                 borrow_rate: InterestRate::new(
                     LOCAL_BASE_INTEREST_RATE,
                     LOCAL_UTILIZATION_OPTIMAL_RATE,
                     LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                min_utilization: TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             },
         )
         .unwrap()
@@ -1258,6 +1275,7 @@ fn test_rewards() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .into_generic();
 

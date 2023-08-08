@@ -112,6 +112,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                Percent::from_permille(250),
             ),
         )
         .unwrap();

@@ -197,11 +197,11 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     // no currency context variants
     match msg {
-        SudoMsg::NewBorrowRate {
-            borrow_rate: interest_rate,
-        } => {
-            config::try_update_parameters(deps, interest_rate).map(response::response_only_messages)
-        }
+        SudoMsg::UpdateParameters {
+            borrow_rate,
+            min_utilization,
+        } => config::try_update_parameters(deps, borrow_rate, min_utilization)
+            .map(response::response_only_messages),
     }
 }
 
