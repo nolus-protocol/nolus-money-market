@@ -62,7 +62,7 @@ impl TestCase<(), (), (), (), (), (), ()> {
     pub const PROFIT_ICA_CHANNEL: &'static str = "channel-0";
     pub const PROFIT_ICA_ADDR: &'static str = "ica1";
 
-    pub const DEFAULT_LPP_MIN_UTILIZATION: Percent = Percent::from_permille(250);
+    pub const DEFAULT_LPP_MIN_UTILIZATION: Percent = Percent::ZERO;
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (

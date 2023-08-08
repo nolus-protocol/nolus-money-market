@@ -286,7 +286,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: Percent = Percent::from_permille(250);
+    const DEFAULT_MIN_UTILIZATION: Percent = Percent::ZERO;
 
     #[test]
     fn test_balance() {

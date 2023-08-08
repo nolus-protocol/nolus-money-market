@@ -127,6 +127,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent = Percent::ZERO;
 
     #[test]
     fn test_deposit() {
@@ -160,7 +161,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                Percent::from_permille(250),
+                DEFAULT_MIN_UTILIZATION,
             ),
         )
         .unwrap();
