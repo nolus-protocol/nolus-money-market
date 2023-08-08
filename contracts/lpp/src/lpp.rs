@@ -238,9 +238,7 @@ where
     }
 
     fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<LPN>> {
-        let balance = bank::balance(account, querier)?;
-
-        Ok(balance)
+        bank::balance(account, querier).map_err(Into::into)
     }
 }
 
