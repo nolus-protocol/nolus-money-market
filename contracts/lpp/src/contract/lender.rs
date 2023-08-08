@@ -255,6 +255,68 @@ mod test {
         assert_eq!(balance_nlpn.u128(), 0);
     }
 
+    #[test]
+    fn test_min_utilization() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        ContractOwnerAccess::new(deps.as_mut().storage)
+            .grant_to(&Addr::unchecked("admin"))
+            .unwrap();
+
+        LiquidityPool::<TheCurrency>::store(
+            deps.as_mut().storage,
+            Config::new(
+                TheCurrency::TICKER.into(),
+                1000u64.into(),
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                Percent::HUNDRED,
+            ),
+        )
+        .unwrap();
+
+        let mut lpp_balance = 0;
+        let deposit = 100;
+
+        // lpp is empty but there are no loans, thus making the utilization 0% upon arrival of the funds
+        lpp_balance += deposit;
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
+        let info = mock_info("lender1", &[cwcoin(deposit)]);
+        _ = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap_err();
+        // reset balance
+        lpp_balance -= deposit;
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
+
+        LiquidityPool::<TheCurrency>::store(
+            deps.as_mut().storage,
+            Config::new(
+                TheCurrency::TICKER.into(),
+                1000u64.into(),
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                Percent::ZERO,
+            ),
+        )
+        .unwrap();
+
+        lpp_balance += deposit;
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
+        let info = mock_info("lender1", &[cwcoin(deposit)]);
+        _ = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
+    }
+
     fn cwcoin<A>(amount: A) -> CwCoin
     where
         A: Into<Coin<TheCurrency>>,
