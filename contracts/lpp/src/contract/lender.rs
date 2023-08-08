@@ -144,7 +144,6 @@ mod test {
         let overdraft = 5_000;
         let withdraw_amount_nlpn = 1000u128;
         let rest_nlpn = 1000u128;
-        let zero = 0u128;
 
         ContractOwnerAccess::new(deps.as_mut().storage)
             .grant_to(&Addr::unchecked("admin"))
@@ -218,24 +217,22 @@ mod test {
         );
 
         //try to deposit zero
-        let info = mock_info("lender4", &[cwcoin(zero)]);
-        let result = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info);
-        assert!(result.is_err());
+        let info = mock_info("lender4", &[cwcoin(0)]);
+        _ = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap_err();
 
         // try to withdraw with overdraft
         let info = mock_info("lender2", &[]);
-        let result = try_withdraw::<TheCurrency>(
+        _ = try_withdraw::<TheCurrency>(
             deps.as_mut(),
             env.clone(),
             info.clone(),
             (test_deposit - rounding_error + overdraft).into(),
-        );
-        assert!(result.is_err());
+        )
+        .unwrap_err();
 
         //try to withdraw zero
-        let result =
-            try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into());
-        assert!(result.is_err());
+        _ = try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), Uint128::new(0))
+            .unwrap_err();
 
         // partial withdraw
         try_withdraw::<TheCurrency>(
@@ -255,7 +252,7 @@ mod test {
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
-        assert_eq!(balance_nlpn.u128(), zero);
+        assert_eq!(balance_nlpn.u128(), 0);
     }
 
     fn cwcoin<A>(amount: A) -> CwCoin
