@@ -10,7 +10,7 @@ use platform::response::{self};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Storage},
 };
 use versioning::{version, VersionSegment};
 
@@ -24,11 +24,12 @@ use crate::{
 mod borrow;
 mod config;
 mod lender;
+mod migrate;
 mod rewards;
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -86,9 +87,14 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
-        .and_then(response::response)
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwResponse> {
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        |storage: &mut dyn Storage| self::migrate::migrate(storage, msg.min_utilization),
+        Into::into,
+    )
+    .and_then(|(label, ())| response::response(label))
 }
 
 struct ExecuteWithLpn<'a> {

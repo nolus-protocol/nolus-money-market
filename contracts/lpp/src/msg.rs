@@ -24,7 +24,9 @@ pub struct InstantiateMsg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub min_utilization: Percent,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
