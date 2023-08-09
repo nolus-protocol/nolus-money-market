@@ -10,7 +10,10 @@ use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct StateQuery {}
+pub enum QueryMsg {
+    State {},
+    IsClosed {},
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]

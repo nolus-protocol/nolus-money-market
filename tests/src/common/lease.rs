@@ -9,7 +9,7 @@ use finance::{
 use lease::{
     api::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, StateQuery, StateResponse,
+        NewLeaseForm, QueryMsg, StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
@@ -460,7 +460,7 @@ fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
     app.query()
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: lease.into_string(),
-            msg: to_binary(&StateQuery {}).unwrap(),
+            msg: to_binary(&QueryMsg::State {}).unwrap(),
         }))
         .unwrap()
 }

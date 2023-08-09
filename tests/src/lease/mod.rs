@@ -11,7 +11,7 @@ use finance::{
     period::Period,
     price::{self, Price},
 };
-use lease::api::{StateQuery, StateResponse};
+use lease::api::{QueryMsg as LeaseQueryMsg, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_std::{coin, Addr, Binary, Timestamp},
@@ -246,7 +246,7 @@ pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Tim
     test_case
         .app
         .query()
-        .query_wasm_smart(contract_addr, &StateQuery {})
+        .query_wasm_smart(contract_addr, &LeaseQueryMsg::State {})
         .unwrap()
 }
 

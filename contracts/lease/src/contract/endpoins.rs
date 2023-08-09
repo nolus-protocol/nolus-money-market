@@ -10,7 +10,7 @@ use sdk::{
 use versioning::{version, VersionSegment};
 
 use crate::{
-    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, QueryMsg},
     contract::api::Contract,
     error::{ContractError, ContractResult},
 };
@@ -125,10 +125,18 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     state::load(deps.storage)
-        .and_then(|state| state.state(env.block.time, &deps.querier))
-        .and_then(|resp| to_binary(&resp).map_err(Into::into))
+        .and_then(|state| match msg {
+            QueryMsg::State {} => state
+                .state(env.block.time, &deps.querier)
+                .and_then(|resp| to_binary(&resp).map_err(Into::into)),
+            QueryMsg::IsClosed {} => to_binary(&matches!(
+                state,
+                State::Closed { .. } | State::Liquidated { .. },
+            ))
+            .map_err(Into::into),
+        })
         .or_else(|err| log_error(err, deps.api))
 }
 

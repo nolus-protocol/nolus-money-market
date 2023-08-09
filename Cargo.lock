@@ -642,7 +642,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",

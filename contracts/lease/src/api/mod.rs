@@ -9,7 +9,7 @@ pub use self::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
         NewLeaseForm,
     },
-    query::{opened, opening, paid, StateQuery, StateResponse},
+    query::{opened, opening, paid, QueryMsg, StateResponse},
 };
 
 // TODO consider defining the modules public instead of just selected items
