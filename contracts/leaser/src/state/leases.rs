@@ -116,3 +116,55 @@ mod test {
         assert_eq!(id, 0);
     }
 }
+
+#[cfg(test)]
+mod test_storage_compatibility {
+    use std::collections::HashSet;
+
+    use sdk::{
+        cosmwasm_std::{testing::MockStorage, Addr},
+        cw_storage_plus::Map,
+    };
+
+    use crate::state::leases::Leases;
+
+    #[test]
+    fn test_storage_compatibility() {
+        // Tests for `HashSet <=> Vec` compatibility.
+        let mut storage: MockStorage = MockStorage::new();
+
+        let addr: Addr = Addr::unchecked("c1");
+
+        let data: [Addr; 3] = {
+            let mut data: [Addr; 3] = [
+                Addr::unchecked("l1"),
+                Addr::unchecked("l2"),
+                Addr::unchecked("l3"),
+            ];
+
+            data.sort();
+
+            data
+        };
+
+        Map::<'static, Addr, HashSet<Addr>>::new("loans")
+            .save(
+                &mut storage,
+                addr.clone(),
+                &data.clone().into_iter().collect(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            {
+                let mut leases: Vec<Addr> = Leases::STORAGE.load(&storage, addr).unwrap();
+
+                leases.sort();
+
+                leases
+            }
+            .as_slice(),
+            &data
+        );
+    }
+}
