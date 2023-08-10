@@ -1,12 +1,12 @@
-use std::collections::HashSet;
-
 use currency::{native::Nls, SymbolOwned};
 use finance::{liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
-use platform::message::Response as MessageResponse;
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{Addr, Deps, StdResult, Storage};
 
 use crate::{
@@ -31,7 +31,7 @@ impl<'a> Leaser<'a> {
         Ok(ConfigResponse { config })
     }
 
-    pub fn customer_leases(&self, owner: Addr) -> StdResult<HashSet<Addr>> {
+    pub fn customer_leases(&self, owner: Addr) -> StdResult<Vec<Addr>> {
         Leases::get(self.deps.storage, owner)
     }
 
