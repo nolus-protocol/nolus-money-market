@@ -246,3 +246,195 @@ mod test_storage_compatibility {
         );
     }
 }
+
+#[cfg(test)]
+mod test_purge_closed {
+    use std::iter;
+
+    use sdk::cosmwasm_std::{
+        from_binary,
+        testing::{MockQuerier, MockStorage},
+        to_binary, Addr, QuerierWrapper, WasmQuery,
+    };
+
+    use crate::state::leases::Leases;
+
+    const CLOSED_SUFFIX: &str = "_closed";
+    const _: () = if CLOSED_SUFFIX.is_empty() {
+        panic!()
+    };
+
+    fn mock_querier() -> MockQuerier {
+        let mut querier: MockQuerier = MockQuerier::new(&[]);
+
+        querier.update_wasm(move |query: &WasmQuery| {
+            if let WasmQuery::Smart { contract_addr, msg } = query {
+                if let Ok(::lease::api::QueryMsg::IsClosed {}) = from_binary(msg) {
+                    Ok(to_binary(&contract_addr.contains(CLOSED_SUFFIX)).into()).into()
+                } else {
+                    unimplemented!()
+                }
+            } else {
+                unimplemented!();
+            }
+        });
+
+        querier
+    }
+
+    fn generate_leases(leases_count: usize, close_every_nth: usize) -> Vec<Addr> {
+        let leases: Vec<Addr> = iter::from_fn({
+            let mut counter: usize = 0;
+
+            move || -> Option<Addr> {
+                Some(Addr::unchecked({
+                    counter += 1;
+
+                    let is_closed: bool = counter % close_every_nth == 0;
+
+                    format!(
+                        "lease_{counter}{}",
+                        if is_closed { CLOSED_SUFFIX } else { "" }
+                    )
+                }))
+            }
+        })
+        .take(leases_count)
+        .collect();
+
+        assert_eq!(leases.len(), leases_count);
+        assert_eq!(
+            leases
+                .iter()
+                .filter(|lease: &&Addr| lease.as_str().contains(CLOSED_SUFFIX))
+                .count(),
+            leases_count / close_every_nth,
+        );
+
+        leases
+    }
+
+    #[test]
+    fn test_retain_opened() {
+        const LEASES_COUNT: usize = 30;
+        const CLOSE_EVERY_NTH: usize = 3;
+        const _: () = if CLOSE_EVERY_NTH == 0 {
+            panic!()
+        };
+        const _: () = if LEASES_COUNT % CLOSE_EVERY_NTH != 0 {
+            panic!()
+        };
+
+        let querier: MockQuerier = mock_querier();
+
+        let mut leases: Vec<Addr> = generate_leases(LEASES_COUNT, CLOSE_EVERY_NTH);
+
+        let mut max_leases: usize = (LEASES_COUNT / CLOSE_EVERY_NTH) / 2;
+        assert_ne!(max_leases, 0);
+
+        {
+            let max_leases_shadow: usize = max_leases;
+
+            assert_eq!(
+                Leases::retain_opened(&mut leases, &QuerierWrapper::new(&querier), &mut max_leases),
+                Ok(true)
+            );
+
+            assert_eq!(max_leases, 0);
+
+            assert_eq!(
+                leases
+                    .iter()
+                    .filter(|lease: &&Addr| lease.as_str().contains(CLOSED_SUFFIX))
+                    .count(),
+                (LEASES_COUNT / CLOSE_EVERY_NTH)
+                    - (max_leases_shadow / CLOSE_EVERY_NTH
+                        + usize::from(max_leases_shadow % CLOSE_EVERY_NTH != 0)),
+            );
+        }
+
+        assert_eq!(
+            Leases::retain_opened(&mut leases, &QuerierWrapper::new(&querier), &mut max_leases),
+            Ok(false)
+        );
+
+        max_leases = usize::MAX;
+
+        assert_eq!(
+            Leases::retain_opened(&mut leases, &QuerierWrapper::new(&querier), &mut max_leases),
+            Ok(true)
+        );
+
+        assert_eq!(
+            leases.len(),
+            LEASES_COUNT * (CLOSE_EVERY_NTH - 1) / CLOSE_EVERY_NTH
+        );
+        assert!(!leases
+            .iter()
+            .any(|lease: &Addr| lease.as_str().contains(CLOSED_SUFFIX)));
+
+        assert_eq!(
+            Leases::retain_opened(&mut leases, &QuerierWrapper::new(&querier), &mut max_leases),
+            Ok(false)
+        );
+
+        assert_eq!(
+            leases.len(),
+            LEASES_COUNT * (CLOSE_EVERY_NTH - 1) / CLOSE_EVERY_NTH
+        );
+    }
+
+    #[test]
+    fn test_purge_closed() {
+        const CUSTOMER_LEASES_CONFIG: [(usize, Option<usize>, usize); 3] =
+            [(10, None, 10), (20, Some(2), 10), (10, Some(1), 0)];
+        const _: () = {
+            let mut index: usize = 0;
+
+            while index < CUSTOMER_LEASES_CONFIG.len() {
+                if let Some(modulo) = CUSTOMER_LEASES_CONFIG[index].1 {
+                    if CUSTOMER_LEASES_CONFIG[index].0 % modulo != 0 {
+                        panic!()
+                    }
+                }
+
+                index += 1;
+            }
+        };
+
+        let mut storage: MockStorage = MockStorage::new();
+        let querier: MockQuerier = mock_querier();
+        let querier: QuerierWrapper<'_> = QuerierWrapper::new(&querier);
+
+        for (index, (leases_count, close_every_nth, _)) in
+            CUSTOMER_LEASES_CONFIG.into_iter().enumerate()
+        {
+            Leases::STORAGE
+                .save(
+                    &mut storage,
+                    Addr::unchecked(format!("customer{index}")),
+                    &generate_leases(leases_count, close_every_nth.unwrap_or(usize::MAX)),
+                )
+                .unwrap();
+        }
+
+        assert_eq!(
+            Leases::purge_closed(&mut storage, &querier, u32::MAX, None),
+            Ok(None)
+        );
+
+        for (index, (_, _, leases_left)) in CUSTOMER_LEASES_CONFIG.into_iter().enumerate() {
+            assert_eq!(
+                Leases::STORAGE
+                    .may_load(&storage, Addr::unchecked(format!("customer{index}")))
+                    .unwrap()
+                    .map(|leases: Vec<Addr>| leases.len()),
+                if leases_left == 0 {
+                    None
+                } else {
+                    Some(leases_left)
+                }
+            );
+        }
+    }
+}
