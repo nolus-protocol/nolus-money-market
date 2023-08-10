@@ -75,6 +75,45 @@ impl Leases {
             .map(|leases: Option<Vec<Addr>>| leases.unwrap_or_default())
     }
 
+    pub fn purge_closed(
+        storage: &mut dyn Storage,
+        querier: &QuerierWrapper<'_>,
+        max_leases: MaxLeases,
+        mut next_key: Option<Addr>,
+    ) -> ContractResult<Option<Addr>> {
+        let mut max_leases: usize = usize::try_from(max_leases)?;
+
+        while let Some((customer, mut leases)) = {
+            let mut entries_iter: Box<dyn Iterator<Item = StdResult<(Addr, Vec<Addr>)>>> =
+                Self::STORAGE.range(
+                    storage,
+                    next_key.take().map(Bound::exclusive),
+                    None,
+                    Order::Ascending,
+                );
+
+            entries_iter.next().transpose()?
+        } {
+            if max_leases != 0 && Self::retain_opened(&mut leases, querier, &mut max_leases)? {
+                let customer: Addr = customer.clone();
+
+                if leases.is_empty() {
+                    Self::STORAGE.remove(storage, customer)
+                } else {
+                    Self::STORAGE.save(storage, customer, &leases)?;
+                }
+            }
+
+            next_key = Some(customer);
+
+            if max_leases == 0 {
+                break;
+            }
+        }
+
+        Ok(next_key)
+    }
+
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
@@ -88,6 +127,45 @@ impl Leases {
                     .map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
                     .map_err(Into::into)
             })
+    }
+
+    fn retain_opened(
+        leases: &mut Vec<Addr>,
+        querier: &QuerierWrapper<'_>,
+        max_leases: &mut usize,
+    ) -> StdResult<bool> {
+        // Iterating in reverse order to prevent bugs
+        // causing out-of-bounds indexing and skipping
+        // over elements which haven't been checked.
+        let mut iter: _ = (0..leases.len()).rev().take(*max_leases);
+
+        *max_leases = max_leases.saturating_sub(leases.len());
+
+        let mut changed: bool = false;
+
+        iter.try_for_each(|index: usize| -> StdResult<()> {
+            querier
+                .query_wasm_smart(
+                    // Call requires `Into<String>`. Explicit
+                    // `clone` call to prevent hidden control-flow.
+                    leases[index].clone(),
+                    &::lease::api::QueryMsg::IsClosed {},
+                )
+                .map(|is_closed: bool| {
+                    if is_closed {
+                        // Safety: Safe to remove element via swap,
+                        // because last element replaces it. Iterating
+                        // from the last to the first element makes it
+                        // safe to continue down, because the last element
+                        // is already guaranteed to have been iterated
+                        // through.
+                        leases.swap_remove(index);
+
+                        changed = true;
+                    }
+                })
+        })
+        .map(|()| changed)
     }
 }
 

@@ -55,6 +55,10 @@ pub enum ExecuteMsg {
     /// It migrates the next batch of up to `max_leases` number of Lease instances
     /// and emits the status as specified in `MigrateLeases`.
     MigrateLeasesCont { key: Addr, max_leases: MaxLeases },
+    DetachClosed {
+        max_leases: MaxLeases,
+        next_key: Option<Addr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

@@ -68,7 +68,8 @@ pub fn execute(
             env.contract.address,
             currency,
             max_ltd,
-        ),
+        )
+        .map(response::response_only_messages),
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
@@ -77,7 +78,8 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(move |()| {
                 leaser::try_migrate_leases(deps.storage, new_code_id.u64(), max_leases)
-            }),
+            })
+            .map(response::response_only_messages),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
@@ -87,9 +89,14 @@ pub fn execute(
             .and_then(|()| validate(next_customer, deps.api, &deps.querier))
             .and_then(move |next_customer_validated| {
                 leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)
-            }),
+            })
+            .map(response::response_only_messages),
+        ExecuteMsg::DetachClosed {
+            max_leases,
+            next_key,
+        } => Leases::purge_closed(deps.storage, &deps.querier, max_leases, next_key)
+            .and_then(|next_key: Option<Addr>| response::response(&next_key)),
     }
-    .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
