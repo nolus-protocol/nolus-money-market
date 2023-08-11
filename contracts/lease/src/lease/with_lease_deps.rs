@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::Addr;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, Symbol};
@@ -9,7 +8,7 @@ use lpp::stub::{
     LppRef,
 };
 use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 pub trait WithLeaseDeps {
     type Output;

@@ -1,4 +1,3 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::LppRef;
@@ -8,7 +7,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Reply};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
