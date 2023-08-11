@@ -26,6 +26,7 @@ pub(crate) struct OpenIcaAccount {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
+    opening_time: Timestamp,
 }
 
 impl OpenIcaAccount {
@@ -34,12 +35,14 @@ impl OpenIcaAccount {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef),
+        opening_time: Timestamp,
     ) -> Self {
         Self {
             new_lease,
             downpayment,
             loan,
             deps,
+            opening_time,
         }
     }
 }
@@ -55,6 +58,7 @@ impl IcaConnectee for OpenIcaAccount {
             self.downpayment,
             self.loan,
             self.deps,
+            self.opening_time,
         ))
     }
 }

@@ -45,8 +45,15 @@ pub(in crate::contract::state::opening) fn start(
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
+    opening_time: Timestamp,
 ) -> StartState {
-    dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(new_lease, downpayment, loan, deps))
+    dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
+        new_lease,
+        downpayment,
+        loan,
+        deps,
+        opening_time,
+    ))
 }
 
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
@@ -58,6 +65,7 @@ pub(crate) struct BuyAsset {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
+    opening_time: Timestamp,
 }
 
 impl BuyAsset {
@@ -67,6 +75,7 @@ impl BuyAsset {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef),
+        opening_time: Timestamp,
     ) -> Self {
         Self {
             form,
@@ -74,6 +83,7 @@ impl BuyAsset {
             downpayment,
             loan,
             deps,
+            opening_time,
         }
     }
 
@@ -136,7 +146,7 @@ impl SwapTask for BuyAsset {
         let IntoDTOResult { lease, batch } = cmd::open_lease(
             self.form,
             self.dex_account.owner().clone(),
-            env.block.time,
+            self.opening_time,
             &amount_out,
             querier,
             (self.deps.0, self.deps.1),

@@ -71,7 +71,13 @@ impl RequestLoan {
 
         let emitter = self.emit_ok(env.contract.address);
 
-        let open_ica = super::buy_asset::start(self.new_lease, self.downpayment, loan, self.deps);
+        let open_ica = super::buy_asset::start(
+            self.new_lease,
+            self.downpayment,
+            loan,
+            self.deps,
+            env.block.time,
+        );
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_events(open_ica.enter(), emitter),
             Into::<DexState>::into(open_ica),
