@@ -390,7 +390,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp;
+    use serde::{Deserialize, Serialize};
+
     use currency::lpn::Usdc;
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
@@ -401,7 +402,7 @@ mod tests {
     };
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
-    use serde::{Deserialize, Serialize};
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::api::InterestPaymentSpec;
 
@@ -993,13 +994,13 @@ mod tests {
     }
 
     mod test_state {
-        use cosmwasm_std::Timestamp;
         use currency::Currency;
         use finance::{
             coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent,
             period::Period,
         };
         use lpp::msg::LoanResponse;
+        use sdk::cosmwasm_std::Timestamp;
 
         use crate::loan::tests::create_loan;
 
