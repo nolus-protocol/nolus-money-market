@@ -43,6 +43,14 @@ where
     Ok(event::emit_deposit(env, lender_addr, amount, receipts).into())
 }
 
+pub(super) fn deposit_limit<Lpn>(deps: Deps<'_>, env: Env) -> Result<Option<Coin<Lpn>>>
+where
+    Lpn: 'static + Currency + DeserializeOwned + Serialize,
+{
+    LiquidityPool::<Lpn>::load(deps.storage)
+        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_limit(&deps.querier, &env))
+}
+
 pub(super) fn try_withdraw<Lpn>(
     deps: DepsMut<'_>,
     env: Env,

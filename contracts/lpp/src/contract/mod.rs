@@ -3,9 +3,8 @@ use std::ops::DerefMut;
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
-use currency::lpn::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
-use platform::response::{self};
+use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency};
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -237,6 +236,9 @@ impl<'a> QueryWithLpn<'a> {
             }
             QueryMsg::Price() => {
                 to_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
+            }
+            QueryMsg::DepositLimit() => {
+                to_binary(&lender::deposit_limit::<Lpn>(self.deps, self.env)?)
             }
             _ => unreachable!("Variants should have been exhausted!"),
         }?;

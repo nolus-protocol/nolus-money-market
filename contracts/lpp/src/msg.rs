@@ -73,6 +73,7 @@ pub enum QueryMsg {
     },
     LppBalance(),
     Price(),
+    DepositLimit(),
 
     Rewards {
         address: Addr,

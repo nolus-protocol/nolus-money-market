@@ -2,14 +2,13 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::Coin,
+    coin::{Amount, Coin},
+    fraction::Fraction,
     percent::Percent,
     price::{self, Price},
+    ratio::Rational,
 };
-use platform::{
-    bank::{self},
-    contract,
-};
+use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
@@ -105,6 +104,24 @@ where
                     Ok(())
                 }
             })
+    }
+
+    pub fn deposit_limit(
+        &self,
+        querier: &QuerierWrapper<'_>,
+        env: &Env,
+    ) -> Result<Option<Coin<Lpn>>> {
+        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
+            (!self.config.min_utilization().is_zero()).then(|| {
+                Fraction::<Amount>::of(
+                    &Rational::new(
+                        Percent::HUNDRED.units(),
+                        self.config.min_utilization().units(),
+                    ),
+                    self.total.total_principal_due(),
+                ) - total_lpn
+            })
+        })
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse<Lpn>> {
