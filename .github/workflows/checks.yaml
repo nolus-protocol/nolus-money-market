@@ -1,0 +1,85 @@
+name: Smart Contracts
+run-name: "Running checks on smart contracts"
+
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: "always"
+  # Release version is set to `ci` to allow building during checking and testing
+  # pipelines, which is ignored during optimized builds.
+  RELEASE_VERSION: "ci"
+  # Network's name is set to `main` to allow building during checking and testing
+  # pipelines, which is ignored during optimized builds.
+  NET_NAME: "main"
+
+jobs:
+  check_formatting:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/check_formatting@main"
+  check_codebase:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/check_codebase@main"
+  audit_dependencies:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/audit_dependencies@main"
+  linting:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - name: "Run linter"
+        shell: "sh"
+        run: "./lint.sh"
+  check_features:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/check_features@main"
+  check_unused_deps:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/check_unused_deps@main"
+  test_dev_profile:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - name: "Run tests in dev profile"
+        shell: "sh"
+        run: "cargo test"
+  test_release_profile:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - name: "Run tests in release profile"
+        shell: "sh"
+        run: "cargo test --release"
+  check_wasm:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - shell: "sh"
+        run: "cargo install cargo-workspaces"
+      - shell: "sh"
+        run: "cargo install cosmwasm-check"
+      - name: "Building WASM binaries"
+        shell: "sh"
+        run: "cargo workspaces exec cargo build --release --target wasm32-unknown-unknown"
+      - name: "Checking WASM binaries"
+        shell: "sh"
+        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/release/*.wasm"

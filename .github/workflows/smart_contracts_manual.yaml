@@ -1,0 +1,24 @@
+name: Manual Workflow
+run-name: "Manually running workflow for smart contracts"
+
+on:
+  workflow_dispatch:
+    inputs:
+      perform_checks:
+        description: "Perform checks."
+        type: "boolean"
+        required: true
+        default: true
+      build_optimized:
+        description: "Build optimized binaries."
+        type: "boolean"
+        required: true
+        default: false
+
+jobs:
+  perform_checks:
+    uses: "./.github/workflows/checks.yaml"
+    if: "fromJSON(inputs.perform_checks)"
+  build_optimized:
+    uses: "./.github/workflows/build_optimized.yaml"
+    if: "fromJSON(inputs.build_optimized)"
