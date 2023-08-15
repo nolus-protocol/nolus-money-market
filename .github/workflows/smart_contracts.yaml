@@ -52,10 +52,6 @@ jobs:
       - uses: "Nolus-Protocol/rust-ci-actions/audit_dependencies@v1.2"
   linting:
     runs-on: "ubuntu-latest"
-    needs:
-      - "check_formatting"
-      - "check_codebase"
-      - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
@@ -64,40 +60,24 @@ jobs:
         run: "./lint.sh"
   check_features:
     runs-on: "ubuntu-latest"
-    needs:
-      - "check_formatting"
-      - "check_codebase"
-      - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - uses: "Nolus-Protocol/rust-ci-actions/check_features@v1.2"
   check_unused_deps:
     runs-on: "ubuntu-latest"
-    needs:
-      - "check_formatting"
-      - "check_codebase"
-      - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - uses: "Nolus-Protocol/rust-ci-actions/check_unused_deps@v1.2"
   code_coverage:
     runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-      - "check_features"
-      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
       - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1.2"
   test_release_profile:
     runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-      - "check_features"
-      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
@@ -106,10 +86,6 @@ jobs:
         run: "cargo test --release"
   check_wasm:
     runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-      - "check_features"
-      - "check_unused_deps"
     steps:
       - uses: "actions/checkout@v3"
       - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
@@ -126,6 +102,12 @@ jobs:
   build_optimized_dev_net:
     runs-on: "ubuntu-latest"
     needs:
+      - "check_formatting"
+      - "check_codebase"
+      - "audit_dependencies"
+      - "linting"
+      - "check_features"
+      - "check_unused_deps"
       - "code_coverage"
       - "test_release_profile"
       - "check_wasm"
@@ -139,6 +121,12 @@ jobs:
   build_optimized_test_net:
     runs-on: "ubuntu-latest"
     needs:
+      - "check_formatting"
+      - "check_codebase"
+      - "audit_dependencies"
+      - "linting"
+      - "check_features"
+      - "check_unused_deps"
       - "code_coverage"
       - "test_release_profile"
       - "check_wasm"
@@ -152,6 +140,12 @@ jobs:
   build_optimized_main_net:
     runs-on: "ubuntu-latest"
     needs:
+      - "check_formatting"
+      - "check_codebase"
+      - "audit_dependencies"
+      - "linting"
+      - "check_features"
+      - "check_unused_deps"
       - "code_coverage"
       - "test_release_profile"
       - "check_wasm"
