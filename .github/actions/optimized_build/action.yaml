@@ -25,7 +25,7 @@ runs:
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
         --env NET_NAME="${{ inputs.target_net }}" \
         --env RELEASE_VERSION="${RELEASE_VERSION}" \
-        cosmwasm/workspace-optimizer:0.13.0
+        cosmwasm/workspace-optimizer:0.14.0
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |

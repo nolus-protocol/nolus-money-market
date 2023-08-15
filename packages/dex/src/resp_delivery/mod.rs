@@ -47,8 +47,8 @@ impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMs
         Self {
             handler,
             response,
-            _forward_to_inner_msg: PhantomData::default(),
-            _delivery_adapter: PhantomData::default(),
+            _forward_to_inner_msg: PhantomData,
+            _delivery_adapter: PhantomData,
         }
     }
 }
