@@ -5,7 +5,6 @@ use currency::Currency;
 use crate::{
     coin::Coin,
     duration::Duration,
-    error::{Error, Result},
     fraction::Fraction,
     fractionable::Percentable,
     percent::{Percent, Units},
@@ -56,37 +55,6 @@ impl<Lpn> Liability<Lpn>
 where
     Lpn: Currency,
 {
-    #[track_caller]
-    #[cfg(any(test, feature = "testing"))]
-    pub fn new(
-        initial: Percent,
-        delta_to_healthy: Percent,
-        delta_to_max: Percent,
-        minus_delta_of_liq_warns: (Percent, Percent, Percent),
-        min_liquidation: Coin<Lpn>,
-        min_asset: Coin<Lpn>,
-        recalc_time: Duration,
-    ) -> Self {
-        let healthy = initial + delta_to_healthy;
-        let max = healthy + delta_to_max;
-        let third_liquidity_warning = max - minus_delta_of_liq_warns.2;
-        let second_liquidity_warning = third_liquidity_warning - minus_delta_of_liq_warns.1;
-        let first_liquidity_warning = second_liquidity_warning - minus_delta_of_liq_warns.0;
-        let obj = Self {
-            initial,
-            healthy,
-            max,
-            first_liq_warn: first_liquidity_warning,
-            second_liq_warn: second_liquidity_warning,
-            third_liq_warn: third_liquidity_warning,
-            min_liquidation,
-            min_asset,
-            recalc_time,
-        };
-        debug_assert_eq!(Ok(()), obj.invariant_held());
-        obj
-    }
-
     pub const fn healthy_percent(&self) -> Percent {
         self.healthy
     }
@@ -160,46 +128,6 @@ where
             total_due - total_due.min(self.healthy_percent().of(lease_amount));
         Fraction::<Units>::of(&multiplier, extra_liability_lpn)
     }
-
-    fn invariant_held(&self) -> Result<()> {
-        check::<Lpn>(self.initial > Percent::ZERO, "Initial % should not be zero")?;
-
-        check::<Lpn>(
-            self.initial <= self.healthy,
-            "Initial % should be <= healthy %",
-        )?;
-
-        check::<Lpn>(
-            self.healthy < self.first_liq_warn,
-            "Healthy % should be < first liquidation %",
-        )?;
-        check::<Lpn>(
-            self.first_liq_warn < self.second_liq_warn,
-            "First liquidation % should be < second liquidation %",
-        )?;
-        check::<Lpn>(
-            self.second_liq_warn < self.third_liq_warn,
-            "Second liquidation % should be < third liquidation %",
-        )?;
-        check::<Lpn>(
-            self.third_liq_warn < self.max,
-            "Third liquidation % should be < max %",
-        )?;
-        check::<Lpn>(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
-        check::<Lpn>(
-            self.recalc_time >= Duration::HOUR,
-            "Recalculation cadence should be >= 1h",
-        )?;
-
-        Ok(())
-    }
-}
-
-fn check<Lpn>(invariant: bool, msg: &str) -> Result<()>
-where
-    Lpn: Currency,
-{
-    Error::broken_invariant_if::<Liability<Lpn>>(!invariant, msg)
 }
 
 #[cfg(test)]
