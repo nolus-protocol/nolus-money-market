@@ -71,8 +71,9 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp));
 
     #[cfg(not(feature = "migration"))]
-    let resp = versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
-        .and_then(response::response);
+    let resp =
+        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+            .and_then(response::response);
     resp.or_else(|err| log_error(err, deps.api))
 }
 
