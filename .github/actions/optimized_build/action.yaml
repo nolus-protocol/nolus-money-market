@@ -34,8 +34,7 @@ runs:
         if ! test "${large_files}" = "";
           then (
             (
-              echo "There are files with size larger than allowed limit!"
-              echo "Those are files are the following:"
+              echo "These files are larger than the allowed limit:"
               echo "${large_files}"
             ) >> "${GITHUB_STEP_SUMMARY}"
 
