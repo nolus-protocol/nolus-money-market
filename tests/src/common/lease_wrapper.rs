@@ -73,8 +73,8 @@ pub struct LeaseWrapperConfig {
     pub liability_minus_delta_to_first_liq_warn: Percent,
     pub liability_minus_delta_to_second_liq_warn: Percent,
     pub liability_minus_delta_to_third_liq_warn: Percent,
-    pub liability_min_liq_amount: LpnCoinDTO,
-    pub liability_min_asset_amount: LpnCoinDTO,
+    pub liability_min_liquidation: LpnCoinDTO,
+    pub liability_min_asset: LpnCoinDTO,
     pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
@@ -93,8 +93,8 @@ impl Default for LeaseWrapperConfig {
             liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
             liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
             liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
-            liability_min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            liability_min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            liability_min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
+            liability_min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
             liability_recalc_time: Duration::from_days(20),
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
@@ -181,8 +181,8 @@ impl LeaseWrapper {
                     config.liability_minus_delta_to_first_liq_warn,
                     config.liability_minus_delta_to_second_liq_warn,
                     config.liability_minus_delta_to_third_liq_warn,
-                    config.liability_min_liq_amount,
-                    config.liability_min_asset_amount,
+                    config.liability_min_liquidation,
+                    config.liability_min_asset,
                     config.liability_recalc_time,
                 ),
                 loan: LoanForm {

@@ -33,10 +33,10 @@ pub struct LiabilityDTO {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
     max: Percent,
-    /// The minimum overdue amount that could be collected
-    min_liq_amount: LpnCoin,
-    //  The minimum amount a lease should have before being liquidated fully
-    min_asset_amount: LpnCoin,
+    /// The minimum amount that triggers a liquidation
+    min_liquidation: LpnCoin,
+    //  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    min_asset: LpnCoin,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
@@ -51,8 +51,8 @@ impl LiabilityDTO {
         delta_to_healthy: Percent,
         delta_to_max: Percent,
         minus_delta_of_liq_warns: (Percent, Percent, Percent),
-        min_liq_amount: LpnCoin,
-        min_asset_amount: LpnCoin,
+        min_liquidation: LpnCoin,
+        min_asset: LpnCoin,
         recalc_time: Duration,
     ) -> Self {
         let healthy = initial + delta_to_healthy;
@@ -67,8 +67,8 @@ impl LiabilityDTO {
             first_liq_warn: first_liquidity_warning,
             second_liq_warn: second_liquidity_warning,
             third_liq_warn: third_liquidity_warning,
-            min_liq_amount,
-            min_asset_amount,
+            min_liquidation,
+            min_asset,
             recalc_time,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
@@ -133,15 +133,16 @@ where
     fn try_from(dto: &LiabilityDTO) -> Result<Self> {
         let liability_dto = dto.clone();
 
-        let min_liq_asset_result = liability_dto
-            .min_liq_amount
-            .try_into()
-            .and_then(|min_liq| {
-                liability_dto
-                    .min_asset_amount
-                    .try_into()
-                    .map(|min_asset| (min_liq, min_asset))
-            })?;
+        let min_liq_asset_result =
+            liability_dto
+                .min_liquidation
+                .try_into()
+                .and_then(|min_liq| {
+                    liability_dto
+                        .min_asset
+                        .try_into()
+                        .map(|min_asset| (min_liq, min_asset))
+                })?;
 
         Ok(Self {
             initial: dto.initial,
@@ -150,8 +151,8 @@ where
             second_liq_warn: dto.second_liq_warn,
             third_liq_warn: dto.third_liq_warn,
             max: dto.max,
-            min_liq_amount: min_liq_asset_result.0,
-            min_asset_amount: min_liq_asset_result.1,
+            min_liquidation: min_liq_asset_result.0,
+            min_asset: min_liq_asset_result.1,
             recalc_time: dto.recalc_time,
         })
     }
@@ -169,8 +170,8 @@ where
             second_liq_warn: value.second_liq_warn,
             third_liq_warn: value.third_liq_warn,
             max: value.max,
-            min_liq_amount: CoinDTO::from(value.min_liq_amount),
-            min_asset_amount: CoinDTO::from(value.min_asset_amount),
+            min_liquidation: CoinDTO::from(value.min_liquidation),
+            min_asset: CoinDTO::from(value.min_asset),
             recalc_time: value.recalc_time,
         }
     }
@@ -200,12 +201,12 @@ mod test {
             second_liq_warn: Percent::from_percent(13),
             third_liq_warn: Percent::from_percent(14),
             max: Percent::from_percent(15),
-            min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
+            min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
             recalc_time: Duration::from_hours(10),
         };
 
-        assert_load_ok(br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time": 36000000000000}"#,
+        assert_load_ok(br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time": 36000000000000}"#,
         exp);
     }
 
@@ -218,19 +219,19 @@ mod test {
             second_liq_warn: Percent::from_permille(12),
             third_liq_warn: Percent::from_permille(13),
             max: Percent::from_permille(14),
-            min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
+            min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
             recalc_time: Duration::HOUR,
         };
 
         assert_load_ok(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, exp);
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, exp);
     }
 
     #[test]
     fn new_invalid_init_percent() {
         assert_load_err(br#"{"initial":0,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "should not be zero");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "should not be zero");
     }
 
     #[test]
@@ -238,46 +239,46 @@ mod test {
         const ERR_MSG: &str = "Invalid number";
 
         assert_load_err(br#"{"initial":4294967296,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "Invalid number"); // u32::MAX + 1
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "Invalid number"); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":4294967296,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":4294967296,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":4294967296,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":4294967296,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":4294967296,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":4294967296,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":18446744073709551616}"#, ERR_MSG);
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":18446744073709551616}"#, ERR_MSG);
         // u64::MAX + 1
     }
 
     #[test]
     fn new_invalid_percents_relations() {
         assert_load_err(br#"{"initial":10,"healthy":9,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "<= healthy %");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "<= healthy %");
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":10,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< first liquidation %");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< first liquidation %");
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":11,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< second liquidation %");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< second liquidation %");
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":12,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< third liquidation %");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< third liquidation %");
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":13,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< max %");
+                        "max":13,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3600000000000}"#, "< max %");
     }
 
     #[test]
     fn new_invalid_recalc_hours() {
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"min_liq_amount": {"amount": "10000", "ticker": "USDC"},"min_asset_amount": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3599999999999}"#, ">= 1h");
+                        "max":14,"min_liquidation": {"amount": "10000", "ticker": "USDC"},"min_asset": {"amount": "15000000", "ticker": "USDC"},"recalc_time":3599999999999}"#, ">= 1h");
     }
 
     fn assert_load_ok(json: &[u8], exp: LiabilityDTO) {

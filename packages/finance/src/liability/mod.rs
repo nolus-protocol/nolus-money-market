@@ -42,10 +42,10 @@ pub struct Liability<Lpn> {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
     max: Percent,
-    /// The minimum overdue amount that could be collected
-    min_liq_amount: Coin<Lpn>,
-    //  The minimum amount a lease should have before being liquidated fully
-    min_asset_amount: Coin<Lpn>,
+    /// The minimum amount that triggers a liquidation
+    min_liquidation: Coin<Lpn>,
+    //  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    min_asset: Coin<Lpn>,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
@@ -63,8 +63,8 @@ where
         delta_to_healthy: Percent,
         delta_to_max: Percent,
         minus_delta_of_liq_warns: (Percent, Percent, Percent),
-        min_liq_amount: Coin<Lpn>,
-        min_asset_amount: Coin<Lpn>,
+        min_liquidation: Coin<Lpn>,
+        min_asset: Coin<Lpn>,
         recalc_time: Duration,
     ) -> Self {
         let healthy = initial + delta_to_healthy;
@@ -79,8 +79,8 @@ where
             first_liq_warn: first_liquidity_warning,
             second_liq_warn: second_liquidity_warning,
             third_liq_warn: third_liquidity_warning,
-            min_liq_amount,
-            min_asset_amount,
+            min_liquidation,
+            min_asset,
             recalc_time,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
@@ -227,8 +227,8 @@ mod test {
             first_liq_warn: Percent::from_permille(792),
             second_liq_warn: Percent::from_permille(815),
             third_liq_warn: Percent::from_permille(826),
-            min_liq_amount: Coin::<TestLpn>::new(10_000),
-            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: Coin::<TestLpn>::new(10_000),
+            min_asset: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         };
         assert_eq!(zone_of(&l, 0), Zone::no_warnings(l.first_liq_warn()));
@@ -293,8 +293,8 @@ mod test {
             first_liq_warn: Percent::from_permille(860),
             second_liq_warn: Percent::from_permille(865),
             third_liq_warn: Percent::from_permille(870),
-            min_liq_amount: Coin::<TestLpn>::new(10_000),
-            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: Coin::<TestLpn>::new(10_000),
+            min_asset: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
@@ -350,8 +350,8 @@ mod test {
             first_liq_warn: Percent::from_permille(992),
             second_liq_warn: Percent::from_permille(995),
             third_liq_warn: Percent::from_permille(998),
-            min_liq_amount: Coin::<TestLpn>::new(10_000),
-            min_asset_amount: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: Coin::<TestLpn>::new(10_000),
+            min_asset: Coin::<TestLpn>::new(15_000_000),
             recalc_time: Duration::from_secs(20000),
         }
         .init_borrow_amount(downpayment, max_p);

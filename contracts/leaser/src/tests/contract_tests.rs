@@ -176,8 +176,8 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent,
         second_liq_warn: Percent,
         third_liq_warn: Percent,
-        min_liq_amount: LpnCoinDTO,
-        min_asset_amount: LpnCoinDTO,
+        min_liquidation: LpnCoinDTO,
+        min_asset: LpnCoinDTO,
         recalc_time: Duration,
     }
 
@@ -198,8 +198,8 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent::from_percent(55),
         second_liq_warn: Percent::from_percent(55),
         third_liq_warn: Percent::from_percent(55),
-        min_liq_amount: LpnCoinDTO::from(LpnCoin::new(10_000)),
-        min_asset_amount: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+        min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
+        min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
         recalc_time: Duration::from_secs(100),
     };
     let mock_msg = MockSudoMsg::Config {

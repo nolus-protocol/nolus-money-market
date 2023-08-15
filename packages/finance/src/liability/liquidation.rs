@@ -82,18 +82,18 @@ where
 pub fn check_liability<Asset, Lpn>(
     spec: &Liability<Lpn>,
     asset: Coin<Asset>,
-    total_due_amount: Coin<Lpn>,
-    overdue_amount: Coin<Lpn>,
-    price_in_asset: Price<Lpn, Asset>,
+    total_due: Coin<Lpn>,
+    overdue: Coin<Lpn>,
+    lpn_in_assets: Price<Lpn, Asset>,
 ) -> Status<Asset>
 where
     Asset: Currency,
     Lpn: Currency + Serialize,
 {
-    let total_due = price::total(total_due_amount, price_in_asset);
-    let overdue = price::total(overdue_amount, price_in_asset);
-    let min_liquidation = price::total(spec.min_liq_amount, price_in_asset);
-    let min_asset = price::total(spec.min_asset_amount, price_in_asset);
+    let total_due = price::total(total_due, lpn_in_assets);
+    let overdue = price::total(overdue, lpn_in_assets);
+    let min_liquidation = price::total(spec.min_liquidation, lpn_in_assets);
+    let min_asset = price::total(spec.min_asset, lpn_in_assets);
 
     debug_assert!(asset != Coin::ZERO);
     debug_assert!(total_due <= asset);
@@ -920,32 +920,32 @@ mod tests {
 
     fn liability_with_first(
         warn: Percent,
-        min_liq: Coin<TestLpn>,
+        min_liquidation: Coin<TestLpn>,
         min_asset: Coin<TestLpn>,
     ) -> Liability<TestLpn> {
-        liability_with_max(warn + STEP + STEP + STEP, min_liq, min_asset)
+        liability_with_max(warn + STEP + STEP + STEP, min_liquidation, min_asset)
     }
 
     fn liability_with_second(
         warn: Percent,
-        min_liq: Coin<TestLpn>,
+        min_liquidation: Coin<TestLpn>,
         min_asset: Coin<TestLpn>,
     ) -> Liability<TestLpn> {
-        liability_with_max(warn + STEP + STEP, min_liq, min_asset)
+        liability_with_max(warn + STEP + STEP, min_liquidation, min_asset)
     }
 
     fn liability_with_third(
         warn: Percent,
-        min_liq: Coin<TestLpn>,
+        min_liquidation: Coin<TestLpn>,
         min_asset: Coin<TestLpn>,
     ) -> Liability<TestLpn> {
-        liability_with_max(warn + STEP, min_liq, min_asset)
+        liability_with_max(warn + STEP, min_liquidation, min_asset)
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
     fn liability_with_max(
         max: Percent,
-        min_liq: Coin<TestLpn>,
+        min_liquidation: Coin<TestLpn>,
         min_asset: Coin<TestLpn>,
     ) -> Liability<TestLpn> {
         let initial = STEP;
@@ -956,7 +956,7 @@ mod tests {
             Percent::ZERO,
             max - initial,
             (STEP, STEP, STEP),
-            min_liq,
+            min_liquidation,
             min_asset,
             Duration::from_hours(1),
         )

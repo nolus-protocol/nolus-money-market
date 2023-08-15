@@ -13,8 +13,8 @@ pub(super) struct LiabilityDTO {
     second_liq_warn: Percent,
     third_liq_warn: Percent,
     max: Percent,
-    min_liq_amount: LpnCoin,
-    min_asset_amount: LpnCoin,
+    min_liquidation: LpnCoin,
+    min_asset: LpnCoin,
     recalc_time: Duration,
 }
 
@@ -29,8 +29,8 @@ impl TryFrom<LiabilityDTO> for ValidatedDTO {
             second_liq_warn: dto.second_liq_warn,
             third_liq_warn: dto.third_liq_warn,
             max: dto.max,
-            min_liq_amount: dto.min_liq_amount,
-            min_asset_amount: dto.min_asset_amount,
+            min_liquidation: dto.min_liquidation,
+            min_asset: dto.min_asset,
             recalc_time: dto.recalc_time,
         };
         res.invariant_held()?;
