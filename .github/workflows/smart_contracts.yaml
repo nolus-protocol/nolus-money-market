@@ -62,14 +62,28 @@ jobs:
       - name: "Run linter"
         shell: "sh"
         run: "./lint.sh"
-  code_coverage:
+  check_features:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_features@v1.2"
+  check_unused_deps:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - uses: "Nolus-Protocol/rust-ci-actions/check_unused_deps@v1.2"
+  test_dev_profile:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1"
+      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
+      - name: "Run tests in dev profile"
+        shell: "sh"
+        run: "cargo test"
   test_release_profile:
     runs-on: "ubuntu-latest"
     needs:
