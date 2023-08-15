@@ -17,15 +17,11 @@ use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
     never::Never,
-    state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{
-    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
-    typedefs::CadenceHours,
-};
+use crate::{profit::Profit, result::ContractResult};
 
 use super::{
     idle::Idle,
@@ -140,23 +136,7 @@ impl SwapTask for BuyBack {
     }
 }
 
-impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
-    fn try_update_config(
-        self,
-        _: Timestamp,
-        _: CadenceHours,
-    ) -> ContractResult<StateMachineResponse<Self>> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration changes are not allowed during ICA opening process.",
-        )))
-    }
-
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Querying configuration is not allowed during buy-back.",
-        )))
-    }
-}
+impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {}
 
 impl SetupDexHandler for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
     type State = Self;

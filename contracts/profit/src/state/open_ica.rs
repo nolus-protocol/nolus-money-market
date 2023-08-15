@@ -3,12 +3,6 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
-use platform::state_machine::Response as StateMachineResponse;
-use sdk::cosmwasm_std::Timestamp;
-
-use crate::{
-    error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
-};
 
 use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
@@ -48,23 +42,7 @@ impl Display for OpenIca {
     }
 }
 
-impl ConfigManagement for IcaConnector {
-    fn try_update_config(
-        self,
-        _: Timestamp,
-        _: CadenceHours,
-    ) -> ContractResult<StateMachineResponse<Self>> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration changes are not allowed during ICA opening process.",
-        )))
-    }
-
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Querying configuration is not allowed during ICA opening process.",
-        )))
-    }
-}
+impl ConfigManagement for IcaConnector {}
 
 impl SetupDexHandler for IcaConnector {
     type State = Self;

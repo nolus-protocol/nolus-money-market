@@ -54,11 +54,19 @@ where
 {
     fn try_update_config(
         self,
-        now: Timestamp,
-        cadence_hours: CadenceHours,
-    ) -> ContractResult<StateMachineResponse<Self>>;
+        _: Timestamp,
+        _: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Configuration changes are not allowed in this state.",
+        )))
+    }
 
-    fn try_query_config(&self) -> ContractResult<ConfigResponse>;
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Configuration querying is not allowed in this state.",
+        )))
+    }
 }
 
 pub(crate) trait SetupDexHandler
