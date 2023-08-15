@@ -19,5 +19,5 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1.2"
-      - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1.2"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/code_coverage@main"
