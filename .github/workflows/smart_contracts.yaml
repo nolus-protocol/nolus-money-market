@@ -114,7 +114,7 @@ jobs:
   build_optimized_dev_net:
     runs-on: "ubuntu-latest"
     needs:
-      - "code_coverage"
+      - "test_dev_profile"
       - "test_release_profile"
       - "check_wasm"
     if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
@@ -127,7 +127,7 @@ jobs:
   build_optimized_test_net:
     runs-on: "ubuntu-latest"
     needs:
-      - "code_coverage"
+      - "test_dev_profile"
       - "test_release_profile"
       - "check_wasm"
     if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
@@ -140,7 +140,7 @@ jobs:
   build_optimized_main_net:
     runs-on: "ubuntu-latest"
     needs:
-      - "code_coverage"
+      - "test_dev_profile"
       - "test_release_profile"
       - "check_wasm"
     if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
