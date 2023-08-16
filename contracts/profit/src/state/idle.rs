@@ -10,7 +10,10 @@ use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
 };
-use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
+use finance::{
+    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
+    duration::Duration,
+};
 use platform::{
     bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
@@ -18,6 +21,7 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
+use timealarms::result::ContractResult as TimeAlarmsResult;
 
 use crate::{
     error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
@@ -27,7 +31,7 @@ use crate::{
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    setup_time_alarm, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -106,11 +110,17 @@ impl Idle {
             })
             .map_err(Into::into)
     }
+
+    fn setup_time_alarm(config: &Config, now: Timestamp) -> TimeAlarmsResult<Batch> {
+        config
+            .time_alarms()
+            .setup_alarm(now + Duration::from_hours(config.cadence_hours()))
+    }
 }
 
 impl Enterable for Idle {
     fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
-        setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
+        Self::setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
     }
 }
 
@@ -122,12 +132,13 @@ impl ConfigManagement for Idle {
     ) -> ContractResult<StateMachineResponse<Self>> {
         let config: Config = self.config.update(cadence_hours);
 
-        super::on_config_update(&config, now).map(|response: PlatformResponse| {
-            StateMachineResponse {
+        Self::setup_time_alarm(&config, now)
+            .map(PlatformResponse::messages_only)
+            .map(|response: PlatformResponse| StateMachineResponse {
                 response,
                 next_state: Self { config, ..self },
-            }
-        })
+            })
+            .map_err(Into::into)
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {

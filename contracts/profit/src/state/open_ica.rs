@@ -15,6 +15,9 @@ pub(super) struct OpenIca {
 }
 
 impl OpenIca {
+    const QUERY_ERROR: &'static str =
+        "Configuration querying is not supported while opening interchain account!";
+
     pub fn new(config: Config, connection: ConnectionParams) -> Self {
         Self {
             config,
@@ -46,9 +49,7 @@ impl Display for OpenIca {
 
 impl ConfigManagement for IcaConnector {
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration querying is not supported while opening interchain account!",
-        )))
+        Err(ContractError::unsupported_operation(OpenIca::QUERY_ERROR))
     }
 }
 

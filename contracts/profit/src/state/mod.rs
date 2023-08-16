@@ -6,17 +6,11 @@ use dex::{
     ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
 };
-use finance::duration::Duration;
-use platform::{
-    batch::Batch,
-    message::Response as PlatformResponse,
-    state_machine::{self, Response as StateMachineResponse},
-};
+use platform::state_machine::{self, Response as StateMachineResponse};
 use sdk::{
     cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
-use timealarms::result::ContractResult as TimeAlarmsResult;
 
 use crate::{
     error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
@@ -41,18 +35,6 @@ mod resp_delivery;
 const STATE: Item<'static, State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
-
-fn setup_time_alarm(config: &Config, now: Timestamp) -> TimeAlarmsResult<Batch> {
-    config
-        .time_alarms()
-        .setup_alarm(now + Duration::from_hours(config.cadence_hours()))
-}
-
-fn on_config_update(new_config: &Config, now: Timestamp) -> ContractResult<PlatformResponse> {
-    setup_time_alarm(new_config, now)
-        .map(PlatformResponse::messages_only)
-        .map_err(Into::into)
-}
 
 pub(crate) trait ConfigManagement
 where

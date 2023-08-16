@@ -38,6 +38,9 @@ pub(super) struct BuyBack {
 }
 
 impl BuyBack {
+    const QUERY_ERROR: &'static str =
+        "Configuration querying is not supported while performing buy back!";
+
     /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
     /// is closed, best action is to verify the pinkie-promise
     /// to not pass in [native currencies](Native) via a debug
@@ -138,9 +141,7 @@ impl SwapTask for BuyBack {
 
 impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration querying is not supported while opening interchain account!",
-        )))
+        Err(ContractError::unsupported_operation(BuyBack::QUERY_ERROR))
     }
 }
 
