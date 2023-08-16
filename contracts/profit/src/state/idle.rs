@@ -5,15 +5,12 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, native::Nls, payment::PaymentGroup, Currency, Group};
+use currency::{native::Nls, payment::PaymentGroup, Currency, Group};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
 };
-use finance::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    duration::Duration,
-};
+use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
 use platform::{
     bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
@@ -23,14 +20,14 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours,
-    ContractError,
+    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
+    typedefs::CadenceHours,
 };
 
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    setup_time_alarm, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -113,10 +110,7 @@ impl Idle {
 
 impl Enterable for Idle {
     fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
-        self.config
-            .time_alarms()
-            .setup_alarm(now + Duration::from_hours(self.config.cadence_hours()))
-            .map_err(DexError::TimeAlarmError)
+        setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
     }
 }
 
