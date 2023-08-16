@@ -58,7 +58,7 @@ where
         _: CadenceHours,
     ) -> ContractResult<StateMachineResponse<Self>> {
         Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration changes are not allowed in this state.",
+            "Configuration changes are not allowed in this state!",
         )))
     }
 
