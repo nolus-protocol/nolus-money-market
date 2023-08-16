@@ -42,7 +42,7 @@ impl Feeders {
             return Err(ContractError::UnknownFeeder {});
         }
 
-        Self::FEEDERS.remove(deps, f_address).map_err(Into::into)
+        Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
     }
 
     pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
