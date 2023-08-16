@@ -182,55 +182,25 @@ where
 }
 
 #[cfg(test)]
-mod test_utilities {
-    use crate::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+mod tests {
     use currency::{lpn::Usdc, test::Dai};
 
-    pub type TestLpn = Usdc;
-    pub type TestCurrency = Dai;
-
-    pub const MIN_DUE_AMOUNT: Coin<TestLpn> = Coin::new(100);
-    pub const MIN_DUE_AMOUNT_TEST_CURRENCY: Coin<TestCurrency> = Coin::new(100);
-    pub const LEASE_AMOUNT: Coin<TestCurrency> = Coin::new(1000);
-    pub const LEASE_AMOUNT_TEST_LPN: Coin<TestLpn> = Coin::new(1000);
-    pub const STEP: Percent = Percent::from_permille(10);
-
-    // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-    pub fn liability_with_max(
-        max: Percent,
-        min_liq: Coin<TestLpn>,
-        min_asset: Coin<TestLpn>,
-    ) -> Liability<TestLpn> {
-        let initial = STEP;
-        assert!(initial < max - STEP - STEP - STEP);
-
-        Liability::<TestLpn>::new(
-            initial,
-            Percent::ZERO,
-            max - initial,
-            (STEP, STEP, STEP),
-            min_liq,
-            min_asset,
-            Duration::from_hours(1),
-        )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        check_liability,
-        test_utilities::{
-            liability_with_max, TestCurrency, TestLpn, LEASE_AMOUNT, LEASE_AMOUNT_TEST_LPN,
-            MIN_DUE_AMOUNT, MIN_DUE_AMOUNT_TEST_CURRENCY, STEP,
-        },
-        Cause, Liability, Status, Zone,
-    };
+    use super::{check_liability, Cause, Liability, Status, Zone};
     use crate::{
         coin::{Amount, Coin},
+        duration::Duration,
         percent::Percent,
         price::{self, Price},
     };
+
+    type TestLpn = Usdc;
+    type TestCurrency = Dai;
+
+    const MIN_DUE_AMOUNT: Coin<TestLpn> = Coin::new(100);
+    const MIN_DUE_AMOUNT_TEST_CURRENCY: Coin<TestCurrency> = Coin::new(100);
+    const LEASE_AMOUNT: Coin<TestCurrency> = Coin::new(1000);
+    const LEASE_AMOUNT_TEST_LPN: Coin<TestLpn> = Coin::new(1000);
+    const STEP: Percent = Percent::from_permille(10);
 
     #[test]
     fn no_debt() {
@@ -242,7 +212,7 @@ mod tests {
                 100.into(),
                 0.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::NoDebt,
         );
@@ -258,7 +228,7 @@ mod tests {
                 100.into(),
                 1.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -268,7 +238,7 @@ mod tests {
                 100.into(),
                 49.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -278,7 +248,7 @@ mod tests {
                 100.into(),
                 50.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -288,7 +258,7 @@ mod tests {
                 LEASE_AMOUNT,
                 505.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -298,7 +268,7 @@ mod tests {
                 LEASE_AMOUNT,
                 505.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue()),
         );
@@ -308,7 +278,7 @@ mod tests {
                 LEASE_AMOUNT,
                 509.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -318,7 +288,7 @@ mod tests {
                 LEASE_AMOUNT,
                 510.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -328,7 +298,7 @@ mod tests {
                 LEASE_AMOUNT,
                 510.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -338,7 +308,7 @@ mod tests {
                 LEASE_AMOUNT,
                 510.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue()),
         );
@@ -348,7 +318,7 @@ mod tests {
                 LEASE_AMOUNT,
                 515.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -364,7 +334,7 @@ mod tests {
                 LEASE_AMOUNT,
                 711.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -374,7 +344,7 @@ mod tests {
                 LEASE_AMOUNT,
                 712.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -384,7 +354,7 @@ mod tests {
                 LEASE_AMOUNT,
                 712.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -394,7 +364,7 @@ mod tests {
                 LEASE_AMOUNT,
                 712.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue())
         );
@@ -404,7 +374,7 @@ mod tests {
                 LEASE_AMOUNT,
                 715.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -414,7 +384,7 @@ mod tests {
                 LEASE_AMOUNT,
                 721.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -424,7 +394,7 @@ mod tests {
                 LEASE_AMOUNT,
                 721.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue()),
         );
@@ -434,7 +404,7 @@ mod tests {
                 LEASE_AMOUNT,
                 722.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -450,7 +420,7 @@ mod tests {
                 LEASE_AMOUNT,
                 122.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -460,7 +430,7 @@ mod tests {
                 LEASE_AMOUNT,
                 123.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -470,7 +440,7 @@ mod tests {
                 LEASE_AMOUNT,
                 124.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -480,7 +450,7 @@ mod tests {
                 LEASE_AMOUNT,
                 128.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -490,7 +460,7 @@ mod tests {
                 LEASE_AMOUNT,
                 128.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue())
         );
@@ -500,7 +470,7 @@ mod tests {
                 LEASE_AMOUNT,
                 132.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -510,7 +480,7 @@ mod tests {
                 LEASE_AMOUNT,
                 133.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -528,7 +498,7 @@ mod tests {
                 LEASE_AMOUNT,
                 380.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -538,7 +508,7 @@ mod tests {
                 LEASE_AMOUNT,
                 380.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -548,7 +518,7 @@ mod tests {
                 LEASE_AMOUNT,
                 381.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue())
         );
@@ -558,7 +528,7 @@ mod tests {
                 LEASE_AMOUNT,
                 381.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -568,7 +538,7 @@ mod tests {
                 LEASE_AMOUNT,
                 382.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -578,7 +548,7 @@ mod tests {
                 LEASE_AMOUNT,
                 390.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -588,7 +558,7 @@ mod tests {
                 LEASE_AMOUNT,
                 391.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 384.into(),
@@ -611,7 +581,7 @@ mod tests {
                 878.into(),
                 752.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -621,7 +591,7 @@ mod tests {
                 LEASE_AMOUNT,
                 750.into(),
                 99.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -631,7 +601,7 @@ mod tests {
                 LEASE_AMOUNT,
                 751.into(),
                 99.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -641,7 +611,7 @@ mod tests {
                 LEASE_AMOUNT,
                 761.into(),
                 0.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -659,7 +629,7 @@ mod tests {
                 LEASE_AMOUNT,
                 880.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -669,7 +639,7 @@ mod tests {
                 LEASE_AMOUNT,
                 880.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(MIN_DUE_AMOUNT_TEST_CURRENCY, Cause::Overdue()),
         );
@@ -679,7 +649,7 @@ mod tests {
                 LEASE_AMOUNT,
                 881.into(),
                 MIN_DUE_AMOUNT,
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 BACK_TO_HEALTHY.into(),
@@ -695,7 +665,7 @@ mod tests {
                 LEASE_AMOUNT,
                 881.into(),
                 (BACK_TO_HEALTHY - 1).into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 BACK_TO_HEALTHY.into(),
@@ -711,7 +681,7 @@ mod tests {
                 LEASE_AMOUNT,
                 881.into(),
                 BACK_TO_HEALTHY.into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 BACK_TO_HEALTHY.into(),
@@ -727,7 +697,7 @@ mod tests {
                 LEASE_AMOUNT,
                 881.into(),
                 (BACK_TO_HEALTHY + 1).into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
         );
@@ -737,7 +707,7 @@ mod tests {
                 LEASE_AMOUNT,
                 999.into(),
                 997.into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 998.into(),
@@ -753,7 +723,7 @@ mod tests {
                 LEASE_AMOUNT,
                 1000.into(),
                 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -773,7 +743,7 @@ mod tests {
                 LEASE_AMOUNT,
                 768.into(),
                 765.into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(
                 765.into(),
@@ -789,7 +759,7 @@ mod tests {
                 LEASE_AMOUNT,
                 768.into(),
                 768.into(),
-                price()
+                price_same_ratio()
             ),
             Status::partial(768.into(), Cause::Overdue()),
         );
@@ -799,7 +769,7 @@ mod tests {
                 LEASE_AMOUNT,
                 1000.into(),
                 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -810,102 +780,44 @@ mod tests {
 
     #[test]
     fn liquidate_partial_liability() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() - 1.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 898;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                900.into(),
-                BACK_TO_HEALTHY.into(),
-                price()
-            ),
-            Status::partial(
-                BACK_TO_HEALTHY.into(),
-                Cause::Liability {
-                    ltv: max_ltv,
-                    healthy_ltv: STEP
-                }
-            ),
+        partial_liability_liquidation(898, 898.into(), price_same_ratio());
+        partial_liability_liquidation(
+            898,
+            price::total(898.into(), price_diff_ratio()),
+            price_diff_ratio(),
         );
     }
 
     #[test]
     fn liquidate_partial_overdue() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() - 2.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 898;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                900.into(),
-                (BACK_TO_HEALTHY + 1).into(),
-                price()
-            ),
-            Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
+        partial_overdue_liquidation(898, 900.into(), 899.into(), price_same_ratio());
+        partial_overdue_liquidation(
+            888,
+            890.into(),
+            price::total(889.into(), price_diff_ratio()),
+            price_diff_ratio(),
         );
     }
 
     #[test]
     fn liquidate_full_liability() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 898;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                900.into(),
-                BACK_TO_HEALTHY.into(),
-                price()
-            ),
-            Status::full(Cause::Liability {
-                ltv: max_ltv,
-                healthy_ltv: STEP
-            }),
-        );
+        full_liability_liquidation(898, price_same_ratio());
+        full_liability_liquidation(885, price_diff_ratio());
     }
 
     #[test]
     fn liquidate_full_overdue() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() - 1.into(),
+        full_overdue_liquidation(
+            898,
+            LEASE_AMOUNT_TEST_LPN - 898.into() - 1.into(),
+            900.into(),
+            price_same_ratio(),
         );
-
-        const BACK_TO_HEALTHY: Amount = 898;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                900.into(),
-                (BACK_TO_HEALTHY + 1).into(),
-                price()
-            ),
-            Status::full(Cause::Overdue()),
+        full_overdue_liquidation(
+            880,
+            LEASE_AMOUNT_TEST_LPN - 880.into() + 11.into(),
+            881.into(),
+            price_diff_ratio(),
         );
     }
 
@@ -926,16 +838,10 @@ mod tests {
                 LEASE_AMOUNT,
                 572.into(),
                 MIN_DUE_AMOUNT - 1.into(),
-                price()
+                price_same_ratio()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
-    }
-
-    fn price() -> Price<TestLpn, TestCurrency> {
-        let amount_test_lpn: Coin<TestLpn> = Coin::new(1_000);
-        let amount_test_currency: Coin<TestCurrency> = Coin::new(1_000);
-        price::total_of(amount_test_lpn).is(amount_test_currency)
     }
 
     fn liability_with_first(
@@ -961,108 +867,61 @@ mod tests {
     ) -> Liability<TestLpn> {
         liability_with_max(warn + STEP, min_liq, min_asset)
     }
-}
 
-#[cfg(test)]
-mod test_price {
-    use crate::{
-        coin::{Amount, Coin},
-        liability::{
-            check_liability,
-            liquidation::test_utilities::{
-                liability_with_max, TestCurrency, TestLpn, LEASE_AMOUNT, LEASE_AMOUNT_TEST_LPN,
-                MIN_DUE_AMOUNT, STEP,
-            },
-            Cause, Status,
-        },
-        percent::Percent,
-        price::{self, Price},
-    };
+    // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
+    fn liability_with_max(
+        max: Percent,
+        min_liq: Coin<TestLpn>,
+        min_asset: Coin<TestLpn>,
+    ) -> Liability<TestLpn> {
+        let initial = STEP;
+        assert!(initial < max - STEP - STEP - STEP);
 
-    #[test]
-    fn liquidate_partial() {
-        let max_ltv = Percent::from_permille(881);
-        const BACK_TO_HEALTHY: Amount = 890;
-        let spec = liability_with_max(max_ltv, MIN_DUE_AMOUNT, 0.into());
+        Liability::<TestLpn>::new(
+            initial,
+            Percent::ZERO,
+            max - initial,
+            (STEP, STEP, STEP),
+            min_liq,
+            min_asset,
+            Duration::from_hours(1),
+        )
+    }
+
+    fn price_same_ratio() -> Price<TestLpn, TestCurrency> {
+        let test_lpn: Coin<TestLpn> = Coin::new(1_000);
+        let test_currency: Coin<TestCurrency> = Coin::new(1_000);
+        price(test_lpn, test_currency)
+    }
+
+    fn price_diff_ratio() -> Price<TestLpn, TestCurrency> {
+        let test_lpn: Coin<TestLpn> = Coin::new(101);
+        let test_currency: Coin<TestCurrency> = Coin::new(100);
+        price(test_lpn, test_currency)
+    }
+
+    fn price(
+        test_lpn: Coin<TestLpn>,
+        test_currency: Coin<TestCurrency>,
+    ) -> Price<TestLpn, TestCurrency> {
+        price::total_of(test_lpn).is(test_currency)
+    }
+
+    fn full_liability_liquidation(back_to_healthy: Amount, price: Price<TestLpn, TestCurrency>) {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(
+            max_ltv,
+            MIN_DUE_AMOUNT,
+            LEASE_AMOUNT_TEST_LPN - back_to_healthy.into(),
+        );
 
         assert_eq!(
             check_liability::<TestCurrency, TestLpn>(
                 &spec,
                 LEASE_AMOUNT,
-                880.into(),
-                MIN_DUE_AMOUNT,
-                price()
-            ),
-            Status::partial(price::total(MIN_DUE_AMOUNT, price()), Cause::Overdue()),
-        );
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                892.into(),
-                (BACK_TO_HEALTHY - 1).into(),
-                price()
-            ),
-            Status::partial(
-                881.into(),
-                Cause::Liability {
-                    ltv: max_ltv,
-                    healthy_ltv: STEP
-                }
-            ),
-        );
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                892.into(),
-                BACK_TO_HEALTHY.into(),
-                price()
-            ),
-            Status::partial(
-                price::total(BACK_TO_HEALTHY.into(), price()),
-                Cause::Liability {
-                    ltv: max_ltv,
-                    healthy_ltv: STEP
-                }
-            ),
-        );
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                891.into(),
-                (BACK_TO_HEALTHY + 1).into(),
-                price()
-            ),
-            Status::partial(
-                price::total((BACK_TO_HEALTHY + 1).into(), price()),
-                Cause::Overdue()
-            ),
-        );
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                999.into(),
-                997.into(),
-                price()
-            ),
-            Status::partial(
-                988.into(),
-                Cause::Liability {
-                    ltv: max_ltv,
-                    healthy_ltv: STEP
-                }
-            ),
-        );
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                1011.into(),
-                1.into(),
-                price()
+                900.into(),
+                back_to_healthy.into(),
+                price
             ),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -1071,116 +930,83 @@ mod test_price {
         );
     }
 
-    #[test]
-    fn liquidate_partial_liability() {
+    fn full_overdue_liquidation(
+        back_to_healthy: Amount,
+        min_asset: Coin<TestLpn>,
+        total_due: Coin<TestLpn>,
+        price: Price<TestLpn, TestCurrency>,
+    ) {
         let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() - 1.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 898;
+        let spec = liability_with_max(max_ltv, MIN_DUE_AMOUNT, min_asset);
 
         assert_eq!(
             check_liability::<TestCurrency, TestLpn>(
                 &spec,
                 LEASE_AMOUNT,
-                900.into(),
-                BACK_TO_HEALTHY.into(),
-                price()
-            ),
-            Status::partial(
-                price::total(BACK_TO_HEALTHY.into(), price()),
-                Cause::Liability {
-                    ltv: max_ltv,
-                    healthy_ltv: STEP
-                }
-            ),
-        );
-    }
-
-    #[test]
-    fn liquidate_partial_overdue() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() - 2.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 888;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                890.into(),
-                (BACK_TO_HEALTHY + 1).into(),
-                price()
-            ),
-            Status::partial(
-                price::total((BACK_TO_HEALTHY + 1).into(), price()),
-                Cause::Overdue()
-            ),
-        );
-    }
-
-    #[test]
-    fn liquidate_full_liability() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 885;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                900.into(),
-                BACK_TO_HEALTHY.into(),
-                price()
-            ),
-            Status::full(Cause::Liability {
-                ltv: max_ltv,
-                healthy_ltv: STEP
-            }),
-        );
-    }
-
-    #[test]
-    fn liquidate_full_overdue() {
-        let max_ltv = Percent::from_permille(573);
-        let spec = liability_with_max(
-            max_ltv,
-            MIN_DUE_AMOUNT,
-            LEASE_AMOUNT_TEST_LPN - BACK_TO_HEALTHY.into() + 11.into(),
-        );
-
-        const BACK_TO_HEALTHY: Amount = 880;
-
-        assert_eq!(
-            check_liability::<TestCurrency, TestLpn>(
-                &spec,
-                LEASE_AMOUNT,
-                881.into(),
-                (BACK_TO_HEALTHY + 1).into(),
-                price()
+                total_due,
+                (back_to_healthy + 1).into(),
+                price
             ),
             Status::full(Cause::Overdue()),
         );
     }
 
-    fn price() -> Price<TestLpn, TestCurrency> {
-        let amount_test_lpn: Coin<TestLpn> = Coin::new(101);
-        let amount_test_currency: Coin<TestCurrency> = Coin::new(100);
-        price::total_of(amount_test_lpn).is(amount_test_currency)
+    fn partial_overdue_liquidation(
+        back_to_healthy: Amount,
+        total_due: Coin<TestLpn>,
+        liq_amount: Coin<TestCurrency>,
+        price: Price<TestLpn, TestCurrency>,
+    ) {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(
+            max_ltv,
+            MIN_DUE_AMOUNT,
+            LEASE_AMOUNT_TEST_LPN - back_to_healthy.into() - 2.into(),
+        );
+
+        assert_eq!(
+            check_liability::<TestCurrency, TestLpn>(
+                &spec,
+                LEASE_AMOUNT,
+                total_due,
+                (back_to_healthy + 1).into(),
+                price
+            ),
+            Status::partial(liq_amount, Cause::Overdue()),
+        );
+    }
+
+    fn partial_liability_liquidation(
+        back_to_healthy: Amount,
+        liq_amount: Coin<TestCurrency>,
+        price: Price<TestLpn, TestCurrency>,
+    ) {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(
+            max_ltv,
+            MIN_DUE_AMOUNT,
+            LEASE_AMOUNT_TEST_LPN - back_to_healthy.into() - 1.into(),
+        );
+
+        assert_eq!(
+            check_liability::<TestCurrency, TestLpn>(
+                &spec,
+                LEASE_AMOUNT,
+                900.into(),
+                back_to_healthy.into(),
+                price
+            ),
+            Status::partial(
+                liq_amount,
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
     }
 }
+
 #[cfg(test)]
 mod test_status {
     use crate::percent::Percent;
