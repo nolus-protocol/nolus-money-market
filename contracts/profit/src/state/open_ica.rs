@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
+use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
+
 use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,7 +44,13 @@ impl Display for OpenIca {
     }
 }
 
-impl ConfigManagement for IcaConnector {}
+impl ConfigManagement for IcaConnector {
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Configuration querying is not supported while opening interchain account!",
+        )))
+    }
+}
 
 impl SetupDexHandler for IcaConnector {
     type State = Self;

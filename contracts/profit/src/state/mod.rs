@@ -62,11 +62,7 @@ where
         )))
     }
 
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration querying is not allowed in this state.",
-        )))
-    }
+    fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
 
 pub(crate) trait SetupDexHandler

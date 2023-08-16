@@ -21,7 +21,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{profit::Profit, result::ContractResult};
+use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
     idle::Idle,
@@ -136,7 +136,13 @@ impl SwapTask for BuyBack {
     }
 }
 
-impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {}
+impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Configuration querying is not supported while opening interchain account!",
+        )))
+    }
+}
 
 impl SetupDexHandler for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
     type State = Self;
