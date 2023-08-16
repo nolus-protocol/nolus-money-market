@@ -6,9 +6,9 @@ use dex::{ConnectionParams, Handler, Response as DexResponse};
 use platform::{
     message::Response as PlatformResponse, state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Deps, Env, Timestamp};
+use sdk::cosmwasm_std::{Deps, Env};
 
-use crate::{msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
@@ -29,21 +29,6 @@ impl Handler for OpenTransferChannel {
 }
 
 impl ConfigManagement for OpenTransferChannel {
-    fn try_update_config(
-        self,
-        now: Timestamp,
-        cadence_hours: CadenceHours,
-    ) -> ContractResult<StateMachineResponse<Self>> {
-        let config: Config = self.config.update(cadence_hours);
-
-        super::on_config_update(&config, now).map(|response: PlatformResponse| {
-            StateMachineResponse {
-                response,
-                next_state: Self { config },
-            }
-        })
-    }
-
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
         Ok(ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
