@@ -22,7 +22,7 @@ use crate::{
 
 mod borrow;
 mod lender;
-mod migrate;
+mod migrate_mod;
 mod rewards;
 
 // version info for migration info
@@ -89,7 +89,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut dyn Storage| self::migrate::migrate(storage, msg.min_utilization),
+        |storage: &mut dyn Storage| self::migrate_mod::migrate(storage, msg.min_utilization),
         Into::into,
     )
     .and_then(|(label, ())| response::response(label))
