@@ -747,7 +747,7 @@ mod test {
         .expect("Failed to store Config!");
 
         // simplify calculation
-        Config::update_parameters(
+        Config::update_borrow_rate(
             deps.as_mut().storage,
             InterestRate::new(
                 Percent::from_percent(18),
@@ -755,7 +755,6 @@ mod test {
                 Percent::from_percent(2),
             )
             .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
         )
         .expect("should update config");
 

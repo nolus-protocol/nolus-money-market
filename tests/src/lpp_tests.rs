@@ -86,15 +86,29 @@ fn config_update_parameters() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::UpdateParameters {
+            &SudoMsg::NewBorrowRate {
                 borrow_rate: InterestRate::new(
                     base_interest_rate,
                     utilization_optimal,
                     addon_optimal_interest_rate,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                min_utilization,
             },
+        )
+        .unwrap()
+        .unwrap_response();
+
+    assert!(response.data.is_none());
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
+    );
+
+    let response: AppResponse = test_case
+        .app
+        .sudo(
+            test_case.address_book.lpp().clone(),
+            &SudoMsg::MinUtilization { min_utilization },
         )
         .unwrap()
         .unwrap_response();
@@ -604,14 +618,13 @@ fn loan_open_and_repay() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::UpdateParameters {
+            &SudoMsg::NewBorrowRate {
                 borrow_rate: InterestRate::new(
                     LOCAL_BASE_INTEREST_RATE,
                     LOCAL_UTILIZATION_OPTIMAL_RATE,
                     LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                min_utilization: TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             },
         )
         .unwrap()
@@ -955,14 +968,13 @@ fn compare_lpp_states() {
         .app
         .sudo(
             test_case.address_book.lpp().clone(),
-            &SudoMsg::UpdateParameters {
+            &SudoMsg::NewBorrowRate {
                 borrow_rate: InterestRate::new(
                     LOCAL_BASE_INTEREST_RATE,
                     LOCAL_UTILIZATION_OPTIMAL_RATE,
                     LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                min_utilization: TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             },
         )
         .unwrap()
