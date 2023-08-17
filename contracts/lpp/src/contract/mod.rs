@@ -184,7 +184,13 @@ pub fn execute(
     // no currency context variants
     match msg {
         ExecuteMsg::NewLeaseCode { lease_code_id } => {
-            config::try_update_lease_code(deps, info, lease_code_id)
+            SingleUserAccess::new(
+                &mut *deps.storage,
+                crate::access_control::LEASE_CODE_ADMIN_KEY,
+            )
+            .check(&info.sender)?;
+
+            config::try_update_lease_code(deps.storage, lease_code_id)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DistributeRewards() => {
@@ -202,12 +208,14 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     // no currency context variants
     match msg {
-        SudoMsg::UpdateParameters {
-            borrow_rate,
-            min_utilization,
-        } => config::try_update_parameters(deps, borrow_rate, min_utilization)
-            .map(response::response_only_messages),
+        SudoMsg::NewBorrowRate { borrow_rate } => {
+            config::try_update_borrow_rate(deps.storage, borrow_rate)
+        }
+        SudoMsg::MinUtilization { min_utilization } => {
+            config::try_update_min_utilization(deps.storage, min_utilization)
+        }
     }
+    .map(response::response_only_messages)
 }
 
 struct QueryWithLpn<'a> {
@@ -270,7 +278,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
     let res = match msg {
-        QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
+        QueryMsg::Config() => to_binary(&config::query_config(deps.storage)?)?,
         QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,
         QueryMsg::Rewards { address } => {
             to_binary(&rewards::query_rewards(deps.storage, address)?)?

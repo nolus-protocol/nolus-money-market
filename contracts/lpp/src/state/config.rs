@@ -9,7 +9,7 @@ use sdk::{
 
 use crate::{
     borrow::InterestRate,
-    error::{ContractError, Result},
+    error::Result,
     msg::InstantiateMsg,
     nlpn::NLpn,
 };
@@ -64,32 +64,6 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Uint64) -> Result<()> {
-        Self::STORAGE
-            .update::<_, ContractError>(storage, |mut config| {
-                config.lease_code_id = lease_code;
-
-                Ok(config)
-            })
-            .map(|_| ())
-    }
-
-    pub fn update_parameters(
-        storage: &mut dyn Storage,
-        borrow_rate: InterestRate,
-        min_utilization: Percent,
-    ) -> Result<()> {
-        Self::STORAGE
-            .update(storage, |config: Self| {
-                Ok(Self {
-                    borrow_rate,
-                    min_utilization,
-                    ..config
-                })
-            })
-            .map(|_| ())
-    }
-
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
     where
         Lpn: Currency + Serialize + DeserializeOwned,
@@ -97,6 +71,34 @@ impl Config {
         Price::identity()
     }
 }
+
+macro_rules! update_param_impl {
+    ($($method:ident($field:ident : $type:ty)),+ $(,)?) => {
+        impl Config {
+            $(
+                pub fn $method(
+                    storage: &mut dyn Storage,
+                    $field: $type,
+                ) -> Result<()> {
+                    Self::STORAGE
+                        .update(storage, |config: Self| {
+                            Ok(Self {
+                                $field,
+                                ..config
+                            })
+                        })
+                        .map(|_| ())
+                }
+            )+
+        }
+    };
+}
+
+update_param_impl!(
+    update_lease_code(lease_code_id: Uint64),
+    update_borrow_rate(borrow_rate: InterestRate),
+    update_min_utilization(min_utilization: Percent),
+);
 
 impl From<InstantiateMsg> for Config {
     fn from(msg: InstantiateMsg) -> Self {

@@ -49,10 +49,8 @@ pub enum ExecuteMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    UpdateParameters {
-        borrow_rate: InterestRate,
-        min_utilization: Percent,
-    },
+    NewBorrowRate { borrow_rate: InterestRate },
+    MinUtilization { min_utilization: Percent },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

@@ -1,35 +1,30 @@
-use std::ops::DerefMut;
-
-use access_control::SingleUserAccess;
 use finance::percent::Percent;
 use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Deps, DepsMut, MessageInfo, Uint64};
+use sdk::cosmwasm_std::{Storage, Uint64};
 
 use crate::{borrow::InterestRate, error::Result, state::Config};
 
 pub(super) fn try_update_lease_code(
-    mut deps: DepsMut<'_>,
-    info: MessageInfo,
+    storage: &mut dyn Storage,
     lease_code: Uint64,
 ) -> Result<MessageResponse> {
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::LEASE_CODE_ADMIN_KEY,
-    )
-    .check(&info.sender)?;
-
-    Config::update_lease_code(deps.storage, lease_code).map(|()| Default::default())
+    Config::update_lease_code(storage, lease_code).map(|()| MessageResponse::default())
 }
 
-pub(super) fn try_update_parameters(
-    deps: DepsMut<'_>,
+pub(super) fn try_update_borrow_rate(
+    storage: &mut dyn Storage,
     borrow_rate: InterestRate,
+) -> Result<MessageResponse> {
+    Config::update_borrow_rate(storage, borrow_rate).map(|()| MessageResponse::default())
+}
+
+pub(super) fn try_update_min_utilization(
+    storage: &mut dyn Storage,
     min_utilization: Percent,
 ) -> Result<MessageResponse> {
-    Config::update_parameters(deps.storage, borrow_rate, min_utilization)
-        .map(|()| Default::default())
+    Config::update_min_utilization(storage, min_utilization).map(|()| MessageResponse::default())
 }
 
-pub(super) fn query_config(deps: &Deps<'_>) -> Result<Config> {
-    Config::load(deps.storage)
+pub(super) fn query_config(storage: &dyn Storage) -> Result<Config> {
+    Config::load(storage)
 }
