@@ -2,9 +2,9 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::{Amount, Coin},
+    coin::Coin,
     fraction::Fraction,
-    percent::Percent,
+    percent::{Percent, Units},
     price::{self, Price},
     ratio::Rational,
 };
@@ -51,7 +51,7 @@ where
     }
 }
 
-pub struct LiquidityPool<Lpn>
+pub(crate) struct LiquidityPool<Lpn>
 where
     Lpn: Currency,
 {
@@ -76,25 +76,6 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn total_lpn(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Coin<Lpn>> {
-        self.balance(&env.contract.address, querier)
-            .map(|balance: Coin<Lpn>| {
-                balance
-                    + self.total.total_principal_due()
-                    + self.total.total_interest_due_by_now(env.block.time)
-            })
-    }
-
-    pub fn utilization(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Percent> {
-        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
-            if total_lpn.is_zero() {
-                Percent::HUNDRED
-            } else {
-                Percent::from_ratio(self.total.total_principal_due(), total_lpn)
-            }
-        })
-    }
-
     pub fn check_utilization_rate(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<()> {
         self.utilization(querier, env)
             .and_then(|utilization: Percent| {
@@ -113,12 +94,9 @@ where
     ) -> Result<Option<Coin<Lpn>>> {
         self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
             (!self.config.min_utilization().is_zero()).then(|| {
-                Fraction::<Amount>::of(
-                    &Rational::new(
-                        Percent::HUNDRED.units(),
-                        self.config.min_utilization().units(),
-                    ),
-                    self.total.total_principal_due(),
+                Fraction::<Units>::of(
+                    &Rational::new(Percent::HUNDRED, self.config.min_utilization()),
+                    self.total_lpn_due(env.block.time),
                 ) - total_lpn
             })
         })
@@ -208,6 +186,14 @@ where
         )))
     }
 
+    pub(crate) fn query_loan(
+        &self,
+        storage: &dyn Storage,
+        lease_addr: Addr,
+    ) -> Result<Option<LoanResponse<Lpn>>> {
+        Loan::query(storage, lease_addr)
+    }
+
     pub(super) fn try_open_loan(
         &mut self,
         deps: &mut DepsMut<'_>,
@@ -267,36 +253,54 @@ where
         Ok(payment.excess)
     }
 
-    pub fn query_loan(
-        &self,
-        storage: &dyn Storage,
-        lease_addr: Addr,
-    ) -> Result<Option<LoanResponse<Lpn>>> {
-        Loan::query(storage, lease_addr)
-    }
-
     fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
         bank::balance(account, querier).map_err(Into::into)
+    }
+
+    fn total_lpn_due(&self, now: Timestamp) -> Coin<Lpn> {
+        self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
+    }
+
+    fn total_lpn(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Coin<Lpn>> {
+        self.balance(&env.contract.address, querier)
+            .map(|balance: Coin<Lpn>| balance + self.total_lpn_due(env.block.time))
+    }
+
+    fn utilization(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Percent> {
+        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
+            if total_lpn.is_zero() {
+                Percent::HUNDRED
+            } else {
+                Percent::from_ratio(self.total_lpn_due(env.block.time), total_lpn)
+            }
+        })
     }
 }
 
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::test::Usdc;
-    use finance::{duration::Duration, price};
+    use currency::{test::Usdc, Currency};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent,
+        price::{self, Price},
+    };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{self, mock_env, MockQuerier, MOCK_CONTRACT_ADDR},
-        Addr, Coin as CwCoin, Timestamp, Uint64,
+        Addr, Coin as CwCoin, DepsMut, Env, QuerierWrapper, Timestamp, Uint64,
     };
 
     use crate::{
         borrow::InterestRate,
+        error::ContractError,
+        nlpn::NLpn,
         state::{Config, Deposit, Total},
     };
 
-    use super::*;
+    use super::LiquidityPool;
 
     type TheCurrency = Usdc;
 
