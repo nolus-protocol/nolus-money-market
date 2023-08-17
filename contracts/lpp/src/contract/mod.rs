@@ -86,13 +86,21 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut dyn Storage| self::migrate::migrate(storage, msg.min_utilization),
-        Into::into,
-    )
-    .and_then(|(label, ())| response::response(label))
+    {
+        #[cfg(feature = "migration")]
+        {
+            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                |storage: &mut dyn Storage| self::migrate::migrate(storage, msg.min_utilization),
+                Into::into,
+            )
+            .map(|(label, ())| label)
+        }
+        #[cfg(not(feature = "migration"))]
+        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+    }
+    .and_then(response::response)
 }
 
 struct ExecuteWithLpn<'a> {
