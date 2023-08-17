@@ -7,12 +7,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{
-    borrow::InterestRate,
-    error::Result,
-    msg::InstantiateMsg,
-    nlpn::NLpn,
-};
+use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg, nlpn::NLpn};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
