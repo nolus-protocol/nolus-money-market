@@ -266,14 +266,27 @@ where
             .map(|balance: Coin<Lpn>| balance + self.total_lpn_due(env.block.time))
     }
 
+    fn total_lpn_with_due(
+        &self,
+        querier: &QuerierWrapper<'_>,
+        account: &Addr,
+        total_lpn_due: Coin<Lpn>,
+    ) -> Result<Coin<Lpn>> {
+        self.balance(account, querier)
+            .map(|balance: Coin<Lpn>| balance + total_lpn_due)
+    }
+
     fn utilization(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Percent> {
-        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
-            if total_lpn.is_zero() {
-                Percent::HUNDRED
-            } else {
-                Percent::from_ratio(self.total_lpn_due(env.block.time), total_lpn)
-            }
-        })
+        let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
+
+        self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
+            .map(|total_lpn: Coin<Lpn>| {
+                if total_lpn.is_zero() {
+                    Percent::HUNDRED
+                } else {
+                    Percent::from_ratio(total_lpn_due, total_lpn)
+                }
+            })
     }
 }
 
