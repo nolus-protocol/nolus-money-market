@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
-use finance::{percent::Percent, price::Price};
+use finance::{percent::BoundToHundredPercent, price::Price};
 use sdk::{
     cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
@@ -14,7 +14,7 @@ pub struct Config {
     lpn_ticker: String,
     lease_code_id: Uint64,
     borrow_rate: InterestRate,
-    min_utilization: Percent,
+    min_utilization: BoundToHundredPercent,
 }
 
 impl Config {
@@ -25,7 +25,7 @@ impl Config {
         lpn_ticker: String,
         lease_code_id: Uint64,
         borrow_rate: InterestRate,
-        min_utilization: Percent,
+        min_utilization: BoundToHundredPercent,
     ) -> Self {
         Self {
             lpn_ticker,
@@ -47,7 +47,7 @@ impl Config {
         &self.borrow_rate
     }
 
-    pub const fn min_utilization(&self) -> Percent {
+    pub const fn min_utilization(&self) -> BoundToHundredPercent {
         self.min_utilization
     }
 
@@ -92,7 +92,7 @@ macro_rules! update_param_impl {
 update_param_impl!(
     update_lease_code(lease_code_id: Uint64),
     update_borrow_rate(borrow_rate: InterestRate),
-    update_min_utilization(min_utilization: Percent),
+    update_min_utilization(min_utilization: BoundToHundredPercent),
 );
 
 impl From<InstantiateMsg> for Config {

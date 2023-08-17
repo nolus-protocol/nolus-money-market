@@ -79,7 +79,7 @@ where
     pub fn check_utilization_rate(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<()> {
         self.utilization(querier, env)
             .and_then(|utilization: Percent| {
-                if utilization < self.config.min_utilization() {
+                if utilization < self.config.min_utilization().percent() {
                     Err(ContractError::UtilizationBelowMinimalRates)
                 } else {
                     Ok(())
@@ -93,9 +93,10 @@ where
         env: &Env,
     ) -> Result<Option<Coin<Lpn>>> {
         self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
-            (!self.config.min_utilization().is_zero()).then(|| {
+            let min_utilization: Percent = self.config.min_utilization().percent();
+            (!min_utilization.is_zero()).then(move || {
                 Fraction::<Units>::of(
-                    &Rational::new(Percent::HUNDRED, self.config.min_utilization()),
+                    &Rational::new(Percent::HUNDRED, min_utilization),
                     self.total_lpn_due(env.block.time),
                 ) - total_lpn
             })
@@ -297,7 +298,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        percent::Percent,
+        percent::{BoundToHundredPercent, Percent},
         price::{self, Price},
     };
     use platform::coin_legacy;
@@ -320,7 +321,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: Percent = Percent::ZERO;
+    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     #[test]
     fn test_balance() {
@@ -878,7 +879,13 @@ mod test {
     fn test_deposit_limit() {
         const BORROWED: Coin<TheCurrency> = Coin::new(200);
         const LPP_BALANCE: Coin<TheCurrency> = Coin::new(100);
-        const MIN_UTILIZATION: Percent = Percent::from_permille(500);
+        const MIN_UTILIZATION: BoundToHundredPercent = if let Ok(percent) =
+            BoundToHundredPercent::try_from_percent(Percent::from_permille(500))
+        {
+            percent
+        } else {
+            panic!()
+        };
         const EXPECTED_DEPOSIT_LIMIT: Coin<TheCurrency> = Coin::new(100);
 
         let mut total: Total<TheCurrency> = Total::new();

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::Currency;
-use finance::percent::Percent;
+use finance::percent::{Percent, BoundToHundredPercent};
 use lease::api::{ConnectionParams, Ics20Channel};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
@@ -312,7 +312,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-        min_utilization: Percent,
+        min_utilization: BoundToHundredPercent,
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         self.init_lpp_with_funds(
             custom_wrapper,
@@ -331,7 +331,7 @@ where
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-        min_utilization: Percent,
+        min_utilization: BoundToHundredPercent,
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         let Self {
             mut test_case,

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Percent;
+use finance::percent::BoundToHundredPercent;
 use sdk::{
     cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
@@ -21,7 +21,10 @@ impl OldConfig {
     const STORAGE: Item<'static, Self> = Item::new("config");
 }
 
-pub fn migrate(storage: &mut dyn Storage, min_utilization: Percent) -> ContractResult<()> {
+pub fn migrate(
+    storage: &mut dyn Storage,
+    min_utilization: BoundToHundredPercent,
+) -> ContractResult<()> {
     OldConfig::STORAGE
         .load(storage)
         .map(

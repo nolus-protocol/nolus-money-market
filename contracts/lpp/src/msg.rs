@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::Percent,
+    percent::{Percent, BoundToHundredPercent},
     price::Price,
 };
 use sdk::{
@@ -20,12 +20,12 @@ pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
     pub borrow_rate: InterestRate,
-    pub min_utilization: Percent,
+    pub min_utilization: BoundToHundredPercent,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {
-    pub min_utilization: Percent,
+    pub min_utilization: BoundToHundredPercent,
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
@@ -50,7 +50,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
     NewBorrowRate { borrow_rate: InterestRate },
-    MinUtilization { min_utilization: Percent },
+    MinUtilization { min_utilization: BoundToHundredPercent },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

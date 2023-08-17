@@ -174,12 +174,14 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Percent {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
 #[serde(into = "Percent", try_from = "Percent")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Percent);
 
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
+    pub const ZERO: Self = Self(Percent::ZERO);
+
     pub const fn try_from_percent(percent: Percent) -> Result<Self, UpperBoundCrossed> {
         if percent.units() <= UPPER_BOUND {
             Ok(Self(percent))
@@ -194,6 +196,10 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     pub const fn percent(&self) -> Percent {
         self.0
     }
+}
+
+impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
+    const ZERO: Self = Self::ZERO;
 }
 
 impl<const UPPER_BOUND: Units> TryFrom<Percent> for BoundPercent<UPPER_BOUND> {
@@ -214,6 +220,14 @@ pub struct UpperBoundCrossed {
 }
 
 pub type BoundToHundredPercent = BoundPercent<{ Percent::HUNDRED.units() }>;
+
+impl BoundToHundredPercent {
+    pub const HUNDRED: Self = if let Ok(percent) = Self::try_from_percent(Percent::HUNDRED) {
+        percent
+    } else {
+        panic!()
+    };
+}
 
 #[cfg(test)]
 pub(super) mod test {

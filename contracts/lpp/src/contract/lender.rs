@@ -119,7 +119,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 mod test {
     use access_control::ContractOwnerAccess;
     use currency::lpn::Usdc;
-    use finance::{percent::Percent, price};
+    use finance::{percent::{Percent, BoundToHundredPercent}, price};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
@@ -135,7 +135,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: Percent = Percent::ZERO;
+    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     #[test]
     fn test_deposit() {
@@ -283,7 +283,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                Percent::HUNDRED,
+                Percent::HUNDRED.try_into().unwrap(),
             ),
         )
         .unwrap();
@@ -313,7 +313,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
-                Percent::ZERO,
+                BoundToHundredPercent::ZERO,
             ),
         )
         .unwrap();

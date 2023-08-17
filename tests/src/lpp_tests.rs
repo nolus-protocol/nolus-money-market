@@ -62,7 +62,7 @@ fn config_update_parameters() {
     let base_interest_rate = Percent::from_percent(21);
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
-    let min_utilization = Percent::from_percent(500);
+    let min_utilization = Percent::from_percent(500).try_into().unwrap();
 
     assert_ne!(base_interest_rate, BASE_INTEREST_RATE);
     assert_ne!(addon_optimal_interest_rate, ADDON_OPTIMAL_INTEREST_RATE);

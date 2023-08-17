@@ -1,4 +1,4 @@
-use finance::percent::Percent;
+use finance::percent::BoundToHundredPercent;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Storage, Uint64};
 
@@ -20,7 +20,7 @@ pub(super) fn try_update_borrow_rate(
 
 pub(super) fn try_update_min_utilization(
     storage: &mut dyn Storage,
-    min_utilization: Percent,
+    min_utilization: BoundToHundredPercent,
 ) -> Result<MessageResponse> {
     Config::update_min_utilization(storage, min_utilization).map(|()| MessageResponse::default())
 }

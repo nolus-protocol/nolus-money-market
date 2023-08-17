@@ -1,5 +1,8 @@
 use currency::{lpn::Usdc, Currency};
-use finance::{coin::Coin, percent::Percent};
+use finance::{
+    coin::Coin,
+    percent::{BoundToHundredPercent, Percent},
+};
 use lpp::{
     borrow::InterestRate,
     contract::sudo,
@@ -23,7 +26,7 @@ impl Instantiator {
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
-        min_utilization: Percent,
+        min_utilization: BoundToHundredPercent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
@@ -53,7 +56,7 @@ impl Instantiator {
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
-        min_utilization: Percent,
+        min_utilization: BoundToHundredPercent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
