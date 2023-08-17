@@ -74,7 +74,7 @@ mod test {
     use currency::test::Usdc;
     use finance::{
         coin::Coin,
-        percent::{BoundToHundredPercent, Percent},
+        percent::{bound::BoundToHundredPercent, Percent},
     };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{

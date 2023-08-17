@@ -1,7 +1,7 @@
 use currency::{lpn::Usdc, Currency};
 use finance::{
     coin::Coin,
-    percent::{BoundToHundredPercent, Percent},
+    percent::{bound::BoundToHundredPercent, Percent},
 };
 use lpp::{
     borrow::InterestRate,

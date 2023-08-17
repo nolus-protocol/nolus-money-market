@@ -120,7 +120,7 @@ mod test {
     use access_control::ContractOwnerAccess;
     use currency::lpn::Usdc;
     use finance::{
-        percent::{BoundToHundredPercent, Percent},
+        percent::{bound::BoundToHundredPercent, Percent},
         price,
     };
     use platform::coin_legacy;

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::Currency;
-use finance::percent::{BoundToHundredPercent, Percent};
+use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lease::api::{ConnectionParams, Ics20Channel};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;

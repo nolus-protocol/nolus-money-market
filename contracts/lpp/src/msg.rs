@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::{BoundToHundredPercent, Percent},
+    percent::{bound::BoundToHundredPercent, Percent},
     price::Price,
 };
 use sdk::{

@@ -2,7 +2,7 @@ use address_book::AddressBook;
 use app::App;
 use currency::{Currency, Symbol};
 
-use finance::percent::BoundToHundredPercent;
+use finance::percent::bound::BoundToHundredPercent;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},

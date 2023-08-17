@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use finance::percent::BoundToHundredPercent;
+use finance::percent::bound::BoundToHundredPercent;
 use sdk::{
     cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
