@@ -1,4 +1,4 @@
-name: Smart Contracts
+name: "Smart Contracts"
 run-name: "Running workflow for smart contracts"
 
 on:

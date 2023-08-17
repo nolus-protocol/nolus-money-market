@@ -1,4 +1,4 @@
-name: Manual Workflow
+name: "Manual Workflow"
 run-name: "Manually running workflow for smart contracts"
 
 on:

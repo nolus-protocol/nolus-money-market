@@ -1,4 +1,4 @@
-name: Smart Contracts
+name: "Build optimized"
 run-name: "Building optimized version of smart contracts"
 
 on:
