@@ -325,7 +325,7 @@ mod test {
 
     #[test]
     fn test_balance() {
-        let balance_mock = coin_cw::<TheCurrency>(Coin::new(10_000_000));
+        let balance_mock = coin_cw(10_000_000);
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let env = testing::mock_env();
         let lease_code_id = Uint64::new(123);
@@ -362,7 +362,7 @@ mod test {
 
     #[test]
     fn test_query_quote() {
-        let balance_mock = coin_cw::<TheCurrency>(Coin::new(10_000_000));
+        let balance_mock = coin_cw(10_000_000);
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
@@ -409,10 +409,8 @@ mod test {
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
             .expect("can't open loan");
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(3_000_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(3_000_000)]);
 
         // wait for a year
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos());
@@ -432,7 +430,7 @@ mod test {
 
     #[test]
     fn test_open_and_repay_loan() {
-        let lpp_balance: u64 = 10_000_000;
+        let lpp_balance: Amount = 10_000_000;
         let amount = 5_000_000;
 
         let base_rate = 70;
@@ -449,9 +447,7 @@ mod test {
                 .unwrap(),
         );
 
-        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw::<TheCurrency>(
-            Coin::new(Amount::from(lpp_balance)),
-        )]);
+        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
@@ -495,10 +491,8 @@ mod test {
             Coin::new(5_000_000),
         )
         .expect("can't open loan");
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(5_000_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
         let loan = lpp
             .query_loan(deps.as_ref().storage, lease_addr.clone())
@@ -590,7 +584,7 @@ mod test {
 
     #[test]
     fn try_open_loan_for_zero_amount() {
-        let balance_mock = [coin_cw::<TheCurrency>(Coin::new(10_000_000))];
+        let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
@@ -624,7 +618,7 @@ mod test {
 
     #[test]
     fn open_loan_repay_zero() {
-        let balance_mock = [coin_cw::<TheCurrency>(Coin::new(10_000_000))];
+        let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
@@ -654,10 +648,8 @@ mod test {
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(5_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
         let loan_before = lpp
             .query_loan(deps.as_ref().storage, loan.clone())
@@ -684,7 +676,7 @@ mod test {
 
     #[test]
     fn try_open_and_close_loan_without_paying_interest() {
-        let balance_mock = [coin_cw::<TheCurrency>(Coin::new(10_000_000))];
+        let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
@@ -714,10 +706,8 @@ mod test {
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(5_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
         let payment = lpp
             .query_loan(deps.as_ref().storage, loan.clone())
@@ -741,8 +731,7 @@ mod test {
 
     #[test]
     fn test_tvl_and_price() {
-        let balance_mock = coin_cw::<TheCurrency>(Coin::default()); // will deposit something later
-        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
+        let mut deps = testing::mock_dependencies_with_balance(&[]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
@@ -751,7 +740,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
-            balance_mock.denom,
+            String::from(TheCurrency::BANK_SYMBOL),
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -790,10 +779,8 @@ mod test {
             .expect("should get price");
         assert_eq!(price.get(), Price::identity());
 
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(10_000_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
         lender
             .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
             .expect("should deposit");
@@ -812,10 +799,8 @@ mod test {
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(5_000_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
         // wait a year
         env.block.time = Timestamp::from_nanos(Duration::YEAR.nanos());
@@ -849,10 +834,8 @@ mod test {
             .unwrap();
         assert_eq!(excess, Coin::new(0));
 
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin_cw::<TheCurrency>(Coin::new(11_000_000))],
-        );
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
         let total_lpn = lpp
             .total_lpn(&deps.as_ref().querier, &env)
             .expect("should query total_lpn");
@@ -916,11 +899,8 @@ mod test {
         );
     }
 
-    fn coin_cw<C>(coin: Coin<C>) -> CwCoin
-    where
-        C: Currency,
-    {
-        coin_legacy::to_cosmwasm::<C>(coin)
+    fn coin_cw(coin: impl Into<Coin<TheCurrency>>) -> CwCoin {
+        coin_legacy::to_cosmwasm::<TheCurrency>(coin.into())
     }
 
     fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
