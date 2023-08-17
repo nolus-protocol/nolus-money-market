@@ -32,7 +32,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $LEASER_ADDRESS"
 
-  local -r lpp_init_msg='{"lpn_ticker":"'"$lpp_native"'","lease_code_admin":"'"$LEASER_ADDRESS"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":"0"}'
+  local -r lpp_init_msg='{"lpn_ticker":"'"$lpp_native"'","lease_code_admin":"'"$LEASER_ADDRESS"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":0}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$lpp_init_msg"
   _export_to_file "lpp" "$LPP_ADDRESS" "$contracts_info_file"
