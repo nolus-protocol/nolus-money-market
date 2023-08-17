@@ -41,11 +41,7 @@ jobs:
         shell: "sh"
         run: "./lint.sh"
   check_features:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
-      - uses: "nolus-protocol/rust-ci-actions/check_features@main"
+    uses: "./.github/workflows/check_features.yaml"
   check_unused_deps:
     runs-on: "ubuntu-latest"
     steps:
