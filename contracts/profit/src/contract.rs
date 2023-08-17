@@ -6,7 +6,9 @@ use dex::{
     Response as DexResponse,
 };
 use oracle::stub::OracleRef;
-use platform::{message::Response as MessageResponse, response};
+use platform::{
+    message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -87,11 +89,14 @@ pub fn execute(
         ExecuteMsg::Config { cadence_hours } => {
             ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
 
-            State::load(deps.storage)?
-                .try_update_config(cadence_hours)?
-                .store(deps.storage)?;
+            let StateMachineResponse {
+                response,
+                next_state,
+            } = State::load(deps.storage)?.try_update_config(env.block.time, cadence_hours)?;
 
-            Ok(response::empty_response())
+            next_state.store(deps.storage)?;
+
+            Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
             access_control::check(&env.contract.address, &info.sender)?;

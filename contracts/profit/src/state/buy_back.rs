@@ -21,10 +21,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{
-    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
-    typedefs::CadenceHours,
-};
+use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
     idle::Idle,
@@ -41,6 +38,9 @@ pub(super) struct BuyBack {
 }
 
 impl BuyBack {
+    const QUERY_ERROR: &'static str =
+        "Configuration querying is not supported while performing buy back!";
+
     /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
     /// is closed, best action is to verify the pinkie-promise
     /// to not pass in [native currencies](Native) via a debug
@@ -140,16 +140,8 @@ impl SwapTask for BuyBack {
 }
 
 impl ConfigManagement for StateLocalOut<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> {
-    fn try_update_config(self, _: CadenceHours) -> ContractResult<Self> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration changes are not allowed during ICA opening process.",
-        )))
-    }
-
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Querying configuration is not allowed during buy-back.",
-        )))
+        Err(ContractError::unsupported_operation(BuyBack::QUERY_ERROR))
     }
 }
 

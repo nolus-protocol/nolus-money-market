@@ -8,7 +8,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Deps, Env};
 
-use crate::{msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{open_ica::OpenIca, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
@@ -29,12 +29,6 @@ impl Handler for OpenTransferChannel {
 }
 
 impl ConfigManagement for OpenTransferChannel {
-    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
-        Ok(Self {
-            config: self.config.update(cadence_hours),
-        })
-    }
-
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
         Ok(ConfigResponse {
             cadence_hours: self.config.cadence_hours(),

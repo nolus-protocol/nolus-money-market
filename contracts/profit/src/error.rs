@@ -45,3 +45,10 @@ pub enum ContractError {
     #[error("[Profit] EmptyBalance. No profit to dispatch")]
     EmptyBalance {},
 }
+
+impl ContractError {
+    #[cfg(any(feature = "contract", test))]
+    pub(crate) fn unsupported_operation(msg: &'static str) -> Self {
+        Self::UnsupportedOperation(String::from(msg))
+    }
+}

@@ -8,7 +8,7 @@ use dex::{
 };
 use platform::state_machine::{self, Response as StateMachineResponse};
 use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 
@@ -40,7 +40,15 @@ pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
-    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self>;
+    fn try_update_config(
+        self,
+        _: Timestamp,
+        _: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
+        Err(ContractError::unsupported_operation(
+            "Configuration changes are not allowed in this state!",
+        ))
+    }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
@@ -77,16 +85,24 @@ enum StateEnum {
 pub(crate) struct State(StateEnum);
 
 impl ConfigManagement for State {
-    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
+    fn try_update_config(
+        self,
+        now: Timestamp,
+        cadence_hours: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
         match self.0 {
-            StateEnum::OpenTransferChannel(transfer) => {
-                transfer.try_update_config(cadence_hours).map(Into::into)
-            }
-            StateEnum::OpenIca(ica) => ica.try_update_config(cadence_hours).map(Into::into),
-            StateEnum::Idle(idle) => idle.try_update_config(cadence_hours).map(Into::into),
-            StateEnum::BuyBack(buy_back) => {
-                buy_back.try_update_config(cadence_hours).map(Into::into)
-            }
+            StateEnum::OpenTransferChannel(transfer) => transfer
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::Idle(idle) => idle
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => buy_back
+                .try_update_config(now, cadence_hours)
+                .map(state_machine::from),
         }
     }
 
