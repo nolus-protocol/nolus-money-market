@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
-use finance::{percent::BoundToHundredPercent, price::Price};
+use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use sdk::{
     cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
@@ -65,35 +65,40 @@ impl Config {
     {
         Price::identity()
     }
-}
 
-macro_rules! update_param_impl {
-    ($($method:ident($field:ident : $type:ty)),+ $(,)?) => {
-        impl Config {
-            $(
-                pub fn $method(
-                    storage: &mut dyn Storage,
-                    $field: $type,
-                ) -> Result<()> {
-                    Self::STORAGE
-                        .update(storage, |config: Self| {
-                            Ok(Self {
-                                $field,
-                                ..config
-                            })
-                        })
-                        .map(|_| ())
-                }
-            )+
-        }
-    };
-}
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code_id: Uint64) -> Result<()> {
+        Self::update_field(storage, |config| Self {
+            lease_code_id,
+            ..config
+        })
+    }
 
-update_param_impl!(
-    update_lease_code(lease_code_id: Uint64),
-    update_borrow_rate(borrow_rate: InterestRate),
-    update_min_utilization(min_utilization: BoundToHundredPercent),
-);
+    pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
+        Self::update_field(storage, |config| Self {
+            borrow_rate,
+            ..config
+        })
+    }
+
+    pub fn update_min_utilization(
+        storage: &mut dyn Storage,
+        min_utilization: BoundToHundredPercent,
+    ) -> Result<()> {
+        Self::update_field(storage, |config| Self {
+            min_utilization,
+            ..config
+        })
+    }
+
+    fn update_field<F>(storage: &mut dyn Storage, f: F) -> Result<()>
+    where
+        F: FnOnce(Config) -> Config,
+    {
+        Self::STORAGE
+            .update(storage, |config: Self| Ok(f(config)))
+            .map(|_| ())
+    }
+}
 
 impl From<InstantiateMsg> for Config {
     fn from(msg: InstantiateMsg) -> Self {
