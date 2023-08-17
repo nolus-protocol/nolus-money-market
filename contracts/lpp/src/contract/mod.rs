@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
 use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency};
-use platform::response;
+use platform::{message::Response as PlatformResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -21,7 +21,6 @@ use crate::{
 };
 
 mod borrow;
-mod config;
 mod lender;
 mod migrate;
 mod rewards;
@@ -190,7 +189,8 @@ pub fn execute(
             )
             .check(&info.sender)?;
 
-            config::try_update_lease_code(deps.storage, lease_code_id)
+            Config::update_lease_code(deps.storage, lease_code_id)
+                .map(|()| PlatformResponse::default())
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DistributeRewards() => {
@@ -209,12 +209,13 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     // no currency context variants
     match msg {
         SudoMsg::NewBorrowRate { borrow_rate } => {
-            config::try_update_borrow_rate(deps.storage, borrow_rate)
+            Config::update_borrow_rate(deps.storage, borrow_rate)
         }
         SudoMsg::MinUtilization { min_utilization } => {
-            config::try_update_min_utilization(deps.storage, min_utilization)
+            Config::update_min_utilization(deps.storage, min_utilization)
         }
     }
+    .map(|()| PlatformResponse::default())
     .map(response::response_only_messages)
 }
 
@@ -277,14 +278,14 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
-    let res = match msg {
-        QueryMsg::Config() => to_binary(&config::query_config(deps.storage)?)?,
-        QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,
-        QueryMsg::Rewards { address } => {
-            to_binary(&rewards::query_rewards(deps.storage, address)?)?
+    match msg {
+        QueryMsg::Config() => to_binary(&Config::load(deps.storage)?).map_err(Into::into),
+        QueryMsg::Balance { address } => {
+            to_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
         }
-        _ => QueryWithLpn::cmd(deps, env, msg)?,
-    };
-
-    Ok(res)
+        QueryMsg::Rewards { address } => {
+            to_binary(&rewards::query_rewards(deps.storage, address)?).map_err(Into::into)
+        }
+        _ => QueryWithLpn::cmd(deps, env, msg),
+    }
 }
