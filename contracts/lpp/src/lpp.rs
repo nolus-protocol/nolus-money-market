@@ -77,7 +77,7 @@ where
     }
 
     pub fn check_utilization_rate(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<()> {
-        self.utilization(querier, env)
+        self.utilization(querier, env.block.time, &env.contract.address)
             .and_then(|utilization: Percent| {
                 if utilization < self.config.min_utilization().percent() {
                     Err(ContractError::UtilizationBelowMinimalRates)
@@ -92,15 +92,28 @@ where
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> Result<Option<Coin<Lpn>>> {
-        self.total_lpn(querier, env).map(|total_lpn: Coin<Lpn>| {
             let min_utilization: Percent = self.config.min_utilization().percent();
-            (!min_utilization.is_zero()).then(move || {
+
+        if min_utilization.is_zero() {
+            Ok(None)
+        } else {
+            let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
+
+            self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
+                .map(|total_lpn: Coin<Lpn>| {
+                    if min_utilization
+                        < self.utilization_with_total_and_due(total_lpn, total_lpn_due)
+                    {
                 Fraction::<Units>::of(
                     &Rational::new(Percent::HUNDRED, min_utilization),
-                    self.total_lpn_due(env.block.time),
+                            total_lpn_due,
                 ) - total_lpn
+                    } else {
+                        Coin::default()
+                    }
             })
-        })
+                .map(Some)
+        }
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse<Lpn>> {
@@ -277,17 +290,30 @@ where
             .map(|balance: Coin<Lpn>| balance + total_lpn_due)
     }
 
-    fn utilization(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Percent> {
-        let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
+    fn utilization(
+        &self,
+        querier: &QuerierWrapper<'_>,
+        now: Timestamp,
+        account: &Addr,
+    ) -> Result<Percent> {
+        let total_lpn_due: Coin<Lpn> = self.total_lpn_due(now);
 
-        self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
+        self.total_lpn_with_due(querier, account, total_lpn_due)
             .map(|total_lpn: Coin<Lpn>| {
+                self.utilization_with_total_and_due(total_lpn, total_lpn_due)
+            })
+    }
+
+    fn utilization_with_total_and_due(
+        &self,
+        total_lpn: Coin<Lpn>,
+        total_lpn_due: Coin<Lpn>,
+    ) -> Percent {
                 if total_lpn.is_zero() {
                     Percent::HUNDRED
                 } else {
                     Percent::from_ratio(total_lpn_due, total_lpn)
                 }
-            })
     }
 }
 
@@ -298,13 +324,13 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        percent::{BoundToHundredPercent, Percent},
+        percent::{bound::BoundToHundredPercent, Percent},
         price::{self, Price},
     };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
-        testing::{self, mock_env, MockQuerier, MOCK_CONTRACT_ADDR},
-        Addr, Coin as CwCoin, DepsMut, Env, QuerierWrapper, Timestamp, Uint64,
+        testing::{self, MOCK_CONTRACT_ADDR},
+        Addr, Coin as CwCoin, DepsMut, Timestamp, Uint64,
     };
 
     use crate::{
