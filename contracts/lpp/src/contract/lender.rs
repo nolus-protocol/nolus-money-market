@@ -119,7 +119,10 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 mod test {
     use access_control::ContractOwnerAccess;
     use currency::lpn::Usdc;
-    use finance::{percent::{Percent, BoundToHundredPercent}, price};
+    use finance::{
+        percent::{BoundToHundredPercent, Percent},
+        price,
+    };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},

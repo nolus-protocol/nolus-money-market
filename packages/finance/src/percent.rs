@@ -174,7 +174,9 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Percent {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema,
+)]
 #[repr(transparent)]
 #[serde(into = "Percent", try_from = "Percent")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Percent);

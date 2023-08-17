@@ -72,7 +72,10 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 mod test {
     use access_control::ContractOwnerAccess;
     use currency::test::Usdc;
-    use finance::{coin::Coin, percent::{Percent, BoundToHundredPercent}};
+    use finance::{
+        coin::Coin,
+        percent::{BoundToHundredPercent, Percent},
+    };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},

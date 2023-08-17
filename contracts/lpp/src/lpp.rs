@@ -499,7 +499,7 @@ mod test {
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, Coin::new(amount.into()));
+        assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
         assert_eq!(loan.interest_due(env.block.time), 0u128.into());
@@ -521,7 +521,7 @@ mod test {
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, Coin::new(amount.into()));
+        assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
         assert_eq!(loan.interest_due(env.block.time), 0u128.into());
@@ -539,7 +539,7 @@ mod test {
             .expect("can't query the loan")
             .expect("should exist")
             .interest_due(env.block.time)
-            + Coin::new(amount.into())
+            + Coin::new(amount)
             + Coin::new(100);
 
         let repay = lpp
