@@ -766,7 +766,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
-            String::from(TheCurrency::BANK_SYMBOL),
+            TheCurrency::BANK_SYMBOL.into(),
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
