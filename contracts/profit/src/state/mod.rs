@@ -45,9 +45,9 @@ where
         _: Timestamp,
         _: CadenceHours,
     ) -> ContractResult<StateMachineResponse<Self>> {
-        Err(ContractError::UnsupportedOperation(String::from(
+        Err(ContractError::unsupported_operation(
             "Configuration changes are not allowed in this state!",
-        )))
+        ))
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse>;
