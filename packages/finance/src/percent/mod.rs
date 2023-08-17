@@ -4,7 +4,6 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 use sdk::{
     cosmwasm_std::{OverflowError, OverflowOperation},
@@ -18,6 +17,8 @@ use crate::{
     ratio::{Ratio, Rational},
     zero::Zero,
 };
+
+pub mod bound;
 
 pub type Units = u32;
 
@@ -166,69 +167,6 @@ impl<'a> Sub<&'a Percent> for Percent {
     fn sub(self, rhs: &'a Percent) -> Self {
         self - *rhs
     }
-}
-
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Percent {
-    fn from(value: BoundPercent<UPPER_BOUND>) -> Self {
-        value.percent()
-    }
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema,
-)]
-#[repr(transparent)]
-#[serde(into = "Percent", try_from = "Percent")]
-pub struct BoundPercent<const UPPER_BOUND: Units>(Percent);
-
-impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
-    pub const ZERO: Self = Self(Percent::ZERO);
-
-    pub const fn try_from_percent(percent: Percent) -> Result<Self, UpperBoundCrossed> {
-        if percent.units() <= UPPER_BOUND {
-            Ok(Self(percent))
-        } else {
-            Err(UpperBoundCrossed {
-                bound: UPPER_BOUND,
-                value: percent.units(),
-            })
-        }
-    }
-
-    pub const fn percent(&self) -> Percent {
-        self.0
-    }
-}
-
-impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
-    const ZERO: Self = Self::ZERO;
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<Percent> for BoundPercent<UPPER_BOUND> {
-    type Error = UpperBoundCrossed;
-
-    fn try_from(value: Percent) -> Result<Self, Self::Error> {
-        Self::try_from_percent(value)
-    }
-}
-
-#[derive(Debug, Error)]
-#[error(
-    "[Finance] [Percent] Upper bound has been crossed! Upper bound is: {bound}, but got: {value}!"
-)]
-pub struct UpperBoundCrossed {
-    bound: Units,
-    value: Units,
-}
-
-pub type BoundToHundredPercent = BoundPercent<{ Percent::HUNDRED.units() }>;
-
-impl BoundToHundredPercent {
-    pub const HUNDRED: Self = if let Ok(percent) = Self::try_from_percent(Percent::HUNDRED) {
-        percent
-    } else {
-        panic!()
-    };
 }
 
 #[cfg(test)]
