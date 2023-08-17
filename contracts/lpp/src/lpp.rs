@@ -92,7 +92,7 @@ where
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> Result<Option<Coin<Lpn>>> {
-            let min_utilization: Percent = self.config.min_utilization().percent();
+        let min_utilization: Percent = self.config.min_utilization().percent();
 
         if min_utilization.is_zero() {
             Ok(None)
@@ -104,14 +104,14 @@ where
                     if min_utilization
                         < self.utilization_with_total_and_due(total_lpn, total_lpn_due)
                     {
-                Fraction::<Units>::of(
-                    &Rational::new(Percent::HUNDRED, min_utilization),
+                        Fraction::<Units>::of(
+                            &Rational::new(Percent::HUNDRED, min_utilization),
                             total_lpn_due,
-                ) - total_lpn
+                        ) - total_lpn
                     } else {
                         Coin::default()
                     }
-            })
+                })
                 .map(Some)
         }
     }
@@ -309,11 +309,11 @@ where
         total_lpn: Coin<Lpn>,
         total_lpn_due: Coin<Lpn>,
     ) -> Percent {
-                if total_lpn.is_zero() {
-                    Percent::HUNDRED
-                } else {
-                    Percent::from_ratio(total_lpn_due, total_lpn)
-                }
+        if total_lpn.is_zero() {
+            Percent::HUNDRED
+        } else {
+            Percent::from_ratio(total_lpn_due, total_lpn)
+        }
     }
 }
 
@@ -884,54 +884,122 @@ mod test {
         assert_eq!(withdraw, Coin::new(1110));
     }
 
-    #[test]
-    fn test_deposit_limit() {
-        const BORROWED: Coin<TheCurrency> = Coin::new(200);
-        const LPP_BALANCE: Coin<TheCurrency> = Coin::new(100);
-        const MIN_UTILIZATION: BoundToHundredPercent = if let Ok(percent) =
-            BoundToHundredPercent::try_from_percent(Percent::from_permille(500))
-        {
-            percent
-        } else {
-            panic!()
-        };
-        const EXPECTED_DEPOSIT_LIMIT: Coin<TheCurrency> = Coin::new(100);
-
-        let mut total: Total<TheCurrency> = Total::new();
-
-        total
-            .borrow(Timestamp::default(), BORROWED, Percent::ZERO)
-            .unwrap();
-
-        let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
-            config: Config::new(
-                String::from(TheCurrency::TICKER),
-                Uint64::new(0xDEADC0DE),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                MIN_UTILIZATION,
-            ),
-            total,
-        };
-
-        let mock_env: Env = mock_env();
-        let mock_querier: MockQuerier =
-            MockQuerier::new(&[(mock_env.contract.address.as_str(), &[coin_cw(LPP_BALANCE)])]);
-        let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
-
-        assert_eq!(
-            lpp.deposit_limit(&mock_querier, &mock_env).unwrap(),
-            Some(EXPECTED_DEPOSIT_LIMIT)
-        );
-    }
-
-    fn coin_cw(coin: impl Into<Coin<TheCurrency>>) -> CwCoin {
-        coin_legacy::to_cosmwasm::<TheCurrency>(coin.into())
+    fn coin_cw<IntoCoin>(into_coin: IntoCoin) -> CwCoin
+    where
+        IntoCoin: Into<Coin<TheCurrency>>,
+    {
+        coin_legacy::to_cosmwasm::<TheCurrency>(into_coin.into())
     }
 
     fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
         ContractOwnerAccess::new(deps.storage)
             .grant_to(admin)
             .unwrap();
+    }
+
+    mod min_utilization {
+        use currency::Currency as _;
+        use finance::{
+            coin::Amount,
+            percent::{bound::BoundToHundredPercent, Percent},
+        };
+        use sdk::cosmwasm_std::{
+            testing::{mock_env, MockQuerier},
+            Env, QuerierWrapper, Timestamp,
+        };
+
+        use crate::{
+            borrow::InterestRate,
+            state::{Config, Total},
+        };
+
+        use super::{super::LiquidityPool, coin_cw, TheCurrency};
+
+        const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> BoundToHundredPercent =
+            || Percent::from_permille(500).try_into().unwrap();
+
+        fn test_case(
+            borrowed: Amount,
+            lpp_balance: Amount,
+            min_utilization: BoundToHundredPercent,
+            expected_limit: Option<Amount>,
+        ) {
+            let mut total: Total<TheCurrency> = Total::new();
+
+            total
+                .borrow(Timestamp::default(), borrowed.into(), Percent::ZERO)
+                .unwrap();
+
+            let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
+                config: Config::new(
+                    TheCurrency::TICKER.into(),
+                    0xDEADC0DE_u64.into(),
+                    InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
+                        .unwrap(),
+                    min_utilization,
+                ),
+                total,
+            };
+
+            let mock_env: Env = mock_env();
+            let mock_querier: MockQuerier =
+                MockQuerier::new(&[(mock_env.contract.address.as_str(), &[coin_cw(lpp_balance)])]);
+            let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
+
+            assert_eq!(
+                lpp.deposit_limit(&mock_querier, &mock_env).unwrap(),
+                expected_limit.map(Into::into)
+            );
+        }
+
+        #[test]
+        fn test_deposit_limit_no_min_util_below_50() {
+            test_case(50, 100, BoundToHundredPercent::ZERO, None);
+        }
+
+        #[test]
+        fn test_deposit_limit_no_min_util_at_50() {
+            test_case(50, 50, BoundToHundredPercent::ZERO, None);
+        }
+
+        #[test]
+        fn test_deposit_limit_no_min_util_above_50() {
+            test_case(100, 50, BoundToHundredPercent::ZERO, None);
+        }
+
+        #[test]
+        fn test_deposit_limit_no_min_util_at_100() {
+            test_case(50, 0, BoundToHundredPercent::ZERO, None);
+        }
+
+        #[test]
+        fn test_deposit_limit_below_min_util() {
+            test_case(
+                50,
+                100,
+                FIFTY_PERCENT_MIN_UTILIZATION(),
+                Some(Default::default()),
+            );
+        }
+
+        #[test]
+        fn test_deposit_limit_at_min_util() {
+            test_case(
+                50,
+                50,
+                FIFTY_PERCENT_MIN_UTILIZATION(),
+                Some(Default::default()),
+            );
+        }
+
+        #[test]
+        fn test_deposit_limit_above_min_util() {
+            test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+        }
+
+        #[test]
+        fn test_deposit_limit_at_max_util() {
+            test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+        }
     }
 }
