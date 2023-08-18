@@ -23,6 +23,11 @@ pub struct InstantiateMsg {
     pub min_utilization: BoundToHundredPercent,
 }
 
+#[cfg(not(feature = "migration"))]
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg(feature = "migration")]
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {
     pub min_utilization: BoundToHundredPercent,
