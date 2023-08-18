@@ -92,6 +92,11 @@ where
             self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
                 .map(|mut total_lpn: Coin<Lpn>| {
                     if let Some(pending_deposit) = pending_deposit {
+                        debug_assert!(
+                            pending_deposit <= total_lpn,
+                            "Pending deposit {{{pending_deposit}}} > Total LPN: {{{total_lpn}}}!"
+                        );
+
                         total_lpn -= pending_deposit;
                     }
 
