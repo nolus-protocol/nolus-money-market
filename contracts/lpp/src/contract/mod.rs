@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use std::ops::DerefMut as _;
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -9,7 +9,7 @@ use platform::{message::Response as PlatformResponse, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{version, VersionSegment};
 
@@ -93,7 +93,9 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
             versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
                 deps.storage,
                 version!(CONTRACT_STORAGE_VERSION),
-                |storage: &mut dyn Storage| self::migrate::migrate(storage, msg.min_utilization),
+                |storage: &mut dyn sdk::cosmwasm_std::Storage| {
+                    self::migrate::migrate(storage, msg.min_utilization)
+                },
                 Into::into,
             )
             .map(|(label, ())| label)
