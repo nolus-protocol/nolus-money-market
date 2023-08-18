@@ -927,7 +927,8 @@ mod test {
             let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
 
             assert_eq!(
-                lpp.deposit_capacity(&mock_querier, &mock_env, None).unwrap(),
+                lpp.deposit_capacity(&mock_querier, &mock_env, None)
+                    .unwrap(),
                 expected_limit.map(Into::into)
             );
         }
