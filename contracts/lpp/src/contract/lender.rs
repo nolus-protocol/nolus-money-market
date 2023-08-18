@@ -30,7 +30,13 @@ where
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
-    lpp.check_utilization_rate(&deps.querier, &env)?;
+    if lpp
+        .deposit_capacity(&deps.querier, &env, Some(amount))?
+        .map(|limit| amount > limit)
+        .unwrap_or_default()
+    {
+        return Err(ContractError::UtilizationBelowMinimalRates);
+    }
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
@@ -43,12 +49,12 @@ where
     Ok(event::emit_deposit(env, lender_addr, amount, receipts).into())
 }
 
-pub(super) fn deposit_limit<Lpn>(deps: Deps<'_>, env: Env) -> Result<Option<Coin<Lpn>>>
+pub(super) fn deposit_capacity<Lpn>(deps: Deps<'_>, env: Env) -> Result<Option<Coin<Lpn>>>
 where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage)
-        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_limit(&deps.querier, &env))
+        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(&deps.querier, &env, None))
 }
 
 pub(super) fn try_withdraw<Lpn>(

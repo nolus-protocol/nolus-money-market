@@ -76,21 +76,11 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn check_utilization_rate(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<()> {
-        self.utilization(querier, env.block.time, &env.contract.address)
-            .and_then(|utilization: Percent| {
-                if utilization < self.config.min_utilization().percent() {
-                    Err(ContractError::UtilizationBelowMinimalRates)
-                } else {
-                    Ok(())
-                }
-            })
-    }
-
-    pub fn deposit_limit(
+    pub fn deposit_capacity(
         &self,
         querier: &QuerierWrapper<'_>,
         env: &Env,
+        pending_deposit: Option<Coin<Lpn>>,
     ) -> Result<Option<Coin<Lpn>>> {
         let min_utilization: Percent = self.config.min_utilization().percent();
 
@@ -100,7 +90,11 @@ where
             let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
 
             self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
-                .map(|total_lpn: Coin<Lpn>| {
+                .map(|mut total_lpn: Coin<Lpn>| {
+                    if let Some(pending_deposit) = pending_deposit {
+                        total_lpn -= pending_deposit;
+                    }
+
                     if min_utilization
                         < self.utilization_with_total_and_due(total_lpn, total_lpn_due)
                     {
@@ -288,20 +282,6 @@ where
     ) -> Result<Coin<Lpn>> {
         self.balance(account, querier)
             .map(|balance: Coin<Lpn>| balance + total_lpn_due)
-    }
-
-    fn utilization(
-        &self,
-        querier: &QuerierWrapper<'_>,
-        now: Timestamp,
-        account: &Addr,
-    ) -> Result<Percent> {
-        let total_lpn_due: Coin<Lpn> = self.total_lpn_due(now);
-
-        self.total_lpn_with_due(querier, account, total_lpn_due)
-            .map(|total_lpn: Coin<Lpn>| {
-                self.utilization_with_total_and_due(total_lpn, total_lpn_due)
-            })
     }
 
     fn utilization_with_total_and_due(
@@ -947,33 +927,33 @@ mod test {
             let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
 
             assert_eq!(
-                lpp.deposit_limit(&mock_querier, &mock_env).unwrap(),
+                lpp.deposit_capacity(&mock_querier, &mock_env, None).unwrap(),
                 expected_limit.map(Into::into)
             );
         }
 
         #[test]
-        fn test_deposit_limit_no_min_util_below_50() {
+        fn test_deposit_capacity_no_min_util_below_50() {
             test_case(50, 100, BoundToHundredPercent::ZERO, None);
         }
 
         #[test]
-        fn test_deposit_limit_no_min_util_at_50() {
+        fn test_deposit_capacity_no_min_util_at_50() {
             test_case(50, 50, BoundToHundredPercent::ZERO, None);
         }
 
         #[test]
-        fn test_deposit_limit_no_min_util_above_50() {
+        fn test_deposit_capacity_no_min_util_above_50() {
             test_case(100, 50, BoundToHundredPercent::ZERO, None);
         }
 
         #[test]
-        fn test_deposit_limit_no_min_util_at_100() {
+        fn test_deposit_capacity_no_min_util_at_100() {
             test_case(50, 0, BoundToHundredPercent::ZERO, None);
         }
 
         #[test]
-        fn test_deposit_limit_below_min_util() {
+        fn test_deposit_capacity_below_min_util() {
             test_case(
                 50,
                 100,
@@ -983,7 +963,7 @@ mod test {
         }
 
         #[test]
-        fn test_deposit_limit_at_min_util() {
+        fn test_deposit_capacity_at_min_util() {
             test_case(
                 50,
                 50,
@@ -993,12 +973,12 @@ mod test {
         }
 
         #[test]
-        fn test_deposit_limit_above_min_util() {
+        fn test_deposit_capacity_above_min_util() {
             test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
         }
 
         #[test]
-        fn test_deposit_limit_at_max_util() {
+        fn test_deposit_capacity_at_max_util() {
             test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
         }
     }

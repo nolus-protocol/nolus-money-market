@@ -254,8 +254,8 @@ impl<'a> QueryWithLpn<'a> {
             QueryMsg::Price() => {
                 to_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
             }
-            QueryMsg::DepositLimit() => {
-                to_binary(&lender::deposit_limit::<Lpn>(self.deps, self.env)?)
+            QueryMsg::DepositCapacity() => {
+                to_binary(&lender::deposit_capacity::<Lpn>(self.deps, self.env)?)
             }
             _ => unreachable!("Variants should have been exhausted!"),
         }?;
