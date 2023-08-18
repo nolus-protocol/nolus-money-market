@@ -1,6 +1,6 @@
 #![cfg(feature = "migration")]
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use finance::percent::bound::BoundToHundredPercent;
 use sdk::{
@@ -10,7 +10,7 @@ use sdk::{
 
 use crate::{borrow::InterestRate, error::Result as ContractResult, state::Config};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct OldConfig {
     lpn_ticker: String,
     lease_code_id: Uint64,
@@ -19,6 +19,15 @@ struct OldConfig {
 
 impl OldConfig {
     const STORAGE: Item<'static, Self> = Item::new("config");
+}
+
+impl Serialize for OldConfig {
+    fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        unimplemented!("Required by `cw_storage_plus::Item::load`'s trait bounds.")
+    }
 }
 
 pub fn migrate(
