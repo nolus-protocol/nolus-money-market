@@ -181,7 +181,7 @@ mod test {
             TheCurrency, DEFAULT_MIN_UTILIZATION,
         };
 
-        const LENDER: &'static str = "lender";
+        const LENDER: &str = "lender";
         const DEPOSIT: Amount = 100;
 
         fn test_case<F>(initial_lpp_balance: Amount, f: F)
@@ -445,7 +445,7 @@ mod test {
 
             let info = mock_info("lender1", &[cwcoin(deposit)]);
 
-            let result = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info);
+            let result = try_deposit::<TheCurrency>(deps.as_mut(), env, info);
 
             assert_eq!(result.is_err(), expect_error, "{result:#?}");
         }
