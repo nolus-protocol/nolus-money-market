@@ -26,6 +26,7 @@ mod migrate;
 mod rewards;
 
 // version info for migration info
+#[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
@@ -98,7 +99,16 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
             .map(|(label, ())| label)
         }
         #[cfg(not(feature = "migration"))]
-        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+        {
+            // Statically assert that the message is empty when doing a software-only update.
+            let MigrateMsg {}: MigrateMsg = msg;
+
+            versioning::update_software(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                Into::into,
+            )
+        }
     }
     .and_then(response::response)
 }
