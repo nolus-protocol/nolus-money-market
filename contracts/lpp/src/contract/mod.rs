@@ -195,7 +195,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
