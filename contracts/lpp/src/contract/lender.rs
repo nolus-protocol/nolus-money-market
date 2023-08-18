@@ -515,6 +515,11 @@ mod test {
                 false,
             );
         }
+
+        #[test]
+        fn test_uncapped() {
+            test_case(50, 0, 50, BoundToHundredPercent::ZERO, false);
+        }
     }
 
     fn cwcoin<A>(amount: A) -> CwCoin
