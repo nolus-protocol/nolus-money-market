@@ -204,7 +204,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::NewLeaseCode { lease_code_id } => {
             SingleUserAccess::new(
-                &mut *deps.storage,
+                deps.storage.deref_mut(),
                 crate::access_control::LEASE_CODE_ADMIN_KEY,
             )
             .check(&info.sender)?;
