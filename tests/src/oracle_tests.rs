@@ -69,6 +69,7 @@ fn create_test_case() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr> {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)

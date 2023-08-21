@@ -6,6 +6,8 @@ use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use currency::{error::Error as CurrencyError, Currency, SymbolOwned};
 
+use crate::percent::Units as PercentUnits;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
@@ -25,6 +27,14 @@ pub enum Error {
 
     #[error("[Finance] Expecting funds of '{0}' but found extra ones")]
     UnexpectedFunds(String),
+
+    #[error(
+        "[Finance] [Percent] Upper bound has been crossed! Upper bound is: {bound}, but got: {value}!"
+    )]
+    UpperBoundCrossed {
+        bound: PercentUnits,
+        value: PercentUnits,
+    },
 
     #[error("[Finance] [Std] {0}")]
     CosmWasmError(#[from] StdError),

@@ -1,11 +1,10 @@
-use std::ops::DerefMut;
+use std::ops::DerefMut as _;
 
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
-use currency::lpn::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
-use platform::response::{self};
+use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency};
+use platform::{message::Response as PlatformResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -22,13 +21,14 @@ use crate::{
 };
 
 mod borrow;
-mod config;
 mod lender;
+mod migrate;
 mod rewards;
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+#[cfg(feature = "migration")]
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -37,9 +37,9 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(mut self) -> Result<()>
+    fn do_work<Lpn>(mut self) -> Result<()>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
@@ -49,7 +49,7 @@ impl<'a> InstantiateWithLpn<'a> {
         )
         .grant_to(&self.msg.lease_code_admin)?;
 
-        LiquidityPool::<LPN>::store(self.deps.storage, self.msg.into())
+        LiquidityPool::<Lpn>::store(self.deps.storage, self.msg.into())
     }
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
@@ -63,11 +63,11 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     type Output = ();
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 
@@ -86,9 +86,33 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
-        .and_then(response::response)
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwResponse> {
+    {
+        #[cfg(feature = "migration")]
+        {
+            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                |storage: &mut dyn sdk::cosmwasm_std::Storage| {
+                    self::migrate::migrate(storage, msg.min_utilization)
+                },
+                Into::into,
+            )
+            .map(|(label, ())| label)
+        }
+        #[cfg(not(feature = "migration"))]
+        {
+            // Statically assert that the message is empty when doing a software-only update.
+            let MigrateMsg {}: MigrateMsg = msg;
+
+            versioning::update_software(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                Into::into,
+            )
+        }
+    }
+    .and_then(response::response)
 }
 
 struct ExecuteWithLpn<'a> {
@@ -99,9 +123,9 @@ struct ExecuteWithLpn<'a> {
 }
 
 impl<'a> ExecuteWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<CwResponse>
+    fn do_work<Lpn>(self) -> Result<CwResponse>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         match self.msg {
@@ -109,7 +133,7 @@ impl<'a> ExecuteWithLpn<'a> {
                 .try_into()
                 .map_err(Into::into)
                 .and_then(|amount_lpn| {
-                    borrow::try_open_loan::<LPN>(self.deps, self.env, self.info, amount_lpn)
+                    borrow::try_open_loan::<Lpn>(self.deps, self.env, self.info, amount_lpn)
                 })
                 .and_then(|(loan_resp, message_response)| {
                     response::response_with_messages::<_, _, ContractError>(
@@ -117,7 +141,7 @@ impl<'a> ExecuteWithLpn<'a> {
                         message_response,
                     )
                 }),
-            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<LPN>(
+            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<Lpn>(
                 self.deps, self.env, self.info,
             )
             .and_then(|(excess_amount, message_response)| {
@@ -126,10 +150,10 @@ impl<'a> ExecuteWithLpn<'a> {
                     message_response,
                 )
             }),
-            ExecuteMsg::Deposit() => lender::try_deposit::<LPN>(self.deps, self.env, self.info)
+            ExecuteMsg::Deposit() => lender::try_deposit::<Lpn>(self.deps, self.env, self.info)
                 .map(response::response_only_messages),
             ExecuteMsg::Burn { amount } => {
-                lender::try_withdraw::<LPN>(self.deps, self.env, self.info, amount)
+                lender::try_withdraw::<Lpn>(self.deps, self.env, self.info, amount)
                     .map(response::response_only_messages)
             }
             _ => {
@@ -161,17 +185,17 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     type Output = CwResponse;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -179,7 +203,14 @@ pub fn execute(
     // no currency context variants
     match msg {
         ExecuteMsg::NewLeaseCode { lease_code_id } => {
-            config::try_update_lease_code(deps, info, lease_code_id)
+            SingleUserAccess::new(
+                deps.storage.deref_mut(),
+                crate::access_control::LEASE_CODE_ADMIN_KEY,
+            )
+            .check(&info.sender)?;
+
+            Config::update_lease_code(deps.storage, lease_code_id)
+                .map(|()| PlatformResponse::default())
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DistributeRewards() => {
@@ -197,12 +228,15 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     // no currency context variants
     match msg {
-        SudoMsg::NewBorrowRate {
-            borrow_rate: interest_rate,
-        } => {
-            config::try_update_parameters(deps, interest_rate).map(response::response_only_messages)
+        SudoMsg::NewBorrowRate { borrow_rate } => {
+            Config::update_borrow_rate(deps.storage, borrow_rate)
+        }
+        SudoMsg::MinUtilization { min_utilization } => {
+            Config::update_min_utilization(deps.storage, min_utilization)
         }
     }
+    .map(|()| PlatformResponse::default())
+    .map(response::response_only_messages)
 }
 
 struct QueryWithLpn<'a> {
@@ -212,25 +246,28 @@ struct QueryWithLpn<'a> {
 }
 
 impl<'a> QueryWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<Binary>
+    fn do_work<Lpn>(self) -> Result<Binary>
     where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         let res = match self.msg {
             QueryMsg::Quote { amount } => {
                 let quote = amount.try_into()?;
 
-                to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
+                to_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
             }
             QueryMsg::Loan { lease_addr } => {
-                to_binary(&borrow::query_loan::<LPN>(self.deps.storage, lease_addr)?)
+                to_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
             }
             QueryMsg::LppBalance() => {
-                to_binary(&rewards::query_lpp_balance::<LPN>(self.deps, self.env)?)
+                to_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
             }
             QueryMsg::Price() => {
-                to_binary(&lender::query_ntoken_price::<LPN>(self.deps, self.env)?)
+                to_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
+            }
+            QueryMsg::DepositCapacity() => {
+                to_binary(&lender::deposit_capacity::<Lpn>(self.deps, self.env)?)
             }
             _ => unreachable!("Variants should have been exhausted!"),
         }?;
@@ -251,24 +288,24 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: 'static + Currency + DeserializeOwned + Serialize,
     {
-        self.do_work::<LPN>()
+        self.do_work::<Lpn>()
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
-    let res = match msg {
-        QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
-        QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,
-        QueryMsg::Rewards { address } => {
-            to_binary(&rewards::query_rewards(deps.storage, address)?)?
+    match msg {
+        QueryMsg::Config() => to_binary(&Config::load(deps.storage)?).map_err(Into::into),
+        QueryMsg::Balance { address } => {
+            to_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
         }
-        _ => QueryWithLpn::cmd(deps, env, msg)?,
-    };
-
-    Ok(res)
+        QueryMsg::Rewards { address } => {
+            to_binary(&rewards::query_rewards(deps.storage, address)?).map_err(Into::into)
+        }
+        _ => QueryWithLpn::cmd(deps, env, msg),
+    }
 }

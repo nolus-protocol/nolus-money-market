@@ -58,14 +58,14 @@ impl Deposit {
         Ok(result)
     }
 
-    pub fn deposit<LPN>(
+    pub fn deposit<Lpn>(
         &mut self,
         storage: &mut dyn Storage,
-        amount_lpn: Coin<LPN>,
-        price: NTokenPrice<LPN>,
+        amount_lpn: Coin<Lpn>,
+        price: NTokenPrice<Lpn>,
     ) -> Result<Coin<NLpn>>
     where
-        LPN: Currency + Serialize + DeserializeOwned,
+        Lpn: Currency + Serialize + DeserializeOwned,
     {
         if amount_lpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);

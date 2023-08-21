@@ -21,6 +21,7 @@ fn on_alarm_zero_reward() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(Some(
@@ -75,6 +76,7 @@ fn on_alarm() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(Some(
@@ -307,6 +309,7 @@ fn new_test_case() -> TestCase<Addr, Addr, (), (), Addr, Addr, Addr> {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
         .init_time_alarms()

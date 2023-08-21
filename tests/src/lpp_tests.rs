@@ -59,9 +59,15 @@ fn general_interest_rate(
 fn config_update_parameters() {
     let app_balance = 10_000_000_000u128;
 
-    let base_interest_rate = Percent::from_percent(21);
-    let addon_optimal_interest_rate = Percent::from_percent(20);
-    let utilization_optimal = Percent::from_percent(55);
+    let base_interest_rate = Percent::from_permille(210);
+    let addon_optimal_interest_rate = Percent::from_permille(200);
+    let utilization_optimal = Percent::from_permille(550);
+    let min_utilization = Percent::from_permille(500).try_into().unwrap();
+
+    assert_ne!(base_interest_rate, BASE_INTEREST_RATE);
+    assert_ne!(addon_optimal_interest_rate, ADDON_OPTIMAL_INTEREST_RATE);
+    assert_ne!(utilization_optimal, UTILIZATION_OPTIMAL);
+    assert_ne!(min_utilization, TestCase::DEFAULT_LPP_MIN_UTILIZATION);
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
@@ -72,6 +78,7 @@ fn config_update_parameters() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .into_generic();
 
@@ -97,6 +104,21 @@ fn config_update_parameters() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
     );
 
+    let response: AppResponse = test_case
+        .app
+        .sudo(
+            test_case.address_book.lpp().clone(),
+            &SudoMsg::MinUtilization { min_utilization },
+        )
+        .unwrap()
+        .unwrap_response();
+
+    assert!(response.data.is_none());
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
+    );
+
     let quote: Config = test_case
         .app
         .query()
@@ -112,6 +134,7 @@ fn config_update_parameters() {
         quote.borrow_rate().addon_optimal_interest_rate(),
         addon_optimal_interest_rate
     );
+    assert_eq!(quote.min_utilization(), min_utilization);
 }
 
 #[test]
@@ -123,6 +146,7 @@ fn open_loan_unauthorized_contract_id() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -154,6 +178,7 @@ fn open_loan_no_liquidity() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -206,6 +231,7 @@ fn deposit_and_withdraw() {
                 BASE_INTEREST_RATE,
                 UTILIZATION_OPTIMAL,
                 ADDON_OPTIMAL_INTEREST_RATE,
+                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             )
             .init_time_alarms()
             .init_oracle(None)
@@ -488,6 +514,7 @@ fn loan_open_wrong_id() {
                 BASE_INTEREST_RATE,
                 UTILIZATION_OPTIMAL,
                 ADDON_OPTIMAL_INTEREST_RATE,
+                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
             )
             .into_generic();
 
@@ -555,6 +582,7 @@ fn loan_open_and_repay() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
@@ -911,6 +939,7 @@ fn compare_lpp_states() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
@@ -1258,6 +1287,7 @@ fn test_rewards() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .into_generic();
 

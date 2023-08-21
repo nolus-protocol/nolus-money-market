@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::Percent,
+    percent::{bound::BoundToHundredPercent, Percent},
     price::Price,
 };
 use sdk::{
@@ -20,10 +20,18 @@ pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
     pub borrow_rate: InterestRate,
+    pub min_utilization: BoundToHundredPercent,
 }
 
+#[cfg(not(feature = "migration"))]
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}
+
+#[cfg(feature = "migration")]
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {
+    pub min_utilization: BoundToHundredPercent,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
@@ -46,7 +54,12 @@ pub enum ExecuteMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    NewBorrowRate { borrow_rate: InterestRate },
+    NewBorrowRate {
+        borrow_rate: InterestRate,
+    },
+    MinUtilization {
+        min_utilization: BoundToHundredPercent,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
@@ -67,6 +80,7 @@ pub enum QueryMsg {
     },
     LppBalance(),
     Price(),
+    DepositCapacity(),
 
     Rewards {
         address: Addr,
@@ -93,18 +107,18 @@ pub struct BalanceResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
-pub struct PriceResponse<LPN>(pub Price<NLpn, LPN>)
+pub struct PriceResponse<Lpn>(pub Price<NLpn, Lpn>)
 where
-    LPN: 'static + Currency;
+    Lpn: 'static + Currency;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
-pub struct LppBalanceResponse<LPN>
+pub struct LppBalanceResponse<Lpn>
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
-    pub balance: Coin<LPN>,
-    pub total_principal_due: Coin<LPN>,
-    pub total_interest_due: Coin<LPN>,
+    pub balance: Coin<Lpn>,
+    pub total_principal_due: Coin<Lpn>,
+    pub total_interest_due: Coin<Lpn>,
     pub balance_nlpn: Coin<NLpn>,
 }
 
