@@ -26,27 +26,27 @@ where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lender_addr = info.sender;
-    let amount = bank::received_one(info.funds)?;
+    let pending_deposit = bank::received_one(info.funds)?;
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
     if lpp
-        .deposit_capacity(&deps.querier, &env, amount)?
-        .map(|limit| amount > limit)
+        .deposit_capacity(&deps.querier, &env, pending_deposit)?
+        .map(|capacity| pending_deposit > capacity)
         .unwrap_or_default()
     {
         return Err(ContractError::UtilizationBelowMinimalRates);
     }
 
-    let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
+    let price = lpp.calculate_price(&deps.as_ref(), &env, pending_deposit)?;
 
     let receipts = Deposit::load_or_default(deps.storage, lender_addr.clone())?.deposit(
         deps.storage,
-        amount,
+        pending_deposit,
         price,
     )?;
 
-    Ok(event::emit_deposit(env, lender_addr, amount, receipts).into())
+    Ok(event::emit_deposit(env, lender_addr, pending_deposit, receipts).into())
 }
 
 pub(super) fn deposit_capacity<Lpn>(deps: Deps<'_>, env: Env) -> Result<Option<Coin<Lpn>>>
