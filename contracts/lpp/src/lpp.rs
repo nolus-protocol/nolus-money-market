@@ -7,6 +7,7 @@ use finance::{
     percent::{Percent, Units},
     price::{self, Price},
     ratio::Rational,
+    zero::Zero,
 };
 use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
@@ -89,24 +90,18 @@ where
         } else {
             let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
 
-            self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
-                .map(|mut total_lpn: Coin<Lpn>| {
-                    debug_assert!(
-                        pending_deposit <= total_lpn,
-                        "Pending deposit {{{pending_deposit}}} > Total LPN: {{{total_lpn}}}!"
-                    );
-
-                    total_lpn -= pending_deposit;
-
-                    if min_utilization
-                        < self.utilization_with_total_and_due(total_lpn, total_lpn_due)
+            self.commited_balance(&env.contract.address, querier, pending_deposit)
+                .map(|balance: Coin<Lpn>| {
+                    if self.utilization_with_total_and_due(balance, total_lpn_due) > min_utilization
                     {
+                        // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
                         Fraction::<Units>::of(
                             &Rational::new(Percent::HUNDRED, min_utilization),
                             total_lpn_due,
-                        ) - total_lpn
+                        ) - balance
+                            - total_lpn_due
                     } else {
-                        Coin::default()
+                        Coin::ZERO
                     }
                 })
                 .map(Some)
@@ -134,14 +129,19 @@ where
         &self,
         deps: &Deps<'_>,
         env: &Env,
-        received: Coin<Lpn>,
+        pending_deposit: Coin<Lpn>,
     ) -> Result<NTokenPrice<Lpn>> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
             Config::initial_derivative_price()
         } else {
-            price::total_of(balance_nlpn).is(self.total_lpn(&deps.querier, env)? - received)
+            price::total_of(balance_nlpn).is(self.total_lpn(
+                &deps.querier,
+                &env.contract.address,
+                env.block.time,
+                pending_deposit,
+            )?)
         };
 
         debug_assert!(
@@ -163,7 +163,7 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::new(0))?.get();
+        let price = self.calculate_price(deps, env, Coin::ZERO)?.get();
         let amount_lpn = price::total(amount_nlpn, price);
 
         if self.balance(&env.contract.address, &deps.querier)? < amount_lpn {
@@ -265,6 +265,30 @@ where
     }
 
     fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
+        self.uncommited_balance(account, querier)
+    }
+
+    fn commited_balance(
+        &self,
+        account: &Addr,
+        querier: &QuerierWrapper<'_>,
+        pending_deposit: Coin<Lpn>,
+    ) -> Result<Coin<Lpn>> {
+        self.uncommited_balance(account, querier)
+            .map(|balance: Coin<Lpn>| {
+                debug_assert!(
+                    pending_deposit <= balance,
+                    "Pending deposit {{{pending_deposit}}} > Current Balance: {{{balance}}}!"
+                );
+                balance - pending_deposit
+            })
+    }
+
+    fn uncommited_balance(
+        &self,
+        account: &Addr,
+        querier: &QuerierWrapper<'_>,
+    ) -> Result<Coin<Lpn>> {
         bank::balance(account, querier).map_err(Into::into)
     }
 
@@ -272,30 +296,22 @@ where
         self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
     }
 
-    fn total_lpn(&self, querier: &QuerierWrapper<'_>, env: &Env) -> Result<Coin<Lpn>> {
-        self.balance(&env.contract.address, querier)
-            .map(|balance: Coin<Lpn>| balance + self.total_lpn_due(env.block.time))
-    }
-
-    fn total_lpn_with_due(
+    fn total_lpn(
         &self,
         querier: &QuerierWrapper<'_>,
         account: &Addr,
-        total_lpn_due: Coin<Lpn>,
+        now: Timestamp,
+        pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
-        self.balance(account, querier)
-            .map(|balance: Coin<Lpn>| balance + total_lpn_due)
+        self.commited_balance(account, querier, pending_deposit)
+            .map(|balance: Coin<Lpn>| balance + self.total_lpn_due(now))
     }
 
-    fn utilization_with_total_and_due(
-        &self,
-        total_lpn: Coin<Lpn>,
-        total_lpn_due: Coin<Lpn>,
-    ) -> Percent {
-        if total_lpn.is_zero() {
+    fn utilization_with_total_and_due(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
+        if balance.is_zero() {
             Percent::HUNDRED
         } else {
-            Percent::from_ratio(total_lpn_due, total_lpn)
+            Percent::from_ratio(total_due, total_due + balance)
         }
     }
 }
@@ -309,6 +325,7 @@ mod test {
         duration::Duration,
         percent::{bound::BoundToHundredPercent, Percent},
         price::{self, Price},
+        zero::Zero,
     };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
@@ -815,7 +832,12 @@ mod test {
         env.block.time = Timestamp::from_nanos(Duration::YEAR.nanos());
 
         let total_lpn = lpp
-            .total_lpn(&deps.as_ref().querier, &env)
+            .total_lpn(
+                &deps.as_ref().querier,
+                &env.contract.address,
+                env.block.time,
+                Coin::ZERO,
+            )
             .expect("should query total_lpn");
         assert_eq!(total_lpn, 11_100_000u128.into());
 
@@ -846,7 +868,12 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
         let total_lpn = lpp
-            .total_lpn(&deps.as_ref().querier, &env)
+            .total_lpn(
+                &deps.as_ref().querier,
+                &env.contract.address,
+                env.block.time,
+                Coin::ZERO,
+            )
             .expect("should query total_lpn");
         assert_eq!(total_lpn, 11_100_000u128.into());
 
