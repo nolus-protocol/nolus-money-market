@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
-use finance::coin::Coin;
+use finance::{coin::Coin, zero::Zero};
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -31,7 +31,7 @@ where
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
     if lpp
-        .deposit_capacity(&deps.querier, &env, Some(amount))?
+        .deposit_capacity(&deps.querier, &env, amount)?
         .map(|limit| amount > limit)
         .unwrap_or_default()
     {
@@ -54,7 +54,7 @@ where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage)
-        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(&deps.querier, &env, None))
+        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(&deps.querier, &env, Coin::ZERO))
 }
 
 pub(super) fn try_withdraw<Lpn>(

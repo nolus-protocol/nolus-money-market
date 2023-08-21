@@ -80,7 +80,7 @@ where
         &self,
         querier: &QuerierWrapper<'_>,
         env: &Env,
-        pending_deposit: Option<Coin<Lpn>>,
+        pending_deposit: Coin<Lpn>,
     ) -> Result<Option<Coin<Lpn>>> {
         let min_utilization: Percent = self.config.min_utilization().percent();
 
@@ -91,14 +91,12 @@ where
 
             self.total_lpn_with_due(querier, &env.contract.address, total_lpn_due)
                 .map(|mut total_lpn: Coin<Lpn>| {
-                    if let Some(pending_deposit) = pending_deposit {
-                        debug_assert!(
-                            pending_deposit <= total_lpn,
-                            "Pending deposit {{{pending_deposit}}} > Total LPN: {{{total_lpn}}}!"
-                        );
+                    debug_assert!(
+                        pending_deposit <= total_lpn,
+                        "Pending deposit {{{pending_deposit}}} > Total LPN: {{{total_lpn}}}!"
+                    );
 
-                        total_lpn -= pending_deposit;
-                    }
+                    total_lpn -= pending_deposit;
 
                     if min_utilization
                         < self.utilization_with_total_and_due(total_lpn, total_lpn_due)
@@ -885,8 +883,9 @@ mod test {
     mod min_utilization {
         use currency::Currency as _;
         use finance::{
-            coin::Amount,
+            coin::{Amount, Coin},
             percent::{bound::BoundToHundredPercent, Percent},
+            zero::Zero,
         };
         use sdk::cosmwasm_std::{
             testing::{mock_env, MockQuerier},
@@ -932,7 +931,7 @@ mod test {
             let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
 
             assert_eq!(
-                lpp.deposit_capacity(&mock_querier, &mock_env, None)
+                lpp.deposit_capacity(&mock_querier, &mock_env, Coin::ZERO)
                     .unwrap(),
                 expected_limit.map(Into::into)
             );
