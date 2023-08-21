@@ -15,11 +15,14 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Times
 use crate::{
     error::{ContractError, Result},
     loan::Loan,
-    msg::{LoanResponse, LppBalanceResponse, PriceResponse},
+    msg::{LppBalanceResponse, PriceResponse},
     nlpn::NLpn,
     state::{Config, Deposit, Total},
 };
 
+// TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
+// and LiquidityPool and Loan. The contract API implementation should depend on
+// Deposit and Loan which in turn may use LiquidityPool.
 pub struct NTokenPrice<Lpn>
 where
     Lpn: 'static + Currency + Serialize + DeserializeOwned,
@@ -196,14 +199,6 @@ where
         )))
     }
 
-    pub(crate) fn query_loan(
-        &self,
-        storage: &dyn Storage,
-        lease_addr: Addr,
-    ) -> Result<Option<LoanResponse<Lpn>>> {
-        Loan::query(storage, lease_addr)
-    }
-
     pub(super) fn try_open_loan(
         &mut self,
         deps: &mut DepsMut<'_>,
@@ -335,6 +330,7 @@ mod test {
     use crate::{
         borrow::InterestRate,
         error::ContractError,
+        loan::Loan,
         nlpn::NLpn,
         state::{Config, Deposit, Total},
     };
@@ -502,8 +498,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         // doesn't exist
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, lease_addr.clone())
+        let loan_response = Loan::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan");
         assert_eq!(loan_response, None);
 
@@ -519,8 +514,7 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
-        let loan = lpp
-            .query_loan(deps.as_ref().storage, lease_addr.clone())
+        let loan = Loan::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -541,8 +535,7 @@ mod test {
 
         assert_eq!(repay, 0u128.into());
 
-        let loan = lpp
-            .query_loan(deps.as_ref().storage, lease_addr.clone())
+        let loan = Loan::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -559,8 +552,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(10 + 2 * Duration::YEAR.nanos() / 10);
 
         // pay everything + excess
-        let payment = lpp
-            .query_loan(deps.as_ref().storage, lease_addr.clone())
+        let payment = Loan::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query the loan")
             .expect("should exist")
             .interest_due(env.block.time)
@@ -676,8 +668,7 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let loan_before = lpp
-            .query_loan(deps.as_ref().storage, loan.clone())
+        let loan_before = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -685,8 +676,7 @@ mod test {
         lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
             .expect("can't repay loan");
 
-        let loan_after = lpp
-            .query_loan(deps.as_ref().storage, loan)
+        let loan_after = Loan::query(deps.as_ref().storage, loan)
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -734,8 +724,7 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let payment = lpp
-            .query_loan(deps.as_ref().storage, loan.clone())
+        let payment = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
             .interest_due(env.block.time);
@@ -748,9 +737,8 @@ mod test {
         assert_eq!(repay, 0u128.into());
 
         // Should be closed
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, loan)
-            .expect("can't query loan");
+        let loan_response =
+            Loan::<TheCurrency>::query(deps.as_ref().storage, loan).expect("can't query loan");
         assert_eq!(loan_response, None);
     }
 

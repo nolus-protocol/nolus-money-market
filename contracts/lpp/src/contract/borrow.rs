@@ -11,6 +11,7 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
     error::Result,
+    loan::Loan,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
@@ -83,5 +84,5 @@ pub fn query_loan<Lpn>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryL
 where
     Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
-    LiquidityPool::<Lpn>::load(storage)?.query_loan(storage, lease_addr)
+    Loan::query(storage, lease_addr)
 }
