@@ -88,18 +88,17 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_lpn_due: Coin<Lpn> = self.total_lpn_due(env.block.time);
+            let total_due: Coin<Lpn> = self.total_due(env.block.time);
 
             self.commited_balance(&env.contract.address, querier, pending_deposit)
                 .map(|balance: Coin<Lpn>| {
-                    if self.utilization_with_total_and_due(balance, total_lpn_due) > min_utilization
-                    {
+                    if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
                         Fraction::<Units>::of(
                             &Rational::new(Percent::HUNDRED, min_utilization),
-                            total_lpn_due,
+                            total_due,
                         ) - balance
-                            - total_lpn_due
+                            - total_due
                     } else {
                         Coin::ZERO
                     }
@@ -292,7 +291,7 @@ where
         bank::balance(account, querier).map_err(Into::into)
     }
 
-    fn total_lpn_due(&self, now: Timestamp) -> Coin<Lpn> {
+    fn total_due(&self, now: Timestamp) -> Coin<Lpn> {
         self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
     }
 
@@ -304,10 +303,10 @@ where
         pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
         self.commited_balance(account, querier, pending_deposit)
-            .map(|balance: Coin<Lpn>| balance + self.total_lpn_due(now))
+            .map(|balance: Coin<Lpn>| balance + self.total_due(now))
     }
 
-    fn utilization_with_total_and_due(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
+    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
         if balance.is_zero() {
             Percent::HUNDRED
         } else {
