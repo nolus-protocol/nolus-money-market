@@ -43,7 +43,7 @@ pub struct Liability<Lpn> {
     max: Percent,
     /// The minimum amount that triggers a liquidation
     min_liquidation: Coin<Lpn>,
-    //  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    ///  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
     min_asset: Coin<Lpn>,
     /// At what time cadence to recalculate the liability
     ///

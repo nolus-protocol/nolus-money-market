@@ -133,16 +133,10 @@ where
     fn try_from(dto: &LiabilityDTO) -> Result<Self> {
         let liability_dto = dto.clone();
 
-        let min_liq_asset_result =
-            liability_dto
-                .min_liquidation
-                .try_into()
-                .and_then(|min_liq| {
-                    liability_dto
-                        .min_asset
-                        .try_into()
-                        .map(|min_asset| (min_liq, min_asset))
-                })?;
+        let min_liq = liability_dto.min_liquidation.try_into()?;
+        let min_asset = liability_dto.min_asset.try_into()?;
+
+        let min_liq_asset_result = (min_liq, min_asset);
 
         Ok(Self {
             initial: dto.initial,
@@ -170,8 +164,8 @@ where
             second_liq_warn: value.second_liq_warn,
             third_liq_warn: value.third_liq_warn,
             max: value.max,
-            min_liquidation: CoinDTO::from(value.min_liquidation),
-            min_asset: CoinDTO::from(value.min_asset),
+            min_liquidation: value.min_liquidation.into(),
+            min_asset: value.min_asset.into(),
             recalc_time: value.recalc_time,
         }
     }
