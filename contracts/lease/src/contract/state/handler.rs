@@ -16,6 +16,8 @@ pub(crate) trait Handler
 where
     Self: Sized,
 {
+    const IS_FINISHED: bool;
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {

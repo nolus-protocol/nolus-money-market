@@ -89,6 +89,8 @@ impl RequestLoan {
 }
 
 impl Handler for RequestLoan {
+    const IS_FINISHED: bool = false;
+
     fn state(
         self,
         _now: Timestamp,

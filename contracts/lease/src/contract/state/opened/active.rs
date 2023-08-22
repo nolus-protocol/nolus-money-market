@@ -1,4 +1,3 @@
-use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
@@ -9,6 +8,7 @@ use platform::{
     batch::{Batch, Emitter},
     message::Response as MessageResponse,
 };
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -335,6 +335,8 @@ fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) 
 }
 
 impl Handler for Active {
+    const IS_FINISHED: bool = false;
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         super::lease_state(self.lease.lease, None, now, querier)
     }

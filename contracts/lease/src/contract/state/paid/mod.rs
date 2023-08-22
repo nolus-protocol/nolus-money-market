@@ -23,6 +23,8 @@ impl Active {
 }
 
 impl Handler for Active {
+    const IS_FINISHED: bool = false;
+
     fn state(
         self,
         _now: Timestamp,

@@ -86,6 +86,10 @@ where
         self.handler.heal(deps, env).into()
     }
 
+    fn is_finished(&self) -> bool {
+        false
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
     }

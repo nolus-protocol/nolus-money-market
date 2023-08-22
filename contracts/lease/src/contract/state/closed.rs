@@ -38,6 +38,8 @@ impl Closed {
 }
 
 impl Handler for Closed {
+    const IS_FINISHED: bool = true;
+
     fn state(
         self,
         _now: Timestamp,

@@ -10,6 +10,8 @@ use super::{Handler, Response};
 pub struct Liquidated {}
 
 impl Handler for Liquidated {
+    const IS_FINISHED: bool = true;
+
     fn state(
         self,
         _now: Timestamp,

@@ -22,6 +22,10 @@ impl<H> Contract for State<H>
 where
     H: LeaseHandler,
 {
+    fn is_finished(&self) -> bool {
+        H::IS_FINISHED
+    }
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
     }

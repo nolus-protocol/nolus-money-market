@@ -72,6 +72,8 @@ where
         err("heal")
     }
 
+    fn is_finished(&self) -> bool;
+
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
