@@ -131,7 +131,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             QueryMsg::State {} => state
                 .state(env.block.time, &deps.querier)
                 .and_then(|resp| to_binary(&resp).map_err(Into::into)),
-            QueryMsg::IsClosed {} => to_binary(&matches!(
+            QueryMsg::Finished {} => to_binary(&matches!(
                 state,
                 State::Closed { .. } | State::Liquidated { .. },
             ))

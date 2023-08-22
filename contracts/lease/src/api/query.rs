@@ -12,7 +12,7 @@ use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     State {},
-    IsClosed {},
+    Finished {},
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
