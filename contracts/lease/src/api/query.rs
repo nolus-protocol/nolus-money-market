@@ -9,7 +9,7 @@ use sdk::{
 use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     State {},
     IsClosed {},
@@ -17,7 +17,7 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum StateResponse {
     Opening {
         downpayment: DownpaymentCoin,
@@ -52,7 +52,7 @@ pub mod opening {
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-    #[serde(rename_all = "snake_case")]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
         OpenIcaAccount,
         TransferOut { ica_account: String },
@@ -69,7 +69,7 @@ pub mod opened {
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-    #[serde(rename_all = "snake_case")]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
         Repayment {
             payment: PaymentCoin,
@@ -83,7 +83,7 @@ pub mod opened {
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-    #[serde(rename_all = "snake_case")]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum RepayTrx {
         TransferOut,
         Swap,
@@ -93,7 +93,7 @@ pub mod opened {
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-    #[serde(rename_all = "snake_case")]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum LiquidateTrx {
         Swap,
         TransferInInit,
@@ -108,7 +108,7 @@ pub mod paid {
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
-    #[serde(rename_all = "snake_case")]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum ClosingTrx {
         TransferInInit,
         TransferInFinish,
