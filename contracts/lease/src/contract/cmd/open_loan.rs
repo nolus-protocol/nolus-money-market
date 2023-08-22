@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub struct OpenLoanReq<'a> {
-    liability: &'a LiabilityDTO,
+    liability: LiabilityDTO,
     funds_in: Vec<CwCoin>,
     max_ltd: Option<Percent>,
     oracle: OracleRef,
@@ -28,7 +28,7 @@ pub struct OpenLoanReq<'a> {
 
 impl<'a> OpenLoanReq<'a> {
     pub fn new(
-        liability: &'a LiabilityDTO,
+        liability: LiabilityDTO,
         funds_in: Vec<CwCoin>,
         max_ltd: Option<Percent>,
         oracle: OracleRef,

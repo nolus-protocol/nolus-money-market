@@ -120,21 +120,8 @@ where
     type Error = Error;
 
     fn try_from(dto: LiabilityDTO) -> Result<Self> {
-        Self::try_from(&dto)
-    }
-}
-
-impl<Lpn> TryFrom<&LiabilityDTO> for Liability<Lpn>
-where
-    Lpn: Currency,
-{
-    type Error = Error;
-
-    fn try_from(dto: &LiabilityDTO) -> Result<Self> {
-        let liability_dto = dto.clone();
-
-        let min_liq = liability_dto.min_liquidation.try_into()?;
-        let min_asset = liability_dto.min_asset.try_into()?;
+        let min_liq = dto.min_liquidation.try_into()?;
+        let min_asset = dto.min_asset.try_into()?;
 
         let min_liq_asset_result = (min_liq, min_asset);
 
