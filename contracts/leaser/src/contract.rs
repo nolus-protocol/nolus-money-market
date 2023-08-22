@@ -91,11 +91,10 @@ pub fn execute(
                 leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)
             })
             .map(response::response_only_messages),
-        ExecuteMsg::PurgeLeases {
-            max_leases,
-            key,
-        } => Leases::purge_closed(deps.storage, &deps.querier, max_leases, key)
-            .and_then(|next_key: Option<Addr>| response::response(&next_key)),
+        ExecuteMsg::PurgeLeases { max_leases, key } => {
+            Leases::purge_closed(deps.storage, &deps.querier, max_leases, key)
+                .and_then(|next_key: Option<Addr>| response::response(&next_key))
+        }
     }
 }
 

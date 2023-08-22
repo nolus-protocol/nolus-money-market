@@ -131,8 +131,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             QueryMsg::State {} => state
                 .state(env.block.time, &deps.querier)
                 .and_then(|resp| to_binary(&resp).map_err(Into::into)),
-            QueryMsg::Finished {} => to_binary(&state.is_finished())
-            .map_err(Into::into),
+            QueryMsg::Finished {} => to_binary(&state.is_finished()).map_err(Into::into),
         })
         .or_else(|err| log_error(err, deps.api))
 }

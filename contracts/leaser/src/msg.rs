@@ -58,14 +58,14 @@ pub enum ExecuteMsg {
     /// and emits the status as specified in `MigrateLeases`.
     MigrateLeasesCont { key: Addr, max_leases: MaxLeases },
     /// Performs manual clean up of the stored list of lease contracts.
-    /// 
+    ///
     /// When the purge is incomplete, there are more leases but the
     /// maximum amount is already exhausted, the result is a continuation
     /// key.
     PurgeLeases {
         /// When specified, defines the customer's address starting from
         /// which the purge should be performed.
-        /// 
+        ///
         /// This is used as continuation mechanism. It can be specified to
         /// any arbitrary address but the execution outcome is undefined.
         key: Option<Addr>,
