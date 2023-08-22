@@ -79,7 +79,7 @@ impl Leases {
         storage: &mut dyn Storage,
         querier: &QuerierWrapper<'_>,
         max_leases: MaxLeases,
-        mut next_key: Option<Addr>,
+        mut key: Option<Addr>,
     ) -> ContractResult<Option<Addr>> {
         let mut max_leases: usize = usize::try_from(max_leases)?;
 
@@ -87,7 +87,7 @@ impl Leases {
             let mut entries_iter: Box<dyn Iterator<Item = StdResult<(Addr, Vec<Addr>)>>> =
                 Self::STORAGE.range(
                     storage,
-                    next_key.take().map(Bound::exclusive),
+                    key.take().map(Bound::exclusive),
                     None,
                     Order::Ascending,
                 );
@@ -104,14 +104,14 @@ impl Leases {
                 }
             }
 
-            next_key = Some(customer);
+            key = Some(customer);
 
             if max_leases == 0 {
                 break;
             }
         }
 
-        Ok(next_key)
+        Ok(key)
     }
 
     pub fn iter(
@@ -149,7 +149,7 @@ impl Leases {
                     // Call requires `Into<String>`. Explicit
                     // `clone` call to prevent hidden control-flow.
                     leases[index].clone(),
-                    &::lease::api::QueryMsg::IsClosed {},
+                    &::lease::api::QueryMsg::Finished {},
                 )
                 .map(|is_closed: bool| {
                     if is_closed {
@@ -269,7 +269,7 @@ mod test_purge_closed {
 
         querier.update_wasm(move |query: &WasmQuery| {
             if let WasmQuery::Smart { contract_addr, msg } = query {
-                if let Ok(::lease::api::QueryMsg::IsClosed {}) = from_binary(msg) {
+                if let Ok(::lease::api::QueryMsg::Finished {}) = from_binary(msg) {
                     return Ok(to_binary(&contract_addr.contains(CLOSED_SUFFIX)).into()).into();
                 }
             }
