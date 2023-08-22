@@ -384,6 +384,7 @@ mod test_purge_closed {
 
     #[test]
     fn test_purge_closed() {
+        /// ({Lease count}, {Some => Close every N-th}, {Expected lease count left after purge})
         const CUSTOMER_LEASES_CONFIG: [(usize, Option<usize>, usize); 3] =
             [(10, None, 10), (20, Some(2), 10), (10, Some(1), 0)];
         const _: () = {
