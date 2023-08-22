@@ -270,13 +270,11 @@ mod test_purge_closed {
         querier.update_wasm(move |query: &WasmQuery| {
             if let WasmQuery::Smart { contract_addr, msg } = query {
                 if let Ok(::lease::api::QueryMsg::IsClosed {}) = from_binary(msg) {
-                    Ok(to_binary(&contract_addr.contains(CLOSED_SUFFIX)).into()).into()
-                } else {
-                    unimplemented!()
+                    return Ok(to_binary(&contract_addr.contains(CLOSED_SUFFIX)).into()).into();
                 }
-            } else {
-                unimplemented!();
             }
+
+            unimplemented!();
         });
 
         querier
