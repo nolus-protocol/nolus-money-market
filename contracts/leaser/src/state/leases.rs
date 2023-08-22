@@ -137,7 +137,7 @@ impl Leases {
         // Iterating in reverse order to prevent bugs
         // causing out-of-bounds indexing and skipping
         // over elements which haven't been checked.
-        let mut iter: _ = (0..leases.len()).rev().take(*max_leases);
+        let mut iter = (0..leases.len()).rev().take(*max_leases);
 
         *max_leases = max_leases.saturating_sub(leases.len());
 
