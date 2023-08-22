@@ -223,7 +223,7 @@ fn try_partial_liquidation(
     time_alarms: TimeAlarmsRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
-) -> Result<platform::state_machine::Response<crate::contract::state::State>, ContractError> {
+) -> ContractResult<Response> {
     let price_alarms = lease.lease.oracle.clone();
     let liquidation_asset = liquidation.amount(&lease.lease).clone();
     let PartialLiquidationResult {
@@ -274,7 +274,7 @@ fn try_full_liquidation(
     time_alarms: TimeAlarmsRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
-) -> Result<platform::state_machine::Response<crate::contract::state::State>, ContractError> {
+) -> ContractResult<Response> {
     let FullLiquidationResult {
         lease: lease_updated,
         receipt,
