@@ -101,30 +101,26 @@ impl Active {
         env: &Env,
     ) -> ContractResult<Response> {
         let profit = lease.lease.loan.profit().clone();
-        let time_alarms = lease.lease.time_alarms.clone();
 
         match liquidation {
             LiquidationDTO::Partial {
                 amount: _,
                 cause: _,
-            } => try_partial_liquidation(
-                lease,
-                liquidation,
-                liquidation_lpn,
-                profit,
-                time_alarms,
-                env,
-                querier,
-            ),
-            LiquidationDTO::Full(_) => try_full_liquidation(
-                lease,
-                liquidation,
-                liquidation_lpn,
-                profit,
-                time_alarms,
-                env,
-                querier,
-            ),
+            } => {
+                let time_alarms = lease.lease.time_alarms.clone();
+                try_partial_liquidation(
+                    lease,
+                    liquidation,
+                    liquidation_lpn,
+                    profit,
+                    time_alarms,
+                    env,
+                    querier,
+                )
+            }
+            LiquidationDTO::Full(_) => {
+                try_full_liquidation(lease, liquidation, liquidation_lpn, profit, env, querier)
+            }
         }
     }
 
@@ -276,7 +272,6 @@ fn try_full_liquidation(
     liquidation: LiquidationDTO,
     liquidation_lpn: LpnCoin,
     profit: ProfitRef,
-    time_alarms: TimeAlarmsRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
@@ -292,7 +287,6 @@ fn try_full_liquidation(
         liquidation_lpn,
         env.block.time,
         profit,
-        time_alarms,
         querier,
     )?;
     let liquidate_response = MessageResponse::messages_with_events(

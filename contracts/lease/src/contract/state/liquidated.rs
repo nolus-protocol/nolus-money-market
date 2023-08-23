@@ -4,7 +4,6 @@ use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Addr, Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseCoin, LpnCoin, StateResponse},
@@ -28,12 +27,11 @@ impl Liquidated {
         liquidation_lpn: LpnCoin,
         now: Timestamp,
         profit: ProfitRef,
-        time_alarms: TimeAlarmsRef,
         querier: &QuerierWrapper<'_>,
     ) -> ContractResult<FullLiquidationResult> {
         lease::with_lease::execute(
             lease,
-            FullLiquidation::new(liquidation_lpn, now, profit, time_alarms),
+            FullLiquidation::new(liquidation_lpn, now, profit),
             querier,
         )
     }
