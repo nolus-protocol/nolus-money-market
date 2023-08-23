@@ -120,11 +120,6 @@ where
     type Error = Error;
 
     fn try_from(dto: LiabilityDTO) -> Result<Self> {
-        let min_liq = dto.min_liquidation.try_into()?;
-        let min_asset = dto.min_asset.try_into()?;
-
-        let min_liq_asset_result = (min_liq, min_asset);
-
         Ok(Self {
             initial: dto.initial,
             healthy: dto.healthy,
@@ -132,8 +127,8 @@ where
             second_liq_warn: dto.second_liq_warn,
             third_liq_warn: dto.third_liq_warn,
             max: dto.max,
-            min_liquidation: min_liq_asset_result.0,
-            min_asset: min_liq_asset_result.1,
+            min_liquidation: dto.min_liquidation.try_into()?,
+            min_asset: dto.min_asset.try_into()?,
             recalc_time: dto.recalc_time,
         })
     }
