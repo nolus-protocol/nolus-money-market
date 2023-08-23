@@ -10,15 +10,24 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
+    lease::{with_lease::WithLease, Lease},
 };
 
 use super::ReceiptDTO;
 
 pub(crate) struct LiquidateResult {
-    pub lease: LeaseDTO,
     pub receipt: ReceiptDTO,
     pub messages: Batch,
+}
+
+impl LiquidateResult {
+    fn new(receipt: ReceiptDTO, messages: Batch) -> Self {
+        debug_assert!(
+            receipt.close,
+            "The full-liquidation payment should have repaid the total outstanding liability!"
+        );
+        Self { receipt, messages }
+    }
 }
 
 pub(crate) struct Liquidate {
@@ -68,15 +77,10 @@ impl WithLease for Liquidate {
 
         profit.send(receipt.change());
 
-        lease.try_into_dto(self.profit, self.time_alarms).map(
-            |IntoDTOResult {
-                 lease,
-                 batch: messages,
-             }| Self::Output {
-                lease,
-                receipt: receipt.into(),
-                messages: messages.merge(profit.into()),
-            },
-        )
+        lease
+            .try_into_dto(self.profit, self.time_alarms)
+            .map(|dto_result| {
+                Self::Output::new(receipt.into(), dto_result.batch.merge(profit.into()))
+            })
     }
 }

@@ -16,11 +16,10 @@ use crate::{
     api::{DownpaymentCoin, LpnCoin, StateResponse},
     contract::{
         cmd::{
-            FullLiquidation, FullLiquidationResult, LiquidationDTO, LiquidationStatus,
-            LiquidationStatusCmd, OpenLoanRespResult, PartialLiquidation, PartialLiquidationResult,
-            Repay, RepayResult,
+            FullLiquidationResult, LiquidationDTO, LiquidationStatus, LiquidationStatusCmd,
+            OpenLoanRespResult, PartialLiquidation, PartialLiquidationResult, Repay, RepayResult,
         },
-        state::{liquidated, paid, Handler, Response},
+        state::{event as state_event, liquidated, paid, Handler, Response},
         Lease,
     },
     error::{ContractError, ContractResult},
@@ -225,7 +224,7 @@ fn try_partial_liquidation(
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     let price_alarms = lease.lease.oracle.clone();
-    let liquidation_asset = liquidation.amount(&lease.lease).clone();
+    let liquidation_amount = liquidation.amount(&lease.lease).clone();
     let PartialLiquidationResult {
         lease: lease_updated,
         receipt,
@@ -234,7 +233,7 @@ fn try_partial_liquidation(
     } = with_lease::execute(
         lease.lease,
         PartialLiquidation::new(
-            liquidation_asset,
+            liquidation_amount.clone(),
             liquidation_lpn,
             env.block.time,
             profit,
@@ -246,7 +245,13 @@ fn try_partial_liquidation(
 
     let liquidate_response = MessageResponse::messages_with_events(
         liquidate_messages,
-        event::emit_liquidation(env, &lease_updated, &receipt, &liquidation),
+        state_event::emit_liquidation(
+            env,
+            &lease_updated.addr,
+            &receipt,
+            liquidation.cause(),
+            &liquidation_amount,
+        ),
     );
 
     let lease = Lease::new(lease_updated, lease.dex);
@@ -275,29 +280,33 @@ fn try_full_liquidation(
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
+    let lease_addr = lease.lease.addr.clone();
+    let liquidation_amount = liquidation.amount(&lease.lease).clone();
+
+    let liquidated = liquidated::Liquidated::default();
     let FullLiquidationResult {
-        lease: lease_updated,
         receipt,
         messages: liquidate_messages,
-    } = with_lease::execute(
+    } = liquidated.enter_state(
         lease.lease,
-        FullLiquidation::new(liquidation_lpn, env.block.time, profit, time_alarms),
+        liquidation_lpn,
+        env.block.time,
+        profit,
+        time_alarms,
         querier,
     )?;
-    debug_assert!(
-        receipt.close,
-        "The full-liquidation payment should have repaid the total outstanding liability!"
-    );
-
     let liquidate_response = MessageResponse::messages_with_events(
         liquidate_messages,
-        event::emit_liquidation(env, &lease_updated, &receipt, &liquidation),
+        liquidated.emit_ok(
+            env,
+            &lease_addr,
+            &receipt,
+            liquidation.cause(),
+            &liquidation_amount,
+        ),
     );
 
-    Ok(Response::from(
-        liquidate_response,
-        liquidated::Liquidated::default(),
-    ))
+    Ok(Response::from(liquidate_response, liquidated))
 }
 
 fn start_liquidation(
