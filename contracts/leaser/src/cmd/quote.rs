@@ -102,7 +102,7 @@ where
 
 struct QuoteStage2<Lpn, Lpp>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
 {
     downpayment: DownpaymentCoin,
@@ -115,7 +115,7 @@ where
 
 impl<Lpn, Lpp> WithOracle<Lpn> for QuoteStage2<Lpn, Lpp>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
 {
     type Output = QuoteResponse;
@@ -147,7 +147,7 @@ where
 
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -162,7 +162,7 @@ where
 
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -194,7 +194,7 @@ where
 
 struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
@@ -209,7 +209,7 @@ where
 
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,

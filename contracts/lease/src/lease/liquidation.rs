@@ -1,12 +1,7 @@
 use serde::Serialize;
 
 use currency::Currency;
-use finance::{
-    coin::Coin,
-    liability::{self, Status},
-    price::Price,
-    zero::Zero,
-};
+use finance::{coin::Coin, liability::Status, price::Price, zero::Zero};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -36,13 +31,9 @@ where
             Coin::ZERO
         };
 
-        let status = liability::check_liability(
-            &self.liability,
-            self.amount,
-            total_due,
-            overdue,
-            price_in_asset,
-        );
+        let status = self
+            .liability
+            .check(self.amount, total_due, overdue, price_in_asset);
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
         Ok(status)
