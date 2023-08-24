@@ -1,4 +1,5 @@
 use currency::Currency;
+use finance::coin::LpnCoin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::{bank::FixedAddressSender, batch::Batch};
@@ -8,7 +9,6 @@ use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCoin,
     error::ContractError,
     lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
 };

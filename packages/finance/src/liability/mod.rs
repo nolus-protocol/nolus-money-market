@@ -3,7 +3,7 @@ use std::ops::Sub;
 use currency::Currency;
 
 use crate::{
-    coin::Coin,
+    coin::{Amount, Coin},
     duration::Duration,
     fraction::Fraction,
     fractionable::Percentable,
@@ -21,6 +21,9 @@ mod dto;
 mod level;
 mod liquidation;
 mod zone;
+
+pub const MIN_LIQ_AMOUNT: Amount = 10_000;
+pub const MIN_ASSET_AMOUNT: Amount = 15_000_000;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Liability<Lpn> {
@@ -136,6 +139,7 @@ mod test {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
+        liability::{MIN_ASSET_AMOUNT, MIN_LIQ_AMOUNT},
         percent::{Percent, Units},
         zero::Zero,
     };
@@ -143,6 +147,7 @@ mod test {
     use super::{Liability, Zone};
 
     pub type TestLpn = Usdc;
+    pub type CoinLpn = Coin<TestLpn>;
 
     #[test]
     fn test_zone_of() {
@@ -153,8 +158,8 @@ mod test {
             first_liq_warn: Percent::from_permille(792),
             second_liq_warn: Percent::from_permille(815),
             third_liq_warn: Percent::from_permille(826),
-            min_liquidation: Coin::<TestLpn>::new(10_000),
-            min_asset: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: CoinLpn::new(MIN_LIQ_AMOUNT),
+            min_asset: CoinLpn::new(MIN_ASSET_AMOUNT),
             recalc_time: Duration::from_secs(20000),
         };
         assert_eq!(zone_of(&l, 0), Zone::no_warnings(l.first_liq_warn()));
@@ -219,8 +224,8 @@ mod test {
             first_liq_warn: Percent::from_permille(860),
             second_liq_warn: Percent::from_permille(865),
             third_liq_warn: Percent::from_permille(870),
-            min_liquidation: Coin::<TestLpn>::new(10_000),
-            min_asset: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: CoinLpn::new(MIN_LIQ_AMOUNT),
+            min_asset: CoinLpn::new(MIN_ASSET_AMOUNT),
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
@@ -267,7 +272,7 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
-        let downpayment = Coin::<TestLpn>::new(d);
+        let downpayment = CoinLpn::new(d);
         let percent = Percent::from_percent(p);
         let calculated = Liability::<TestLpn> {
             initial: percent,
@@ -276,12 +281,12 @@ mod test {
             first_liq_warn: Percent::from_permille(992),
             second_liq_warn: Percent::from_permille(995),
             third_liq_warn: Percent::from_permille(998),
-            min_liquidation: Coin::<TestLpn>::new(10_000),
-            min_asset: Coin::<TestLpn>::new(15_000_000),
+            min_liquidation: CoinLpn::new(MIN_LIQ_AMOUNT),
+            min_asset: CoinLpn::new(MIN_ASSET_AMOUNT),
             recalc_time: Duration::from_secs(20000),
         }
         .init_borrow_amount(downpayment, max_p);
 
-        assert_eq!(calculated, Coin::<TestLpn>::new(exp));
+        assert_eq!(calculated, CoinLpn::new(exp));
     }
 }

@@ -33,7 +33,7 @@ mod open;
 mod repay;
 
 type Lpn = Usdc;
-type LpnCoin = Coin<Lpn>;
+type CoinLpn = Coin<Lpn>;
 
 type LeaseCurrency = Cro;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -213,8 +213,8 @@ pub(super) fn construct_response(data: Binary) -> NeutronSudoMsg {
 pub(super) fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
     test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: PaymentCoin,
-) -> LpnCoin {
-    LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
+) -> CoinLpn {
+    CoinLpn::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
 pub(super) fn quote_query<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
@@ -272,8 +272,8 @@ where
 {
     let quote_result = quote_query(test_case, downpayment);
     let total: LeaseCoin = quote_result.total.try_into().unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<LeaseCurrency>());
-    let expected: LpnCoin = total_lpn
+    let total_lpn: CoinLpn = price::total(total, price_lpn_of::<LeaseCurrency>());
+    let expected: CoinLpn = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
         - price::total(payments, price_lpn_of::<PaymentC>());
     let (overdue, due) = (

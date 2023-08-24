@@ -1,11 +1,9 @@
 use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, Symbol};
+use finance::coin::LpnCoin;
 use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::{
-    api::LpnCoin,
-    error::{ContractError, ContractResult},
-};
+use crate::error::{ContractError, ContractResult};
 
 pub(super) fn balance(
     account: &Addr,

@@ -1,4 +1,5 @@
 use currency::Currency;
+use finance::coin::LpnCoin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
@@ -7,7 +8,7 @@ use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::LeaseCoin,
     error::ContractError,
     lease::{with_lease::WithLease, IntoDTOResult, Lease},
 };

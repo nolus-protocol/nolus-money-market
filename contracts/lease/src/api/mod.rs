@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, lpn::Lpns, payment::PaymentGroup};
+use currency::{lease::LeaseGroup, payment::PaymentGroup};
 use finance::coin::CoinDTO;
 use sdk::schemars::{self, JsonSchema};
 
@@ -19,7 +19,6 @@ mod query;
 pub type PaymentCoin = CoinDTO<PaymentGroup>;
 pub type DownpaymentCoin = PaymentCoin;
 pub type LeaseCoin = CoinDTO<LeaseGroup>;
-pub type LpnCoin = CoinDTO<Lpns>;
 
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}

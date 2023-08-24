@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use crate::{duration::Duration, error::Error, percent::Percent};
+use crate::{coin::LpnCoin, duration::Duration, error::Error, percent::Percent};
 
-use super::{LiabilityDTO as ValidatedDTO, LpnCoin};
+use super::LiabilityDTO as ValidatedDTO;
 
 /// Brings invariant checking as a step in deserializing a LiabilityDTO
 #[derive(Deserialize)]

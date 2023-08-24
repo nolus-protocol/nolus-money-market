@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Percent;
+use finance::{coin::LpnCoin, percent::Percent};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
 };
 
-use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
+use super::{DownpaymentCoin, LeaseCoin};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

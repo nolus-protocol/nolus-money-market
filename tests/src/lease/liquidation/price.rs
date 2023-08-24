@@ -8,9 +8,9 @@ use crate::{
     lease,
 };
 
-use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{CoinLpn, LeaseCoin, LeaseCurrency, PaymentCurrency, DOWNPAYMENT};
 
-fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
+fn liquidation_warning(base: LeaseCoin, quote: CoinLpn, liability: Percent, level: &str) {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let downpayment = lease::create_payment_coin(DOWNPAYMENT);
     let lease_address = lease::open_lease(&mut test_case, downpayment, None);

@@ -8,8 +8,8 @@ use sdk::schemars::{self, JsonSchema};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol,
-    SymbolOwned,
+    self, error::CmdError, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor,
+    Symbol, SymbolOwned,
 };
 
 use crate::{
@@ -18,6 +18,8 @@ use crate::{
 };
 
 use super::{Coin, WithCoin};
+
+pub type LpnCoin = CoinDTO<Lpns>;
 
 /// A type designed to be used in the init, execute and query incoming messages.
 /// It is a non-currency-parameterized version of finance::coin::Coin<C> with

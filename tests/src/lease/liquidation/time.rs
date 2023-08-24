@@ -24,7 +24,7 @@ use crate::{
     lease,
 };
 
-use super::{LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{CoinLpn, LeaseCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
@@ -74,7 +74,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         )
         .unwrap();
 
-    let liquidated_in_lpn: LpnCoin = price::total(liquidation_amount, lease::price_lpn_of());
+    let liquidated_in_lpn: CoinLpn = price::total(liquidation_amount, lease::price_lpn_of());
 
     test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
 

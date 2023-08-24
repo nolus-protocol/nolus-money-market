@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use dex::Enterable;
-use finance::{coin::IntoDTO, liability::Zone};
+use finance::{
+    coin::{IntoDTO, LpnCoin},
+    liability::Zone,
+};
 use platform::{
     bank,
     batch::{Batch, Emitter},
@@ -13,7 +16,7 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timesta
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{DownpaymentCoin, LpnCoin, StateResponse},
+    api::{DownpaymentCoin, StateResponse},
     contract::{
         cmd::{
             FullLiquidation, FullLiquidationResult, LiquidationDTO, LiquidationStatus,

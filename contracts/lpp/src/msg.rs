@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
+use currency::{native::Nls, Currency, SymbolOwned};
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::{Coin, LpnCoin},
     percent::Percent,
     price::Price,
 };
@@ -12,8 +12,6 @@ use sdk::{
 };
 
 use crate::{borrow::InterestRate, loan::Loan, nlpn::NLpn};
-
-pub type LpnCoin = CoinDTO<Lpns>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {

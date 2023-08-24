@@ -12,7 +12,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
 
-pub use self::coinc::{from_amount_ticker, CoinDTO, IntoDTO};
+pub use self::coinc::{from_amount_ticker, CoinDTO, IntoDTO, LpnCoin};
 
 mod coinc;
 mod serde;

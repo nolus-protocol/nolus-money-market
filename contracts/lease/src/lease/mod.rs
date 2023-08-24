@@ -148,7 +148,7 @@ mod tests {
     use finance::{
         coin::Coin,
         duration::Duration,
-        liability::{Liability, LiabilityDTO},
+        liability::{Liability, LiabilityDTO, MIN_ASSET_AMOUNT, MIN_LIQ_AMOUNT},
         percent::Percent,
         price::Price,
     };
@@ -321,8 +321,8 @@ mod tests {
                     Percent::from_percent(3),
                     Percent::from_percent(2),
                 ),
-                Coin::<TestLpn>::new(10_000).into(),
-                Coin::<TestLpn>::new(15_000_000).into(),
+                Coin::<TestLpn>::new(MIN_LIQ_AMOUNT).into(),
+                Coin::<TestLpn>::new(MIN_ASSET_AMOUNT).into(),
                 RECALC_TIME,
             ))
             .unwrap(),

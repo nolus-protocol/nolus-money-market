@@ -2,7 +2,7 @@ use currency::{lpn::Usdc, Currency};
 use finance::{
     coin::Coin,
     duration::Duration,
-    liability::{Liability, LiabilityDTO},
+    liability::{Liability, LiabilityDTO, MIN_ASSET_AMOUNT, MIN_LIQ_AMOUNT},
     percent::Percent,
     test,
 };
@@ -34,8 +34,8 @@ impl Instantiator {
                 Percent::from_percent(3),
                 Percent::from_percent(2),
             ),
-            Coin::<Usdc>::new(10_000).into(),
-            Coin::<Usdc>::new(15_000_000).into(),
+            Coin::<Usdc>::new(MIN_LIQ_AMOUNT).into(),
+            Coin::<Usdc>::new(MIN_ASSET_AMOUNT).into(),
             Duration::from_hours(1),
         ))
         .unwrap()

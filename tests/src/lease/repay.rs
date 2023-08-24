@@ -31,7 +31,7 @@ use crate::{
     lease,
 };
 
-use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{CoinLpn, LeaseCoin, LeaseCurrency, Lpn, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn partial_repay() {
@@ -39,7 +39,7 @@ fn partial_repay() {
     let downpayment = super::create_payment_coin(DOWNPAYMENT);
 
     let quote_result = super::quote_query(&test_case, downpayment);
-    let amount: LpnCoin = quote_result.borrow.try_into().unwrap();
+    let amount: CoinLpn = quote_result.borrow.try_into().unwrap();
     let partial_payment = super::create_payment_coin(u128::from(amount) / 2);
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);
@@ -76,7 +76,7 @@ fn partial_repay_after_time() {
 
     super::feed_price(&mut test_case);
 
-    let current_margin_to_pay: LpnCoin = LpnCoin::try_from(current_margin_due)
+    let current_margin_to_pay: CoinLpn = CoinLpn::try_from(current_margin_due)
         .unwrap()
         .checked_div(2)
         .unwrap();
@@ -85,8 +85,8 @@ fn partial_repay_after_time() {
         &mut test_case,
         lease_address.clone(),
         price::total(
-            LpnCoin::try_from(previous_margin_due).unwrap()
-                + LpnCoin::try_from(previous_interest_due).unwrap()
+            CoinLpn::try_from(previous_margin_due).unwrap()
+                + CoinLpn::try_from(previous_interest_due).unwrap()
                 + current_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
         ),
@@ -162,10 +162,10 @@ fn full_repay_with_max_ltd() {
         loan_interest_rate: Percent::from_permille(70),
         margin_interest_rate: Percent::from_permille(30),
         principal_due: price::total(percent.of(downpayment), super::price_lpn_of()).into(),
-        previous_margin_due: LpnCoin::ZERO.into(),
-        previous_interest_due: LpnCoin::ZERO.into(),
-        current_margin_due: LpnCoin::ZERO.into(),
-        current_interest_due: LpnCoin::ZERO.into(),
+        previous_margin_due: CoinLpn::ZERO.into(),
+        previous_interest_due: CoinLpn::ZERO.into(),
+        current_margin_due: CoinLpn::ZERO.into(),
+        current_interest_due: CoinLpn::ZERO.into(),
         validity: Timestamp::from_nanos(1537237454879305533),
         in_progress: None,
     };
@@ -249,7 +249,7 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
 
     expect_swap(response);
 
-    let swap_out_lpn: LpnCoin = price::total(payment, super::price_lpn_of());
+    let swap_out_lpn: CoinLpn = price::total(payment, super::price_lpn_of());
 
     let response: ResponseWithInterChainMsgs<'_, ()> =
         do_swap(test_case, contract_addr.clone(), &cw_payment, swap_out_lpn);
@@ -310,7 +310,7 @@ fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     test_case: &'r mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     cw_payment: &CwCoin,
-    swap_out_lpn: LpnCoin,
+    swap_out_lpn: CoinLpn,
 ) -> ResponseWithInterChainMsgs<'r, ()> {
     test_case
         .app

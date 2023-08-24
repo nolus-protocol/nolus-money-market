@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 use currency::Currency;
+use finance::coin::LpnCoin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
@@ -9,7 +10,6 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCoin,
     error::ContractError,
     lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
     loan::RepayReceipt,

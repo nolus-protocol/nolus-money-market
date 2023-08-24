@@ -3,18 +3,16 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    coin::CoinDTO,
+    coin::LpnCoin,
     duration::Duration,
     error::{Error, Result},
     percent::Percent,
 };
-use currency::{lpn::Lpns, Currency};
+use currency::Currency;
 
 use super::Liability;
 
 mod unchecked;
-
-pub type LpnCoin = CoinDTO<Lpns>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -35,7 +33,7 @@ pub struct LiabilityDTO {
     max: Percent,
     /// The minimum amount that triggers a liquidation
     min_liquidation: LpnCoin,
-    //  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    ///  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
     min_asset: LpnCoin,
     /// At what time cadence to recalculate the liability
     ///
@@ -155,18 +153,20 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::lpn::{Lpns, Usdc};
+    use currency::lpn::Usdc;
     use sdk::cosmwasm_std::{from_slice, StdError};
 
     use crate::{
-        coin::{Coin, CoinDTO},
+        coin::Coin,
         duration::Duration,
-        liability::LiabilityDTO,
+        liability::{LiabilityDTO, MIN_ASSET_AMOUNT, MIN_LIQ_AMOUNT},
         percent::Percent,
     };
 
-    type LpnCoin = Coin<Usdc>;
-    type LpnCoinDTO = CoinDTO<Lpns>;
+    type CoinLpn = Coin<Usdc>;
+
+    const MIN_LIQUIDATION: CoinLpn = CoinLpn::new(MIN_LIQ_AMOUNT);
+    const MIN_ASSET: CoinLpn = CoinLpn::new(MIN_ASSET_AMOUNT);
 
     #[test]
     fn new_valid() {
@@ -177,8 +177,8 @@ mod test {
             second_liq_warn: Percent::from_percent(13),
             third_liq_warn: Percent::from_percent(14),
             max: Percent::from_percent(15),
-            min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            min_liquidation: MIN_LIQUIDATION.into(),
+            min_asset: MIN_ASSET.into(),
             recalc_time: Duration::from_hours(10),
         };
 
@@ -195,8 +195,8 @@ mod test {
             second_liq_warn: Percent::from_permille(12),
             third_liq_warn: Percent::from_permille(13),
             max: Percent::from_permille(14),
-            min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            min_liquidation: MIN_LIQUIDATION.into(),
+            min_asset: MIN_ASSET.into(),
             recalc_time: Duration::HOUR,
         };
 

@@ -1,10 +1,10 @@
 use currency::{
     self,
-    lpn::{Lpns, Usdc},
+    lpn::Usdc,
     Currency,
 };
 use finance::{
-    coin::{Amount, Coin, CoinDTO},
+    coin::{Amount, Coin, LpnCoin},
     duration::Duration,
     liability::LiabilityDTO,
     percent::Percent,
@@ -33,9 +33,6 @@ use swap::trx as swap_trx;
 use crate::common::cwcoin;
 
 use super::{ContractWrapper, MockApp, ADMIN, USER};
-
-type LpnCoin = Coin<Usdc>;
-pub type LpnCoinDTO = CoinDTO<Lpns>;
 
 pub struct LeaseInitConfig<'r, D>
 where
@@ -73,8 +70,8 @@ pub struct LeaseWrapperConfig {
     pub liability_minus_delta_to_first_liq_warn: Percent,
     pub liability_minus_delta_to_second_liq_warn: Percent,
     pub liability_minus_delta_to_third_liq_warn: Percent,
-    pub liability_min_liquidation: LpnCoinDTO,
-    pub liability_min_asset: LpnCoinDTO,
+    pub liability_min_liquidation: LpnCoin,
+    pub liability_min_asset: LpnCoin,
     pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
@@ -93,8 +90,8 @@ impl Default for LeaseWrapperConfig {
             liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
             liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
             liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
-            liability_min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
-            liability_min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+            liability_min_liquidation: Coin::<Usdc>::new(MIN_LIQ_AMOUNT).into(),
+            liability_min_asset: Coin::<Usdc>::new(MIN_ASSET_AMOUNT).into(),
             liability_recalc_time: Duration::from_days(20),
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%

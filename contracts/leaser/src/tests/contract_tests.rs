@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, test::Usdc, Currency};
+use currency::{test::Usdc, Currency};
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::{Coin, LpnCoin},
     duration::Duration,
-    liability::LiabilityDTO,
+    liability::{LiabilityDTO, MIN_ASSET_AMOUNT, MIN_LIQ_AMOUNT},
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};
@@ -34,8 +34,7 @@ const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 
 type TheCurrency = Usdc;
-type LpnCoin = Coin<TheCurrency>;
-type LpnCoinDTO = CoinDTO<Lpns>;
+type CoinLpn = Coin<TheCurrency>;
 
 const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
@@ -54,8 +53,8 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
                 Percent::from_percent(3),
                 Percent::from_percent(2),
             ),
-            LpnCoin::new(10_000).into(),
-            LpnCoin::new(15_000_000).into(),
+            CoinLpn::new(MIN_LIQ_AMOUNT).into(),
+            CoinLpn::new(MIN_ASSET_AMOUNT).into(),
             Duration::from_hours(1),
         ),
         lease_interest_payment: InterestPaymentSpec::new(
@@ -140,8 +139,8 @@ fn test_update_config() {
             Percent::from_percent(2),
             Percent::from_percent(1),
         ),
-        LpnCoin::new(10_000).into(),
-        LpnCoin::new(15_000_000).into(),
+        CoinLpn::new(MIN_LIQ_AMOUNT).into(),
+        CoinLpn::new(MIN_ASSET_AMOUNT).into(),
         Duration::from_hours(12),
     );
     let expected_repaiment =
@@ -176,8 +175,8 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent,
         second_liq_warn: Percent,
         third_liq_warn: Percent,
-        min_liquidation: LpnCoinDTO,
-        min_asset: LpnCoinDTO,
+        min_liquidation: LpnCoin,
+        min_asset: LpnCoin,
         recalc_time: Duration,
     }
 
@@ -198,8 +197,8 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent::from_percent(55),
         second_liq_warn: Percent::from_percent(55),
         third_liq_warn: Percent::from_percent(55),
-        min_liquidation: LpnCoinDTO::from(LpnCoin::new(10_000)),
-        min_asset: LpnCoinDTO::from(LpnCoin::new(15_000_000)),
+        min_liquidation: CoinLpn::new(MIN_LIQ_AMOUNT).into(),
+        min_asset: CoinLpn::new(MIN_ASSET_AMOUNT).into(),
         recalc_time: Duration::from_secs(100),
     };
     let mock_msg = MockSudoMsg::Config {

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{payment::PaymentGroup, Currency};
 use finance::{
-    coin::{Coin, WithCoin, WithCoinResult},
+    coin::{Coin, LpnCoin, WithCoin, WithCoinResult},
     liability::{Liability, LiabilityDTO},
     percent::Percent,
 };
@@ -13,10 +13,7 @@ use oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
-use crate::{
-    api::{DownpaymentCoin, LpnCoin},
-    error::ContractError,
-};
+use crate::{api::DownpaymentCoin, error::ContractError};
 
 pub struct OpenLoanReq<'a> {
     liability: LiabilityDTO,
