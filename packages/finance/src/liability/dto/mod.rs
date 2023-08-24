@@ -161,7 +161,7 @@ mod test {
     use crate::{
         coin::{Coin, CoinDTO},
         duration::Duration,
-        liability::dto::LiabilityDTO,
+        liability::LiabilityDTO,
         percent::Percent,
     };
 

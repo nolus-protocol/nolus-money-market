@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
-use finance::{duration::Duration, liability::dto::LiabilityDTO, percent::Percent};
+use finance::{duration::Duration, liability::LiabilityDTO, percent::Percent};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},

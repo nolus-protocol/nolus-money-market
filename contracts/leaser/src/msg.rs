@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
-use finance::{liability::dto::LiabilityDTO, percent::Percent};
+use finance::{liability::LiabilityDTO, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
 use lpp::msg::LpnCoin;
 use sdk::{

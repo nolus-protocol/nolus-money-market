@@ -1,5 +1,5 @@
 use currency::SymbolOwned;
-use finance::{liability::dto::LiabilityDTO, percent::Percent};
+use finance::{liability::LiabilityDTO, percent::Percent};
 use lease::api::DownpaymentCoin;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;

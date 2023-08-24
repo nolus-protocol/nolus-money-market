@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{liability::dto::LiabilityDTO, percent::Percent};
+use finance::{liability::LiabilityDTO, percent::Percent};
 use lease::api::{ConnectionParams, InterestPaymentSpec};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},

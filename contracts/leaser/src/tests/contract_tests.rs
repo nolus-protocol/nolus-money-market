@@ -4,7 +4,7 @@ use currency::{lpn::Lpns, test::Usdc, Currency};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
-    liability::dto::LiabilityDTO,
+    liability::LiabilityDTO,
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};

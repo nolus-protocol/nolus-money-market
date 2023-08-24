@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::liability::dto::LiabilityDTO;
+use finance::liability::LiabilityDTO;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;

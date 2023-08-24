@@ -148,7 +148,7 @@ mod tests {
     use finance::{
         coin::Coin,
         duration::Duration,
-        liability::{dto::LiabilityDTO, Liability},
+        liability::{Liability, LiabilityDTO},
         percent::Percent,
         price::Price,
     };

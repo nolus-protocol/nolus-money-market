@@ -8,7 +8,7 @@ use currency::{
 };
 use finance::{
     coin::Coin,
-    liability::{dto::LiabilityDTO, Liability},
+    liability::{Liability, LiabilityDTO},
     percent::Percent,
     price::total,
 };

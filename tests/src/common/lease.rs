@@ -6,7 +6,7 @@ use currency::{
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     duration::Duration,
-    liability::dto::LiabilityDTO,
+    liability::LiabilityDTO,
     percent::Percent,
     price::{self, Price},
 };

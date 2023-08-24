@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::{payment::PaymentGroup, Currency};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
-    liability::{dto::LiabilityDTO, Liability},
+    liability::{Liability, LiabilityDTO},
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
