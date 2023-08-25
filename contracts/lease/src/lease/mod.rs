@@ -146,11 +146,7 @@ mod tests {
 
     use ::currency::{lease::Atom, lpn::Usdc, Currency};
     use finance::{
-        coin::Coin,
-        duration::Duration,
-        liability::{Liability, LiabilityDTO},
-        percent::Percent,
-        price::Price,
+        coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
     };
     use lpp::{
         error::{ContractError as LppError, Result as LppResult},
@@ -312,7 +308,7 @@ mod tests {
             lease,
             Addr::unchecked(CUSTOMER),
             amount,
-            Liability::<TestLpn>::try_from(LiabilityDTO::new(
+            Liability::<TestLpn>::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
                 Percent::from_percent(10),
@@ -321,11 +317,10 @@ mod tests {
                     Percent::from_percent(3),
                     Percent::from_percent(2),
                 ),
-                Coin::<TestLpn>::new(10_000).into(),
-                Coin::<TestLpn>::new(15_000_000).into(),
+                Coin::<TestLpn>::new(10_000),
+                Coin::<TestLpn>::new(15_000_000),
                 RECALC_TIME,
-            ))
-            .unwrap(),
+            ),
             loan,
             oracle,
         )

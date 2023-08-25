@@ -35,7 +35,7 @@ pub struct LiabilityDTO {
     max: Percent,
     /// The minimum amount that triggers a liquidation
     min_liquidation: LpnCoin,
-    //  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    ///  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
     min_asset: LpnCoin,
     /// At what time cadence to recalculate the liability
     ///
@@ -55,6 +55,8 @@ impl LiabilityDTO {
         min_asset: LpnCoin,
         recalc_time: Duration,
     ) -> Self {
+        use crate::liability::invariant_held;
+
         let healthy = initial + delta_to_healthy;
         let max = healthy + delta_to_max;
         let third_liquidity_warning = max - minus_delta_of_liq_warns.2;
@@ -71,46 +73,23 @@ impl LiabilityDTO {
             min_asset,
             recalc_time,
         };
-        debug_assert_eq!(Ok(()), obj.invariant_held());
+        debug_assert_eq!(
+            Ok(()),
+            invariant_held(
+                &obj,
+                initial,
+                healthy,
+                (
+                    first_liquidity_warning,
+                    second_liquidity_warning,
+                    third_liquidity_warning
+                ),
+                max,
+                recalc_time
+            )
+        );
         obj
     }
-
-    fn invariant_held(&self) -> Result<()> {
-        check(self.initial > Percent::ZERO, "Initial % should not be zero")?;
-
-        check(
-            self.initial <= self.healthy,
-            "Initial % should be <= healthy %",
-        )?;
-
-        check(
-            self.healthy < self.first_liq_warn,
-            "Healthy % should be < first liquidation %",
-        )?;
-        check(
-            self.first_liq_warn < self.second_liq_warn,
-            "First liquidation % should be < second liquidation %",
-        )?;
-        check(
-            self.second_liq_warn < self.third_liq_warn,
-            "Second liquidation % should be < third liquidation %",
-        )?;
-        check(
-            self.third_liq_warn < self.max,
-            "Third liquidation % should be < max %",
-        )?;
-        check(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
-        check(
-            self.recalc_time >= Duration::HOUR,
-            "Recalculation cadence should be >= 1h",
-        )?;
-
-        Ok(())
-    }
-}
-
-fn check(invariant: bool, msg: &str) -> Result<()> {
-    Error::broken_invariant_if::<LiabilityDTO>(!invariant, msg)
 }
 
 impl<Lpn> TryFrom<LiabilityDTO> for Liability<Lpn>

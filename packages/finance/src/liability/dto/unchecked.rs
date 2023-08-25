@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{duration::Duration, error::Error, percent::Percent};
+use crate::{duration::Duration, error::Error, liability::invariant_held, percent::Percent};
 
 use super::{LiabilityDTO as ValidatedDTO, LpnCoin};
 
@@ -33,7 +33,14 @@ impl TryFrom<LiabilityDTO> for ValidatedDTO {
             min_asset: dto.min_asset,
             recalc_time: dto.recalc_time,
         };
-        res.invariant_held()?;
+        invariant_held(
+            &res,
+            res.initial,
+            res.healthy,
+            (res.first_liq_warn, res.second_liq_warn, res.third_liq_warn),
+            res.max,
+            res.recalc_time,
+        )?;
         Ok(res)
     }
 }

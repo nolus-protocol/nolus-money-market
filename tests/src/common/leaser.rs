@@ -25,7 +25,7 @@ impl Instantiator {
     pub const GRACE_PERIOD: Duration = Duration::from_days(10);
 
     pub fn liability() -> Liability<Usdc> {
-        Liability::<Usdc>::try_from(LiabilityDTO::new(
+        Liability::<Usdc>::new(
             Percent::from_percent(65),
             Percent::from_percent(5),
             Percent::from_percent(10),
@@ -34,11 +34,10 @@ impl Instantiator {
                 Percent::from_percent(3),
                 Percent::from_percent(2),
             ),
-            Coin::<Usdc>::new(10_000).into(),
-            Coin::<Usdc>::new(15_000_000).into(),
+            Coin::<Usdc>::new(10_000),
+            Coin::<Usdc>::new(15_000_000),
             Duration::from_hours(1),
-        ))
-        .unwrap()
+        )
     }
 
     #[track_caller]

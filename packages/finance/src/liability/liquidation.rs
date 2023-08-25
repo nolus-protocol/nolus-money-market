@@ -187,7 +187,6 @@ mod tests {
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
-        liability::LiabilityDTO,
         percent::Percent,
         price::{self, Price},
     };
@@ -952,16 +951,15 @@ mod tests {
         let initial = STEP;
         assert!(initial < max - STEP - STEP - STEP);
 
-        Liability::<TestLpn>::try_from(LiabilityDTO::new(
+        Liability::<TestLpn>::new(
             initial,
             Percent::ZERO,
             max - initial,
             (STEP, STEP, STEP),
-            min_liquidation.into(),
-            min_asset.into(),
+            min_liquidation,
+            min_asset,
             Duration::from_hours(1),
-        ))
-        .unwrap()
+        )
     }
 }
 
