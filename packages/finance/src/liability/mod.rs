@@ -28,7 +28,7 @@ pub struct Liability<Lpn> {
     /// The initial percentage of the amount due versus the locked collateral
     /// initial > 0
     initial: Percent,
-    /// The healty percentage of the amount due versus the locked collateral
+    /// The healthy percentage of the amount due versus the locked collateral
     /// healthy >= initial
     healthy: Percent,
     /// The percentage above which the first liquidity warning is issued.
@@ -40,9 +40,11 @@ pub struct Liability<Lpn> {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
     max: Percent,
-    /// The minimum amount that triggers a liquidation
+    /// The minimum amount to liquidate. Any attempt to liquidate a smaller
+    /// amount would be postponed until the amount goes above this limit
     min_liquidation: Coin<Lpn>,
-    ///  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    ///  The minimum amount that a lease asset should be evaluated past any
+    ///  partial liquidation or close. If not, a full liquidation is performed
     min_asset: Coin<Lpn>,
     /// At what time cadence to recalculate the liability
     ///

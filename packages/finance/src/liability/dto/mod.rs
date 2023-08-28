@@ -20,8 +20,10 @@ pub type LpnCoin = CoinDTO<Lpns>;
 #[serde(rename_all = "snake_case")]
 #[serde(try_from = "unchecked::LiabilityDTO")]
 pub struct LiabilityDTO {
+    /// The initial percentage of the amount due versus the locked collateral
+    /// initial > 0
     initial: Percent,
-    /// The healty percentage of the amount due versus the locked collateral
+    /// The healthy percentage of the amount due versus the locked collateral
     /// healthy >= initial
     healthy: Percent,
     /// The percentage above which the first liquidity warning is issued.
@@ -33,9 +35,13 @@ pub struct LiabilityDTO {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
     max: Percent,
-    /// The minimum amount that triggers a liquidation
+    /// The minimum amount to liquidate. Any attempt to liquidate a smaller
+    /// amount would be postponed until the amount goes above this limit
+    #[cfg_attr(feature = "migration", serde(default = "default_min_liquidation"))]
     min_liquidation: LpnCoin,
-    ///  The minimum amount that a lease asset should be evaluated past any partial liquidation. If not, a full liquidation is performed
+    ///  The minimum amount that a lease asset should be evaluated past any
+    ///  partial liquidation or close. If not, a full liquidation is performed
+    #[cfg_attr(feature = "migration", serde(default = "default_min_asset"))]
     min_asset: LpnCoin,
     /// At what time cadence to recalculate the liability
     ///
@@ -90,6 +96,16 @@ impl LiabilityDTO {
         );
         obj
     }
+}
+
+#[cfg(feature = "migration")]
+fn default_min_liquidation() -> LpnCoin {
+    LpnCoin::new(10_000)
+}
+
+#[cfg(feature = "migration")]
+fn default_min_asset() -> LpnCoin {
+    LpnCoin::new(15_000_000)
 }
 
 impl<Lpn> TryFrom<LiabilityDTO> for Liability<Lpn>
