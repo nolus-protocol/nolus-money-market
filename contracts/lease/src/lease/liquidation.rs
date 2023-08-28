@@ -23,7 +23,7 @@ where
     Asset: Currency + Serialize,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        let price_in_asset = self.price_of_lease_currency()?.inv();
+        let lpn_in_assets = self.price_of_lease_currency()?.inv();
 
         let LiabilityStatus {
             total: total_due,
@@ -41,7 +41,7 @@ where
             self.amount,
             total_due,
             overdue,
-            price_in_asset,
+            lpn_in_assets,
         );
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());

@@ -199,6 +199,8 @@ mod tests {
     const MIN_DUE_AMOUNT_TEST_CURRENCY: Coin<TestCurrency> = Coin::new(100);
     const LEASE_AMOUNT: Coin<TestCurrency> = Coin::new(1000);
     const LEASE_AMOUNT_TEST_LPN: Coin<TestLpn> = Coin::new(1000);
+    const PRICE_TEST_LPN: Coin<TestLpn> = Coin::new(1_000);
+    const PRICE_TEST_CURRENCY:  Coin<TestCurrency> = Coin::new(1_000);
 
     #[test]
     fn no_debt() {
@@ -913,9 +915,7 @@ mod tests {
     const STEP: Percent = Percent::from_permille(10);
 
     fn price() -> Price<TestLpn, TestCurrency> {
-        let amount_test_lpn: Coin<TestLpn> = Coin::new(1_000);
-        let amount_test_currency: Coin<TestCurrency> = Coin::new(1_000);
-        price::total_of(amount_test_lpn).is(amount_test_currency)
+        price::total_of(PRICE_TEST_LPN).is(PRICE_TEST_CURRENCY)
     }
 
     fn liability_with_first(
