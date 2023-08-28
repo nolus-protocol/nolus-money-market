@@ -23,6 +23,7 @@ macro_rules! define_currency {
             $crate::currency_macro::Deserialize,
             $crate::currency_macro::JsonSchema,
         )]
+        #[serde(deny_unknown_fields, rename_all = "snake_case")]
         pub struct $ident {}
 
         impl $crate::currency_macro::Currency for $ident {

@@ -18,17 +18,19 @@ pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub config: Config,
     pub swap_tree: HumanReadableTree<SwapTarget>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     FeedPrices {
         prices: Vec<SpotPrice>,
@@ -44,7 +46,7 @@ pub enum ExecuteMsg {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
     RegisterFeeder { feeder_address: String },
     RemoveFeeder { feeder_address: String },
@@ -53,7 +55,7 @@ pub enum SudoMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     // Returns contract's semantic version as a package, which is set in `Cargo.toml`.
     ContractVersion {},
@@ -88,33 +90,36 @@ pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ConfigResponse {
     pub config: Config,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct SwapTreeResponse {
     pub tree: HumanReadableTree<SwapTarget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PricesResponse {
     pub prices: Vec<SpotPrice>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(PartialEq))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct AlarmsStatusResponse {
     pub remaining_alarms: bool,
 }

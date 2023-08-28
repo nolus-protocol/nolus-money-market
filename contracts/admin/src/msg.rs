@@ -28,6 +28,7 @@ pub enum SudoMsg {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateContracts {
     pub release: String,
     pub admin_contract: Option<MigrateContract>,
