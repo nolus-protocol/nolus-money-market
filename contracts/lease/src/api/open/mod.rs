@@ -13,7 +13,7 @@ use crate::{error::ContractError, error::ContractResult};
 mod unchecked;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseContract {
     /// An application form for opening a new lease
     pub form: NewLeaseForm,
@@ -22,14 +22,13 @@ pub struct NewLeaseContract {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: Addr,
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
     /// Maximum Loan-to-Downpayment percentage of the new lease, optional.
-    #[cfg_attr(feature = "migration", serde(default))] //due to the migrate v2
     pub max_ltd: Option<Percent>,
     /// Liability parameters
     pub liability: LiabilityDTO,
@@ -42,8 +41,7 @@ pub struct NewLeaseForm {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[serde(rename = "loan")]
+#[serde(deny_unknown_fields, rename = "loan", rename_all = "snake_case")]
 /// The value remains intact.
 pub struct LoanForm {
     /// The delta added on top of the LPP Loan interest rate.
@@ -59,8 +57,7 @@ pub struct LoanForm {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[serde(try_from = "unchecked::InterestPaymentSpec")]
+#[serde(rename_all = "snake_case", try_from = "unchecked::InterestPaymentSpec")]
 pub struct InterestPaymentSpec {
     /// How long is a period for which the interest is due
     due_period: Duration,

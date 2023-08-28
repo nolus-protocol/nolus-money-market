@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::Percent,
+    percent::{bound::BoundToHundredPercent, Percent},
     price::Price,
 };
 use sdk::{
@@ -16,18 +16,29 @@ use crate::{borrow::InterestRate, loan::Loan, nlpn::NLpn};
 pub type LpnCoin = CoinDTO<Lpns>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
     pub borrow_rate: InterestRate,
+    pub min_utilization: BoundToHundredPercent,
 }
 
+#[cfg(not(feature = "migration"))]
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {}
+
+#[cfg(feature = "migration")]
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct MigrateMsg {
+    pub min_utilization: BoundToHundredPercent,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     NewLeaseCode { lease_code_id: Uint64 },
 
@@ -44,14 +55,19 @@ pub enum ExecuteMsg {
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    NewBorrowRate { borrow_rate: InterestRate },
+    NewBorrowRate {
+        borrow_rate: InterestRate,
+    },
+    MinUtilization {
+        min_utilization: BoundToHundredPercent,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     Config(),
     Quote {
@@ -67,6 +83,7 @@ pub enum QueryMsg {
     },
     LppBalance(),
     Price(),
+    DepositCapacity(),
 
     Rewards {
         address: Addr,
@@ -74,7 +91,7 @@ pub enum QueryMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryQuoteResponse {
     QuoteInterestRate(Percent),
     NoLiquidity,
@@ -88,27 +105,31 @@ pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 
 // CW20 interface
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct BalanceResponse {
     pub balance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
-pub struct PriceResponse<LPN>(pub Price<NLpn, LPN>)
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct PriceResponse<Lpn>(pub Price<NLpn, Lpn>)
 where
-    LPN: 'static + Currency;
+    Lpn: 'static + Currency;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
-pub struct LppBalanceResponse<LPN>
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct LppBalanceResponse<Lpn>
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
-    pub balance: Coin<LPN>,
-    pub total_principal_due: Coin<LPN>,
-    pub total_interest_due: Coin<LPN>,
+    pub balance: Coin<Lpn>,
+    pub total_principal_due: Coin<Lpn>,
+    pub total_interest_due: Coin<Lpn>,
     pub balance_nlpn: Coin<NLpn>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct RewardsResponse {
     pub rewards: Coin<Nls>,
 }

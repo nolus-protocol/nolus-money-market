@@ -76,11 +76,15 @@ impl Config {
     }
 
     pub fn feed_valid_since(&self, now: Timestamp) -> Timestamp {
-        if Timestamp::default() + self.feed_validity <= now {
+        debug_assert!(now > Timestamp::default());
+
+        let ret = if Timestamp::default() + self.feed_validity <= now {
             now - self.feed_validity
         } else {
             Timestamp::default()
-        }
+        };
+        debug_assert!(ret < now, "{ret} >= {now}");
+        ret
     }
 
     pub fn discount_factor(&self) -> Percent {
@@ -182,7 +186,7 @@ mod test {
         );
         assert_eq!(
             Timestamp::from_seconds(0),
-            c.feed_valid_since(Timestamp::from_seconds(0))
+            c.feed_valid_since(Timestamp::from_seconds(1))
         );
         assert_eq!(
             Timestamp::from_seconds(0),

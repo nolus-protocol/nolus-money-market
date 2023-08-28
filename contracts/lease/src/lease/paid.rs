@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::Addr;
 use currency::Currency;
 use finance::coin::Coin;
 use platform::{bank::BankAccount, batch::Batch};
+use sdk::cosmwasm_std::Addr;
 
 use crate::error::ContractResult;
 
@@ -51,8 +51,7 @@ where
 mod tests {
     use std::marker::PhantomData;
 
-    use ::currency::{self, lease::Atom, lpn::Usdc, Currency, Group};
-    use cosmwasm_std::Addr;
+    use currency::{lease::Atom, lpn::Usdc, Currency, Group};
     use finance::{
         coin::{Coin, WithCoin},
         zero::Zero,
@@ -62,6 +61,7 @@ mod tests {
         batch::Batch,
         error::Result as PlatformResult,
     };
+    use sdk::cosmwasm_std::Addr;
 
     use super::Lease;
 

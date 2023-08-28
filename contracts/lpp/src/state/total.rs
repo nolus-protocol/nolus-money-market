@@ -14,30 +14,30 @@ use sdk::{
 use crate::error::ContractError;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Total<LPN>
+pub struct Total<Lpn>
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
-    total_principal_due: Coin<LPN>,
-    total_interest_due: Coin<LPN>,
-    annual_interest_rate: Rational<Coin<LPN>>,
+    total_principal_due: Coin<Lpn>,
+    total_interest_due: Coin<Lpn>,
+    annual_interest_rate: Rational<Coin<Lpn>>,
     last_update_time: Timestamp,
 }
 
-impl<LPN> Default for Total<LPN>
+impl<Lpn> Default for Total<Lpn>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency + Serialize + DeserializeOwned,
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<LPN> Total<LPN>
+impl<Lpn> Total<Lpn>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency + Serialize + DeserializeOwned,
 {
-    const STORAGE: Item<'static, Total<LPN>> = Item::new("total");
+    const STORAGE: Item<'static, Total<Lpn>> = Item::new("total");
 
     pub fn new() -> Self {
         Total {
@@ -48,7 +48,7 @@ where
         }
     }
 
-    pub fn total_principal_due(&self) -> Coin<LPN> {
+    pub fn total_principal_due(&self) -> Coin<Lpn> {
         self.total_principal_due
     }
 
@@ -60,8 +60,8 @@ where
         Self::STORAGE.load(storage)
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<LPN> {
-        InterestPeriod::<Coin<LPN>, _>::with_interest(self.annual_interest_rate)
+    pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<Lpn> {
+        InterestPeriod::<Coin<Lpn>, _>::with_interest(self.annual_interest_rate)
             .and_period(Period::from_till(self.last_update_time, ctime))
             .interest(self.total_principal_due)
             + self.total_interest_due
@@ -70,14 +70,14 @@ where
     pub fn borrow(
         &mut self,
         ctime: Timestamp,
-        amount: Coin<LPN>,
+        amount: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(ctime);
 
         // TODO: get rid of fully qualified syntax
         self.annual_interest_rate = Rational::new(
-            Fraction::<Coin<LPN>>::of(&self.annual_interest_rate, self.total_principal_due)
+            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                 + loan_interest_rate.of(amount),
             self.total_principal_due + amount,
         );
@@ -92,17 +92,17 @@ where
     pub fn repay(
         &mut self,
         ctime: Timestamp,
-        loan_interest_payment: Coin<LPN>,
-        loan_principal_payment: Coin<LPN>,
+        loan_interest_payment: Coin<Lpn>,
+        loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
         self.total_interest_due = self.total_interest_due_by_now(ctime) - loan_interest_payment;
 
         self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
-            Rational::new(Coin::<LPN>::new(0), Coin::<LPN>::new(100))
+            Rational::new(Coin::<Lpn>::new(0), Coin::<Lpn>::new(100))
         } else {
             Rational::new(
-                Fraction::<Coin<LPN>>::of(&self.annual_interest_rate, self.total_principal_due)
+                Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
             )

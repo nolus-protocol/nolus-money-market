@@ -26,6 +26,7 @@ define_symbol! {
 define_currency!(Usdc, USDC);
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Lpns {}
 
 impl Group for Lpns {

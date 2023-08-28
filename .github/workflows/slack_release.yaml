@@ -1,16 +1,16 @@
-name: Notify Slack on Release
+name: "Notify Slack on Release"
 
 on:
   release:
-    types: 
-      - published
+    types:
+      - "published"
 
 jobs:
   notify_slack:
-    runs-on: ubuntu-latest
-    name: Notify Slack on Release
+    runs-on: "ubuntu-latest"
+    name: "Notify Slack on Release"
     steps:
-      - name: Notify Slack on Release
-        uses: tryfabric/notify-slack-on-release@1.0.0
+      - name: "Notify Slack on Release"
+        uses: "tryfabric/notify-slack-on-release@1.0.0"
         with:
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: "${{ secrets.SLACK_WEBHOOK_URL }}"

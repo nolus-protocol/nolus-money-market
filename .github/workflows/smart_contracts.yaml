@@ -1,19 +1,12 @@
-name: Smart Contracts
-run-name: "Building smart contracts, triggered by ${{ github.actor }}"
+name: "Smart Contracts"
+run-name: "Running workflow for smart contracts"
 
 on:
-  workflow_dispatch:
-    inputs:
-      optimized_build:
-        description: "Check and build optimized binaries."
-        type: "boolean"
-        required: true
-        default: false
   push:
     branches:
       - "main"
     tags:
-      - '*'
+      - "*"
     paths-ignore:
       - "README.md"
   pull_request:
@@ -32,134 +25,35 @@ env:
   NET_NAME: "main"
 
 jobs:
-  check_formatting:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - uses: "Nolus-Protocol/rust-ci-actions/check_formatting@v1"
-  check_codebase:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - uses: "Nolus-Protocol/rust-ci-actions/check_codebase@v1"
-  audit_dependencies:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - uses: "Nolus-Protocol/rust-ci-actions/audit_dependencies@v1"
-  linting:
-    runs-on: "ubuntu-latest"
+  perform_checks:
+    uses: "./.github/workflows/checks.yaml"
+  build_optimized:
+    uses: "./.github/workflows/build_optimized.yaml"
+    if: "github.ref_type == 'tag'"
     needs:
-      - "check_formatting"
-      - "check_codebase"
-      - "audit_dependencies"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - name: "Run linter"
-        shell: "sh"
-        run: "./lint.sh"
-  code_coverage:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - uses: "Nolus-Protocol/rust-ci-actions/code_coverage@v1"
-  test_release_profile:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - name: "Run tests in release profile"
-        shell: "sh"
-        run: "cargo test --release"
-  check_wasm:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "linting"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: "Nolus-Protocol/rust-ci-actions/rust_cache@v1"
-      - shell: "sh"
-        run: "cargo install cargo-workspaces"
-      - shell: "sh"
-        run: "cargo install cosmwasm-check"
-      - name: "Building WASM binaries"
-        shell: "sh"
-        run: "cargo workspaces exec cargo build --release --target wasm32-unknown-unknown"
-      - name: "Checking WASM binaries"
-        shell: "sh"
-        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/release/*.wasm"
-  build_optimized_dev_net:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "code_coverage"
-      - "test_release_profile"
-      - "check_wasm"
-    if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
-    steps:
-      - uses: "actions/checkout@v3"
-      - name: "Build optimized binaries for dev-net"
-        uses: "./.github/actions/optimized_build"
-        with:
-          target_net: "dev"
-  build_optimized_test_net:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "code_coverage"
-      - "test_release_profile"
-      - "check_wasm"
-    if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
-    steps:
-      - uses: "actions/checkout@v3"
-      - name: "Build optimized binaries for test-net"
-        uses: "./.github/actions/optimized_build"
-        with:
-          target_net: "test"
-  build_optimized_main_net:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "code_coverage"
-      - "test_release_profile"
-      - "check_wasm"
-    if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
-    steps:
-      - uses: "actions/checkout@v3"
-      - name: "Build optimized binaries for main-net"
-        uses: "./.github/actions/optimized_build"
-        with:
-          target_net: "main"
+      - "perform_checks"
   draft_release:
-      runs-on: ubuntu-latest
-      needs:
-        - "build_optimized_dev_net"
-        - "build_optimized_test_net"
-        - "build_optimized_main_net"
-      permissions: write-all
-      steps:
-        - name: Download artifacts
-          uses: actions/download-artifact@v3
-        - name: Display structure of downloaded files
-          run: ls -R
-        - name: Zip test & main
-          run: |
-            zip -j -r optimized-binaries-dev-net.zip optimized-binaries-dev-net/* 
-            zip -j -r optimized-binaries-test-net.zip optimized-binaries-test-net/* 
-            zip -j -r optimized-binaries-main-net.zip optimized-binaries-main-net/* 
-        # temporary using commit as version until it is merged. Updates node version v12 -> v16
-        - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
-          with:
-            repo_token: "${{ secrets.GITHUB_TOKEN }}"
-            prerelease: false
-            draft: true
-            files: |
-              optimized-binaries-dev-net.zip
-              optimized-binaries-test-net.zip
-              optimized-binaries-main-net.zip
+    runs-on: ubuntu-latest
+    needs:
+      - "build_optimized"
+    permissions: write-all
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Zip test & main
+        run: |
+          zip -j -r optimized-binaries-dev-net.zip optimized-binaries-dev-net/* 
+          zip -j -r optimized-binaries-test-net.zip optimized-binaries-test-net/* 
+          zip -j -r optimized-binaries-main-net.zip optimized-binaries-main-net/*
+      # temporary using commit as version until it is merged. Updates node version v12 -> v16
+      - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          draft: true
+          files: |
+            optimized-binaries-dev-net.zip
+            optimized-binaries-test-net.zip
+            optimized-binaries-main-net.zip

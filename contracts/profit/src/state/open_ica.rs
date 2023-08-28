@@ -6,9 +6,7 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{
-    idle::Idle, CadenceHours, Config, ConfigManagement, IcaConnector, SetupDexHandler, State,
-};
+use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
@@ -17,6 +15,9 @@ pub(super) struct OpenIca {
 }
 
 impl OpenIca {
+    const QUERY_ERROR: &'static str =
+        "Configuration querying is not supported while opening interchain account!";
+
     pub fn new(config: Config, connection: ConnectionParams) -> Self {
         Self {
             config,
@@ -47,16 +48,8 @@ impl Display for OpenIca {
 }
 
 impl ConfigManagement for IcaConnector {
-    fn try_update_config(self, _: CadenceHours) -> ContractResult<Self> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Configuration changes are not allowed during ICA opening process.",
-        )))
-    }
-
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::UnsupportedOperation(String::from(
-            "Querying configuration is not allowed during ICA opening process.",
-        )))
+        Err(ContractError::unsupported_operation(OpenIca::QUERY_ERROR))
     }
 }
 

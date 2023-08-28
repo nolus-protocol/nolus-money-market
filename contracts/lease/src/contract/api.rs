@@ -1,6 +1,8 @@
-use cosmwasm_std::QuerierWrapper;
 use enum_dispatch::enum_dispatch;
-use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Timestamp};
+
+use sdk::cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp,
+};
 
 use crate::{
     api::StateResponse,

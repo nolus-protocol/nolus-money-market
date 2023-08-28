@@ -25,24 +25,16 @@ runs:
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
         --env NET_NAME="${{ inputs.target_net }}" \
         --env RELEASE_VERSION="${RELEASE_VERSION}" \
-        cosmwasm/workspace-optimizer:0.13.0
+        cosmwasm/workspace-optimizer:0.14.0
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        # Temporarily disable check
-        exit 0
+        large_files="`find "artifacts/" -size +3M`"
 
-        large_files=`find "artifacts/" -size +3M`
-
-        large_files_count=`wc -l < EOF
-          ${large_files}
-          EOF`
-
-        if ! test "${large_files_count}" = "0";
+        if ! test "${large_files}" = "";
           then (
             (
-              echo "There are ${large_files_count} files with size larger than allowed limit!"
-              echo "Those are files are the following:"
+              echo "These files are larger than the allowed limit:"
               echo "${large_files}"
             ) >> "${GITHUB_STEP_SUMMARY}"
 

@@ -29,13 +29,13 @@ where
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
-pub struct RepayShares<LPN>
+pub struct RepayShares<Lpn>
 where
-    LPN: Currency,
+    Lpn: Currency,
 {
-    pub interest: Coin<LPN>,
-    pub principal: Coin<LPN>,
-    pub excess: Coin<LPN>,
+    pub interest: Coin<Lpn>,
+    pub principal: Coin<Lpn>,
+    pub excess: Coin<Lpn>,
 }
 
 impl<Lpn> Loan<Lpn>

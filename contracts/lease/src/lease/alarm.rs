@@ -106,29 +106,28 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp;
-    use currency::lease::Atom;
-    use currency::lpn::Usdc;
-    use finance::liability::Zone;
-    use finance::percent::Percent;
-    use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
+    use currency::{lease::Atom, lpn::Usdc};
+    use finance::{
+        coin::Coin, duration::Duration, fraction::Fraction, liability::Zone, percent::Percent,
+        price::total_of,
+    };
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
-    use oracle::stub::OracleRef;
-    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
+    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm, stub::OracleRef};
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{to_binary, WasmMsg};
-    use timealarms::msg::ExecuteMsg::AddAlarm;
-    use timealarms::stub::TimeAlarmsRef;
+    use sdk::cosmwasm_std::{to_binary, Timestamp, WasmMsg};
+    use timealarms::{msg::ExecuteMsg::AddAlarm, stub::TimeAlarmsRef};
 
-    use crate::api::InterestPaymentSpec;
-    use crate::lease::tests::{
-        open_lease_with_payment_spec, LppLoanLocal, OracleLocalStub, RECALC_TIME,
-    };
-    use crate::lease::Lease;
-    use crate::lease::{
-        self,
-        tests::{loan, open_lease, LEASE_START},
+    use crate::{
+        api::InterestPaymentSpec,
+        lease::{
+            self,
+            tests::{
+                loan, open_lease, open_lease_with_payment_spec, LppLoanLocal, OracleLocalStub,
+                LEASE_START, RECALC_TIME,
+            },
+            Lease,
+        },
     };
 
     const TIME_ALARMS_ADDR: &str = "timealarms";

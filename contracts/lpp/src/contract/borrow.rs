@@ -11,21 +11,22 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
     error::Result,
+    loan::Loan,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
 
-pub(super) fn try_open_loan<LPN>(
+pub(super) fn try_open_loan<Lpn>(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    amount: Coin<LPN>,
-) -> Result<(LoanResponse<LPN>, MessageResponse)>
+    amount: Coin<Lpn>,
+) -> Result<(LoanResponse<Lpn>, MessageResponse)>
 where
-    LPN: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
     let lease_addr = info.sender;
-    let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
 
     let loan = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
@@ -38,18 +39,18 @@ where
     Ok((loan, messages.into()))
 }
 
-pub(super) fn try_repay_loan<LPN>(
+pub(super) fn try_repay_loan<Lpn>(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-) -> Result<(Coin<LPN>, MessageResponse)>
+) -> Result<(Coin<Lpn>, MessageResponse)>
 where
-    LPN: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
     let lease_addr = info.sender;
     let repay_amount = bank::received_one(info.funds)?;
 
-    let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     let excess_received = lpp.try_repay_loan(&mut deps, &env, lease_addr.clone(), repay_amount)?;
 
@@ -63,15 +64,15 @@ where
     Ok((excess_received, batch.into()))
 }
 
-pub(super) fn query_quote<LPN>(
+pub(super) fn query_quote<Lpn>(
     deps: &Deps<'_>,
     env: &Env,
-    quote: Coin<LPN>,
+    quote: Coin<Lpn>,
 ) -> Result<QueryQuoteResponse>
 where
-    LPN: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
     match lpp.query_quote(quote, &env.contract.address, &deps.querier, env.block.time)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
@@ -79,9 +80,9 @@ where
     }
 }
 
-pub fn query_loan<LPN>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse<LPN>>
+pub fn query_loan<Lpn>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse<Lpn>>
 where
-    LPN: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
-    LiquidityPool::<LPN>::load(storage)?.query_loan(storage, lease_addr)
+    Loan::query(storage, lease_addr)
 }

@@ -38,6 +38,7 @@ where
         price: Price<C, QuoteC>,
         valid_since: Timestamp,
     ) -> Self {
+        debug_assert!(valid_since < at, "{valid_since} >= {at}");
         self.observations
             .retain(observation::valid_since(valid_since));
 
@@ -153,7 +154,7 @@ mod test {
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
-        feed = feed.add_observation(feeder1, feed2_time, feed2_price, feed2_time);
+        feed = feed.add_observation(feeder1, feed2_time, feed2_price, feed1_time);
         assert_eq!(
             Ok(feed2_price),
             feed.calc_price(&config, block_time, ONE_FEEDER)

@@ -12,7 +12,9 @@ use crate::{
     loan::Loan,
 };
 
-pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
+pub(super) use self::{
+    dto::LeaseDTO, paid::Lease as LeasePaid, repay::FullRepayReceipt, state::State,
+};
 
 mod alarm;
 mod dto;
@@ -135,6 +137,10 @@ where
             ),
             batch: loan_batch,
         })
+    }
+
+    pub(super) fn try_into_messages(self) -> ContractResult<Batch> {
+        self.loan.try_into_messages()
     }
 }
 

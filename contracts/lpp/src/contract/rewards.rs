@@ -52,11 +52,11 @@ pub(super) fn try_claim_rewards(
     Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<LPN>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<LPN>>
+pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<Lpn>>
 where
-    LPN: 'static + Currency + DeserializeOwned + Serialize,
+    Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     lpp.query_lpp_balance(&deps, &env)
 }
 
@@ -72,7 +72,10 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 mod test {
     use access_control::ContractOwnerAccess;
     use currency::test::Usdc;
-    use finance::{coin::Coin, percent::Percent};
+    use finance::{
+        coin::Coin,
+        percent::{bound::BoundToHundredPercent, Percent},
+    };
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
@@ -88,6 +91,7 @@ mod test {
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     #[test]
     fn test_claim_zero_rewards() {
@@ -112,6 +116,7 @@ mod test {
                     ADDON_OPTIMAL_INTEREST_RATE,
                 )
                 .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
             ),
         )
         .unwrap();

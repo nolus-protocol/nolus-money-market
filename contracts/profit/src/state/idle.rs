@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, native::Nls, payment::PaymentGroup, Currency, Group};
+use currency::{native::Nls, payment::PaymentGroup, Currency, Group};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
@@ -18,15 +18,20 @@ use platform::{
     bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
     message::Response as PlatformResponse,
+    state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
+use timealarms::result::ContractResult as TimeAlarmsResult;
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
+use crate::{
+    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
+    typedefs::CadenceHours,
+};
 
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -105,23 +110,35 @@ impl Idle {
             })
             .map_err(Into::into)
     }
+
+    fn setup_time_alarm(config: &Config, now: Timestamp) -> TimeAlarmsResult<Batch> {
+        config
+            .time_alarms()
+            .setup_alarm(now + Duration::from_hours(config.cadence_hours()))
+    }
 }
 
 impl Enterable for Idle {
     fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
-        self.config
-            .time_alarms()
-            .setup_alarm(now + Duration::from_hours(self.config.cadence_hours()))
-            .map_err(DexError::TimeAlarmError)
+        Self::setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
     }
 }
 
 impl ConfigManagement for Idle {
-    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
-        Ok(Self {
-            config: self.config.update(cadence_hours),
-            ..self
-        })
+    fn try_update_config(
+        self,
+        now: Timestamp,
+        cadence_hours: CadenceHours,
+    ) -> ContractResult<StateMachineResponse<Self>> {
+        let config: Config = self.config.update(cadence_hours);
+
+        Self::setup_time_alarm(&config, now)
+            .map(PlatformResponse::messages_only)
+            .map(|response: PlatformResponse| StateMachineResponse {
+                response,
+                next_state: Self { config, ..self },
+            })
+            .map_err(Into::into)
     }
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {

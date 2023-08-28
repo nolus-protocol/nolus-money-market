@@ -18,6 +18,8 @@ use crate::{
     zero::Zero,
 };
 
+pub mod bound;
+
 pub type Units = u32;
 
 #[derive(

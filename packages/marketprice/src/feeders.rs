@@ -58,16 +58,48 @@ impl<'f> PriceFeeders<'f> {
         Ok(())
     }
 
-    pub fn remove(&self, deps: DepsMut<'_>, addr: Addr) -> Result<(), PriceFeedersError> {
-        let remove_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
-            addrs.remove(&addr);
-            Ok(addrs)
+    pub fn remove(&self, deps: DepsMut<'_>, feeder: &Addr) -> Result<(), PriceFeedersError> {
+        let remove_address = |mut feeders: HashSet<Addr>| -> HashSet<Addr> {
+            feeders.remove(feeder);
+            feeders
         };
 
-        if self.0.may_load(deps.storage)?.is_some() {
-            self.0.update(deps.storage, remove_address)?;
+        if let Some(feeders) = self.0.may_load(deps.storage).transpose() {
+            feeders
+                .map(remove_address)
+                .and_then(|new_feeders| self.0.save(deps.storage, &new_feeders))
+                .map_err(Into::into)
+        } else {
+            Ok(())
         }
+    }
+}
 
-        Ok(())
+#[cfg(test)]
+mod tests {
+    use sdk::cosmwasm_std::{testing, Addr};
+
+    use crate::feeders::PriceFeeders;
+
+    #[test]
+    fn remove_empty() {
+        let mut deps = testing::mock_dependencies();
+        let feeders = PriceFeeders::new("storage_namespace");
+        feeders
+            .remove(deps.as_mut(), &Addr::unchecked("test_feeder"))
+            .unwrap();
+    }
+
+    #[test]
+    fn remove_existing() {
+        let mut deps = testing::mock_dependencies();
+        let feeders = PriceFeeders::new("storage_namespace");
+        let new_feeder = Addr::unchecked("feeder34");
+        feeders.register(deps.as_mut(), new_feeder.clone()).unwrap();
+        assert_eq!(Ok(true), feeders.is_registered(&deps.storage, &new_feeder));
+
+        feeders.remove(deps.as_mut(), &new_feeder).unwrap();
+
+        assert_eq!(Ok(false), feeders.is_registered(&deps.storage, &new_feeder));
     }
 }

@@ -7,6 +7,7 @@ use super::PriceDTO as ValidatedDTO;
 
 /// Brings invariant checking as a step in deserializing a PriceDTO
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(super) struct PriceDTO<G, QuoteG>
 where
     G: Group,

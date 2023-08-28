@@ -1,6 +1,6 @@
 [package]
 name = "lpp"
-version = "0.4.0"
+version = "0.4.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -15,7 +15,7 @@ test = true
 [features]
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
-contract = ["stub"]
+contract = ["stub", "migration"]
 stub = []
 migration = []
 testing = ["currency/testing"]

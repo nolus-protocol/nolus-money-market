@@ -1,45 +1,56 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::{bank::FixedAddressSender, batch::Batch};
+use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use serde::Serialize;
-use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
+    lease::{with_lease::WithLease, FullRepayReceipt, Lease},
 };
 
 use super::ReceiptDTO;
 
 pub(crate) struct LiquidateResult {
-    pub lease: LeaseDTO,
     pub receipt: ReceiptDTO,
     pub messages: Batch,
+}
+
+impl LiquidateResult {
+    fn new(receipt: ReceiptDTO, messages: Batch) -> Self {
+        debug_assert!(
+            receipt.close,
+            "The full-liquidation payment should have repaid the total outstanding liability!"
+        );
+        Self { receipt, messages }
+    }
+}
+
+impl<Lpn> From<FullRepayReceipt<Lpn>> for LiquidateResult
+where
+    Lpn: Currency,
+{
+    fn from(value: FullRepayReceipt<Lpn>) -> Self {
+        let (receipt, messages) = value.decompose();
+        Self::new(receipt.into(), messages)
+    }
 }
 
 pub(crate) struct Liquidate {
     payment: LpnCoin,
     now: Timestamp,
     profit: ProfitRef,
-    time_alarms: TimeAlarmsRef,
 }
 
 impl Liquidate {
-    pub fn new(
-        payment: LpnCoin,
-        now: Timestamp,
-        profit: ProfitRef,
-        time_alarms: TimeAlarmsRef,
-    ) -> Self {
+    pub fn new(payment: LpnCoin, now: Timestamp, profit: ProfitRef) -> Self {
         Self {
             payment,
             now,
             profit,
-            time_alarms,
         }
     }
 }
@@ -51,7 +62,7 @@ impl WithLease for Liquidate {
 
     fn exec<Lpn, Asset, Lpp, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
@@ -59,24 +70,10 @@ impl WithLease for Liquidate {
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        let mut profit = self.profit.as_stub();
-        let receipt = lease.repay(self.payment.try_into()?, self.now, &mut profit)?;
-
-        if !receipt.close() {
-            return Err(ContractError::InsufficientLiquidation()); //issue #92
-        }
-
-        profit.send(receipt.change());
-
-        lease.try_into_dto(self.profit, self.time_alarms).map(
-            |IntoDTOResult {
-                 lease,
-                 batch: messages,
-             }| Self::Output {
-                lease,
-                receipt: receipt.into(),
-                messages: messages.merge(profit.into()),
-            },
-        )
+        // TODO [issue #92] request the needed amount from the Liquidation Fund and
+        // make sure the message goes out before the liquidation messages.
+        lease
+            .liquidate_full(self.payment.try_into()?, self.now, self.profit.as_stub())
+            .map(Into::into)
     }
 }

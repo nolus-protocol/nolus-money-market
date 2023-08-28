@@ -1,4 +1,4 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},

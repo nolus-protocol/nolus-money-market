@@ -80,17 +80,25 @@ where
     LppLoan::Error: Into<ContractError>,
 {
     pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
-        let LppBatch {
-            lpp_ref,
-            batch: lpp_messages,
-        } = self
-            .lpp_loan
-            .try_into()
-            .map_err(Into::<ContractError>::into)?;
+        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| {
+            (
+                LoanDTO::new(
+                    lpp_batch.lpp_ref,
+                    self.interest_payment_spec,
+                    self.due_period,
+                    profit,
+                ),
+                lpp_batch.batch,
+            )
+        })
+    }
 
-        let dto = LoanDTO::new(lpp_ref, self.interest_payment_spec, self.due_period, profit);
+    pub(super) fn try_into_messages(self) -> ContractResult<Batch> {
+        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| lpp_batch.batch)
+    }
 
-        Ok((dto, lpp_messages))
+    fn try_loan_into(loan: LppLoan) -> ContractResult<LppBatch<LppRef>> {
+        loan.try_into().map_err(Into::<ContractError>::into)
     }
 }
 
@@ -390,7 +398,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp;
+    use serde::{Deserialize, Serialize};
+
     use currency::lpn::Usdc;
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
@@ -401,7 +410,7 @@ mod tests {
     };
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
-    use serde::{Deserialize, Serialize};
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::api::InterestPaymentSpec;
 
@@ -993,13 +1002,13 @@ mod tests {
     }
 
     mod test_state {
-        use cosmwasm_std::Timestamp;
         use currency::Currency;
         use finance::{
             coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent,
             period::Period,
         };
         use lpp::msg::LoanResponse;
+        use sdk::cosmwasm_std::Timestamp;
 
         use crate::loan::tests::create_loan;
 

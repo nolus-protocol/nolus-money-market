@@ -56,6 +56,7 @@ fn init_lpp_with_unknown_currency() {
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     );
 }
 
@@ -73,6 +74,7 @@ fn open_lease_not_in_lease_currency() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -126,6 +128,7 @@ fn open_multiple_loans() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -234,6 +237,7 @@ fn test_quote() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -330,6 +334,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
@@ -416,6 +421,7 @@ fn test_quote_fixed_rate() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -500,6 +506,7 @@ fn open_loans_lpp_fails() {
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
         .init_oracle(None)
@@ -543,6 +550,7 @@ where
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
     .init_oracle(None)
