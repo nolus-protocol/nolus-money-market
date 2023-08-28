@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -17,10 +15,10 @@ use super::Lease;
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
         let lpn_in_assets = self.price_of_lease_currency()?.inv();

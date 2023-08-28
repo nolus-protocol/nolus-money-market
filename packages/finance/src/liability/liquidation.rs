@@ -88,7 +88,7 @@ pub fn check_liability<Asset, Lpn>(
 ) -> Status<Asset>
 where
     Asset: Currency,
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
 {
     let total_due = price::total(total_due, lpn_in_assets);
     let overdue = price::total(overdue, lpn_in_assets);
@@ -116,7 +116,7 @@ fn no_liquidation<Asset, Lpn>(
 ) -> Status<Asset>
 where
     Asset: Currency,
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
 {
     debug_assert!(ltv < spec.max());
     if total_due.is_zero() {
@@ -135,7 +135,7 @@ fn may_ask_liquidation_liability<Asset, Lpn>(
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
 {
     let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
     may_ask_liquidation(
@@ -200,7 +200,7 @@ mod tests {
     const LEASE_AMOUNT: Coin<TestCurrency> = Coin::new(1000);
     const LEASE_AMOUNT_TEST_LPN: Coin<TestLpn> = Coin::new(1000);
     const PRICE_TEST_LPN: Coin<TestLpn> = Coin::new(1_000);
-    const PRICE_TEST_CURRENCY:  Coin<TestCurrency> = Coin::new(1_000);
+    const PRICE_TEST_CURRENCY: Coin<TestCurrency> = Coin::new(1_000);
 
     #[test]
     fn no_debt() {

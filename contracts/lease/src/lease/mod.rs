@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::{self, Currency};
 use finance::{coin::Coin, liability::Liability};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
@@ -47,8 +45,8 @@ pub struct IntoDTOResult {
 
 impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
 where
-    Lpn: Currency + Serialize,
-    Asset: Currency + Serialize,
+    Lpn: Currency,
+    Asset: Currency,
     LppLoan: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -112,8 +110,8 @@ where
 
 impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
 where
-    Lpn: Currency + Serialize,
-    Asset: Currency + Serialize,
+    Lpn: Currency,
+    Asset: Currency,
     LppLoan: LppLoanTrait<Lpn>,
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,

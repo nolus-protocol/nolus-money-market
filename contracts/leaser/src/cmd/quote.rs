@@ -31,7 +31,7 @@ impl<'r> WithLppLender for Quote<'r> {
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppLenderTrait<Lpn>,
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
     {
         self.oracle.execute_as_oracle(
             QuoteStage2 {
