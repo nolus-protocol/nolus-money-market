@@ -10,6 +10,7 @@ use crate::{
 };
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {

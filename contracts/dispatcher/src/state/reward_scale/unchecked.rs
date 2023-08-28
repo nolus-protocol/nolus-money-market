@@ -5,6 +5,7 @@ use sdk::schemars::{self, JsonSchema};
 use super::Bar;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct RewardScale {
     bars: Vec<Bar>,
 }

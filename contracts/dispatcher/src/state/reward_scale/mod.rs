@@ -30,6 +30,7 @@ impl TotalValueLocked {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Bar {
     pub tvl: TotalValueLocked,
     pub apr: Percent,

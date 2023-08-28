@@ -8,6 +8,7 @@ use super::InterestPaymentSpec as ValidatedInterestPaymentSpec;
 
 /// Brings invariant checking as a step in deserializing a InterestPaymentSpec
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(super) struct InterestPaymentSpec {
     due_period: Duration,
     grace_period: Duration,
