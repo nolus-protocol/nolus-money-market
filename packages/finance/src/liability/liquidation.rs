@@ -90,14 +90,14 @@ where
     Asset: Currency,
     Lpn: Currency,
 {
+    debug_assert!(asset != Coin::ZERO);
     let total_due = price::total(total_due, lpn_in_assets);
+    debug_assert!(total_due <= asset);
     let overdue = price::total(overdue, lpn_in_assets);
+    debug_assert!(overdue <= total_due);
     let min_liquidation = price::total(spec.min_liquidation, lpn_in_assets);
     let min_asset = price::total(spec.min_asset, lpn_in_assets);
 
-    debug_assert!(asset != Coin::ZERO);
-    debug_assert!(total_due <= asset);
-    debug_assert!(overdue <= total_due);
     let ltv = Percent::from_ratio(total_due, asset);
     may_ask_liquidation_liability(spec, asset, total_due, min_liquidation, min_asset)
         .max(may_ask_liquidation_overdue(
