@@ -77,15 +77,15 @@ mod test {
     fn below_price_err() {
         assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, "amount_quote": {"amount": "10", "ticker": "WBTC"}}}"#), 
                                 "The price should be equal to the identity if the currencies match");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "DAI"}, "amount_quote": {"amount": "0", "ticker": "DAI"}}}"#),
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "OSMO"}, "amount_quote": {"amount": "0", "ticker": "OSMO"}}}"#),
                                 "The quote amount should not be zero");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "DAI"}, "amount_quote": {"amount": "5", "ticker": "DAI"}}}"#),
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "WETH"}, "amount_quote": {"amount": "5", "ticker": "WETH"}}}"#),
                                 "The amount should not be zero");
     }
 
     #[test]
     fn above_price_zero() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "ABC"}, "amount_quote": {"amount": "10", "ticker": "ABC"}}}"#),
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "AXL"}, "amount_quote": {"amount": "10", "ticker": "AXL"}}}"#),
                                 "The amount should not be zero");
     }
 
@@ -132,6 +132,7 @@ mod test {
 
     #[track_caller]
     fn assert_err(r: Result<Alarm, StdError>, msg: &str) {
+        assert!(r.is_err());
         assert!(matches!(
             r,
             Err(StdError::ParseErr {

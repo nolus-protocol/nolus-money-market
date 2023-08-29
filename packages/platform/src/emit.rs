@@ -1,4 +1,4 @@
-use currency::{Currency, Symbol};
+use currency::{Currency, Group, Symbol};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     percent::Percent,
@@ -76,6 +76,7 @@ where
     fn emit_coin_dto<K, G>(self, event_key: K, coin: &CoinDTO<G>) -> Self
     where
         K: Into<String>,
+        G: Group,
     {
         emit_coinable(self, event_key, coin.amount(), coin.ticker())
     }

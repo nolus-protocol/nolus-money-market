@@ -57,7 +57,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{Dai, Nls, TestCurrencies, Usdc},
+        test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
         Currency,
     };
     use finance::coin::{Amount, Coin};
@@ -153,7 +153,7 @@ mod test {
         assert_passed_through::<true>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<YetAnotherCurrency>::new(AMOUNT2).into())
+            f.visit::<TestExtraCurrencies>(&Coin::<YetAnotherCurrency>::new(AMOUNT2).into())
                 .unwrap(),
             IterNext::Stop
         );

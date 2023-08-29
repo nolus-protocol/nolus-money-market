@@ -12,9 +12,9 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
 
-pub use self::coinc::{from_amount_ticker, CoinDTO, IntoDTO};
+pub use self::dto::{from_amount_ticker, CoinDTO, IntoDTO};
 
-mod coinc;
+mod dto;
 mod serde;
 
 pub type Amount = u128;

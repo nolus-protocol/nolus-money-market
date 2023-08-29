@@ -19,12 +19,21 @@ use crate::{
 
 use super::{Coin, WithCoin};
 
-/// A type designed to be used in the init, execute and query incoming messages.
-/// It is a non-currency-parameterized version of finance::coin::Coin<C> with
-/// the same representation on the wire. The aim is to use it everywhere the cosmwasm
-/// framework does not support type parameterization.
+mod unchecked;
+
+/// A type designed to be used in the init, execute and query incoming messages
+/// and everywhere the exact currency is unknown at compile time.
+///
+/// This is a non-currency-parameterized version of finance::coin::Coin<C> that
+/// carries also the currency ticker. The aim is to use it everywhere the cosmwasm
+/// framework does not support type parameterization or where the currency type
+/// is unknown at compile time.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CoinDTO<G> {
+#[serde(try_from = "unchecked::CoinDTO")]
+pub struct CoinDTO<G>
+where
+    G: Group,
+{
     amount: Amount,
     // TODO either
     // use a reference type, e.g. SymbolStatic, and validate instances on deserialization, or
@@ -34,7 +43,26 @@ pub struct CoinDTO<G> {
     _g: PhantomData<G>,
 }
 
-impl<G> CoinDTO<G> {
+impl<G> CoinDTO<G>
+where
+    G: Group,
+{
+    fn new_checked(amount: Amount, ticker: SymbolOwned) -> Result<Self> {
+        let res = Self::new_raw(amount, ticker);
+        res.invariant_held().map(|_| res)
+    }
+
+    fn new_unchecked(amount: Amount, ticker: Symbol<'_>) -> Self {
+        let res = Self::new_raw(amount, ticker.into());
+        debug_assert_eq!(
+            Ok(()),
+            res.invariant_held(),
+            "Conversion of coin with ticker {ticker} to group '{:?}'",
+            G::DESCR
+        );
+        res
+    }
+
     pub const fn amount(&self) -> Amount {
         self.amount
     }
@@ -46,20 +74,19 @@ impl<G> CoinDTO<G> {
     pub fn is_zero(&self) -> bool {
         self.amount == Amount::default()
     }
-}
-impl<G> CoinDTO<G>
-where
-    G: Group,
-{
+
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
         V: WithCoin,
         Error: Into<V::Error>,
     {
-        struct CoinTransformerAny<'a, G, V>(&'a CoinDTO<G>, V);
+        struct CoinTransformerAny<'a, G, V>(&'a CoinDTO<G>, V)
+        where
+            G: Group;
 
         impl<'a, G, V> AnyVisitor for CoinTransformerAny<'a, G, V>
         where
+            G: Group,
             V: WithCoin,
         {
             type Output = V::Output;
@@ -78,6 +105,18 @@ where
         currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
+
+    fn new_raw(amount: Amount, ticker: SymbolOwned) -> CoinDTO<G> {
+        Self {
+            amount,
+            ticker,
+            _g: Default::default(),
+        }
+    }
+
+    fn invariant_held(&self) -> Result<()> {
+        currency::validate::<G>(&self.ticker).map_err(Into::into)
+    }
 }
 
 impl<G> Display for CoinDTO<G>
@@ -91,18 +130,22 @@ where
 
 impl<G, C> TryFrom<&CoinDTO<G>> for Coin<C>
 where
+    G: Group,
     C: Currency,
 {
     type Error = Error;
 
-    // TODO consider adding some compile-time check that a currency belongs to a group
+    // TODO consider adding a compile-time check that a currency belongs to a group
     // one option is to revive the trait Member<Group> that currencies to impl
     // another option is to add an associated trait type to Currency pointing to its direct group
     // the still open quenstion to the both solution is how to express a 'sub-group' relationship
     fn try_from(coin: &CoinDTO<G>) -> StdResult<Self, Self::Error> {
-        struct CoinFactory<'a, G>(&'a CoinDTO<G>);
+        struct CoinFactory<'a, G>(&'a CoinDTO<G>)
+        where
+            G: Group;
         impl<'a, G, CC> SingleVisitor<CC> for CoinFactory<'a, G>
         where
+            G: Group,
             CC: Currency,
         {
             type Output = Coin<CC>;
@@ -119,6 +162,7 @@ where
 
 impl<G, C> TryFrom<CoinDTO<G>> for Coin<C>
 where
+    G: Group,
     C: Currency,
 {
     type Error = Error;
@@ -130,14 +174,12 @@ where
 
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
+    G: Group,
     C: Currency,
 {
     fn from(coin: Coin<C>) -> Self {
-        Self {
-            amount: coin.amount,
-            ticker: C::TICKER.into(),
-            _g: PhantomData,
-        }
+        // TODO consider adding a compile-time check that the currency belongs to the group
+        Self::new_unchecked(coin.amount, C::TICKER)
     }
 }
 
@@ -146,7 +188,10 @@ where
     G: Group,
 {
     struct Converter<G>(Amount, PhantomData<G>);
-    impl<G> AnyVisitor for Converter<G> {
+    impl<G> AnyVisitor for Converter<G>
+    where
+        G: Group,
+    {
         type Output = CoinDTO<G>;
         type Error = Error;
         fn on<C>(self) -> AnyVisitorResult<Self>
@@ -173,7 +218,10 @@ impl<G> Default for IntoDTO<G> {
         Self::new()
     }
 }
-impl<G> WithCoin for IntoDTO<G> {
+impl<G> WithCoin for IntoDTO<G>
+where
+    G: Group,
+{
     type Output = CoinDTO<G>;
     type Error = Error;
 
@@ -188,6 +236,7 @@ impl<G> WithCoin for IntoDTO<G> {
 #[cfg(test)]
 mod test {
     use sdk::cosmwasm_std::{from_slice, to_vec};
+    use serde::{Deserialize, Serialize};
 
     use currency::{
         test::{Dai, Nls, TestCurrencies, Usdc},
@@ -199,7 +248,9 @@ mod test {
         error::Error,
     };
 
-    #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+    #[derive(
+        Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize,
+    )]
     struct MyTestCurrency;
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
@@ -207,7 +258,34 @@ mod test {
         const DEX_SYMBOL: SymbolStatic = "ibc/2";
     }
 
+    #[derive(PartialEq)]
     struct MyTestGroup {}
+    impl Group for MyTestGroup {
+        const DESCR: SymbolStatic = "My Test Group";
+
+        fn maybe_visit_on_ticker<V>(
+            symbol: currency::Symbol<'_>,
+            visitor: V,
+        ) -> currency::MaybeAnyVisitResult<V>
+        where
+            Self: Sized,
+            V: currency::AnyVisitor,
+        {
+            assert_eq!(symbol, MyTestCurrency::TICKER);
+            Ok(visitor.on::<MyTestCurrency>())
+        }
+
+        fn maybe_visit_on_bank_symbol<V>(
+            _bank_symbol: currency::Symbol<'_>,
+            _visitor: V,
+        ) -> currency::MaybeAnyVisitResult<V>
+        where
+            Self: Sized,
+            V: currency::AnyVisitor,
+        {
+            unreachable!()
+        }
+    }
 
     #[test]
     fn longer_representation() {

@@ -172,8 +172,9 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 #[cfg(test)]
 mod tests {
     use currency::{
+        lease::{Akt, Axl, Mars, Wbtc, Weth},
+        lpn::Usdc,
         payment::PaymentGroup,
-        test::{Dai, Usdc},
     };
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
@@ -248,8 +249,8 @@ mod tests {
     #[test]
     fn always_continue() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Dai>::new(100).into(),
-            Coin::<Usdc>::new(200).into(),
+            Coin::<Weth>::new(100).into(),
+            Coin::<Axl>::new(200).into(),
         ]);
 
         assert_eq!(
@@ -261,7 +262,7 @@ mod tests {
     #[test]
     fn stop_on_first() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Dai>::new(100).into(),
+            Coin::<Akt>::new(100).into(),
             Coin::<Usdc>::new(200).into(),
         ]);
 
@@ -274,8 +275,8 @@ mod tests {
     #[test]
     fn stop_on_second() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Dai>::new(100).into(),
-            Coin::<Usdc>::new(200).into(),
+            Coin::<Wbtc>::new(100).into(),
+            Coin::<Mars>::new(200).into(),
         ]);
 
         assert_eq!(

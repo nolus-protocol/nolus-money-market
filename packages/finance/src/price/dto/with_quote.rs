@@ -9,6 +9,7 @@ use super::{PriceDTO, WithQuote};
 
 struct BaseCVisitor<'a, G, C, Cmd>
 where
+    G: Group,
     C: Currency,
 {
     base_dto: &'a CoinDTO<G>,
@@ -18,6 +19,7 @@ where
 
 impl<'a, G, C, Cmd> AnyVisitor for BaseCVisitor<'a, G, C, Cmd>
 where
+    G: Group,
     C: Currency,
     Cmd: WithQuote<C>,
 {
