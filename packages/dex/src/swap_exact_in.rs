@@ -113,8 +113,11 @@ where
         #[cfg(debug_assertions)]
         self.debug_check(&filtered_resp, _res);
 
-        coin::from_amount_ticker(filtered_resp.filtered() + resp.1, spec.out_currency())
-            .map_err(Into::into)
+        coin::from_amount_ticker(
+            filtered_resp.filtered() + resp.1,
+            spec.out_currency().into(),
+        )
+        .map_err(Into::into)
     }
 
     #[cfg(debug_assertions)]

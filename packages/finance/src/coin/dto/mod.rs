@@ -5,7 +5,7 @@ use std::{
 };
 
 use sdk::schemars::{self, JsonSchema};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{
     self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol,
@@ -183,26 +183,11 @@ where
     }
 }
 
-pub fn from_amount_ticker<G>(amount: Amount, ticker: Symbol<'_>) -> Result<CoinDTO<G>>
+pub fn from_amount_ticker<G>(amount: Amount, ticker: SymbolOwned) -> Result<CoinDTO<G>>
 where
     G: Group,
 {
-    struct Converter<G>(Amount, PhantomData<G>);
-    impl<G> AnyVisitor for Converter<G>
-    where
-        G: Group,
-    {
-        type Output = CoinDTO<G>;
-        type Error = Error;
-        fn on<C>(self) -> AnyVisitorResult<Self>
-        where
-            C: Currency + Serialize + DeserializeOwned,
-        {
-            Ok(Coin::<C>::from(self.0).into())
-        }
-    }
-
-    currency::visit_any_on_ticker::<G, _>(ticker, Converter(amount, PhantomData))
+    CoinDTO::new_checked(amount, ticker)
 }
 
 pub struct IntoDTO<G> {
@@ -312,7 +297,7 @@ mod test {
         type TheCurrency = Usdc;
         assert_eq!(
             Ok(Coin::<TheCurrency>::from(amount).into()),
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::TICKER)
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::TICKER.into())
         );
     }
 
@@ -321,11 +306,11 @@ mod test {
         let amount = 20;
         type TheCurrency = Usdc;
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::DEX_SYMBOL),
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::DEX_SYMBOL.into()),
             Err(Error::CurrencyError { .. })
         ));
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::BANK_SYMBOL),
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::BANK_SYMBOL.into()),
             Err(Error::CurrencyError { .. })
         ));
     }
@@ -333,7 +318,7 @@ mod test {
     #[test]
     fn from_amount_ticker_not_in_the_group() {
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER),
+            super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER.into()),
             Err(Error::CurrencyError { .. })
         ));
     }
