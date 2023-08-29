@@ -2,8 +2,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::Coin, fraction::Fraction, interest::InterestPeriod, percent::Percent, period::Period,
+    coin::{Amount, Coin},
+    fraction::Fraction,
+    interest::InterestPeriod,
+    percent::Percent,
+    period::Period,
     ratio::Rational,
+    zero::Zero,
 };
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Timestamp},
@@ -41,9 +46,9 @@ where
 
     pub fn new() -> Self {
         Total {
-            total_principal_due: Coin::new(0),
-            total_interest_due: Coin::new(0),
-            annual_interest_rate: Rational::new(Coin::new(0), Coin::new(1000)),
+            total_principal_due: Coin::ZERO,
+            total_interest_due: Coin::ZERO,
+            annual_interest_rate: zero_interest_rate(),
             last_update_time: Timestamp::default(),
         }
     }
@@ -99,7 +104,7 @@ where
         self.total_interest_due = self.total_interest_due_by_now(ctime) - loan_interest_payment;
 
         self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
-            Rational::new(Coin::<Lpn>::new(0), Coin::<Lpn>::new(100))
+            zero_interest_rate()
         } else {
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
@@ -114,6 +119,14 @@ where
 
         self
     }
+}
+
+fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>>
+where
+    Lpn: Currency,
+{
+    const THOUSAND: Amount = 1000;
+    Rational::new(Coin::ZERO, THOUSAND.into())
 }
 
 #[cfg(test)]

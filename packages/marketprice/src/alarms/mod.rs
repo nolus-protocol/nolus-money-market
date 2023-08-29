@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{Currency, SymbolOwned};
 use finance::{
-    coin::{Amount, Coin, CoinDTO},
+    coin::{Amount, CoinDTO},
     price::{self, Price},
 };
 use sdk::{
@@ -27,8 +27,6 @@ pub type AlarmsCount = u32;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 struct NormalizedPrice(CoinDTO<SwapGroup>);
-
-const NORM_SCALE: u128 = 10u128.pow(18);
 
 type BoxedIter<'storage> =
     Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), StdError>> + 'storage>;
@@ -52,7 +50,8 @@ impl NormalizedPrice {
         C: Currency,
         BaseC: Currency,
     {
-        NormalizedPrice(price::total(Coin::new(NORM_SCALE), price.inv()).into())
+        const NORM_SCALE: Amount = 10u128.pow(18);
+        NormalizedPrice(price::total(NORM_SCALE.into(), price.inv()).into())
     }
 }
 

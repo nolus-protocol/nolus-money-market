@@ -107,10 +107,7 @@ impl<C> Zero for Coin<C>
 where
     C: Currency,
 {
-    const ZERO: Self = Self {
-        amount: Zero::ZERO,
-        ticker: PhantomData,
-    };
+    const ZERO: Self = Self::new(Zero::ZERO);
 }
 
 impl<C> Add<Coin<C>> for Coin<C>
@@ -133,11 +130,9 @@ where
     type Output = Self;
 
     #[track_caller]
-    fn sub(self, rhs: Coin<C>) -> Self::Output {
-        Self::Output {
-            amount: self.amount - rhs.amount,
-            ticker: self.ticker,
-        }
+    fn sub(mut self, rhs: Coin<C>) -> Self::Output {
+        self -= rhs;
+        self
     }
 }
 

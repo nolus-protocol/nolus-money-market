@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::result::Result as StdResult;
 
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor};
-use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
+use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{
@@ -114,9 +114,7 @@ where
     where
         C: Currency,
     {
-        let coin = Coin::new(self.0.amount.into());
-
-        self.1.on::<C>(coin)
+        self.1.on::<C>(from_cosmwasm_internal(self.0))
     }
 }
 
@@ -125,7 +123,7 @@ where
     C: Currency,
 {
     debug_assert_eq!(C::BANK_SYMBOL, coin.denom);
-    Coin::new(coin.amount.into())
+    Amount::from(coin.amount).into()
 }
 
 #[cfg(test)]

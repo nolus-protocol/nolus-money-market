@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::{native::Nls, Group};
 use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -28,18 +28,15 @@ pub struct Sender<'c> {
 }
 
 impl<'c> Sender<'c> {
-    pub fn new<C>(
+    pub fn new(
         channel: &'c str,
         sender: Addr,
         receiver: HostAccount,
         timeout: Timestamp,
-        ack_tip: Coin<C>,
-        timeout_tip: Coin<C>,
+        ack_tip: Coin<Nls>,
+        timeout_tip: Coin<Nls>,
         memo: String,
-    ) -> Self
-    where
-        C: Currency,
-    {
+    ) -> Self {
         Self {
             channel,
             sender,
@@ -134,7 +131,10 @@ impl<'c> From<Sender<'c>> for Batch {
 
 #[cfg(test)]
 mod test {
-    use currency::test::{Dai, Nls, TestExtraCurrencies, Usdc};
+    use currency::{
+        native::Nls,
+        test::{Dai, TestExtraCurrencies, Usdc},
+    };
     use finance::coin::Coin;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 

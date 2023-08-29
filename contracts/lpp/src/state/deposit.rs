@@ -4,6 +4,7 @@ use currency::{native::Nls, Currency};
 use finance::{
     coin::Coin,
     price::{self, Price},
+    zero::Zero,
 };
 use sdk::{
     cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
@@ -173,7 +174,7 @@ impl Deposit {
         self.update_rewards(&globals);
 
         let reward = self.data.pending_rewards_nls;
-        self.data.pending_rewards_nls = Coin::new(0);
+        self.data.pending_rewards_nls = Coin::ZERO;
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
 

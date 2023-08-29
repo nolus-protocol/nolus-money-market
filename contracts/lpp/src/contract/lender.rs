@@ -14,6 +14,7 @@ use crate::{
     event,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
+    nlpn::NLpn,
     state::Deposit,
 };
 
@@ -71,7 +72,7 @@ where
     }
 
     let lender_addr = info.sender;
-    let amount_nlpn = Coin::new(amount_nlpn.u128());
+    let amount_nlpn: Coin<NLpn> = amount_nlpn.u128().into();
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
