@@ -12,7 +12,8 @@ use crate::{msg::InstantiateMsg, result::ContractResult, ContractError};
 
 type CodeId = u64;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Config {
     pub lease_code_id: CodeId,
     pub lpp_addr: Addr,

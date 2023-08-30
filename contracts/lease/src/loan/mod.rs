@@ -30,7 +30,8 @@ mod liability;
 mod repay;
 mod state;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub(crate) struct LoanDTO {
     lpp: LppRef,
     interest_payment_spec: InterestPaymentSpec,

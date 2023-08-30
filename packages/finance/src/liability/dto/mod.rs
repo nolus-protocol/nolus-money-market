@@ -16,7 +16,8 @@ mod unchecked;
 
 pub type LpnCoin = CoinDTO<Lpns>;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(rename_all = "snake_case")]
 #[serde(try_from = "unchecked::LiabilityDTO")]
 pub struct LiabilityDTO {
