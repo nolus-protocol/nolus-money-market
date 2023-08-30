@@ -28,9 +28,7 @@ impl Batch {
     where
         M: Into<CosmosMsg>,
     {
-        let msg_cw = SubMsg::new(msg);
-
-        self.msgs.push(msg_cw);
+        self.schedule_no_reply(msg)
     }
 
     pub fn schedule_execute_on_success_reply<M>(&mut self, msg: M, reply_id: ReplyId)
@@ -40,6 +38,15 @@ impl Batch {
         let msg_cw = SubMsg::reply_on_success(msg, reply_id);
 
         self.msgs.push(msg_cw);
+    }
+
+    pub fn schedule_execute_wasm_no_reply_no_funds<M>(&mut self, addr: &Addr, msg: M) -> Result<()>
+    where
+        M: Serialize,
+    {
+        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
+        self.schedule_no_reply(wasm_msg);
+        Ok(())
     }
 
     pub fn schedule_execute_wasm_no_reply<M, C>(
@@ -53,9 +60,7 @@ impl Batch {
         C: Currency,
     {
         let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
-        let msg_cw = SubMsg::new(wasm_msg);
-
-        self.msgs.push(msg_cw);
+        self.schedule_no_reply(wasm_msg);
         Ok(())
     }
 
@@ -138,9 +143,7 @@ impl Batch {
         M: Serialize,
     {
         let wasm_msg = Self::wasm_migrate_msg(addr, msg, new_code_id)?;
-        let msg_cw = SubMsg::new(wasm_msg);
-
-        self.msgs.push(msg_cw);
+        self.schedule_no_reply(wasm_msg);
         Ok(())
     }
 
@@ -218,6 +221,13 @@ impl Batch {
             new_code_id,
             msg: msg_bin,
         })
+    }
+
+    fn schedule_no_reply<M>(&mut self, msg: M)
+    where
+        M: Into<CosmosMsg>,
+    {
+        self.msgs.push(SubMsg::new(msg));
     }
 }
 

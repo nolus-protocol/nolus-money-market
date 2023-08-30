@@ -27,12 +27,6 @@ pub struct ProfitRef {
     addr: Addr,
 }
 
-impl From<ProfitRef> for Addr {
-    fn from(profit_ref: ProfitRef) -> Self {
-        profit_ref.addr
-    }
-}
-
 impl ProfitRef {
     pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
         let _: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
