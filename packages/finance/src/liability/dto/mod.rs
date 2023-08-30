@@ -116,6 +116,17 @@ where
     type Error = Error;
 
     fn try_from(dto: LiabilityDTO) -> Result<Self> {
+        Self::try_from(&dto)
+    }
+}
+
+impl<Lpn> TryFrom<&LiabilityDTO> for Liability<Lpn>
+where
+    Lpn: Currency,
+{
+    type Error = Error;
+
+    fn try_from(dto: &LiabilityDTO) -> Result<Self> {
         Ok(Self {
             initial: dto.initial,
             healthy: dto.healthy,
@@ -123,8 +134,8 @@ where
             second_liq_warn: dto.second_liq_warn,
             third_liq_warn: dto.third_liq_warn,
             max: dto.max,
-            min_liquidation: dto.min_liquidation.try_into()?,
-            min_asset: dto.min_asset.try_into()?,
+            min_liquidation: (&dto.min_liquidation).try_into()?,
+            min_asset: (&dto.min_asset).try_into()?,
             recalc_time: dto.recalc_time,
         })
     }

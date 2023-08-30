@@ -35,19 +35,18 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lease_form = spec.form.clone();
-        let lpp = LppRef::try_new(lease_form.loan.lpp, &deps.querier)?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), &deps.querier)?;
 
-        let oracle = OracleRef::try_from(lease_form.market_price_oracle, &deps.querier)
+        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), &deps.querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
-        let timealarms = TimeAlarmsRef::new(lease_form.time_alarms, &deps.querier)?;
+        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &deps.querier)?;
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
-                lease_form.liability,
+                &spec.form.liability,
                 info.funds,
-                lease_form.max_ltd,
+                spec.form.max_ltd,
                 oracle.clone(),
                 &deps.querier,
             ),
