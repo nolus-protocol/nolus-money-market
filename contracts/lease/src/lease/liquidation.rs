@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -17,10 +15,10 @@ use super::Lease;
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
     const MIN_LIQUIDATION_AMOUNT: Coin<Lpn> = Coin::new(10_000); // $0.01 TODO issue #40
     const MIN_ASSET_AMOUNT_BEFORE_LIQUIDATION: Coin<Lpn> = Coin::new(15_000_000); // TODO issue #50

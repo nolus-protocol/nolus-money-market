@@ -1,5 +1,4 @@
 use platform::batch::Batch;
-use serde::Serialize;
 
 use currency::{self, Currency};
 use finance::{
@@ -21,10 +20,10 @@ use crate::{error::ContractResult, lease::Lease};
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
     pub(crate) fn reschedule(
         &self,

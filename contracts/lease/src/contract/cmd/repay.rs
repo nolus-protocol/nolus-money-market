@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
@@ -71,10 +69,10 @@ impl WithLease for Repay {
         mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize,
+        Asset: Currency,
     {
         let payment = self.payment.try_into()?;
         let mut profit = self.profit.as_stub();

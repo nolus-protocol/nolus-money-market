@@ -4,7 +4,7 @@ use cosmwasm_std::Timestamp;
 use currency::Currency;
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
 
 use crate::{
     error::ContractError,
@@ -36,7 +36,7 @@ pub trait WithLppLoan {
 
     fn exec<Lpn, Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         Loan: LppLoan<Lpn>;
 }
 

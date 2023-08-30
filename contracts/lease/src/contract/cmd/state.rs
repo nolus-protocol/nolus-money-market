@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
@@ -32,10 +30,10 @@ impl WithLease for LeaseState {
         lease: Lease<Lpn, Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize,
+        Asset: Currency,
     {
         Ok(StateResponse::opened_from(
             lease.state(self.now),

@@ -4,7 +4,6 @@ use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
-use serde::Serialize;
 
 use crate::{
     api::LpnCoin,
@@ -65,10 +64,10 @@ impl WithLease for Liquidate {
         lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize,
+        Asset: Currency,
     {
         // TODO [issue #92] request the needed amount from the Liquidation Fund and
         // make sure the message goes out before the liquidation messages.

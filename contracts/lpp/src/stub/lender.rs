@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
 
 use currency::Currency;
 use finance::coin::Coin;
@@ -35,7 +35,7 @@ pub trait WithLppLender {
     fn exec<C, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
     where
         L: LppLender<C>,
-        C: Currency + Serialize;
+        C: Currency;
 }
 
 pub(super) struct LppLenderStub<'a, Lpn> {

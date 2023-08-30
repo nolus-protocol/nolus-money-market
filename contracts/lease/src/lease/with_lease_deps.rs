@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
 
 use currency::{self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, Symbol};
 use lpp::stub::{
@@ -20,10 +20,10 @@ pub trait WithLeaseDeps {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize;
+        Asset: Currency;
 }
 
 pub fn execute<Cmd>(
@@ -72,7 +72,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned,
+        C: 'static + Currency + DeserializeOwned,
     {
         self.lpp.execute_loan(
             FactoryStage2 {
@@ -96,7 +96,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
 impl<'r, Cmd, Asset> WithLppLoan for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency + Serialize,
+    Asset: Currency,
     lpp::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
@@ -105,7 +105,7 @@ where
 
     fn exec<Lpn, LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         LppLoan: LppLoanTrait<Lpn>,
     {
         self.oracle.execute_as_oracle(
@@ -130,8 +130,8 @@ struct FactoryStage4<Cmd, Asset, Lpn, LppLoan> {
 impl<Cmd, Asset, Lpn, LppLoan> WithOracle<Lpn> for FactoryStage4<Cmd, Asset, Lpn, LppLoan>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency + Serialize,
-    Lpn: Currency + Serialize,
+    Asset: Currency,
+    Lpn: Currency,
     LppLoan: LppLoanTrait<Lpn>,
 {
     type Output = Cmd::Output;
