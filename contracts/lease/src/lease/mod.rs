@@ -82,7 +82,7 @@ where
         let amount = dto.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
-        let liability = Liability::<Lpn>::try_from(dto.liability)?;
+        let liability: Liability<Lpn> = dto.liability.try_into()?;
 
         Ok(Self {
             addr: dto.addr,

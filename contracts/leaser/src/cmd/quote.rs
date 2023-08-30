@@ -38,7 +38,7 @@ impl<'r> WithLppLender for Quote<'r> {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
                 lpp_quote: LppQuote::new(lpp)?,
-                liability: Liability::<Lpn>::try_from(self.liability)?,
+                liability: self.liability.try_into()?,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
             },
