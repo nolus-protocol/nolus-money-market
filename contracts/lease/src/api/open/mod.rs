@@ -12,7 +12,8 @@ use crate::{error::ContractError, error::ContractResult};
 
 mod unchecked;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseContract {
     /// An application form for opening a new lease
@@ -21,7 +22,8 @@ pub struct NewLeaseContract {
     pub dex: ConnectionParams,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
@@ -40,7 +42,8 @@ pub struct NewLeaseForm {
     pub market_price_oracle: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename = "loan", rename_all = "snake_case")]
 /// The value remains intact.
 pub struct LoanForm {
@@ -56,7 +59,8 @@ pub struct LoanForm {
     pub profit: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(rename_all = "snake_case", try_from = "unchecked::InterestPaymentSpec")]
 pub struct InterestPaymentSpec {
     /// How long is a period for which the interest is due
