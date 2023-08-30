@@ -19,12 +19,12 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct FinalizerRef {
     addr: Addr,
 }
 
 impl FinalizerRef {
-    #[allow(unused)]
     pub(super) fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
         use platform::contract;
 

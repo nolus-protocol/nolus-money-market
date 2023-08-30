@@ -19,6 +19,7 @@ impl Borrow {
         amount: Vec<Coin>,
         customer: Addr,
         admin: Addr,
+        finalizer: Addr,
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
@@ -28,7 +29,7 @@ impl Borrow {
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
             config.lease_code_id,
-            Self::open_lease_msg(customer, config, currency, max_ltd)?,
+            Self::open_lease_msg(customer, config, currency, max_ltd, finalizer)?,
             Some(amount),
             "lease",
             Some(admin), // allows lease migrations from this contract
@@ -42,6 +43,7 @@ impl Borrow {
         config: Config,
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
+        finalizer: Addr,
     ) -> ContractResult<NewLeaseContract> {
         config
             .dex
@@ -61,6 +63,7 @@ impl Borrow {
                     market_price_oracle: config.market_price_oracle,
                 },
                 dex,
+                finalizer,
             })
             .ok_or(ContractError::NoDEXConnectivitySetup {})
     }

@@ -98,7 +98,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     }
 }
 
-impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr> {
+impl<Dispatcher, Treasury> TestCase<Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
     pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
@@ -111,6 +111,7 @@ impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, 
                 time_alarms: self.address_book.time_alarms().clone(),
                 oracle: self.address_book.oracle().clone(),
                 profit: self.address_book.profit().clone(),
+                finalizer: self.address_book.leaser().clone(),
             },
             InitConfig::new(lease_currency, 1000.into(), None),
             LeaseInstantiatorConfig::default(),

@@ -30,7 +30,8 @@ pub fn instantiate(
     info: MessageInfo,
     new_lease: NewLeaseContract,
 ) -> ContractResult<CwResponse> {
-    //TODO move the following validation into the deserialization
+    //TODO move the following validations into the deserialization
+    deps.api.addr_validate(new_lease.finalizer.as_str())?;
     currency::validate::<LeaseGroup>(&new_lease.form.currency)?;
     deps.api.addr_validate(new_lease.form.customer.as_str())?;
 

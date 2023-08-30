@@ -25,7 +25,6 @@ use self::{dex::State as DexState, lease::State as LeaseState};
 mod closed;
 mod dex;
 mod event;
-mod finalize;
 mod handler;
 mod lease;
 mod liquidated;
@@ -90,8 +89,8 @@ pub(super) fn new_lease(
     info: MessageInfo,
     spec: NewLeaseContract,
 ) -> ContractResult<(Batch, State)> {
-    let (batch, start_state) = opening::request_loan::RequestLoan::new(deps, info, spec)?;
-    Ok((batch, start_state.into()))
+    opening::request_loan::RequestLoan::new(deps, info, spec)
+        .map(|(batch, start_state)| (batch, start_state.into()))
 }
 
 fn ignore_msg<S>(state: S) -> ContractResult<Response>

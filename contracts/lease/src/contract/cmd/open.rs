@@ -24,19 +24,18 @@ pub(crate) fn open_lease(
     start_at: Timestamp,
     amount: &LeaseCoin,
     querier: &QuerierWrapper<'_>,
-    deps: (LppRef, OracleRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
 
-    let time_alarms = TimeAlarmsRef::new(form.time_alarms.clone(), querier)?;
     let profit = ProfitRef::new(form.loan.profit.clone(), querier)?;
 
     let cmd = LeaseFactory {
         form,
         lease_addr: lease_addr.clone(),
         profit,
-        time_alarms,
+        time_alarms: deps.2,
         price_alarms: deps.1.clone(),
         start_at,
         amount,

@@ -76,7 +76,8 @@ impl Active {
             event::emit_payment(env, &lease_updated, &receipt),
         );
 
-        let lease = Lease::new(lease_updated, lease.dex);
+        // TODO extract `with_lease::execute` and the update of the lease DTO into a fn of contract::Lease
+        let lease = Lease::new(lease_updated, lease.dex, lease.finalizer);
         match liquidation {
             LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, repay_response, lease)),
             LiquidationStatus::NewAlarms {
@@ -250,7 +251,7 @@ fn try_partial_liquidation(
         ),
     );
 
-    let lease = Lease::new(lease_updated, lease.dex);
+    let lease = Lease::new(lease_updated, lease.dex, lease.finalizer);
     match next_liquidation {
         LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, liquidate_response, lease)),
         LiquidationStatus::NewAlarms {

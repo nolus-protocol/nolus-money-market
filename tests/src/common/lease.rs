@@ -107,6 +107,7 @@ impl Instantiator {
                 market_price_oracle: addresses.oracle,
             },
             dex: config.dex,
+            finalizer: addresses.finalizer,
         }
     }
 }
@@ -186,6 +187,7 @@ pub struct InstantiatorAddresses {
     pub time_alarms: Addr,
     pub oracle: Addr,
     pub profit: Addr,
+    pub finalizer: Addr,
 }
 
 pub(crate) fn complete_initialization<Lpn, DownpaymentC, LeaseC>(

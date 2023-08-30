@@ -14,6 +14,7 @@ use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
+        finalize::FinalizerRef,
         state::{Handler, Response},
     },
     error::ContractResult,
@@ -26,7 +27,7 @@ use super::buy_asset::DexState;
 pub(crate) struct RequestLoan {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
-    deps: (LppRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
 }
 
 impl RequestLoan {
@@ -42,6 +43,8 @@ impl RequestLoan {
 
         let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &deps.querier)?;
 
+        let finalizer = FinalizerRef::try_new(spec.finalizer.clone(), &deps.querier)?;
+
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
                 &spec.form.liability,
@@ -56,7 +59,7 @@ impl RequestLoan {
             Self {
                 new_lease: spec,
                 downpayment,
-                deps: (lpp, oracle, timealarms),
+                deps: (lpp, oracle, timealarms, finalizer),
             }
         }))
     }

@@ -21,6 +21,7 @@ use crate::{
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
+        finalize::FinalizerRef,
         state::{
             opened::active::Active,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
@@ -44,7 +45,7 @@ pub(in crate::contract::state::opening) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
@@ -64,7 +65,7 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 }
 
@@ -74,7 +75,7 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {
@@ -149,12 +150,13 @@ impl SwapTask for BuyAsset {
             self.start_opening_at,
             &amount_out,
             querier,
-            (self.deps.0, self.deps.1),
+            (self.deps.0, self.deps.1, self.deps.2),
         )?;
 
         let active = Active::new(Lease {
             lease,
             dex: self.dex_account,
+            finalizer: self.deps.3,
         });
         let emitter = active.emit_opened(env, self.downpayment, self.loan);
         Ok(StateMachineResponse::from(

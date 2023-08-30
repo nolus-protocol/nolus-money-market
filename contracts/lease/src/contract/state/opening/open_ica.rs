@@ -14,7 +14,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateResponse},
-    contract::cmd::OpenLoanRespResult,
+    contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef},
     error::ContractResult,
 };
 
@@ -25,7 +25,7 @@ pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 }
 
@@ -34,7 +34,7 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

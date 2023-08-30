@@ -65,6 +65,7 @@ pub fn execute(
             deps,
             info.funds,
             info.sender,
+            env.contract.address.clone(),
             env.contract.address,
             currency,
             max_ltd,

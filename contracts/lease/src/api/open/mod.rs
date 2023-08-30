@@ -19,6 +19,8 @@ pub struct NewLeaseContract {
     pub form: NewLeaseForm,
     /// Connection parameters of a Dex capable to perform currency swaps
     pub dex: ConnectionParams,
+    /// A contract to be notified when a lease just went into a final state
+    pub finalizer: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

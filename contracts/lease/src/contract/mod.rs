@@ -5,10 +5,12 @@ use dex::{Account, ConnectionParams, DexConnectable};
 use crate::lease::LeaseDTO;
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
+use self::finalize::FinalizerRef;
 
 mod api;
 mod cmd;
 mod endpoins;
+mod finalize;
 pub mod msg;
 mod state;
 
@@ -16,11 +18,16 @@ mod state;
 pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,
+    finalizer: FinalizerRef,
 }
 
 impl Lease {
-    fn new(lease: LeaseDTO, dex: Account) -> Self {
-        Self { lease, dex }
+    fn new(lease: LeaseDTO, dex: Account, finalizer: FinalizerRef) -> Self {
+        Self {
+            lease,
+            dex,
+            finalizer,
+        }
     }
 }
 

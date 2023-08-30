@@ -245,9 +245,11 @@ fn open_lease_with(max_ltd: Option<Percent>) {
     let info = customer();
     let env = mock_env();
     let admin = env.contract.address.clone();
+    let finalizer = admin.clone();
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd).unwrap();
+    let msg =
+        Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd, finalizer).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
