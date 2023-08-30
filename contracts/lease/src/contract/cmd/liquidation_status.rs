@@ -21,10 +21,10 @@ pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
     price_alarms: &OracleRef,
 ) -> ContractResult<CmdResult>
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
     let status = lease.liquidation_status(when)?;
     Ok(match status {
@@ -113,10 +113,10 @@ impl<'a> WithLease for Cmd<'a> {
         lease: Lease<Lpn, Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         Loan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize,
+        Asset: Currency,
     {
         status_and_schedule(&lease, self.now, self.time_alarms, self.price_alarms)
     }

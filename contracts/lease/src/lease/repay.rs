@@ -1,5 +1,4 @@
 use platform::{bank::FixedAddressSender, batch::Batch};
-use serde::Serialize;
 
 use currency::Currency;
 use finance::coin::Coin;
@@ -37,10 +36,10 @@ where
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
     pub(crate) fn repay<Profit>(
         &mut self,

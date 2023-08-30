@@ -51,7 +51,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
 
     fn exec<Lpn, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         LppLender: LppLenderTrait<Lpn>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
@@ -128,7 +128,7 @@ impl WithLppLender for OpenLoanResp {
 
     fn exec<Lpn, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         LppLender: LppLenderTrait<Lpn>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;

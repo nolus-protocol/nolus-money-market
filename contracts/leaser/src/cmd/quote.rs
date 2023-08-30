@@ -26,7 +26,7 @@ impl<'r> WithLppLender for Quote<'r> {
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppLenderTrait<Lpn>,
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
     {
         self.oracle.execute_as_oracle(
             QuoteStage2 {
@@ -214,7 +214,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: 'static + Currency + Serialize + DeserializeOwned,
+        Asset: 'static + Currency + DeserializeOwned,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of()?);
 

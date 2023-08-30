@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
@@ -68,8 +66,8 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
-        Asset: Currency + Serialize,
+        Lpn: Currency,
+        Asset: Currency,
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {

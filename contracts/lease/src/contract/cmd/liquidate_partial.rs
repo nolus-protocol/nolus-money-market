@@ -3,7 +3,6 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
-use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -55,10 +54,10 @@ impl WithLease for Liquidate {
         mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
         Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Asset: Currency + Serialize,
+        Asset: Currency,
     {
         let mut profit = self.profit.as_stub();
         let receipt = lease.liquidate_partial(
