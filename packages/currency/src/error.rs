@@ -7,6 +7,9 @@ pub enum Error {
     #[error("[Finance] Found bank symbol '{0}' expecting '{1}'")]
     UnexpectedBankSymbol(String, String),
 
+    #[error("[Finance] Found dex symbol '{0}' expecting '{1}'")]
+    UnexpectedDexSymbol(String, String),
+
     #[error("[Finance] Found currency '{0}' which is not defined in the {1} currency group")]
     NotInCurrencyGroup(String, String),
 }
@@ -18,6 +21,14 @@ impl Error {
         C: Currency,
     {
         Self::UnexpectedBankSymbol(bank_symbol.into(), C::BANK_SYMBOL.into())
+    }
+
+    pub fn unexpected_dex_symbol<S, C>(dex_symbol: S) -> Self
+    where
+        S: Into<SymbolOwned>,
+        C: Currency,
+    {
+        Self::UnexpectedDexSymbol(dex_symbol.into(), C::DEX_SYMBOL.into())
     }
 
     pub fn not_in_currency_group<S, G>(symbol: S) -> Self

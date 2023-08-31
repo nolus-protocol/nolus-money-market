@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, SingleVisitor};
 
 use super::{Currency, Group, Symbol};
 
@@ -18,6 +18,21 @@ pub trait AnyVisitor {
     where
         C: Currency + Serialize + DeserializeOwned;
 }
+
+impl<C, T> SingleVisitor<C> for T
+where
+    C: Currency + Serialize + DeserializeOwned,
+    T: AnyVisitor,
+{
+    type Output = T::Output;
+
+    type Error = T::Error;
+
+    fn on(self) -> Result<Self::Output, Self::Error> {
+        self.on::<C>()
+    }
+}
+
 pub trait AnyVisitorPair {
     type Output;
     type Error;
