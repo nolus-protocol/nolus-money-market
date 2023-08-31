@@ -61,7 +61,11 @@ pub struct LoanForm {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(rename_all = "snake_case", try_from = "unchecked::InterestPaymentSpec")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "unchecked::InterestPaymentSpec"
+)]
 pub struct InterestPaymentSpec {
     /// How long is a period for which the interest is due
     due_period: Duration,
