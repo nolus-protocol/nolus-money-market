@@ -45,7 +45,7 @@ where
         now: &Timestamp,
         time_alarms: &TimeAlarmsRef,
     ) -> ContractResult<Batch> {
-        let grace_period_end = self.loan.grace_period_end_not_before(now);
+        let grace_period_end = self.loan.next_grace_period_end(now);
         debug_assert!(
             now < &grace_period_end,
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
@@ -214,42 +214,14 @@ mod tests {
 
     #[test]
     fn reschedule_time_alarm_liquidation() {
-        let lease_amount = 300.into();
-        let lease = open_lease(lease_amount, loan());
+        test_setup_alarm_grace_period_end(
+            RECALC_TIME - Duration::from_nanos(1),
+            Duration::from_nanos(0),
+        );
 
-        let now = lease.loan.grace_period_end() - lease.liability.recalculation_time()
-            + Duration::from_nanos(1);
-        let recalc_time = now + lease.liability.recalculation_time();
-        let exp_alarm_at = lease.loan.grace_period_end();
-        let up_to = lease.liability.first_liq_warn();
-        let no_warnings = Zone::no_warnings(up_to);
-        let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
-            .unwrap();
-        let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
-            .is(projected_liability(&lease, recalc_time))
-            .into();
+        test_setup_alarm_grace_period_end(Duration::from_nanos(1), Duration::from_nanos(0));
 
-        assert_eq!(alarm_msgs, {
-            let mut batch = Batch::default();
-
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
-                funds: vec![],
-            });
-
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
-                    alarm: Alarm::new(exp_below, None),
-                })
-                .unwrap(),
-                funds: vec![],
-            });
-
-            batch
-        });
+        test_setup_alarm_grace_period_end(Duration::from_nanos(0), RECALC_TIME);
     }
 
     #[test]
@@ -367,5 +339,46 @@ mod tests {
             + l.previous_margin_interest_due
             + l.current_interest_due
             + l.current_margin_interest_due
+    }
+
+    fn test_setup_alarm_grace_period_end(
+        offset_from_this: Duration,
+        exp_alarm_past_this: Duration,
+    ) {
+        let lease_amount = 300.into();
+        let lease = open_lease(lease_amount, loan());
+
+        let now = lease.loan.grace_period_end() - offset_from_this;
+        let recalc_time = now + lease.liability.recalculation_time();
+        let exp_alarm_at = lease.loan.grace_period_end() + exp_alarm_past_this;
+        let up_to = lease.liability.first_liq_warn();
+        let no_warnings = Zone::no_warnings(up_to);
+        let alarm_msgs = lease
+            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
+            .unwrap();
+        let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
+            .is(projected_liability(&lease, recalc_time))
+            .into();
+
+        assert_eq!(alarm_msgs, {
+            let mut batch = Batch::default();
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: TIME_ALARMS_ADDR.into(),
+                msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
+                funds: vec![],
+            });
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: ORACLE_ADDR.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(exp_below, None),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
+
+            batch
+        });
     }
 }

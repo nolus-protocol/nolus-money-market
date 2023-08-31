@@ -140,9 +140,9 @@ where
         self.grace_period_end_impl(&self.due_period.period())
     }
 
-    pub(crate) fn grace_period_end_not_before(&self, when: &Timestamp) -> Timestamp {
+    pub(crate) fn next_grace_period_end(&self, after: &Timestamp) -> Timestamp {
         let mut current_period = self.due_period.period();
-        while &self.grace_period_end_impl(&current_period) < when {
+        while &self.grace_period_end_impl(&current_period) <= after {
             current_period = next_due_period(current_period, &self.interest_payment_spec);
         }
         self.grace_period_end_impl(&current_period)
@@ -1168,39 +1168,39 @@ mod tests {
             assert_eq!(next_grace_period_end, loan.grace_period_end());
             assert_eq!(
                 next_grace_period_end,
-                loan.grace_period_end_not_before(&(LEASE_START + Duration::from_days(10)))
+                loan.next_grace_period_end(&(LEASE_START + Duration::from_days(10)))
             );
             assert_eq!(
                 next_grace_period_end,
-                loan.grace_period_end_not_before(&(LEASE_START + due_period))
+                loan.next_grace_period_end(&(LEASE_START + due_period))
             );
             assert_eq!(
                 next_grace_period_end,
-                loan.grace_period_end_not_before(&(LEASE_START + due_period + BIT))
+                loan.next_grace_period_end(&(LEASE_START + due_period + BIT))
             );
             assert_eq!(
                 next_grace_period_end,
-                loan.grace_period_end_not_before(&(next_grace_period_end - BIT))
-            );
-            assert_eq!(
-                next_grace_period_end,
-                loan.grace_period_end_not_before(&next_grace_period_end)
+                loan.next_grace_period_end(&(next_grace_period_end - BIT))
             );
             assert_eq!(
                 next_grace_period_end + due_period,
-                loan.grace_period_end_not_before(&(next_grace_period_end + BIT))
+                loan.next_grace_period_end(&next_grace_period_end)
             );
             assert_eq!(
                 next_grace_period_end + due_period,
-                loan.grace_period_end_not_before(&(next_grace_period_end + due_period - BIT))
+                loan.next_grace_period_end(&(next_grace_period_end + BIT))
             );
             assert_eq!(
                 next_grace_period_end + due_period,
-                loan.grace_period_end_not_before(&(next_grace_period_end + due_period))
+                loan.next_grace_period_end(&(next_grace_period_end + due_period - BIT))
             );
             assert_eq!(
                 next_grace_period_end + due_period + due_period,
-                loan.grace_period_end_not_before(&(next_grace_period_end + due_period + BIT))
+                loan.next_grace_period_end(&(next_grace_period_end + due_period))
+            );
+            assert_eq!(
+                next_grace_period_end + due_period + due_period,
+                loan.next_grace_period_end(&(next_grace_period_end + due_period + BIT))
             );
         }
     }
