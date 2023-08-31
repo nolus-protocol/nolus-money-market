@@ -4,7 +4,7 @@ use currency::{
     Currency,
 };
 use finance::{
-    coin::Coin,
+    coin::{Coin, Amount},
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
@@ -41,7 +41,9 @@ type LeaseCoin = Coin<LeaseCurrency>;
 type PaymentCurrency = Atom;
 type PaymentCoin = Coin<PaymentCurrency>;
 
-const DOWNPAYMENT: u128 = 1_000_000_000_000;
+const DOWNPAYMENT: Amount = 1_000_000_000_000;
+
+pub(super) type LeaseTestCase = TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>;
 
 pub(super) fn create_payment_coin(amount: u128) -> PaymentCoin {
     PaymentCoin::new(amount)
