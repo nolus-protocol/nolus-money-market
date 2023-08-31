@@ -1,6 +1,6 @@
 pub use serde::{Deserialize, Serialize};
 
-pub use sdk::schemars::{self, JsonSchema};
+pub use sdk::schemars::JsonSchema;
 
 pub use crate::currency::{Currency, SymbolStatic};
 

@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+use sdk::schemars::{self, JsonSchema};
+
 use crate::{
     currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
     define_currency, define_symbol,
@@ -27,8 +29,9 @@ define_symbol! {
 }
 define_currency!(Nls, NLS);
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Native {}
 
 impl Group for Native {

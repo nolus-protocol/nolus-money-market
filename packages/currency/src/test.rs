@@ -6,6 +6,7 @@ use crate::{
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
+
 impl Currency for Usdc {
     const TICKER: SymbolStatic = "uusdc";
     const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
@@ -14,6 +15,7 @@ impl Currency for Usdc {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Nls;
+
 impl Currency for Nls {
     const TICKER: SymbolStatic = "unls";
     const BANK_SYMBOL: SymbolStatic = "ibc/unls";
@@ -22,6 +24,7 @@ impl Currency for Nls {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Dai;
+
 impl Currency for Dai {
     const TICKER: SymbolStatic = "udai";
     const BANK_SYMBOL: SymbolStatic = "ibc/udai";
@@ -30,6 +33,7 @@ impl Currency for Dai {
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct TestCurrencies {}
+
 impl Group for TestCurrencies {
     const DESCR: SymbolStatic = "test";
 
@@ -46,6 +50,7 @@ impl Group for TestCurrencies {
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct TestExtraCurrencies {}
+
 impl Group for TestExtraCurrencies {
     const DESCR: SymbolStatic = "test_extra";
 
