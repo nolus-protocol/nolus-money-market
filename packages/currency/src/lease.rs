@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
-    define_currency, define_symbol, SingleVisitorAdapter,
+    currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    define_currency, define_symbol,
+    visitor::GeneralizedVisitorExt,
 };
 
 // Resources:
@@ -343,59 +344,30 @@ pub struct LeaseGroup {}
 impl Group for LeaseGroup {
     const DESCR: SymbolStatic = "lease";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        GV: GeneralizedVisitorExt,
         V: AnyVisitor,
     {
-        use crate::currency::maybe_visit_on_ticker as maybe_visit;
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        maybe_visit::<Atom, _>(ticker, v)
-            .or_else(|v| maybe_visit::<StAtom, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
-            .or_else(|v| maybe_visit::<StOsmo, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Akt, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Axl, _>(ticker, v))
-            .or_else(|v| maybe_visit::<QAtom, _>(ticker, v))
-            .or_else(|v| maybe_visit::<StkAtom, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Strd, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Inj, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Stars, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Mars, _>(ticker, v))
-            .map_err(|v| v.0)
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        use crate::currency::maybe_visit_on_bank_symbol as maybe_visit;
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        maybe_visit::<Atom, _>(bank_symbol, v)
-            .or_else(|v| maybe_visit::<StAtom, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<StOsmo, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Akt, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Axl, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<QAtom, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<StkAtom, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Strd, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Inj, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Mars, _>(bank_symbol, v))
-            .map_err(|v| v.0)
+        generalized_visitor
+            .maybe_visit::<Atom, V>(visitor)
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<StAtom, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Osmo, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<StOsmo, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Weth, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Wbtc, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Akt, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Axl, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<QAtom, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<StkAtom, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Strd, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Inj, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Secret, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Stars, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Cro, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Juno, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Evmos, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Mars, V>(visitor))
     }
 }
 

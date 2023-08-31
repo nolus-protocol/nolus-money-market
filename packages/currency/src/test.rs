@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
+use crate::{
+    visitor::GeneralizedVisitorExt, AnyVisitor, Currency, Group, MaybeAnyVisitResult, SymbolStatic,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
@@ -31,27 +33,14 @@ pub struct TestCurrencies {}
 impl Group for TestCurrencies {
     const DESCR: SymbolStatic = "test";
 
-    fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        GV: GeneralizedVisitorExt,
         V: AnyVisitor,
     {
-        match symbol {
-            Usdc::TICKER => Ok(visitor.on::<Usdc>()),
-            Nls::TICKER => Ok(visitor.on::<Nls>()),
-            _ => Err(visitor),
-        }
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        match symbol {
-            Usdc::BANK_SYMBOL => Ok(visitor.on::<Usdc>()),
-            Nls::BANK_SYMBOL => Ok(visitor.on::<Nls>()),
-            _ => Err(visitor),
-        }
+        generalized_visitor
+            .maybe_visit::<Usdc, V>(visitor)
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Nls, V>(visitor))
     }
 }
 
@@ -60,33 +49,22 @@ pub struct TestExtraCurrencies {}
 impl Group for TestExtraCurrencies {
     const DESCR: SymbolStatic = "test_extra";
 
-    fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        GV: GeneralizedVisitorExt,
         V: AnyVisitor,
     {
-        match symbol {
-            Usdc::TICKER => Ok(visitor.on::<Usdc>()),
-            Nls::TICKER => Ok(visitor.on::<Nls>()),
-            Dai::TICKER => Ok(visitor.on::<Dai>()),
-            _ => Err(visitor),
-        }
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(_: Symbol<'_>, _: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        unreachable!()
+        generalized_visitor
+            .maybe_visit::<Usdc, V>(visitor)
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Nls, V>(visitor))
+            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Dai, V>(visitor))
     }
 }
 
 pub mod visitor {
     use std::marker::PhantomData;
 
-    use crate::{
-        error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, SingleVisitor,
-    };
+    use crate::{error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency};
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct Expect<C>(PhantomData<C>);
@@ -96,6 +74,7 @@ pub mod visitor {
             Self(Default::default())
         }
     }
+
     impl<C> AnyVisitor for Expect<C>
     where
         C: 'static,
@@ -110,16 +89,9 @@ pub mod visitor {
             Ok(crate::equal::<C, Cin>())
         }
     }
-    impl<C> SingleVisitor<C> for Expect<C> {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
-        }
-    }
 
     pub struct ExpectUnknownCurrency;
+
     impl AnyVisitor for ExpectUnknownCurrency {
         type Output = bool;
         type Error = Error;
@@ -131,16 +103,6 @@ pub mod visitor {
             unreachable!();
         }
     }
-
-    impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
-        }
-    }
-
     pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
     impl<C1, C2> Default for ExpectPair<C1, C2> {
         fn default() -> Self {

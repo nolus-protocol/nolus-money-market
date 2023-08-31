@@ -1,7 +1,9 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{
-    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
-    currency_macro::schemars,
-    define_currency, define_symbol, SingleVisitorAdapter,
+    currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    define_currency, define_symbol,
+    visitor::GeneralizedVisitorExt,
 };
 
 define_symbol! {
@@ -28,23 +30,15 @@ define_currency!(Nls, NLS);
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Native {}
+
 impl Group for Native {
     const DESCR: SymbolStatic = "native";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        GV: GeneralizedVisitorExt,
         V: AnyVisitor,
     {
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        currency::maybe_visit_on_ticker::<Nls, _>(ticker, v).map_err(|v| v.0)
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        currency::maybe_visit_on_bank_symbol::<Nls, _>(bank_symbol, v).map_err(|v| v.0)
+        generalized_visitor.maybe_visit::<Nls, V>(visitor)
     }
 }
