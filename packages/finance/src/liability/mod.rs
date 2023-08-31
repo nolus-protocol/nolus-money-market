@@ -26,7 +26,8 @@ mod liquidation;
 mod unchecked;
 mod zone;
 
-#[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(rename_all = "snake_case")]
 #[serde(try_from = "unchecked::Liability")]
 pub struct Liability {

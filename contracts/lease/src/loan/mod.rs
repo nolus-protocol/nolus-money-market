@@ -1,4 +1,4 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +30,8 @@ mod liability;
 mod repay;
 mod state;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub(crate) struct LoanDTO {
     lpp: LppRef,
     interest_payment_spec: InterestPaymentSpec,
@@ -75,7 +76,7 @@ pub struct Loan<Lpn, LppLoan> {
 
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
-    Lpn: Currency + Debug,
+    Lpn: Currency,
     LppLoan: LppLoanTrait<Lpn>,
     LppLoan::Error: Into<ContractError>,
 {
@@ -104,7 +105,7 @@ where
 
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
-    Lpn: Currency + Debug,
+    Lpn: Currency,
     LppLoan: LppLoanTrait<Lpn>,
 {
     pub(super) fn new(
