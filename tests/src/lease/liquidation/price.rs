@@ -232,7 +232,7 @@ fn deliver_new_price(
     lease: Addr,
     base: LeaseCoin,
     quote: LpnCoin,
-) -> ResponseWithInterChainMsgs<AppResponse> {
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     common::oracle::feed_price(test_case, Addr::unchecked(ADMIN), base, quote);
 
     test_case

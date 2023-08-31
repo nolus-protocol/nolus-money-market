@@ -4,7 +4,7 @@ use currency::{
     Currency,
 };
 use finance::{
-    coin::{Coin, Amount},
+    coin::{Amount, Coin},
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
