@@ -225,6 +225,7 @@ mod test {
 
     use currency::{
         test::{Dai, Nls, TestCurrencies, Usdc},
+        visitor::GeneralizedVisitorExt,
         Currency, Group, SymbolStatic,
     };
 
@@ -237,6 +238,7 @@ mod test {
         Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize,
     )]
     struct MyTestCurrency;
+
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
         const BANK_SYMBOL: SymbolStatic = "ibc/1";
@@ -245,30 +247,19 @@ mod test {
 
     #[derive(PartialEq)]
     struct MyTestGroup {}
+
     impl Group for MyTestGroup {
         const DESCR: SymbolStatic = "My Test Group";
 
-        fn maybe_visit_on_ticker<V>(
-            symbol: currency::Symbol<'_>,
+        fn maybe_visit_on_by_ref<GV, V>(
+            generalized_visitor: &GV,
             visitor: V,
         ) -> currency::MaybeAnyVisitResult<V>
         where
-            Self: Sized,
+            GV: GeneralizedVisitorExt,
             V: currency::AnyVisitor,
         {
-            assert_eq!(symbol, MyTestCurrency::TICKER);
-            Ok(visitor.on::<MyTestCurrency>())
-        }
-
-        fn maybe_visit_on_bank_symbol<V>(
-            _bank_symbol: currency::Symbol<'_>,
-            _visitor: V,
-        ) -> currency::MaybeAnyVisitResult<V>
-        where
-            Self: Sized,
-            V: currency::AnyVisitor,
-        {
-            unreachable!()
+            generalized_visitor.maybe_visit::<MyTestCurrency, V>(visitor)
         }
     }
 

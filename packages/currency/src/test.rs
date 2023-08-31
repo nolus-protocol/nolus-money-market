@@ -128,13 +128,13 @@ pub mod visitor {
 }
 
 pub mod group {
-    use crate::{test::visitor::Expect, Currency, Group, Symbol};
+    use crate::{test::visitor::Expect, Currency, GroupExt, Symbol};
 
     #[track_caller]
     pub fn maybe_visit_on_ticker_impl<C, G>()
     where
         C: Currency,
-        G: Group,
+        G: GroupExt,
     {
         let v = Expect::<C>::default();
         assert_eq!(G::maybe_visit_on_ticker(C::TICKER, v), Ok(Ok(true)));
@@ -144,7 +144,7 @@ pub mod group {
     pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: Symbol<'_>)
     where
         C: Currency,
-        G: Group,
+        G: GroupExt,
     {
         let v = Expect::<C>::default();
         assert_eq!(G::maybe_visit_on_ticker(unknown_ticker, v.clone()), Err(v));
@@ -154,7 +154,7 @@ pub mod group {
     pub fn maybe_visit_on_bank_symbol_impl<C, G>()
     where
         C: Currency,
-        G: Group,
+        G: GroupExt,
     {
         let v = Expect::<C>::default();
         assert_eq!(
@@ -167,7 +167,7 @@ pub mod group {
     pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol<'_>)
     where
         C: Currency,
-        G: Group,
+        G: GroupExt,
     {
         let v = Expect::<C>::default();
         assert_eq!(

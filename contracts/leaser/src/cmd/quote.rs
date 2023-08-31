@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{
-    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, Group,
+    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupExt as _,
     SymbolOwned,
 };
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};

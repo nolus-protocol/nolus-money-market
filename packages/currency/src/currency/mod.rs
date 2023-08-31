@@ -4,14 +4,14 @@ use crate::error::{Error, Result};
 
 pub use self::{
     from_symbol::{
-        maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
-        SingleVisitor,
+        maybe_visit_on_bank_symbol, maybe_visit_on_dex_symbol, maybe_visit_on_ticker,
+        visit_on_bank_symbol, visit_on_dex_symbol, MaybeVisitResult, SingleVisitor,
     },
     from_symbol_any::{
         maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
         AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
     },
-    group::{Group, MaybeAnyVisitResult},
+    group::{Group, GroupExt, MaybeAnyVisitResult},
 };
 
 mod from_symbol;
@@ -46,7 +46,7 @@ where
 
 pub fn validate<G>(ticker: Symbol<'_>) -> Result<()>
 where
-    G: Group,
+    G: GroupExt,
 {
     struct SupportedLeaseCurrency {}
     impl AnyVisitor for SupportedLeaseCurrency {

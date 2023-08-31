@@ -1,7 +1,6 @@
-use std::marker::PhantomData;
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, SingleVisitor, GroupExt};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -22,7 +21,7 @@ pub(crate) fn from_cosmwasm_any_impl<G, V>(
     v: V,
 ) -> StdResult<WithCoinResult<V>, V>
 where
-    G: Group,
+    G: GroupExt,
     V: WithCoin,
 {
     G::maybe_visit_on_bank_symbol(&coin.denom, CoinTransformerAny(&coin, v))
@@ -34,7 +33,7 @@ pub(crate) fn maybe_from_cosmwasm_any_impl<G, V>(
     v: V,
 ) -> Option<WithCoinResult<V>>
 where
-    G: Group,
+    G: GroupExt,
     V: WithCoin,
 {
     G::maybe_visit_on_bank_symbol(&coin.denom, CoinTransformerAny(&coin, v)).ok()
@@ -57,7 +56,7 @@ where
 
 pub fn to_cosmwasm_on_network<'a, G, CM>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
-    G: Group,
+    G: GroupExt,
     CM: CurrencyMapper<'a>,
 {
     struct CoinTransformer<CM>(PhantomData<CM>);

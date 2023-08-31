@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{error::Error, SingleVisitor};
 
-use super::{Currency, Group, Symbol};
+use super::{Currency, GroupExt, Symbol};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
@@ -48,7 +48,7 @@ pub fn maybe_visit_any_on_ticker<G, V>(
     visitor: V,
 ) -> Option<Result<V::Output, V::Error>>
 where
-    G: Group,
+    G: GroupExt,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
@@ -57,7 +57,7 @@ where
 
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
-    G: Group,
+    G: GroupExt,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
@@ -71,8 +71,8 @@ pub fn visit_any_on_tickers<G1, G2, V>(
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
-    G1: Group,
-    G2: Group,
+    G1: GroupExt,
+    G2: GroupExt,
     V: AnyVisitorPair,
     Error: Into<V::Error>,
 {
@@ -85,7 +85,7 @@ mod impl_any_tickers {
     use serde::{de::DeserializeOwned, Serialize};
 
     use crate::{
-        currency::{Currency, Group, Symbol},
+        currency::{Currency, GroupExt, Symbol},
         error::Error,
     };
 
@@ -93,7 +93,7 @@ mod impl_any_tickers {
 
     pub struct FirstTickerVisitor<'a, G2, V>
     where
-        G2: Group,
+        G2: GroupExt,
         V: AnyVisitorPair,
     {
         ticker2: Symbol<'a>,
@@ -102,7 +102,7 @@ mod impl_any_tickers {
     }
     impl<'a, G2, V> FirstTickerVisitor<'a, G2, V>
     where
-        G2: Group,
+        G2: GroupExt,
         V: AnyVisitorPair,
     {
         pub fn new(ticker2: Symbol<'a>, visitor: V) -> Self {
@@ -115,7 +115,7 @@ mod impl_any_tickers {
     }
     impl<'a, G2, V> AnyVisitor for FirstTickerVisitor<'a, G2, V>
     where
-        G2: Group,
+        G2: GroupExt,
         V: AnyVisitorPair,
         Error: Into<V::Error>,
     {
@@ -164,7 +164,7 @@ mod impl_any_tickers {
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{Currency, Group},
+        currency::{Currency, GroupExt},
         error::Error,
         test::{
             visitor::{Expect, ExpectPair, ExpectUnknownCurrency},
@@ -218,8 +218,8 @@ mod test {
 
     fn visit_any_tickers_ok<G1, G2, C1, C2>()
     where
-        G1: Group,
-        G2: Group,
+        G1: GroupExt,
+        G2: GroupExt,
         C1: 'static + Currency,
         C2: 'static + Currency,
     {
@@ -232,8 +232,8 @@ mod test {
 
     fn visit_any_tickers_fail<G1, G2, C1, C2>()
     where
-        G1: Group,
-        G2: Group,
+        G1: GroupExt,
+        G2: GroupExt,
         C1: 'static + Currency,
         C2: 'static + Currency,
     {
