@@ -22,10 +22,7 @@ where
         .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(bank_symbol).into()))
 }
 
-pub fn visit_on_dex_symbol<C, V>(
-    dex_symbol: Symbol<'_>,
-    visitor: V,
-) -> Result<V::Output, V::Error>
+pub fn visit_on_dex_symbol<C, V>(dex_symbol: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
     C: Currency,
@@ -57,10 +54,7 @@ where
     maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
 }
 
-pub fn maybe_visit_on_dex_symbol<C, V>(
-    dex_symbol: Symbol<'_>,
-    visitor: V,
-) -> MaybeVisitResult<C, V>
+pub fn maybe_visit_on_dex_symbol<C, V>(dex_symbol: Symbol<'_>, visitor: V) -> MaybeVisitResult<C, V>
 where
     V: SingleVisitor<C>,
     C: Currency,

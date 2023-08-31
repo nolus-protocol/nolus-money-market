@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, SingleVisitor, GroupExt};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupExt, SingleVisitor};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
