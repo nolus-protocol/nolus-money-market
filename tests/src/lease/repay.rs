@@ -7,10 +7,6 @@ use finance::{
     zero::Zero,
 };
 
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
-};
-
 use ::lease::api::{ExecuteMsg, StateResponse};
 
 use sdk::{
@@ -328,13 +324,7 @@ fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
         .sudo(
             contract_addr,
             &super::construct_response(Binary(platform::trx::encode_msg_responses(
-                [platform::trx::encode_msg_response(
-                    MsgSwapExactAmountInResponse {
-                        token_out_amount: Amount::from(swap_out_lpn).to_string(),
-                    },
-                    MsgSwapExactAmountIn::TYPE_URL,
-                )]
-                .into_iter(),
+                [swap::trx::build_exact_amount_in_resp(swap_out_lpn.into())].into_iter(),
             ))),
         )
         .unwrap()
