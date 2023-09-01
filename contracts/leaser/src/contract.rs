@@ -1,13 +1,14 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
-use cosmwasm_std::{Addr, Api, QuerierWrapper};
-use platform::{batch::Batch, reply::from_instantiate, response};
+use platform::{batch::Batch, contract, message::Response as MessageResponse, reply, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{
+        to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+    },
 };
 use versioning::{version, VersionSegment};
 
@@ -31,10 +32,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    platform::contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
-    platform::contract::validate_addr(&deps.querier, &msg.time_alarms)?;
-    platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
-    platform::contract::validate_addr(&deps.querier, &msg.profit)?;
+    contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
+    contract::validate_addr(&deps.querier, &msg.time_alarms)?;
+    contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
+    contract::validate_addr(&deps.querier, &msg.profit)?;
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
@@ -70,6 +71,22 @@ pub fn execute(
             currency,
             max_ltd,
         ),
+        ExecuteMsg::FinalizeLease { customer } => deps
+            .api
+            .addr_validate(customer.as_str())
+            .map_err(Into::into)
+            .and_then(|customer| {
+                contract::validate_addr(&deps.querier, &info.sender)
+                    .map(|()| (customer, info.sender))
+                    .map_err(Into::into)
+            })
+            .and_then(|(customer, lease)| {
+                Leases::remove(deps.storage, customer, &lease).map_err(Into::into)
+            })
+            .map(|removed| {
+                debug_assert!(removed);
+                MessageResponse::default()
+            }),
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
@@ -128,7 +145,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     let msg_id = msg.id;
-    let contract_addr = from_instantiate::<()>(deps.api, msg)
+    let contract_addr = reply::from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
@@ -148,7 +165,7 @@ fn validate(
             err: "invalid address".into(),
         })
         .and_then(|next_customer| {
-            platform::contract::validate_addr(querier, &next_customer)
+            contract::validate_addr(querier, &next_customer)
                 .is_err()
                 .then_some(next_customer)
                 .ok_or_else(|| ContractError::InvalidContinuationKey {

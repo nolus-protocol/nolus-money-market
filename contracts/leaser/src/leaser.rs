@@ -31,8 +31,8 @@ impl<'a> Leaser<'a> {
         Ok(ConfigResponse { config })
     }
 
-    pub fn customer_leases(&self, owner: Addr) -> StdResult<HashSet<Addr>> {
-        Leases::get(self.deps.storage, owner)
+    pub fn customer_leases(&self, customer: Addr) -> StdResult<HashSet<Addr>> {
+        Leases::load_by_customer(self.deps.storage, customer)
     }
 
     pub fn quote(

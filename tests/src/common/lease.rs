@@ -15,7 +15,7 @@ use lease::{
 };
 use platform::{coin_legacy, trx};
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, QueryRequest, WasmQuery},
+    cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::{RequestPacket, SudoMsg},
 };
@@ -459,12 +459,7 @@ fn send_response(
 }
 
 fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
-    app.query()
-        .query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: lease.into_string(),
-            msg: to_binary(&StateQuery {}).unwrap(),
-        }))
-        .unwrap()
+    app.query().query_wasm_smart(lease, &StateQuery {}).unwrap()
 }
 
 fn check_state_opening(app: &mut App, lease: Addr) {

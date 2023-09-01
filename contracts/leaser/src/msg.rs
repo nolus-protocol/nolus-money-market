@@ -40,6 +40,10 @@ pub enum ExecuteMsg {
         #[serde(default)]
         max_ltd: Option<Percent>,
     },
+    /// A callback from a lease that it has just entered a final state
+    ///
+    /// It matches the `lease::api::FinalizerExecuteMsg::FinalizeLease`.
+    FinalizeLease { customer: Addr },
     /// Start a Lease migration
     ///
     /// The consumed gas is a limitaton factor for the maximum lease instances that
@@ -104,4 +108,25 @@ pub struct QuoteResponse {
     pub borrow: LpnCoin,
     pub annual_interest_rate: Percent,
     pub annual_interest_rate_margin: Percent,
+}
+
+#[cfg(test)]
+mod test {
+    use crate::msg::ExecuteMsg;
+    use lease::api::FinalizerExecuteMsg;
+    use sdk::cosmwasm_std::Addr;
+
+    #[test]
+    fn finalize_api_match() {
+        use sdk::cosmwasm_std::{from_slice, to_vec};
+
+        let customer = Addr::unchecked("c");
+        let finalize_bin = to_vec(&ExecuteMsg::FinalizeLease {
+            customer: customer.clone(),
+        })
+        .expect("serialization passed");
+        let msg_out: FinalizerExecuteMsg =
+            from_slice(&finalize_bin).expect("deserialization passed");
+        assert_eq!(FinalizerExecuteMsg::FinalizeLease { customer }, msg_out);
+    }
 }

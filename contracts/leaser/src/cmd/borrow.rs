@@ -24,7 +24,7 @@ impl Borrow {
         max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
         let config = Config::load(deps.storage)?;
-        let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
+        let instance_reply_id = Leases::cache_open_req(deps.storage, &customer)?;
 
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
