@@ -3,19 +3,16 @@ use serde::{Deserialize, Serialize};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::FinalizerExecuteMsg,
+    error::{ContractError, ContractResult},
+};
 
 pub trait Finalizer
 where
     Self: TryInto<Batch>,
 {
     fn on_finish(&mut self);
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg {
-    FinalizeLease {},
 }
 
 #[derive(Serialize, Deserialize)]
@@ -34,23 +31,25 @@ impl FinalizerRef {
     }
 
     #[allow(unused)]
-    pub(super) fn into_stub(self) -> impl Finalizer {
-        Stub::from(self)
-    }
-}
-
-impl From<FinalizerRef> for Stub {
-    fn from(reff: FinalizerRef) -> Self {
-        Self {
-            reff,
-            do_call: false,
-        }
+    pub(super) fn into_stub(self, customer: Addr) -> impl Finalizer {
+        Stub::new(self, customer)
     }
 }
 
 struct Stub {
     reff: FinalizerRef,
+    customer: Addr,
     do_call: bool,
+}
+
+impl Stub {
+    fn new(reff: FinalizerRef, customer: Addr) -> Self {
+        Self {
+            reff,
+            customer,
+            do_call: false,
+        }
+    }
 }
 
 impl Finalizer for Stub {
@@ -67,7 +66,9 @@ impl TryFrom<Stub> for Batch {
         if stub.do_call {
             msgs.schedule_execute_wasm_no_reply_no_funds(
                 &stub.reff.addr,
-                ExecuteMsg::FinalizeLease {},
+                FinalizerExecuteMsg::FinalizeLease {
+                    customer: stub.customer,
+                },
             )?;
         }
         Ok(msgs)

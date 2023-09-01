@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use currency::{lease::LeaseGroup, lpn::Lpns, payment::PaymentGroup};
 use finance::coin::CoinDTO;
-use sdk::schemars::{self, JsonSchema};
+use sdk::{
+    cosmwasm_std::Addr,
+    schemars::{self, JsonSchema},
+};
 
 pub use self::{
     open::{
@@ -52,4 +55,12 @@ pub enum ExecuteMsg {
     /// - on the final repay transaction, when an error, usually an out-of-gas, occurs on the Lpp's ExecuteMsg::RepayLoan sub-message
     /// - on the final repay transaction, when an error occurs on the Lease's SudoMsg::Response message
     Heal(),
+}
+
+/// The execute message any `Finalizer` should respond to.
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum FinalizerExecuteMsg {
+    FinalizeLease { customer: Addr },
 }
