@@ -1,9 +1,5 @@
 use std::collections::HashMap;
 
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
-};
-
 use ::lease::api::{ExecuteMsg, StateResponse};
 use finance::{coin::Amount, duration::Duration, price};
 use sdk::{
@@ -94,11 +90,8 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
                     timeout_timestamp: None,
                 },
                 data: Binary(platform::trx::encode_msg_responses(
-                    [platform::trx::encode_msg_response(
-                        MsgSwapExactAmountInResponse {
-                            token_out_amount: Amount::from(liquidated_in_lpn).to_string(),
-                        },
-                        MsgSwapExactAmountIn::TYPE_URL,
+                    [swap::trx::build_exact_amount_in_resp(
+                        liquidated_in_lpn.into(),
                     )]
                     .into_iter(),
                 )),

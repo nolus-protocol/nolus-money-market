@@ -52,6 +52,7 @@ where
     M: Message + Default,
 {
     let msg_type = msg_type.into();
+
     if resp.msg_type != msg_type {
         return Err(Error::ProtobufInvalidType(msg_type, resp.msg_type));
     }

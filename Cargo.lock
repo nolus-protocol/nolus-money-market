@@ -599,7 +599,6 @@ dependencies = [
  "lpp",
  "marketprice",
  "oracle",
- "osmosis-std",
  "platform",
  "profit",
  "rewards_dispatcher",

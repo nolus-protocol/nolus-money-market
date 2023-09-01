@@ -1,9 +1,6 @@
 use ::lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
 use finance::{coin::Amount, percent::Percent};
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse,
-};
 use sdk::{
     cosmwasm_std::{Addr, Binary, Event},
     cw_multi_test::AppResponse,
@@ -99,7 +96,7 @@ fn full_liquidation() {
         .expect("No liquidation warning emitted!");
 
     let liquidated_in_lpn: LpnCoin = quote;
-    let swap_out_amount = Amount::from(liquidated_in_lpn).to_string();
+    let liquidated_amount: Amount = liquidated_in_lpn.into();
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .sudo(
@@ -116,13 +113,7 @@ fn full_liquidation() {
                     timeout_timestamp: None,
                 },
                 data: Binary(platform::trx::encode_msg_responses(
-                    [platform::trx::encode_msg_response(
-                        MsgSwapExactAmountInResponse {
-                            token_out_amount: swap_out_amount.clone(),
-                        },
-                        MsgSwapExactAmountIn::TYPE_URL,
-                    )]
-                    .into_iter(),
+                    [swap::trx::build_exact_amount_in_resp(liquidated_amount)].into_iter(),
                 )),
             },
         )
@@ -157,7 +148,7 @@ fn full_liquidation() {
         .unwrap_response();
     response_transfer_in.has_event(
         &Event::new("wasm-ls-liquidation")
-            .add_attribute("payment-amount", swap_out_amount)
+            .add_attribute("payment-amount", liquidated_amount.to_string())
             .add_attribute("loan-close", true.to_string()),
     );
 
