@@ -7,7 +7,7 @@ use sdk::{
 
 use crate::{
     common::{
-        cwcoin,
+        cwcoin, leaser as leaser_mod,
         test_case::{
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
             TestCase,
@@ -35,8 +35,9 @@ fn state_closed() {
     );
     repay::repay(&mut test_case, lease_address.clone(), borrowed);
 
+    let customer = Addr::unchecked(USER);
     let user_balance: LeaseCoin =
-        platform::bank::balance(&Addr::unchecked(USER), &test_case.app.query()).unwrap();
+        platform::bank::balance(&customer, &test_case.app.query()).unwrap();
 
     close(
         &mut test_case,
@@ -50,10 +51,15 @@ fn state_closed() {
     assert_eq!(query_result, expected_result);
 
     assert_eq!(
-        platform::bank::balance(&Addr::unchecked(USER), &test_case.app.query()).unwrap(),
+        platform::bank::balance(&customer, &test_case.app.query()).unwrap(),
         user_balance + lease_amount
     );
 
+    leaser_mod::assert_no_leases(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        customer,
+    );
     heal::heal_unsupported(&mut test_case, lease_address);
 }
 
