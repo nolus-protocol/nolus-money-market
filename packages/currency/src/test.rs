@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    visitor::GeneralizedVisitorExt, AnyVisitor, Currency, Group, MaybeAnyVisitResult, SymbolStatic,
-};
+use sdk::schemars::{self, JsonSchema};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+use crate::{define_prime_group, Currency, SymbolStatic};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Usdc;
 
 impl Currency for Usdc {
@@ -13,7 +15,9 @@ impl Currency for Usdc {
     const DEX_SYMBOL: SymbolStatic = "ibc/dex_uusdc";
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Nls;
 
 impl Currency for Nls {
@@ -22,7 +26,9 @@ impl Currency for Nls {
     const DEX_SYMBOL: SymbolStatic = "ibc/dex_unls";
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Dai;
 
 impl Currency for Dai {
@@ -31,40 +37,9 @@ impl Currency for Dai {
     const DEX_SYMBOL: SymbolStatic = "ibc/dex_udai";
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct TestCurrencies {}
+define_prime_group!(TestCurrencies = ("test")[Usdc]);
 
-impl Group for TestCurrencies {
-    const DESCR: SymbolStatic = "test";
-
-    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        GV: GeneralizedVisitorExt,
-        V: AnyVisitor,
-    {
-        generalized_visitor
-            .maybe_visit::<Usdc, V>(visitor)
-            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Nls, V>(visitor))
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct TestExtraCurrencies {}
-
-impl Group for TestExtraCurrencies {
-    const DESCR: SymbolStatic = "test_extra";
-
-    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        GV: GeneralizedVisitorExt,
-        V: AnyVisitor,
-    {
-        generalized_visitor
-            .maybe_visit::<Usdc, V>(visitor)
-            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Nls, V>(visitor))
-            .or_else(|visitor: V| generalized_visitor.maybe_visit::<Dai, V>(visitor))
-    }
-}
+define_prime_group!(TestExtraCurrencies = ("test_extra")[Usdc, Nls, Dai]);
 
 pub mod visitor {
     use std::marker::PhantomData;
@@ -142,7 +117,10 @@ pub mod group {
         G: GroupExt,
     {
         let v = Expect::<C>::default();
-        assert_eq!(G::maybe_visit_on_ticker(C::TICKER, v), Ok(Ok(true)));
+        assert_eq!(
+            G::get_from_ticker(C::TICKER).map(|group: G| group.visit(v)),
+            Some(Ok(true))
+        );
     }
 
     #[track_caller]
@@ -152,7 +130,10 @@ pub mod group {
         G: GroupExt,
     {
         let v = Expect::<C>::default();
-        assert_eq!(G::maybe_visit_on_ticker(unknown_ticker, v.clone()), Err(v));
+        assert_eq!(
+            G::get_from_ticker(unknown_ticker).map(|group: G| group.visit(v)),
+            None
+        );
     }
 
     #[track_caller]
@@ -163,21 +144,47 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            G::maybe_visit_on_bank_symbol(C::BANK_SYMBOL, v),
-            Ok(Ok(true))
+            G::get_from_bank_symbol(C::BANK_SYMBOL).map(|group: G| group.visit(v)),
+            Some(Ok(true))
         );
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol<'_>)
+    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_bank_symbol: Symbol<'_>)
     where
         C: Currency,
         G: GroupExt,
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            G::maybe_visit_on_bank_symbol(unknown_ticker, v.clone()),
-            Err(v)
+            G::get_from_bank_symbol(unknown_bank_symbol).map(|group: G| group.visit(v)),
+            None
+        );
+    }
+
+    #[track_caller]
+    pub fn maybe_visit_on_dex_symbol_impl<C, G>()
+    where
+        C: Currency,
+        G: GroupExt,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(
+            G::get_from_dex_symbol(C::DEX_SYMBOL).map(|group: G| group.visit(v)),
+            Some(Ok(true))
+        );
+    }
+
+    #[track_caller]
+    pub fn maybe_visit_on_dex_symbol_err<C, G>(unknown_dex_symbol: Symbol<'_>)
+    where
+        C: Currency,
+        G: GroupExt,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(
+            G::get_from_dex_symbol(unknown_dex_symbol).map(|group: G| group.visit(v)),
+            None
         );
     }
 }

@@ -1,25 +1,23 @@
 use std::{any::TypeId, fmt::Debug};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, Result as CrateResult};
 
 pub use self::{
-    from_symbol::{
-        maybe_visit_on_bank_symbol, maybe_visit_on_dex_symbol, maybe_visit_on_ticker,
-        visit_on_bank_symbol, visit_on_dex_symbol, MaybeVisitResult, SingleVisitor,
-    },
     from_symbol_any::{
-        maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
-        AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
+        visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair,
+        AnyVisitorPairResult, AnyVisitorResult,
     },
     group::{Group, GroupExt, MaybeAnyVisitResult},
+    matcher::{BankSymbolMatcher, DexSymbolMatcher, Matcher, MatcherExt, TickerMatcher},
 };
 
-mod from_symbol;
 mod from_symbol_any;
 mod group;
+mod matcher;
 
-pub type Symbol<'a> = &'a str;
-pub type SymbolStatic = &'static str;
+pub type SymbolUnsized = str;
+pub type Symbol<'a> = &'a SymbolUnsized;
+pub type SymbolStatic = Symbol<'static>;
 pub type SymbolOwned = String;
 
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
@@ -36,6 +34,38 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
     const DEX_SYMBOL: SymbolStatic;
 }
 
+pub trait CurrencyExt: Currency {
+    fn get_from<M>(matcher: M, field_value: &M::FieldType) -> Option<Self>
+    where
+        M: MatcherExt,
+    {
+        matcher.match_field(field_value)
+    }
+
+    fn get_from_ticker(ticker: &<TickerMatcher as Matcher>::FieldType) -> Option<Self> {
+        Self::get_from(TickerMatcher, ticker)
+    }
+
+    fn get_from_bank_symbol(
+        bank_symbol: &<BankSymbolMatcher as Matcher>::FieldType,
+    ) -> Option<Self> {
+        Self::get_from(BankSymbolMatcher, bank_symbol)
+    }
+
+    fn get_from_dex_symbol(dex_symbol: &<DexSymbolMatcher as Matcher>::FieldType) -> Option<Self> {
+        Self::get_from(DexSymbolMatcher, dex_symbol)
+    }
+
+    fn visit<V>(visitor: V) -> VisitorResult<Self, V>
+    where
+        V: SingleVisitor<Self>,
+    {
+        visitor.on()
+    }
+}
+
+impl<T> CurrencyExt for T where T: Currency + ?Sized {}
+
 pub fn equal<C1, C2>() -> bool
 where
     C1: 'static,
@@ -44,23 +74,38 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate<G>(ticker: Symbol<'_>) -> Result<()>
+pub fn validate<G>(ticker: Symbol<'_>) -> CrateResult<()>
 where
     G: GroupExt,
 {
     struct SupportedLeaseCurrency {}
+
     impl AnyVisitor for SupportedLeaseCurrency {
-        type Error = Error;
         type Output = ();
-        fn on<C>(self) -> Result<Self::Output>
+
+        type Error = Error;
+
+        fn on<C>(self) -> CrateResult<Self::Output>
         where
             C: Currency,
         {
             Ok(())
         }
     }
+
     visit_any_on_ticker::<G, _>(ticker, SupportedLeaseCurrency {})
 }
+
+pub trait SingleVisitor<C> {
+    type Output;
+
+    type Error;
+
+    fn on(self) -> VisitorResult<C, Self>;
+}
+
+pub type VisitorResult<C, V> =
+    Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>;
 
 #[cfg(test)]
 mod test {

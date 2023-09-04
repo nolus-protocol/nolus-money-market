@@ -1,12 +1,6 @@
-use serde::{Deserialize, Serialize};
+use sdk::schemars;
 
-use sdk::schemars::{self, JsonSchema};
-
-use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
-    define_currency, define_symbol,
-    visitor::GeneralizedVisitorExt,
-};
+use crate::{define_currency, define_prime_group, define_symbol};
 
 define_symbol! {
     NLS {
@@ -29,19 +23,4 @@ define_symbol! {
 }
 define_currency!(Nls, NLS);
 
-#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct Native {}
-
-impl Group for Native {
-    const DESCR: SymbolStatic = "native";
-
-    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        GV: GeneralizedVisitorExt,
-        V: AnyVisitor,
-    {
-        generalized_visitor.maybe_visit::<Nls, V>(visitor)
-    }
-}
+define_prime_group!(Native = ("native")[Nls]);

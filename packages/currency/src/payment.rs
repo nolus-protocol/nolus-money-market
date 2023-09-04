@@ -3,28 +3,55 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    currency::{AnyVisitor, Group, SymbolStatic},
     lease::LeaseGroup,
     lpn::Lpns,
     native::Native,
-    visitor::GeneralizedVisitorExt,
+    MatcherExt,
 };
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct PaymentGroup {}
+pub enum PaymentGroup {
+    Lease(LeaseGroup),
+    Lpns(Lpns),
+    Native(Native),
+}
 
 impl Group for PaymentGroup {
     const DESCR: SymbolStatic = "payment";
 
-    fn maybe_visit_on_by_ref<GV, V>(generalized_visitor: &GV, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        GV: GeneralizedVisitorExt,
-        V: AnyVisitor,
-    {
-        LeaseGroup::maybe_visit_on_by_ref(generalized_visitor, visitor)
-            .or_else(|visitor: V| Lpns::maybe_visit_on_by_ref(generalized_visitor, visitor))
-            .or_else(|visitor: V| Native::maybe_visit_on_by_ref(generalized_visitor, visitor))
+    fn get_from<M: MatcherExt>(matcher: M, field_value: &M::FieldType) -> Option<Self> {
+        LeaseGroup::get_from(matcher, field_value)
+            .map(From::from)
+            .or_else(|| Lpns::get_from(matcher, field_value).map(From::from))
+            .or_else(|| Native::get_from(matcher, field_value).map(From::from))
+    }
+
+    fn visit<V: AnyVisitor>(&self, visitor: V) -> crate::AnyVisitorResult<V> {
+        match self {
+            PaymentGroup::Lease(lease_group) => lease_group.visit(visitor),
+            PaymentGroup::Lpns(lpns) => lpns.visit(visitor),
+            PaymentGroup::Native(native) => native.visit(visitor),
+        }
+    }
+}
+
+impl From<LeaseGroup> for PaymentGroup {
+    fn from(v: LeaseGroup) -> Self {
+        Self::Lease(v)
+    }
+}
+
+impl From<Lpns> for PaymentGroup {
+    fn from(v: Lpns) -> Self {
+        Self::Lpns(v)
+    }
+}
+
+impl From<Native> for PaymentGroup {
+    fn from(v: Native) -> Self {
+        Self::Native(v)
     }
 }
 

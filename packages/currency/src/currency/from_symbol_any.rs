@@ -1,12 +1,13 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{error::Error, SingleVisitor};
+use crate::error::Error;
 
-use super::{Currency, GroupExt, Symbol};
+use super::{Currency, GroupExt, SingleVisitor, Symbol};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
 pub type AnyVisitorResult<V> = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
+
 pub type AnyVisitorPairResult<V> =
     Result<<V as AnyVisitorPair>::Output, <V as AnyVisitorPair>::Error>;
 
@@ -43,26 +44,15 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
-pub fn maybe_visit_any_on_ticker<G, V>(
-    ticker: Symbol<'_>,
-    visitor: V,
-) -> Option<Result<V::Output, V::Error>>
-where
-    G: GroupExt,
-    V: AnyVisitor,
-    Error: Into<V::Error>,
-{
-    G::maybe_visit_on_ticker(ticker, visitor).ok()
-}
-
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
     G: GroupExt,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
-    G::maybe_visit_on_ticker(ticker, visitor)
-        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+    G::get_from_ticker(ticker)
+        .map(|group: G| group.visit(visitor))
+        .unwrap_or_else(|| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
 }
 
 pub fn visit_any_on_tickers<G1, G2, V>(
@@ -76,7 +66,10 @@ where
     V: AnyVisitorPair,
     Error: Into<V::Error>,
 {
-    visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
+    visit_any_on_ticker::<G1, _>(
+        ticker1,
+        FirstTickerVisitor::<'_, G2, V>::new(ticker2, visitor),
+    )
 }
 
 mod impl_any_tickers {
