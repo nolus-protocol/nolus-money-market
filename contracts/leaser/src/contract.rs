@@ -144,14 +144,18 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
-    let contract_addr = reply::from_instantiate::<()>(deps.api, msg)
+    reply::from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
-        })?;
-
-    Leases::save(deps.storage, contract_addr.clone())?;
-    Ok(Response::new().add_attribute("lease_address", contract_addr))
+        })
+        .and_then(|lease| {
+            Leases::save(deps.storage, lease.clone()).map(|stored| {
+                debug_assert!(stored);
+                lease
+            })
+        })
+        .map(|lease| Response::new().add_attribute("lease_address", lease))
 }
 
 fn validate(

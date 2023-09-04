@@ -260,7 +260,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
                 code_id: 1,
                 label: "lease".to_string(),
             }),
-            1,
+            0,
         )]
     );
 }
