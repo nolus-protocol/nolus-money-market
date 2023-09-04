@@ -144,14 +144,13 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
-    let msg_id = msg.id;
     let contract_addr = reply::from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
         })?;
 
-    Leases::save(deps.storage, msg_id, contract_addr.clone())?;
+    Leases::save(deps.storage, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
 }
 

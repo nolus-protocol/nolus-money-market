@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use finance::{liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, InterestPaymentSpec};
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -29,7 +29,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(msg: InstantiateMsg) -> Result<Self, ContractError> {
+    pub fn new(msg: InstantiateMsg) -> ContractResult<Self> {
         Ok(Config {
             lease_code_id: msg.lease_code_id.u64(),
             lpp_addr: msg.lpp_ust_addr,
@@ -43,12 +43,12 @@ impl Config {
         })
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, self)
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        Self::STORAGE.save(storage, self).map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        Self::STORAGE.load(storage).map_err(Into::into)
     }
 
     pub fn setup_dex(storage: &mut dyn Storage, params: ConnectionParams) -> ContractResult<()> {

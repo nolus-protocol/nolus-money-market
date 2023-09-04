@@ -10,46 +10,20 @@ use crate::{
     migrate::{Customer, MaybeCustomer},
 };
 
-const IDS: InstantiateReplyIdSeq<'static> = InstantiateReplyIdSeq::new("instantiate_reply_ids");
-
-pub type InstantiateReplyId = u64;
-pub struct InstantiateReplyIdSeq<'a>(Item<'a, InstantiateReplyId>);
-
-impl<'a> InstantiateReplyIdSeq<'a> {
-    pub const fn new(namespace: &'a str) -> Self {
-        InstantiateReplyIdSeq(Item::new(namespace))
-    }
-
-    pub fn next(&self, store: &mut dyn Storage) -> Result<InstantiateReplyId, ContractError> {
-        let mut next_seq = self.0.load(store).unwrap_or(0);
-        next_seq = next_seq.wrapping_add(1);
-        self.0.save(store, &next_seq)?;
-        Ok(next_seq)
-    }
-}
-
 pub struct Leases {}
 
 impl Leases {
-    const PENDING: Map<'static, InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
+    const PENDING_CUSTOMER: Item<'static, Addr> = Item::new("pending_customer");
     const CUSTOMER_LEASES: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
 
-    pub fn cache_open_req(
-        storage: &mut dyn Storage,
-        customer: &Addr,
-    ) -> Result<InstantiateReplyId, ContractError> {
-        let instance_reply_id = IDS.next(storage)?;
-
-        Self::PENDING.save(storage, instance_reply_id, customer)?;
-
-        Ok(instance_reply_id)
+    pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> Result<(), ContractError> {
+        Self::PENDING_CUSTOMER
+            .save(storage, customer)
+            .map_err(Into::into)
     }
 
     /// Return an error if the same lease exists
-    pub fn save(storage: &mut dyn Storage, msg_id: u64, lease: Addr) -> StdResult<()> {
-        let customer = Self::PENDING.load(storage, msg_id)?;
-        Self::PENDING.remove(storage, msg_id);
-
+    pub fn save(storage: &mut dyn Storage, lease: Addr) -> StdResult<()> {
         let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
             let mut leases = may_leases.unwrap_or_default();
             if leases.insert(lease) {
@@ -58,8 +32,14 @@ impl Leases {
                 Err(StdError::generic_err("the lease already exists"))
             }
         };
-        Self::CUSTOMER_LEASES
-            .update(storage, customer, update_fn)
+
+        Self::PENDING_CUSTOMER
+            .load(storage)
+            .map(|customer| {
+                Self::PENDING_CUSTOMER.remove(storage);
+                customer
+            })
+            .map(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
             .map(|_| ())
     }
 
@@ -101,37 +81,15 @@ impl Leases {
 
 #[cfg(test)]
 mod test {
-    use sdk::{
-        cosmwasm_std::{
-            testing::{self, MockStorage},
-            Addr, StdError, Storage,
-        },
-        cw_storage_plus::Item,
-    };
+    use sdk::cosmwasm_std::{testing::MockStorage, Addr, StdError, Storage};
 
-    use crate::state::leases::{InstantiateReplyId, Leases};
-
-    #[test]
-    fn test_id_overflow() {
-        let mut deps = testing::mock_dependencies();
-        let id_item: Item<'_, InstantiateReplyId> = Item::new("instantiate_reply_ids");
-        id_item
-            .save(&mut deps.storage, &(InstantiateReplyId::MAX - 1))
-            .unwrap();
-
-        let id = Leases::cache_open_req(&mut deps.storage, &Addr::unchecked("test")).unwrap();
-        assert_eq!(id, InstantiateReplyId::MAX);
-
-        // overflow
-        let id = Leases::cache_open_req(&mut deps.storage, &Addr::unchecked("test")).unwrap();
-        assert_eq!(id, 0);
-    }
+    use crate::state::leases::Leases;
 
     #[test]
     fn test_save_customer_not_cached() {
         let mut storage = MockStorage::default();
         assert!(matches!(
-            Leases::save(&mut storage, 1, test_lease(),),
+            Leases::save(&mut storage, test_lease(),),
             Err(StdError::NotFound { .. })
         ));
         assert_lease_not_exist(&storage);
@@ -143,7 +101,7 @@ mod test {
         assert_lease_not_exist(&storage);
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
 
-        assert_eq!(Ok(()), Leases::save(&mut storage, 1, test_lease()));
+        assert_eq!(Ok(()), Leases::save(&mut storage, test_lease()));
         assert_lease_exist(&storage);
     }
 
@@ -151,12 +109,12 @@ mod test {
     fn test_save_same_lease() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(()), Leases::save(&mut storage, 1, test_lease()));
+        assert_eq!(Ok(()), Leases::save(&mut storage, test_lease()));
         assert_lease_exist(&storage);
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
         assert!(matches!(
-            Leases::save(&mut storage, 2, test_lease()),
+            Leases::save(&mut storage, test_lease()),
             Err(StdError::GenericErr { .. })
         ));
         assert_lease_exist(&storage);
@@ -166,11 +124,11 @@ mod test {
     fn test_save_another_lease() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(()), Leases::save(&mut storage, 1, test_lease()));
+        assert_eq!(Ok(()), Leases::save(&mut storage, test_lease()));
         assert_lease_exist(&storage);
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(()), Leases::save(&mut storage, 2, test_another_lease()));
+        assert_eq!(Ok(()), Leases::save(&mut storage, test_another_lease()));
         assert_lease_exist(&storage);
         assert!(lease_exist(&storage, &test_another_lease()));
     }
@@ -192,10 +150,9 @@ mod test {
     #[test]
     fn test_remove_exist() {
         let mut storage = MockStorage::default();
-        let msg_id = 1;
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        Leases::save(&mut storage, msg_id, test_lease()).unwrap();
+        Leases::save(&mut storage, test_lease()).unwrap();
         assert_lease_exist(&storage);
 
         assert_eq!(
