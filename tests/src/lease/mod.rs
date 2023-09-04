@@ -40,11 +40,11 @@ type LeaseCoin = Coin<LeaseCurrency>;
 type PaymentCurrency = Atom;
 type PaymentCoin = Coin<PaymentCurrency>;
 
-const DOWNPAYMENT: Amount = 1_000_000_000_000;
+const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);
 
 pub(super) type LeaseTestCase = TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>;
 
-pub(super) fn create_payment_coin(amount: u128) -> PaymentCoin {
+pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
 }
 
@@ -65,34 +65,33 @@ pub(super) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
-pub(super) fn create_test_case<InitFundsC>() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>
+pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn, _, _, _, _, _, _, _>::with_reserve(&[
-            cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-            cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
-        ])
-        .init_lpp_with_funds(
-            None,
-            &[coin(
-                5_000_000_000_000_000_000_000_000_000,
-                Lpn::BANK_SYMBOL,
-            )],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_treasury_without_dispatcher()
-        .init_profit(24)
-        .init_leaser()
-        .into_generic();
+    let mut test_case = TestCaseBuilder::<Lpn, _, _, _, _, _, _, _>::with_reserve(&[
+        cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
+    ])
+    .init_lpp_with_funds(
+        None,
+        &[coin(
+            5_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury_without_dispatcher()
+    .init_profit(24)
+    .init_leaser()
+    .into_generic();
 
     test_case.send_funds_from_admin(
         Addr::unchecked(USER),
@@ -149,8 +148,8 @@ where
         TestCase::LEASER_CONNECTION_ID,
         lease.clone(),
         downpayment,
-        exp_borrow,
-        exp_lease,
+        dbg!(exp_borrow),
+        dbg!(exp_lease),
     );
 
     lease

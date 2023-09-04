@@ -1,9 +1,10 @@
 use finance::{
-    coin::{Amount, Coin},
+    coin::Amount,
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
     price::{self, Price},
+    ratio::Rational,
     zero::Zero,
 };
 
@@ -32,11 +33,14 @@ use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency
 #[test]
 fn partial_repay() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
 
     let quote_result = super::quote_query(&test_case, downpayment);
     let amount: LpnCoin = quote_result.borrow.try_into().unwrap();
-    let partial_payment = super::create_payment_coin(u128::from(amount) / 2);
+    let partial_payment = Fraction::<PaymentCoin>::of(
+        &Rational::new(1, 2),
+        super::create_payment_coin(amount.into()),
+    );
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);
 
@@ -51,7 +55,7 @@ fn partial_repay() {
 #[test]
 fn partial_repay_after_time() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment: PaymentCoin = DOWNPAYMENT;
 
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
 
@@ -115,7 +119,7 @@ fn partial_repay_after_time() {
 #[test]
 fn full_repay() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
     let borrowed: PaymentCoin = price::total(
         super::quote_borrow(&test_case, downpayment),
@@ -143,9 +147,9 @@ fn full_repay() {
 #[test]
 fn full_repay_with_max_ltd() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
     let percent = Percent::from_percent(10);
-    let borrowed = Coin::new(percent.of(DOWNPAYMENT));
+    let borrowed = percent.of(DOWNPAYMENT);
     let lease_address = super::open_lease(&mut test_case, downpayment, Some(percent));
 
     let expected_result = StateResponse::Opened {
@@ -190,7 +194,7 @@ fn full_repay_with_max_ltd() {
 #[test]
 fn full_repay_with_excess() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
     let borrowed: PaymentCoin = price::total(
         super::quote_borrow(&test_case, downpayment),

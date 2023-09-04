@@ -71,11 +71,7 @@ fn liquidation_warning_price_3() {
 #[test]
 fn full_liquidation() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let lease = lease::open_lease(
-        &mut test_case,
-        lease::create_payment_coin(DOWNPAYMENT),
-        None,
-    );
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     // loan = 1857142857142
     // asset = 2857142857142
@@ -170,11 +166,7 @@ fn full_liquidation() {
 
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let lease = lease::open_lease(
-        &mut test_case,
-        lease::create_payment_coin(DOWNPAYMENT),
-        None,
-    );
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let response: AppResponse =
         deliver_new_price(&mut test_case, lease, base, quote).unwrap_response();

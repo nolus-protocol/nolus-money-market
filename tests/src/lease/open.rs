@@ -1,3 +1,5 @@
+use finance::{coin::Coin, zero::Zero};
+
 use crate::lease::heal;
 
 use super::{LeaseCoin, LeaseCurrency, PaymentCurrency, DOWNPAYMENT};
@@ -6,7 +8,7 @@ use super::{LeaseCoin, LeaseCurrency, PaymentCurrency, DOWNPAYMENT};
 #[should_panic = "[Lease] No payment sent"]
 fn open_zero_downpayment() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(0);
+    let downpayment = Coin::<PaymentCurrency>::ZERO;
     super::try_init_lease(&mut test_case, downpayment, None);
 }
 
@@ -27,7 +29,7 @@ fn open_downpayment_lease_currency() {
 #[test]
 fn open_downpayment_different_than_lease_currency() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
     let query_result = super::state_query(&test_case, &lease.clone().into_string());

@@ -22,7 +22,7 @@ use super::{heal, LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPA
 #[test]
 fn state_closed() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
     let borrowed: PaymentCoin = price::total(
         super::quote_borrow(&test_case, downpayment),
