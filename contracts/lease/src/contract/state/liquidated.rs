@@ -43,7 +43,7 @@ impl Liquidated {
             querier,
         )
         .map(|FullLiquidationResult { receipt, messages }| {
-            (
+            MessageResponse::messages_with_events(
                 messages,
                 self.emit_ok(
                     env,
@@ -54,14 +54,13 @@ impl Liquidated {
                 ),
             )
         })
-        .and_then(|(liquidation_messages, events)| {
+        .and_then(|liquidation_response| {
             lease
                 .finalizer
                 .notify(customer)
-                .map(|finalizer_msgs| (liquidation_messages.merge(finalizer_msgs), events))
+                .map(|finalizer_msgs| liquidation_response.merge_with(finalizer_msgs))
             //make sure the finalizer messages go out last
         })
-        .map(|(all_messages, events)| MessageResponse::messages_with_events(all_messages, events))
     }
 
     fn emit_ok(

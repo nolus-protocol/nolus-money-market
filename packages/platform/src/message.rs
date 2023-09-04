@@ -22,7 +22,11 @@ impl Response {
         }
     }
 
-    pub fn merge_with(mut self, mut other: Self) -> Self {
+    pub fn merge_with<R>(mut self, other: R) -> Self
+    where
+        R: Into<Self>,
+    {
+        let mut other = other.into();
         self.messages = self.messages.merge(other.messages);
         self.events.append(&mut other.events);
         self

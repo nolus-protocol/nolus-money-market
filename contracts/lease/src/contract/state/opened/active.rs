@@ -299,7 +299,7 @@ fn start_liquidation(
     let start_liquidaion = sell_asset::start(lease, liquidation);
     start_liquidaion
         .enter(env.block.time, querier)
-        .map(|swap_msg| curr_request_response.merge_with(swap_msg.into()))
+        .map(|swap_msg| curr_request_response.merge_with(swap_msg))
         .map(|start_liq| Response::from(start_liq, SellAssetState::from(start_liquidaion)))
         .map_err(Into::into)
 }
