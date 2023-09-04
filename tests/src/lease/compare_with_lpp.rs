@@ -1,7 +1,13 @@
 use ::lease::api::StateResponse;
-use finance::{coin::Coin, duration::Duration};
+use finance::{
+    coin::{Amount, Coin},
+    duration::Duration,
+};
 
-use crate::{common::leaser::Instantiator as LeaserInstantiator, lease};
+use crate::{
+    common::leaser::Instantiator as LeaserInstantiator,
+    lease::{self, LeaseCoin},
+};
 
 use super::{Lpn, LpnCoin, PaymentCurrency, DOWNPAYMENT};
 
@@ -25,7 +31,7 @@ fn manual_calculation() {
 
     let query_result = super::state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
-        amount: (DOWNPAYMENT + 1_857_142_857_142.into()).into(),
+        amount: LeaseCoin::from(Amount::from(DOWNPAYMENT + 1_857_142_857_142.into())).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<Lpn>::new(1_857_142_857_142).into(),

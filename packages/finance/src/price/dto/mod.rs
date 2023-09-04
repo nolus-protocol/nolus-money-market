@@ -49,19 +49,6 @@ where
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
-        struct Validator {}
-        impl WithPrice for Validator {
-            type Output = ();
-            type Error = Error;
-
-            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-                QuoteC: Currency,
-            {
-                price.invariant_held()
-            }
-        }
         Self::check(!self.base().is_zero(), "The amount should not be zero")
             .and_then(|_| {
                 Self::check(
@@ -76,7 +63,6 @@ where
                     "The price should be equal to the identity if the currencies match",
                 )
             })
-            .and_then(|_| with_price::execute(self, Validator {}))
     }
 
     fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
