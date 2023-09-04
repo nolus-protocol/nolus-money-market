@@ -42,7 +42,7 @@ pub fn instantiate(
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     let lease_code = msg.lease_code_id;
-    Config::new(msg)?.store(deps.storage)?;
+    Config::new(msg).store(deps.storage)?;
 
     leaser::update_lpp(deps.storage, lease_code.u64(), Batch::default())
         .map(response::response_only_messages)
@@ -71,22 +71,19 @@ pub fn execute(
             currency,
             max_ltd,
         ),
-        ExecuteMsg::FinalizeLease { customer } => deps
-            .api
-            .addr_validate(customer.as_str())
-            .map_err(Into::into)
-            .and_then(|customer| {
-                contract::validate_addr(&deps.querier, &info.sender)
-                    .map(|()| (customer, info.sender))
-                    .map_err(Into::into)
-            })
-            .and_then(|(customer, lease)| {
-                Leases::remove(deps.storage, customer, &lease).map_err(Into::into)
-            })
-            .map(|removed| {
-                debug_assert!(removed);
-                MessageResponse::default()
-            }),
+        ExecuteMsg::FinalizeLease { customer } => {
+            validate_customer(customer, deps.api, &deps.querier)
+                .and_then(|customer| {
+                    validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
+                })
+                .and_then(|(customer, lease)| {
+                    Leases::remove(deps.storage, customer, &lease).map_err(Into::into)
+                })
+                .map(|removed| {
+                    debug_assert!(removed);
+                    MessageResponse::default()
+                })
+        }
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
@@ -102,7 +99,7 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(|()| validate(next_customer, deps.api, &deps.querier))
+            .and_then(|()| validate_customer(next_customer, deps.api, &deps.querier))
             .and_then(move |next_customer_validated| {
                 leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)
             }),
@@ -158,12 +155,12 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
         .map(|lease| Response::new().add_attribute("lease_address", lease))
 }
 
-fn validate(
-    next_customer: Addr,
+fn validate_customer(
+    customer: Addr,
     api: &dyn Api,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Addr> {
-    api.addr_validate(next_customer.as_str())
+    api.addr_validate(customer.as_str())
         .map_err(|_| ContractError::InvalidContinuationKey {
             err: "invalid address".into(),
         })
@@ -175,4 +172,14 @@ fn validate(
                     err: "smart contract key".into(),
                 })
         })
+}
+
+fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
+    Leaser::new(deps)
+        .config()
+        .map(|config| config.config.lease_code_id)
+        .and_then(|lease_code_id| {
+            contract::validate_code_id(&deps.querier, &lease, lease_code_id).map_err(Into::into)
+        })
+        .map(|()| lease)
 }
