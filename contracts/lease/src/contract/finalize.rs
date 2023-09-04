@@ -30,8 +30,7 @@ impl FinalizerRef {
             .map_err(Into::into)
     }
 
-    #[allow(unused)]
-    pub(super) fn into_stub(self, customer: Addr) -> impl Finalizer {
+    pub(super) fn into_stub(self, customer: Addr) -> impl Finalizer<Error = ContractError> {
         Stub::new(self, customer)
     }
 }

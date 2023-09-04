@@ -17,10 +17,9 @@ use sdk::{
     cosmwasm_std::{coin, Addr, Binary, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
-use std::collections::HashSet;
 
 use crate::common::{
-    self, cwcoin,
+    self, cwcoin, leaser as leaser_mod,
     test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -130,7 +129,11 @@ where
 {
     try_init_lease(test_case, downpayment, max_ltd);
 
-    let lease = get_lease_address(test_case);
+    let lease = leaser_mod::expect_a_lease(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        Addr::unchecked(USER),
+    );
 
     let quote = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
@@ -178,23 +181,6 @@ pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlar
     response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
     () = response.ignore_response().unwrap_response();
-}
-
-pub(super) fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
-) -> Addr {
-    let query_response: HashSet<Addr> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Leases {
-                owner: Addr::unchecked(USER),
-            },
-        )
-        .unwrap();
-    assert_eq!(query_response.len(), 1);
-    query_response.iter().next().unwrap().clone()
 }
 
 pub(super) fn construct_response(data: Binary) -> NeutronSudoMsg {

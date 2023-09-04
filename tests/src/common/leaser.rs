@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::InterestPaymentSpec;
@@ -85,5 +87,26 @@ where
                 max_ltd,
             },
         )
+        .unwrap()
+}
+
+pub(crate) fn expect_a_lease(app: &App, leaser: Addr, customer: Addr) -> Addr {
+    let leases = leases(app, leaser, customer);
+    assert_eq!(1, leases.len());
+
+    leases.into_iter().next().unwrap()
+}
+
+pub(crate) fn assert_no_leases(app: &App, leaser: Addr, customer: Addr) {
+    assert!(leases(app, leaser, customer).is_empty());
+}
+
+pub(crate) fn assert_lease(app: &App, leaser: Addr, customer: Addr, lease: &Addr) {
+    assert!(leases(app, leaser, customer).contains(lease));
+}
+
+fn leases(app: &App, leaser: Addr, customer: Addr) -> HashSet<Addr> {
+    app.query()
+        .query_wasm_smart(leaser, &QueryMsg::Leases { owner: customer })
         .unwrap()
 }
