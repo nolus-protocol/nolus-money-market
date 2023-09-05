@@ -4,7 +4,7 @@ use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{loan::LoanDTO, position::dto::PositionDTO};
+use crate::{loan::LoanDTO, position::PositionDTO};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]

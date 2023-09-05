@@ -110,9 +110,9 @@ impl InterestPaymentSpec {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(test, derive(Debug))]
-#[serde(deny_unknown_fields, rename = "loan", rename_all = "snake_case")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionSpec {
     pub liability: Liability,
     min_asset: LpnCoin,
@@ -126,9 +126,6 @@ impl PositionSpec {
             min_asset,
             min_sell_asset,
         }
-    }
-    pub const fn liability(&self) -> Liability {
-        self.liability
     }
 }
 

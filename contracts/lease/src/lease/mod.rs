@@ -11,7 +11,7 @@ use crate::{
     api::LpnCoin,
     error::{ContractError, ContractResult},
     loan::Loan,
-    position::dto::PositionDTO,
+    position::PositionDTO,
 };
 
 pub(super) use self::{
@@ -130,10 +130,10 @@ where
                 self.addr,
                 self.customer,
                 PositionDTO::new(
+                    self.amount.into(),
                     self.liability,
                     LpnCoin::from(Coin::<Lpn>::new(10_000)),
                     LpnCoin::from(Coin::<Lpn>::new(15_000_000)),
-                    self.amount.into(),
                 ),
                 loan_dto,
                 time_alarms,
