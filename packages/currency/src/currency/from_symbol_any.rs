@@ -2,7 +2,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::Error;
 
-use super::{Currency, Group, Symbol};
+use super::{
+    matcher::{BankSymbolMatcher, TickerMatcher},
+    Currency, Group, Symbol,
+};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
@@ -28,26 +31,13 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
-pub fn maybe_visit_any_on_ticker<G, V>(
-    ticker: Symbol<'_>,
-    visitor: V,
-) -> Option<Result<V::Output, V::Error>>
-where
-    G: Group,
-    V: AnyVisitor,
-    Error: Into<V::Error>,
-{
-    G::maybe_visit_on_ticker(ticker, visitor).ok()
-}
-
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
-    G::maybe_visit_on_ticker(ticker, visitor)
-        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+    impl_any_tickers::visit_any_impl::<_, G, _>(TickerMatcher, ticker, visitor)
 }
 
 pub fn visit_any_on_tickers<G1, G2, V>(
@@ -64,6 +54,15 @@ where
     visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
+pub fn visit_any_on_bank_symbol<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
+where
+    G: Group,
+    V: AnyVisitor,
+    Error: Into<V::Error>,
+{
+    impl_any_tickers::visit_any_impl::<_, G, _>(BankSymbolMatcher, ticker, visitor)
+}
+
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
@@ -72,6 +71,7 @@ mod impl_any_tickers {
     use crate::{
         currency::{Currency, Group, Symbol},
         error::Error,
+        Matcher,
     };
 
     use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair, AnyVisitorResult};
@@ -143,6 +143,21 @@ mod impl_any_tickers {
         {
             self.visitor.on::<C1, C2>()
         }
+    }
+
+    pub(super) fn visit_any_impl<M, G, V>(
+        matcher: M,
+        ticker: Symbol<'_>,
+        visitor: V,
+    ) -> Result<V::Output, V::Error>
+    where
+        M: Matcher,
+        G: Group,
+        V: AnyVisitor,
+        Error: Into<V::Error>,
+    {
+        G::maybe_visit(matcher, ticker, visitor)
+            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
     }
 }
 

@@ -8,18 +8,23 @@ pub use self::{
         SingleVisitor,
     },
     from_symbol_any::{
-        maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
+        visit_any_on_bank_symbol, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
         AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
     },
     group::{Group, MaybeAnyVisitResult},
+    matcher::Matcher,
 };
+
+pub(crate) use group::maybe_visit;
 
 mod from_symbol;
 mod from_symbol_any;
 mod group;
+mod matcher;
 
-pub type Symbol<'a> = &'a str;
-pub type SymbolStatic = &'static str;
+pub type SymbolSlice = str;
+pub type Symbol<'a> = &'a SymbolSlice;
+pub type SymbolStatic = Symbol<'static>;
 pub type SymbolOwned = String;
 
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
