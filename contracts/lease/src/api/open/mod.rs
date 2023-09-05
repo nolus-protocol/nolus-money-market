@@ -10,6 +10,8 @@ use sdk::{
 
 use crate::{error::ContractError, error::ContractResult};
 
+use super::LpnCoin;
+
 mod unchecked;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
@@ -105,6 +107,28 @@ impl InterestPaymentSpec {
                 "The interest due period should be longer than grace period to avoid overlapping",
             )
         })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(test, derive(Debug))]
+#[serde(deny_unknown_fields, rename = "loan", rename_all = "snake_case")]
+pub struct PositionSpec {
+    pub liability: Liability,
+    min_asset: LpnCoin,
+    min_sell_asset: LpnCoin,
+}
+
+impl PositionSpec {
+    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
+        Self {
+            liability,
+            min_asset,
+            min_sell_asset,
+        }
+    }
+    pub const fn liability(&self) -> Liability {
+        self.liability
     }
 }
 

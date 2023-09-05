@@ -34,7 +34,7 @@ pub(in crate::contract::state) type DexState =
     dex::StateLocalOut<TransferIn, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
 pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
-    let amount_in = lease.lease.amount.clone();
+    let amount_in = lease.lease.position.amount.clone();
     StartState::new(TransferIn::new(lease), amount_in)
 }
 
@@ -85,14 +85,14 @@ impl SwapTask for TransferIn {
     }
 
     fn out_currency(&self) -> Symbol<'_> {
-        self.lease.lease.amount.ticker()
+        self.lease.lease.position.amount.ticker()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        dex::on_coin(&self.lease.lease.amount, visitor)
+        dex::on_coin(&self.lease.lease.position.amount, visitor)
     }
 
     fn finish(
@@ -101,7 +101,7 @@ impl SwapTask for TransferIn {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        debug_assert!(amount_out == self.lease.lease.amount);
+        debug_assert!(amount_out == self.lease.lease.position.amount);
         let closed = Closed::default();
         let emitter = closed.emit_ok(env, &self.lease.lease);
         let batch = closed.enter_state(self.lease.lease, querier)?;

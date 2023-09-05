@@ -10,7 +10,7 @@ use sdk::{
 pub use self::{
     open::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm,
+        NewLeaseForm, PositionSpec,
     },
     query::{opened, opening, paid, StateQuery, StateResponse},
 };

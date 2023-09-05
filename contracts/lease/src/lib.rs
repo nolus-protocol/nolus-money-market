@@ -9,3 +9,5 @@ mod event;
 mod lease;
 #[cfg(any(feature = "contract", test))]
 mod loan;
+#[cfg(any(feature = "contract", test))]
+mod position;

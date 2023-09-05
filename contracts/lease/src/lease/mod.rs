@@ -8,8 +8,10 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LpnCoin,
     error::{ContractError, ContractResult},
     loan::Loan,
+    position::dto::PositionDTO,
 };
 
 pub(super) use self::{
@@ -75,14 +77,15 @@ where
     }
 
     pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
-        let amount = dto.amount.try_into().expect(
+        let amount = dto.position.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
+        let liability = dto.position.spec.liability;
         Self {
             addr: dto.addr,
             customer: dto.customer,
             amount,
-            liability: dto.liability,
+            liability,
             loan: Loan::from_dto(dto.loan, lpp_loan),
             oracle,
         }
@@ -112,6 +115,9 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
+    // const MIN_ASSET: LpnCoin = LpnCoin::from(Coin::<Lpn>::new(10_000));
+    // const MIN_SELL_ASSET: LpnCoin = LpnCoin::from(Coin::<Lpn>::new(15_000_000));
+
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
@@ -123,8 +129,12 @@ where
             lease: LeaseDTO::new(
                 self.addr,
                 self.customer,
-                self.amount.into(),
-                self.liability,
+                PositionDTO::new(
+                    self.liability,
+                    LpnCoin::from(Coin::<Lpn>::new(10_000)),
+                    LpnCoin::from(Coin::<Lpn>::new(15_000_000)),
+                    self.amount.into(),
+                ),
                 loan_dto,
                 time_alarms,
                 self.oracle.into(),
