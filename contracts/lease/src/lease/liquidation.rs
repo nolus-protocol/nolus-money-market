@@ -9,7 +9,11 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractResult, loan::LiabilityStatus};
+use crate::{
+    error::ContractResult,
+    lease::{MIN_ASSET, MIN_SELL_ASSET},
+    loan::LiabilityStatus,
+};
 
 use super::Lease;
 
@@ -20,9 +24,6 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    const MIN_LIQUIDATION_AMOUNT: Coin<Lpn> = Coin::new(10_000); // $0.01 TODO issue #40
-    const MIN_ASSET_AMOUNT_BEFORE_LIQUIDATION: Coin<Lpn> = Coin::new(15_000_000); // TODO issue #50
-
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
         let price_in_asset = self.price_of_lease_currency()?.inv();
 
@@ -42,8 +43,8 @@ where
             self.amount,
             price::total(total_due, price_in_asset),
             price::total(overdue, price_in_asset),
-            price::total(Self::MIN_LIQUIDATION_AMOUNT, price_in_asset),
-            price::total(Self::MIN_ASSET_AMOUNT_BEFORE_LIQUIDATION, price_in_asset),
+            price::total(Coin::<Lpn>::new(MIN_ASSET), price_in_asset),
+            price::total(Coin::<Lpn>::new(MIN_SELL_ASSET), price_in_asset),
         );
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());

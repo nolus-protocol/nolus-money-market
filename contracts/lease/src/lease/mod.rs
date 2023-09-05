@@ -1,5 +1,8 @@
 use currency::{self, Currency};
-use finance::{coin::Coin, liability::Liability};
+use finance::{
+    coin::{Amount, Coin},
+    liability::Liability,
+};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -27,6 +30,9 @@ mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;
+
+pub const MIN_ASSET: Amount = 10_000;
+pub const MIN_SELL_ASSET: Amount = 15_000_000;
 
 // TODO look into reducing the type parameters to Lpn and Asset only!
 // the others could be provided on demand when certain operation is being performed
@@ -78,7 +84,7 @@ where
 
     pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
         let amount = dto.position.amount.try_into().expect(
-            "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
+            "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol()",
         );
         let liability = dto.position.spec.liability;
         Self {
@@ -115,9 +121,6 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
-    // const MIN_ASSET: LpnCoin = LpnCoin::from(Coin::<Lpn>::new(10_000));
-    // const MIN_SELL_ASSET: LpnCoin = LpnCoin::from(Coin::<Lpn>::new(15_000_000));
-
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
@@ -132,8 +135,8 @@ where
                 PositionDTO::new(
                     self.amount.into(),
                     self.liability,
-                    LpnCoin::from(Coin::<Lpn>::new(10_000)),
-                    LpnCoin::from(Coin::<Lpn>::new(15_000_000)),
+                    LpnCoin::from(Coin::<Lpn>::new(MIN_ASSET)),
+                    LpnCoin::from(Coin::<Lpn>::new(MIN_SELL_ASSET)),
                 ),
                 loan_dto,
                 time_alarms,
