@@ -141,16 +141,12 @@ where
     where
         C: Currency,
     {
-        if let Some(above) = self.above_or_equal {
-            self.price_alarms
-                .add_alarm_above_or_equal::<C, BaseC>(self.receiver.clone(), above.try_into()?)?;
-        } else {
-            self.price_alarms
-                .remove_above_or_equal(self.receiver.clone())?;
-        }
-
         self.price_alarms
-            .add_alarm_below(self.receiver.clone(), below)
+            .add_alarms(
+                self.receiver,
+                below,
+                self.above_or_equal.map(TryInto::try_into).transpose()?,
+            )
             .map_err(Into::into)
     }
 }
