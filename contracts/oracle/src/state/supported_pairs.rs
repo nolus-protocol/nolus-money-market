@@ -3,8 +3,8 @@ use std::{fmt::Debug, marker::PhantomData};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::{
-    payment::PaymentGroup, visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol,
-    SymbolOwned,
+    payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol, SymbolOwned,
+    TickerMatcher,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use swap::SwapTarget;
@@ -101,7 +101,7 @@ where
         }
 
         for swap in self.tree.iter() {
-            visit_any_on_ticker::<PaymentGroup, _>(&swap.value().target, TickerChecker)?;
+            TickerMatcher.visit_any::<PaymentGroup, _>(&swap.value().target, TickerChecker)?;
         }
 
         Ok(self)

@@ -50,19 +50,19 @@ pub trait Matcher: MatcherSpec + Copy {
 impl<T> Matcher for T where T: MatcherSpec + ?Sized + Copy {}
 
 #[derive(Clone, Copy)]
-pub(super) struct TickerMatcher;
+pub struct TickerMatcher;
 impl MatcherSpec for TickerMatcher {
     type Symbol<C> = Ticker<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
-pub(super) struct BankSymbolMatcher;
+pub struct BankSymbolMatcher;
 impl MatcherSpec for BankSymbolMatcher {
     type Symbol<C> = BankSymbol<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
-pub(super) struct DexSymbolMatcher;
+pub struct DexSymbolMatcher;
 impl MatcherSpec for DexSymbolMatcher {
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }

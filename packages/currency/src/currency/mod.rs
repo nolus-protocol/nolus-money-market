@@ -5,11 +5,11 @@ use crate::error::{Error, Result};
 pub use self::{
     from_symbol::{maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult, SingleVisitor},
     from_symbol_any::{
-        maybe_visit_any_on_bank_symbol, maybe_visit_any_on_ticker, visit_any_on_ticker,
         visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
+        GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult},
-    matcher::Matcher,
+    matcher::{BankSymbolMatcher, Matcher, TickerMatcher},
 };
 
 pub(crate) use group::maybe_visit_any;
@@ -61,7 +61,7 @@ where
             Ok(())
         }
     }
-    visit_any_on_ticker::<G, _>(ticker, SupportedLeaseCurrency {})
+    TickerMatcher.visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
 }
 
 #[cfg(test)]

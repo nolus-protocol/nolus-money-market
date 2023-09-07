@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use currency::{self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, Symbol};
+use currency::{
+    self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol,
+    TickerMatcher,
+};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,
@@ -40,7 +43,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
-    currency::visit_any_on_ticker::<LeaseGroup, _>(
+    TickerMatcher.visit_any::<LeaseGroup, _>(
         asset,
         FactoryStage1 {
             cmd,

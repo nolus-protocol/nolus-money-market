@@ -8,8 +8,8 @@ use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol,
-    SymbolOwned,
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit,
+    SingleVisitor, Symbol, SymbolOwned, TickerMatcher,
 };
 
 use crate::{
@@ -102,7 +102,8 @@ where
             }
         }
 
-        currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+        TickerMatcher
+            .visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
 

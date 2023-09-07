@@ -1,7 +1,10 @@
 use std::marker::PhantomData;
 use std::result::Result as StdResult;
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor};
+use currency::{
+    self, AnyVisitor, AnyVisitorResult, BankSymbolMatcher, Currency, Group, GroupVisit,
+    SingleVisitor,
+};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -22,7 +25,8 @@ where
     G: Group,
     V: WithCoin,
 {
-    currency::maybe_visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+    BankSymbolMatcher
+        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
         .map_err(|transformer| transformer.1)
 }
 
@@ -31,7 +35,9 @@ where
     G: Group,
     V: WithCoin,
 {
-    currency::maybe_visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v)).ok()
+    BankSymbolMatcher
+        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+        .ok()
 }
 
 #[cfg(any(test, feature = "testing"))]
