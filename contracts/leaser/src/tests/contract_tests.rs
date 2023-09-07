@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{test::Usdc, Currency};
-use finance::{duration::Duration, liability::Liability, percent::Percent};
-use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};
+use currency::{lpn::Usdc, Currency};
+use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+use lease::{
+    api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpec},
+    lease::{MIN_ASSET as MIN_ASSET_AMOUNT, MIN_SELL_ASSET as MIN_SELL_ASSET_AMOUNT},
+};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
@@ -33,20 +36,26 @@ type TheCurrency = Usdc;
 
 const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
+const MIN_ASSET: Coin<TheCurrency> = Coin::<TheCurrency>::new(MIN_ASSET_AMOUNT);
+const MIN_SELL_ASSET: Coin<TheCurrency> = Coin::<TheCurrency>::new(MIN_SELL_ASSET_AMOUNT);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
-        liability: Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
-            Duration::from_hours(1),
+        lease_position_spec: PositionSpec::new(
+            Liability::new(
+                Percent::from_percent(65),
+                Percent::from_percent(5),
+                Percent::from_percent(10),
+                Percent::from_percent(2),
+                Percent::from_percent(3),
+                Percent::from_percent(2),
+                Duration::from_hours(1),
+            ),
+            MIN_ASSET.into(),
+            MIN_SELL_ASSET.into(),
         ),
         lease_interest_payment: InterestPaymentSpec::new(
             Duration::from_days(90),
@@ -130,6 +139,8 @@ fn test_update_config() {
         Percent::from_percent(1),
         Duration::from_hours(12),
     );
+    let expected_position_spec =
+        PositionSpec::new(expected_liability, MIN_ASSET.into(), MIN_SELL_ASSET.into());
     let expected_repaiment =
         InterestPaymentSpec::new(Duration::from_secs(100), Duration::from_secs(10));
 
@@ -137,14 +148,14 @@ fn test_update_config() {
 
     let msg = SudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        liability: expected_liability,
+        lease_position_spec: expected_position_spec,
         lease_interest_payment: expected_repaiment.clone(),
     };
 
     sudo(deps.as_mut(), mock_env(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
-    assert_eq!(expected_liability, config.liability);
+    assert_eq!(expected_liability, config.lease_position_spec.liability);
     assert_eq!(expected_repaiment, config.lease_interest_payment);
 }
 
@@ -167,10 +178,18 @@ fn test_update_config_invalid_liability() {
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
+    pub struct PositionSpec {
+        liability: Liability,
+        min_asset: LpnCoin,
+        min_sell_asset: LpnCoin,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
     pub enum MockSudoMsg {
         Config {
             lease_interest_rate_margin: Percent,
-            liability: Liability,
+            lease_position_spec: PositionSpec,
             lease_interest_payment: InterestPaymentSpec,
         },
     }
@@ -186,7 +205,11 @@ fn test_update_config_invalid_liability() {
     };
     let mock_msg = MockSudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        liability,
+        lease_position_spec: PositionSpec {
+            liability,
+            min_asset: MIN_ASSET.into(),
+            min_sell_asset: MIN_SELL_ASSET.into(),
+        },
         lease_interest_payment: InterestPaymentSpec::new(
             Duration::from_secs(20),
             Duration::from_secs(10),

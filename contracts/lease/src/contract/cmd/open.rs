@@ -70,7 +70,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let liability = self.form.liability;
+        let liability = self.form.position_spec.liability;
 
         let loan = Loan::new(
             self.start_at,

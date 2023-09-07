@@ -86,7 +86,7 @@ where
         let amount = dto.position.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol()",
         );
-        let liability = dto.position.spec.liability;
+        let liability = dto.position.liability;
         Self {
             addr: dto.addr,
             customer: dto.customer,

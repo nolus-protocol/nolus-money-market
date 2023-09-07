@@ -9,7 +9,7 @@ use finance::{
 use lease::{
     api::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, StateQuery, StateResponse,
+        NewLeaseForm, PositionSpec, StateQuery, StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
@@ -26,7 +26,7 @@ use super::{
     test_case::{
         app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase,
+        TestCase, MIN_ASSET, MIN_SELL_ASSET,
     },
     CwContractWrapper, ADMIN, USER,
 };
@@ -88,14 +88,18 @@ impl Instantiator {
                 customer: config.customer,
                 currency: lease_currency.into(),
                 max_ltd,
-                liability: Liability::new(
-                    config.liability_init_percent,
-                    config.liability_delta_to_healthy_percent,
-                    config.liability_delta_to_max_percent,
-                    config.liability_minus_delta_to_first_liq_warn,
-                    config.liability_minus_delta_to_second_liq_warn,
-                    config.liability_minus_delta_to_third_liq_warn,
-                    config.liability_recalc_time,
+                position_spec: PositionSpec::new(
+                    Liability::new(
+                        config.liability_init_percent,
+                        config.liability_delta_to_healthy_percent,
+                        config.liability_delta_to_max_percent,
+                        config.liability_minus_delta_to_first_liq_warn,
+                        config.liability_minus_delta_to_second_liq_warn,
+                        config.liability_minus_delta_to_third_liq_warn,
+                        config.liability_recalc_time,
+                    ),
+                    MIN_ASSET.into(),
+                    MIN_SELL_ASSET.into(),
                 ),
                 loan: LoanForm {
                     annual_margin_interest: config.annual_margin_interest,

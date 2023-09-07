@@ -1,13 +1,16 @@
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::InterestPaymentSpec;
+use lease::api::{InterestPaymentSpec, PositionSpec};
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::{app::App, MIN_ASSET, MIN_SELL_ASSET},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
@@ -30,6 +33,10 @@ impl Instantiator {
         )
     }
 
+    pub fn position_spec() -> PositionSpec {
+        PositionSpec::new(Self::liability(), MIN_ASSET.into(), MIN_SELL_ASSET.into())
+    }
+
     #[track_caller]
     pub fn instantiate(
         app: &mut App,
@@ -50,7 +57,7 @@ impl Instantiator {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
-            liability: Self::liability(),
+            lease_position_spec: Self::position_spec(),
             lease_interest_payment: InterestPaymentSpec::new(
                 Self::REPAYMENT_PERIOD,
                 Self::GRACE_PERIOD,

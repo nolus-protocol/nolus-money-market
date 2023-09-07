@@ -1,8 +1,9 @@
 use address_book::AddressBook;
 use app::App;
-use currency::{Currency, Symbol};
+use currency::{lpn::Usdc, Currency, Symbol};
 
-use finance::percent::bound::BoundToHundredPercent;
+use finance::{coin::Coin, percent::bound::BoundToHundredPercent};
+use lease::lease::{MIN_ASSET as MIN_ASSET_AMOUNT, MIN_SELL_ASSET as MIN_SELL_ASSET_AMOUNT};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
@@ -48,6 +49,10 @@ type OptionalOracleWrapper = Option<
         oracle::ContractError,
     >,
 >;
+
+type Lpn = Usdc;
+pub const MIN_ASSET: Coin<Lpn> = Coin::<Lpn>::new(MIN_ASSET_AMOUNT);
+pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::<Lpn>::new(MIN_SELL_ASSET_AMOUNT);
 
 #[must_use]
 pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
