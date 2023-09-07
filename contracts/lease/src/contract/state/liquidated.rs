@@ -1,5 +1,5 @@
 use finance::liability::Cause;
-use platform::batch::Emitter;
+use platform::{batch::Emitter, message::Response as MessageResponse};
 use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
@@ -8,11 +8,12 @@ use sdk::cosmwasm_std::{Addr, Deps, Env, MessageInfo, QuerierWrapper, Timestamp}
 use crate::{
     api::{LeaseCoin, LpnCoin, StateResponse},
     contract::{
-        cmd::{FullLiquidation, FullLiquidationResult, ReceiptDTO},
+        cmd::{FullLiquidation, FullLiquidationResult, LiquidationDTO, ReceiptDTO},
         state::event,
+        Lease,
     },
     error::ContractResult,
-    lease::{self, LeaseDTO},
+    lease::with_lease,
 };
 
 use super::{Handler, Response};
@@ -23,20 +24,46 @@ pub struct Liquidated {}
 impl Liquidated {
     pub(super) fn enter_state(
         &self,
-        lease: LeaseDTO,
-        liquidation_lpn: LpnCoin,
+        lease: Lease,
+        liquidation_descr: (LiquidationDTO, LpnCoin),
         now: Timestamp,
         profit: ProfitRef,
+        env: &Env,
         querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<FullLiquidationResult> {
-        lease::with_lease::execute(
-            lease,
+    ) -> ContractResult<MessageResponse> {
+        let lease_addr = lease.lease.addr.clone();
+        let liquidation = liquidation_descr.0;
+        let liquidation_lpn = liquidation_descr.1;
+        let liquidation_amount = liquidation.amount(&lease.lease).clone();
+        let customer = lease.lease.customer.clone();
+
+        with_lease::execute(
+            lease.lease,
             FullLiquidation::new(liquidation_lpn, now, profit),
             querier,
         )
+        .map(|FullLiquidationResult { receipt, messages }| {
+            MessageResponse::messages_with_events(
+                messages,
+                self.emit_ok(
+                    env,
+                    &lease_addr,
+                    &receipt,
+                    liquidation.cause(),
+                    &liquidation_amount,
+                ),
+            )
+        })
+        .and_then(|liquidation_response| {
+            lease
+                .finalizer
+                .notify(customer)
+                .map(|finalizer_msgs| liquidation_response.merge_with(finalizer_msgs))
+            //make sure the finalizer messages go out last
+        })
     }
 
-    pub(super) fn emit_ok(
+    fn emit_ok(
         &self,
         env: &Env,
         lease_addr: &Addr,

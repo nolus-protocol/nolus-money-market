@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use finance::percent::Percent;
 use lease::api::{ConnectionParams, InterestPaymentSpec, PositionSpec};
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -29,8 +29,8 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(msg: InstantiateMsg) -> Result<Self, ContractError> {
-        Ok(Config {
+    pub fn new(msg: InstantiateMsg) -> Self {
+        Self {
             lease_code_id: msg.lease_code_id.u64(),
             lpp_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
@@ -40,27 +40,28 @@ impl Config {
             market_price_oracle: msg.market_price_oracle,
             profit: msg.profit,
             dex: None,
-        })
+        }
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, self)
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        Self::STORAGE.save(storage, self).map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        Self::STORAGE.load(storage).map_err(Into::into)
     }
 
     pub fn setup_dex(storage: &mut dyn Storage, params: ConnectionParams) -> ContractResult<()> {
-        Self::STORAGE.update(storage, |mut c| {
-            if c.dex.is_none() {
-                c.dex = Some(params);
-                Ok(c)
-            } else {
-                Err(ContractError::DEXConnectivityAlreadySetup {})
-            }
-        })?;
-        Ok(())
+        Self::STORAGE
+            .update(storage, |mut c| {
+                if c.dex.is_none() {
+                    c.dex = Some(params);
+                    Ok(c)
+                } else {
+                    Err(ContractError::DEXConnectivityAlreadySetup {})
+                }
+            })
+            .map(|_| ())
     }
 
     pub fn update(

@@ -24,7 +24,7 @@ use super::{LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = lease::create_payment_coin(DOWNPAYMENT);
+    let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = lease::open_lease(&mut test_case, downpayment, None);
 
     let StateResponse::Opened {

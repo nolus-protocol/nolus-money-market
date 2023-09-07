@@ -49,19 +49,6 @@ where
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
-        struct Validator {}
-        impl WithPrice for Validator {
-            type Output = ();
-            type Error = Error;
-
-            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-                QuoteC: Currency,
-            {
-                price.invariant_held()
-            }
-        }
         Self::check(!self.base().is_zero(), "The amount should not be zero")
             .and_then(|_| {
                 Self::check(
@@ -76,7 +63,6 @@ where
                     "The price should be equal to the identity if the currencies match",
                 )
             })
-            .and_then(|_| with_price::execute(self, Validator {}))
     }
 
     fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
@@ -256,7 +242,7 @@ mod test_invariant {
     use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
 
     use crate::coin::{Coin, CoinDTO};
-    use currency::test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc};
+    use currency::test::{Nls, TestCurrencies, TestExtraCurrencies, Usdc};
     use currency::{Currency, Group};
 
     use super::PriceDTO;
@@ -312,15 +298,6 @@ mod test_invariant {
     }
 
     #[test]
-    #[should_panic = "NotInCurrencyGroup"]
-    fn group_mismatch() {
-        new_invalid_with_groups::<TestCurrencies, TestCurrencies, _, _>(
-            Coin::<Nls>::new(4),
-            Coin::<Dai>::new(5),
-        );
-    }
-
-    #[test]
     fn group_mismatch_json() {
         let r = load_with_groups::<TC, TestCurrencies>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
         assert_err(r, "not defined in the test currency group");
@@ -331,17 +308,7 @@ mod test_invariant {
         C: Currency,
         QuoteC: Currency,
     {
-        new_invalid_with_groups::<TC, TC, C, QuoteC>(base, quote);
-    }
-
-    fn new_invalid_with_groups<G, QuoteG, C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
-    where
-        G: Group,
-        QuoteG: Group,
-        C: Currency,
-        QuoteC: Currency,
-    {
-        let _p = PriceDTO::<G, QuoteG>::new(base.into(), quote.into());
+        let _p = PriceDTO::<TC, TC>::new(base.into(), quote.into());
         #[cfg(not(debug_assertions))]
         {
             _p.invariant_held().expect("should have returned an error");

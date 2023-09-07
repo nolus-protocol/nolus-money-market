@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use serde::{Deserialize, Serialize};
 use serde_json_wasm::from_str;
 
@@ -14,7 +12,6 @@ use finance::{
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
-use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     alarms::Alarm,
@@ -36,7 +33,7 @@ use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
-    oracle as oracle_mod,
+    leaser as leaser_mod, oracle as oracle_mod,
     test_case::{
         app::App,
         builder::BlankBuilder as TestCaseBuilder,
@@ -267,10 +264,11 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: TheCoin,
 ) -> Addr {
+    let customer = Addr::unchecked(ADMIN);
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            customer.clone(),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
@@ -284,30 +282,11 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
 
     () = response.ignore_response().unwrap_response();
 
-    get_lease_address(test_case)
-}
-
-fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
-) -> Addr {
-    let query_response: HashSet<Addr> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Leases {
-                owner: Addr::unchecked(ADMIN),
-            },
-        )
-        .unwrap();
-
-    let mut iter = query_response.into_iter();
-
-    let addr: Addr = iter.next().unwrap();
-
-    assert_eq!(iter.next(), None);
-
-    addr
+    leaser_mod::expect_a_lease(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        customer,
+    )
 }
 
 #[test]

@@ -7,9 +7,7 @@ use dex::{
 };
 use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
-use platform::{
-    message::Response as MessageResponse, state_machine::Response as StateMachineResponse,
-};
+use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -103,12 +101,9 @@ impl SwapTask for TransferIn {
     ) -> Self::Result {
         debug_assert!(amount_out == self.lease.lease.position.amount);
         let closed = Closed::default();
-        let emitter = closed.emit_ok(env, &self.lease.lease);
-        let batch = closed.enter_state(self.lease.lease, querier)?;
-        Ok(StateMachineResponse::from(
-            MessageResponse::messages_with_events(batch, emitter),
-            closed,
-        ))
+        closed
+            .enter_state(self.lease, env, querier)
+            .map(|response| StateMachineResponse::from(response, closed))
     }
 }
 

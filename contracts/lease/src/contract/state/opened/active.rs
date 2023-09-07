@@ -16,8 +16,8 @@ use crate::{
     api::{DownpaymentCoin, LpnCoin, StateResponse},
     contract::{
         cmd::{
-            FullLiquidationResult, LiquidationDTO, LiquidationStatus, LiquidationStatusCmd,
-            OpenLoanRespResult, PartialLiquidation, PartialLiquidationResult, Repay, RepayResult,
+            LiquidationDTO, LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult,
+            PartialLiquidation, PartialLiquidationResult, Repay, RepayResult,
         },
         state::{event as state_event, liquidated, paid, Handler, Response},
         Lease,
@@ -276,32 +276,17 @@ fn try_full_liquidation(
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    let lease_addr = lease.lease.addr.clone();
-    let liquidation_amount = liquidation.amount(&lease.lease).clone();
-
     let liquidated = liquidated::Liquidated::default();
-    let FullLiquidationResult {
-        receipt,
-        messages: liquidate_messages,
-    } = liquidated.enter_state(
-        lease.lease,
-        liquidation_lpn,
-        env.block.time,
-        profit,
-        querier,
-    )?;
-    let liquidate_response = MessageResponse::messages_with_events(
-        liquidate_messages,
-        liquidated.emit_ok(
+    liquidated
+        .enter_state(
+            lease,
+            (liquidation, liquidation_lpn),
+            env.block.time,
+            profit,
             env,
-            &lease_addr,
-            &receipt,
-            liquidation.cause(),
-            &liquidation_amount,
-        ),
-    );
-
-    Ok(Response::from(liquidate_response, liquidated))
+            querier,
+        )
+        .map(|response| Response::from(response, liquidated))
 }
 
 fn start_liquidation(
@@ -314,7 +299,7 @@ fn start_liquidation(
     let start_liquidaion = sell_asset::start(lease, liquidation);
     start_liquidaion
         .enter(env.block.time, querier)
-        .map(|swap_msg| curr_request_response.merge_with(swap_msg.into()))
+        .map(|swap_msg| curr_request_response.merge_with(swap_msg))
         .map(|start_liq| Response::from(start_liq, SellAssetState::from(start_liquidaion)))
         .map_err(Into::into)
 }

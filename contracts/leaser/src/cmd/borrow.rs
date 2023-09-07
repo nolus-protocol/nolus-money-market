@@ -23,19 +23,23 @@ impl Borrow {
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
-        let config = Config::load(deps.storage)?;
-        let instance_reply_id = Leases::cache_open_req(deps.storage, &customer)?;
-
-        let mut batch = Batch::default();
-        batch.schedule_instantiate_wasm_on_success_reply(
-            config.lease_code_id,
-            Self::open_lease_msg(customer, config, currency, max_ltd, finalizer)?,
-            Some(amount),
-            "lease",
-            Some(admin), // allows lease migrations from this contract
-            instance_reply_id,
-        )?;
-        Ok(batch.into())
+        Leases::cache_open_req(deps.storage, &customer)
+            .and_then(|()| Config::load(deps.storage))
+            .and_then(|config| {
+                let mut batch = Batch::default();
+                batch
+                    .schedule_instantiate_wasm_on_success_reply(
+                        config.lease_code_id,
+                        Self::open_lease_msg(customer, config, currency, max_ltd, finalizer)?,
+                        Some(amount),
+                        "lease",
+                        Some(admin), // allows lease migrations from this contract
+                        Default::default(),
+                    )
+                    .map(|()| batch)
+                    .map_err(Into::into)
+            })
+            .map(Into::into)
     }
 
     pub(crate) fn open_lease_msg(

@@ -1,14 +1,20 @@
 use ::lease::api::StateResponse;
-use finance::{coin::Coin, duration::Duration};
+use finance::{
+    coin::{Amount, Coin},
+    duration::Duration,
+};
 
-use crate::{common::leaser::Instantiator as LeaserInstantiator, lease};
+use crate::{
+    common::leaser::Instantiator as LeaserInstantiator,
+    lease::{self, LeaseCoin},
+};
 
-use super::{LeaseCurrency, Lpn, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{Lpn, LpnCoin, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn manual_calculation() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
     let quote_result = dbg!(lease::quote_query(&test_case, downpayment));
 
@@ -25,7 +31,7 @@ fn manual_calculation() {
 
     let query_result = super::state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
-        amount: Coin::<LeaseCurrency>::new(DOWNPAYMENT + 1_857_142_857_142).into(),
+        amount: LeaseCoin::from(Amount::from(DOWNPAYMENT + 1_857_142_857_142.into())).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<Lpn>::new(1_857_142_857_142).into(),
@@ -43,7 +49,7 @@ fn manual_calculation() {
 #[test]
 fn lpp_state_implicit_time() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
 
     let query_result = super::state_query(&test_case, lease_address.as_ref());
@@ -96,7 +102,7 @@ fn lpp_state_implicit_time() {
 #[test]
 fn lpp_state_explicit_time() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment = super::create_payment_coin(DOWNPAYMENT);
+    let downpayment = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
 
     let query_result = super::state_query(&test_case, lease_address.as_ref());

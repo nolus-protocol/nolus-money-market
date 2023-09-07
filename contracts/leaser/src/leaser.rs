@@ -7,11 +7,10 @@ use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Addr, Deps, StdResult, Storage};
+use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
 use crate::{
     cmd::Quote,
-    error::ContractError,
     migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
@@ -27,11 +26,10 @@ impl<'a> Leaser<'a> {
         Self { deps }
     }
     pub fn config(&self) -> ContractResult<ConfigResponse> {
-        let config = Config::load(self.deps.storage)?;
-        Ok(ConfigResponse { config })
+        Config::load(self.deps.storage).map(|config| ConfigResponse { config })
     }
 
-    pub fn customer_leases(&self, customer: Addr) -> StdResult<HashSet<Addr>> {
+    pub fn customer_leases(&self, customer: Addr) -> ContractResult<HashSet<Addr>> {
         Leases::load_by_customer(self.deps.storage, customer)
     }
 
@@ -40,14 +38,14 @@ impl<'a> Leaser<'a> {
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
         max_ltd: Option<Percent>,
-    ) -> Result<QuoteResponse, ContractError> {
+    ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
         let lpp = LppRef::try_new(config.lpp_addr, &self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, &self.deps.querier)?;
 
-        let resp = lpp.execute_lender(
+        lpp.execute_lender(
             Quote::new(
                 self.deps.querier,
                 downpayment,
@@ -58,9 +56,7 @@ impl<'a> Leaser<'a> {
                 max_ltd,
             ),
             &self.deps.querier,
-        )?;
-
-        Ok(resp)
+        )
     }
 }
 

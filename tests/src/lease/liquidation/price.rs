@@ -9,7 +9,7 @@ use sdk::{
 use crate::{
     common::{
         self, cwcoin,
-        leaser::Instantiator as LeaserInstantiator,
+        leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{
             response::{RemoteChain, ResponseWithInterChainMsgs},
             TestCase,
@@ -71,11 +71,7 @@ fn liquidation_warning_price_3() {
 #[test]
 fn full_liquidation() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let lease = lease::open_lease(
-        &mut test_case,
-        lease::create_payment_coin(DOWNPAYMENT),
-        None,
-    );
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     // loan = 1857142857142
     // asset = 2857142857142
@@ -88,12 +84,7 @@ fn full_liquidation() {
     //swap
     response_with_ica.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
     let liquidation_start_response = response_with_ica.unwrap_response();
-
-    let _start_event = liquidation_start_response
-        .events
-        .iter()
-        .find(|event| event.ty == "wasm-ls-liquidation-start")
-        .expect("No liquidation warning emitted!");
+    liquidation_start_response.assert_event(&Event::new("wasm-ls-liquidation-start"));
 
     let liquidated_in_lpn: LpnCoin = quote;
     let liquidated_amount: Amount = liquidated_in_lpn.into();
@@ -146,7 +137,7 @@ fn full_liquidation() {
         )
         .unwrap()
         .unwrap_response();
-    response_transfer_in.has_event(
+    response_transfer_in.assert_event(
         &Event::new("wasm-ls-liquidation")
             .add_attribute("payment-amount", liquidated_amount.to_string())
             .add_attribute("loan-close", true.to_string()),
@@ -166,15 +157,16 @@ fn full_liquidation() {
         matches!(state, StateResponse::Liquidated()),
         "should have been in Liquidated state"
     );
+    leaser::assert_no_leases(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        Addr::unchecked(USER),
+    )
 }
 
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let lease = lease::open_lease(
-        &mut test_case,
-        lease::create_payment_coin(DOWNPAYMENT),
-        None,
-    );
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let response: AppResponse =
         deliver_new_price(&mut test_case, lease, base, quote).unwrap_response();

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use currency::{
     lease::{Atom, Cro, Juno, Osmo},
     lpn::Usdc,
@@ -11,7 +9,6 @@ use finance::{
     percent::Percent,
     price::{total, total_of, Price},
 };
-use leaser::msg::QueryMsg;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
@@ -141,19 +138,12 @@ fn open_multiple_loans() {
         .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)])
         .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(50)]);
 
-    let resp: HashSet<Addr> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Leases {
-                owner: user_addr.clone(),
-            },
-        )
-        .unwrap();
-    assert!(resp.is_empty());
+    leaser_mod::assert_no_leases(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        user_addr.clone(),
+    );
 
-    let mut loans = HashSet::new();
     for _ in 0..5 {
         let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
             .app
@@ -174,11 +164,13 @@ fn open_multiple_loans() {
 
         test_case.app.update_block(next_block);
 
-        let addr = lease_addr(&response.events);
-        loans.insert(Addr::unchecked(addr));
+        leaser_mod::assert_lease(
+            &test_case.app,
+            test_case.address_book.leaser().clone(),
+            user_addr.clone(),
+            &lease_addr(&response.events),
+        );
     }
-
-    assert_eq!(loans.len(), 5);
 
     let mut response = test_case
         .app
@@ -199,30 +191,12 @@ fn open_multiple_loans() {
 
     test_case.app.update_block(next_block);
 
-    let user1_lease_addr = lease_addr(&response.events);
-
-    let resp: HashSet<Addr> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Leases {
-                owner: other_user_addr,
-            },
-        )
-        .unwrap();
-    assert!(resp.contains(&Addr::unchecked(user1_lease_addr)));
-    assert_eq!(resp.len(), 1);
-
-    let user0_loans: HashSet<Addr> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Leases { owner: user_addr },
-        )
-        .unwrap();
-    assert_eq!(user0_loans, loans);
+    leaser_mod::assert_lease(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        other_user_addr,
+        &lease_addr(&response.events),
+    );
 }
 
 #[test]
@@ -629,13 +603,15 @@ where
     );
 }
 
-fn lease_addr(events: &[Event]) -> String {
-    events
-        .last()
-        .unwrap()
-        .attributes
-        .get(1)
-        .unwrap()
-        .value
-        .clone()
+fn lease_addr(events: &[Event]) -> Addr {
+    Addr::unchecked(
+        events
+            .last()
+            .unwrap()
+            .attributes
+            .get(1)
+            .unwrap()
+            .value
+            .clone(),
+    )
 }
