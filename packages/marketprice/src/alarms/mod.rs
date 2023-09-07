@@ -402,7 +402,7 @@ pub mod tests {
         alarms
             .add_alarm_below_and_above(
                 addr1.clone(),
-                price::total_of(Coin::new(1)).is(Coin::new(30)),
+                price::total_of(Coin::new(1)).is(Coin::new(10)),
                 price,
             )
             .unwrap();
@@ -424,7 +424,7 @@ pub mod tests {
         alarms
             .add_alarm_below_and_above(
                 addr1.clone(),
-                price::total_of(Coin::new(1)).is(Coin::new(30)),
+                price::total_of(Coin::new(1)).is(Coin::new(10)),
                 price,
             )
             .unwrap();
