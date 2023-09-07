@@ -141,13 +141,15 @@ where
     where
         C: Currency,
     {
-        self.price_alarms
-            .add_alarms(
-                self.receiver,
-                below,
-                self.above_or_equal.map(TryInto::try_into).transpose()?,
-            )
+        self.above_or_equal
+            .map(TryInto::try_into)
+            .transpose()
             .map_err(Into::into)
+            .and_then(|above_or_equal: Option<Price<C, BaseC>>| {
+                self.price_alarms
+                    .add_alarm(self.receiver, below, above_or_equal)
+                    .map_err(Into::into)
+            })
     }
 }
 

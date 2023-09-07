@@ -11,7 +11,7 @@ use finance::{
     price::{self, Price},
 };
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdError, Storage},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage},
     cw_storage_plus::{
         Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, IntKey, Key, MultiIndex,
         Prefixer, PrimaryKey,
@@ -29,7 +29,7 @@ pub type AlarmsCount = u32;
 struct NormalizedPrice(CoinDTO<SwapGroup>);
 
 type BoxedIter<'storage> =
-    Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), StdError>> + 'storage>;
+    Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), CwError>> + 'storage>;
 
 pub struct AlarmsIterator<'alarms>(iter::Chain<BoxedIter<'alarms>, BoxedIter<'alarms>>);
 
@@ -181,53 +181,23 @@ impl<'storage, S> PriceAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn add_alarms<C, BaseC>(
+    pub fn add_alarm<C, BaseC>(
         &mut self,
         subscriber: Addr,
-        below_alarm: Price<C, BaseC>,
-        above_or_equal_alarm: Option<Price<C, BaseC>>,
+        below: Price<C, BaseC>,
+        above_or_equal: Option<Price<C, BaseC>>,
     ) -> Result<(), AlarmError>
     where
         C: Currency,
         BaseC: Currency,
     {
-        match above_or_equal_alarm {
-            None => self.add_alarm_below(subscriber, below_alarm),
-            Some(above_or_equal_alarm) => {
-                self.add_alarm_below_and_above(subscriber, below_alarm, above_or_equal_alarm)
-            }
-        }
-    }
-
-    pub fn add_alarm_below<C, BaseC>(
-        &mut self,
-        subscriber: Addr,
-        below_alarm: Price<C, BaseC>,
-    ) -> Result<(), AlarmError>
-    where
-        C: Currency,
-        BaseC: Currency,
-    {
-        self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below_alarm))
-            .and_then(|()| self.remove_above_or_equal(subscriber))
-    }
-
-    pub fn add_alarm_below_and_above<C, BaseC>(
-        &mut self,
-        subscriber: Addr,
-        below_alarm: Price<C, BaseC>,
-        above_or_equal_alarm: Price<C, BaseC>,
-    ) -> Result<(), AlarmError>
-    where
-        C: Currency,
-        BaseC: Currency,
-    {
-        self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below_alarm))
-            .and_then(|()| {
-                self.add_alarm_above_or_equal_internal(
+        self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below))
+            .and_then(|()| match above_or_equal {
+                None => self.remove_above_or_equal(subscriber),
+                Some(above_or_equal) => self.add_alarm_above_or_equal_internal(
                     subscriber,
-                    &NormalizedPrice::new(&above_or_equal_alarm),
-                )
+                    &NormalizedPrice::new(&above_or_equal),
+                ),
             })
     }
 
@@ -330,6 +300,7 @@ where
             &self.alarms_below,
             subscriber,
             alarm,
+            AlarmError::AddAlarmStoreBelow,
         )
     }
 
@@ -343,18 +314,21 @@ where
             &self.alarms_above_or_equal,
             subscriber,
             alarm,
+            AlarmError::AddAlarmStoreAboveOrEqual,
         )
     }
 
-    fn add_alarm_internal(
+    fn add_alarm_internal<ErrFn>(
         storage: &mut dyn Storage,
         alarms: &IndexedMap,
         subscriber: Addr,
         alarm: &NormalizedPrice,
-    ) -> Result<(), AlarmError> {
-        alarms
-            .save(storage, subscriber, alarm)
-            .map_err(AlarmError::AddAlarmInternal)
+        error_map: ErrFn,
+    ) -> Result<(), AlarmError>
+    where
+        ErrFn: FnOnce(CwError) -> AlarmError,
+    {
+        alarms.save(storage, subscriber, alarm).map_err(error_map)
     }
 }
 
@@ -386,7 +360,7 @@ pub mod tests {
         let addr1 = Addr::unchecked("addr1");
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
-        alarms.add_alarm_below(addr1, price).unwrap();
+        alarms.add_alarm(addr1, price, None).unwrap();
 
         assert_eq!(None, alarms.alarms(price).next());
     }
@@ -400,10 +374,10 @@ pub mod tests {
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 addr1.clone(),
                 price::total_of(Coin::new(1)).is(Coin::new(10)),
-                price,
+                Some(price),
             )
             .unwrap();
 
@@ -420,12 +394,12 @@ pub mod tests {
         let addr1 = Addr::unchecked("addr1");
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
-        alarms.add_alarm_below(addr1.clone(), price).unwrap();
+        alarms.add_alarm(addr1.clone(), price, None).unwrap();
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 addr1.clone(),
                 price::total_of(Coin::new(1)).is(Coin::new(10)),
-                price,
+                Some(price),
             )
             .unwrap();
 
@@ -464,7 +438,7 @@ pub mod tests {
 
         // Add alarms
         alarms
-            .add_alarm_below_and_above(subscriber.clone(), PRICE(), PRICE())
+            .add_alarm(subscriber.clone(), PRICE(), Some(PRICE()))
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
@@ -497,23 +471,25 @@ pub mod tests {
         let addr3 = Addr::unchecked("addr3");
 
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr1.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
 
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 addr2.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(5)),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
+                Some(price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10))),
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr3.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
 
@@ -539,35 +515,38 @@ pub mod tests {
         let addr5 = Addr::unchecked("addr5");
 
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr1,
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr2.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr3.clone(),
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(30)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 addr4.clone(),
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(25)),
+                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(25))),
             )
             .unwrap();
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 addr5,
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(35)),
+                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(35))),
             )
             .unwrap();
 
@@ -595,24 +574,34 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber1.clone(), Price::<Atom, BaseCurrency>::identity())
+            .add_alarm(
+                subscriber1.clone(),
+                Price::<Atom, BaseCurrency>::identity(),
+                None,
+            )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 subscriber1.clone(),
                 price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                None,
             )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber2.clone(), Price::<Atom, BaseCurrency>::identity())
+            .add_alarm(
+                subscriber2.clone(),
+                Price::<Atom, BaseCurrency>::identity(),
+                None,
+            )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 subscriber2.clone(),
                 price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                None,
             )
             .unwrap();
 
@@ -652,20 +641,20 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 subscriber1.clone(),
                 Price::<Atom, BaseCurrency>::identity(),
-                price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                Some(price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into())),
             )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below_and_above(
+            .add_alarm(
                 subscriber2.clone(),
                 subscriber2_below_price,
-                subscriber2_above_or_equal_price,
+                Some(subscriber2_above_or_equal_price),
             )
             .unwrap();
 

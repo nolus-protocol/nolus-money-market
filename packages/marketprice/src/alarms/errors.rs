@@ -13,22 +13,31 @@ pub enum AlarmError {
     #[error("[Market Price; Alarm] Failed to remove \"below price\"! Cause: {0}")]
     RemoveBelow(StdError),
 
+    #[error("[Market Price; Alarm] Failed to store new \"below price\" alarm! Cause: {0}")]
+    AddAlarmStoreBelow(StdError),
+
+    #[error("[Market Price; Alarm] Failed to load \"above or equal price\"! Cause: {0}")]
+    AddAlarmLoadAboveOrEqual(StdError),
+
+    #[error("[Market Price; Alarm] Failed to store new \"above or equal price\"! Cause: {0}")]
+    AddAlarmStoreAboveOrEqual(StdError),
+
     #[error("[Market Price; Alarm] Failed to remove \"above or equal price\"! Cause: {0}")]
     RemoveAboveOrEqual(StdError),
 
-    #[error("[Market Price; Alarm] Failed to load \"below price\"! Cause: {0}")]
+    #[error("[Market Price; Alarm; InDelivery] Failed to load \"below price\"! Cause: {0}")]
     InDeliveryLoadBelow(StdError),
 
-    #[error("[Market Price; Alarm] Failed to remove \"below price\"! Cause: {0}")]
+    #[error("[Market Price; Alarm; In Delivery] Failed to remove \"below price\"! Cause: {0}")]
     InDeliveryRemoveBelow(StdError),
 
-    #[error("[Market Price; Alarm] Failed to load \"above or equal price\"! Cause: {0}")]
+    #[error("[Market Price; Alarm; In Delivery] Failed to load \"above or equal price\"! Cause: {0}")]
     InDeliveryLoadAboveOrEqual(StdError),
 
-    #[error("[Market Price; Alarm] Failed to remove \"above or equal price\"! Cause: {0}")]
+    #[error("[Market Price; Alarm; In Delivery] Failed to remove \"above or equal price\"! Cause: {0}")]
     InDeliveryRemoveAboveOrEqual(StdError),
 
-    #[error("[Market Price; Alarm] Failed to append alarm in \"in delivery\" queue! Cause: {0}")]
+    #[error("[Market Price; Alarm; In Delivery] Failed to append alarm in \"in delivery\" queue! Cause: {0}")]
     InDeliveryAppend(StdError),
 
     #[error("[Market Price; Alarm] Failed to remove last delivered alarm from queue! Cause: {0}")]
@@ -36,9 +45,6 @@ pub enum AlarmError {
 
     #[error("[Market Price; Alarm] Failed to remove last failed alarm from queue! Cause: {0}")]
     LastFailedRemove(StdError),
-
-    #[error("[Market Price; Alarm] Failed to remove last failed alarm from queue! Cause: {0}")]
-    AddAlarmInternal(StdError),
 
     #[error("[Market Price; Alarm] Alarms delivery queue is empty! Cause: {0}")]
     EmptyAlarmsInDeliveryQueue(String),
