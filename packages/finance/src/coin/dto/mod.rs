@@ -225,7 +225,7 @@ mod test {
 
     use currency::{
         test::{Dai, Nls, TestCurrencies, Usdc},
-        Currency, Group, SymbolStatic,
+        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
     };
 
     use crate::{
@@ -248,27 +248,14 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: SymbolStatic = "My Test Group";
 
-        fn maybe_visit_on_ticker<V>(
-            symbol: currency::Symbol<'_>,
-            visitor: V,
-        ) -> currency::MaybeAnyVisitResult<V>
+        fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
         where
             Self: Sized,
-            V: currency::AnyVisitor,
+            M: Matcher,
+            V: AnyVisitor,
         {
-            assert_eq!(symbol, MyTestCurrency::TICKER);
+            assert!(matcher.match_::<MyTestCurrency>(symbol));
             Ok(visitor.on::<MyTestCurrency>())
-        }
-
-        fn maybe_visit_on_bank_symbol<V>(
-            _bank_symbol: currency::Symbol<'_>,
-            _visitor: V,
-        ) -> currency::MaybeAnyVisitResult<V>
-        where
-            Self: Sized,
-            V: currency::AnyVisitor,
-        {
-            unreachable!()
         }
     }
 

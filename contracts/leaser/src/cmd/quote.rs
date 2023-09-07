@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{
-    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, Group,
-    SymbolOwned,
+    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned,
 };
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
@@ -122,7 +121,7 @@ where
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        PaymentGroup::maybe_visit_on_ticker(
+        currency::maybe_visit_any_on_ticker::<PaymentGroup, _>(
             &downpayment,
             QuoteStage3 {
                 downpayment: self.downpayment,
@@ -168,7 +167,7 @@ where
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
-        LeaseGroup::maybe_visit_on_ticker(
+        currency::maybe_visit_any_on_ticker::<LeaseGroup, _>(
             &self.lease_asset,
             QuoteStage4 {
                 downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,

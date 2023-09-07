@@ -1,10 +1,10 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, MaybeAnyVisitResult, SymbolSlice};
 
 use super::{
     matcher::{BankSymbolMatcher, TickerMatcher},
-    Currency, Group, Symbol,
+    Currency, Group,
 };
 
 use self::impl_any_tickers::FirstTickerVisitor;
@@ -31,18 +31,19 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
-pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_any_on_ticker<G, V>(ticker: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
-    impl_any_tickers::visit_any_impl::<_, G, _>(TickerMatcher, ticker, visitor)
+    maybe_visit_any_on_ticker::<G, _>(ticker, visitor)
+        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
 }
 
 pub fn visit_any_on_tickers<G1, G2, V>(
-    ticker1: Symbol<'_>,
-    ticker2: Symbol<'_>,
+    ticker1: &SymbolSlice,
+    ticker2: &SymbolSlice,
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
@@ -54,13 +55,23 @@ where
     visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
-pub fn visit_any_on_bank_symbol<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
+pub fn maybe_visit_any_on_ticker<G, V>(ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
 where
     G: Group,
     V: AnyVisitor,
-    Error: Into<V::Error>,
 {
-    impl_any_tickers::visit_any_impl::<_, G, _>(BankSymbolMatcher, ticker, visitor)
+    G::maybe_visit(TickerMatcher, ticker, visitor)
+}
+
+pub fn maybe_visit_any_on_bank_symbol<G, V>(
+    ticker: &SymbolSlice,
+    visitor: V,
+) -> MaybeAnyVisitResult<V>
+where
+    G: Group,
+    V: AnyVisitor,
+{
+    G::maybe_visit(BankSymbolMatcher, ticker, visitor)
 }
 
 mod impl_any_tickers {
@@ -69,9 +80,8 @@ mod impl_any_tickers {
     use serde::{de::DeserializeOwned, Serialize};
 
     use crate::{
-        currency::{Currency, Group, Symbol},
+        currency::{Currency, Group, SymbolSlice},
         error::Error,
-        Matcher,
     };
 
     use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair, AnyVisitorResult};
@@ -81,7 +91,7 @@ mod impl_any_tickers {
         G2: Group,
         V: AnyVisitorPair,
     {
-        ticker2: Symbol<'a>,
+        ticker2: &'a SymbolSlice,
         group2: PhantomData<G2>,
         visitor: V,
     }
@@ -90,7 +100,7 @@ mod impl_any_tickers {
         G2: Group,
         V: AnyVisitorPair,
     {
-        pub fn new(ticker2: Symbol<'a>, visitor: V) -> Self {
+        pub fn new(ticker2: &'a SymbolSlice, visitor: V) -> Self {
             Self {
                 ticker2,
                 group2: PhantomData::<G2>,
@@ -143,21 +153,6 @@ mod impl_any_tickers {
         {
             self.visitor.on::<C1, C2>()
         }
-    }
-
-    pub(super) fn visit_any_impl<M, G, V>(
-        matcher: M,
-        ticker: Symbol<'_>,
-        visitor: V,
-    ) -> Result<V::Output, V::Error>
-    where
-        M: Matcher,
-        G: Group,
-        V: AnyVisitor,
-        Error: Into<V::Error>,
-    {
-        G::maybe_visit(matcher, ticker, visitor)
-            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
     }
 }
 

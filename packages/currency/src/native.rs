@@ -37,6 +37,6 @@ impl Group for Native {
         M: Matcher,
         V: AnyVisitor,
     {
-        currency::maybe_visit::<_, Nls, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
     }
 }

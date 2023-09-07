@@ -39,7 +39,7 @@ impl Group for Lpns {
         M: Matcher,
         V: AnyVisitor,
     {
-        currency::maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
     }
 }
 

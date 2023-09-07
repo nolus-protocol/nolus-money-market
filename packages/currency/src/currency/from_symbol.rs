@@ -1,6 +1,10 @@
-use crate::error::Error;
+use crate::{error::Error, SymbolSlice};
 
-use super::{Currency, Symbol};
+use super::{
+    group,
+    matcher::{BankSymbolMatcher, TickerMatcher},
+    Currency,
+};
 
 pub trait SingleVisitor<C> {
     type Output;
@@ -10,7 +14,7 @@ pub trait SingleVisitor<C> {
 }
 
 pub fn visit_on_bank_symbol<C, V>(
-    bank_symbol: Symbol<'_>,
+    bank_symbol: &SymbolSlice,
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
@@ -18,46 +22,19 @@ where
     C: Currency,
     Error: Into<V::Error>,
 {
-    maybe_visit_on_bank_symbol(bank_symbol, visitor)
+    group::maybe_visit(BankSymbolMatcher, bank_symbol, visitor)
         .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(bank_symbol).into()))
 }
 
 pub type MaybeVisitResult<C, V> =
     Result<Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>, V>;
 
-pub fn maybe_visit_on_ticker<C, V>(ticker: Symbol<'_>, visitor: V) -> MaybeVisitResult<C, V>
+pub fn maybe_visit_on_ticker<C, V>(ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
 where
     C: Currency,
     V: SingleVisitor<C>,
 {
-    maybe_visit_impl(ticker, C::TICKER, visitor)
-}
-
-pub fn maybe_visit_on_bank_symbol<C, V>(
-    bank_symbol: Symbol<'_>,
-    visitor: V,
-) -> MaybeVisitResult<C, V>
-where
-    V: SingleVisitor<C>,
-    C: Currency,
-{
-    maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
-}
-
-fn maybe_visit_impl<C, V>(
-    symbol: Symbol<'_>,
-    symbol_exp: Symbol<'_>,
-    visitor: V,
-) -> MaybeVisitResult<C, V>
-where
-    V: SingleVisitor<C>,
-    C: Currency,
-{
-    if symbol == symbol_exp {
-        Ok(visitor.on())
-    } else {
-        Err(visitor)
-    }
+    group::maybe_visit(TickerMatcher, ticker, visitor)
 }
 
 #[cfg(test)]

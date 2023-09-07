@@ -39,8 +39,8 @@ impl Group for TestCurrencies {
         M: Matcher,
         V: AnyVisitor,
     {
-        currency::maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
-            .or_else(|visitor| currency::maybe_visit::<_, Nls, _>(matcher, symbol, visitor))
+        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
+            .or_else(|visitor| currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor))
     }
 }
 
@@ -56,7 +56,7 @@ impl Group for TestExtraCurrencies {
         V: AnyVisitor,
     {
         TestCurrencies::maybe_visit(matcher, symbol, visitor)
-            .or_else(|visitor| currency::maybe_visit::<_, Dai, _>(matcher, symbol, visitor))
+            .or_else(|visitor| currency::maybe_visit_any::<_, Dai, _>(matcher, symbol, visitor))
     }
 }
 
@@ -145,10 +145,7 @@ pub mod visitor {
 }
 
 pub mod group {
-    use crate::{
-        error::Error, test::visitor::Expect, visit_any_on_ticker, visit_on_bank_symbol, Currency,
-        Group, Symbol,
-    };
+    use crate::{currency, test::visitor::Expect, Currency, Group, Symbol, SymbolSlice};
 
     #[track_caller]
     pub fn maybe_visit_on_ticker_impl<C, G>()
@@ -157,7 +154,10 @@ pub mod group {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(visit_any_on_ticker::<G, _>(C::TICKER, v), Ok(true));
+        assert_eq!(
+            currency::maybe_visit_any_on_ticker::<G, _>(C::TICKER, v),
+            Ok(Ok(true))
+        );
     }
 
     #[track_caller]
@@ -168,8 +168,8 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            visit_any_on_ticker::<G, _>(unknown_ticker, v.clone()),
-            Err(Error::not_in_currency_group::<_, G>(unknown_ticker))
+            currency::maybe_visit_any_on_ticker::<G, _>(unknown_ticker, v.clone()),
+            Err(v)
         );
     }
 
@@ -180,19 +180,22 @@ pub mod group {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(visit_on_bank_symbol(C::BANK_SYMBOL, v), Ok(true));
+        assert_eq!(
+            currency::maybe_visit_any_on_bank_symbol::<G, _>(C::BANK_SYMBOL, v),
+            Ok(Ok(true))
+        );
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol<'_>)
+    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: &SymbolSlice)
     where
         C: Currency,
         G: Group,
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            visit_on_bank_symbol(unknown_ticker, v.clone()),
-            Err(Error::not_in_currency_group::<_, G>(unknown_ticker))
+            currency::maybe_visit_any_on_bank_symbol::<G, _>(unknown_ticker, v.clone()),
+            Err(v)
         );
     }
 }

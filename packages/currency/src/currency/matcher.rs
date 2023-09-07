@@ -45,33 +45,24 @@ pub trait Matcher: MatcherSpec + Copy {
     {
         field_value == <Self::Symbol<C> as Symbol>::VALUE
     }
-
-    fn match_into<C, T>(&self, field_value: &SymbolSlice) -> Option<T>
-    where
-        C: Currency + Into<T>,
-    {
-        (field_value == <Self::Symbol<C> as Symbol>::VALUE).then(|| C::default().into())
-    }
 }
 
 impl<T> Matcher for T where T: MatcherSpec + ?Sized + Copy {}
 
 #[derive(Clone, Copy)]
-pub struct TickerMatcher;
+pub(super) struct TickerMatcher;
 impl MatcherSpec for TickerMatcher {
     type Symbol<C> = Ticker<C> where C: Currency;
-
 }
 
 #[derive(Clone, Copy)]
-pub struct BankSymbolMatcher;
+pub(super) struct BankSymbolMatcher;
 impl MatcherSpec for BankSymbolMatcher {
     type Symbol<C> = BankSymbol<C> where C: Currency;
-
 }
 
 #[derive(Clone, Copy)]
-pub struct DexSymbolMatcher;
+pub(super) struct DexSymbolMatcher;
 impl MatcherSpec for DexSymbolMatcher {
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }

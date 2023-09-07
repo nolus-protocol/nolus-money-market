@@ -3,19 +3,16 @@ use std::{any::TypeId, fmt::Debug};
 use crate::error::{Error, Result};
 
 pub use self::{
-    from_symbol::{
-        maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
-        SingleVisitor,
-    },
+    from_symbol::{maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult, SingleVisitor},
     from_symbol_any::{
-        visit_any_on_bank_symbol, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
-        AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
+        maybe_visit_any_on_bank_symbol, maybe_visit_any_on_ticker, visit_any_on_ticker,
+        visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
     },
     group::{Group, MaybeAnyVisitResult},
     matcher::Matcher,
 };
 
-pub(crate) use group::maybe_visit;
+pub(crate) use group::maybe_visit_any;
 
 mod from_symbol;
 mod from_symbol_any;
