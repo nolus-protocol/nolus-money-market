@@ -19,9 +19,8 @@ pub trait CurrencyVisit: Matcher {
         V: SingleVisitor<C>,
         Error: Into<V::Error>,
     {
-        //TODO correct the error adding info from the Matcher
         self.maybe_visit(symbol, visitor)
-            .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(symbol).into()))
+            .unwrap_or_else(|_| Err(Error::unexpected_symbol::<_, Self, C>(symbol).into()))
     }
 
     fn maybe_visit<C, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
@@ -63,12 +62,16 @@ mod test {
 
         assert_eq!(
             TickerMatcher.visit::<Nls, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(UNKNOWN_TICKER,)),
+            Err(Error::unexpected_symbol::<_, TickerMatcher, Nls>(
+                UNKNOWN_TICKER,
+            )),
         );
 
         assert_eq!(
             TickerMatcher.visit::<Nls, _>(Usdc::TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(Usdc::TICKER,)),
+            Err(Error::unexpected_symbol::<_, TickerMatcher, Nls>(
+                Usdc::TICKER,
+            )),
         );
     }
 
@@ -87,7 +90,7 @@ mod test {
 
         assert_eq!(
             BankSymbolMatcher.visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(DENOM,)),
+            Err(Error::unexpected_symbol::<_, BankSymbolMatcher, Nls>(DENOM,)),
         );
     }
 }

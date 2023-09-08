@@ -7,20 +7,21 @@ use crate::{
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Currency] Found bank symbol '{0}' expecting '{1}'")]
-    UnexpectedBankSymbol(String, String),
+    #[error("[Currency] Found a symbol '{0}' pretending to be the {1} of the currency with ticker '{2}'")]
+    UnexpectedSymbol(String, String, String),
 
     #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
     NotInCurrencyGroup(String, String, String),
 }
 
 impl Error {
-    pub fn unexpected_bank_symbol<S, C>(bank_symbol: S) -> Self
+    pub fn unexpected_symbol<S, CS, C>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
+        CS: CurrencySymbol + ?Sized,
         C: Currency,
     {
-        Self::UnexpectedBankSymbol(bank_symbol.into(), C::BANK_SYMBOL.into())
+        Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), C::TICKER.into())
     }
 
     pub fn not_in_currency_group<S, CS, G>(symbol: S) -> Self

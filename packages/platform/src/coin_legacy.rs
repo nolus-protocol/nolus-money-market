@@ -130,7 +130,7 @@ where
 mod test {
     use currency::{
         test::{Nls, TestCurrencies, Usdc},
-        Currency,
+        BankSymbolMatcher, Currency,
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -159,7 +159,9 @@ mod test {
         assert_eq!(
             c1,
             Err(Error::Currency(
-                currency::error::Error::unexpected_bank_symbol::<_, Nls>(Usdc::BANK_SYMBOL,)
+                currency::error::Error::unexpected_symbol::<_, BankSymbolMatcher, Nls>(
+                    Usdc::BANK_SYMBOL,
+                )
             )),
         );
 
@@ -168,7 +170,9 @@ mod test {
         assert_eq!(
             c2,
             Err(Error::Currency(
-                currency::error::Error::unexpected_bank_symbol::<_, Usdc>(Nls::BANK_SYMBOL,)
+                currency::error::Error::unexpected_symbol::<_, BankSymbolMatcher, Usdc>(
+                    Nls::BANK_SYMBOL,
+                )
             )),
         );
     }
