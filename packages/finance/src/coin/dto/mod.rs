@@ -8,8 +8,8 @@ use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit,
-    SingleVisitor, Symbol, SymbolOwned, TickerMatcher,
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
+    GroupVisit, SingleVisitor, Symbol, SymbolOwned, TickerMatcher,
 };
 
 use crate::{
@@ -156,7 +156,8 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        currency::maybe_visit_on_ticker(&coin.ticker, CoinFactory(coin))
+        TickerMatcher
+            .maybe_visit(&coin.ticker, CoinFactory(coin))
             .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
     }
 }

@@ -33,6 +33,8 @@ where
 }
 
 pub trait MatcherSpec {
+    const DESCRIPTION: &'static str;
+
     type Symbol<C>: Symbol
     where
         C: Currency;
@@ -52,17 +54,23 @@ impl<T> Matcher for T where T: MatcherSpec + ?Sized + Copy {}
 #[derive(Clone, Copy)]
 pub struct TickerMatcher;
 impl MatcherSpec for TickerMatcher {
+    const DESCRIPTION: &'static str = "ticker";
+
     type Symbol<C> = Ticker<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct BankSymbolMatcher;
 impl MatcherSpec for BankSymbolMatcher {
+    const DESCRIPTION: &'static str = "bank symbol";
+
     type Symbol<C> = BankSymbol<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct DexSymbolMatcher;
 impl MatcherSpec for DexSymbolMatcher {
+    const DESCRIPTION: &'static str = "dex symbol";
+
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }

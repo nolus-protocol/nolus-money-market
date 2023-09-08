@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 use std::result::Result as StdResult;
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, BankSymbolMatcher, Currency, Group, GroupVisit,
-    SingleVisitor,
+    self, AnyVisitor, AnyVisitorResult, BankSymbolMatcher, Currency, CurrencyVisit, Group,
+    GroupVisit, SingleVisitor,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -17,7 +17,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    currency::visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
+    BankSymbolMatcher.visit(&coin.denom, CoinTransformer(&coin))
 }
 
 pub(crate) fn from_cosmwasm_any<G, V>(coin: CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
