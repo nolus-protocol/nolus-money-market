@@ -2,17 +2,17 @@ use std::collections::HashSet;
 
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{InterestPaymentSpec, PositionSpec};
+use lease::{
+    api::{InterestPaymentSpec, PositionSpec},
+    tests::{MIN_ASSET, MIN_SELL_ASSET},
+};
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{
-    test_case::{app::App, MIN_ASSET, MIN_SELL_ASSET},
-    CwContractWrapper, ADMIN,
-};
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 

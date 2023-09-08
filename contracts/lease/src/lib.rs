@@ -6,8 +6,11 @@ pub mod contract;
 #[cfg(any(feature = "contract", test))]
 mod event;
 #[cfg(any(feature = "contract", test))]
-pub mod lease;
+mod lease;
 #[cfg(any(feature = "contract", test))]
 mod loan;
 #[cfg(any(feature = "contract", test))]
 mod position;
+
+#[cfg(any(feature = "testing", test))]
+pub use crate::lease::tests;

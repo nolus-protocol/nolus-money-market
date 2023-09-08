@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Usdc, Currency};
-use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpec},
-    lease::{MIN_ASSET as MIN_ASSET_AMOUNT, MIN_SELL_ASSET as MIN_SELL_ASSET_AMOUNT},
+    tests::{MIN_ASSET, MIN_SELL_ASSET},
 };
+
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
@@ -36,8 +37,6 @@ type TheCurrency = Usdc;
 
 const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
-const MIN_ASSET: Coin<TheCurrency> = Coin::<TheCurrency>::new(MIN_ASSET_AMOUNT);
-const MIN_SELL_ASSET: Coin<TheCurrency> = Coin::<TheCurrency>::new(MIN_SELL_ASSET_AMOUNT);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {

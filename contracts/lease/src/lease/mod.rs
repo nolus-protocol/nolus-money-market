@@ -11,7 +11,6 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCoin,
     error::{ContractError, ContractResult},
     loan::Loan,
     position::PositionDTO,
@@ -30,9 +29,6 @@ mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;
-
-pub const MIN_ASSET: Amount = 10_000;
-pub const MIN_SELL_ASSET: Amount = 15_000_000;
 
 // TODO look into reducing the type parameters to Lpn and Asset only!
 // the others could be provided on demand when certain operation is being performed
@@ -121,6 +117,12 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
+    pub const MIN_ASSET_AMOUNT: Amount = 10_000;
+    pub const MIN_SELL_ASSET_AMOUNT: Amount = 15_000_000;
+
+    pub const MIN_ASSET: Coin<Lpn> = Coin::new(Self::MIN_ASSET_AMOUNT);
+    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(Self::MIN_SELL_ASSET_AMOUNT);
+
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
@@ -135,8 +137,8 @@ where
                 PositionDTO::new(
                     self.amount.into(),
                     self.liability,
-                    LpnCoin::from(Coin::<Lpn>::new(MIN_ASSET)),
-                    LpnCoin::from(Coin::<Lpn>::new(MIN_SELL_ASSET)),
+                    Self::MIN_ASSET.into(),
+                    Self::MIN_SELL_ASSET.into(),
                 ),
                 loan_dto,
                 time_alarms,
@@ -151,8 +153,8 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(any(feature = "testing", test))]
+pub mod tests {
     use serde::{Deserialize, Serialize};
 
     use ::currency::{lease::Atom, lpn::Usdc, Currency};
@@ -177,15 +179,18 @@ mod tests {
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
-    pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
-    pub const LEASE_START: Timestamp = Timestamp::from_nanos(100);
-    pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
-    pub const DUE_PERIOD: Duration = Duration::from_days(100);
-    pub const GRACE_PERIOD: Duration = Duration::from_days(10);
-    pub const RECALC_TIME: Duration = Duration::from_hours(24);
+    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
+    const DUE_PERIOD: Duration = Duration::from_days(100);
+    const GRACE_PERIOD: Duration = Duration::from_days(10);
+    pub(super) const RECALC_TIME: Duration = Duration::from_hours(24);
     type TestLpn = Usdc;
-    pub type TestCurrency = Atom;
-    pub type TestLease = Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+    type TestCurrency = Atom;
+    type TestLease = Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+
+    pub const MIN_ASSET: Coin<TestLpn> = TestLease::MIN_ASSET;
+    pub const MIN_SELL_ASSET: Coin<TestLpn> = TestLease::MIN_SELL_ASSET;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where

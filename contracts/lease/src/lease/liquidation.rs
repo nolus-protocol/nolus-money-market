@@ -9,11 +9,7 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{
-    error::ContractResult,
-    lease::{MIN_ASSET, MIN_SELL_ASSET},
-    loan::LiabilityStatus,
-};
+use crate::{error::ContractResult, loan::LiabilityStatus};
 
 use super::Lease;
 
@@ -43,8 +39,11 @@ where
             self.amount,
             price::total(total_due, price_in_asset),
             price::total(overdue, price_in_asset),
-            price::total(Coin::<Lpn>::new(MIN_ASSET), price_in_asset),
-            price::total(Coin::<Lpn>::new(MIN_SELL_ASSET), price_in_asset),
+            price::total(Lease::<Lpn, Asset, Lpp, Oracle>::MIN_ASSET, price_in_asset),
+            price::total(
+                Lease::<Lpn, Asset, Lpp, Oracle>::MIN_SELL_ASSET,
+                price_in_asset,
+            ),
         );
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());

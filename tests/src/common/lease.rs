@@ -12,7 +12,9 @@ use lease::{
         NewLeaseForm, PositionSpec, StateQuery, StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
+    tests::{MIN_ASSET, MIN_SELL_ASSET},
 };
+
 use platform::{coin_legacy, trx};
 use sdk::{
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
@@ -26,7 +28,7 @@ use super::{
     test_case::{
         app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase, MIN_ASSET, MIN_SELL_ASSET,
+        TestCase,
     },
     CwContractWrapper, ADMIN, USER,
 };
