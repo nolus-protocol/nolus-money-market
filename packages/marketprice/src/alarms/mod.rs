@@ -258,31 +258,41 @@ where
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
-        self.pop_front_in_delivery("Received success reply status")
-            .map(|_: AlarmWithSubscriber| ())
+        self.pop_front_in_delivery(
+            AlarmError::LastDeliveredRemove,
+            "Received success reply status",
+        )
+        .map(|_: AlarmWithSubscriber| ())
     }
 
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
-        self.pop_front_in_delivery("Received failure reply status")
-            .and_then(|alarm: AlarmWithSubscriber| {
-                self.add_alarm_below_internal(alarm.subscriber.clone(), &alarm.below)
-                    .and_then(|()| {
-                        if let Some(above) = alarm.above {
-                            self.add_alarm_above_or_equal_internal(alarm.subscriber.clone(), &above)
-                        } else {
-                            Ok(())
-                        }
-                    })
-            })
+        self.pop_front_in_delivery(
+            AlarmError::LastFailedRemove,
+            "Received failure reply status",
+        )
+        .and_then(|alarm: AlarmWithSubscriber| {
+            self.add_alarm_below_internal(alarm.subscriber.clone(), &alarm.below)
+                .and_then(|()| {
+                    if let Some(above) = alarm.above {
+                        self.add_alarm_above_or_equal_internal(alarm.subscriber.clone(), &above)
+                    } else {
+                        Ok(())
+                    }
+                })
+        })
     }
 
-    fn pop_front_in_delivery(
+    fn pop_front_in_delivery<PopErrFn>(
         &mut self,
+        error_on_pop: PopErrFn,
         error_on_empty: &str,
-    ) -> Result<AlarmWithSubscriber, AlarmError> {
+    ) -> Result<AlarmWithSubscriber, AlarmError>
+    where
+        PopErrFn: FnOnce(CwError) -> AlarmError,
+    {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(AlarmError::LastDeliveredRemove)
+            .map_err(error_on_pop)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 maybe_alarm.ok_or_else(|| {
                     AlarmError::EmptyAlarmsInDeliveryQueue(String::from(error_on_empty))
