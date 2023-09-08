@@ -31,10 +31,14 @@ pub enum AlarmError {
     #[error("[Market Price; Alarm; In Delivery] Failed to remove \"below price\"! Cause: {0}")]
     InDeliveryRemoveBelow(StdError),
 
-    #[error("[Market Price; Alarm; In Delivery] Failed to load \"above or equal price\"! Cause: {0}")]
+    #[error(
+        "[Market Price; Alarm; In Delivery] Failed to load \"above or equal price\"! Cause: {0}"
+    )]
     InDeliveryLoadAboveOrEqual(StdError),
 
-    #[error("[Market Price; Alarm; In Delivery] Failed to remove \"above or equal price\"! Cause: {0}")]
+    #[error(
+        "[Market Price; Alarm; In Delivery] Failed to remove \"above or equal price\"! Cause: {0}"
+    )]
     InDeliveryRemoveAboveOrEqual(StdError),
 
     #[error("[Market Price; Alarm; In Delivery] Failed to append alarm in \"in delivery\" queue! Cause: {0}")]
