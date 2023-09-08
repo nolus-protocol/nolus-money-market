@@ -343,10 +343,9 @@ pub struct LeaseGroup {}
 impl Group for LeaseGroup {
     const DESCR: SymbolStatic = "lease";
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
         use crate::currency::maybe_visit_any as maybe_visit;

@@ -17,10 +17,9 @@ pub struct PaymentGroup {}
 impl Group for PaymentGroup {
     const DESCR: SymbolStatic = "payment";
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
         LeaseGroup::maybe_visit(matcher, symbol, visitor)

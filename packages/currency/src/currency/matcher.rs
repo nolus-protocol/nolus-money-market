@@ -5,6 +5,7 @@ use crate::SymbolSlice;
 use super::{Currency, SymbolStatic};
 
 pub trait Symbol {
+    const DESCRIPTION: &'static str;
     const VALUE: SymbolStatic;
 }
 
@@ -13,6 +14,7 @@ impl<C> Symbol for Ticker<C>
 where
     C: Currency,
 {
+    const DESCRIPTION: &'static str = "ticker";
     const VALUE: SymbolStatic = C::TICKER;
 }
 
@@ -21,6 +23,7 @@ impl<C> Symbol for BankSymbol<C>
 where
     C: Currency,
 {
+    const DESCRIPTION: &'static str = "bank symbol";
     const VALUE: SymbolStatic = C::BANK_SYMBOL;
 }
 
@@ -29,18 +32,17 @@ impl<C> Symbol for DexSymbol<C>
 where
     C: Currency,
 {
+    const DESCRIPTION: &'static str = "dex symbol";
     const VALUE: SymbolStatic = C::DEX_SYMBOL;
 }
 
-pub trait MatcherSpec {
-    const DESCRIPTION: &'static str;
-
+pub trait CurrencySymbol {
     type Symbol<C>: Symbol
     where
         C: Currency;
 }
 
-pub trait Matcher: MatcherSpec + Copy {
+pub trait Matcher: CurrencySymbol {
     fn match_<C>(&self, field_value: &SymbolSlice) -> bool
     where
         C: Currency,
@@ -49,28 +51,22 @@ pub trait Matcher: MatcherSpec + Copy {
     }
 }
 
-impl<T> Matcher for T where T: MatcherSpec + ?Sized + Copy {}
+impl<T> Matcher for T where T: CurrencySymbol + ?Sized + Copy {}
 
 #[derive(Clone, Copy)]
 pub struct TickerMatcher;
-impl MatcherSpec for TickerMatcher {
-    const DESCRIPTION: &'static str = "ticker";
-
+impl CurrencySymbol for TickerMatcher {
     type Symbol<C> = Ticker<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct BankSymbolMatcher;
-impl MatcherSpec for BankSymbolMatcher {
-    const DESCRIPTION: &'static str = "bank symbol";
-
+impl CurrencySymbol for BankSymbolMatcher {
     type Symbol<C> = BankSymbol<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct DexSymbolMatcher;
-impl MatcherSpec for DexSymbolMatcher {
-    const DESCRIPTION: &'static str = "dex symbol";
-
+impl CurrencySymbol for DexSymbolMatcher {
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }

@@ -33,10 +33,9 @@ pub struct Lpns {}
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
         currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)

@@ -33,10 +33,9 @@ pub struct TestCurrencies {}
 impl Group for TestCurrencies {
     const DESCR: SymbolStatic = "test";
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
         currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
@@ -49,10 +48,9 @@ pub struct TestExtraCurrencies {}
 impl Group for TestExtraCurrencies {
     const DESCR: SymbolStatic = "test_extra";
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
         TestCurrencies::maybe_visit(matcher, symbol, visitor)

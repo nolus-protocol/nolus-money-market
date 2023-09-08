@@ -13,7 +13,7 @@ pub type MaybeVisitResult<C, V> =
     Result<Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>, V>;
 
 pub trait CurrencyVisit: Matcher {
-    fn visit<C, V>(self, symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    fn visit<C, V>(&self, symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
         C: Currency,
         V: SingleVisitor<C>,
@@ -24,7 +24,7 @@ pub trait CurrencyVisit: Matcher {
             .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(symbol).into()))
     }
 
-    fn maybe_visit<C, V>(self, ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
+    fn maybe_visit<C, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
     where
         C: Currency,
         V: SingleVisitor<C>,

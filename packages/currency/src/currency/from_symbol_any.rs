@@ -29,7 +29,7 @@ pub trait AnyVisitorPair {
 }
 
 pub trait GroupVisit: Matcher {
-    fn visit_any<G, V>(self, ticker: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    fn visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
         G: Group,
         V: AnyVisitor,
@@ -39,7 +39,7 @@ pub trait GroupVisit: Matcher {
             .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
     }
 
-    fn maybe_visit_any<G, V>(self, ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         G: Group,
         V: AnyVisitor,

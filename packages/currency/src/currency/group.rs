@@ -7,22 +7,21 @@ use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult, SymbolStatic};
 pub trait Group: PartialEq {
     const DESCR: SymbolStatic;
 
-    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        Self: Sized,
-        M: Matcher,
+        M: Matcher + ?Sized,
         V: AnyVisitor;
 }
 
 pub type MaybeAnyVisitResult<V> = Result<AnyVisitorResult<V>, V>;
 
 pub(crate) fn maybe_visit_any<M, C, V>(
-    matcher: M,
+    matcher: &M,
     symbol: &SymbolSlice,
     visitor: V,
 ) -> MaybeAnyVisitResult<V>
 where
-    M: Matcher,
+    M: Matcher + ?Sized,
     C: Currency + Serialize + DeserializeOwned,
     V: AnyVisitor,
 {
@@ -34,12 +33,12 @@ where
 }
 
 pub(crate) fn maybe_visit<M, C, V>(
-    matcher: M,
+    matcher: &M,
     symbol: &SymbolSlice,
     visitor: V,
 ) -> MaybeVisitResult<C, V>
 where
-    M: Matcher,
+    M: Matcher + ?Sized,
     C: Currency,
     V: SingleVisitor<C>,
 {

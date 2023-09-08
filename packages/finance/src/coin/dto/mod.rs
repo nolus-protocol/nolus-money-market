@@ -250,10 +250,13 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: SymbolStatic = "My Test Group";
 
-        fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+        fn maybe_visit<M, V>(
+            matcher: &M,
+            symbol: &SymbolSlice,
+            visitor: V,
+        ) -> MaybeAnyVisitResult<V>
         where
-            Self: Sized,
-            M: Matcher,
+            M: Matcher + ?Sized,
             V: AnyVisitor,
         {
             assert!(matcher.match_::<MyTestCurrency>(symbol));
