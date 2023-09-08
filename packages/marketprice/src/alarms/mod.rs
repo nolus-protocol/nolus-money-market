@@ -11,7 +11,7 @@ use finance::{
     price::{self, Price},
 };
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdError, Storage},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage},
     cw_storage_plus::{
         Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, IntKey, Key, MultiIndex,
         Prefixer, PrimaryKey,
@@ -29,7 +29,7 @@ pub type AlarmsCount = u32;
 struct NormalizedPrice(CoinDTO<SwapGroup>);
 
 type BoxedIter<'storage> =
-    Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), StdError>> + 'storage>;
+    Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), CwError>> + 'storage>;
 
 pub struct AlarmsIterator<'alarms>(iter::Chain<BoxedIter<'alarms>, BoxedIter<'alarms>>);
 
@@ -181,28 +181,24 @@ impl<'storage, S> PriceAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn add_alarm_below<C, BaseC>(
+    pub fn add_alarm<C, BaseC>(
         &mut self,
         subscriber: Addr,
-        alarm: Price<C, BaseC>,
+        below: Price<C, BaseC>,
+        above_or_equal: Option<Price<C, BaseC>>,
     ) -> Result<(), AlarmError>
     where
         C: Currency,
         BaseC: Currency,
     {
-        self.add_alarm_below_internal(subscriber, &NormalizedPrice::new(&alarm))
-    }
-
-    pub fn add_alarm_above_or_equal<C, BaseC>(
-        &mut self,
-        subscriber: Addr,
-        alarm: Price<C, BaseC>,
-    ) -> Result<(), AlarmError>
-    where
-        C: Currency,
-        BaseC: Currency,
-    {
-        self.add_alarm_above_or_equal_internal(subscriber, &NormalizedPrice::new(&alarm))
+        self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below))
+            .and_then(|()| match above_or_equal {
+                None => self.remove_above_or_equal(subscriber),
+                Some(above_or_equal) => self.add_alarm_above_or_equal_internal(
+                    subscriber,
+                    &NormalizedPrice::new(&above_or_equal),
+                ),
+            })
     }
 
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
@@ -262,38 +258,45 @@ where
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
-        self.in_delivery
-            .pop_front(self.storage.deref_mut())
-            .map_err(AlarmError::LastDeliveredRemove)
-            .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
-                maybe_alarm.map(|_: AlarmWithSubscriber| ()).ok_or_else(|| {
-                    AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
-                        "Received success reply status",
-                    ))
-                })
-            })
+        self.pop_front_in_delivery(
+            AlarmError::LastDeliveredRemove,
+            "Received success reply status",
+        )
+        .map(|_: AlarmWithSubscriber| ())
     }
 
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
+        self.pop_front_in_delivery(
+            AlarmError::LastFailedRemove,
+            "Received failure reply status",
+        )
+        .and_then(|alarm: AlarmWithSubscriber| {
+            self.add_alarm_below_internal(alarm.subscriber.clone(), &alarm.below)
+                .and_then(|()| {
+                    if let Some(above) = alarm.above {
+                        self.add_alarm_above_or_equal_internal(alarm.subscriber.clone(), &above)
+                    } else {
+                        Ok(())
+                    }
+                })
+        })
+    }
+
+    fn pop_front_in_delivery<PopErrFn>(
+        &mut self,
+        error_on_pop: PopErrFn,
+        error_on_empty: &str,
+    ) -> Result<AlarmWithSubscriber, AlarmError>
+    where
+        PopErrFn: FnOnce(CwError) -> AlarmError,
+    {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(AlarmError::LastFailedRemove)
+            .map_err(error_on_pop)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 maybe_alarm.ok_or_else(|| {
-                    AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
-                        "Received failure reply status",
-                    ))
+                    AlarmError::EmptyAlarmsInDeliveryQueue(String::from(error_on_empty))
                 })
-            })
-            .and_then(|alarm: AlarmWithSubscriber| {
-                self.add_alarm_below_internal(alarm.subscriber.clone(), &alarm.below)
-                    .and_then(|()| {
-                        if let Some(above) = alarm.above {
-                            self.add_alarm_above_or_equal_internal(alarm.subscriber.clone(), &above)
-                        } else {
-                            Ok(())
-                        }
-                    })
             })
     }
 
@@ -307,6 +310,7 @@ where
             &self.alarms_below,
             subscriber,
             alarm,
+            AlarmError::AddAlarmStoreBelow,
         )
     }
 
@@ -320,18 +324,21 @@ where
             &self.alarms_above_or_equal,
             subscriber,
             alarm,
+            AlarmError::AddAlarmStoreAboveOrEqual,
         )
     }
 
-    fn add_alarm_internal(
+    fn add_alarm_internal<ErrFn>(
         storage: &mut dyn Storage,
         alarms: &IndexedMap,
         subscriber: Addr,
         alarm: &NormalizedPrice,
-    ) -> Result<(), AlarmError> {
-        alarms
-            .save(storage, subscriber, alarm)
-            .map_err(AlarmError::AddAlarmInternal)
+        error_map: ErrFn,
+    ) -> Result<(), AlarmError>
+    where
+        ErrFn: FnOnce(CwError) -> AlarmError,
+    {
+        alarms.save(storage, subscriber, alarm).map_err(error_map)
     }
 }
 
@@ -363,7 +370,7 @@ pub mod tests {
         let addr1 = Addr::unchecked("addr1");
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
-        alarms.add_alarm_below(addr1, price).unwrap();
+        alarms.add_alarm(addr1, price, None).unwrap();
 
         assert_eq!(None, alarms.alarms(price).next());
     }
@@ -377,7 +384,11 @@ pub mod tests {
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms
-            .add_alarm_above_or_equal(addr1.clone(), price)
+            .add_alarm(
+                addr1.clone(),
+                price::total_of(Coin::new(1)).is(Coin::new(10)),
+                Some(price),
+            )
             .unwrap();
 
         let mut triggered_alarms = alarms.alarms(price);
@@ -393,9 +404,13 @@ pub mod tests {
         let addr1 = Addr::unchecked("addr1");
 
         let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20));
-        alarms.add_alarm_below(addr1.clone(), price).unwrap();
+        alarms.add_alarm(addr1.clone(), price, None).unwrap();
         alarms
-            .add_alarm_above_or_equal(addr1.clone(), price)
+            .add_alarm(
+                addr1.clone(),
+                price::total_of(Coin::new(1)).is(Coin::new(10)),
+                Some(price),
+            )
             .unwrap();
 
         let mut triggered_alarms = alarms.alarms(price);
@@ -432,9 +447,8 @@ pub mod tests {
         let subscriber: Addr = Addr::unchecked("addr1");
 
         // Add alarms
-        alarms.add_alarm_below(subscriber.clone(), PRICE()).unwrap();
         alarms
-            .add_alarm_above_or_equal(subscriber.clone(), PRICE())
+            .add_alarm(subscriber.clone(), PRICE(), Some(PRICE()))
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
@@ -467,28 +481,25 @@ pub mod tests {
         let addr3 = Addr::unchecked("addr3");
 
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr1.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
 
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr2.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(5)),
+                Some(price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10))),
             )
             .unwrap();
         alarms
-            .add_alarm_above_or_equal(
-                addr2.clone(),
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
-            )
-            .unwrap();
-        alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr3.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
 
@@ -514,45 +525,38 @@ pub mod tests {
         let addr5 = Addr::unchecked("addr5");
 
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr1,
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(10)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr2.clone(),
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr3.clone(),
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(30)),
+                None,
             )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 addr4.clone(),
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(25))),
             )
             .unwrap();
         alarms
-            .add_alarm_above_or_equal(
-                addr4.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(25)),
-            )
-            .unwrap();
-        alarms
-            .add_alarm_below(
-                addr5.clone(),
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
-            )
-            .unwrap();
-        alarms
-            .add_alarm_above_or_equal(
+            .add_alarm(
                 addr5,
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(35)),
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<BaseCurrency>::new(35))),
             )
             .unwrap();
 
@@ -580,24 +584,34 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber1.clone(), Price::<Atom, BaseCurrency>::identity())
+            .add_alarm(
+                subscriber1.clone(),
+                Price::<Atom, BaseCurrency>::identity(),
+                None,
+            )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 subscriber1.clone(),
                 price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                None,
             )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber2.clone(), Price::<Atom, BaseCurrency>::identity())
+            .add_alarm(
+                subscriber2.clone(),
+                Price::<Atom, BaseCurrency>::identity(),
+                None,
+            )
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm(
                 subscriber2.clone(),
                 price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                None,
             )
             .unwrap();
 
@@ -637,22 +651,21 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber1.clone(), Price::<Atom, BaseCurrency>::identity())
-            .unwrap();
-        alarms
-            .add_alarm_above_or_equal(
+            .add_alarm(
                 subscriber1.clone(),
-                price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into()),
+                Price::<Atom, BaseCurrency>::identity(),
+                Some(price::total_of::<Atom>(1.into()).is::<BaseCurrency>(2.into())),
             )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber2.clone(), subscriber2_below_price)
-            .unwrap();
-        alarms
-            .add_alarm_above_or_equal(subscriber2.clone(), subscriber2_above_or_equal_price)
+            .add_alarm(
+                subscriber2.clone(),
+                subscriber2_below_price,
+                Some(subscriber2_above_or_equal_price),
+            )
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
