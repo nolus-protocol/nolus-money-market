@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
-    define_currency, define_symbol, SingleVisitorAdapter,
+    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    define_currency, define_symbol, Matcher, SymbolSlice,
 };
 
 define_symbol! {
@@ -33,21 +33,12 @@ pub struct Lpns {}
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        currency::maybe_visit_on_ticker::<Usdc, _>(ticker, v).map_err(|v| v.0)
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        let v: SingleVisitorAdapter<_> = visitor.into();
-        currency::maybe_visit_on_bank_symbol::<Usdc, _>(bank_symbol, v).map_err(|v| v.0)
+        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
     }
 }
 

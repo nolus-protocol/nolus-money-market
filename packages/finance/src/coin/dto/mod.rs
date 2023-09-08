@@ -8,8 +8,8 @@ use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol,
-    SymbolOwned,
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
+    GroupVisit, SingleVisitor, Symbol, SymbolOwned, TickerMatcher,
 };
 
 use crate::{
@@ -102,7 +102,8 @@ where
             }
         }
 
-        currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+        TickerMatcher
+            .visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
 
@@ -155,7 +156,8 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        currency::maybe_visit_on_ticker(&coin.ticker, CoinFactory(coin))
+        TickerMatcher
+            .maybe_visit(&coin.ticker, CoinFactory(coin))
             .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
     }
 }
@@ -225,7 +227,7 @@ mod test {
 
     use currency::{
         test::{Dai, Nls, TestCurrencies, Usdc},
-        Currency, Group, SymbolStatic,
+        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
     };
 
     use crate::{
@@ -248,27 +250,17 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: SymbolStatic = "My Test Group";
 
-        fn maybe_visit_on_ticker<V>(
-            symbol: currency::Symbol<'_>,
+        fn maybe_visit<M, V>(
+            matcher: &M,
+            symbol: &SymbolSlice,
             visitor: V,
-        ) -> currency::MaybeAnyVisitResult<V>
+        ) -> MaybeAnyVisitResult<V>
         where
-            Self: Sized,
-            V: currency::AnyVisitor,
+            M: Matcher + ?Sized,
+            V: AnyVisitor,
         {
-            assert_eq!(symbol, MyTestCurrency::TICKER);
+            assert!(matcher.match_::<MyTestCurrency>(symbol));
             Ok(visitor.on::<MyTestCurrency>())
-        }
-
-        fn maybe_visit_on_bank_symbol<V>(
-            _bank_symbol: currency::Symbol<'_>,
-            _visitor: V,
-        ) -> currency::MaybeAnyVisitResult<V>
-        where
-            Self: Sized,
-            V: currency::AnyVisitor,
-        {
-            unreachable!()
         }
     }
 

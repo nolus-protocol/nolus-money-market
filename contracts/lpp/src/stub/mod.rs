@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::error::CmdError;
+use currency::{error::CmdError, GroupVisit, TickerMatcher};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned};
@@ -90,15 +90,16 @@ impl LppRef {
             }
         }
 
-        currency::visit_any_on_ticker::<Lpns, _>(
-            &self.currency.clone(),
-            CurrencyVisitor {
-                cmd,
-                lpp_ref: self,
-                querier,
-            },
-        )
-        .map_err(CmdError::into_customer_err)
+        TickerMatcher
+            .visit_any::<Lpns, _>(
+                &self.currency.clone(),
+                CurrencyVisitor {
+                    cmd,
+                    lpp_ref: self,
+                    querier,
+                },
+            )
+            .map_err(CmdError::into_customer_err)
     }
 
     pub fn execute_loan<Cmd>(
@@ -140,16 +141,17 @@ impl LppRef {
             }
         }
 
-        currency::visit_any_on_ticker::<Lpns, _>(
-            &self.currency.clone(),
-            CurrencyVisitor {
-                cmd,
-                lpp_ref: self,
-                lease,
-                querier,
-            },
-        )
-        .map_err(CmdError::into_customer_err)
+        TickerMatcher
+            .visit_any::<Lpns, _>(
+                &self.currency.clone(),
+                CurrencyVisitor {
+                    cmd,
+                    lpp_ref: self,
+                    lease,
+                    querier,
+                },
+            )
+            .map_err(CmdError::into_customer_err)
     }
 
     pub fn execute_lender<Cmd>(
@@ -184,15 +186,16 @@ impl LppRef {
             }
         }
 
-        currency::visit_any_on_ticker::<Lpns, _>(
-            &self.currency.clone(),
-            CurrencyVisitor {
-                cmd,
-                lpp_ref: self,
-                querier,
-            },
-        )
-        .map_err(CmdError::into_customer_err)
+        TickerMatcher
+            .visit_any::<Lpns, _>(
+                &self.currency.clone(),
+                CurrencyVisitor {
+                    cmd,
+                    lpp_ref: self,
+                    querier,
+                },
+            )
+            .map_err(CmdError::into_customer_err)
     }
 
     fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'_>) -> LppStub<'a, C> {

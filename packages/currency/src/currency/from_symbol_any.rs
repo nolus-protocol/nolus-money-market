@@ -1,8 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-use super::{Currency, Group, Symbol};
+use super::{matcher::TickerMatcher, Currency, Group};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
@@ -28,31 +28,30 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
-pub fn maybe_visit_any_on_ticker<G, V>(
-    ticker: Symbol<'_>,
-    visitor: V,
-) -> Option<Result<V::Output, V::Error>>
-where
-    G: Group,
-    V: AnyVisitor,
-    Error: Into<V::Error>,
-{
-    G::maybe_visit_on_ticker(ticker, visitor).ok()
-}
+pub trait GroupVisit: Matcher {
+    fn visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    where
+        G: Group,
+        V: AnyVisitor,
+        Error: Into<V::Error>,
+    {
+        self.maybe_visit_any::<G, _>(ticker, visitor)
+            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, Self, G>(ticker).into()))
+    }
 
-pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
-where
-    G: Group,
-    V: AnyVisitor,
-    Error: Into<V::Error>,
-{
-    G::maybe_visit_on_ticker(ticker, visitor)
-        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+    fn maybe_visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        G: Group,
+        V: AnyVisitor,
+    {
+        G::maybe_visit(self, ticker, visitor)
+    }
 }
+impl<M> GroupVisit for M where M: Matcher {}
 
 pub fn visit_any_on_tickers<G1, G2, V>(
-    ticker1: Symbol<'_>,
-    ticker2: Symbol<'_>,
+    ticker1: &SymbolSlice,
+    ticker2: &SymbolSlice,
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
@@ -61,7 +60,7 @@ where
     V: AnyVisitorPair,
     Error: Into<V::Error>,
 {
-    visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
+    TickerMatcher.visit_any::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
 mod impl_any_tickers {
@@ -70,18 +69,18 @@ mod impl_any_tickers {
     use serde::{de::DeserializeOwned, Serialize};
 
     use crate::{
-        currency::{Currency, Group, Symbol},
+        currency::{matcher::TickerMatcher, Currency, Group, SymbolSlice},
         error::Error,
     };
 
-    use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair, AnyVisitorResult};
+    use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, GroupVisit};
 
     pub struct FirstTickerVisitor<'a, G2, V>
     where
         G2: Group,
         V: AnyVisitorPair,
     {
-        ticker2: Symbol<'a>,
+        ticker2: &'a SymbolSlice,
         group2: PhantomData<G2>,
         visitor: V,
     }
@@ -90,7 +89,7 @@ mod impl_any_tickers {
         G2: Group,
         V: AnyVisitorPair,
     {
-        pub fn new(ticker2: Symbol<'a>, visitor: V) -> Self {
+        pub fn new(ticker2: &'a SymbolSlice, visitor: V) -> Self {
             Self {
                 ticker2,
                 group2: PhantomData::<G2>,
@@ -111,7 +110,7 @@ mod impl_any_tickers {
         where
             C1: Currency + Serialize + DeserializeOwned,
         {
-            visit_any_on_ticker::<G2, _>(
+            TickerMatcher.visit_any::<G2, _>(
                 self.ticker2,
                 SecondTickerVisitor {
                     currency1: PhantomData::<C1>,
@@ -149,7 +148,7 @@ mod impl_any_tickers {
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{Currency, Group},
+        currency::{from_symbol_any::GroupVisit, matcher::TickerMatcher, Currency, Group},
         error::Error,
         test::{
             visitor::{Expect, ExpectPair, ExpectUnknownCurrency},
@@ -162,23 +161,22 @@ mod test {
         let v_usdc = Expect::<Usdc>::default();
         assert_eq!(
             Ok(true),
-            super::visit_any_on_ticker::<TestCurrencies, _>(Usdc::TICKER, v_usdc)
+            TickerMatcher.visit_any::<TestCurrencies, _>(Usdc::TICKER, v_usdc)
         );
 
         let v_nls = Expect::<Nls>::default();
         assert_eq!(
             Ok(true),
-            super::visit_any_on_ticker::<TestCurrencies, _>(Nls::TICKER, v_nls)
+            TickerMatcher.visit_any::<TestCurrencies, _>(Nls::TICKER, v_nls)
         );
 
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(
-                Dai::BANK_SYMBOL
-            )),
-            super::visit_any_on_ticker::<TestCurrencies, _>(
-                Dai::BANK_SYMBOL,
-                ExpectUnknownCurrency
-            )
+            Err(Error::not_in_currency_group::<
+                _,
+                TickerMatcher,
+                TestCurrencies,
+            >(Dai::BANK_SYMBOL)),
+            TickerMatcher.visit_any::<TestCurrencies, _>(Dai::BANK_SYMBOL, ExpectUnknownCurrency)
         );
     }
 
@@ -187,8 +185,12 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            super::visit_any_on_ticker::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(DENOM)),
+            TickerMatcher.visit_any::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::not_in_currency_group::<
+                _,
+                TickerMatcher,
+                TestCurrencies,
+            >(DENOM)),
         );
     }
 

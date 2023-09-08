@@ -1,14 +1,17 @@
 use thiserror::Error;
 
-use crate::currency::{Currency, Group, SymbolOwned};
+use crate::{
+    currency::{Currency, Group, SymbolOwned},
+    CurrencySymbol,
+};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Finance] Found bank symbol '{0}' expecting '{1}'")]
+    #[error("[Currency] Found bank symbol '{0}' expecting '{1}'")]
     UnexpectedBankSymbol(String, String),
 
-    #[error("[Finance] Found currency '{0}' which is not defined in the {1} currency group")]
-    NotInCurrencyGroup(String, String),
+    #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
+    NotInCurrencyGroup(String, String, String),
 }
 
 impl Error {
@@ -20,12 +23,13 @@ impl Error {
         Self::UnexpectedBankSymbol(bank_symbol.into(), C::BANK_SYMBOL.into())
     }
 
-    pub fn not_in_currency_group<S, G>(symbol: S) -> Self
+    pub fn not_in_currency_group<S, CS, G>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
+        CS: CurrencySymbol + ?Sized,
         G: Group,
     {
-        Self::NotInCurrencyGroup(symbol.into(), G::DESCR.into())
+        Self::NotInCurrencyGroup(symbol.into(), CS::DESCR.into(), G::DESCR.into())
     }
 }
 

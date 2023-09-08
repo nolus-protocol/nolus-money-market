@@ -3,10 +3,11 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
+    currency::{AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
     lease::LeaseGroup,
     lpn::Lpns,
     native::Native,
+    Matcher, SymbolSlice,
 };
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
@@ -16,23 +17,14 @@ pub struct PaymentGroup {}
 impl Group for PaymentGroup {
     const DESCR: SymbolStatic = "payment";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
+        M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        LeaseGroup::maybe_visit_on_ticker(ticker, visitor)
-            .or_else(|v| Lpns::maybe_visit_on_ticker(ticker, v))
-            .or_else(|v| Native::maybe_visit_on_ticker(ticker, v))
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        Self: Sized,
-        V: AnyVisitor,
-    {
-        LeaseGroup::maybe_visit_on_bank_symbol(bank_symbol, visitor)
-            .or_else(|v| Lpns::maybe_visit_on_bank_symbol(bank_symbol, v))
-            .or_else(|v| Native::maybe_visit_on_bank_symbol(bank_symbol, v))
+        LeaseGroup::maybe_visit(matcher, symbol, visitor)
+            .or_else(|v| Lpns::maybe_visit(matcher, symbol, v))
+            .or_else(|v| Native::maybe_visit(matcher, symbol, v))
     }
 }
 

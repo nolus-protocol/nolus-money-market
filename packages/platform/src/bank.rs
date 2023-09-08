@@ -1,4 +1,4 @@
-use std::{error::Error as StdError, result::Result as StdResult};
+use std::result::Result as StdResult;
 
 use currency::{Currency, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 use crate::{
     batch::Batch,
     coin_legacy::{
-        from_cosmwasm_any_impl, from_cosmwasm_impl, maybe_from_cosmwasm_any_impl, to_cosmwasm_impl,
+        from_cosmwasm_any, from_cosmwasm_impl, maybe_from_cosmwasm_any, to_cosmwasm_impl,
     },
     error::{Error, Result},
 };
@@ -65,7 +65,7 @@ where
 {
     let mut may_res = None;
     for coin in cw_amount {
-        cmd = match from_cosmwasm_any_impl::<G, _>(coin, cmd) {
+        cmd = match from_cosmwasm_any::<G, _>(coin, cmd) {
             Ok(res) => {
                 may_res = Some(res);
                 break;
@@ -107,7 +107,7 @@ impl<'a> BankAccountView for BankView<'a> {
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
-                    .filter_map(|cw_coin| maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &cmd))
+                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, &cmd))
                     .reduce_results(Aggregate::aggregate)
             })
             .map_err(Into::into)
@@ -303,7 +303,7 @@ where
     Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
 {
     type InnerItem;
-    type Error: StdError;
+    type Error;
 
     fn reduce_results<F>(&mut self, f: F) -> Option<StdResult<Self::InnerItem, Self::Error>>
     where
@@ -313,7 +313,6 @@ where
 impl<I, T, E> ReduceResults for I
 where
     I: Iterator<Item = StdResult<T, E>>,
-    E: StdError,
 {
     type InnerItem = T;
     type Error = E;

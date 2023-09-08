@@ -1,6 +1,6 @@
-use crate::error::Error;
+use crate::{error::Error, Matcher, SymbolSlice};
 
-use super::{Currency, Symbol};
+use super::{group, Currency};
 
 pub trait SingleVisitor<C> {
     type Output;
@@ -9,79 +9,76 @@ pub trait SingleVisitor<C> {
     fn on(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit_on_bank_symbol<C, V>(
-    bank_symbol: Symbol<'_>,
-    visitor: V,
-) -> Result<V::Output, V::Error>
-where
-    V: SingleVisitor<C>,
-    C: Currency,
-    Error: Into<V::Error>,
-{
-    maybe_visit_on_bank_symbol(bank_symbol, visitor)
-        .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(bank_symbol).into()))
-}
-
 pub type MaybeVisitResult<C, V> =
     Result<Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>, V>;
 
-pub fn maybe_visit_on_ticker<C, V>(ticker: Symbol<'_>, visitor: V) -> MaybeVisitResult<C, V>
-where
-    C: Currency,
-    V: SingleVisitor<C>,
-{
-    maybe_visit_impl(ticker, C::TICKER, visitor)
-}
+pub trait CurrencyVisit: Matcher {
+    fn visit<C, V>(&self, symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    where
+        C: Currency,
+        V: SingleVisitor<C>,
+        Error: Into<V::Error>,
+    {
+        //TODO correct the error adding info from the Matcher
+        self.maybe_visit(symbol, visitor)
+            .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(symbol).into()))
+    }
 
-pub fn maybe_visit_on_bank_symbol<C, V>(
-    bank_symbol: Symbol<'_>,
-    visitor: V,
-) -> MaybeVisitResult<C, V>
-where
-    V: SingleVisitor<C>,
-    C: Currency,
-{
-    maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
-}
-
-fn maybe_visit_impl<C, V>(
-    symbol: Symbol<'_>,
-    symbol_exp: Symbol<'_>,
-    visitor: V,
-) -> MaybeVisitResult<C, V>
-where
-    V: SingleVisitor<C>,
-    C: Currency,
-{
-    if symbol == symbol_exp {
-        Ok(visitor.on())
-    } else {
-        Err(visitor)
+    fn maybe_visit<C, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
+    where
+        C: Currency,
+        V: SingleVisitor<C>,
+    {
+        group::maybe_visit(self, ticker, visitor)
     }
 }
+impl<M> CurrencyVisit for M where M: Matcher {}
 
 #[cfg(test)]
 mod test {
+    use crate::currency::from_symbol::CurrencyVisit;
     use crate::test::{Nls, Usdc};
     use crate::{
         currency::Currency,
         error::Error,
         test::visitor::{Expect, ExpectUnknownCurrency},
     };
+    use crate::{BankSymbolMatcher, TickerMatcher};
+
+    #[test]
+    fn visit_on_ticker() {
+        let v_usdc = Expect::<Usdc>::default();
+        TickerMatcher
+            .visit(Usdc::BANK_SYMBOL, v_usdc.clone())
+            .unwrap_err();
+        assert_eq!(TickerMatcher.visit(Usdc::TICKER, v_usdc), Ok(true));
+
+        let v_nls = Expect::<Nls>::default();
+        assert_eq!(TickerMatcher.visit(Nls::TICKER, v_nls), Ok(true));
+    }
+
+    #[test]
+    fn visit_on_ticker_unexpected() {
+        const UNKNOWN_TICKER: &str = "my_fancy_coin";
+
+        assert_eq!(
+            TickerMatcher.visit::<Nls, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_bank_symbol::<_, Nls>(UNKNOWN_TICKER,)),
+        );
+
+        assert_eq!(
+            TickerMatcher.visit::<Nls, _>(Usdc::TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_bank_symbol::<_, Nls>(Usdc::TICKER,)),
+        );
+    }
 
     #[test]
     fn visit_on_bank_symbol() {
         let v_usdc = Expect::<Usdc>::default();
-        assert_eq!(
-            super::visit_on_bank_symbol(Usdc::BANK_SYMBOL, v_usdc),
-            Ok(true)
-        );
+        assert_eq!(BankSymbolMatcher.visit(Usdc::BANK_SYMBOL, v_usdc), Ok(true));
 
         let v_nls = Expect::<Nls>::default();
-        assert_eq!(
-            super::visit_on_bank_symbol(Nls::BANK_SYMBOL, v_nls),
-            Ok(true)
-        );
+        assert_eq!(BankSymbolMatcher.visit(Nls::BANK_SYMBOL, v_nls), Ok(true));
     }
 
     #[test]
@@ -89,7 +86,7 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            super::visit_on_bank_symbol::<Nls, _>(DENOM, ExpectUnknownCurrency),
+            BankSymbolMatcher.visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
             Err(Error::unexpected_bank_symbol::<_, Nls>(DENOM,)),
         );
     }
