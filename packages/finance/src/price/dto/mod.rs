@@ -235,7 +235,6 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-    use std::fmt::Debug;
 
     use serde::Deserialize;
 
@@ -300,7 +299,7 @@ mod test_invariant {
     #[test]
     fn group_mismatch_json() {
         let r = load_with_groups::<TC, TestCurrencies>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
-        assert_err(r, "not defined in the test currency group");
+        assert_err(r, "pretending to be ticker of a currency pertaining to");
     }
 
     fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
@@ -321,8 +320,8 @@ mod test_invariant {
 
     fn load_with_groups<G, QuoteG>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
     where
-        G: Group + for<'a> Deserialize<'a> + Debug,
-        QuoteG: Group + for<'a> Deserialize<'a> + Debug,
+        G: Group + for<'a> Deserialize<'a>,
+        QuoteG: Group + for<'a> Deserialize<'a>,
     {
         from_slice::<PriceDTO<G, QuoteG>>(json)
     }

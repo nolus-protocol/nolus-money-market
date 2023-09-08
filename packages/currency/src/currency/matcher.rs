@@ -5,7 +5,6 @@ use crate::SymbolSlice;
 use super::{Currency, SymbolStatic};
 
 pub trait Symbol {
-    const DESCRIPTION: &'static str;
     const VALUE: SymbolStatic;
 }
 
@@ -14,7 +13,6 @@ impl<C> Symbol for Ticker<C>
 where
     C: Currency,
 {
-    const DESCRIPTION: &'static str = "ticker";
     const VALUE: SymbolStatic = C::TICKER;
 }
 
@@ -23,7 +21,6 @@ impl<C> Symbol for BankSymbol<C>
 where
     C: Currency,
 {
-    const DESCRIPTION: &'static str = "bank symbol";
     const VALUE: SymbolStatic = C::BANK_SYMBOL;
 }
 
@@ -32,11 +29,12 @@ impl<C> Symbol for DexSymbol<C>
 where
     C: Currency,
 {
-    const DESCRIPTION: &'static str = "dex symbol";
     const VALUE: SymbolStatic = C::DEX_SYMBOL;
 }
 
 pub trait CurrencySymbol {
+    const DESCR: &'static str;
+
     type Symbol<C>: Symbol
     where
         C: Currency;
@@ -56,17 +54,23 @@ impl<T> Matcher for T where T: CurrencySymbol + ?Sized + Copy {}
 #[derive(Clone, Copy)]
 pub struct TickerMatcher;
 impl CurrencySymbol for TickerMatcher {
+    const DESCR: &'static str = "ticker";
+
     type Symbol<C> = Ticker<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct BankSymbolMatcher;
 impl CurrencySymbol for BankSymbolMatcher {
+    const DESCR: &'static str = "bank symbol";
+
     type Symbol<C> = BankSymbol<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
 pub struct DexSymbolMatcher;
 impl CurrencySymbol for DexSymbolMatcher {
+    const DESCR: &'static str = "dex symbol";
+
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }

@@ -12,7 +12,7 @@ pub use self::{
     matcher::{BankSymbolMatcher, Matcher, TickerMatcher},
 };
 
-pub(crate) use group::maybe_visit_any;
+pub(crate) use self::{group::maybe_visit_any, matcher::CurrencySymbol};
 
 mod from_symbol;
 mod from_symbol_any;
@@ -69,7 +69,7 @@ mod test {
     use crate::{
         error::Error,
         test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
-        Currency,
+        Currency, TickerMatcher,
     };
 
     #[test]
@@ -77,9 +77,11 @@ mod test {
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Usdc::TICKER));
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Nls::TICKER));
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(
-                Dai::TICKER
-            )),
+            Err(Error::not_in_currency_group::<
+                _,
+                TickerMatcher,
+                TestCurrencies,
+            >(Dai::TICKER)),
             super::validate::<TestCurrencies>(Dai::TICKER)
         );
         assert_eq!(Ok(()), super::validate::<TestExtraCurrencies>(Dai::TICKER));

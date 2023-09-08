@@ -36,7 +36,7 @@ pub trait GroupVisit: Matcher {
         Error: Into<V::Error>,
     {
         self.maybe_visit_any::<G, _>(ticker, visitor)
-            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, Self, G>(ticker).into()))
     }
 
     fn maybe_visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
@@ -171,9 +171,11 @@ mod test {
         );
 
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(
-                Dai::BANK_SYMBOL
-            )),
+            Err(Error::not_in_currency_group::<
+                _,
+                TickerMatcher,
+                TestCurrencies,
+            >(Dai::BANK_SYMBOL)),
             TickerMatcher.visit_any::<TestCurrencies, _>(Dai::BANK_SYMBOL, ExpectUnknownCurrency)
         );
     }
@@ -184,7 +186,11 @@ mod test {
 
         assert_eq!(
             TickerMatcher.visit_any::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(DENOM)),
+            Err(Error::not_in_currency_group::<
+                _,
+                TickerMatcher,
+                TestCurrencies,
+            >(DENOM)),
         );
     }
 

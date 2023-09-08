@@ -44,7 +44,9 @@ fn open_lease_unsupported_currency_by_oracle() {
 }
 
 #[test]
-#[should_panic(expected = "is not defined in the lpns currency group")]
+#[should_panic(
+    expected = "Found a symbol 'OSMO' pretending to be ticker of a currency pertaining to the lpns group"
+)]
 fn init_lpp_with_unknown_currency() {
     type NotLpn = Osmo;
 
@@ -105,10 +107,9 @@ fn open_lease_not_in_lease_currency() {
     //     root_err
     // );
 
-    assert!(err
-        .root_cause()
-        .to_string()
-        .contains("which is not defined in the lease currency group"));
+    assert!(err.root_cause().to_string().contains(
+        "Found a symbol 'NLS' pretending to be ticker of a currency pertaining to the lease group"
+    ));
 }
 
 #[test]

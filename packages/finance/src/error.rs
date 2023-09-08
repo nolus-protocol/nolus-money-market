@@ -16,7 +16,7 @@ pub enum Error {
     #[error("[Finance] [OverflowError] {0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("[Finance] [Currency] {0}")]
+    #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
 
     #[error("[Finance] Found ticker '{0}' expecting '{1}'")]
