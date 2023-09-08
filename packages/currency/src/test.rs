@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
+use crate::{
+    currency, AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
@@ -31,27 +33,14 @@ pub struct TestCurrencies {}
 impl Group for TestCurrencies {
     const DESCR: SymbolStatic = "test";
 
-    fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        V: AnyVisitor,
-    {
-        match symbol {
-            Usdc::TICKER => Ok(visitor.on::<Usdc>()),
-            Nls::TICKER => Ok(visitor.on::<Nls>()),
-            _ => Err(visitor),
-        }
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
+        M: Matcher,
         V: AnyVisitor,
     {
-        match symbol {
-            Usdc::BANK_SYMBOL => Ok(visitor.on::<Usdc>()),
-            Nls::BANK_SYMBOL => Ok(visitor.on::<Nls>()),
-            _ => Err(visitor),
-        }
+        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
+            .or_else(|visitor| currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor))
     }
 }
 
@@ -60,24 +49,14 @@ pub struct TestExtraCurrencies {}
 impl Group for TestExtraCurrencies {
     const DESCR: SymbolStatic = "test_extra";
 
-    fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        V: AnyVisitor,
-    {
-        match symbol {
-            Usdc::TICKER => Ok(visitor.on::<Usdc>()),
-            Nls::TICKER => Ok(visitor.on::<Nls>()),
-            Dai::TICKER => Ok(visitor.on::<Dai>()),
-            _ => Err(visitor),
-        }
-    }
-
-    fn maybe_visit_on_bank_symbol<V>(_: Symbol<'_>, _: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
+        M: Matcher,
         V: AnyVisitor,
     {
-        unreachable!()
+        TestCurrencies::maybe_visit(matcher, symbol, visitor)
+            .or_else(|visitor| currency::maybe_visit_any::<_, Dai, _>(matcher, symbol, visitor))
     }
 }
 
@@ -166,7 +145,10 @@ pub mod visitor {
 }
 
 pub mod group {
-    use crate::{test::visitor::Expect, Currency, Group, Symbol};
+    use crate::{
+        test::visitor::Expect, BankSymbolMatcher, Currency, Group, GroupVisit, Symbol, SymbolSlice,
+        TickerMatcher,
+    };
 
     #[track_caller]
     pub fn maybe_visit_on_ticker_impl<C, G>()
@@ -175,7 +157,10 @@ pub mod group {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(G::maybe_visit_on_ticker(C::TICKER, v), Ok(Ok(true)));
+        assert_eq!(
+            TickerMatcher.maybe_visit_any::<G, _>(C::TICKER, v),
+            Ok(Ok(true))
+        );
     }
 
     #[track_caller]
@@ -185,7 +170,10 @@ pub mod group {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(G::maybe_visit_on_ticker(unknown_ticker, v.clone()), Err(v));
+        assert_eq!(
+            TickerMatcher.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
+            Err(v)
+        );
     }
 
     #[track_caller]
@@ -196,20 +184,20 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            G::maybe_visit_on_bank_symbol(C::BANK_SYMBOL, v),
+            BankSymbolMatcher.maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
             Ok(Ok(true))
         );
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol<'_>)
+    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: &SymbolSlice)
     where
         C: Currency,
         G: Group,
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            G::maybe_visit_on_bank_symbol(unknown_ticker, v.clone()),
+            BankSymbolMatcher.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
             Err(v)
         );
     }

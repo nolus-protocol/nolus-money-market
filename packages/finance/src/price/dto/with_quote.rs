@@ -3,7 +3,9 @@ use crate::{
     error::Error,
     price,
 };
-use currency::{self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group};
+use currency::{
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, TickerMatcher,
+};
 
 use super::{PriceDTO, WithQuote};
 
@@ -51,14 +53,15 @@ where
     Error: Into<Cmd::Error>,
 {
     //TODO use CoinDTO::with_coin instead
-    currency::visit_any_on_ticker::<G, _>(
-        &price.amount.ticker().clone(),
-        BaseCVisitor {
-            base_dto: &price.amount,
-            quote: Coin::<C>::try_from(&price.amount_quote)
-                .expect("Got different currency in visitor!"),
-            cmd,
-        },
-    )
-    .map_err(CmdError::into_customer_err)
+    TickerMatcher
+        .visit_any::<G, _>(
+            &price.amount.ticker().clone(),
+            BaseCVisitor {
+                base_dto: &price.amount,
+                quote: Coin::<C>::try_from(&price.amount_quote)
+                    .expect("Got different currency in visitor!"),
+                cmd,
+            },
+        )
+        .map_err(CmdError::into_customer_err)
 }

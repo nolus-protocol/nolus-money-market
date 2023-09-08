@@ -1,5 +1,5 @@
 use currency::lpn::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, TickerMatcher};
 use platform::{
     batch::{Emit, Emitter},
     response,
@@ -49,7 +49,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        currency::visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
+        TickerMatcher.visit_any::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 

@@ -1,5 +1,4 @@
 use std::{
-    error::Error as StdError,
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -187,7 +186,7 @@ pub type WithCoinResult<V> = Result<<V as WithCoin>::Output, <V as WithCoin>::Er
 
 pub trait WithCoin {
     type Output;
-    type Error: StdError;
+    type Error;
 
     fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
     where

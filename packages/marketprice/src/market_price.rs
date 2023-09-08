@@ -1,6 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned};
+use currency::{
+    self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol, SymbolOwned, TickerMatcher,
+};
 use finance::price::{
     dto::{with_price, WithPrice},
     Price,
@@ -145,7 +147,7 @@ where
                 total_feeders,
                 price,
             };
-            currency::visit_any_on_ticker::<CurrencyGroup, _>(next_currency, next_collect)
+            TickerMatcher.visit_any::<CurrencyGroup, _>(next_currency, next_collect)
         } else {
             Ok(price.into())
         }

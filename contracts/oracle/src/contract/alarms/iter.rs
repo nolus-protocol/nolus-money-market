@@ -2,7 +2,7 @@ use std::{iter, ops::Deref};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, TickerMatcher};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
@@ -52,17 +52,14 @@ where
             .next()
             .map(|price_result: PriceResult<BaseC>| {
                 price_result.and_then(|ref price| {
-                        currency::visit_any_on_ticker::<
-                            SwapGroup,
-                            Cmd<'storage, 'alarms, '_, S, BaseC>,
-                        >(
-                            price.base_ticker(),
-                            Cmd {
-                                alarms: self.alarms,
-                                price,
-                            },
-                        )
-                    })
+                    TickerMatcher.visit_any::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
+                        price.base_ticker(),
+                        Cmd {
+                            alarms: self.alarms,
+                            price,
+                        },
+                    )
+                })
             })
             .transpose()
     }

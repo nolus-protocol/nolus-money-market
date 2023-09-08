@@ -3,23 +3,25 @@ use std::{any::TypeId, fmt::Debug};
 use crate::error::{Error, Result};
 
 pub use self::{
-    from_symbol::{
-        maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
-        SingleVisitor,
-    },
+    from_symbol::{CurrencyVisit, MaybeVisitResult, SingleVisitor},
     from_symbol_any::{
-        maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
-        AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
+        visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
+        GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult},
+    matcher::{BankSymbolMatcher, Matcher, TickerMatcher},
 };
+
+pub(crate) use group::maybe_visit_any;
 
 mod from_symbol;
 mod from_symbol_any;
 mod group;
+mod matcher;
 
-pub type Symbol<'a> = &'a str;
-pub type SymbolStatic = &'static str;
+pub type SymbolSlice = str;
+pub type Symbol<'a> = &'a SymbolSlice;
+pub type SymbolStatic = Symbol<'static>;
 pub type SymbolOwned = String;
 
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
@@ -59,7 +61,7 @@ where
             Ok(())
         }
     }
-    visit_any_on_ticker::<G, _>(ticker, SupportedLeaseCurrency {})
+    TickerMatcher.visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
 }
 
 #[cfg(test)]
