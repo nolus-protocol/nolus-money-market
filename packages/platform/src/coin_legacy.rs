@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 use std::result::Result as StdResult;
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, BankSymbolMatcher, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor,
+    self, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
+    SingleVisitor,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -17,7 +17,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    BankSymbolMatcher.visit(&coin.denom, CoinTransformer(&coin))
+    BankSymbols.visit(&coin.denom, CoinTransformer(&coin))
 }
 
 pub(crate) fn from_cosmwasm_any<G, V>(coin: CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
@@ -25,7 +25,7 @@ where
     G: Group,
     V: WithCoin,
 {
-    BankSymbolMatcher
+    BankSymbols
         .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
         .map_err(|transformer| transformer.1)
 }
@@ -35,7 +35,7 @@ where
     G: Group,
     V: WithCoin,
 {
-    BankSymbolMatcher
+    BankSymbols
         .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
         .ok()
 }
@@ -130,7 +130,7 @@ where
 mod test {
     use currency::{
         test::{Nls, TestCurrencies, Usdc},
-        BankSymbolMatcher, Currency,
+        BankSymbols, Currency,
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -159,9 +159,7 @@ mod test {
         assert_eq!(
             c1,
             Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbolMatcher, Nls>(
-                    Usdc::BANK_SYMBOL,
-                )
+                currency::error::Error::unexpected_symbol::<_, BankSymbols, Nls>(Usdc::BANK_SYMBOL,)
             )),
         );
 
@@ -170,9 +168,7 @@ mod test {
         assert_eq!(
             c2,
             Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbolMatcher, Usdc>(
-                    Nls::BANK_SYMBOL,
-                )
+                currency::error::Error::unexpected_symbol::<_, BankSymbols, Usdc>(Nls::BANK_SYMBOL,)
             )),
         );
     }

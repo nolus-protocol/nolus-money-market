@@ -2,10 +2,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{Currency, MaybeVisitResult, SingleVisitor, SymbolSlice};
 
-use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult, SymbolStatic};
+use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 
 pub trait Group: PartialEq {
-    const DESCR: SymbolStatic;
+    const DESCR: &'static str;
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where

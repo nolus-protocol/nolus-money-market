@@ -31,7 +31,7 @@ impl Currency for Dai {
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct TestCurrencies {}
 impl Group for TestCurrencies {
-    const DESCR: SymbolStatic = "test";
+    const DESCR: &'static str = "test";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
@@ -46,7 +46,7 @@ impl Group for TestCurrencies {
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct TestExtraCurrencies {}
 impl Group for TestExtraCurrencies {
-    const DESCR: SymbolStatic = "test_extra";
+    const DESCR: &'static str = "test_extra";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
@@ -144,8 +144,7 @@ pub mod visitor {
 
 pub mod group {
     use crate::{
-        test::visitor::Expect, BankSymbolMatcher, Currency, Group, GroupVisit, SymbolSlice,
-        TickerMatcher,
+        test::visitor::Expect, BankSymbols, Currency, Group, GroupVisit, SymbolSlice, Tickers,
     };
 
     #[track_caller]
@@ -155,10 +154,7 @@ pub mod group {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(
-            TickerMatcher.maybe_visit_any::<G, _>(C::TICKER, v),
-            Ok(Ok(true))
-        );
+        assert_eq!(Tickers.maybe_visit_any::<G, _>(C::TICKER, v), Ok(Ok(true)));
     }
 
     #[track_caller]
@@ -169,7 +165,7 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            TickerMatcher.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
+            Tickers.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
             Err(v)
         );
     }
@@ -182,7 +178,7 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            BankSymbolMatcher.maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
+            BankSymbols.maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
             Ok(Ok(true))
         );
     }
@@ -195,7 +191,7 @@ pub mod group {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            BankSymbolMatcher.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
+            BankSymbols.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
             Err(v)
         );
     }

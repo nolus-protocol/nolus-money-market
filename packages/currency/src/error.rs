@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     currency::{Currency, Group, SymbolOwned},
-    CurrencySymbol,
+    Symbols,
 };
 
 #[derive(Error, Debug, PartialEq)]
@@ -18,7 +18,7 @@ impl Error {
     pub fn unexpected_symbol<S, CS, C>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
-        CS: CurrencySymbol + ?Sized,
+        CS: Symbols + ?Sized,
         C: Currency,
     {
         Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), C::TICKER.into())
@@ -27,7 +27,7 @@ impl Error {
     pub fn not_in_currency_group<S, CS, G>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
-        CS: CurrencySymbol + ?Sized,
+        CS: Symbols + ?Sized,
         G: Group,
     {
         Self::NotInCurrencyGroup(symbol.into(), CS::DESCR.into(), G::DESCR.into())

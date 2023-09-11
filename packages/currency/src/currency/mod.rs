@@ -9,10 +9,10 @@ pub use self::{
         GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult},
-    matcher::{BankSymbolMatcher, Matcher, TickerMatcher},
+    matcher::{BankSymbols, Matcher, Tickers},
 };
 
-pub(crate) use self::{group::maybe_visit_any, matcher::CurrencySymbol};
+pub(crate) use self::{group::maybe_visit_any, matcher::Symbols};
 
 mod from_symbol;
 mod from_symbol_any;
@@ -60,7 +60,7 @@ where
             Ok(())
         }
     }
-    TickerMatcher.visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
+    Tickers.visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
 }
 
 #[cfg(test)]
@@ -68,7 +68,7 @@ mod test {
     use crate::{
         error::Error,
         test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
-        Currency, TickerMatcher,
+        Currency, Tickers,
     };
 
     #[test]
@@ -76,11 +76,9 @@ mod test {
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Usdc::TICKER));
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Nls::TICKER));
         assert_eq!(
-            Err(Error::not_in_currency_group::<
-                _,
-                TickerMatcher,
-                TestCurrencies,
-            >(Dai::TICKER)),
+            Err(Error::not_in_currency_group::<_, Tickers, TestCurrencies>(
+                Dai::TICKER
+            )),
             super::validate::<TestCurrencies>(Dai::TICKER)
         );
         assert_eq!(Ok(()), super::validate::<TestExtraCurrencies>(Dai::TICKER));

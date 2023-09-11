@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use super::LeaseDTO;
 use ::currency::{lease::LeaseGroup, lpn::Lpns};
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, TickerMatcher};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 
 pub trait WithLeaseTypes {
     type Output;
@@ -19,7 +19,7 @@ where
     Cmd: WithLeaseTypes,
     currency::error::Error: Into<Cmd::Error>,
 {
-    TickerMatcher.visit_any::<LeaseGroup, _>(
+    Tickers.visit_any::<LeaseGroup, _>(
         &lease_dto.amount.ticker().clone(),
         FactoryStage1 { lease_dto, cmd },
     )
@@ -43,7 +43,7 @@ where
         Asset: Currency,
     {
         let lpn = self.lease_dto.loan.lpp().currency().to_owned();
-        TickerMatcher.visit_any::<Lpns, _>(
+        Tickers.visit_any::<Lpns, _>(
             &lpn,
             FactoryStage2 {
                 lease_dto: self.lease_dto,

@@ -3,7 +3,7 @@ use std::ops::DerefMut as _;
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
-use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, TickerMatcher};
+use currency::{lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{message::Response as PlatformResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -55,7 +55,7 @@ impl<'a> InstantiateWithLpn<'a> {
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
         let context = Self { deps, msg };
 
-        TickerMatcher.visit_any::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
+        Tickers.visit_any::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
 
@@ -177,7 +177,7 @@ impl<'a> ExecuteWithLpn<'a> {
 
         let config = Config::load(context.deps.storage)?;
 
-        TickerMatcher.visit_any::<Lpns, _>(config.lpn_ticker(), context)
+        Tickers.visit_any::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 
@@ -280,7 +280,7 @@ impl<'a> QueryWithLpn<'a> {
 
         let config = Config::load(context.deps.storage)?;
 
-        TickerMatcher.visit_any::<Lpns, _>(config.lpn_ticker(), context)
+        Tickers.visit_any::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 

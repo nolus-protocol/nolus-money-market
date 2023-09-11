@@ -32,7 +32,7 @@ where
     const VALUE: SymbolStatic = C::DEX_SYMBOL;
 }
 
-pub trait CurrencySymbol {
+pub trait Symbols {
     const DESCR: &'static str;
 
     type Symbol<C>: Symbol
@@ -40,7 +40,7 @@ pub trait CurrencySymbol {
         C: Currency;
 }
 
-pub trait Matcher: CurrencySymbol {
+pub trait Matcher: Symbols {
     fn match_<C>(&self, field_value: &SymbolSlice) -> bool
     where
         C: Currency,
@@ -49,27 +49,27 @@ pub trait Matcher: CurrencySymbol {
     }
 }
 
-impl<T> Matcher for T where T: CurrencySymbol + ?Sized + Copy {}
+impl<T> Matcher for T where T: Symbols + ?Sized + Copy {}
 
 #[derive(Clone, Copy)]
-pub struct TickerMatcher;
-impl CurrencySymbol for TickerMatcher {
+pub struct Tickers;
+impl Symbols for Tickers {
     const DESCR: &'static str = "ticker";
 
     type Symbol<C> = Ticker<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
-pub struct BankSymbolMatcher;
-impl CurrencySymbol for BankSymbolMatcher {
+pub struct BankSymbols;
+impl Symbols for BankSymbols {
     const DESCR: &'static str = "bank symbol";
 
     type Symbol<C> = BankSymbol<C> where C: Currency;
 }
 
 #[derive(Clone, Copy)]
-pub struct DexSymbolMatcher;
-impl CurrencySymbol for DexSymbolMatcher {
+pub struct DexSymbols;
+impl Symbols for DexSymbols {
     const DESCR: &'static str = "dex symbol";
 
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;

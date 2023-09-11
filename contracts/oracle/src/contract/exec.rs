@@ -1,7 +1,7 @@
 use serde::de::DeserializeOwned;
 
 use currency::lpn::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, TickerMatcher};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use marketprice::SpotPrice;
 use platform::{contract, response};
 use sdk::{
@@ -42,9 +42,7 @@ impl<'a> ExecWithOracleBase<'a> {
 
         Config::load(visitor.deps.storage)
             .map_err(ContractError::LoadConfig)
-            .and_then(|config: Config| {
-                TickerMatcher.visit_any::<Lpns, _>(&config.base_asset, visitor)
-            })
+            .and_then(|config: Config| Tickers.visit_any::<Lpns, _>(&config.base_asset, visitor))
     }
 }
 
