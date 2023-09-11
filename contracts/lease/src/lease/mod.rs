@@ -1,8 +1,5 @@
 use currency::{self, Currency};
-use finance::{
-    coin::{Amount, Coin},
-    liability::Liability,
-};
+use finance::{coin::Coin, liability::Liability};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -117,11 +114,8 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
-    pub const MIN_ASSET_AMOUNT: Amount = 10_000;
-    pub const MIN_SELL_ASSET_AMOUNT: Amount = 15_000_000;
-
-    pub const MIN_ASSET: Coin<Lpn> = Coin::new(Self::MIN_ASSET_AMOUNT);
-    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(Self::MIN_SELL_ASSET_AMOUNT);
+    pub const MIN_ASSET: Coin<Lpn> = Coin::new(10_000);
+    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(15_000_000);
 
     pub(super) fn try_into_dto(
         self,

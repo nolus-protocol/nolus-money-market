@@ -39,11 +39,8 @@ where
             self.amount,
             price::total(total_due, price_in_asset),
             price::total(overdue, price_in_asset),
-            price::total(Lease::<Lpn, Asset, Lpp, Oracle>::MIN_ASSET, price_in_asset),
-            price::total(
-                Lease::<Lpn, Asset, Lpp, Oracle>::MIN_SELL_ASSET,
-                price_in_asset,
-            ),
+            price::total(Self::MIN_ASSET, price_in_asset),
+            price::total(Self::MIN_SELL_ASSET, price_in_asset),
         );
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
