@@ -1,4 +1,4 @@
-use currency::{Group, Symbol};
+use currency::{Group, SymbolSlice};
 use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
@@ -21,7 +21,7 @@ pub trait SwapTask {
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &OracleRef;
     fn time_alarm(&self) -> &TimeAlarmsRef;
-    fn out_currency(&self) -> Symbol<'_>;
+    fn out_currency(&self) -> &SymbolSlice;
 
     /// Call back the worker with each coin this swap is about.
     /// The iteration is done over the coins always in the same order.

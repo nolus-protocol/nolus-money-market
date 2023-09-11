@@ -2,7 +2,7 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use currency::{Currency, Symbol, SymbolOwned};
+use currency::{Currency, SymbolOwned, SymbolSlice};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -119,7 +119,7 @@ where
     }
 }
 
-pub fn unsupported_currency<C>(unsupported: Symbol<'_>) -> ContractError
+pub fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError
 where
     C: Currency,
 {

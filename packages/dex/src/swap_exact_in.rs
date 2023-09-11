@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Group, Symbol};
+use currency::{Group, SymbolSlice};
 use finance::{
     coin::{self, Amount, CoinDTO},
     zero::Zero,
@@ -65,7 +65,7 @@ where
     ) -> Result<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'a>(SwapTrx<'a>, Symbol<'a>);
+        struct SwapWorker<'a>(SwapTrx<'a>, &'a SymbolSlice);
         impl<'a> CoinVisitor for SwapWorker<'a> {
             type Result = IterNext;
             type Error = Error;

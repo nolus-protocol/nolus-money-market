@@ -1,5 +1,5 @@
 use currency::{
-    lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol, TickerMatcher,
+    lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, TickerMatcher,
 };
 use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -11,7 +11,7 @@ use crate::{
 
 pub(super) fn balance(
     account: &Addr,
-    currency: Symbol<'_>,
+    currency: &SymbolSlice,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<LpnCoin> {
     TickerMatcher.visit_any::<Lpns, _>(currency, CheckBalance { account, querier })

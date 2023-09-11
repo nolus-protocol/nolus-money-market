@@ -1,4 +1,4 @@
-use currency::{native::Nls, Group, Symbol};
+use currency::{native::Nls, Group, SymbolSlice};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -89,7 +89,11 @@ impl<'a> SwapTrx<'a> {
         }
     }
 
-    pub fn swap_exact_in<G>(&mut self, amount: &CoinDTO<G>, currency_out: Symbol<'_>) -> Result<()>
+    pub fn swap_exact_in<G>(
+        &mut self,
+        amount: &CoinDTO<G>,
+        currency_out: &SymbolSlice,
+    ) -> Result<()>
     where
         G: Group,
     {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, Symbol};
+use currency::{lease::LeaseGroup, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
     SwapTask, TransferOutState,
@@ -127,7 +127,7 @@ impl SwapTask for BuyAsset {
         &self.deps.2
     }
 
-    fn out_currency(&self) -> Symbol<'_> {
+    fn out_currency(&self) -> &SymbolSlice {
         &self.form.currency
     }
 

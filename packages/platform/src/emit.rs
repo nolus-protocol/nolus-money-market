@@ -1,4 +1,4 @@
-use currency::{Currency, Group, Symbol};
+use currency::{Currency, Group, SymbolSlice};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     percent::Percent,
@@ -50,7 +50,7 @@ where
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
-    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: Symbol<'_>) -> Self
+    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: &SymbolSlice) -> Self
     where
         K: Into<String>,
     {
@@ -129,7 +129,7 @@ impl From<Emitter> for Event {
     }
 }
 
-fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: Symbol<'_>) -> E
+fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: &SymbolSlice) -> E
 where
     E: Emit,
     K: Into<String>,

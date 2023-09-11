@@ -1,6 +1,6 @@
 use address_book::AddressBook;
 use app::App;
-use currency::{Currency, Symbol};
+use currency::{Currency, SymbolSlice};
 
 use finance::percent::bound::BoundToHundredPercent;
 use sdk::{
@@ -99,7 +99,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 }
 
 impl<Dispatcher, Treasury> TestCase<Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
-    pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
+    pub fn open_lease<D>(&mut self, lease_currency: &SymbolSlice) -> Addr
     where
         D: Currency,
     {

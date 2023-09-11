@@ -144,7 +144,7 @@ pub mod visitor {
 
 pub mod group {
     use crate::{
-        test::visitor::Expect, BankSymbolMatcher, Currency, Group, GroupVisit, Symbol, SymbolSlice,
+        test::visitor::Expect, BankSymbolMatcher, Currency, Group, GroupVisit, SymbolSlice,
         TickerMatcher,
     };
 
@@ -162,7 +162,7 @@ pub mod group {
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: Symbol<'_>)
+    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: &SymbolSlice)
     where
         C: Currency,
         G: Group,

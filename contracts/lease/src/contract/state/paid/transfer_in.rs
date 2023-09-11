@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, Symbol};
+use currency::{lease::LeaseGroup, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
@@ -82,7 +82,7 @@ impl SwapTask for TransferIn {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> Symbol<'_> {
+    fn out_currency(&self) -> &SymbolSlice {
         self.lease.lease.amount.ticker()
     }
 

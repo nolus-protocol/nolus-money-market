@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor, Symbol, SymbolOwned, TickerMatcher,
+    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, TickerMatcher,
 };
 
 use crate::{
@@ -52,7 +52,7 @@ where
         res.invariant_held().map(|_| res)
     }
 
-    fn new_unchecked(amount: Amount, ticker: Symbol<'_>) -> Self {
+    fn new_unchecked(amount: Amount, ticker: &SymbolSlice) -> Self {
         let res = Self::new_raw(amount, ticker.into());
         debug_assert_eq!(
             Ok(()),

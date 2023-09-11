@@ -1,19 +1,19 @@
-use currency::{Currency, Symbol};
+use currency::{Currency, SymbolSlice};
 
 pub trait CurrencyMapper<'a> {
-    fn map<C>() -> Symbol<'a>
+    fn map<C>() -> &'a SymbolSlice
     where
         C: Currency;
 }
 
 pub mod local {
-    use currency::{Currency, Symbol};
+    use currency::{Currency, SymbolSlice};
 
     use super::CurrencyMapper;
 
     pub struct BankMapper {}
     impl<'a> CurrencyMapper<'a> for BankMapper {
-        fn map<C>() -> Symbol<'a>
+        fn map<C>() -> &'a SymbolSlice
         where
             C: Currency,
         {
@@ -23,7 +23,7 @@ pub mod local {
 }
 
 pub mod dex {
-    use currency::{AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolStatic};
+    use currency::{AnyVisitor, AnyVisitorResult, Currency, SymbolSlice, SymbolStatic};
 
     use crate::error::Error;
 
@@ -31,7 +31,7 @@ pub mod dex {
 
     pub struct DexMapper {}
     impl<'a> CurrencyMapper<'a> for DexMapper {
-        fn map<C>() -> Symbol<'a>
+        fn map<C>() -> &'a SymbolSlice
         where
             C: Currency,
         {

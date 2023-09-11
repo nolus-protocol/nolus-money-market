@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use currency::{error::CmdError, GroupVisit, TickerMatcher};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned};
+use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned, SymbolSlice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -58,7 +58,7 @@ impl LppRef {
         &self.addr
     }
 
-    pub fn currency(&self) -> Symbol<'_> {
+    pub fn currency(&self) -> &SymbolSlice {
         &self.currency
     }
 

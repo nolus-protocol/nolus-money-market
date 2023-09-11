@@ -3,8 +3,8 @@ use std::{fmt::Debug, marker::PhantomData};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::{
-    payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol, SymbolOwned,
-    TickerMatcher,
+    payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned,
+    SymbolSlice, TickerMatcher,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use swap::SwapTarget;
@@ -16,7 +16,7 @@ use crate::{
 };
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-pub type CurrencyPair<'a> = (Symbol<'a>, Symbol<'a>);
+pub type CurrencyPair<'a> = (&'a SymbolSlice, &'a SymbolSlice);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SwapLeg {
@@ -121,16 +121,16 @@ where
 
     pub fn load_path(
         &self,
-        query: Symbol<'_>,
-    ) -> Result<impl Iterator<Item = Symbol<'_>> + DoubleEndedIterator + '_, ContractError> {
+        query: &SymbolSlice,
+    ) -> Result<impl Iterator<Item = &SymbolSlice> + DoubleEndedIterator + '_, ContractError> {
         self.internal_load_path(query)
             .map(|iter| iter.map(|node| node.value().target.as_str()))
     }
 
     pub fn load_swap_path(
         &self,
-        from: Symbol<'_>,
-        to: Symbol<'_>,
+        from: &SymbolSlice,
+        to: &SymbolSlice,
     ) -> Result<Vec<SwapTarget>, ContractError> {
         let path_from = self.internal_load_path(from)?;
 
@@ -216,7 +216,7 @@ where
 
     fn internal_load_path(
         &self,
-        query: Symbol<'_>,
+        query: &SymbolSlice,
     ) -> Result<
         impl Iterator<Item = NodeRef<'_, SwapTarget>> + DoubleEndedIterator + '_,
         ContractError,

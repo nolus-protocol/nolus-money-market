@@ -20,8 +20,7 @@ mod group;
 mod matcher;
 
 pub type SymbolSlice = str;
-pub type Symbol<'a> = &'a SymbolSlice;
-pub type SymbolStatic = Symbol<'static>;
+pub type SymbolStatic = &'static SymbolSlice;
 pub type SymbolOwned = String;
 
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
@@ -46,7 +45,7 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate<G>(ticker: Symbol<'_>) -> Result<()>
+pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>
 where
     G: Group,
 {

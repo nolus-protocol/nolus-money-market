@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use currency::{
-    self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol,
+    self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice,
     TickerMatcher,
 };
 use lpp::stub::{
@@ -32,7 +32,7 @@ pub trait WithLeaseDeps {
 pub fn execute<Cmd>(
     cmd: Cmd,
     lease_addr: Addr,
-    asset: Symbol<'_>,
+    asset: &SymbolSlice,
     lpp: LppRef,
     oracle: OracleRef,
     querier: &QuerierWrapper<'_>,

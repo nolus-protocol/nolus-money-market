@@ -1,4 +1,4 @@
-use currency::{Group, Symbol};
+use currency::{Group, SymbolSlice};
 use finance::{
     coin::{Amount, CoinDTO},
     zero::Zero,
@@ -10,12 +10,12 @@ type PassedThrough = bool;
 
 pub(super) struct CurrencyFilter<'a, V> {
     v: &'a mut V,
-    filter: Symbol<'a>,
+    filter: &'a SymbolSlice,
     filtered: Amount,
     pass_any: PassedThrough,
 }
 impl<'a, V> CurrencyFilter<'a, V> {
-    pub fn new(v: &'a mut V, filter: Symbol<'a>) -> Self {
+    pub fn new(v: &'a mut V, filter: &'a SymbolSlice) -> Self {
         Self {
             v,
             filter,
