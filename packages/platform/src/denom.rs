@@ -47,7 +47,7 @@ pub mod dex {
         where
             C: Currency,
         {
-            Ok(C::DEX_SYMBOL)
+            Ok(DexMapper::map::<C>())
         }
     }
 }

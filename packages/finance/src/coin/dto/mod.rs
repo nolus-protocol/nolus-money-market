@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, TickerMatcher,
+    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 
 use crate::{
@@ -102,7 +102,7 @@ where
             }
         }
 
-        TickerMatcher
+        Tickers
             .visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
@@ -156,7 +156,7 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        TickerMatcher
+        Tickers
             .maybe_visit(&coin.ticker, CoinFactory(coin))
             .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
     }
@@ -248,7 +248,7 @@ mod test {
     #[derive(PartialEq)]
     struct MyTestGroup {}
     impl Group for MyTestGroup {
-        const DESCR: SymbolStatic = "My Test Group";
+        const DESCR: &'static str = "My Test Group";
 
         fn maybe_visit<M, V>(
             matcher: &M,

@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{error::CmdError, GroupVisit, SymbolSlice, TickerMatcher};
+use currency::{error::CmdError, GroupVisit, Tickers};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
+use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned, SymbolSlice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -90,7 +90,7 @@ impl LppRef {
             }
         }
 
-        TickerMatcher
+        Tickers
             .visit_any::<Lpns, _>(
                 &self.currency.clone(),
                 CurrencyVisitor {
@@ -141,7 +141,7 @@ impl LppRef {
             }
         }
 
-        TickerMatcher
+        Tickers
             .visit_any::<Lpns, _>(
                 &self.currency.clone(),
                 CurrencyVisitor {
@@ -186,7 +186,7 @@ impl LppRef {
             }
         }
 
-        TickerMatcher
+        Tickers
             .visit_any::<Lpns, _>(
                 &self.currency.clone(),
                 CurrencyVisitor {

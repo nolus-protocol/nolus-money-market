@@ -2,7 +2,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
 
-use currency::{self, Group, GroupVisit, SymbolSlice, TickerMatcher};
+use currency::{self, Group, GroupVisit, SymbolSlice, Tickers};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
@@ -99,7 +99,7 @@ where
 }
 
 fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
-    TickerMatcher
+    Tickers
         .visit_any::<SwapGroup, _>(ticker, DexMapper {})
         .map_err(Error::from)
 }

@@ -4,7 +4,7 @@ use crate::{
     price,
 };
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, TickerMatcher,
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
 };
 
 use super::{PriceDTO, WithQuote};
@@ -53,7 +53,7 @@ where
     Error: Into<Cmd::Error>,
 {
     //TODO use CoinDTO::with_coin instead
-    TickerMatcher
+    Tickers
         .visit_any::<G, _>(
             &price.amount.ticker().clone(),
             BaseCVisitor {

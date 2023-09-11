@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult},
     define_currency, define_symbol, Matcher, SymbolSlice,
 };
 
@@ -31,7 +31,7 @@ define_currency!(Usdc, USDC);
 pub struct Lpns {}
 
 impl Group for Lpns {
-    const DESCR: SymbolStatic = "lpns";
+    const DESCR: &'static str = "lpns";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where

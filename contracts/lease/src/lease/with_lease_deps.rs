@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 
 use currency::{
     self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice,
-    TickerMatcher,
+    Tickers,
 };
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
@@ -43,7 +43,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
-    TickerMatcher.visit_any::<LeaseGroup, _>(
+    Tickers.visit_any::<LeaseGroup, _>(
         asset,
         FactoryStage1 {
             cmd,

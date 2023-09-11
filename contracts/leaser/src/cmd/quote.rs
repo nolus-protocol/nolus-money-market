@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{
     lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit,
-    SymbolOwned, TickerMatcher,
+    SymbolOwned, Tickers,
 };
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
@@ -122,7 +122,7 @@ where
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        TickerMatcher
+        Tickers
             .maybe_visit_any::<PaymentGroup, _>(
                 &downpayment,
                 QuoteStage3 {
@@ -169,7 +169,7 @@ where
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
-        TickerMatcher
+        Tickers
             .maybe_visit_any::<LeaseGroup, _>(
                 &self.lease_asset,
                 QuoteStage4 {

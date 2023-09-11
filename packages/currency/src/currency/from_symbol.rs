@@ -19,9 +19,8 @@ pub trait CurrencyVisit: Matcher {
         V: SingleVisitor<C>,
         Error: Into<V::Error>,
     {
-        //TODO correct the error adding info from the Matcher
         self.maybe_visit(symbol, visitor)
-            .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(symbol).into()))
+            .unwrap_or_else(|_| Err(Error::unexpected_symbol::<_, Self, C>(symbol).into()))
     }
 
     fn maybe_visit<C, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeVisitResult<C, V>
@@ -43,18 +42,18 @@ mod test {
         error::Error,
         test::visitor::{Expect, ExpectUnknownCurrency},
     };
-    use crate::{BankSymbolMatcher, TickerMatcher};
+    use crate::{BankSymbols, Tickers};
 
     #[test]
     fn visit_on_ticker() {
         let v_usdc = Expect::<Usdc>::default();
-        TickerMatcher
+        Tickers
             .visit(Usdc::BANK_SYMBOL, v_usdc.clone())
             .unwrap_err();
-        assert_eq!(TickerMatcher.visit(Usdc::TICKER, v_usdc), Ok(true));
+        assert_eq!(Tickers.visit(Usdc::TICKER, v_usdc), Ok(true));
 
         let v_nls = Expect::<Nls>::default();
-        assert_eq!(TickerMatcher.visit(Nls::TICKER, v_nls), Ok(true));
+        assert_eq!(Tickers.visit(Nls::TICKER, v_nls), Ok(true));
     }
 
     #[test]
@@ -62,23 +61,23 @@ mod test {
         const UNKNOWN_TICKER: &str = "my_fancy_coin";
 
         assert_eq!(
-            TickerMatcher.visit::<Nls, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(UNKNOWN_TICKER,)),
+            Tickers.visit::<Nls, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, Tickers, Nls>(UNKNOWN_TICKER,)),
         );
 
         assert_eq!(
-            TickerMatcher.visit::<Nls, _>(Usdc::TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(Usdc::TICKER,)),
+            Tickers.visit::<Nls, _>(Usdc::TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, Tickers, Nls>(Usdc::TICKER,)),
         );
     }
 
     #[test]
     fn visit_on_bank_symbol() {
         let v_usdc = Expect::<Usdc>::default();
-        assert_eq!(BankSymbolMatcher.visit(Usdc::BANK_SYMBOL, v_usdc), Ok(true));
+        assert_eq!(BankSymbols.visit(Usdc::BANK_SYMBOL, v_usdc), Ok(true));
 
         let v_nls = Expect::<Nls>::default();
-        assert_eq!(BankSymbolMatcher.visit(Nls::BANK_SYMBOL, v_nls), Ok(true));
+        assert_eq!(BankSymbols.visit(Nls::BANK_SYMBOL, v_nls), Ok(true));
     }
 
     #[test]
@@ -86,8 +85,8 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            BankSymbolMatcher.visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::unexpected_bank_symbol::<_, Nls>(DENOM,)),
+            BankSymbols.visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, BankSymbols, Nls>(DENOM,)),
         );
     }
 }

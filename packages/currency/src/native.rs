@@ -1,5 +1,5 @@
 use crate::{
-    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, SymbolStatic},
+    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult},
     currency_macro::schemars,
     define_currency, define_symbol, Matcher, SymbolSlice,
 };
@@ -29,7 +29,7 @@ define_currency!(Nls, NLS);
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Native {}
 impl Group for Native {
-    const DESCR: SymbolStatic = "native";
+    const DESCR: &'static str = "native";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
