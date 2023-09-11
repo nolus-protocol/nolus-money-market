@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::{
     native::{Native, Nls},
     payment::PaymentGroup,
-    Currency, Symbol,
+    Currency, SymbolSlice,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
@@ -90,7 +90,7 @@ impl SwapTask for BuyBack {
         self.config.time_alarms()
     }
 
-    fn out_currency(&self) -> Symbol<'_> {
+    fn out_currency(&self) -> &SymbolSlice {
         Nls::TICKER
     }
 

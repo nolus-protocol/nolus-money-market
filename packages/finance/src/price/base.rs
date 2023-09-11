@@ -1,4 +1,4 @@
-use currency::{Currency, Group, Symbol};
+use currency::{Currency, Group, SymbolSlice};
 
 use crate::{
     coin::{Coin, CoinDTO},
@@ -22,7 +22,7 @@ where
     BaseG: Group,
     QuoteC: Currency,
 {
-    pub fn base_ticker(&self) -> Symbol<'_> {
+    pub fn base_ticker(&self) -> &SymbolSlice {
         self.amount.ticker()
     }
 }

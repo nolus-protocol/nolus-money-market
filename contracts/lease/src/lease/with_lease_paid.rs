@@ -19,7 +19,7 @@ where
     Cmd: WithLeaseTypes,
     currency::error::Error: Into<Cmd::Error>,
 {
-    currency::visit_any_on_ticker::<LeaseGroup, _>(
+    TickerMatcher.visit_any::<LeaseGroup, _>(
         &lease_dto.position.amount.ticker().clone(),
         FactoryStage1 { lease_dto, cmd },
     )

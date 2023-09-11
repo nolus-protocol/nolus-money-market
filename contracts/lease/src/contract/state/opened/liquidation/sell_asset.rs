@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, Symbol};
+use currency::{lpn::Lpns, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartRemoteLocalState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
@@ -70,7 +70,7 @@ impl SwapTask for SellAsset {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> Symbol<'_> {
+    fn out_currency(&self) -> &SymbolSlice {
         self.lease.lease.loan.lpp().currency()
     }
 

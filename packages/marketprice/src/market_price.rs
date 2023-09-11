@@ -1,7 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Symbol, SymbolOwned, TickerMatcher,
+    self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice,
+    TickerMatcher,
 };
 use finance::price::{
     dto::{with_price, WithPrice},
@@ -67,7 +68,7 @@ impl<'m> PriceFeeds<'m> {
     where
         'm: 'a,
         QuoteC: Currency + DeserializeOwned,
-        Iter: Iterator<Item = Symbol<'a>> + DoubleEndedIterator,
+        Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
@@ -113,7 +114,7 @@ where
 }
 struct PriceCollect<'a, Iter, BaseC, QuoteC>
 where
-    Iter: Iterator<Item = Symbol<'a>>,
+    Iter: Iterator<Item = &'a SymbolSlice>,
     BaseC: Currency,
     QuoteC: Currency,
 {
@@ -126,7 +127,7 @@ where
 }
 impl<'a, Iter, BaseC, QuoteC> PriceCollect<'a, Iter, BaseC, QuoteC>
 where
-    Iter: Iterator<Item = Symbol<'a>>,
+    Iter: Iterator<Item = &'a SymbolSlice>,
     BaseC: Currency + DeserializeOwned,
     QuoteC: Currency,
 {
@@ -155,7 +156,7 @@ where
 }
 impl<'a, Iter, QuoteC, QuoteQuoteC> AnyVisitor for PriceCollect<'a, Iter, QuoteC, QuoteQuoteC>
 where
-    Iter: Iterator<Item = Symbol<'a>>,
+    Iter: Iterator<Item = &'a SymbolSlice>,
     QuoteC: Currency + DeserializeOwned,
     QuoteQuoteC: Currency,
 {
