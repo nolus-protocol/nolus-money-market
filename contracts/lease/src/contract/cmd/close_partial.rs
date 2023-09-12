@@ -60,7 +60,7 @@ impl WithLease for Liquidate {
         Asset: Currency,
     {
         let mut profit = self.profit.as_stub();
-        let receipt = lease.liquidate_partial(
+        let receipt = lease.close_partial(
             self.asset.try_into()?,
             self.payment.try_into()?,
             self.now,

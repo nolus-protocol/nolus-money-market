@@ -14,10 +14,11 @@ use crate::{
 };
 
 pub(super) use self::{
-    dto::LeaseDTO, paid::Lease as LeasePaid, repay::FullRepayReceipt, state::State,
+    close::FullRepayReceipt, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
 };
 
 mod alarm;
+mod close;
 mod dto;
 mod liquidation;
 mod paid;

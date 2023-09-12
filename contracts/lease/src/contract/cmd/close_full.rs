@@ -13,22 +13,22 @@ use crate::{
 
 use super::ReceiptDTO;
 
-pub(crate) struct LiquidateResult {
+pub(crate) struct CloseResult {
     pub receipt: ReceiptDTO,
     pub messages: Batch,
 }
 
-impl LiquidateResult {
+impl CloseResult {
     fn new(receipt: ReceiptDTO, messages: Batch) -> Self {
         debug_assert!(
             receipt.close,
-            "The full-liquidation payment should have repaid the total outstanding liability!"
+            "The full-close payment should have repaid the total outstanding liability!"
         );
         Self { receipt, messages }
     }
 }
 
-impl<Lpn> From<FullRepayReceipt<Lpn>> for LiquidateResult
+impl<Lpn> From<FullRepayReceipt<Lpn>> for CloseResult
 where
     Lpn: Currency,
 {
@@ -38,13 +38,13 @@ where
     }
 }
 
-pub(crate) struct Liquidate {
+pub(crate) struct Close {
     payment: LpnCoin,
     now: Timestamp,
     profit: ProfitRef,
 }
 
-impl Liquidate {
+impl Close {
     pub fn new(payment: LpnCoin, now: Timestamp, profit: ProfitRef) -> Self {
         Self {
             payment,
@@ -54,8 +54,8 @@ impl Liquidate {
     }
 }
 
-impl WithLease for Liquidate {
-    type Output = LiquidateResult;
+impl WithLease for Close {
+    type Output = CloseResult;
 
     type Error = ContractError;
 
@@ -69,10 +69,11 @@ impl WithLease for Liquidate {
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
     {
-        // TODO [issue #92] request the needed amount from the Liquidation Fund and
+        // TODO [issue #92] request the needed amount from the Liquidation Fund
+        // this holds true for both use cases - full liquidation and full close
         // make sure the message goes out before the liquidation messages.
         lease
-            .liquidate_full(self.payment.try_into()?, self.now, self.profit.as_stub())
+            .close_full(self.payment.try_into()?, self.now, self.profit.as_stub())
             .map(Into::into)
     }
 }
