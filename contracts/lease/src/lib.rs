@@ -11,6 +11,3 @@ mod lease;
 mod loan;
 #[cfg(any(feature = "contract", test))]
 mod position;
-
-#[cfg(any(feature = "testing", test))]
-pub use crate::lease::tests;

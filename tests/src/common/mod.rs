@@ -1,7 +1,12 @@
+use ::lease::api::LpnCoin;
 use serde::{Deserialize, Serialize};
 
-use currency::{native::Nls, Currency};
-use finance::{coin::Coin, duration::Duration, percent::Percent};
+use currency::{lpn::Usdc, native::Nls, Currency};
+use finance::{
+    coin::{Amount, Coin},
+    duration::Duration,
+    percent::Percent,
+};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
@@ -57,12 +62,17 @@ pub mod treasury;
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 pub type Native = Nls;
+pub type Lpn = Usdc;
 
 pub fn native_cwcoin<A>(amount: A) -> CwCoin
 where
     A: Into<Coin<Native>>,
 {
     cwcoin::<Native, A>(amount)
+}
+
+pub fn lpn_coin(amount: Amount) -> LpnCoin {
+    Coin::<Lpn>::new(amount).into()
 }
 
 pub fn cwcoin<C, A>(amount: A) -> CwCoin

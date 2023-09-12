@@ -148,8 +148,8 @@ where
     }
 }
 
-#[cfg(any(feature = "testing", test))]
-pub mod tests {
+#[cfg(test)]
+mod tests {
     use serde::{Deserialize, Serialize};
 
     use ::currency::{lease::Atom, lpn::Usdc, Currency};
@@ -183,9 +183,6 @@ pub mod tests {
     type TestLpn = Usdc;
     type TestCurrency = Atom;
     type TestLease = Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
-
-    pub const MIN_ASSET: Coin<TestLpn> = TestLease::MIN_ASSET;
-    pub const MIN_SELL_ASSET: Coin<TestLpn> = TestLease::MIN_SELL_ASSET;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where

@@ -2,10 +2,7 @@ use std::collections::HashSet;
 
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::{
-    api::{InterestPaymentSpec, PositionSpec},
-    tests::{MIN_ASSET, MIN_SELL_ASSET},
-};
+use lease::api::{InterestPaymentSpec, PositionSpec};
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
@@ -36,7 +33,11 @@ impl Instantiator {
     }
 
     pub fn position_spec() -> PositionSpec {
-        PositionSpec::new(Self::liability(), MIN_ASSET.into(), MIN_SELL_ASSET.into())
+        PositionSpec::new(
+            Self::liability(),
+            super::lpn_coin(25_000_000),
+            super::lpn_coin(5_000),
+        )
     }
 
     #[track_caller]

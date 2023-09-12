@@ -12,7 +12,6 @@ use lease::{
         NewLeaseForm, PositionSpec, StateQuery, StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
-    tests::{MIN_ASSET, MIN_SELL_ASSET},
 };
 
 use platform::{coin_legacy, trx};
@@ -100,8 +99,8 @@ impl Instantiator {
                         config.liability_minus_delta_to_third_liq_warn,
                         config.liability_recalc_time,
                     ),
-                    MIN_ASSET.into(),
-                    MIN_SELL_ASSET.into(),
+                    super::lpn_coin(23_456_986),
+                    super::lpn_coin(23_456),
                 ),
                 loan: LoanForm {
                     annual_margin_interest: config.annual_margin_interest,
