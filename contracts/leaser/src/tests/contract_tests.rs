@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Usdc, Currency};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::{
-    api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpec},
+    api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpec},
     tests::{MIN_ASSET, MIN_SELL_ASSET},
 };
 
@@ -163,26 +163,6 @@ fn test_update_config() {
 fn test_update_config_invalid_liability() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-    #[serde(rename_all = "snake_case")]
-    pub struct Liability {
-        initial: Percent,
-        healthy: Percent,
-        max: Percent,
-        first_liq_warn: Percent,
-        second_liq_warn: Percent,
-        third_liq_warn: Percent,
-        recalc_time: Duration,
-    }
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
-    #[serde(rename_all = "snake_case")]
-    pub struct PositionSpec {
-        liability: Liability,
-        min_asset: LpnCoin,
-        min_sell_asset: LpnCoin,
-    }
-
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub enum MockSudoMsg {
@@ -193,22 +173,19 @@ fn test_update_config_invalid_liability() {
         },
     }
 
-    let liability = Liability {
-        initial: Percent::from_percent(55),
-        healthy: Percent::from_percent(55),
-        max: Percent::from_percent(55),
-        first_liq_warn: Percent::from_percent(55),
-        second_liq_warn: Percent::from_percent(55),
-        third_liq_warn: Percent::from_percent(55),
-        recalc_time: Duration::from_secs(100),
-    };
+    let liability = Liability::new(
+        Percent::from_percent(55),
+        Percent::from_percent(55),
+        Percent::from_percent(55),
+        Percent::from_percent(55),
+        Percent::from_percent(55),
+        Percent::from_percent(55),
+        Duration::from_secs(100),
+    );
+
     let mock_msg = MockSudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        lease_position_spec: PositionSpec {
-            liability,
-            min_asset: MIN_ASSET.into(),
-            min_sell_asset: MIN_SELL_ASSET.into(),
-        },
+        lease_position_spec: PositionSpec::new(liability, MIN_ASSET.into(), MIN_SELL_ASSET.into()),
         lease_interest_payment: InterestPaymentSpec::new(
             Duration::from_secs(20),
             Duration::from_secs(10),
