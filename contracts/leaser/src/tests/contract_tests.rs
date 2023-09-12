@@ -175,7 +175,7 @@ fn test_update_config_invalid_liability() {
         recalc_time: Duration,
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub struct PositionSpec {
         liability: Liability,
@@ -183,7 +183,7 @@ fn test_update_config_invalid_liability() {
         min_sell_asset: LpnCoin,
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub enum MockSudoMsg {
         Config {
