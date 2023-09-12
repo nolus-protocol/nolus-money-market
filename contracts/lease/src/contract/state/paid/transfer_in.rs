@@ -95,7 +95,7 @@ impl SwapTask for TransferIn {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        dex::on_coin(&self.amount(), visitor)
+        dex::on_coin(self.amount(), visitor)
     }
 
     fn finish(
