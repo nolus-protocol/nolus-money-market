@@ -10,6 +10,8 @@ use sdk::{
 
 use crate::{error::ContractError, error::ContractResult};
 
+use super::LpnCoin;
+
 mod unchecked;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
@@ -36,8 +38,8 @@ pub struct NewLeaseForm {
     pub currency: SymbolOwned,
     /// Maximum Loan-to-Downpayment percentage of the new lease, optional.
     pub max_ltd: Option<Percent>,
-    /// Liability parameters
-    pub liability: Liability,
+    /// Position parameters
+    pub position_spec: PositionSpec,
     /// Loan parameters
     pub loan: LoanForm,
     /// The time alarms contract the lease uses to get time notifications
@@ -107,6 +109,26 @@ impl InterestPaymentSpec {
                 "The interest due period should be longer than grace period to avoid overlapping",
             )
         })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct PositionSpec {
+    pub liability: Liability,
+    pub min_asset: LpnCoin,
+    pub min_sell_asset: LpnCoin,
+}
+
+impl PositionSpec {
+    #[cfg(any(test, feature = "testing"))]
+    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
+        Self {
+            liability,
+            min_asset,
+            min_sell_asset,
+        }
     }
 }
 

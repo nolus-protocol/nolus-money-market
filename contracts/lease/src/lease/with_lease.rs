@@ -36,7 +36,7 @@ where
     oracle::error::ContractError: Into<Cmd::Error>,
 {
     let lease = lease_dto.addr.clone();
-    let asset = lease_dto.amount.ticker().clone();
+    let asset = lease_dto.position.amount.ticker().clone();
     let lpp = lease_dto.loan.lpp().clone();
     let oracle = lease_dto.oracle.clone();
 

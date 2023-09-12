@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use currency::{native::Nls, SymbolOwned};
-use finance::{liability::Liability, percent::Percent};
-use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
+use finance::percent::Percent;
+use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec, PositionSpec};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
@@ -51,7 +51,7 @@ impl<'a> Leaser<'a> {
                 downpayment,
                 lease_asset,
                 oracle,
-                config.liability,
+                config.lease_position_spec.liability,
                 config.lease_interest_rate_margin,
                 max_ltd,
             ),
@@ -72,13 +72,13 @@ pub(super) fn try_setup_dex(
 pub(super) fn try_configure(
     storage: &mut dyn Storage,
     lease_interest_rate_margin: Percent,
-    liability: Liability,
+    lease_position_spec: PositionSpec,
     lease_interest_payment: InterestPaymentSpec,
 ) -> ContractResult<MessageResponse> {
     Config::update(
         storage,
         lease_interest_rate_margin,
-        liability,
+        lease_position_spec,
         lease_interest_payment,
     )?;
 

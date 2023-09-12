@@ -56,7 +56,7 @@ impl Borrow {
                     customer,
                     currency,
                     max_ltd,
-                    liability: config.liability,
+                    position_spec: config.lease_position_spec,
                     loan: LoanForm {
                         annual_margin_interest: config.lease_interest_rate_margin,
                         lpp: config.lpp_addr,

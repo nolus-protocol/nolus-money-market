@@ -20,7 +20,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
 {
     Tickers.visit_any::<LeaseGroup, _>(
-        &lease_dto.amount.ticker().clone(),
+        &lease_dto.position.amount.ticker().clone(),
         FactoryStage1 { lease_dto, cmd },
     )
 }

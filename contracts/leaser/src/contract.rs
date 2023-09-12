@@ -113,12 +113,12 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
         SudoMsg::SetupDex(params) => leaser::try_setup_dex(deps.storage, params),
         SudoMsg::Config {
             lease_interest_rate_margin,
-            liability,
+            lease_position_spec,
             lease_interest_payment,
         } => leaser::try_configure(
             deps.storage,
             lease_interest_rate_margin,
-            liability,
+            lease_position_spec,
             lease_interest_payment,
         ),
     }

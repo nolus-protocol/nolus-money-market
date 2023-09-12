@@ -3,6 +3,7 @@ use app::App;
 use currency::{Currency, SymbolSlice};
 
 use finance::percent::bound::BoundToHundredPercent;
+
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
