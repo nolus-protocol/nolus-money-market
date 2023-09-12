@@ -1,5 +1,6 @@
-use finance::liability::Liability;
 use serde::{Deserialize, Serialize};
+
+use finance::liability::Liability;
 
 use crate::api::{LeaseCoin, LpnCoin};
 

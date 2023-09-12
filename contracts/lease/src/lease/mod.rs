@@ -115,7 +115,7 @@ where
     Oracle: OracleTrait<Lpn>,
 {
     pub const MIN_ASSET: Coin<Lpn> = Coin::new(10_000); // $0.01 TODO issue #40
-    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(15_000_000); // TODO issue #50
+    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(15_000_000); // $15 TODO issue #50
 
     pub(super) fn try_into_dto(
         self,
