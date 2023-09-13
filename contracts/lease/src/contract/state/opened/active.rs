@@ -17,7 +17,7 @@ use crate::{
     contract::{
         cmd::{
             LiquidationDTO, LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult,
-            PartialLiquidation, PartialLiquidationResult, Repay, RepayResult,
+            PartialCloseFn, Repay, RepayFn, RepayResult,
         },
         state::{event as state_event, liquidated, paid, Handler, Response},
         Lease,
@@ -67,7 +67,14 @@ impl Active {
             liquidation,
         } = with_lease::execute(
             lease.lease,
-            Repay::new(payment, env.block.time, profit, time_alarms, price_alarms),
+            Repay::new(
+                RepayFn {},
+                payment,
+                env.block.time,
+                profit,
+                time_alarms,
+                price_alarms,
+            ),
             querier,
         )?;
 
@@ -222,15 +229,15 @@ fn try_partial_liquidation(
 ) -> ContractResult<Response> {
     let price_alarms = lease.lease.oracle.clone();
     let liquidation_amount = liquidation.amount(&lease.lease).clone();
-    let PartialLiquidationResult {
+    let RepayResult {
         lease: lease_updated,
         receipt,
         messages: liquidate_messages,
         liquidation: next_liquidation,
     } = with_lease::execute(
         lease.lease,
-        PartialLiquidation::new(
-            liquidation_amount.clone(),
+        Repay::new(
+            PartialCloseFn::new(liquidation_amount.clone()),
             liquidation_lpn,
             env.block.time,
             profit,
