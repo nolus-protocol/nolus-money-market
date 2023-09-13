@@ -58,14 +58,3 @@ where
     }
     M::decode(resp.data.as_slice()).map_err(Into::into)
 }
-
-pub fn encode_msg_response<T, M>(resp: M, msg_type: T) -> MsgData
-where
-    T: Into<String>,
-    M: Message + Default,
-{
-    MsgData {
-        msg_type: msg_type.into(),
-        data: resp.encode_to_vec(),
-    }
-}
