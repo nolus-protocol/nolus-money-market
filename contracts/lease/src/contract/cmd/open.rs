@@ -14,6 +14,7 @@ use crate::{
         IntoDTOResult, Lease,
     },
     loan::Loan,
+    position::Position,
 };
 
 use super::{liquidation_status, LiquidationStatus};
@@ -70,8 +71,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let liability = self.form.position_spec.liability;
-
         let loan = Loan::new(
             self.start_at,
             lpp_loan,
@@ -79,12 +78,15 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             self.form.loan.interest_payment,
         );
         let amount: Coin<Asset> = self.amount.try_into()?;
+        let liability = self.form.position_spec.liability;
+        let min_asset = self.form.position_spec.min_asset.try_into()?;
+        let min_sell_asset = self.form.position_spec.min_sell_asset.try_into()?;
+        let position = Position::<Asset, Lpn>::new(amount, liability, min_asset, min_sell_asset);
 
         let lease = Lease::<_, Asset, _, _>::new(
             self.lease_addr,
             self.form.customer,
-            amount,
-            liability,
+            position,
             loan,
             oracle,
         );
