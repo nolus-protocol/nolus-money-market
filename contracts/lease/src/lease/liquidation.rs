@@ -35,8 +35,8 @@ where
         };
 
         let status = liability::check_liability(
-            &self.liability(),
-            self.amount(),
+            &self.position.liability(),
+            self.position.amount(),
             price::total(total_due, price_in_asset),
             price::total(overdue, price_in_asset),
             price::total(Self::MIN_ASSET, price_in_asset),

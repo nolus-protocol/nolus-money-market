@@ -87,7 +87,7 @@ where
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
         let loan = self.loan.state(now);
         State {
-            amount: self.amount(),
+            amount: self.position.amount(),
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,

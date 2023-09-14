@@ -4,7 +4,7 @@ use currency::{self, Currency};
 use finance::{
     coin::Coin,
     fraction::Fraction,
-    liability::{Level, Liability, Zone},
+    liability::{Level, Zone},
     price::{total_of, Price},
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
@@ -25,14 +25,6 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    pub fn liability(&self) -> Liability {
-        self.position.liability()
-    }
-
-    pub fn amount(&self) -> Coin<Asset> {
-        self.position.amount()
-    }
-
     pub(crate) fn reschedule(
         &self,
         now: &Timestamp,
@@ -59,7 +51,9 @@ where
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
         );
         time_alarms
-            .setup_alarm(grace_period_end.min(*now + self.liability().recalculation_time()))
+            .setup_alarm(
+                grace_period_end.min(*now + self.position.liability().recalculation_time()),
+            )
             .map_err(Into::into)
     }
 
@@ -76,7 +70,7 @@ where
 
         let total_liability = self
             .loan
-            .liability_status(*now + self.liability().recalculation_time())
+            .liability_status(*now + self.position.liability().recalculation_time())
             .total;
         debug_assert!(!total_liability.is_zero());
 
@@ -100,14 +94,17 @@ where
         liability: Coin<Lpn>,
         alarm_at: Level,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        debug_assert!(!self.amount().is_zero(), "Invariant broken, asset = 0!");
+        debug_assert!(
+            !self.position.amount().is_zero(),
+            "Invariant broken, asset = 0!"
+        );
         debug_assert!(
             !liability.is_zero(),
             "Loan already paid, no need of next alarms!"
         );
         debug_assert!(!alarm_at.ltv().is_zero());
 
-        Ok(total_of(alarm_at.ltv().of(self.amount())).is(liability))
+        Ok(total_of(alarm_at.ltv().of(self.position.amount())).is(liability))
     }
 }
 
@@ -144,8 +141,8 @@ mod tests {
     fn initial_alarm_schedule() {
         let asset = Coin::from(10);
         let lease = lease::tests::open_lease(asset, loan());
-        let recalc_time = LEASE_START + lease.liability().recalculation_time();
-        let liability_alarm_on = lease.liability().first_liq_warn();
+        let recalc_time = LEASE_START + lease.position.liability().recalculation_time();
+        let liability_alarm_on = lease.position.liability().first_liq_warn();
         let projected_liability = projected_liability(&lease, recalc_time);
         let alarm_msgs = lease
             .reschedule(
@@ -186,10 +183,10 @@ mod tests {
         let lease_amount = 20.into();
         let lease = open_lease(lease_amount, loan());
         let now = lease.loan.grace_period_end()
-            - lease.liability().recalculation_time()
-            - lease.liability().recalculation_time();
-        let recalc_time = now + lease.liability().recalculation_time();
-        let up_to = lease.liability().first_liq_warn();
+            - lease.position.liability().recalculation_time()
+            - lease.position.liability().recalculation_time();
+        let recalc_time = now + lease.position.liability().recalculation_time();
+        let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
@@ -241,9 +238,9 @@ mod tests {
         let lease = open_lease_with_payment_spec(lease_amount, loan(), interest_spec);
 
         let now = lease.loan.grace_period_end() + due_period + due_period + Duration::from_nanos(1);
-        let recalc_time = now + lease.liability().recalculation_time();
+        let recalc_time = now + lease.position.liability().recalculation_time();
         let exp_alarm_at = lease.loan.grace_period_end() + due_period + due_period + due_period;
-        let up_to = lease.liability().first_liq_warn();
+        let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
@@ -289,12 +286,12 @@ mod tests {
         let lease = open_lease(lease_amount, loan);
 
         let reschedule_at = LEASE_START + Duration::from_days(50);
-        let recalc_at = reschedule_at + lease.liability().recalculation_time();
+        let recalc_at = reschedule_at + lease.position.liability().recalculation_time();
         let projected_liability = projected_liability(&lease, recalc_at);
 
         let zone = Zone::second(
-            lease.liability().second_liq_warn(),
-            lease.liability().third_liq_warn(),
+            lease.position.liability().second_liq_warn(),
+            lease.position.liability().third_liq_warn(),
         );
         let alarm_msgs = lease
             .reschedule(&reschedule_at, &zone, &timealarms(), &pricealarms())
@@ -357,9 +354,9 @@ mod tests {
         let lease = open_lease(lease_amount, loan());
 
         let now = lease.loan.grace_period_end() - offset_from_this;
-        let recalc_time = now + lease.liability().recalculation_time();
+        let recalc_time = now + lease.position.liability().recalculation_time();
         let exp_alarm_at = lease.loan.grace_period_end() + exp_alarm_past_this;
-        let up_to = lease.liability().first_liq_warn();
+        let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())

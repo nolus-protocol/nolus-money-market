@@ -51,7 +51,7 @@ where
     where
         Profit: FixedAddressSender,
     {
-        let amount = self.amount();
+        let amount = self.position.amount();
         debug_assert!(
             asset < amount,
             "Liquidated asset {asset} should be less than the available {0}",
