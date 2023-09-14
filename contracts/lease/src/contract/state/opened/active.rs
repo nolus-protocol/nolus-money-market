@@ -10,7 +10,6 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{DownpaymentCoin, LpnCoin, StateResponse},
@@ -114,18 +113,7 @@ impl Active {
             LiquidationDTO::Partial {
                 amount: _,
                 cause: _,
-            } => {
-                let time_alarms = lease.lease.time_alarms.clone();
-                try_partial_liquidation(
-                    lease,
-                    liquidation,
-                    liquidation_lpn,
-                    profit,
-                    time_alarms,
-                    env,
-                    querier,
-                )
-            }
+            } => try_partial_liquidation(lease, liquidation, liquidation_lpn, profit, env, querier),
             LiquidationDTO::Full(_) => {
                 try_full_liquidation(lease, liquidation, liquidation_lpn, profit, env, querier)
             }
@@ -223,11 +211,11 @@ fn try_partial_liquidation(
     liquidation: LiquidationDTO,
     liquidation_lpn: LpnCoin,
     profit: ProfitRef,
-    time_alarms: TimeAlarmsRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     let price_alarms = lease.lease.oracle.clone();
+    let time_alarms = lease.lease.time_alarms.clone();
     let liquidation_amount = liquidation.amount(&lease.lease).clone();
     let RepayResult {
         lease: lease_updated,
