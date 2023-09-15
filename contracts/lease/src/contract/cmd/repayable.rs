@@ -2,9 +2,12 @@ use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
-use platform::{bank::FixedAddressSender, batch::Batch};
+use platform::{
+    bank::FixedAddressSender, batch::Emitter as PlatformEmitter,
+    message::Response as MessageResponse,
+};
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::Timestamp;
+use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -21,7 +24,7 @@ pub(crate) trait Repayable {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
         self,
         lease: &mut Lease<Lpn, Asset, Lpp, Oracle>,
-        payment: Coin<Lpn>,
+        amount: Coin<Lpn>,
         now: Timestamp,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
@@ -33,34 +36,54 @@ pub(crate) trait Repayable {
         Profit: FixedAddressSender;
 }
 
-pub(crate) struct Repay<RepayableT>
+pub(crate) trait Emitter {
+    // TODO
+    // fn emit<Lpn, Asset, Lpp, Oracle>(
+    fn emit(
+        self,
+        // TODO
+        // lease: &Lease<Lpn, Asset, Lpp, Oracle>,
+        // receipt: RepayReceipt<Lpn>,
+        lease: &Addr,
+        receipt: &ReceiptDTO,
+    ) -> PlatformEmitter;
+    // where
+    //     Lpn: Currency;
+}
+
+pub(crate) struct Repay<RepayableT, EmitterT>
 where
     RepayableT: Repayable,
+    EmitterT: Emitter,
 {
-    lease_fn: RepayableT,
-    payment: LpnCoin,
+    repay_fn: RepayableT,
+    amount: LpnCoin,
     now: Timestamp,
+    emitter_fn: EmitterT,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
 }
 
-impl<RepayableT> Repay<RepayableT>
+impl<RepayableT, EmitterT> Repay<RepayableT, EmitterT>
 where
     RepayableT: Repayable,
+    EmitterT: Emitter,
 {
     pub fn new(
-        lease_fn: RepayableT,
-        payment: LpnCoin,
+        repay_fn: RepayableT,
+        amount: LpnCoin,
         now: Timestamp,
+        emitter_fn: EmitterT,
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
         price_alarms: OracleRef,
     ) -> Self {
         Self {
-            lease_fn,
-            payment,
+            repay_fn,
+            amount,
             now,
+            emitter_fn,
             profit,
             time_alarms,
             price_alarms,
@@ -82,8 +105,8 @@ impl SplitDTOOut for RepayLeaseResult {
 }
 
 pub(crate) struct RepayResult {
-    pub receipt: ReceiptDTO,
-    pub messages: Batch,
+    pub response: MessageResponse,
+    pub loan_paid: bool,
     pub liquidation: LiquidationStatus,
 }
 
@@ -98,9 +121,10 @@ pub(crate) struct ReceiptDTO {
     pub close: bool,
 }
 
-impl<RepayableT> WithLease for Repay<RepayableT>
+impl<RepayableT, EmitterT> WithLease for Repay<RepayableT, EmitterT>
 where
     RepayableT: Repayable,
+    EmitterT: Emitter,
 {
     type Output = RepayLeaseResult;
 
@@ -116,12 +140,12 @@ where
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
     {
-        let payment = self.payment.try_into()?;
+        let amount = self.amount.try_into()?;
         let mut profit = self.profit.as_stub();
 
         let receipt = self
-            .lease_fn
-            .do_repay(&mut lease, payment, self.now, &mut profit)?;
+            .repay_fn
+            .do_repay(&mut lease, amount, self.now, &mut profit)?;
 
         let liquidation = liquidation_status::status_and_schedule(
             &lease,
@@ -135,11 +159,16 @@ where
                  lease,
                  batch: messages,
              }| {
+                let receipt_dto = receipt.into();
+                let events = self.emitter_fn.emit(&lease.addr, &receipt_dto);
                 RepayLeaseResult {
                     lease,
                     result: RepayResult {
-                        receipt: receipt.into(),
-                        messages: messages.merge(profit.into()),
+                        response: MessageResponse::messages_with_events(
+                            messages.merge(profit.into()),
+                            events,
+                        ),
+                        loan_paid: receipt_dto.close,
                         liquidation,
                     },
                 }

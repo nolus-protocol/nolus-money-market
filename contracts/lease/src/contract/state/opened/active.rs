@@ -1,4 +1,3 @@
-use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
@@ -16,9 +15,9 @@ use crate::{
     contract::{
         cmd::{
             LiquidationDTO, LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult,
-            PartialCloseFn, Repay, RepayFn, RepayResult,
+            PartialCloseFn, Repay, RepayEmitter, RepayFn, RepayResult, Repayable,
         },
-        state::{event as state_event, liquidated, paid, Handler, Response},
+        state::{event::LiquidationEmitter, liquidated, paid, Handler, Response},
         Lease,
     },
     error::{ContractError, ContractResult},
@@ -26,7 +25,8 @@ use crate::{
 };
 
 use super::{
-    balance, event,
+    balance,
+    event::{self, PaymentEmitter},
     liquidation::sell_asset::{self, DexState as SellAssetState},
     repay::buy_lpn::{self, DexState as BuyLpnState},
 };
@@ -56,47 +56,14 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        let profit = lease.lease.loan.profit().clone();
-        let time_alarms = lease.lease.time_alarms.clone();
-        let price_alarms = lease.lease.oracle.clone();
-        let (
+        try_repay_lease(
             lease,
-            RepayResult {
-                receipt,
-                messages: repay_messages,
-                liquidation,
-            },
-        ) = lease.execute(
-            Repay::new(
-                RepayFn {},
-                payment,
-                env.block.time,
-                profit,
-                time_alarms,
-                price_alarms,
-            ),
+            RepayFn {},
+            payment,
+            PaymentEmitter::new(env),
+            env,
             querier,
-        )?;
-
-        let repay_response = MessageResponse::messages_with_events(
-            repay_messages,
-            event::emit_payment(env, &lease.lease, &receipt),
-        );
-
-        match liquidation {
-            LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, repay_response, lease)),
-            LiquidationStatus::NewAlarms {
-                current_liability,
-                alarms,
-            } => {
-                let response =
-                    alarms_resp(&lease, current_liability, alarms).merge_with(repay_response);
-                Ok(finish_repay(receipt.close, response, lease))
-            }
-            LiquidationStatus::NeedLiquidation(liquidation) => {
-                start_liquidation(lease, liquidation, repay_response, env, querier)
-            }
-        }
+        )
     }
 
     pub(in crate::contract::state::opened) fn try_liquidate(
@@ -106,15 +73,13 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        let profit = lease.lease.loan.profit().clone();
-
         match liquidation {
             LiquidationDTO::Partial {
                 amount: _,
                 cause: _,
-            } => try_partial_liquidation(lease, liquidation, liquidation_lpn, profit, env, querier),
+            } => try_partial_liquidation(lease, liquidation, liquidation_lpn, env, querier),
             LiquidationDTO::Full(_) => {
-                try_full_liquidation(lease, liquidation, liquidation_lpn, profit, env, querier)
+                try_full_liquidation(lease, liquidation, liquidation_lpn, env, querier)
             }
         }
     }
@@ -209,25 +174,48 @@ fn try_partial_liquidation(
     lease: Lease,
     liquidation: LiquidationDTO,
     liquidation_lpn: LpnCoin,
-    profit: ProfitRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
+    let liquidation_amount = liquidation.amount(&lease.lease).clone();
+    try_repay_lease(
+        lease,
+        PartialCloseFn::new(liquidation_amount.clone()),
+        liquidation_lpn,
+        LiquidationEmitter::new(liquidation, liquidation_amount, env),
+        env,
+        querier,
+    )
+}
+
+fn try_repay_lease<RepayableT, EmitterT>(
+    lease: Lease,
+    repay_fn: RepayableT,
+    amount: LpnCoin,
+    emitter_fn: EmitterT,
+    env: &Env,
+    querier: &QuerierWrapper<'_>,
+) -> Result<platform::state_machine::Response<crate::contract::state::State>, ContractError>
+where
+    RepayableT: Repayable,
+    EmitterT: RepayEmitter,
+{
+    let profit = lease.lease.loan.profit().clone();
     let price_alarms = lease.lease.oracle.clone();
     let time_alarms = lease.lease.time_alarms.clone();
-    let liquidation_amount = liquidation.amount(&lease.lease).clone();
     let (
         lease,
         RepayResult {
-            receipt,
-            messages: liquidate_messages,
-            liquidation: next_liquidation,
+            response,
+            loan_paid,
+            liquidation,
         },
     ) = lease.execute(
         Repay::new(
-            PartialCloseFn::new(liquidation_amount.clone()),
-            liquidation_lpn,
+            repay_fn,
+            amount,
             env.block.time,
+            emitter_fn,
             profit,
             time_alarms,
             price_alarms,
@@ -235,29 +223,17 @@ fn try_partial_liquidation(
         querier,
     )?;
 
-    let liquidate_response = MessageResponse::messages_with_events(
-        liquidate_messages,
-        state_event::emit_liquidation(
-            env,
-            &lease.lease.addr,
-            &receipt,
-            liquidation.cause(),
-            &liquidation_amount,
-        ),
-    );
-
-    match next_liquidation {
-        LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, liquidate_response, lease)),
+    match liquidation {
+        LiquidationStatus::NoDebt => Ok(finish_repay(loan_paid, response, lease)),
         LiquidationStatus::NewAlarms {
             current_liability,
             alarms,
         } => {
-            let response =
-                alarms_resp(&lease, current_liability, alarms).merge_with(liquidate_response);
-            Ok(finish_repay(receipt.close, response, lease))
+            let response = alarms_resp(&lease, current_liability, alarms).merge_with(response);
+            Ok(finish_repay(loan_paid, response, lease))
         }
         LiquidationStatus::NeedLiquidation(liquidation) => {
-            start_liquidation(lease, liquidation, liquidate_response, env, querier)
+            start_liquidation(lease, liquidation, response, env, querier)
         }
     }
 }
@@ -266,7 +242,6 @@ fn try_full_liquidation(
     lease: Lease,
     liquidation: LiquidationDTO,
     liquidation_lpn: LpnCoin,
-    profit: ProfitRef,
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
@@ -276,7 +251,6 @@ fn try_full_liquidation(
             lease,
             (liquidation, liquidation_lpn),
             env.block.time,
-            profit,
             env,
             querier,
         )

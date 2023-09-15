@@ -2,17 +2,32 @@ use finance::liability::Cause;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
-use crate::{api::LeaseCoin, contract::cmd::ReceiptDTO, event::Type};
+use crate::{
+    api::LeaseCoin,
+    contract::cmd::{LiquidationDTO, ReceiptDTO, RepayEmitter},
+    event::Type,
+};
 
-pub(super) fn emit_liquidation(
-    env: &Env,
-    lease_addr: &Addr,
-    receipt: &ReceiptDTO,
-    liquidation_cause: &Cause,
-    liquidation_amount: &LeaseCoin,
-) -> Emitter {
-    let emitter = emit_payment_int(Type::Liquidation, env, lease_addr, receipt);
-    emit_liquidation_info(emitter, liquidation_cause, liquidation_amount)
+pub(super) struct LiquidationEmitter<'env> {
+    liquidation: LiquidationDTO,
+    liquidation_amount: LeaseCoin,
+    env: &'env Env,
+}
+
+impl<'env> LiquidationEmitter<'env> {
+    pub fn new(liquidation: LiquidationDTO, liquidation_amount: LeaseCoin, env: &'env Env) -> Self {
+        Self {
+            liquidation,
+            liquidation_amount,
+            env,
+        }
+    }
+}
+impl<'env> RepayEmitter for LiquidationEmitter<'env> {
+    fn emit(self, lease: &Addr, receipt: &ReceiptDTO) -> Emitter {
+        let emitter = emit_payment_int(Type::Liquidation, self.env, lease, receipt);
+        emit_liquidation_info(emitter, self.liquidation.cause(), &self.liquidation_amount)
+    }
 }
 
 pub(super) fn emit_payment_int(

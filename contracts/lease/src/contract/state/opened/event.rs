@@ -1,11 +1,11 @@
 use finance::liability::Level;
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::Env;
+use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::{
     api::DownpaymentCoin,
     contract::{
-        cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO},
+        cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO, RepayEmitter},
         state::event as state_event,
     },
     event::Type,
@@ -32,8 +32,16 @@ pub(super) fn emit_lease_opened(
         .emit_coin_dto("downpayment", &downpayment)
 }
 
-pub(super) fn emit_payment(env: &Env, lease: &LeaseDTO, receipt: &ReceiptDTO) -> Emitter {
-    state_event::emit_payment_int(Type::PaidActive, env, &lease.addr, receipt)
+pub(super) struct PaymentEmitter<'env>(&'env Env);
+impl<'env> PaymentEmitter<'env> {
+    pub fn new(env: &'env Env) -> Self {
+        Self(env)
+    }
+}
+impl<'env> RepayEmitter for PaymentEmitter<'env> {
+    fn emit(self, lease: &Addr, receipt: &ReceiptDTO) -> Emitter {
+        state_event::emit_payment_int(Type::PaidActive, self.0, lease, receipt)
+    }
 }
 
 pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitter {

@@ -1,22 +1,19 @@
-use finance::liability::Cause;
-use platform::{batch::Emitter, message::Response as MessageResponse};
-use profit::stub::ProfitRef;
+use platform::message::Response as MessageResponse;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Addr, Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{LeaseCoin, LpnCoin, StateResponse},
+    api::{LpnCoin, StateResponse},
     contract::{
-        cmd::{FullLiquidation, FullLiquidationResult, LiquidationDTO, ReceiptDTO},
-        state::event,
+        cmd::{FullLiquidation, FullLiquidationResult, LiquidationDTO, RepayEmitter},
         Lease,
     },
     error::ContractResult,
     lease::with_lease,
 };
 
-use super::{Handler, Response};
+use super::{event::LiquidationEmitter, Handler, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Liquidated {}
@@ -27,7 +24,6 @@ impl Liquidated {
         lease: Lease,
         liquidation_descr: (LiquidationDTO, LpnCoin),
         now: Timestamp,
-        profit: ProfitRef,
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> ContractResult<MessageResponse> {
@@ -36,22 +32,20 @@ impl Liquidated {
         let liquidation_lpn = liquidation_descr.1;
         let liquidation_amount = liquidation.amount(&lease.lease).clone();
         let customer = lease.lease.customer.clone();
+        let profit = lease.lease.loan.profit().clone();
 
+        // TODO define a fn similar to `contract::Lease::execute`
         with_lease::execute(
             lease.lease,
             FullLiquidation::new(liquidation_lpn, now, profit),
             querier,
         )
         .map(|FullLiquidationResult { receipt, messages }| {
+            // TODO move event emitting into an emitFn passed to the `FullLiquidation`
             MessageResponse::messages_with_events(
                 messages,
-                self.emit_ok(
-                    env,
-                    &lease_addr,
-                    &receipt,
-                    liquidation.cause(),
-                    &liquidation_amount,
-                ),
+                LiquidationEmitter::new(liquidation, liquidation_amount, env)
+                    .emit(&lease_addr, &receipt),
             )
         })
         .and_then(|liquidation_response| {
@@ -61,23 +55,6 @@ impl Liquidated {
                 .map(|finalizer_msgs| liquidation_response.merge_with(finalizer_msgs))
             //make sure the finalizer messages go out last
         })
-    }
-
-    fn emit_ok(
-        &self,
-        env: &Env,
-        lease_addr: &Addr,
-        receipt: &ReceiptDTO,
-        liquidation_cause: &Cause,
-        liquidation_amount: &LeaseCoin,
-    ) -> Emitter {
-        event::emit_liquidation(
-            env,
-            lease_addr,
-            receipt,
-            liquidation_cause,
-            liquidation_amount,
-        )
     }
 }
 

@@ -7,7 +7,7 @@ pub(crate) use liquidation_status::{
 pub(crate) use open::open_lease;
 pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
 pub(crate) use repay::RepayFn;
-pub(crate) use repayable::{ReceiptDTO, Repay, RepayResult};
+pub(crate) use repayable::{Emitter as RepayEmitter, ReceiptDTO, Repay, RepayResult, Repayable};
 pub(crate) use state::LeaseState;
 
 mod close_full;
