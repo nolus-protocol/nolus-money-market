@@ -124,11 +124,21 @@ pub struct PositionSpec {
 impl PositionSpec {
     #[cfg(any(test, feature = "testing"))]
     pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
-        Self {
+        let obj = Self {
             liability,
             min_asset,
             min_sell_asset,
-        }
+        };
+        debug_assert_eq!(obj.invariant_held(), Ok(()));
+        obj
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    fn invariant_held(&self) -> ContractResult<()> {
+        ContractError::broken_invariant_if::<PositionSpec>(
+            self.min_asset.ticker() != self.min_sell_asset.ticker(),
+            "The ticker of min asset should be the same as the ticker of min sell asset",
+        )
     }
 }
 
@@ -194,5 +204,40 @@ mod test_invariant {
                 msg: real_msg
             }) if target_type.contains("InterestPaymentSpec") && real_msg.contains(msg)
         ));
+    }
+}
+
+#[cfg(test)]
+mod test_position_spec {
+    use cosmwasm_std::from_slice;
+    use currency::lpn::Usdc;
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+
+    use super::PositionSpec;
+
+    type LpnCoin = Coin<Usdc>;
+
+    #[test]
+    fn new_valid() {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        let position_spec = PositionSpec::new(
+            liability,
+            LpnCoin::new(5000).into(),
+            LpnCoin::new(9000000).into(),
+        );
+
+        assert_load_ok(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#, position_spec);
+    }
+
+    fn assert_load_ok(json: &[u8], exp: PositionSpec) {
+        assert_eq!(Ok(exp), from_slice::<PositionSpec>(json));
     }
 }

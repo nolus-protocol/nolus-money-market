@@ -60,7 +60,6 @@ where
         loan: Loan<Lpn, LppLoan>,
         oracle: Oracle,
     ) -> Self {
-        debug_assert!(!position.amount().is_zero());
         debug_assert!(!currency::equal::<Lpn, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
@@ -75,13 +74,13 @@ where
 
     pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
         let position = dto.position.try_into().expect("The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol() and Lpn == dto.position.min_asset.symbol()");
-        Self {
-            addr: dto.addr,
-            customer: dto.customer,
+        Self::new(
+            dto.addr,
+            dto.customer,
             position,
-            loan: Loan::from_dto(dto.loan, lpp_loan),
+            Loan::from_dto(dto.loan, lpp_loan),
             oracle,
-        }
+        )
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
@@ -304,7 +303,7 @@ mod tests {
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            Position::new(
+            Position::<TestCurrency, TestLpn>::new_unchecked(
                 amount,
                 Liability::new(
                     Percent::from_percent(65),

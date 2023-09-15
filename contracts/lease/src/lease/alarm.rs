@@ -50,10 +50,9 @@ where
             now < &grace_period_end,
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
         );
+        let recalculation_time = self.recalc_time(now);
         time_alarms
-            .setup_alarm(
-                grace_period_end.min(*now + self.position.liability().recalculation_time()),
-            )
+            .setup_alarm(grace_period_end.min(recalculation_time))
             .map_err(Into::into)
     }
 
@@ -67,11 +66,8 @@ where
         PriceAlarms: PriceAlarmsTrait,
     {
         debug_assert!(!currency::equal::<Lpn, Asset>());
-
-        let total_liability = self
-            .loan
-            .liability_status(*now + self.position.liability().recalculation_time())
-            .total;
+        let recalculation_time = self.recalc_time(now);
+        let total_liability = self.loan.liability_status(recalculation_time).total;
         debug_assert!(!total_liability.is_zero());
 
         let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
@@ -105,6 +101,10 @@ where
         debug_assert!(!alarm_at.ltv().is_zero());
 
         Ok(total_of(alarm_at.ltv().of(self.position.amount())).is(liability))
+    }
+
+    fn recalc_time(&self, now: &Timestamp) -> Timestamp {
+        *now + self.position.liability().recalculation_time()
     }
 }
 

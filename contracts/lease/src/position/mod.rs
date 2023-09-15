@@ -2,7 +2,10 @@ use currency::Currency;
 pub use dto::PositionDTO;
 use finance::{coin::Coin, liability::Liability, zero::Zero};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::{LeaseCoin, PositionSpec},
+    error::{ContractError, ContractResult},
+};
 
 mod dto;
 
@@ -19,7 +22,7 @@ where
     Asset: Currency,
     Lpn: Currency,
 {
-    pub fn new(
+    fn new(
         amount: Coin<Asset>,
         liability: Liability,
         min_asset: Coin<Lpn>,
@@ -33,6 +36,24 @@ where
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
+    }
+
+    #[cfg(test)]
+    pub fn new_unchecked(
+        amount: Coin<Asset>,
+        liability: Liability,
+        min_asset: Coin<Lpn>,
+        min_sell_asset: Coin<Lpn>,
+    ) -> Self {
+        Self::new(amount, liability, min_asset, min_sell_asset)
+    }
+
+    pub fn try_from(amount: &LeaseCoin, spec: PositionSpec) -> ContractResult<Self> {
+        let amount = amount.try_into()?;
+        let min_asset = spec.min_asset.try_into()?;
+        let min_sell_asset = spec.min_sell_asset.try_into()?;
+
+        Ok(Self::new(amount, spec.liability, min_asset, min_sell_asset))
     }
 
     pub fn amount(&self) -> Coin<Asset> {
