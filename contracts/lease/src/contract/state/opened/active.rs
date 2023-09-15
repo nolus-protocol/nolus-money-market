@@ -193,7 +193,7 @@ fn try_repay_lease<RepayableT, EmitterT>(
     emitter_fn: EmitterT,
     env: &Env,
     querier: &QuerierWrapper<'_>,
-) -> Result<platform::state_machine::Response<crate::contract::state::State>, ContractError>
+) -> ContractResult<Response>
 where
     RepayableT: Repayable,
     EmitterT: RepayEmitter,
