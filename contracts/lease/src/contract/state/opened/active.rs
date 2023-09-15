@@ -59,13 +59,14 @@ impl Active {
         let profit = lease.lease.loan.profit().clone();
         let time_alarms = lease.lease.time_alarms.clone();
         let price_alarms = lease.lease.oracle.clone();
-        let RepayResult {
-            lease: lease_updated,
-            receipt,
-            messages: repay_messages,
-            liquidation,
-        } = with_lease::execute(
-            lease.lease,
+        let (
+            lease,
+            RepayResult {
+                receipt,
+                messages: repay_messages,
+                liquidation,
+            },
+        ) = lease.execute(
             Repay::new(
                 RepayFn {},
                 payment,
@@ -79,11 +80,9 @@ impl Active {
 
         let repay_response = MessageResponse::messages_with_events(
             repay_messages,
-            event::emit_payment(env, &lease_updated, &receipt),
+            event::emit_payment(env, &lease.lease, &receipt),
         );
 
-        // TODO extract `with_lease::execute` and the update of the lease DTO into a fn of contract::Lease
-        let lease = Lease::new(lease_updated, lease.dex, lease.finalizer);
         match liquidation {
             LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, repay_response, lease)),
             LiquidationStatus::NewAlarms {
@@ -217,13 +216,14 @@ fn try_partial_liquidation(
     let price_alarms = lease.lease.oracle.clone();
     let time_alarms = lease.lease.time_alarms.clone();
     let liquidation_amount = liquidation.amount(&lease.lease).clone();
-    let RepayResult {
-        lease: lease_updated,
-        receipt,
-        messages: liquidate_messages,
-        liquidation: next_liquidation,
-    } = with_lease::execute(
-        lease.lease,
+    let (
+        lease,
+        RepayResult {
+            receipt,
+            messages: liquidate_messages,
+            liquidation: next_liquidation,
+        },
+    ) = lease.execute(
         Repay::new(
             PartialCloseFn::new(liquidation_amount.clone()),
             liquidation_lpn,
@@ -239,14 +239,13 @@ fn try_partial_liquidation(
         liquidate_messages,
         state_event::emit_liquidation(
             env,
-            &lease_updated.addr,
+            &lease.lease.addr,
             &receipt,
             liquidation.cause(),
             &liquidation_amount,
         ),
     );
 
-    let lease = Lease::new(lease_updated, lease.dex, lease.finalizer);
     match next_liquidation {
         LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, liquidate_response, lease)),
         LiquidationStatus::NewAlarms {

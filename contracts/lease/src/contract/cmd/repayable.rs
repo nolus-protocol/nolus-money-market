@@ -9,6 +9,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LpnCoin,
+    contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
     loan::RepayReceipt,
@@ -67,8 +68,20 @@ where
     }
 }
 
+pub(crate) struct RepayLeaseResult {
+    lease: LeaseDTO,
+    result: RepayResult,
+}
+
+impl SplitDTOOut for RepayLeaseResult {
+    type Other = RepayResult;
+
+    fn split_into(self) -> (LeaseDTO, Self::Other) {
+        (self.lease, self.result)
+    }
+}
+
 pub(crate) struct RepayResult {
-    pub lease: LeaseDTO,
     pub receipt: ReceiptDTO,
     pub messages: Batch,
     pub liquidation: LiquidationStatus,
@@ -89,7 +102,7 @@ impl<RepayableT> WithLease for Repay<RepayableT>
 where
     RepayableT: Repayable,
 {
-    type Output = RepayResult;
+    type Output = RepayLeaseResult;
 
     type Error = ContractError;
 
@@ -122,11 +135,13 @@ where
                  lease,
                  batch: messages,
              }| {
-                RepayResult {
+                RepayLeaseResult {
                     lease,
-                    receipt: receipt.into(),
-                    messages: messages.merge(profit.into()),
-                    liquidation,
+                    result: RepayResult {
+                        receipt: receipt.into(),
+                        messages: messages.merge(profit.into()),
+                        liquidation,
+                    },
                 }
             },
         )

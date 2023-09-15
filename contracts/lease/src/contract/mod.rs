@@ -1,8 +1,12 @@
+use cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable};
 
-use crate::lease::LeaseDTO;
+use crate::lease::{
+    with_lease::{self, WithLease},
+    LeaseDTO,
+};
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::FinalizerRef;
@@ -21,6 +25,12 @@ pub(crate) struct Lease {
     finalizer: FinalizerRef,
 }
 
+pub(crate) trait SplitDTOOut {
+    type Other;
+
+    fn split_into(self) -> (LeaseDTO, Self::Other);
+}
+
 impl Lease {
     fn new(lease: LeaseDTO, dex: Account, finalizer: FinalizerRef) -> Self {
         Self {
@@ -28,6 +38,25 @@ impl Lease {
             dex,
             finalizer,
         }
+    }
+
+    fn execute<Cmd>(
+        self,
+        cmd: Cmd,
+        querier: &QuerierWrapper<'_>,
+    ) -> Result<(Self, <Cmd::Output as SplitDTOOut>::Other), Cmd::Error>
+    where
+        Cmd: WithLease,
+        Cmd::Output: SplitDTOOut,
+        Cmd::Error: From<lpp::error::ContractError>,
+        currency::error::Error: Into<Cmd::Error>,
+        timealarms::error::ContractError: Into<Cmd::Error>,
+        oracle::error::ContractError: Into<Cmd::Error>,
+    {
+        with_lease::execute(self.lease, cmd, querier).map(|result| {
+            let (lease, other) = result.split_into();
+            (Self::new(lease, self.dex, self.finalizer), other)
+        })
     }
 }
 
