@@ -104,7 +104,7 @@ impl ContractInSwap<TransferOutState, SellAssetStateResponse> for SellAsset {
 impl ContractInSwap<SwapState, SellAssetStateResponse> for SellAsset {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
         super::query(
-            self.lease.lease,
+            self.lease,
             self.liquidation,
             LiquidateTrx::Swap,
             now,
@@ -116,7 +116,7 @@ impl ContractInSwap<SwapState, SellAssetStateResponse> for SellAsset {
 impl ContractInSwap<TransferInInitState, SellAssetStateResponse> for SellAsset {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
         super::query(
-            self.lease.lease,
+            self.lease,
             self.liquidation,
             LiquidateTrx::TransferInInit,
             now,
@@ -128,7 +128,7 @@ impl ContractInSwap<TransferInInitState, SellAssetStateResponse> for SellAsset {
 impl ContractInSwap<TransferInFinishState, SellAssetStateResponse> for SellAsset {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
         super::query(
-            self.lease.lease,
+            self.lease,
             self.liquidation,
             LiquidateTrx::TransferInFinish,
             now,

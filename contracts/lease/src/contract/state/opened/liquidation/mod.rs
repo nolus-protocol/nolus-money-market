@@ -5,22 +5,21 @@ use crate::{
         opened::{LiquidateTrx, OngoingTrx},
         StateResponse,
     },
-    contract::cmd::LiquidationDTO,
+    contract::{cmd::LiquidationDTO, Lease},
     error::ContractResult,
-    lease::LeaseDTO,
 };
 
 pub mod sell_asset;
 
 fn query(
-    lease: LeaseDTO,
+    lease: Lease,
     liquidation: LiquidationDTO,
     in_progress: LiquidateTrx,
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
     let in_progress = OngoingTrx::Liquidation {
-        liquidation: liquidation.amount(&lease).clone(),
+        liquidation: liquidation.amount(&lease.lease).clone(),
         in_progress,
     };
 

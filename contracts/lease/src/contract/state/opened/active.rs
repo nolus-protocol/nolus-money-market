@@ -21,7 +21,6 @@ use crate::{
         Lease,
     },
     error::{ContractError, ContractResult},
-    lease::with_lease,
 };
 
 use super::{
@@ -140,8 +139,7 @@ impl Active {
     }
 
     fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        let liquidation_status = with_lease::execute(
-            self.lease.lease.clone(),
+        let liquidation_status = self.lease.execute(
             LiquidationStatusCmd::new(
                 env.block.time,
                 &self.lease.lease.time_alarms,
@@ -210,7 +208,7 @@ where
             loan_paid,
             liquidation,
         },
-    ) = lease.execute(
+    ) = lease.update(
         Repay::new(
             repay_fn,
             amount,
@@ -293,7 +291,7 @@ fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) 
 
 impl Handler for Active {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        super::lease_state(self.lease.lease, None, now, querier)
+        super::lease_state(self.lease, None, now, querier)
     }
 
     fn repay(

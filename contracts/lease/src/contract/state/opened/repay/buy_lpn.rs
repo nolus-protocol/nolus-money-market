@@ -96,7 +96,7 @@ impl SwapTask for BuyLpn {
 impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferOut,
             now,
@@ -107,14 +107,14 @@ impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
 
 impl ContractInSwap<SwapState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
+        repay::query(self.lease, self.payment, RepayTrx::Swap, now, querier)
     }
 }
 
 impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferInInit,
             now,
@@ -126,7 +126,7 @@ impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
 impl ContractInSwap<TransferInFinishState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferInInit,
             now,

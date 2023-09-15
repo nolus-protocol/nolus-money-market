@@ -2,9 +2,8 @@ use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},
-    contract::cmd::LeaseState,
+    contract::{cmd::LeaseState, Lease},
     error::ContractResult,
-    lease::{with_lease, LeaseDTO},
 };
 
 pub mod active;
@@ -14,10 +13,10 @@ pub mod liquidation;
 pub mod repay;
 
 fn lease_state(
-    lease: LeaseDTO,
+    lease: Lease,
     in_progress: Option<OngoingTrx>,
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
-    with_lease::execute(lease, LeaseState::new(now, in_progress), querier)
+    lease.execute(LeaseState::new(now, in_progress), querier)
 }

@@ -5,14 +5,14 @@ use crate::{
         opened::{OngoingTrx, RepayTrx},
         PaymentCoin, StateResponse,
     },
+    contract::Lease,
     error::ContractResult,
-    lease::LeaseDTO,
 };
 
 pub mod buy_lpn;
 
 fn query(
-    lease: LeaseDTO,
+    lease: Lease,
     payment: PaymentCoin,
     in_progress: RepayTrx,
     now: Timestamp,

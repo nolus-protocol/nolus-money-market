@@ -10,7 +10,6 @@ use crate::{
         Lease,
     },
     error::ContractResult,
-    lease::with_lease,
 };
 
 use super::{event::LiquidationEmitter, Handler, Response};
@@ -33,22 +32,18 @@ impl Liquidated {
         let customer = lease.lease.customer.clone();
         let profit = lease.lease.loan.profit().clone();
 
-        // TODO define a fn similar to `contract::Lease::execute`
-        with_lease::execute(
-            lease.lease,
-            FullLiquidation::new(
-                liquidation_lpn,
-                now,
-                LiquidationEmitter::new(liquidation, liquidation_amount, env),
-                profit,
-            ),
-            querier,
-        )
-        .and_then(|liquidation_response| {
+        lease.finalizer.notify(customer).and_then(|finalizer_msgs| {
             lease
-                .finalizer
-                .notify(customer)
-                .map(|finalizer_msgs| liquidation_response.merge_with(finalizer_msgs))
+                .execute(
+                    FullLiquidation::new(
+                        liquidation_lpn,
+                        now,
+                        LiquidationEmitter::new(liquidation, liquidation_amount, env),
+                        profit,
+                    ),
+                    querier,
+                )
+                .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))
             //make sure the finalizer messages go out last
         })
     }
