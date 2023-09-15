@@ -37,18 +37,9 @@ pub(crate) trait Repayable {
 }
 
 pub(crate) trait Emitter {
-    // TODO
-    // fn emit<Lpn, Asset, Lpp, Oracle>(
-    fn emit(
-        self,
-        // TODO
-        // lease: &Lease<Lpn, Asset, Lpp, Oracle>,
-        // receipt: RepayReceipt<Lpn>,
-        lease: &Addr,
-        receipt: &ReceiptDTO,
-    ) -> PlatformEmitter;
-    // where
-    //     Lpn: Currency;
+    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> PlatformEmitter
+    where
+        Lpn: Currency;
 }
 
 pub(crate) struct Repay<RepayableT, EmitterT>
@@ -110,17 +101,6 @@ pub(crate) struct RepayResult {
     pub liquidation: LiquidationStatus,
 }
 
-pub(crate) struct ReceiptDTO {
-    pub total: LpnCoin,
-    pub previous_margin_paid: LpnCoin,
-    pub current_margin_paid: LpnCoin,
-    pub previous_interest_paid: LpnCoin,
-    pub current_interest_paid: LpnCoin,
-    pub principal_paid: LpnCoin,
-    pub change: LpnCoin,
-    pub close: bool,
-}
-
 impl<RepayableT, EmitterT> WithLease for Repay<RepayableT, EmitterT>
 where
     RepayableT: Repayable,
@@ -146,6 +126,7 @@ where
         let receipt = self
             .repay_fn
             .do_repay(&mut lease, amount, self.now, &mut profit)?;
+        let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
         let liquidation = liquidation_status::status_and_schedule(
             &lease,
@@ -159,8 +140,6 @@ where
                  lease,
                  batch: messages,
              }| {
-                let receipt_dto = receipt.into();
-                let events = self.emitter_fn.emit(&lease.addr, &receipt_dto);
                 RepayLeaseResult {
                     lease,
                     result: RepayResult {
@@ -168,29 +147,11 @@ where
                             messages.merge(profit.into()),
                             events,
                         ),
-                        loan_paid: receipt_dto.close,
+                        loan_paid: receipt.close(),
                         liquidation,
                     },
                 }
             },
         )
-    }
-}
-
-impl<Lpn> From<RepayReceipt<Lpn>> for ReceiptDTO
-where
-    Lpn: Currency,
-{
-    fn from(value: RepayReceipt<Lpn>) -> Self {
-        Self {
-            total: value.total().into(),
-            previous_margin_paid: value.previous_margin_paid().into(),
-            current_margin_paid: value.current_margin_paid().into(),
-            previous_interest_paid: value.previous_interest_paid().into(),
-            current_interest_paid: value.current_interest_paid().into(),
-            principal_paid: value.principal_paid().into(),
-            change: value.change().into(),
-            close: value.close(),
-        }
     }
 }

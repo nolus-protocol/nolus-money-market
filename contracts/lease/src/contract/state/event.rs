@@ -1,11 +1,13 @@
+use currency::Currency;
 use finance::liability::Cause;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::{
     api::LeaseCoin,
-    contract::cmd::{LiquidationDTO, ReceiptDTO, RepayEmitter},
+    contract::cmd::{LiquidationDTO, RepayEmitter},
     event::Type,
+    loan::RepayReceipt,
 };
 
 pub(super) struct LiquidationEmitter<'env> {
@@ -24,35 +26,35 @@ impl<'env> LiquidationEmitter<'env> {
     }
 }
 impl<'env> RepayEmitter for LiquidationEmitter<'env> {
-    fn emit(self, lease: &Addr, receipt: &ReceiptDTO) -> Emitter {
+    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
+    where
+        Lpn: Currency,
+    {
         let emitter = emit_payment_int(Type::Liquidation, self.env, lease, receipt);
         emit_liquidation_info(emitter, self.liquidation.cause(), &self.liquidation_amount)
     }
 }
 
-pub(super) fn emit_payment_int(
+pub(super) fn emit_payment_int<Lpn>(
     event_type: Type,
     env: &Env,
-    lease_addr: &Addr,
-    receipt: &ReceiptDTO,
-) -> Emitter {
+    lease: &Addr,
+    receipt: &RepayReceipt<Lpn>,
+) -> Emitter
+where
+    Lpn: Currency,
+{
     Emitter::of_type(event_type)
         .emit_tx_info(env)
-        .emit("to", lease_addr)
-        .emit_coin_dto("payment", &receipt.total)
-        .emit_to_string_value("loan-close", receipt.close)
-        .emit_coin_amount(
-            "prev-margin-interest",
-            receipt.previous_margin_paid.amount(),
-        )
-        .emit_coin_amount(
-            "prev-loan-interest",
-            receipt.previous_interest_paid.amount(),
-        )
-        .emit_coin_amount("curr-margin-interest", receipt.current_margin_paid.amount())
-        .emit_coin_amount("curr-loan-interest", receipt.current_interest_paid.amount())
-        .emit_coin_amount("principal", receipt.principal_paid.amount())
-        .emit_coin_amount("change", receipt.change.amount())
+        .emit("to", lease)
+        .emit_coin("payment", receipt.total())
+        .emit_to_string_value("loan-close", receipt.close())
+        .emit_coin_amount("prev-margin-interest", receipt.previous_margin_paid())
+        .emit_coin_amount("prev-loan-interest", receipt.previous_interest_paid())
+        .emit_coin_amount("curr-margin-interest", receipt.current_margin_paid())
+        .emit_coin_amount("curr-loan-interest", receipt.current_interest_paid())
+        .emit_coin_amount("principal", receipt.principal_paid())
+        .emit_coin_amount("change", receipt.change())
 }
 
 pub(super) fn emit_liquidation_info(

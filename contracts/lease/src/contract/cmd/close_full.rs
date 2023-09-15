@@ -1,61 +1,41 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::batch::Batch;
+use platform::message::Response as MessageResponse;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, FullRepayReceipt, Lease},
+    lease::{with_lease::WithLease, Lease},
 };
 
-use super::ReceiptDTO;
+use super::repayable::Emitter;
 
-pub(crate) struct CloseResult {
-    pub receipt: ReceiptDTO,
-    pub messages: Batch,
-}
-
-impl CloseResult {
-    fn new(receipt: ReceiptDTO, messages: Batch) -> Self {
-        debug_assert!(
-            receipt.close,
-            "The full-close payment should have repaid the total outstanding liability!"
-        );
-        Self { receipt, messages }
-    }
-}
-
-impl<Lpn> From<FullRepayReceipt<Lpn>> for CloseResult
-where
-    Lpn: Currency,
-{
-    fn from(value: FullRepayReceipt<Lpn>) -> Self {
-        let (receipt, messages) = value.decompose();
-        Self::new(receipt.into(), messages)
-    }
-}
-
-pub(crate) struct Close {
+pub(crate) struct Close<EmitterT> {
     payment: LpnCoin,
     now: Timestamp,
+    emitter_fn: EmitterT,
     profit: ProfitRef,
 }
 
-impl Close {
-    pub fn new(payment: LpnCoin, now: Timestamp, profit: ProfitRef) -> Self {
+impl<EmitterT> Close<EmitterT> {
+    pub fn new(payment: LpnCoin, now: Timestamp, emitter_fn: EmitterT, profit: ProfitRef) -> Self {
         Self {
             payment,
             now,
+            emitter_fn,
             profit,
         }
     }
 }
 
-impl WithLease for Close {
-    type Output = CloseResult;
+impl<EmitterT> WithLease for Close<EmitterT>
+where
+    EmitterT: Emitter,
+{
+    type Output = MessageResponse;
 
     type Error = ContractError;
 
@@ -69,11 +49,18 @@ impl WithLease for Close {
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
     {
+        let lease_addr = lease.addr().clone();
         // TODO [issue #92] request the needed amount from the Liquidation Fund
         // this holds true for both use cases - full liquidation and full close
         // make sure the message goes out before the liquidation messages.
         lease
             .close_full(self.payment.try_into()?, self.now, self.profit.as_stub())
-            .map(Into::into)
+            .map(|result| {
+                let (receipt, messages) = result.decompose();
+                MessageResponse::messages_with_events(
+                    messages,
+                    self.emitter_fn.emit(&lease_addr, &receipt),
+                )
+            })
     }
 }

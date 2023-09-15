@@ -13,9 +13,7 @@ use crate::{
     position::PositionDTO,
 };
 
-pub(super) use self::{
-    close::FullRepayReceipt, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
-};
+pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
 
 mod alarm;
 mod close;
@@ -45,6 +43,12 @@ pub struct Lease<Lpn, Asset, Lpp, Oracle> {
 pub struct IntoDTOResult {
     pub lease: LeaseDTO,
     pub batch: Batch,
+}
+
+impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle> {
+    pub(crate) fn addr(&self) -> &Addr {
+        &self.addr
+    }
 }
 
 impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>

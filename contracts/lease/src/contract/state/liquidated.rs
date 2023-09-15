@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 use crate::{
     api::{LpnCoin, StateResponse},
     contract::{
-        cmd::{FullLiquidation, FullLiquidationResult, LiquidationDTO, RepayEmitter},
+        cmd::{FullLiquidation, LiquidationDTO},
         Lease,
     },
     error::ContractResult,
@@ -27,7 +27,6 @@ impl Liquidated {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> ContractResult<MessageResponse> {
-        let lease_addr = lease.lease.addr.clone();
         let liquidation = liquidation_descr.0;
         let liquidation_lpn = liquidation_descr.1;
         let liquidation_amount = liquidation.amount(&lease.lease).clone();
@@ -37,17 +36,14 @@ impl Liquidated {
         // TODO define a fn similar to `contract::Lease::execute`
         with_lease::execute(
             lease.lease,
-            FullLiquidation::new(liquidation_lpn, now, profit),
+            FullLiquidation::new(
+                liquidation_lpn,
+                now,
+                LiquidationEmitter::new(liquidation, liquidation_amount, env),
+                profit,
+            ),
             querier,
         )
-        .map(|FullLiquidationResult { receipt, messages }| {
-            // TODO move event emitting into an emitFn passed to the `FullLiquidation`
-            MessageResponse::messages_with_events(
-                messages,
-                LiquidationEmitter::new(liquidation, liquidation_amount, env)
-                    .emit(&lease_addr, &receipt),
-            )
-        })
         .and_then(|liquidation_response| {
             lease
                 .finalizer

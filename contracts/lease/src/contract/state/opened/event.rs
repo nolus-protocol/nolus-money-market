@@ -1,3 +1,4 @@
+use currency::Currency;
 use finance::liability::Level;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
@@ -5,11 +6,12 @@ use sdk::cosmwasm_std::{Addr, Env};
 use crate::{
     api::DownpaymentCoin,
     contract::{
-        cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO, RepayEmitter},
+        cmd::{LiquidationDTO, OpenLoanRespResult, RepayEmitter},
         state::event as state_event,
     },
     event::Type,
     lease::LeaseDTO,
+    loan::RepayReceipt,
 };
 
 pub(super) fn emit_lease_opened(
@@ -39,7 +41,10 @@ impl<'env> PaymentEmitter<'env> {
     }
 }
 impl<'env> RepayEmitter for PaymentEmitter<'env> {
-    fn emit(self, lease: &Addr, receipt: &ReceiptDTO) -> Emitter {
+    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
+    where
+        Lpn: Currency,
+    {
         state_event::emit_payment_int(Type::PaidActive, self.0, lease, receipt)
     }
 }
