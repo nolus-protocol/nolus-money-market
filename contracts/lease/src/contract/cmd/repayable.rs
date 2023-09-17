@@ -121,11 +121,11 @@ where
         Asset: Currency,
     {
         let amount = self.amount.try_into()?;
-        let mut profit = self.profit.as_stub();
+        let mut profit_sender = self.profit.clone().into_stub();
 
         let receipt = self
             .repay_fn
-            .do_repay(&mut lease, amount, self.now, &mut profit)?;
+            .do_repay(&mut lease, amount, self.now, &mut profit_sender)?;
         let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
         let liquidation = liquidation_status::status_and_schedule(
@@ -144,7 +144,7 @@ where
                     lease,
                     result: RepayResult {
                         response: MessageResponse::messages_with_events(
-                            messages.merge(profit.into()),
+                            messages.merge(profit_sender.into()),
                             events,
                         ),
                         loan_paid: receipt.close(),

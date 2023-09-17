@@ -54,7 +54,7 @@ where
         // this holds true for both use cases - full liquidation and full close
         // make sure the message goes out before the liquidation messages.
         lease
-            .close_full(self.payment.try_into()?, self.now, self.profit.as_stub())
+            .close_full(self.payment.try_into()?, self.now, self.profit.into_stub())
             .map(|result| {
                 let (receipt, messages) = result.decompose();
                 MessageResponse::messages_with_events(

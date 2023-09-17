@@ -1260,6 +1260,6 @@ mod tests {
     }
 
     fn profit_stub() -> impl FixedAddressSender {
-        ProfitRef::unchecked(PROFIT_ADDR).as_stub()
+        ProfitRef::unchecked(PROFIT_ADDR).into_stub()
     }
 }

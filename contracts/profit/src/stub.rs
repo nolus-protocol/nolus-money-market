@@ -1,26 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
-use finance::coin::Coin;
-use platform::{
-    bank::{FixedAddressSender, LazySenderStub},
-    batch::Batch,
-};
+use platform::bank::{FixedAddressSender, LazySenderStub};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     msg::{ConfigResponse, QueryMsg},
     result::ContractResult,
 };
-
-pub trait Profit
-where
-    Self: Into<Batch>,
-{
-    fn send<C>(&mut self, amount: Coin<C>)
-    where
-        C: Currency;
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProfitRef {
@@ -29,13 +15,14 @@ pub struct ProfitRef {
 
 impl ProfitRef {
     pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
-        let _: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
-
-        Ok(Self { addr })
+        querier
+            .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
+            .map(|_: ConfigResponse| Self { addr })
+            .map_err(Into::into)
     }
 
-    pub fn as_stub(&self) -> impl FixedAddressSender {
-        LazySenderStub::new(self.addr.clone())
+    pub fn into_stub(self) -> impl FixedAddressSender {
+        LazySenderStub::new(self.addr)
     }
 }
 

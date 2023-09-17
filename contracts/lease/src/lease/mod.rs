@@ -168,7 +168,6 @@ mod tests {
     };
     use oracle::stub::{Oracle, OracleRef};
     use platform::batch::Batch;
-    use profit::stub::Profit;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{api::InterestPaymentSpec, loan::Loan};
@@ -282,14 +281,6 @@ mod tests {
 
     pub struct ProfitLocalStub {
         pub batch: Batch,
-    }
-
-    impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>)
-        where
-            C: Currency,
-        {
-        }
     }
 
     impl From<ProfitLocalStub> for Batch {
