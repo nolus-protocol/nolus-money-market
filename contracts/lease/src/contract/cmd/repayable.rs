@@ -11,19 +11,25 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCoin,
-    contract::SplitDTOOut,
+    api::{LeaseCoin, LpnCoin},
+    contract::{Lease, SplitDTOOut},
     error::{ContractError, ContractResult},
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
+    event::Type,
+    lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     loan::RepayReceipt,
 };
 
 use super::{liquidation_status, LiquidationStatus};
 
-pub(crate) trait Repayable {
+pub(crate) trait Closable {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin;
+    fn event_type(&self) -> Type;
+}
+
+pub(crate) trait RepayFn {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
         self,
-        lease: &mut Lease<Lpn, Asset, Lpp, Oracle>,
+        lease: &mut LeaseDO<Lpn, Asset, Lpp, Oracle>,
         amount: Coin<Lpn>,
         now: Timestamp,
         profit: &mut Profit,
@@ -44,7 +50,7 @@ pub(crate) trait Emitter {
 
 pub(crate) struct Repay<RepayableT, EmitterT>
 where
-    RepayableT: Repayable,
+    RepayableT: RepayFn,
     EmitterT: Emitter,
 {
     repay_fn: RepayableT,
@@ -58,7 +64,7 @@ where
 
 impl<RepayableT, EmitterT> Repay<RepayableT, EmitterT>
 where
-    RepayableT: Repayable,
+    RepayableT: RepayFn,
     EmitterT: Emitter,
 {
     pub fn new(
@@ -103,7 +109,7 @@ pub(crate) struct RepayResult {
 
 impl<RepayableT, EmitterT> WithLease for Repay<RepayableT, EmitterT>
 where
-    RepayableT: Repayable,
+    RepayableT: RepayFn,
     EmitterT: Emitter,
 {
     type Output = RepayLeaseResult;
@@ -112,7 +118,7 @@ where
 
     fn exec<Lpn, Asset, Lpp, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
+        mut lease: LeaseDO<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,

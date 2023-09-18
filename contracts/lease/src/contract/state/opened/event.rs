@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, Env};
 use crate::{
     api::DownpaymentCoin,
     contract::{
-        cmd::{LiquidationDTO, OpenLoanRespResult, RepayEmitter},
+        cmd::{OpenLoanRespResult, RepayEmitter},
         state::event as state_event,
     },
     event::Type,
@@ -53,11 +53,6 @@ pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitt
     emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
         .emit_percent_amount("ltv", level.ltv())
         .emit_to_string_value("level", level.ordinal())
-}
-
-pub(super) fn emit_liquidation_start(lease: &LeaseDTO, liquidation: &LiquidationDTO) -> Emitter {
-    let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
-    state_event::emit_liquidation_info(emitter, liquidation.cause(), liquidation.amount(lease))
 }
 
 fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {

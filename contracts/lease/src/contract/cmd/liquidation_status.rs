@@ -10,12 +10,16 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LeaseCoin,
+    contract::Lease,
     error::{ContractError, ContractResult},
-    lease::{with_lease::WithLease, Lease, LeaseDTO},
+    event::Type,
+    lease::{with_lease::WithLease, Lease as LeaseDO},
 };
 
+use super::repayable::Closable;
+
 pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
-    lease: &Lease<Lpn, Asset, Lpp, Oracle>,
+    lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
     when: Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
@@ -54,23 +58,36 @@ pub(crate) enum CmdResult {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum LiquidationDTO {
-    Partial { amount: LeaseCoin, cause: Cause },
-    Full(Cause),
+    Partial(PartialLiquidationDTO),
+    Full(FullLiquidationDTO),
 }
 
-impl LiquidationDTO {
-    pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
-        match self {
-            Self::Partial { amount, cause: _ } => amount,
-            Self::Full(_) => &lease.position.amount,
-        }
+#[derive(Serialize, Deserialize)]
+pub(crate) struct PartialLiquidationDTO {
+    pub amount: LeaseCoin,
+    pub cause: Cause,
+}
+impl Closable for PartialLiquidationDTO {
+    fn amount(&self, _lease: &Lease) -> &LeaseCoin {
+        &self.amount
     }
 
-    pub(crate) fn cause(&self) -> &Cause {
-        match self {
-            Self::Partial { amount: _, cause } => cause,
-            Self::Full(cause) => cause,
-        }
+    fn event_type(&self) -> Type {
+        Type::LiquidationSwap
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct FullLiquidationDTO {
+    pub cause: Cause,
+}
+impl Closable for FullLiquidationDTO {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+        &lease.lease.position.amount
+    }
+
+    fn event_type(&self) -> Type {
+        Type::LiquidationSwap
     }
 }
 
@@ -80,11 +97,11 @@ where
 {
     fn from(value: Liquidation<Asset>) -> Self {
         match value {
-            Liquidation::Partial { amount, cause } => Self::Partial {
+            Liquidation::Partial { amount, cause } => Self::Partial(PartialLiquidationDTO {
                 amount: amount.into(),
                 cause,
-            },
-            Liquidation::Full(cause) => Self::Full(cause),
+            }),
+            Liquidation::Full(cause) => Self::Full(FullLiquidationDTO { cause }),
         }
     }
 }
@@ -110,7 +127,7 @@ impl<'a> WithLease for Cmd<'a> {
 
     fn exec<Lpn, Asset, Loan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Loan, Oracle>,
+        lease: LeaseDO<Lpn, Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,

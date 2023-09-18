@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use platform::bank::{FixedAddressSender, LazySenderStub};
+use platform::bank::LazySenderStub;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -21,7 +21,7 @@ impl ProfitRef {
             .map_err(Into::into)
     }
 
-    pub fn into_stub(self) -> impl FixedAddressSender {
+    pub fn into_stub(self) -> LazySenderStub {
         LazySenderStub::new(self.addr)
     }
 }

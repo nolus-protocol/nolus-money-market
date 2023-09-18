@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{api::LeaseCoin, error::ContractResult, lease::Lease, loan::RepayReceipt};
 
-use super::repayable::Repayable;
+use super::repayable::RepayFn;
 
 pub(crate) struct CloseFn {
     asset: LeaseCoin,
@@ -17,7 +17,7 @@ impl CloseFn {
         Self { asset }
     }
 }
-impl Repayable for CloseFn {
+impl RepayFn for CloseFn {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
         self,
         lease: &mut Lease<Lpn, Asset, Lpp, Oracle>,
@@ -32,6 +32,9 @@ impl Repayable for CloseFn {
         Asset: Currency,
         Profit: FixedAddressSender,
     {
-        lease.close_partial(self.asset.try_into()?, payment, now, profit)
+        self.asset
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|asset| lease.close_partial(asset, payment, now, profit))
     }
 }

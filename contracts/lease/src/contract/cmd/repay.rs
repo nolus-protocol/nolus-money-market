@@ -7,10 +7,10 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
 
-use super::repayable::Repayable;
+use super::repayable::RepayFn;
 
-pub(crate) struct RepayFn {}
-impl Repayable for RepayFn {
+pub(crate) struct RepayLeaseFn {}
+impl RepayFn for RepayLeaseFn {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
         self,
         lease: &mut Lease<Lpn, Asset, Lpp, Oracle>,

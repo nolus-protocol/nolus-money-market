@@ -14,7 +14,7 @@ use crate::{
     api::{self, opened::RepayTrx, PaymentCoin},
     contract::{
         state::{
-            opened::{active::Active, repay},
+            opened::repay,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
             SwapResult,
         },
@@ -44,10 +44,6 @@ impl BuyLpn {
     fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
-
-    // fn emit_ok(&self) -> Emitter {
-    //     Emitter::of_type(Type::OpeningTransferOut)
-    // }
 }
 
 impl SwapTask for BuyLpn {
@@ -89,7 +85,7 @@ impl SwapTask for BuyLpn {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        Active::try_repay_lpn(self.lease, amount_out, querier, env)
+        repay::repay(self.lease, amount_out, env, querier)
     }
 }
 

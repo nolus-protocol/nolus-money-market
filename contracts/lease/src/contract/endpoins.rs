@@ -56,7 +56,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
             deps.storage,
             version!(CONTRACT_STORAGE_VERSION),
             |storage: &mut _| {
-                state::load_v4(storage)
+                state::load_v5(storage)
                     .and_then(|lease_v4| lease_v4.into_last_version())
                     .and_then(
                         |Response {

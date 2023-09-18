@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, SymbolSlice};
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartRemoteLocalState, SwapState,
-    SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, SwapState, SwapTask,
+    TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
@@ -13,49 +13,43 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, opened::LiquidateTrx},
     contract::{
-        cmd::LiquidationDTO,
-        state::{
-            opened::active::Active,
-            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapResult,
-        },
+        cmd::Closable,
+        state::{opened::payment::Repayable, SwapResult},
         Lease,
     },
     error::ContractResult,
     event::Type,
 };
 
-pub(super) type StartState =
-    StartRemoteLocalState<SellAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
-pub(crate) type DexState =
-    dex::StateLocalOut<SellAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(super) type Task<RepayableT> = SellAsset<RepayableT>;
+pub(super) type StartState<RepayableT> = super::StartState<Task<RepayableT>>;
+pub(crate) type DexState<RepayableT> = super::DexState<Task<RepayableT>>;
 
-pub(in crate::contract::state) fn start(lease: Lease, liquidation: LiquidationDTO) -> StartState {
-    dex::start_remote_local(SellAsset::new(lease, liquidation))
-}
-
-type SellAssetStateResponse = <SellAsset as SwapTask>::StateResponse;
+type SellAssetStateResponse<RepayableT> = <SellAsset<RepayableT> as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct SellAsset {
+pub(crate) struct SellAsset<RepayableT> {
     lease: Lease,
-    liquidation: LiquidationDTO,
+    repayable: RepayableT,
 }
 
-impl SellAsset {
-    pub(in crate::contract::state) fn new(lease: Lease, liquidation: LiquidationDTO) -> Self {
-        Self { lease, liquidation }
+impl<RepayableT> SellAsset<RepayableT> {
+    pub(in crate::contract::state) fn new(lease: Lease, repayable: RepayableT) -> Self {
+        Self { lease, repayable }
     }
 }
 
-impl SwapTask for SellAsset {
+impl<RepayableT> SwapTask for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
     type OutG = Lpns;
     type Label = Type;
     type StateResponse = ContractResult<api::StateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {
-        Type::LiquidationSwap
+        self.repayable.event_type()
     }
 
     fn dex_account(&self) -> &Account {
@@ -78,7 +72,7 @@ impl SwapTask for SellAsset {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        dex::on_coin(self.liquidation.amount(&self.lease.lease), visitor)
+        dex::on_coin(self.repayable.amount(&self.lease), visitor)
     }
 
     fn finish(
@@ -87,12 +81,21 @@ impl SwapTask for SellAsset {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        Active::try_liquidate(self.lease, self.liquidation, amount_out, querier, env)
+        self.repayable
+            .try_repay(self.lease, amount_out, env, querier)
     }
 }
 
-impl ContractInSwap<TransferOutState, SellAssetStateResponse> for SellAsset {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
+impl<RepayableT> ContractInSwap<TransferOutState, SellAssetStateResponse<RepayableT>>
+    for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> SellAssetStateResponse<RepayableT> {
         // it's due to reusing the same enum dex::State
         // have to define a tailored enum dex::State that starts from SwapExactIn
         unreachable!(
@@ -101,23 +104,33 @@ impl ContractInSwap<TransferOutState, SellAssetStateResponse> for SellAsset {
     }
 }
 
-impl ContractInSwap<SwapState, SellAssetStateResponse> for SellAsset {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
-        super::query(
-            self.lease,
-            self.liquidation,
-            LiquidateTrx::Swap,
-            now,
-            querier,
-        )
+impl<RepayableT> ContractInSwap<SwapState, SellAssetStateResponse<RepayableT>>
+    for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
+    fn state(
+        self,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
+    ) -> SellAssetStateResponse<RepayableT> {
+        super::query(self.lease, self.repayable, LiquidateTrx::Swap, now, querier)
     }
 }
 
-impl ContractInSwap<TransferInInitState, SellAssetStateResponse> for SellAsset {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
+impl<RepayableT> ContractInSwap<TransferInInitState, SellAssetStateResponse<RepayableT>>
+    for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
+    fn state(
+        self,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
+    ) -> SellAssetStateResponse<RepayableT> {
         super::query(
             self.lease,
-            self.liquidation,
+            self.repayable,
             LiquidateTrx::TransferInInit,
             now,
             querier,
@@ -125,11 +138,19 @@ impl ContractInSwap<TransferInInitState, SellAssetStateResponse> for SellAsset {
     }
 }
 
-impl ContractInSwap<TransferInFinishState, SellAssetStateResponse> for SellAsset {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> SellAssetStateResponse {
+impl<RepayableT> ContractInSwap<TransferInFinishState, SellAssetStateResponse<RepayableT>>
+    for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
+    fn state(
+        self,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
+    ) -> SellAssetStateResponse<RepayableT> {
         super::query(
             self.lease,
-            self.liquidation,
+            self.repayable,
             LiquidateTrx::TransferInFinish,
             now,
             querier,

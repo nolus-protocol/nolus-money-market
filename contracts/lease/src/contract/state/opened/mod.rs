@@ -7,9 +7,11 @@ use crate::{
 };
 
 pub mod active;
+mod alarm;
 mod balance;
 mod event;
 pub mod liquidation;
+mod payment;
 pub mod repay;
 
 fn lease_state(

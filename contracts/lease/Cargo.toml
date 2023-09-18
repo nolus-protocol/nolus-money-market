@@ -15,7 +15,8 @@ name = "lease_schema"
 test = true
 
 [features]
-default = ["contract-with-bindings", "migration"]
+# default = ["contract-with-bindings", "migration"]
+default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]

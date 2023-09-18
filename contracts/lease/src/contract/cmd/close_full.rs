@@ -1,8 +1,7 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::message::Response as MessageResponse;
-use profit::stub::ProfitRef;
+use platform::{bank::FixedAddressSender, message::Response as MessageResponse};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
@@ -13,26 +12,36 @@ use crate::{
 
 use super::repayable::Emitter;
 
-pub(crate) struct Close<EmitterT> {
+pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
     payment: LpnCoin,
     now: Timestamp,
+    profit: ProfitSender,
+    change: ChangeSender,
     emitter_fn: EmitterT,
-    profit: ProfitRef,
 }
 
-impl<EmitterT> Close<EmitterT> {
-    pub fn new(payment: LpnCoin, now: Timestamp, emitter_fn: EmitterT, profit: ProfitRef) -> Self {
+impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
+    pub fn new(
+        payment: LpnCoin,
+        now: Timestamp,
+        profit: ProfitSender,
+        change: ChangeSender,
+        emitter_fn: EmitterT,
+    ) -> Self {
         Self {
             payment,
             now,
-            emitter_fn,
             profit,
+            change,
+            emitter_fn,
         }
     }
 }
 
-impl<EmitterT> WithLease for Close<EmitterT>
+impl<ProfitSender, ChangeSender, EmitterT> WithLease for Close<ProfitSender, ChangeSender, EmitterT>
 where
+    ProfitSender: FixedAddressSender,
+    ChangeSender: FixedAddressSender,
     EmitterT: Emitter,
 {
     type Output = MessageResponse;
@@ -50,11 +59,14 @@ where
         Asset: Currency,
     {
         let lease_addr = lease.addr().clone();
+
         // TODO [issue #92] request the needed amount from the Liquidation Fund
         // this holds true for both use cases - full liquidation and full close
         // make sure the message goes out before the liquidation messages.
-        lease
-            .close_full(self.payment.try_into()?, self.now, self.profit.into_stub())
+        self.payment
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|payment| lease.close_full(payment, self.now, self.profit, self.change))
             .map(|result| {
                 let (receipt, messages) = result.decompose();
                 MessageResponse::messages_with_events(

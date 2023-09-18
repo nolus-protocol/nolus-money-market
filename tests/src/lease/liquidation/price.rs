@@ -83,8 +83,7 @@ fn full_liquidation() {
 
     //swap
     response_with_ica.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-    let liquidation_start_response = response_with_ica.unwrap_response();
-    liquidation_start_response.assert_event(&Event::new("wasm-ls-liquidation-start"));
+    let _ = response_with_ica.unwrap_response();
 
     let liquidated_in_lpn: LpnCoin = quote;
     let liquidated_amount: Amount = liquidated_in_lpn.into();

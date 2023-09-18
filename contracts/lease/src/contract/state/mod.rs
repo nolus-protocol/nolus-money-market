@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
-pub(in crate::contract) use self::v4::{Migrate, StateV4};
+pub(in crate::contract) use self::v5::{Migrate, StateV5};
 use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
@@ -33,7 +33,7 @@ mod opening;
 mod paid;
 mod resp_delivery;
 #[cfg(feature = "migration")]
-mod v4;
+mod v5;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
@@ -43,7 +43,9 @@ type OpenedActive = LeaseState<opened::active::Active>;
 
 type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
-type SellAsset = DexState<opened::liquidation::sell_asset::DexState>;
+type PartialLiquidation = DexState<opened::liquidation::partial::DexState>;
+
+type FullLiquidation = DexState<opened::liquidation::full::DexState>;
 
 type PaidActive = LeaseState<paid::Active>;
 
@@ -62,7 +64,8 @@ pub(crate) enum State {
     BuyAsset,
     OpenedActive,
     BuyLpn,
-    SellAsset,
+    PartialLiquidation,
+    FullLiquidation,
     PaidActive,
     ClosingTransferIn,
     Closed,
@@ -76,7 +79,7 @@ pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
 }
 
 #[cfg(feature = "migration")]
-pub(super) fn load_v4(storage: &dyn Storage) -> ContractResult<StateV4> {
+pub(super) fn load_v5(storage: &dyn Storage) -> ContractResult<StateV4> {
     Item::new("state").load(storage).map_err(Into::into)
 }
 
@@ -102,8 +105,8 @@ where
 
 mod impl_from {
     use super::{
-        BuyAsset, BuyLpn, Closed, ClosingTransferIn, Liquidated, OpenedActive, PaidActive,
-        RequestLoan, SellAsset, State,
+        BuyAsset, BuyLpn, Closed, ClosingTransferIn, FullLiquidation, Liquidated, OpenedActive,
+        PaidActive, PartialLiquidation, RequestLoan, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -130,9 +133,15 @@ mod impl_from {
         }
     }
 
-    impl From<super::opened::liquidation::sell_asset::DexState> for State {
-        fn from(value: super::opened::liquidation::sell_asset::DexState) -> Self {
-            SellAsset::new(value).into()
+    impl From<super::opened::liquidation::partial::DexState> for State {
+        fn from(value: super::opened::liquidation::partial::DexState) -> Self {
+            PartialLiquidation::new(value).into()
+        }
+    }
+
+    impl From<super::opened::liquidation::full::DexState> for State {
+        fn from(value: super::opened::liquidation::full::DexState) -> Self {
+            FullLiquidation::new(value).into()
         }
     }
 
