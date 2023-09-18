@@ -14,7 +14,7 @@ lpp = { workspace = true, features = ["contract", "testing"] }
 oracle = { workspace = true, features = ["contract", "testing"] }
 profit = { workspace = true, features = ["contract", "testing"] }
 rewards_dispatcher = { workspace = true, features = [] }
-timealarms = { workspace = true, features = ["contract"] }
+timealarms = { workspace = true, features = ["contract", "testing"] }
 treasury = { workspace = true, features = ["contract"] }
 
 access-control = { workspace = true }
