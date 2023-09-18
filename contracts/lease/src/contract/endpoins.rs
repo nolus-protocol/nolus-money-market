@@ -56,14 +56,14 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
             deps.storage,
             version!(CONTRACT_STORAGE_VERSION),
             |storage: &mut _| {
-                state::load_v5(storage)
-                    .and_then(|lease_v4| lease_v4.into_last_version())
+                state::load_prev_version(storage)
+                    .and_then(|lease_prev| lease_prev.into_last_version())
                     .and_then(
                         |Response {
                              response,
-                             next_state: lease_v5,
+                             next_state: lease_current,
                          }| {
-                            state::save(storage, &lease_v5).map(|()| response)
+                            state::save(storage, &lease_current).map(|()| response)
                         },
                     )
             },
