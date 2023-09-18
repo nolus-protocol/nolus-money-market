@@ -1,6 +1,11 @@
 use currency::Currency;
 pub use dto::PositionDTO;
-use finance::{coin::Coin, liability::Liability, zero::Zero};
+use finance::{
+    coin::Coin,
+    liability::{Liability, Status},
+    price::{self, Price},
+    zero::Zero,
+};
 
 use crate::{
     api::{LeaseCoin, PositionSpec},
@@ -73,5 +78,24 @@ where
             self.min_asset <= Coin::ZERO,
             "Min asset amount should be positive",
         )
+    }
+
+    pub fn check_liability(
+        &self,
+        asset: Coin<Asset>,
+        total_due: Coin<Lpn>,
+        overdue: Coin<Lpn>,
+        lpn_in_assets: Price<Lpn, Asset>,
+    ) -> Status<Asset> {
+        debug_assert!(asset != Coin::ZERO);
+        debug_assert!(overdue <= total_due);
+
+        let total_due = price::total(total_due, lpn_in_assets);
+        let overdue = price::total(overdue, lpn_in_assets);
+        let min_asset = price::total(self.min_asset, lpn_in_assets);
+        let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
+
+        self.liability
+            .check(asset, total_due, overdue, min_asset, min_sell_asset)
     }
 }

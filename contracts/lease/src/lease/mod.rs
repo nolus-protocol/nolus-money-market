@@ -1,5 +1,4 @@
 use currency::{self, Currency};
-use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -107,9 +106,6 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
-    pub const MIN_ASSET: Coin<Lpn> = Coin::new(10_000); // $0.01 TODO issue #40
-    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(15_000_000); // $15 TODO issue #50
-
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
