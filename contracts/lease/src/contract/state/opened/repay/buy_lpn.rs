@@ -14,7 +14,7 @@ use crate::{
     api::{self, opened::RepayTrx, PaymentCoin},
     contract::{
         state::{
-            opened::{active::Active, repay},
+            opened::repay,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
             SwapResult,
         },
@@ -44,10 +44,6 @@ impl BuyLpn {
     fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
-
-    // fn emit_ok(&self) -> Emitter {
-    //     Emitter::of_type(Type::OpeningTransferOut)
-    // }
 }
 
 impl SwapTask for BuyLpn {
@@ -89,14 +85,14 @@ impl SwapTask for BuyLpn {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        Active::try_repay_lpn(self.lease, amount_out, querier, env)
+        repay::repay(self.lease, amount_out, env, querier)
     }
 }
 
 impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferOut,
             now,
@@ -107,14 +103,14 @@ impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
 
 impl ContractInSwap<SwapState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
+        repay::query(self.lease, self.payment, RepayTrx::Swap, now, querier)
     }
 }
 
 impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferInInit,
             now,
@@ -126,7 +122,7 @@ impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
 impl ContractInSwap<TransferInFinishState, BuyLpnStateResponse> for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(
-            self.lease.lease,
+            self.lease,
             self.payment,
             RepayTrx::TransferInInit,
             now,

@@ -11,11 +11,11 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LeaseCoin,
     error::{ContractError, ContractResult},
-    lease::{with_lease::WithLease, Lease, LeaseDTO},
+    lease::{with_lease::WithLease, Lease as LeaseDO},
 };
 
 pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
-    lease: &Lease<Lpn, Asset, Lpp, Oracle>,
+    lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
     when: Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
@@ -54,8 +54,8 @@ pub(crate) enum CmdResult {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum LiquidationDTO {
-    Partial { amount: LeaseCoin, cause: Cause },
-    Full(Cause),
+    Partial(PartialLiquidationDTO),
+    Full(FullLiquidationDTO),
 }
 
 impl LiquidationDTO {
@@ -80,11 +80,11 @@ where
 {
     fn from(value: Liquidation<Asset>) -> Self {
         match value {
-            Liquidation::Partial { amount, cause } => Self::Partial {
+            Liquidation::Partial { amount, cause } => Self::Partial(PartialLiquidationDTO {
                 amount: amount.into(),
                 cause,
-            },
-            Liquidation::Full(cause) => Self::Full(cause),
+            }),
+            Liquidation::Full(cause) => Self::Full(FullLiquidationDTO { cause }),
         }
     }
 }
@@ -110,7 +110,7 @@ impl<'a> WithLease for Cmd<'a> {
 
     fn exec<Lpn, Asset, Loan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Loan, Oracle>,
+        lease: LeaseDO<Lpn, Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,

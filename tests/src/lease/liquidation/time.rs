@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use ::lease::api::{ExecuteMsg, StateResponse};
 use finance::{coin::Amount, duration::Duration, price};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Event},
+    cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
 };
 
@@ -53,11 +53,9 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
     }
 
-    let liquidation_start_response: AppResponse = response.unwrap_response();
+    let _ = response.unwrap_response();
 
     let Some(liquidation_amount): Option<LeaseCoin> = liquidation_amount else {
-        assert!(!liquidation_start_response.has_event(&Event::new("wasm-ls-liquidation-start")));
-
         return;
     };
 
@@ -113,7 +111,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         )
         .unwrap();
 
-    () = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .sudo(
             lease_address.clone(),
@@ -131,9 +129,9 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
                 data: Binary::default(),
             },
         )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+        .unwrap();
+    response.expect_empty();
+    let liquidation_end_response = response.unwrap_response();
 
     assert_eq!(
         test_case
@@ -144,10 +142,10 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         &[],
     );
 
-    let liquidation_attributes: HashMap<String, String> = liquidation_start_response
+    let liquidation_attributes: HashMap<String, String> = liquidation_end_response
         .events
         .into_iter()
-        .find(|event| event.ty == "wasm-ls-liquidation-start")
+        .find(|event| event.ty == "wasm-ls-liquidation")
         .expect("No liquidation emitted!")
         .attributes
         .into_iter()

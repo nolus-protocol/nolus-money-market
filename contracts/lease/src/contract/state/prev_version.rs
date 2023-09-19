@@ -5,7 +5,7 @@ use crate::error::ContractResult;
 
 use super::{
     dex::State as DexState, opening, BuyAsset, BuyLpn, Closed, ClosingTransferIn, Liquidated,
-    OpenedActive, PaidActive, RequestLoan, Response, SellAsset, SwapResult,
+    OpenedActive, PaidActive, RequestLoan, Response, SwapResult,
 };
 
 type OpenIcaAccount =
@@ -21,13 +21,13 @@ where
 
 #[enum_dispatch(Migrate)]
 #[derive(Deserialize)]
-pub(in crate::contract) enum StateV4 {
+pub(in crate::contract) enum StatePrevVersion {
     RequestLoan,
     OpenIcaAccount,
     BuyAsset,
     OpenedActive,
     BuyLpn,
-    SellAsset,
+    // SellAsset,
     PaidActive,
     ClosingTransferIn,
     Closed,
@@ -64,11 +64,6 @@ impl Migrate for BuyLpn {
         Ok(Response::no_msgs(self))
     }
 }
-impl Migrate for SellAsset {
-    fn into_last_version(self) -> ContractResult<Response> {
-        Ok(Response::no_msgs(self))
-    }
-}
 impl Migrate for PaidActive {
     fn into_last_version(self) -> ContractResult<Response> {
         Ok(Response::no_msgs(self))
@@ -90,7 +85,7 @@ impl Migrate for Liquidated {
     }
 }
 
-impl Serialize for StateV4 {
+impl Serialize for StatePrevVersion {
     fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

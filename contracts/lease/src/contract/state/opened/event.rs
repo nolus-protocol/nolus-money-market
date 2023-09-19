@@ -1,15 +1,17 @@
+use currency::Currency;
 use finance::liability::Level;
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::Env;
+use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::{
     api::DownpaymentCoin,
     contract::{
-        cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO},
+        cmd::{OpenLoanRespResult, RepayEmitter},
         state::event as state_event,
     },
     event::Type,
     lease::LeaseDTO,
+    loan::RepayReceipt,
 };
 
 pub(super) fn emit_lease_opened(
@@ -32,19 +34,25 @@ pub(super) fn emit_lease_opened(
         .emit_coin_dto("downpayment", &downpayment)
 }
 
-pub(super) fn emit_payment(env: &Env, lease: &LeaseDTO, receipt: &ReceiptDTO) -> Emitter {
-    state_event::emit_payment_int(Type::PaidActive, env, &lease.addr, receipt)
+pub(super) struct PaymentEmitter<'env>(&'env Env);
+impl<'env> PaymentEmitter<'env> {
+    pub fn new(env: &'env Env) -> Self {
+        Self(env)
+    }
+}
+impl<'env> RepayEmitter for PaymentEmitter<'env> {
+    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
+    where
+        Lpn: Currency,
+    {
+        state_event::emit_payment_int(Type::PaidActive, self.0, lease, receipt)
+    }
 }
 
 pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitter {
     emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
         .emit_percent_amount("ltv", level.ltv())
         .emit_to_string_value("level", level.ordinal())
-}
-
-pub(super) fn emit_liquidation_start(lease: &LeaseDTO, liquidation: &LiquidationDTO) -> Emitter {
-    let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
-    state_event::emit_liquidation_info(emitter, liquidation.cause(), liquidation.amount(lease))
 }
 
 fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {

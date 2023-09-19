@@ -12,9 +12,7 @@ use crate::{
     position::{Position, PositionDTO},
 };
 
-pub(super) use self::{
-    close::FullRepayReceipt, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
-};
+pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
 
 mod alarm;
 mod close;
@@ -43,6 +41,12 @@ pub struct Lease<Lpn, Asset, Lpp, Oracle> {
 pub struct IntoDTOResult {
     pub lease: LeaseDTO,
     pub batch: Batch,
+}
+
+impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle> {
+    pub(crate) fn addr(&self) -> &Addr {
+        &self.addr
+    }
 }
 
 impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
@@ -148,7 +152,6 @@ mod tests {
     };
     use oracle::stub::{Oracle, OracleRef};
     use platform::batch::Batch;
-    use profit::stub::Profit;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{api::InterestPaymentSpec, loan::Loan, position::Position};
@@ -262,14 +265,6 @@ mod tests {
 
     pub struct ProfitLocalStub {
         pub batch: Batch,
-    }
-
-    impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>)
-        where
-            C: Currency,
-        {
-        }
     }
 
     impl From<ProfitLocalStub> for Batch {

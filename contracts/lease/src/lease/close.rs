@@ -61,14 +61,16 @@ where
         self.repay(payment, now, profit)
     }
 
-    pub(crate) fn close_full<Profit>(
+    pub(crate) fn close_full<Profit, Change>(
         mut self,
         payment: Coin<Lpn>,
         now: Timestamp,
         mut profit: Profit,
+        mut change_recipient: Change,
     ) -> ContractResult<FullRepayReceipt<Lpn>>
     where
         Profit: FixedAddressSender,
+        Change: FixedAddressSender,
     {
         // TODO [issue #92] debug_assert!(payment >= self.state().total_due())
         let receipt = self.repay(payment, now, &mut profit).and_then(|receipt| {
@@ -79,10 +81,15 @@ where
             }
         })?;
 
-        profit.send(receipt.change());
+        change_recipient.send(receipt.change());
 
         self.try_into_messages().map(|lease_messages| {
-            FullRepayReceipt::new(receipt, lease_messages.merge(profit.into()))
+            FullRepayReceipt::new(
+                receipt,
+                lease_messages
+                    .merge(profit.into())
+                    .merge(change_recipient.into()),
+            )
         })
     }
 }
