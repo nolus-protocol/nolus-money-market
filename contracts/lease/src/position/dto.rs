@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use finance::liability::Liability;
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::{LeaseCoin, LpnCoin, PositionSpec},
     error::{ContractError, ContractResult},
 };
 
@@ -19,6 +19,26 @@ pub struct PositionDTO {
     min_sell_asset: LpnCoin,
 }
 
+pub fn try_from<Asset, Lpn>(
+    amount: &LeaseCoin,
+    spec: PositionSpec,
+) -> ContractResult<Position<Asset, Lpn>>
+where
+    Asset: Currency,
+    Lpn: Currency,
+{
+    let amount = amount.try_into()?;
+    let min_asset = spec.min_asset.try_into()?;
+    let min_sell_asset = spec.min_sell_asset.try_into()?;
+
+    Ok(Position::new_internal(
+        amount,
+        spec.liability,
+        min_asset,
+        min_sell_asset,
+    ))
+}
+
 impl<Asset, Lpn> TryFrom<PositionDTO> for Position<Asset, Lpn>
 where
     Asset: Currency,
@@ -27,7 +47,7 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionDTO) -> ContractResult<Self> {
-        Ok(Position::new(
+        Ok(Position::new_internal(
             dto.amount.try_into()?,
             dto.liability,
             dto.min_asset.try_into()?,

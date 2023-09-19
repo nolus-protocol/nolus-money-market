@@ -29,12 +29,9 @@ where
             Coin::ZERO
         };
 
-        let status = self.position.check_liability(
-            self.position.amount(),
-            total_due,
-            overdue,
-            lpn_in_assets,
-        );
+        let status = self
+            .position
+            .check_liability(total_due, overdue, lpn_in_assets);
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
         Ok(status)

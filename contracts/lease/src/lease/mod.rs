@@ -299,7 +299,7 @@ mod tests {
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            Position::<TestCurrency, TestLpn>::new_unchecked(
+            Position::<TestCurrency, TestLpn>::new(
                 amount,
                 Liability::new(
                     Percent::from_percent(65),

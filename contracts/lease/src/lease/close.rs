@@ -57,7 +57,7 @@ where
             "Liquidated asset {asset} should be less than the available {0}",
             amount
         );
-        self.position.decrease_amount_with(asset);
+        self.position.close(asset);
         self.repay(payment, now, profit)
     }
 
