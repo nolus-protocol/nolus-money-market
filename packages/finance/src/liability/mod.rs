@@ -292,8 +292,7 @@ mod test {
             max: Percent::from_percent(15),
             recalc_time: Duration::from_hours(10),
         };
-        assert_load_ok(br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#,
-        exp);
+        assert_load_ok(exp, br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#);
     }
 
     #[test]
@@ -308,8 +307,8 @@ mod test {
             recalc_time: Duration::HOUR,
         };
 
-        assert_load_ok(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, exp);
+        assert_load_ok(exp, br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
+                        "max":14,"recalc_time":3600000000000}"#);
     }
 
     #[test]
@@ -474,7 +473,7 @@ mod test {
         }
     }
 
-    fn assert_load_ok(json: &[u8], exp: Liability) {
+    fn assert_load_ok(exp: Liability, json: &[u8]) {
         assert_eq!(Ok(exp), from_slice::<Liability>(json));
     }
 

@@ -86,7 +86,7 @@ impl InterestPaymentSpec {
             due_period,
             grace_period,
         };
-        debug_assert_eq!(res.invariant_held(), Ok(()));
+        debug_assert_eq!(Ok(()), res.invariant_held());
         res
     }
 
@@ -129,7 +129,7 @@ impl PositionSpec {
             min_asset,
             min_sell_asset,
         };
-        debug_assert_eq!(obj.invariant_held(), Ok(()));
+        debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
     }
 
@@ -234,10 +234,10 @@ mod test_position_spec {
             LpnCoin::new(9000000).into(),
         );
 
-        assert_load_ok(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#, position_spec);
+        assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
     }
 
-    fn assert_load_ok(json: &[u8], exp: PositionSpec) {
+    fn assert_load_ok(exp: PositionSpec, json: &[u8]) {
         assert_eq!(Ok(exp), from_slice::<PositionSpec>(json));
     }
 }
