@@ -58,20 +58,14 @@ pub(crate) enum LiquidationDTO {
     Full(FullLiquidationDTO),
 }
 
-impl LiquidationDTO {
-    pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
-        match self {
-            Self::Partial { amount, cause: _ } => amount,
-            Self::Full(_) => lease.position.amount(),
-        }
-    }
-
-    pub(crate) fn cause(&self) -> &Cause {
-        match self {
-            Self::Partial { amount: _, cause } => cause,
-            Self::Full(cause) => cause,
-        }
-    }
+#[derive(Serialize, Deserialize)]
+pub(crate) struct PartialLiquidationDTO {
+    pub amount: LeaseCoin,
+    pub cause: Cause,
+}
+#[derive(Serialize, Deserialize)]
+pub(crate) struct FullLiquidationDTO {
+    pub cause: Cause,
 }
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO

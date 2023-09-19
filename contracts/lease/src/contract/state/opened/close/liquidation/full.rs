@@ -25,7 +25,7 @@ pub(crate) type DexState = close::DexState<RepayableImpl>;
 
 impl Closable for Spec {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
-        &lease.lease.position.amount
+        lease.lease.position.amount()
     }
 
     fn event_type(&self) -> Type {
