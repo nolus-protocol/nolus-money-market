@@ -11,8 +11,14 @@ use super::Position;
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct PositionDTO {
-    pub amount: LeaseCoin,
+    amount: LeaseCoin,
     spec: PositionSpec,
+}
+
+impl PositionDTO {
+    pub fn amount(&self) -> &LeaseCoin {
+        &self.amount
+    }
 }
 
 pub fn try_from<Asset, Lpn>(

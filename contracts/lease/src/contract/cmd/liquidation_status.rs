@@ -62,7 +62,7 @@ impl LiquidationDTO {
     pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
         match self {
             Self::Partial { amount, cause: _ } => amount,
-            Self::Full(_) => &lease.position.amount,
+            Self::Full(_) => lease.position.amount(),
         }
     }
 

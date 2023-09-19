@@ -21,8 +21,8 @@ where
     Lpn: Currency,
 {
     pub(crate) fn from_dto(dto: LeaseDTO) -> Self {
-        let amount = dto.position.amount.try_into().expect(
-            "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol()",
+        let amount = dto.position.amount().try_into().expect(
+            "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount().symbol()",
         );
         Self {
             customer: dto.customer,
