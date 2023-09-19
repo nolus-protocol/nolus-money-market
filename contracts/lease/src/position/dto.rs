@@ -1,10 +1,8 @@
 use currency::Currency;
 use serde::{Deserialize, Serialize};
 
-use finance::liability::Liability;
-
 use crate::{
-    api::{LeaseCoin, LpnCoin, PositionSpec},
+    api::{LeaseCoin, PositionSpec},
     error::{ContractError, ContractResult},
 };
 
@@ -14,9 +12,7 @@ use super::Position;
 #[cfg_attr(test, derive(Debug))]
 pub struct PositionDTO {
     pub amount: LeaseCoin,
-    pub liability: Liability,
-    min_asset: LpnCoin,
-    min_sell_asset: LpnCoin,
+    spec: PositionSpec,
 }
 
 pub fn try_from<Asset, Lpn>(
@@ -27,15 +23,11 @@ where
     Asset: Currency,
     Lpn: Currency,
 {
-    let amount = amount.try_into()?;
-    let min_asset = spec.min_asset.try_into()?;
-    let min_sell_asset = spec.min_sell_asset.try_into()?;
-
     Ok(Position::new_internal(
-        amount,
+        amount.try_into()?,
         spec.liability,
-        min_asset,
-        min_sell_asset,
+        spec.min_asset.try_into()?,
+        spec.min_sell_asset.try_into()?,
     ))
 }
 
@@ -47,12 +39,7 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionDTO) -> ContractResult<Self> {
-        Ok(Position::new_internal(
-            dto.amount.try_into()?,
-            dto.liability,
-            dto.min_asset.try_into()?,
-            dto.min_sell_asset.try_into()?,
-        ))
+        self::try_from(&dto.amount, dto.spec)
     }
 }
 
@@ -64,9 +51,11 @@ where
     fn from(value: Position<Asset, Lpn>) -> Self {
         Self {
             amount: value.amount.into(),
-            liability: value.liability,
-            min_asset: value.min_asset.into(),
-            min_sell_asset: value.min_sell_asset.into(),
+            spec: PositionSpec {
+                liability: value.liability,
+                min_asset: value.min_asset.into(),
+                min_sell_asset: value.min_sell_asset.into(),
+            },
         }
     }
 }
