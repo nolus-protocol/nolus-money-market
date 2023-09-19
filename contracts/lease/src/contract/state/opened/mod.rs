@@ -9,8 +9,8 @@ use crate::{
 pub mod active;
 mod alarm;
 mod balance;
+pub mod close;
 mod event;
-pub mod liquidation;
 mod payment;
 pub mod repay;
 

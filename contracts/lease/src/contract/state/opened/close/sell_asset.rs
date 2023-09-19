@@ -21,10 +21,6 @@ use crate::{
     event::Type,
 };
 
-pub(super) type Task<RepayableT> = SellAsset<RepayableT>;
-pub(super) type StartState<RepayableT> = super::StartState<Task<RepayableT>>;
-pub(crate) type DexState<RepayableT> = super::DexState<Task<RepayableT>>;
-
 type SellAssetStateResponse<RepayableT> = <SellAsset<RepayableT> as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]

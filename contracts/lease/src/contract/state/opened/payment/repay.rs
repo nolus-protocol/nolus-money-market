@@ -8,7 +8,7 @@ use crate::{
     contract::{
         cmd::{Closable, LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
         state::{
-            opened::{active, alarm, liquidation},
+            opened::{active, alarm, close},
             paid, Response,
         },
         Lease,
@@ -100,7 +100,7 @@ where
                 Ok(finish_repay(loan_paid, response, lease))
             }
             LiquidationStatus::NeedLiquidation(liquidation) => {
-                liquidation::start(lease, liquidation, response, env, querier)
+                close::start_liquidation(lease, liquidation, response, env, querier)
             }
         }
     }
