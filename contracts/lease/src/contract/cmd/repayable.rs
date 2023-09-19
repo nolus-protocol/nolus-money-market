@@ -11,20 +11,14 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
-    contract::{Lease, SplitDTOOut},
+    api::LpnCoin,
+    contract::SplitDTOOut,
     error::{ContractError, ContractResult},
-    event::Type,
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     loan::RepayReceipt,
 };
 
 use super::{liquidation_status, LiquidationStatus};
-
-pub(crate) trait Closable {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin;
-    fn event_type(&self) -> Type;
-}
 
 pub(crate) trait RepayFn {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(

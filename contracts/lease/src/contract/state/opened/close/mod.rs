@@ -4,14 +4,14 @@ use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use crate::{
     api::{
         opened::{LiquidateTrx, OngoingTrx},
-        StateResponse,
+        LeaseCoin, StateResponse,
     },
     contract::{
-        cmd::Closable,
         state::resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
         Lease,
     },
     error::ContractResult,
+    event::Type,
 };
 
 use self::sell_asset::SellAsset;
@@ -23,6 +23,11 @@ use super::payment::Repayable;
 // mod customer_close;
 pub mod liquidation;
 mod sell_asset;
+
+pub(crate) trait Closable {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin;
+    fn event_type(&self) -> Type;
+}
 
 type Task<RepayableT> = SellAsset<RepayableT>;
 type StartState<Repayable> =

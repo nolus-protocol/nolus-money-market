@@ -6,8 +6,8 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::{LeaseCoin, LpnCoin},
     contract::{
-        cmd::{Closable, FullClose as FullCloseCmd, RepayEmitter},
-        state::{Response, State},
+        cmd::{FullClose as FullCloseCmd, RepayEmitter},
+        state::{opened::close::Closable, Response, State},
         Lease,
     },
     error::ContractResult,

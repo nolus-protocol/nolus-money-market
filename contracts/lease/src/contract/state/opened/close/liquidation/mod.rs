@@ -4,7 +4,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     contract::{
-        cmd::{Closable, LiquidationDTO},
+        cmd::LiquidationDTO,
         state::{
             opened::{close::DexState, payment::Repayable},
             Response, State,
@@ -13,6 +13,8 @@ use crate::{
     },
     error::ContractResult,
 };
+
+use super::Closable;
 
 pub mod full;
 pub mod partial;

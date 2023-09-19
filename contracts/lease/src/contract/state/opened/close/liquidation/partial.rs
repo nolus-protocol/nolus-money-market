@@ -1,19 +1,34 @@
 use sdk::cosmwasm_std::Env;
 
-use crate::contract::{
-    cmd::{PartialCloseFn, PartialLiquidationDTO},
-    state::{
-        event::LiquidationEmitter,
-        opened::{
-            close,
-            payment::{Repay, RepayAlgo},
+use crate::{
+    api::LeaseCoin,
+    contract::{
+        cmd::{PartialCloseFn, PartialLiquidationDTO},
+        state::{
+            event::LiquidationEmitter,
+            opened::{
+                close::{self, Closable},
+                payment::{Repay, RepayAlgo},
+            },
         },
+        Lease,
     },
+    event::Type,
 };
 
 type Spec = PartialLiquidationDTO;
 pub(super) type RepayableImpl = Repay<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
+
+impl Closable for Spec {
+    fn amount(&self, _lease: &Lease) -> &LeaseCoin {
+        &self.amount
+    }
+
+    fn event_type(&self) -> Type {
+        Type::LiquidationSwap
+    }
+}
 
 impl RepayAlgo for Spec {
     type RepayFn = PartialCloseFn;

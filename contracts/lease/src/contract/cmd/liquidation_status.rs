@@ -10,13 +10,9 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LeaseCoin,
-    contract::Lease,
     error::{ContractError, ContractResult},
-    event::Type,
     lease::{with_lease::WithLease, Lease as LeaseDO},
 };
-
-use super::repayable::Closable;
 
 pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
     lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
@@ -67,28 +63,9 @@ pub(crate) struct PartialLiquidationDTO {
     pub amount: LeaseCoin,
     pub cause: Cause,
 }
-impl Closable for PartialLiquidationDTO {
-    fn amount(&self, _lease: &Lease) -> &LeaseCoin {
-        &self.amount
-    }
-
-    fn event_type(&self) -> Type {
-        Type::LiquidationSwap
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct FullLiquidationDTO {
     pub cause: Cause,
-}
-impl Closable for FullLiquidationDTO {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
-        &lease.lease.position.amount
-    }
-
-    fn event_type(&self) -> Type {
-        Type::LiquidationSwap
-    }
 }
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO

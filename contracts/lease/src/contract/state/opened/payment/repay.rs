@@ -6,9 +6,12 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::{LeaseCoin, LpnCoin},
     contract::{
-        cmd::{Closable, LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
+        cmd::{LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
         state::{
-            opened::{active, alarm, close},
+            opened::{
+                active, alarm,
+                close::{self, Closable},
+            },
             paid, Response,
         },
         Lease,

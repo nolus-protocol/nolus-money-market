@@ -2,22 +2,36 @@ use sdk::cosmwasm_std::Env;
 
 use platform::bank::LazySenderStub;
 
-use crate::contract::{
-    cmd::{Closable, FullLiquidationDTO},
-    state::{
-        event::LiquidationEmitter,
-        liquidated::Liquidated,
-        opened::{
-            close,
-            payment::{Close, CloseAlgo},
+use crate::{
+    api::LeaseCoin,
+    contract::{
+        cmd::FullLiquidationDTO,
+        state::{
+            event::LiquidationEmitter,
+            liquidated::Liquidated,
+            opened::{
+                close::{self, Closable},
+                payment::{Close, CloseAlgo},
+            },
         },
+        Lease,
     },
-    Lease,
+    event::Type,
 };
 
 type Spec = FullLiquidationDTO;
 pub(super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
+
+impl Closable for Spec {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+        &lease.lease.position.amount
+    }
+
+    fn event_type(&self) -> Type {
+        Type::LiquidationSwap
+    }
+}
 
 impl CloseAlgo for Spec {
     type OutState = Liquidated;

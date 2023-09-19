@@ -13,13 +13,14 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, opened::LiquidateTrx},
     contract::{
-        cmd::Closable,
         state::{opened::payment::Repayable, SwapResult},
         Lease,
     },
     error::ContractResult,
     event::Type,
 };
+
+use super::Closable;
 
 type SellAssetStateResponse<RepayableT> = <SellAsset<RepayableT> as SwapTask>::StateResponse;
 
