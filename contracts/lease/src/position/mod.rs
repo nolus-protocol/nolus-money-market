@@ -93,15 +93,13 @@ where
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<Position<Asset, Lpn>>(
-            self.amount.is_zero(),
-            "The amount should be positive",
-        )
-        .and_then(|_| {
-            ContractError::broken_invariant_if::<Position<Asset, Lpn>>(
-                self.min_asset.is_zero(),
-                "Min asset amount should be positive",
-            )
-        })
+        Self::check(!self.amount.is_zero(), "The amount should be positive").and(Self::check(
+            !self.min_asset.is_zero(),
+            "Min asset amount should be positive",
+        ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
+        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 }
