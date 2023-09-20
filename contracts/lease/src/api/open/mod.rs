@@ -116,13 +116,17 @@ impl InterestPaymentSpec {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionSpec {
+    /// The liability of the position
     pub liability: Liability,
+    /// The minimum amount to liquidate. Any attempt to liquidate a smaller
+    /// amount would be postponed until the amount goes above this limit
     pub min_asset: LpnCoin,
+    ///  The minimum amount that a lease asset should be evaluated past any
+    ///  partial liquidation or close. If not, a full liquidation is performed
     pub min_sell_asset: LpnCoin,
 }
 
 impl PositionSpec {
-    #[cfg(any(test, feature = "testing"))]
     pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
         let obj = Self {
             liability,
@@ -133,7 +137,6 @@ impl PositionSpec {
         obj
     }
 
-    #[cfg(any(test, feature = "testing"))]
     fn invariant_held(&self) -> ContractResult<()> {
         ContractError::broken_invariant_if::<PositionSpec>(
             self.min_asset.ticker() != self.min_sell_asset.ticker(),

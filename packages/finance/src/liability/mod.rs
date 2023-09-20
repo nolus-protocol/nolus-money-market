@@ -92,7 +92,7 @@ impl Liability {
     where
         Asset: Currency,
     {
-        debug_assert!(asset != Coin::ZERO);
+        debug_assert!(!asset.is_zero());
         debug_assert!(total_due <= asset);
         debug_assert!(overdue <= total_due);
 

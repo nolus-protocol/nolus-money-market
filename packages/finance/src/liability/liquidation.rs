@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, percent::Percent, zero::Zero};
+use crate::{coin::Coin, percent::Percent};
 use currency::Currency;
 
 use super::Zone;
@@ -28,7 +28,7 @@ where
     Asset: Currency,
 {
     pub fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
-        debug_assert!(amount != Coin::ZERO);
+        debug_assert!(!amount.is_zero());
         Self::Liquidation(Liquidation::Partial { amount, cause })
     }
 

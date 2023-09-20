@@ -21,22 +21,6 @@ impl PositionDTO {
     }
 }
 
-pub fn try_from<Asset, Lpn>(
-    amount: &LeaseCoin,
-    spec: PositionSpec,
-) -> ContractResult<Position<Asset, Lpn>>
-where
-    Asset: Currency,
-    Lpn: Currency,
-{
-    Ok(Position::new_internal(
-        amount.try_into()?,
-        spec.liability,
-        spec.min_asset.try_into()?,
-        spec.min_sell_asset.try_into()?,
-    ))
-}
-
 impl<Asset, Lpn> TryFrom<PositionDTO> for Position<Asset, Lpn>
 where
     Asset: Currency,
@@ -45,7 +29,7 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionDTO) -> ContractResult<Self> {
-        self::try_from(&dto.amount, dto.spec)
+        Self::try_from(&dto.amount, dto.spec)
     }
 }
 
@@ -57,11 +41,11 @@ where
     fn from(value: Position<Asset, Lpn>) -> Self {
         Self {
             amount: value.amount.into(),
-            spec: PositionSpec {
-                liability: value.liability,
-                min_asset: value.min_asset.into(),
-                min_sell_asset: value.min_sell_asset.into(),
-            },
+            spec: PositionSpec::new(
+                value.liability,
+                value.min_asset.into(),
+                value.min_sell_asset.into(),
+            ),
         }
     }
 }

@@ -6,8 +6,10 @@ use finance::{
     price::{self, Price},
 };
 
-use crate::error::{ContractError, ContractResult};
-pub use dto::try_from;
+use crate::{
+    api::{LeaseCoin, PositionSpec},
+    error::{ContractError, ContractResult},
+};
 
 mod dto;
 
@@ -38,6 +40,15 @@ where
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
+    }
+
+    pub fn try_from(amount: &LeaseCoin, spec: PositionSpec) -> ContractResult<Self> {
+        Ok(Self::new_internal(
+            amount.try_into()?,
+            spec.liability,
+            spec.min_asset.try_into()?,
+            spec.min_sell_asset.try_into()?,
+        ))
     }
 
     #[cfg(test)]
