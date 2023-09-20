@@ -23,17 +23,21 @@ pub(crate) trait CloseAlgo {
 
     type ChangeSender: FixedAddressSender;
 
-    type PaymentEmitter<'liq, 'env>: RepayEmitter
+    type PaymentEmitter<'this, 'env>: RepayEmitter
     where
-        Self: 'liq;
+        Self: 'this,
+        'env: 'this;
 
     fn profit_sender(&self, lease: &Lease) -> Self::ProfitSender;
     fn change_sender(&self, lease: &Lease) -> Self::ChangeSender;
-    fn emitter_fn<'liq, 'env>(
-        &'liq self,
-        lease: &'liq Lease,
+    fn emitter_fn<'this, 'env>(
+        &'this self,
+        lease: &'this Lease,
         env: &'env Env,
-    ) -> Self::PaymentEmitter<'liq, 'env>;
+    ) -> Self::PaymentEmitter<'this, 'env>
+    where
+        Self: 'this,
+        'env: 'this;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -54,7 +58,7 @@ impl<CloseAlgoT> Closable for Close<CloseAlgoT>
 where
     CloseAlgoT: CloseAlgo + Closable,
 {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)
     }
 

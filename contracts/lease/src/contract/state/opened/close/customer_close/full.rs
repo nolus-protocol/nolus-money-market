@@ -1,14 +1,14 @@
-use sdk::cosmwasm_std::Env;
+use serde::{Deserialize, Serialize};
 
 use platform::bank::LazySenderStub;
+use sdk::cosmwasm_std::Env;
 
 use crate::{
     api::LeaseCoin,
     contract::{
-        cmd::FullLiquidationDTO,
         state::{
-            event::LiquidationEmitter,
-            liquidated::Liquidated,
+            closed::Closed,
+            event::PositionCloseEmitter,
             opened::{
                 close::{self, Closable},
                 payment::{Close, CloseAlgo},
@@ -19,38 +19,41 @@ use crate::{
     event::Type,
 };
 
-type Spec = FullLiquidationDTO;
+type Spec = FullClose;
 pub(super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
 
+#[derive(Serialize, Deserialize)]
+pub(crate) struct FullClose();
+
 impl Closable for Spec {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
-        lease.lease.position.amount()
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
+        &lease.lease.position.amount
     }
 
     fn event_type(&self) -> Type {
-        Type::LiquidationSwap
+        Type::ClosePosition
     }
 }
 
 impl CloseAlgo for Spec {
-    type OutState = Liquidated;
+    type OutState = Closed;
 
     type ProfitSender = LazySenderStub; //TODO deduce it somehow from ProfitRef?
 
     type ChangeSender = Self::ProfitSender;
 
-    type PaymentEmitter<'this, 'env> = LiquidationEmitter<'this, 'env>
+    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'this, 'env>
     where
-    Self: 'this,
-    'env: 'this;
+        Self: 'this,
+        'env: 'this;
 
     fn profit_sender(&self, lease: &Lease) -> Self::ProfitSender {
         lease.lease.loan.profit().clone().into_stub()
     }
 
     fn change_sender(&self, lease: &Lease) -> Self::ChangeSender {
-        self.profit_sender(lease)
+        Self::ChangeSender::new(lease.lease.customer.clone())
     }
 
     fn emitter_fn<'this, 'env>(
@@ -61,6 +64,6 @@ impl CloseAlgo for Spec {
     where
         'env: 'this,
     {
-        Self::PaymentEmitter::new(&self.cause, self.amount(lease), env)
+        Self::PaymentEmitter::new(self.amount(lease), env)
     }
 }

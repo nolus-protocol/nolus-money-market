@@ -10,7 +10,7 @@ use crate::{
         state::{
             opened::{
                 active, alarm,
-                close::{self, Closable},
+                close::{liquidation, Closable},
             },
             paid, Response,
         },
@@ -24,12 +24,12 @@ use super::Repayable;
 
 pub(crate) trait RepayAlgo {
     type RepayFn: RepayFn;
-    type PaymentEmitter<'liq, 'env>: RepayEmitter
+    type PaymentEmitter<'this, 'env>: RepayEmitter
     where
-        Self: 'liq;
+        Self: 'this;
 
     fn repay_fn(&self) -> Self::RepayFn;
-    fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env>;
+    fn emitter_fn<'this, 'env>(&'this self, env: &'env Env) -> Self::PaymentEmitter<'this, 'env>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -49,7 +49,7 @@ impl<RepayAlgoT> Closable for Repay<RepayAlgoT>
 where
     RepayAlgoT: RepayAlgo + Closable,
 {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)
     }
 
@@ -103,7 +103,7 @@ where
                 Ok(finish_repay(loan_paid, response, lease))
             }
             LiquidationStatus::NeedLiquidation(liquidation) => {
-                close::start_liquidation(lease, liquidation, response, env, querier)
+                liquidation::start(lease, liquidation, response, env, querier)
             }
         }
     }
