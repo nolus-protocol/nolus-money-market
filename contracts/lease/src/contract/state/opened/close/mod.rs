@@ -1,5 +1,6 @@
-use dex::StartRemoteLocalState;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use dex::Enterable;
+use platform::message::Response as MessageResponse;
+use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{
@@ -7,7 +8,10 @@ use crate::{
         LeaseCoin, StateResponse,
     },
     contract::{
-        state::resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+        state::{
+            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            Response, State,
+        },
         Lease,
     },
     error::ContractResult,
@@ -16,30 +20,39 @@ use crate::{
 
 use self::sell_asset::SellAsset;
 
-pub(super) use liquidation::start as start_liquidation;
-
 use super::payment::Repayable;
 
-// mod customer_close;
+pub mod customer_close;
 pub mod liquidation;
 mod sell_asset;
 
 pub(crate) trait Closable {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin;
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin;
     fn event_type(&self) -> Type;
 }
 
 type Task<RepayableT> = SellAsset<RepayableT>;
-type StartState<Repayable> =
-    StartRemoteLocalState<Task<Repayable>, ForwardToDexEntry, ForwardToDexEntryContinue>;
 type DexState<Repayable> =
     dex::StateLocalOut<Task<Repayable>, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
-fn start<RepayableT>(lease: Lease, repayable: RepayableT) -> StartState<RepayableT>
+fn start_impl<Spec, RepayableT>(
+    lease: Lease,
+    spec: Spec,
+    curr_request_response: MessageResponse,
+    env: &Env,
+    querier: &QuerierWrapper<'_>,
+) -> ContractResult<Response>
 where
+    Spec: Into<RepayableT>,
     RepayableT: Closable + Repayable,
+    DexState<RepayableT>: Into<State>,
 {
-    dex::start_remote_local(Task::new(lease, repayable))
+    let start_state = dex::start_remote_local(Task::new(lease, spec.into()));
+    start_state
+        .enter(env.block.time, querier)
+        .map(|swap_msg| curr_request_response.merge_with(swap_msg))
+        .map(|start| Response::from(start, DexState::<RepayableT>::from(start_state)))
+        .map_err(Into::into)
 }
 
 fn query<RepayableT>(

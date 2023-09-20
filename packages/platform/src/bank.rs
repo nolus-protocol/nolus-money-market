@@ -127,6 +127,9 @@ where
     View: BankAccountView,
 {
     pub fn new(view: View) -> Self {
+        //TODO may bring a lot of confusion if used with a view of a not-the-host-contract account
+        // check out if there are use cases to view other account balances
+        // if not, refactor to limit the View instances to be created only on the host contract
         Self {
             view,
             batch: Batch::default(),

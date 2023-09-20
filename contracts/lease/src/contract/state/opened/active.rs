@@ -17,7 +17,9 @@ use crate::{
 };
 
 use super::{
-    alarm, balance, close, event,
+    alarm, balance,
+    close::liquidation,
+    event,
     repay::{
         self,
         buy_lpn::{self, DexState as BuyLpnState},
@@ -117,7 +119,7 @@ impl Active {
                 alarm::build_resp(&self.lease, current_liability, alarms),
                 self,
             )),
-            LiquidationStatus::NeedLiquidation(liquidation) => close::start_liquidation(
+            LiquidationStatus::NeedLiquidation(liquidation) => liquidation::start(
                 self.lease,
                 liquidation,
                 MessageResponse::default(),

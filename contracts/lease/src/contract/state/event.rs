@@ -26,6 +26,26 @@ impl<'liq, 'env> RepayEmitter for LiquidationEmitter<'liq, 'env> {
     }
 }
 
+pub(crate) struct PositionCloseEmitter<'close, 'env> {
+    amount: &'close LeaseCoin,
+    env: &'env Env,
+}
+
+impl<'close, 'env> PositionCloseEmitter<'close, 'env> {
+    pub fn new(amount: &'close LeaseCoin, env: &'env Env) -> Self {
+        Self { amount, env }
+    }
+}
+impl<'close, 'env> RepayEmitter for PositionCloseEmitter<'close, 'env> {
+    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
+    where
+        Lpn: Currency,
+    {
+        let emitter = emit_payment_int(Type::ClosePosition, self.env, lease, receipt);
+        emitter.emit_coin_dto("amount", self.amount)
+    }
+}
+
 pub(super) fn emit_payment_int<Lpn>(
     event_type: Type,
     env: &Env,
