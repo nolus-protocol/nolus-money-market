@@ -65,6 +65,9 @@ where
         self.amount
     }
 
+    // `self.liability` is semi-hidden, semi-public - it's exposed just for computing the recalculation period
+    // let's return `recalc_liability_at` as a data of `Status`
+    // for more insights refer to the TODO next to `Liability::check`
     pub fn liability(&self) -> Liability {
         self.liability
     }
@@ -88,6 +91,9 @@ where
         let min_asset = price::total(self.min_asset, lpn_in_assets);
         let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
 
+        // TODO the functionality consuming both `min*_asset` amounts should be moved
+        // to this type
+        // finance::Liability's responsability is only to provide `amount_to_liquidate`
         self.liability
             .check(self.amount, total_due, overdue, min_asset, min_sell_asset)
     }

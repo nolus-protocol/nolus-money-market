@@ -85,6 +85,7 @@ where
             .map_err(Into::into)
     }
 
+    // TODO define it as a member method of `Level`
     fn price_alarm_at_level(
         &self,
         liability: Coin<Lpn>,

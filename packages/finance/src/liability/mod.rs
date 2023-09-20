@@ -81,6 +81,9 @@ impl Liability {
         obj
     }
 
+    // TODO return the next `recalc_time` as well to simplify the API and its usage
+    // remove the `fn recalc_time`
+    // compute the point of time based on the  provided current time
     pub fn check<Asset>(
         &self,
         asset: Coin<Asset>,
