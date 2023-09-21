@@ -2,37 +2,35 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::LeaseCoin,
+    api::{FullClose, PartialClose},
     contract::{state::Response, Lease},
     error::ContractResult,
 };
 
+use super::ClosePositionTask;
+
 pub mod full;
 pub mod partial;
 
+// TODO abstract LiquidationDTO-to-ClosePositionTask to avoid match-ing PositionClose variants
+
 #[allow(unused)]
 fn start_partial(
-    amount: LeaseCoin,
+    close: PartialClose,
     lease: Lease,
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    super::start_impl::<_, partial::RepayableImpl>(
-        lease,
-        partial::PartialClose::new(amount),
-        MessageResponse::default(),
-        env,
-        querier,
-    )
+    //TODO validate the close.amount against the lease position using a cmd
+    partial::RepayableImpl::from(close).start(lease, MessageResponse::default(), env, querier)
 }
 
 #[allow(unused)]
-fn start_full(lease: Lease, env: &Env, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
-    super::start_impl::<_, full::RepayableImpl>(
-        lease,
-        full::FullClose(),
-        MessageResponse::default(),
-        env,
-        querier,
-    )
+fn start_full(
+    close: FullClose,
+    lease: Lease,
+    env: &Env,
+    querier: &QuerierWrapper<'_>,
+) -> ContractResult<Response> {
+    full::RepayableImpl::from(close).start(lease, MessageResponse::default(), env, querier)
 }

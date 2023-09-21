@@ -1,9 +1,7 @@
-use serde::{Deserialize, Serialize};
-
 use sdk::cosmwasm_std::Env;
 
 use crate::{
-    api::LeaseCoin,
+    api::{LeaseCoin, PartialClose},
     contract::{
         cmd::PartialCloseFn,
         state::{
@@ -21,17 +19,6 @@ use crate::{
 type Spec = PartialClose;
 pub(super) type RepayableImpl = Repay<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct PartialClose {
-    amount: LeaseCoin,
-}
-
-impl PartialClose {
-    pub(super) fn new(amount: LeaseCoin) -> Self {
-        Self { amount }
-    }
-}
 
 impl Closable for Spec {
     fn amount(&self, _lease: &Lease) -> &LeaseCoin {

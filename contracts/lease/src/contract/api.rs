@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{
 };
 
 use crate::{
-    api::StateResponse,
+    api::{PositionClose, StateResponse},
     error::{ContractError, ContractResult},
 };
 
@@ -85,6 +85,16 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("repay")
+    }
+
+    fn close_position(
+        self,
+        _spec: PositionClose,
+        _deps: &mut DepsMut<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        err("close position")
     }
 
     fn close(

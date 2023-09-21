@@ -13,11 +13,13 @@ pub use self::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
         NewLeaseForm, PositionSpec,
     },
+    position::{FullClose, PartialClose, PositionClose},
     query::{opened, opening, paid, StateQuery, StateResponse},
 };
 
 // TODO consider defining the modules public instead of just selected items
 mod open;
+mod position;
 mod query;
 
 pub type PaymentCoin = CoinDTO<PaymentGroup>;
@@ -33,10 +35,17 @@ pub struct MigrateMsg {}
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    /// Repayment
+    ///
+    /// The funds should be sent attached to the message
     Repay(),
-    // it is not an enum variant to represent it as a JSON object instead of JSON string
+
+    /// Customer initiated position close
+    ClosePosition(PositionClose),
+
+    /// Close of a fully paid lease
     Close(),
-    // that is a limitation of cosmjs library
+
     PriceAlarm(),
     TimeAlarm {},
 

@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use platform::bank::LazySenderStub;
 use sdk::cosmwasm_std::Env;
 
 use crate::{
-    api::LeaseCoin,
+    api::{FullClose, LeaseCoin},
     contract::{
         state::{
             closed::Closed,
@@ -22,9 +20,6 @@ use crate::{
 type Spec = FullClose;
 pub(super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct FullClose();
 
 impl Closable for Spec {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {

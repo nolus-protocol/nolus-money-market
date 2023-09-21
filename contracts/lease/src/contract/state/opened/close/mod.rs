@@ -35,24 +35,32 @@ type Task<RepayableT> = SellAsset<RepayableT>;
 type DexState<Repayable> =
     dex::StateLocalOut<Task<Repayable>, ForwardToDexEntry, ForwardToDexEntryContinue>;
 
-fn start_impl<Spec, RepayableT>(
-    lease: Lease,
-    spec: Spec,
-    curr_request_response: MessageResponse,
-    env: &Env,
-    querier: &QuerierWrapper<'_>,
-) -> ContractResult<Response>
+trait ClosePositionTask
 where
-    Spec: Into<RepayableT>,
-    RepayableT: Closable + Repayable,
-    DexState<RepayableT>: Into<State>,
+    Self: Closable + Repayable + Sized,
+    DexState<Self>: Into<State>,
 {
-    let start_state = dex::start_remote_local(Task::new(lease, spec.into()));
-    start_state
-        .enter(env.block.time, querier)
-        .map(|swap_msg| curr_request_response.merge_with(swap_msg))
-        .map(|start| Response::from(start, DexState::<RepayableT>::from(start_state)))
-        .map_err(Into::into)
+    fn start(
+        self,
+        lease: Lease,
+        curr_request_response: MessageResponse,
+        env: &Env,
+        querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<Response>
+where {
+        let start_state = dex::start_remote_local(Task::new(lease, self));
+        start_state
+            .enter(env.block.time, querier)
+            .map(|swap_msg| curr_request_response.merge_with(swap_msg))
+            .map(|start| Response::from(start, DexState::<Self>::from(start_state)))
+            .map_err(Into::into)
+    }
+}
+impl<T> ClosePositionTask for T
+where
+    T: Closable + Repayable,
+    DexState<T>: Into<State>,
+{
 }
 
 fn query<RepayableT>(
