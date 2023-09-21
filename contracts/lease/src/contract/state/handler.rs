@@ -4,7 +4,7 @@ use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Api, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
-    api::StateResponse,
+    api::{PositionClose, StateResponse},
     error::{ContractError, ContractResult},
 };
 
@@ -29,6 +29,15 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("repay", deps.api)
+    }
+
+    fn close_position(
+        self,
+        _spec: PositionClose,
+        deps: &mut DepsMut<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        err("close position", deps.api)
     }
 
     fn close(

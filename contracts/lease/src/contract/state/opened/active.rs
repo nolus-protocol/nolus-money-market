@@ -7,7 +7,7 @@ use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{DownpaymentCoin, StateResponse},
+    api::{DownpaymentCoin, PositionClose, StateResponse},
     contract::{
         cmd::{LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult},
         state::{Handler, Response},
@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     alarm, balance,
-    close::liquidation,
+    close::{customer_close, liquidation},
     event,
     repay::{
         self,
@@ -143,6 +143,16 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         self.try_repay(deps.as_ref(), &env, info)
     }
+
+    fn close_position(
+        self,
+        spec: PositionClose,
+        deps: &mut DepsMut<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        customer_close::start(spec, self.lease, &env, &deps.querier)
+    }
+
     fn on_time_alarm(
         self,
         deps: Deps<'_>,
