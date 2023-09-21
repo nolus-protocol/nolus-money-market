@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::StdError;
 use swap::error::Error as SwapError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::api::PaymentCoin;
+use crate::api::{LpnCoin, PaymentCoin};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -58,6 +58,12 @@ pub enum ContractError {
 
     #[error("[Lease] Insufficient liquidation amount")]
     InsufficientLiquidation(),
+
+    #[error("[Lease] The position close amount should worth at least {0}")]
+    PositionCloseAmountTooSmall(LpnCoin),
+
+    #[error("[Lease] The position past this close should worth at least {0}")]
+    PositionCloseAmountTooBig(LpnCoin),
 
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),
