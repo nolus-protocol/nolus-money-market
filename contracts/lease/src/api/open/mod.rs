@@ -1,4 +1,9 @@
-use serde::{Deserialize, Serialize};
+use std::fmt;
+
+use serde::{
+    de::{self, MapAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
@@ -112,7 +117,7 @@ impl InterestPaymentSpec {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionSpec {
@@ -142,6 +147,73 @@ impl PositionSpec {
             self.min_asset.ticker() != self.min_sell_asset.ticker(),
             "The ticker of min asset should be the same as the ticker of min sell asset",
         )
+    }
+}
+
+impl<'de> Deserialize<'de> for PositionSpec {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(PositionSpecVisitor)
+    }
+}
+
+struct PositionSpecVisitor;
+
+impl<'de> Visitor<'de> for PositionSpecVisitor {
+    type Value = PositionSpec;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a PositionSpec object")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut liability = None;
+        let mut min_asset = None;
+        let mut min_sell_asset = None;
+
+        while let Some(key) = map.next_key()? {
+            match key {
+                "liability" => {
+                    if liability.is_some() {
+                        return Err(de::Error::duplicate_field("liability"));
+                    }
+                    liability = Some(map.next_value()?);
+                }
+                "min_asset" => {
+                    if min_asset.is_some() {
+                        return Err(de::Error::duplicate_field("min_asset"));
+                    }
+                    min_asset = Some(map.next_value()?);
+                }
+                "min_sell_asset" => {
+                    if min_sell_asset.is_some() {
+                        return Err(de::Error::duplicate_field("min_sell_asset"));
+                    }
+                    min_sell_asset = Some(map.next_value()?);
+                }
+                _ => {
+                    let _ = map.next_value::<serde::de::IgnoredAny>()?;
+                }
+            }
+        }
+
+        let position_spec = PositionSpec {
+            liability: liability.ok_or_else(|| de::Error::missing_field("liability"))?,
+            min_asset: min_asset.ok_or_else(|| de::Error::missing_field("min_asset"))?,
+            min_sell_asset: min_sell_asset
+                .ok_or_else(|| de::Error::missing_field("min_sell_asset"))?,
+        };
+
+        if let Err(err) = position_spec.invariant_held() {
+            return Err(de::Error::custom(err));
+        }
+
+        Ok(position_spec)
     }
 }
 
