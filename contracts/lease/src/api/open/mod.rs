@@ -121,7 +121,7 @@ impl InterestPaymentSpec {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionSpec {
-    /// The liability of the position
+    /// Liability constraints
     pub liability: Liability,
     /// The minimum amount to liquidate. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
@@ -143,10 +143,18 @@ impl PositionSpec {
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<PositionSpec>(
-            self.min_asset.ticker() != self.min_sell_asset.ticker(),
-            "The ticker of min asset should be the same as the ticker of min sell asset",
+        Self::check(
+            !self.min_asset.is_zero(),
+            "Min asset amount should be positive",
         )
+        .and(Self::check(
+            self.min_asset.ticker() == self.min_sell_asset.ticker(),
+            "The ticker of min asset should be the same as the ticker of min sell asset",
+        ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
+        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 }
 
@@ -284,7 +292,8 @@ mod test_invariant {
 
 #[cfg(test)]
 mod test_position_spec {
-    use cosmwasm_std::from_slice;
+
+    use cosmwasm_std::{from_slice, StdError};
     use currency::lpn::Usdc;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 
@@ -312,7 +321,23 @@ mod test_position_spec {
         assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
     }
 
+    #[test]
+    fn new_invalid() {
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
+        assert_err(r, "should be positive");
+    }
+
     fn assert_load_ok(exp: PositionSpec, json: &[u8]) {
         assert_eq!(Ok(exp), from_slice::<PositionSpec>(json));
+    }
+
+    fn assert_err(r: Result<PositionSpec, StdError>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
+        ));
     }
 }
