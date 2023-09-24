@@ -1,4 +1,4 @@
-use platform::bank::LazySenderStub;
+use profit::stub::ProfitStub;
 use sdk::cosmwasm_std::Env;
 
 use crate::{
@@ -34,7 +34,7 @@ impl Closable for Spec {
 impl CloseAlgo for Spec {
     type OutState = Closed;
 
-    type ProfitSender = LazySenderStub; //TODO deduce it somehow from ProfitRef?
+    type ProfitSender = ProfitStub;
 
     type ChangeSender = Self::ProfitSender;
 

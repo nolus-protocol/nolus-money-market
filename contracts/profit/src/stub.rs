@@ -8,6 +8,8 @@ use crate::{
     result::ContractResult,
 };
 
+pub type ProfitStub = LazySenderStub;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProfitRef {
     addr: Addr,
@@ -21,8 +23,8 @@ impl ProfitRef {
             .map_err(Into::into)
     }
 
-    pub fn into_stub(self) -> LazySenderStub {
-        LazySenderStub::new(self.addr)
+    pub fn into_stub(self) -> ProfitStub {
+        ProfitStub::new(self.addr)
     }
 }
 
