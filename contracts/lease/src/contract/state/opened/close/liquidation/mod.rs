@@ -18,14 +18,9 @@ pub(in crate::contract::state::opened) fn start(
     env: &Env,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    // TODO abstract LiquidationDTO-to-ClosePositionTask to avoid this match
     match liquidation {
-        LiquidationDTO::Partial(spec) => {
-            partial::RepayableImpl::from(spec).start(lease, curr_request_response, env, querier)
-        }
-        LiquidationDTO::Full(spec) => {
-            full::RepayableImpl::from(spec).start(lease, curr_request_response, env, querier)
-        }
+        LiquidationDTO::Partial(spec) => spec.start(lease, curr_request_response, env, querier),
+        LiquidationDTO::Full(spec) => spec.start(lease, curr_request_response, env, querier),
     }
     .map_err(Into::into)
 }

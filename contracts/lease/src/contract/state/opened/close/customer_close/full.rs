@@ -8,7 +8,7 @@ use crate::{
             closed::Closed,
             event::PositionCloseEmitter,
             opened::{
-                close::{self, Closable},
+                close::{self, Closable, IntoRepayable},
                 payment::{Close, CloseAlgo},
             },
         },
@@ -20,6 +20,14 @@ use crate::{
 type Spec = FullClose;
 pub(super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
+
+impl IntoRepayable for Spec {
+    type Repayable = RepayableImpl;
+
+    fn into(self) -> Self::Repayable {
+        Into::into(self)
+    }
+}
 
 impl Closable for Spec {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
