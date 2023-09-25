@@ -49,3 +49,9 @@ where
         }
     }
 }
+
+impl From<PositionDTO> for LeaseCoin {
+    fn from(value: PositionDTO) -> Self {
+        value.amount().clone()
+    }
+}
