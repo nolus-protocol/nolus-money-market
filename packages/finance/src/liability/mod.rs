@@ -110,41 +110,6 @@ impl Liability {
             .unwrap_or_else(|| self.no_liquidation(total_due, ltv.min(self.third_liq_warn())))
     }
 
-    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
-    where
-        Asset: Currency,
-    {
-        debug_assert!(ltv < self.max());
-        if total_due.is_zero() {
-            Status::NoDebt
-        } else {
-            Status::No(self.zone_of(ltv))
-        }
-    }
-
-    fn may_ask_liquidation_liability<Asset>(
-        &self,
-        asset: Coin<Asset>,
-        total_due: Coin<Asset>,
-        min_asset: Coin<Asset>,
-        min_sell_asset: Coin<Asset>,
-    ) -> Option<Status<Asset>>
-    where
-        Asset: Currency,
-    {
-        let liquidation_amount = self.amount_to_liquidate(asset, total_due);
-        liquidation::may_ask_liquidation(
-            asset,
-            Cause::Liability {
-                ltv: self.max,
-                healthy_ltv: self.healthy_percent(),
-            },
-            liquidation_amount,
-            min_asset,
-            min_sell_asset,
-        )
-    }
-
     pub const fn healthy_percent(&self) -> Percent {
         self.healthy
     }
@@ -200,7 +165,7 @@ impl Liability {
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
     {
@@ -250,6 +215,41 @@ impl Liability {
         )?;
 
         Ok(())
+    }
+
+    fn may_ask_liquidation_liability<Asset>(
+        &self,
+        asset: Coin<Asset>,
+        total_due: Coin<Asset>,
+        min_asset: Coin<Asset>,
+        min_sell_asset: Coin<Asset>,
+    ) -> Option<Status<Asset>>
+    where
+        Asset: Currency,
+    {
+        let liquidation_amount = self.amount_to_liquidate(asset, total_due);
+        liquidation::may_ask_liquidation(
+            asset,
+            Cause::Liability {
+                ltv: self.max,
+                healthy_ltv: self.healthy_percent(),
+            },
+            liquidation_amount,
+            min_asset,
+            min_sell_asset,
+        )
+    }
+
+    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
+    where
+        Asset: Currency,
+    {
+        debug_assert!(ltv < self.max());
+        if total_due.is_zero() {
+            Status::NoDebt
+        } else {
+            Status::No(self.zone_of(ltv))
+        }
     }
 }
 

@@ -29,7 +29,7 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionDTO) -> ContractResult<Self> {
-        Self::try_from(&dto.amount, dto.spec)
+        Self::try_from(dto.amount, dto.spec)
     }
 }
 

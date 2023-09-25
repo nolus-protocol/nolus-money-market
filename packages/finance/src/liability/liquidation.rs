@@ -36,12 +36,14 @@ where
         Self::Liquidation(Liquidation::Full(cause))
     }
 
+    //TODO rename to #[cfg(debug_assertions)]
     #[cfg(debug_assertion)]
     fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
         &self,
         lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Coin<Asset> {
         match self {
+            Self::NoDebt => Default::default(),
             Self::No(_) => Default::default(),
             Self::Liquidation(liq) => liq.amount(lease),
         }
@@ -62,6 +64,7 @@ impl<Asset> Liquidation<Asset>
 where
     Asset: Currency,
 {
+    //TODO rename to #[cfg(debug_assertions)]
     #[cfg(debug_assertion)]
     pub(crate) fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
         &self,

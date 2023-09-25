@@ -42,7 +42,7 @@ where
         obj
     }
 
-    pub fn try_from(amount: &LeaseCoin, spec: PositionSpec) -> ContractResult<Self> {
+    pub fn try_from(amount: LeaseCoin, spec: PositionSpec) -> ContractResult<Self> {
         Ok(Self::new_internal(
             amount.try_into()?,
             spec.liability,

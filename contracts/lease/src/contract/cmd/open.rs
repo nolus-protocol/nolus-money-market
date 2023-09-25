@@ -70,7 +70,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let position = Position::try_from(self.amount, self.form.position_spec);
+        let position = Position::try_from(self.amount.clone(), self.form.position_spec)?;
 
         let loan = Loan::new(
             self.start_at,
@@ -82,7 +82,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         let lease = Lease::<_, Asset, _, _>::new(
             self.lease_addr,
             self.form.customer,
-            position?,
+            position,
             loan,
             oracle,
         );

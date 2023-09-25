@@ -32,6 +32,7 @@ where
         let status = self
             .position
             .check_liability(total_due, overdue, lpn_in_assets);
+        //TODO rename to #[cfg(debug_assertions)]
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
         Ok(status)
