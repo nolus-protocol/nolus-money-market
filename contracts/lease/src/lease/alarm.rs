@@ -92,10 +92,6 @@ where
         alarm_at: Level,
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(
-            !self.position.amount().is_zero(),
-            "Invariant broken, asset = 0!"
-        );
-        debug_assert!(
             !liability.is_zero(),
             "Loan already paid, no need of next alarms!"
         );

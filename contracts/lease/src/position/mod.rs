@@ -72,10 +72,14 @@ where
         self.liability
     }
 
-    pub fn close(&mut self, amount: Coin<Asset>) {
-        debug_assert!(amount <= self.amount);
+    pub fn close(&mut self, asset: Coin<Asset>) {
+        debug_assert!(
+            asset < self.amount,
+            "Liquidated asset {asset} should be less than the available {0}",
+            self.amount
+        );
 
-        self.amount -= amount
+        self.amount -= asset
     }
 
     pub fn check_liability(

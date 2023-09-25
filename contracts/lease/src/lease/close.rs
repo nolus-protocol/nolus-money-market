@@ -51,12 +51,6 @@ where
     where
         Profit: FixedAddressSender,
     {
-        let amount = self.position.amount();
-        debug_assert!(
-            asset < amount,
-            "Liquidated asset {asset} should be less than the available {0}",
-            amount
-        );
         self.position.close(asset);
         self.repay(payment, now, profit)
     }
