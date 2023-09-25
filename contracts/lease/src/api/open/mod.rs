@@ -1,10 +1,3 @@
-use std::fmt;
-
-use serde::{
-    de::{self, MapAccess, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
-
 use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
@@ -12,6 +5,7 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{error::ContractError, error::ContractResult};
 
@@ -117,9 +111,13 @@ impl InterestPaymentSpec {
     }
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "unchecked::PositionSpec"
+)]
 pub struct PositionSpec {
     /// Liability constraints
     pub liability: Liability,
@@ -132,7 +130,11 @@ pub struct PositionSpec {
 }
 
 impl PositionSpec {
-    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
+    pub(crate) fn new_internal(
+        liability: Liability,
+        min_asset: LpnCoin,
+        min_sell_asset: LpnCoin,
+    ) -> Self {
         let obj = Self {
             liability,
             min_asset,
@@ -140,6 +142,11 @@ impl PositionSpec {
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
+        Self::new_internal(liability, min_asset, min_sell_asset)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
@@ -155,73 +162,6 @@ impl PositionSpec {
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
-    }
-}
-
-impl<'de> Deserialize<'de> for PositionSpec {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_map(PositionSpecVisitor)
-    }
-}
-
-struct PositionSpecVisitor;
-
-impl<'de> Visitor<'de> for PositionSpecVisitor {
-    type Value = PositionSpec;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a PositionSpec object")
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        let mut liability = None;
-        let mut min_asset = None;
-        let mut min_sell_asset = None;
-
-        while let Some(key) = map.next_key()? {
-            match key {
-                "liability" => {
-                    if liability.is_some() {
-                        return Err(de::Error::duplicate_field("liability"));
-                    }
-                    liability = Some(map.next_value()?);
-                }
-                "min_asset" => {
-                    if min_asset.is_some() {
-                        return Err(de::Error::duplicate_field("min_asset"));
-                    }
-                    min_asset = Some(map.next_value()?);
-                }
-                "min_sell_asset" => {
-                    if min_sell_asset.is_some() {
-                        return Err(de::Error::duplicate_field("min_sell_asset"));
-                    }
-                    min_sell_asset = Some(map.next_value()?);
-                }
-                _ => {
-                    let _ = map.next_value::<serde::de::IgnoredAny>()?;
-                }
-            }
-        }
-
-        let position_spec = PositionSpec {
-            liability: liability.ok_or_else(|| de::Error::missing_field("liability"))?,
-            min_asset: min_asset.ok_or_else(|| de::Error::missing_field("min_asset"))?,
-            min_sell_asset: min_sell_asset
-                .ok_or_else(|| de::Error::missing_field("min_sell_asset"))?,
-        };
-
-        if let Err(err) = position_spec.invariant_held() {
-            return Err(de::Error::custom(err));
-        }
-
-        Ok(position_spec)
     }
 }
 
@@ -322,9 +262,16 @@ mod test_position_spec {
     }
 
     #[test]
-    fn new_invalid() {
+    fn sezo_min_asset() {
         let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
+    }
+
+    #[test]
+    fn invalid_ticker() {
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"ATOM"}}"#);
+        dbg!(&r);
+        assert_err(r, "'ATOM' pretending to be");
     }
 
     fn assert_load_ok(exp: PositionSpec, json: &[u8]) {

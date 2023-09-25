@@ -41,7 +41,7 @@ where
     fn from(value: Position<Asset, Lpn>) -> Self {
         Self {
             amount: value.amount.into(),
-            spec: PositionSpec::new(
+            spec: PositionSpec::new_internal(
                 value.liability,
                 value.min_asset.into(),
                 value.min_sell_asset.into(),
