@@ -1,10 +1,5 @@
 use currency::Currency;
-use finance::{
-    coin::Coin,
-    fraction::Fraction,
-    liability::{Level, Zone},
-    price::{total_of, Price},
-};
+use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use marketprice::SpotPrice;
 use oracle::{
@@ -70,11 +65,13 @@ where
         let total_liability = self.loan.liability_status(recalculation_time).total;
         debug_assert!(!total_liability.is_zero());
 
-        let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
+        let below = liquidation_zone
+            .high()
+            .price_alarm(self.position.amount(), total_liability)?;
 
         let above_or_equal = liquidation_zone
             .low()
-            .map(|low| self.price_alarm_at_level(total_liability, low))
+            .map(|low| low.price_alarm(self.position.amount(), total_liability))
             .transpose()?;
 
         price_alarms
@@ -83,21 +80,6 @@ where
                 above_or_equal.map(Into::<SpotPrice>::into),
             ))
             .map_err(Into::into)
-    }
-
-    // TODO define it as a member method of `Level`
-    fn price_alarm_at_level(
-        &self,
-        liability: Coin<Lpn>,
-        alarm_at: Level,
-    ) -> ContractResult<Price<Asset, Lpn>> {
-        debug_assert!(
-            !liability.is_zero(),
-            "Loan already paid, no need of next alarms!"
-        );
-        debug_assert!(!alarm_at.ltv().is_zero());
-
-        Ok(total_of(alarm_at.ltv().of(self.position.amount())).is(liability))
     }
 
     fn recalc_time(&self, now: &Timestamp) -> Timestamp {
