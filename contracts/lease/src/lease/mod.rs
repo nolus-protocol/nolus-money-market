@@ -9,7 +9,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
-    position::{Position, PositionDTO},
+    position::Position,
 };
 
 pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
@@ -116,7 +116,7 @@ where
         time_alarms: TimeAlarmsRef,
     ) -> ContractResult<IntoDTOResult> {
         let (loan_dto, loan_batch) = self.loan.try_into_dto(profit)?;
-        let position = PositionDTO::from(self.position);
+        let position = self.position.into();
 
         Ok(IntoDTOResult {
             lease: LeaseDTO::new(

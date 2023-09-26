@@ -1,7 +1,6 @@
-use finance::liability::Liability;
 use serde::Deserialize;
 
-use finance::duration::Duration;
+use finance::{duration::Duration, liability::Liability};
 
 use crate::{api::LpnCoin, error::ContractError};
 
@@ -24,8 +23,7 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
             due_period: dto.due_period,
             grace_period: dto.grace_period,
         };
-        res.invariant_held()?;
-        Ok(res)
+        res.invariant_held().map(|_| res)
     }
 }
 
@@ -47,7 +45,6 @@ impl TryFrom<PositionSpec> for ValidatedPositionSpec {
             min_asset: value.min_asset,
             min_sell_asset: value.min_sell_asset,
         };
-        res.invariant_held()?;
-        Ok(res)
+        res.invariant_held().map(|_| res)
     }
 }

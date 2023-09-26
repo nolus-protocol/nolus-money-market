@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
@@ -5,7 +7,6 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{error::ContractError, error::ContractResult};
 
@@ -121,7 +122,7 @@ impl InterestPaymentSpec {
 pub struct PositionSpec {
     /// Liability constraints
     pub liability: Liability,
-    /// The minimum amount to liquidate. Any attempt to liquidate a smaller
+    /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
     pub min_asset: LpnCoin,
     ///  The minimum amount that a lease asset should be evaluated past any
@@ -232,8 +233,8 @@ mod test_invariant {
 
 #[cfg(test)]
 mod test_position_spec {
+    use sdk::cosmwasm_std::{from_slice, StdError};
 
-    use cosmwasm_std::{from_slice, StdError};
     use currency::lpn::Usdc;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 
@@ -262,7 +263,7 @@ mod test_position_spec {
     }
 
     #[test]
-    fn sezo_min_asset() {
+    fn zero_min_asset() {
         let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
     }
