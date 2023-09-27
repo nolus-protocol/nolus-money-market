@@ -22,7 +22,7 @@ pub(crate) fn open_lease(
     form: NewLeaseForm,
     lease_addr: Addr,
     start_at: Timestamp,
-    amount: &LeaseCoin,
+    amount: LeaseCoin,
     querier: &QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
@@ -45,17 +45,17 @@ pub(crate) fn open_lease(
     with_lease_deps::execute(cmd, lease_addr, &asset_currency, deps.0, deps.1, querier)
 }
 
-struct LeaseFactory<'a> {
+struct LeaseFactory {
     form: NewLeaseForm,
     lease_addr: Addr,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
-    amount: &'a LeaseCoin,
+    amount: LeaseCoin,
 }
 
-impl<'a> WithLeaseDeps for LeaseFactory<'a> {
+impl WithLeaseDeps for LeaseFactory {
     type Output = IntoDTOResult;
     type Error = ContractError;
 
@@ -70,7 +70,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let position = Position::try_from(self.amount.clone(), self.form.position_spec)?;
+        let position = Position::try_from(self.amount, self.form.position_spec)?;
 
         let loan = Loan::new(
             self.start_at,
