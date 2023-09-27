@@ -9,10 +9,8 @@ use crate::{
 
 use super::swap_task::SwapTask as SwapTaskT;
 
-pub type OpenIcaRespDelivery<OpenIca, SwapTask, ForwardToInnerMsg> = ICAOpenResponseDelivery<
-    IcaConnector<OpenIca, <SwapTask as SwapTaskT>::Result>,
-    ForwardToInnerMsg,
->;
+pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
 
 #[derive(Serialize, Deserialize)]
 pub enum State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
@@ -20,7 +18,7 @@ where
     SwapTask: SwapTaskT,
 {
     OpenIca(IcaConnector<OpenIca, SwapTask::Result>),
-    OpenIcaRespDelivery(OpenIcaRespDelivery<OpenIca, SwapTask, ForwardToInnerContinueMsg>),
+    OpenIcaRespDelivery(OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>),
     TransferOut(TransferOut<SwapTask, Self>),
     TransferOutRespDelivery(TransferOutRespDelivery<SwapTask, Self, ForwardToInnerMsg>),
     SwapExactIn(SwapExactIn<SwapTask, Self>),
@@ -65,12 +63,14 @@ mod impl_into {
     }
 
     impl<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<OpenIcaRespDelivery<OpenIca, SwapTask, ForwardToInnerContinueMsg>>
+        From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
         for State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: OpenIcaRespDelivery<OpenIca, SwapTask, ForwardToInnerContinueMsg>) -> Self {
+        fn from(
+            value: OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>,
+        ) -> Self {
             Self::OpenIcaRespDelivery(value)
         }
     }
