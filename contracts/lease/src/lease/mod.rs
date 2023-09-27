@@ -116,13 +116,12 @@ where
         time_alarms: TimeAlarmsRef,
     ) -> ContractResult<IntoDTOResult> {
         let (loan_dto, loan_batch) = self.loan.try_into_dto(profit)?;
-        let position = self.position.into();
 
         Ok(IntoDTOResult {
             lease: LeaseDTO::new(
                 self.addr,
                 self.customer,
-                position,
+                self.position.into(),
                 loan_dto,
                 time_alarms,
                 self.oracle.into(),

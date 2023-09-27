@@ -233,10 +233,9 @@ mod test_invariant {
 
 #[cfg(test)]
 mod test_position_spec {
-    use sdk::cosmwasm_std::{from_slice, StdError};
-
     use currency::lpn::Usdc;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use sdk::cosmwasm_std::{from_slice, StdError};
 
     use super::PositionSpec;
 
