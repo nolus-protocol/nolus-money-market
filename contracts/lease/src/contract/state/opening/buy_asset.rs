@@ -148,7 +148,7 @@ impl SwapTask for BuyAsset {
             self.form,
             self.dex_account.owner().clone(),
             self.start_opening_at,
-            &amount_out,
+            amount_out,
             querier,
             (self.deps.0, self.deps.1, self.deps.2),
         )?;

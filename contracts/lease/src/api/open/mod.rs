@@ -86,7 +86,7 @@ impl InterestPaymentSpec {
             due_period,
             grace_period,
         };
-        debug_assert_eq!(res.invariant_held(), Ok(()));
+        debug_assert_eq!(Ok(()), res.invariant_held());
         res
     }
 
@@ -114,21 +114,55 @@ impl InterestPaymentSpec {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "unchecked::PositionSpec"
+)]
 pub struct PositionSpec {
+    /// Liability constraints
     pub liability: Liability,
+    /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
+    /// amount would be postponed until the amount goes above this limit
     pub min_asset: LpnCoin,
+    ///  The minimum amount that a lease asset should be evaluated past any
+    ///  partial liquidation or close. If not, a full liquidation is performed
     pub min_sell_asset: LpnCoin,
 }
 
 impl PositionSpec {
-    #[cfg(any(test, feature = "testing"))]
-    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
-        Self {
+    pub(crate) fn new_internal(
+        liability: Liability,
+        min_asset: LpnCoin,
+        min_sell_asset: LpnCoin,
+    ) -> Self {
+        let obj = Self {
             liability,
             min_asset,
             min_sell_asset,
-        }
+        };
+        debug_assert_eq!(Ok(()), obj.invariant_held());
+        obj
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
+        Self::new_internal(liability, min_asset, min_sell_asset)
+    }
+
+    fn invariant_held(&self) -> ContractResult<()> {
+        Self::check(
+            !self.min_asset.is_zero(),
+            "Min asset amount should be positive",
+        )
+        .and(Self::check(
+            self.min_asset.ticker() == self.min_sell_asset.ticker(),
+            "The ticker of min asset should be the same as the ticker of min sell asset",
+        ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
+        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 }
 
@@ -193,6 +227,64 @@ mod test_invariant {
                 target_type,
                 msg: real_msg
             }) if target_type.contains("InterestPaymentSpec") && real_msg.contains(msg)
+        ));
+    }
+}
+
+#[cfg(test)]
+mod test_position_spec {
+    use currency::lpn::Usdc;
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use sdk::cosmwasm_std::{from_slice, StdError};
+
+    use super::PositionSpec;
+
+    type LpnCoin = Coin<Usdc>;
+
+    #[test]
+    fn new_valid() {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        let position_spec = PositionSpec::new(
+            liability,
+            LpnCoin::new(5000).into(),
+            LpnCoin::new(9000000).into(),
+        );
+
+        assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
+    }
+
+    #[test]
+    fn zero_min_asset() {
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
+        assert_err(r, "should be positive");
+    }
+
+    #[test]
+    fn invalid_ticker() {
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"ATOM"}}"#);
+        dbg!(&r);
+        assert_err(r, "'ATOM' pretending to be");
+    }
+
+    fn assert_load_ok(exp: PositionSpec, json: &[u8]) {
+        assert_eq!(Ok(exp), from_slice::<PositionSpec>(json));
+    }
+
+    fn assert_err(r: Result<PositionSpec, StdError>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
         ));
     }
 }

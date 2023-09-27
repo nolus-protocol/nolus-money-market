@@ -463,16 +463,19 @@ fn send_response(
     .unwrap()
 }
 
+#[track_caller]
 fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
     app.query().query_wasm_smart(lease, &StateQuery {}).unwrap()
 }
 
+#[track_caller]
 fn check_state_opening(app: &mut App, lease: Addr) {
     if !matches!(fetch_state(app, lease), StateResponse::Opening { .. }) {
         panic!("Opening lease failed! Lease is expected to be in opening state!");
     }
 }
 
+#[track_caller]
 fn check_state_opened(app: &mut App, lease: Addr) {
     if !matches!(fetch_state(app, lease), StateResponse::Opened { .. }) {
         panic!("Opening lease failed! Lease is not yet it opened state!");

@@ -1,10 +1,5 @@
 use currency::Currency;
-use finance::{
-    coin::Coin,
-    liability::{self, Status},
-    price::{self, Price},
-    zero::Zero,
-};
+use finance::{coin::Coin, liability::Status, price::Price, zero::Zero};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -21,7 +16,7 @@ where
     Asset: Currency,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        let price_in_asset = self.price_of_lease_currency()?.inv();
+        let lpn_in_assets = self.price_of_lease_currency()?.inv();
 
         let LiabilityStatus {
             total: total_due,
@@ -34,14 +29,10 @@ where
             Coin::ZERO
         };
 
-        let status = liability::check_liability(
-            &self.liability,
-            self.amount,
-            price::total(total_due, price_in_asset),
-            price::total(overdue, price_in_asset),
-            price::total(Self::MIN_ASSET, price_in_asset),
-            price::total(Self::MIN_SELL_ASSET, price_in_asset),
-        );
+        let status = self
+            .position
+            .check_liability(total_due, overdue, lpn_in_assets);
+        //TODO rename to #[cfg(debug_assertions)]
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
         Ok(status)

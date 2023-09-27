@@ -1,5 +1,4 @@
 use currency::{self, Currency};
-use finance::{coin::Coin, liability::Liability};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -10,7 +9,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
-    position::PositionDTO,
+    position::Position,
 };
 
 pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
@@ -33,8 +32,7 @@ pub(crate) mod with_lease_paid;
 pub struct Lease<Lpn, Asset, Lpp, Oracle> {
     addr: Addr,
     customer: Addr,
-    amount: Coin<Asset>,
-    liability: Liability,
+    position: Position<Asset, Lpn>,
     loan: Loan<Lpn, Lpp>,
     oracle: Oracle,
 }
@@ -61,44 +59,37 @@ where
     pub(super) fn new(
         addr: Addr,
         customer: Addr,
-        amount: Coin<Asset>,
-        liability: Liability,
+        position: Position<Asset, Lpn>,
         loan: Loan<Lpn, LppLoan>,
         oracle: Oracle,
     ) -> Self {
-        debug_assert!(!amount.is_zero());
         debug_assert!(!currency::equal::<Lpn, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
         Self {
             addr,
             customer,
-            amount,
-            liability,
+            position,
             loan,
             oracle,
         }
     }
 
     pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
-        let amount = dto.position.amount.try_into().expect(
-            "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol()",
-        );
-        let liability = dto.position.liability;
-        Self {
-            addr: dto.addr,
-            customer: dto.customer,
-            amount,
-            liability,
-            loan: Loan::from_dto(dto.loan, lpp_loan),
+        let position = dto.position.try_into().expect("The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol() and Lpn == dto.position.min_asset.symbol()");
+        Self::new(
+            dto.addr,
+            dto.customer,
+            position,
+            Loan::from_dto(dto.loan, lpp_loan),
             oracle,
-        }
+        )
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
         let loan = self.loan.state(now);
         State {
-            amount: self.amount,
+            amount: self.position.amount(),
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
@@ -119,9 +110,6 @@ where
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
-    pub const MIN_ASSET: Coin<Lpn> = Coin::new(10_000); // $0.01 TODO issue #40
-    pub const MIN_SELL_ASSET: Coin<Lpn> = Coin::new(15_000_000); // $15 TODO issue #50
-
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
@@ -133,12 +121,7 @@ where
             lease: LeaseDTO::new(
                 self.addr,
                 self.customer,
-                PositionDTO::new(
-                    self.amount.into(),
-                    self.liability,
-                    Self::MIN_ASSET.into(),
-                    Self::MIN_SELL_ASSET.into(),
-                ),
+                self.position.into(),
                 loan_dto,
                 time_alarms,
                 self.oracle.into(),
@@ -170,7 +153,7 @@ mod tests {
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{api::InterestPaymentSpec, loan::Loan};
+    use crate::{api::InterestPaymentSpec, loan::Loan, position::Position};
 
     use super::{Lease, State};
 
@@ -310,15 +293,19 @@ mod tests {
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            amount,
-            Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(5),
-                Percent::from_percent(10),
-                Percent::from_percent(2),
-                Percent::from_percent(3),
-                Percent::from_percent(2),
-                RECALC_TIME,
+            Position::<TestCurrency, TestLpn>::new(
+                amount,
+                Liability::new(
+                    Percent::from_percent(65),
+                    Percent::from_percent(5),
+                    Percent::from_percent(10),
+                    Percent::from_percent(2),
+                    Percent::from_percent(3),
+                    Percent::from_percent(2),
+                    RECALC_TIME,
+                ),
+                Coin::<TestLpn>::new(10_000),
+                Coin::<TestLpn>::new(15_000_000),
             ),
             loan,
             oracle,

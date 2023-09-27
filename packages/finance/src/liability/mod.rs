@@ -1,10 +1,12 @@
 use std::ops::Sub;
 
+use currency::Currency;
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
+    coin::Coin,
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
@@ -15,10 +17,7 @@ use crate::{
 };
 
 pub use self::level::Level;
-pub use self::liquidation::check_liability;
-pub use self::liquidation::Cause;
-pub use self::liquidation::Liquidation;
-pub use self::liquidation::Status;
+pub use self::liquidation::{may_ask_liquidation, Cause, Liquidation, Status};
 pub use self::zone::Zone;
 
 mod level;
@@ -82,6 +81,35 @@ impl Liability {
         obj
     }
 
+    // TODO return the next `recalc_time` as well to simplify the API and its usage
+    // remove the `fn recalc_time`
+    // compute the point of time based on the  provided current time
+    pub fn check<Asset>(
+        &self,
+        asset: Coin<Asset>,
+        total_due: Coin<Asset>,
+        overdue: Coin<Asset>,
+        min_asset: Coin<Asset>,
+        min_sell_asset: Coin<Asset>,
+    ) -> Status<Asset>
+    where
+        Asset: Currency,
+    {
+        debug_assert!(!asset.is_zero());
+        debug_assert!(total_due <= asset);
+        debug_assert!(overdue <= total_due);
+
+        let ltv = Percent::from_ratio(total_due, asset);
+        self.may_ask_liquidation_liability(asset, total_due, min_asset, min_sell_asset)
+            .max(may_ask_liquidation_overdue(
+                asset,
+                overdue,
+                min_asset,
+                min_sell_asset,
+            ))
+            .unwrap_or_else(|| self.no_liquidation(total_due, ltv.min(self.third_liq_warn())))
+    }
+
     pub const fn healthy_percent(&self) -> Percent {
         self.healthy
     }
@@ -137,7 +165,7 @@ impl Liability {
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
     {
@@ -188,10 +216,57 @@ impl Liability {
 
         Ok(())
     }
+
+    fn may_ask_liquidation_liability<Asset>(
+        &self,
+        asset: Coin<Asset>,
+        total_due: Coin<Asset>,
+        min_asset: Coin<Asset>,
+        min_sell_asset: Coin<Asset>,
+    ) -> Option<Status<Asset>>
+    where
+        Asset: Currency,
+    {
+        let liquidation_amount = self.amount_to_liquidate(asset, total_due);
+        liquidation::may_ask_liquidation(
+            asset,
+            Cause::Liability {
+                ltv: self.max,
+                healthy_ltv: self.healthy_percent(),
+            },
+            liquidation_amount,
+            min_asset,
+            min_sell_asset,
+        )
+    }
+
+    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
+    where
+        Asset: Currency,
+    {
+        debug_assert!(ltv < self.max());
+        if total_due.is_zero() {
+            Status::NoDebt
+        } else {
+            Status::No(self.zone_of(ltv))
+        }
+    }
 }
 
 fn check(invariant: bool, msg: &str) -> Result<()> {
     Error::broken_invariant_if::<Liability>(!invariant, msg)
+}
+
+fn may_ask_liquidation_overdue<Asset>(
+    asset: Coin<Asset>,
+    overdue: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
+    min_asset: Coin<Asset>,
+) -> Option<Status<Asset>>
+where
+    Asset: Currency,
+{
+    liquidation::may_ask_liquidation(asset, Cause::Overdue(), overdue, min_liquidation, min_asset)
 }
 
 #[cfg(test)]
@@ -220,8 +295,7 @@ mod test {
             max: Percent::from_percent(15),
             recalc_time: Duration::from_hours(10),
         };
-        assert_load_ok(br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#,
-        exp);
+        assert_load_ok(exp, br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#);
     }
 
     #[test]
@@ -236,8 +310,8 @@ mod test {
             recalc_time: Duration::HOUR,
         };
 
-        assert_load_ok(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, exp);
+        assert_load_ok(exp, br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
+                        "max":14,"recalc_time":3600000000000}"#);
     }
 
     #[test]
@@ -402,7 +476,7 @@ mod test {
         }
     }
 
-    fn assert_load_ok(json: &[u8], exp: Liability) {
+    fn assert_load_ok(exp: Liability, json: &[u8]) {
         assert_eq!(Ok(exp), from_slice::<Liability>(json));
     }
 
@@ -438,5 +512,709 @@ mod test {
         .init_borrow_amount(downpayment, max_p);
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
+    }
+}
+
+#[cfg(test)]
+mod test_check {
+    use crate::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        liability::{Cause, Liability, Status, Zone},
+        percent::Percent,
+        zero::Zero,
+    };
+    use currency::test::Dai;
+
+    pub type TestCurrency = Dai;
+
+    const LEASE_AMOUNT: Coin<TestCurrency> = Coin::new(1000);
+    const MIN_DUE_AMOUNT: Coin<TestCurrency> = Coin::new(100);
+    const MIN_ASSET: Coin<TestCurrency> = MIN_DUE_AMOUNT;
+    const MIN_SELL_ASSET: Coin<TestCurrency> = Coin::ZERO;
+
+    #[test]
+    fn no_debt() {
+        let warn_ltv = Percent::from_permille(11);
+        let spec = liability_with_first(warn_ltv);
+        assert_eq!(
+            spec.check::<TestCurrency>(100.into(), 0.into(), 0.into(), MIN_ASSET, MIN_SELL_ASSET),
+            Status::NoDebt,
+        );
+    }
+
+    #[test]
+    fn warnings_none() {
+        let warn_ltv = Percent::from_percent(51);
+        let spec = liability_with_first(warn_ltv);
+        assert_eq!(
+            spec.check::<TestCurrency>(100.into(), 1.into(), 0.into(), MIN_ASSET, MIN_SELL_ASSET),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(100.into(), 49.into(), 0.into(), MIN_ASSET, MIN_SELL_ASSET),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(100.into(), 50.into(), 0.into(), MIN_ASSET, MIN_SELL_ASSET),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                505.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                505.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                509.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                510.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                510.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                510.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                515.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+    }
+
+    #[test]
+    fn warnings_first() {
+        let spec = liability_with_first(Percent::from_permille(712));
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                711.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                712.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                712.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                712.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                715.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                721.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                721.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                722.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+    }
+
+    #[test]
+    fn warnings_second() {
+        let spec = liability_with_second(Percent::from_permille(123));
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                122.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                123.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                124.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                128.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                128.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                132.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                133.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+    }
+
+    #[test]
+    fn warnings_third() {
+        let warn_third_ltv = Percent::from_permille(381);
+        let max_ltv = warn_third_ltv + STEP;
+        let spec = liability_with_third(warn_third_ltv);
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                380.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                380.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                381.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                381.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                382.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                390.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                391.into(),
+                0.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                384.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+    }
+
+    #[test]
+    fn min_liquidation() {
+        let max_ltv = Percent::from_permille(751);
+        let spec = liability_with_max(max_ltv);
+        let min_asset = Coin::<TestCurrency>::new(1000);
+
+        assert_eq!(
+            spec.check::<TestCurrency>(878.into(), 752.into(), 0.into(), min_asset, MIN_SELL_ASSET),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(878.into(), 752.into(), 0.into(), min_asset, MIN_SELL_ASSET),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                750.into(),
+                99.into(),
+                min_asset,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                751.into(),
+                99.into(),
+                min_asset,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                761.into(),
+                0.into(),
+                min_asset,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+    }
+
+    #[test]
+    fn liquidate_partial() {
+        let max_ltv = Percent::from_permille(881);
+        const BACK_TO_HEALTHY: Amount = 879;
+        let spec = liability_with_max(max_ltv);
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                880.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                880.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                881.into(),
+                MIN_DUE_AMOUNT,
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                BACK_TO_HEALTHY.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                881.into(),
+                (BACK_TO_HEALTHY - 1).into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                BACK_TO_HEALTHY.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                881.into(),
+                BACK_TO_HEALTHY.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                BACK_TO_HEALTHY.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                881.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                999.into(),
+                997.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                998.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                1000.into(),
+                1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::full(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+    }
+
+    #[test]
+    fn liquidate_full() {
+        let max_ltv = Percent::from_permille(768);
+        let spec = liability_with_max(max_ltv);
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                768.into(),
+                765.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(
+                765.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                768.into(),
+                768.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::partial(768.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                1000.into(),
+                1.into(),
+                MIN_ASSET,
+                MIN_SELL_ASSET
+            ),
+            Status::full(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+    }
+
+    #[test]
+    fn liquidate_partial_liability() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 898;
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                900.into(),
+                BACK_TO_HEALTHY.into(),
+                MIN_ASSET,
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
+            ),
+            Status::partial(
+                BACK_TO_HEALTHY.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+    }
+
+    #[test]
+    fn liquidate_partial_overdue() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 898;
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                900.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                MIN_ASSET,
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 2.into()
+            ),
+            Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
+        );
+    }
+
+    #[test]
+    fn liquidate_full_liability() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 898;
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                900.into(),
+                BACK_TO_HEALTHY.into(),
+                MIN_ASSET,
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into()
+            ),
+            Status::full(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+    }
+
+    #[test]
+    fn liquidate_full_overdue() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 898;
+
+        assert_eq!(
+            spec.check::<TestCurrency>(
+                LEASE_AMOUNT,
+                900.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                MIN_ASSET,
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
+            ),
+            Status::full(Cause::Overdue()),
+        );
+    }
+
+    #[test]
+    fn no_liquidate_min_asset() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 898;
+
+        assert_eq!(
+            spec.check(
+                LEASE_AMOUNT,
+                572.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_ASSET,
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+    }
+
+    const STEP: Percent = Percent::from_permille(10);
+
+    fn liability_with_first(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP + STEP + STEP)
+    }
+
+    fn liability_with_second(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP + STEP)
+    }
+
+    fn liability_with_third(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP)
+    }
+
+    // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
+    fn liability_with_max(max: Percent) -> Liability {
+        let initial = STEP;
+        assert!(initial < max - STEP - STEP - STEP);
+
+        Liability::new(
+            initial,
+            Percent::ZERO,
+            max - initial,
+            STEP,
+            STEP,
+            STEP,
+            Duration::from_hours(1),
+        )
     }
 }

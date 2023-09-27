@@ -57,7 +57,7 @@ impl TransferIn {
     }
 
     fn amount(&self) -> &CoinDTO<LeaseGroup> {
-        &self.lease.lease.position.amount
+        self.lease.lease.position.amount()
     }
 
     // fn emit_ok(&self) -> Emitter {

@@ -1,5 +1,4 @@
 use currency::Currency;
-use finance::coin::Coin;
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
@@ -14,6 +13,7 @@ use crate::{
         IntoDTOResult, Lease,
     },
     loan::Loan,
+    position::Position,
 };
 
 use super::{liquidation_status, LiquidationStatus};
@@ -22,7 +22,7 @@ pub(crate) fn open_lease(
     form: NewLeaseForm,
     lease_addr: Addr,
     start_at: Timestamp,
-    amount: &LeaseCoin,
+    amount: LeaseCoin,
     querier: &QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
@@ -45,17 +45,17 @@ pub(crate) fn open_lease(
     with_lease_deps::execute(cmd, lease_addr, &asset_currency, deps.0, deps.1, querier)
 }
 
-struct LeaseFactory<'a> {
+struct LeaseFactory {
     form: NewLeaseForm,
     lease_addr: Addr,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
-    amount: &'a LeaseCoin,
+    amount: LeaseCoin,
 }
 
-impl<'a> WithLeaseDeps for LeaseFactory<'a> {
+impl WithLeaseDeps for LeaseFactory {
     type Output = IntoDTOResult;
     type Error = ContractError;
 
@@ -70,7 +70,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let liability = self.form.position_spec.liability;
+        let position = Position::try_from(self.amount, self.form.position_spec)?;
 
         let loan = Loan::new(
             self.start_at,
@@ -78,13 +78,11 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             self.form.loan.annual_margin_interest,
             self.form.loan.interest_payment,
         );
-        let amount: Coin<Asset> = self.amount.try_into()?;
 
         let lease = Lease::<_, Asset, _, _>::new(
             self.lease_addr,
             self.form.customer,
-            amount,
-            liability,
+            position,
             loan,
             oracle,
         );
