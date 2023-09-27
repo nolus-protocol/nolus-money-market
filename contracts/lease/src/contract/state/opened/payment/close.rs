@@ -4,7 +4,10 @@ use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::{
+        opened::{OngoingTrx, PositionCloseTrx},
+        LeaseCoin, LpnCoin,
+    },
     contract::{
         cmd::{FullClose as FullCloseCmd, RepayEmitter},
         state::{opened::close::Closable, Response, State},
@@ -60,6 +63,10 @@ where
 {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)
+    }
+
+    fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
+        self.0.transaction(lease, in_progress)
     }
 
     fn event_type(&self) -> Type {

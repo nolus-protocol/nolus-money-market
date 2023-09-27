@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opened::LiquidateTrx},
+    api::{self, opened::PositionCloseTrx},
     contract::{
         state::{opened::payment::Repayable, SwapResult},
         Lease,
@@ -111,7 +111,13 @@ where
         now: Timestamp,
         querier: &QuerierWrapper<'_>,
     ) -> SellAssetStateResponse<RepayableT> {
-        super::query(self.lease, self.repayable, LiquidateTrx::Swap, now, querier)
+        super::query(
+            self.lease,
+            self.repayable,
+            PositionCloseTrx::Swap,
+            now,
+            querier,
+        )
     }
 }
 
@@ -128,7 +134,7 @@ where
         super::query(
             self.lease,
             self.repayable,
-            LiquidateTrx::TransferInInit,
+            PositionCloseTrx::TransferInInit,
             now,
             querier,
         )
@@ -148,7 +154,7 @@ where
         super::query(
             self.lease,
             self.repayable,
-            LiquidateTrx::TransferInFinish,
+            PositionCloseTrx::TransferInFinish,
             now,
             querier,
         )

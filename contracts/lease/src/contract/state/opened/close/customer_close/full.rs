@@ -2,7 +2,10 @@ use profit::stub::ProfitStub;
 use sdk::cosmwasm_std::Env;
 
 use crate::{
-    api::{FullClose, LeaseCoin},
+    api::{
+        opened::{OngoingTrx, PositionCloseTrx},
+        FullClose, LeaseCoin,
+    },
     contract::{
         state::{
             closed::Closed,
@@ -32,6 +35,13 @@ impl IntoRepayable for Spec {
 impl Closable for Spec {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         lease.lease.position.amount()
+    }
+
+    fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
+        OngoingTrx::Close {
+            close: self.amount(lease).clone(),
+            in_progress,
+        }
     }
 
     fn event_type(&self) -> Type {

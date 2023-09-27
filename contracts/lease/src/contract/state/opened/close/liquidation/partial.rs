@@ -1,7 +1,10 @@
 use sdk::cosmwasm_std::Env;
 
 use crate::{
-    api::LeaseCoin,
+    api::{
+        opened::{OngoingTrx, PositionCloseTrx},
+        LeaseCoin,
+    },
     contract::{
         cmd::{PartialCloseFn, PartialLiquidationDTO},
         state::{
@@ -31,6 +34,13 @@ impl IntoRepayable for Spec {
 impl Closable for Spec {
     fn amount(&self, _lease: &Lease) -> &LeaseCoin {
         &self.amount
+    }
+
+    fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
+        OngoingTrx::Liquidation {
+            liquidation: self.amount(lease).clone(),
+            in_progress,
+        }
     }
 
     fn event_type(&self) -> Type {

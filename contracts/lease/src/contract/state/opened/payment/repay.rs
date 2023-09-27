@@ -4,7 +4,10 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::{
+        opened::{OngoingTrx, PositionCloseTrx},
+        LeaseCoin, LpnCoin,
+    },
     contract::{
         cmd::{LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
         state::{
@@ -51,6 +54,10 @@ where
 {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)
+    }
+
+    fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
+        self.0.transaction(lease, in_progress)
     }
 
     fn event_type(&self) -> Type {

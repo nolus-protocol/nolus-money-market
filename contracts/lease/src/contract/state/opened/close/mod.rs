@@ -4,7 +4,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{
-        opened::{LiquidateTrx, OngoingTrx},
+        opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin, StateResponse,
     },
     contract::{
@@ -28,6 +28,7 @@ mod sell_asset;
 
 pub(crate) trait Closable {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin;
+    fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx;
     fn event_type(&self) -> Type;
 }
 
@@ -75,17 +76,13 @@ where
 fn query<RepayableT>(
     lease: Lease,
     repayable: RepayableT,
-    in_progress: LiquidateTrx,
+    in_progress: PositionCloseTrx,
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse>
 where
     RepayableT: Closable,
 {
-    let in_progress = OngoingTrx::Liquidation {
-        liquidation: repayable.amount(&lease).clone(),
-        in_progress,
-    };
-
-    super::lease_state(lease, Some(in_progress), now, querier)
+    let trx = repayable.transaction(&lease, in_progress);
+    super::lease_state(lease, Some(trx), now, querier)
 }
