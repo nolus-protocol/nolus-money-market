@@ -1,6 +1,4 @@
-#[cfg(any(test, feature = "testing"))]
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent;
 use sdk::{
@@ -10,8 +8,8 @@ use sdk::{
 
 use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
 
-#[derive(Serialize, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Deserialize))]
+#[derive(Deserialize, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct StateQuery {}
 
