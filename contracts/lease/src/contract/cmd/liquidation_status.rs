@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
-use finance::liability::{Cause, Liquidation, Status, Zone};
+use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
@@ -12,6 +12,7 @@ use crate::{
     api::LeaseCoin,
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, Lease as LeaseDO},
+    position::{Cause, Liquidation, Status},
 };
 
 pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(

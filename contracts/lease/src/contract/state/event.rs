@@ -1,9 +1,10 @@
 use currency::Currency;
-use finance::liability::Cause;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
-use crate::{api::LeaseCoin, contract::cmd::RepayEmitter, event::Type, loan::RepayReceipt};
+use crate::{
+    api::LeaseCoin, contract::cmd::RepayEmitter, event::Type, loan::RepayReceipt, position::Cause,
+};
 
 pub(crate) struct LiquidationEmitter<'liq, 'env> {
     cause: &'liq Cause,
