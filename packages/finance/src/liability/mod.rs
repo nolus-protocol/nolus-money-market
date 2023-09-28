@@ -76,10 +76,6 @@ impl Liability {
         obj
     }
 
-    // TODO return the next `recalc_time` as well to simplify the API and its usage
-    // remove the `fn recalc_time`
-    // compute the point of time based on the  provided current time
-
     pub const fn healthy_percent(&self) -> Percent {
         self.healthy
     }
