@@ -260,13 +260,13 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 fn may_ask_liquidation_overdue<Asset>(
     asset: Coin<Asset>,
     overdue: Coin<Asset>,
-    min_liquidation: Coin<Asset>,
     min_asset: Coin<Asset>,
+    min_sell_asset: Coin<Asset>,
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
 {
-    liquidation::may_ask_liquidation(asset, Cause::Overdue(), overdue, min_liquidation, min_asset)
+    liquidation::may_ask_liquidation(asset, Cause::Overdue(), overdue, min_asset, min_sell_asset)
 }
 
 #[cfg(test)]
@@ -547,6 +547,8 @@ mod test_check {
     fn warnings_none() {
         let warn_ltv = Percent::from_percent(51);
         let spec = liability_with_first(warn_ltv);
+        let min_sell_asset: Coin<TestCurrency> = Coin::new(100);
+
         assert_eq!(
             spec.check::<TestCurrency>(100.into(), 1.into(), 0.into(), MIN_ASSET, MIN_SELL_ASSET),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
@@ -565,7 +567,7 @@ mod test_check {
                 505.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -585,7 +587,7 @@ mod test_check {
                 509.into(),
                 0.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
@@ -605,7 +607,7 @@ mod test_check {
                 510.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -625,7 +627,7 @@ mod test_check {
                 515.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -661,7 +663,7 @@ mod test_check {
                 712.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                MIN_ASSET
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
@@ -757,7 +759,7 @@ mod test_check {
                 128.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                MIN_ASSET
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -815,7 +817,7 @@ mod test_check {
                 380.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                MIN_ASSET
             ),
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
@@ -882,13 +884,14 @@ mod test_check {
         let max_ltv = Percent::from_permille(751);
         let spec = liability_with_max(max_ltv);
         let min_asset = Coin::<TestCurrency>::new(1000);
+        let min_sell_asset = Coin::<TestCurrency>::new(1000);
 
         assert_eq!(
-            spec.check::<TestCurrency>(878.into(), 752.into(), 0.into(), min_asset, MIN_SELL_ASSET),
+            spec.check::<TestCurrency>(878.into(), 752.into(), 0.into(), min_asset, min_sell_asset),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
         assert_eq!(
-            spec.check::<TestCurrency>(878.into(), 752.into(), 0.into(), min_asset, MIN_SELL_ASSET),
+            spec.check::<TestCurrency>(878.into(), 780.into(), 0.into(), min_asset, min_sell_asset),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
         assert_eq!(
@@ -897,7 +900,7 @@ mod test_check {
                 750.into(),
                 99.into(),
                 min_asset,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -907,7 +910,7 @@ mod test_check {
                 751.into(),
                 99.into(),
                 min_asset,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -917,7 +920,7 @@ mod test_check {
                 761.into(),
                 0.into(),
                 min_asset,
-                MIN_SELL_ASSET
+                min_sell_asset
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -935,7 +938,7 @@ mod test_check {
                 880.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_ASSET,
-                MIN_SELL_ASSET
+                MIN_ASSET
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
@@ -1012,7 +1015,7 @@ mod test_check {
                 LEASE_AMOUNT,
                 999.into(),
                 997.into(),
-                MIN_ASSET,
+                1.into(),
                 MIN_SELL_ASSET
             ),
             Status::partial(
@@ -1140,7 +1143,7 @@ mod test_check {
                 LEASE_AMOUNT,
                 900.into(),
                 BACK_TO_HEALTHY.into(),
-                MIN_ASSET,
+                MIN_ASSET + 2.into(),
                 LEASE_AMOUNT - BACK_TO_HEALTHY.into()
             ),
             Status::full(Cause::Liability {
@@ -1162,8 +1165,8 @@ mod test_check {
                 LEASE_AMOUNT,
                 900.into(),
                 (BACK_TO_HEALTHY + 1).into(),
-                MIN_ASSET,
-                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
+                MIN_ASSET + 1.into(),
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into()
             ),
             Status::full(Cause::Overdue()),
         );
