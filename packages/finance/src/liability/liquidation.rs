@@ -81,13 +81,13 @@ pub fn may_ask_liquidation<Asset>(
     asset: Coin<Asset>,
     cause: Cause,
     liquidation: Coin<Asset>,
-    min_liquidation: Coin<Asset>,
     min_asset: Coin<Asset>,
+    min_sell_asset: Coin<Asset>,
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
 {
-    if liquidation.is_zero() || liquidation < min_liquidation {
+    if liquidation.is_zero() || liquidation < min_sell_asset {
         None
     } else if asset.saturating_sub(liquidation) <= min_asset {
         Some(Status::full(cause))

@@ -122,11 +122,11 @@ impl InterestPaymentSpec {
 pub struct PositionSpec {
     /// Liability constraints
     pub liability: Liability,
-    /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
-    /// amount would be postponed until the amount goes above this limit
-    pub min_asset: LpnCoin,
     ///  The minimum amount that a lease asset should be evaluated past any
     ///  partial liquidation or close. If not, a full liquidation is performed
+    pub min_asset: LpnCoin,
+    /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
+    /// amount would be postponed until the amount goes above this limit
     pub min_sell_asset: LpnCoin,
 }
 
@@ -255,23 +255,22 @@ mod test_position_spec {
         );
         let position_spec = PositionSpec::new(
             liability,
-            LpnCoin::new(5000).into(),
             LpnCoin::new(9000000).into(),
+            LpnCoin::new(5000).into(),
         );
 
-        assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
+        assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
     }
 
     #[test]
     fn zero_min_asset() {
-        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"USDC"}}"#);
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
     }
 
     #[test]
     fn invalid_ticker() {
-        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"5000","ticker":"USDC"},"min_sell_asset":{"amount":"9000000","ticker":"ATOM"}}"#);
-        dbg!(&r);
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"ATOM"}}"#);
         assert_err(r, "'ATOM' pretending to be");
     }
 
