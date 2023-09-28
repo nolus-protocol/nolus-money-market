@@ -77,8 +77,13 @@ where
 
 #[cfg(test)]
 mod test_status {
+<<<<<<< HEAD
     use crate::percent::Percent;
     use currency::test::Usdc;
+=======
+    use currency::lpn::Usdc;
+    use finance::percent::Percent;
+>>>>>>> e9add4f8 (Merge conflicts)
 
     use super::{Cause, Liquidation, Status, Zone};
 
