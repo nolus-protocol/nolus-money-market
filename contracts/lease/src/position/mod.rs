@@ -71,7 +71,7 @@ where
 
     // `self.liability` is semi-hidden, semi-public - it's exposed just for computing the recalculation period
     // let's return `recalc_liability_at` as a data of `Status`
-    // for more insights refer to the TODO next to `Liability::check`
+    // for more insights refer to the TODO next to `Self::check_liability`
     pub fn liability(&self) -> Liability {
         self.liability
     }
