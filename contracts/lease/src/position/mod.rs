@@ -99,14 +99,7 @@ where
 
         let total_due = price::total(total_due, lpn_in_assets);
         let overdue = price::total(overdue, lpn_in_assets);
-
         debug_assert!(overdue <= total_due);
-
-        // TODO the functionality consuming both `min*_asset` amounts should be moved
-        // to this type
-        // finance::Liability's responsability is only to provide `amount_to_liquidate`
-        // self.liability
-        //     .check(self.amount, total_due, overdue, min_asset, min_sell_asset)
 
         let ltv = Percent::from_ratio(total_due, self.amount);
         self.may_ask_liquidation_liability(total_due, lpn_in_assets)
