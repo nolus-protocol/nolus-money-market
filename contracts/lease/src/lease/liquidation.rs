@@ -1,10 +1,10 @@
 use currency::Currency;
-use finance::{coin::Coin, liability::Status, price::Price, zero::Zero};
+use finance::{coin::Coin, price::Price, zero::Zero};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractResult, loan::LiabilityStatus};
+use crate::{error::ContractResult, loan::LiabilityStatus, position::Status};
 
 use super::Lease;
 

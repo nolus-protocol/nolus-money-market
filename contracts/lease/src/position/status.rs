@@ -1,15 +1,40 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, percent::Percent};
 use currency::Currency;
-
-use super::Zone;
+use finance::{coin::Coin, liability::Zone, percent::Percent};
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
 pub enum Cause {
     Overdue(),
     Liability { ltv: Percent, healthy_ltv: Percent },
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(test, derive(Debug))]
+pub enum Liquidation<Asset>
+where
+    Asset: Currency,
+{
+    Partial { amount: Coin<Asset>, cause: Cause },
+    Full(Cause),
+}
+
+impl<Asset> Liquidation<Asset>
+where
+    Asset: Currency,
+{
+    //TODO rename to #[cfg(debug_assertions)]
+    #[cfg(debug_assertion)]
+    pub(crate) fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
+        &self,
+        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+    ) -> Coin<Asset> {
+        match self {
+            Self::Partial { amount, cause: _ } => *amount,
+            Self::Full(_) => lease.amount,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
@@ -50,55 +75,10 @@ where
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-#[cfg_attr(test, derive(Debug))]
-pub enum Liquidation<Asset>
-where
-    Asset: Currency,
-{
-    Partial { amount: Coin<Asset>, cause: Cause },
-    Full(Cause),
-}
-
-impl<Asset> Liquidation<Asset>
-where
-    Asset: Currency,
-{
-    //TODO rename to #[cfg(debug_assertions)]
-    #[cfg(debug_assertion)]
-    pub(crate) fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
-        &self,
-        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-    ) -> Coin<Asset> {
-        match self {
-            Self::Partial { amount, cause: _ } => *amount,
-            Self::Full(_) => lease.amount,
-        }
-    }
-}
-
-pub fn may_ask_liquidation<Asset>(
-    asset: Coin<Asset>,
-    cause: Cause,
-    liquidation: Coin<Asset>,
-    min_asset: Coin<Asset>,
-    min_sell_asset: Coin<Asset>,
-) -> Option<Status<Asset>>
-where
-    Asset: Currency,
-{
-    if liquidation.is_zero() || liquidation < min_sell_asset {
-        None
-    } else if asset.saturating_sub(liquidation) <= min_asset {
-        Some(Status::full(cause))
-    } else {
-        Some(Status::partial(liquidation, cause))
-    }
-}
 #[cfg(test)]
 mod test_status {
-    use crate::percent::Percent;
-    use currency::test::Usdc;
+    use currency::lpn::Usdc;
+    use finance::percent::Percent;
 
     use super::{Cause, Liquidation, Status, Zone};
 
