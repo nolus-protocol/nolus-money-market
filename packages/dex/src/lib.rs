@@ -3,6 +3,8 @@ use resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery};
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 use serde::ser::Serialize;
 
+#[cfg(feature = "migration")]
+pub use crate::migration::{InspectSpec, MigrateSpec};
 pub use crate::{
     account::Account,
     connectable::DexConnectable,
@@ -37,6 +39,8 @@ mod error;
 mod filter;
 mod ica_connector;
 mod ica_recover;
+#[cfg(feature = "migration")]
+mod migration;
 mod out_local;
 mod out_remote;
 mod resp_delivery;

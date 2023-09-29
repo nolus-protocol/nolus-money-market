@@ -15,6 +15,7 @@ use crate::{
     swap_task::SwapTask as SwapTaskT,
     transfer_in, Contract, ContractInSwap, Enterable, TransferInFinishState,
 };
+use crate::{InspectSpec, MigrateSpec};
 
 use super::transfer_in_init::TransferInInit;
 
@@ -45,6 +46,36 @@ where
             timeout,
             _state_enum: Default::default(),
         }
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferInFinish<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+    SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
+{
+    type Out = TransferInFinish<SwapTaskNew, SEnumNew>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new(migrate_fn(self.spec), self.amount_in, self.timeout)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for TransferInFinish<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&SwapTask) -> R,
+    {
+        inspect_fn(&self.spec)
     }
 }
 

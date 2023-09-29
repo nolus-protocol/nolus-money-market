@@ -32,6 +32,8 @@ use crate::{
     trx::SwapTrx,
     ContractInSwap, ForwardToInner, TimeAlarm,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 use super::{Contract, SwapState};
 
@@ -239,5 +241,32 @@ where
 {
     fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
         self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for SwapExactIn<SwapTask, SEnum>
+where
+    Self: Sized,
+    SwapExactIn<SwapTaskNew, SEnumNew>: Into<SEnumNew>,
+{
+    type Out = SwapExactIn<SwapTaskNew, SEnumNew>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new(migrate_fn(self.spec))
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for SwapExactIn<SwapTask, SEnum> {
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&SwapTask) -> R,
+    {
+        inspect_fn(&self.spec)
     }
 }

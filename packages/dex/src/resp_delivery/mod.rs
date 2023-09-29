@@ -16,6 +16,8 @@ use crate::{
     error::Result as DexResult, response::Result, ContinueResult, Contract, ForwardToInner,
     Handler, TimeAlarm,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
 
@@ -50,6 +52,38 @@ impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMs
             _forward_to_inner_msg: PhantomData,
             _delivery_adapter: PhantomData,
         }
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnumNew, H, ForwardToInnerMsg, R, Delivery>
+    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
+where
+    H: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
+    H::Out: Into<SEnumNew>,
+{
+    type Out = ResponseDeliveryImpl<H::Out, ForwardToInnerMsg, R, Delivery>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new(self.handler.migrate_spec(migrate_fn), self.response)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, RInspect, H, ForwardToInnerMsg, R, Delivery> InspectSpec<SwapTask, RInspect>
+    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
+where
+    H: InspectSpec<SwapTask, RInspect>,
+{
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> RInspect
+    where
+        InspectFn: FnOnce(&SwapTask) -> RInspect,
+    {
+        self.handler.inspect_spec(inspect_fn)
     }
 }
 

@@ -13,6 +13,7 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "migration", derive(Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct FinalizerRef {
     addr: Addr,

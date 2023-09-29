@@ -13,6 +13,8 @@ pub mod close;
 mod event;
 mod payment;
 pub mod repay;
+#[cfg(feature = "migration")]
+pub(super) mod v5;
 
 fn lease_state(
     lease: Lease,

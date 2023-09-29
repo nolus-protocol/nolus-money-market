@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
-pub(in crate::contract) use self::prev_version::{Migrate, StatePrevVersion};
+pub(in crate::contract) use self::v5::Migrate;
 use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
@@ -31,9 +31,9 @@ mod liquidated;
 mod opened;
 mod opening;
 mod paid;
-#[cfg(feature = "migration")]
-mod prev_version;
 mod resp_delivery;
+#[cfg(feature = "migration")]
+mod v5;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
@@ -85,7 +85,7 @@ pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
 }
 
 #[cfg(feature = "migration")]
-pub(super) fn load_prev_version(storage: &dyn Storage) -> ContractResult<StatePrevVersion> {
+pub(super) fn load_v5(storage: &dyn Storage) -> ContractResult<v5::State> {
     Item::new("state").load(storage).map_err(Into::into)
 }
 

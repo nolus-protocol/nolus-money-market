@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
+use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{batch::Batch, contract, message::Response as MessageResponse, reply, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -67,7 +68,7 @@ pub fn execute(
             info.funds,
             info.sender,
             env.contract.address.clone(),
-            env.contract.address,
+            finalizer(env),
             currency,
             max_ltd,
         ),
@@ -91,7 +92,12 @@ pub fn execute(
             .check(&info.sender)
             .map_err(Into::into)
             .and_then(move |()| {
-                leaser::try_migrate_leases(deps.storage, new_code_id.u64(), max_leases)
+                leaser::try_migrate_leases(
+                    deps.storage,
+                    new_code_id.u64(),
+                    max_leases,
+                    LeaseMigrateMsg::new(finalizer(env)),
+                )
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
@@ -101,7 +107,12 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| validate_customer(next_customer, deps.api, &deps.querier))
             .and_then(move |next_customer_validated| {
-                leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)
+                leaser::try_migrate_leases_cont(
+                    deps.storage,
+                    next_customer_validated,
+                    max_leases,
+                    LeaseMigrateMsg::new(finalizer(env)),
+                )
             }),
     }
     .map(response::response_only_messages)
@@ -182,4 +193,8 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
             contract::validate_code_id(&deps.querier, &lease, lease_code_id).map_err(Into::into)
         })
         .map(|()| lease)
+}
+
+fn finalizer(env: Env) -> Addr {
+    env.contract.address
 }

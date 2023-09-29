@@ -10,6 +10,8 @@ use super::{Handler, Response};
 use self::transfer_in::DexState;
 
 pub mod transfer_in;
+#[cfg(feature = "migration")]
+pub(super) mod v5;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {

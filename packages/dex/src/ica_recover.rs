@@ -13,6 +13,8 @@ use crate::{
     account::Account, connectable::DexConnectable, connection::ConnectionParams,
     entry_delay::EntryDelay, error::Result as DexResult, Contract, TimeAlarm,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 use super::ica_connector::{Enterable, IcaConnectee};
 
@@ -31,6 +33,36 @@ impl<S, SEnum> InRecovery<S, SEnum> {
             time_alarms,
             _state_enum: PhantomData,
         }
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnumNew, S, SEnum> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for InRecovery<S, SEnum>
+where
+    S: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
+    S::Out: Into<SEnumNew>,
+{
+    type Out = InRecovery<S::Out, SEnumNew>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new(self.state.migrate_spec(migrate_fn), self.time_alarms)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, R, S, SEnum> InspectSpec<SwapTask, R> for InRecovery<S, SEnum>
+where
+    S: InspectSpec<SwapTask, R>,
+{
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&SwapTask) -> R,
+    {
+        self.state.inspect_spec(inspect_fn)
     }
 }
 
