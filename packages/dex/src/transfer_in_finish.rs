@@ -15,6 +15,7 @@ use crate::{
     swap_task::SwapTask as SwapTaskT,
     transfer_in, Contract, ContractInSwap, Enterable, TransferInFinishState,
 };
+#[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
 use super::transfer_in_init::TransferInInit;
