@@ -707,3 +707,82 @@ mod impl_display {
         }
     }
 }
+
+#[cfg(feature = "migration")]
+mod impl_migration {
+
+    use super::State;
+    use crate::{
+        migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, ForwardToInner, InspectSpec,
+    };
+
+    impl<SwapTask, SwapTaskNew, SEnumNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+        for State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    where
+        SwapTask: SwapTaskT,
+        ForwardToInnerMsg: ForwardToInner,
+        SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG, Result = SwapTask::Result>,
+    {
+        type Out = State<SwapTaskNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
+
+        fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+        where
+            MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+        {
+            match self {
+                State::TransferOut(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactIn(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    inner.migrate_spec(migrate_fn).into()
+                }
+                State::SwapExactInPreRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactInRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactInPostRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInInit(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInInitRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInInitRecoverIcaRespDelivery(inner) => {
+                    inner.migrate_spec(migrate_fn).into()
+                }
+                State::TransferInInitPreRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInInitRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInInitPostRecoverIca(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferInFinish(inner) => inner.migrate_spec(migrate_fn).into(),
+            }
+        }
+    }
+
+    impl<SwapTask, R, ForwardToInnerMsg, ForwardToInnerContinueMsg> InspectSpec<SwapTask, R>
+        for State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    where
+        SwapTask: SwapTaskT,
+        ForwardToInnerMsg: ForwardToInner,
+    {
+        fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+        where
+            InspectFn: FnOnce(&SwapTask) -> R,
+        {
+            match self {
+                State::TransferOut(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferOutRespDelivery(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactIn(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactInRespDelivery(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactInPreRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactInRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::SwapExactInPostRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInInit(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInInitRespDelivery(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInInitRecoverIcaRespDelivery(inner) => {
+                    inner.inspect_spec(inspect_fn)
+                }
+                State::TransferInInitPreRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInInitRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInInitPostRecoverIca(inner) => inner.inspect_spec(inspect_fn),
+                State::TransferInFinish(inner) => inner.inspect_spec(inspect_fn),
+            }
+        }
+    }
+}

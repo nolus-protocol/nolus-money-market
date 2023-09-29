@@ -17,11 +17,14 @@ use crate::{
 
 #[cfg(feature = "migration")]
 use super::state::Migrate;
-use super::state::{self, Response, State};
+use super::{
+    finalize::FinalizerRef,
+    state::{self, Response, State},
+};
 
 #[cfg(feature = "migration")]
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 4;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 5;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 5;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 6;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -56,8 +59,12 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
             deps.storage,
             version!(CONTRACT_STORAGE_VERSION),
             |storage: &mut _| {
-                state::load_prev_version(storage)
-                    .and_then(|lease_prev| lease_prev.into_last_version())
+                state::load_v5(storage)
+                    .and_then(|lease_v5| {
+                        FinalizerRef::try_new(_msg.finalizer, &deps.querier).and_then(|finalizer| {
+                            lease_v5.into_last_version(_env.block.time, finalizer)
+                        })
+                    })
                     .and_then(
                         |Response {
                              response,

@@ -19,6 +19,8 @@ use crate::{
     response::{ContinueResult, Handler},
     Contract, Response, TimeAlarm,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 pub trait Enterable {
     fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch>;
@@ -79,6 +81,37 @@ where
         Emitter::of_type(Self::STATE_LABEL)
             .emit("id", contract)
             .emit("ica_host", ica_host)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnumNew, Connectee, SwapResult>
+    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for IcaConnector<Connectee, SwapResult>
+where
+    Connectee: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
+    Connectee::Out: IcaConnectee + DexConnectable,
+{
+    type Out = IcaConnector<Connectee::Out, SwapResult>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new(self.connectee.migrate_spec(migrate_fn))
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, R, Connectee, SwapResult> InspectSpec<SwapTask, R>
+    for IcaConnector<Connectee, SwapResult>
+where
+    Connectee: InspectSpec<SwapTask, R>,
+{
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&SwapTask) -> R,
+    {
+        self.connectee.inspect_spec(inspect_fn)
     }
 }
 

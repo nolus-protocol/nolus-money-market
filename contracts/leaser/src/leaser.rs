@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use currency::{native::Nls, SymbolOwned};
 use finance::percent::Percent;
-use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec, PositionSpec};
+use lease::api::{
+    ConnectionParams, DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpec,
+};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
@@ -89,11 +91,12 @@ pub(super) fn try_migrate_leases(
     storage: &mut dyn Storage,
     new_code_id: u64,
     max_leases: MaxLeases,
+    migrate_msg: MigrateMsg,
 ) -> ContractResult<MessageResponse> {
     Config::update_lease_code(storage, new_code_id)?;
 
     let leases = Leases::iter(storage, None);
-    migrate::migrate_leases(leases, new_code_id, max_leases)
+    migrate::migrate_leases(leases, new_code_id, max_leases, migrate_msg)
         .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_code_id, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
@@ -104,11 +107,12 @@ pub(super) fn try_migrate_leases_cont(
     storage: &mut dyn Storage,
     next_customer: Addr,
     max_leases: MaxLeases,
+    migrate_msg: MigrateMsg,
 ) -> ContractResult<MessageResponse> {
     let lease_code_id = Config::load(storage)?.lease_code_id;
 
     let leases = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(leases, lease_code_id, max_leases).map(|result| {
+    migrate::migrate_leases(leases, lease_code_id, max_leases, migrate_msg).map(|result| {
         MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
     })
 }

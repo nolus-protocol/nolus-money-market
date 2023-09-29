@@ -494,3 +494,57 @@ mod impl_display {
         }
     }
 }
+
+#[cfg(feature = "migration")]
+mod impl_migration {
+
+    use super::{OpenIcaRespDelivery, State};
+    use crate::{
+        migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, DexConnectable, ForwardToInner,
+        IcaConnectee, IcaConnector,
+    };
+
+    //cannot impl MigrateSpec due to the need to migrate OpenIca as well
+    impl<SwapTask, OpenIca, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    where
+        SwapTask: SwapTaskT,
+        ForwardToInnerMsg: ForwardToInner,
+    {
+        pub fn migrate<MigrateOpenIcaFn, MigrateSpecFn, OpenIcaNew, SwapTaskNew>(
+            self,
+            migrate_open_ica: MigrateOpenIcaFn,
+            migrate_spec: MigrateSpecFn,
+        ) -> State<OpenIcaNew, SwapTaskNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        where
+            OpenIca: MigrateSpec<
+                OpenIca,
+                OpenIcaNew,
+                State<OpenIcaNew, SwapTaskNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
+            >,
+            OpenIca::Out: IcaConnectee + DexConnectable,
+            IcaConnector<OpenIca::Out, SwapTask::Result>:
+                Into<State<OpenIcaNew, SwapTaskNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>>,
+            OpenIcaRespDelivery<OpenIca::Out, SwapTask::Result, ForwardToInnerContinueMsg>:
+                Into<State<OpenIcaNew, SwapTaskNew, ForwardToInnerMsg, ForwardToInnerContinueMsg>>,
+            MigrateOpenIcaFn: FnOnce(OpenIca) -> OpenIcaNew,
+            MigrateSpecFn: FnOnce(SwapTask) -> SwapTaskNew,
+            SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG, Result = SwapTask::Result>,
+        {
+            match self {
+                State::OpenIca(inner) => inner.migrate_spec(migrate_open_ica).into(),
+                State::OpenIcaRespDelivery(inner) => inner.migrate_spec(migrate_open_ica).into(),
+                State::TransferOut(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SwapExactIn(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    inner.migrate_spec(migrate_spec).into()
+                }
+                State::SwapExactInPreRecoverIca(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SwapExactInRecoverIca(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SwapExactInPostRecoverIca(inner) => inner.migrate_spec(migrate_spec).into(),
+            }
+        }
+    }
+}

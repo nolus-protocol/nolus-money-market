@@ -44,6 +44,11 @@ impl BuyLpn {
     fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
+
+    #[cfg(feature = "migration")]
+    pub(super) fn migrate_to(lease: Lease, payment: PaymentCoin) -> Self {
+        Self::new(lease, payment)
+    }
 }
 
 impl SwapTask for BuyLpn {

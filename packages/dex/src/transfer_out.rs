@@ -24,6 +24,8 @@ use crate::{
     trx::TransferOutTrx,
     Contract, ContractInSwap, TimeAlarm, TransferOutState,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 use super::{
     coin_index,
@@ -49,12 +51,6 @@ where
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
-    pub fn new(spec: SwapTask) -> Self {
-        let first_index = Default::default();
-        let last_coin_index = Self::last_coin_index(&spec);
-        Self::new_with_index(spec, first_index, last_coin_index)
-    }
-
     fn next(self) -> Self {
         debug_assert!(!self.last_coin());
 
@@ -64,28 +60,9 @@ where
         Self::new_with_index(self.spec, next_index, self.last_coin_index)
     }
 
-    fn new_with_index(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
-        debug_assert!(coin_index <= last_coin_index);
-        Self {
-            spec,
-            coin_index,
-            last_coin_index,
-            _state_enum: PhantomData,
-        }
-    }
-
     fn last_coin(&self) -> bool {
         debug_assert!(self.coin_index <= self.last_coin_index);
         self.coin_index == self.last_coin_index
-    }
-
-    fn last_coin_index(spec: &SwapTask) -> CoinsNb {
-        let mut counter = Counter::default();
-        let _res = never::safe_unwrap(spec.on_coins(&mut counter));
-
-        #[cfg(debug_assert)]
-        debug_assert_eq!(_res, IterState::Complete);
-        counter.last_index()
     }
 
     fn enter_state(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
@@ -128,6 +105,36 @@ where
                 next,
             )
         })
+    }
+}
+
+impl<SwapTask, SEnum> TransferOut<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    pub fn new(spec: SwapTask) -> Self {
+        let first_index = Default::default();
+        let last_coin_index = Self::last_coin_index(&spec);
+        Self::new_with_index(spec, first_index, last_coin_index)
+    }
+
+    fn new_with_index(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
+        debug_assert!(coin_index <= last_coin_index);
+        Self {
+            spec,
+            coin_index,
+            last_coin_index,
+            _state_enum: PhantomData,
+        }
+    }
+
+    fn last_coin_index(spec: &SwapTask) -> CoinsNb {
+        let mut counter = Counter::default();
+        let _res = never::safe_unwrap(spec.on_coins(&mut counter));
+
+        #[cfg(debug_assertions)]
+        debug_assert_eq!(_res, IterState::Complete);
+        counter.last_index()
     }
 }
 
@@ -194,6 +201,34 @@ where
 {
     fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
         self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferOut<SwapTask, SEnum>
+where
+    Self: Sized,
+    SwapTaskNew: SwapTaskT,
+    TransferOut<SwapTaskNew, SEnumNew>: Into<SEnumNew>,
+{
+    type Out = TransferOut<SwapTaskNew, SEnumNew>;
+
+    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
+    where
+        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
+    {
+        Self::Out::new_with_index(migrate_fn(self.spec), self.coin_index, self.last_coin_index)
+    }
+}
+
+#[cfg(feature = "migration")]
+impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for TransferOut<SwapTask, SEnum> {
+    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&SwapTask) -> R,
+    {
+        inspect_fn(&self.spec)
     }
 }
 

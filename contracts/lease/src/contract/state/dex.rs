@@ -24,13 +24,22 @@ impl<H> State<H> {
     pub fn new(handler: H) -> Self {
         Self { handler }
     }
+}
 
-    #[cfg(feature = "migration")]
+#[cfg(feature = "migration")]
+impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where
         MapFn: FnOnce(H) -> HTo,
     {
         State::new(map_fn(self.handler))
+    }
+
+    pub fn inspect<InspectFn, R>(&self, inspect_fn: InspectFn) -> R
+    where
+        InspectFn: FnOnce(&H) -> R,
+    {
+        inspect_fn(&self.handler)
     }
 }
 

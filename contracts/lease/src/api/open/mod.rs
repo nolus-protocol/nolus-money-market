@@ -131,7 +131,7 @@ pub struct PositionSpec {
 }
 
 impl PositionSpec {
-    #[cfg(any(test, feature = "testing", feature = "contract"))]
+    #[cfg(any(test, feature = "testing", feature = "contract", feature = "migration"))]
     pub(crate) fn new_internal(
         liability: Liability,
         min_asset: LpnCoin,

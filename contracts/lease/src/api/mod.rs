@@ -27,9 +27,16 @@ pub type DownpaymentCoin = PaymentCoin;
 pub type LeaseCoin = CoinDTO<LeaseGroup>;
 pub type LpnCoin = LppLpnCoin;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub(crate) finalizer: Addr,
+}
+impl MigrateMsg {
+    pub fn new(finalizer: Addr) -> Self {
+        Self { finalizer }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
