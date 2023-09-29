@@ -52,11 +52,13 @@ impl<Asset> Status<Asset>
 where
     Asset: Currency,
 {
-    pub(crate) fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
+    #[cfg(test)]
+    pub fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
         debug_assert!(!amount.is_zero());
         Self::Liquidation(Liquidation::Partial { amount, cause })
     }
 
+    #[cfg(test)]
     pub(crate) fn full(cause: Cause) -> Self {
         Self::Liquidation(Liquidation::Full(cause))
     }
