@@ -95,10 +95,11 @@ where
         overdue: Coin<Lpn>,
         lpn_in_assets: Price<Lpn, Asset>,
     ) -> Status<Asset> {
+        debug_assert!(overdue <= total_due);
+
         let total_due = price::total(total_due, lpn_in_assets);
         let overdue = price::total(overdue, lpn_in_assets);
 
-        debug_assert!(total_due <= self.amount);
         debug_assert!(overdue <= total_due);
 
         // TODO the functionality consuming both `min*_asset` amounts should be moved
