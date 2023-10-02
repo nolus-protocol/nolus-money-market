@@ -2,6 +2,8 @@ use sdk::cosmwasm_std::{Addr, ContractInfoResponse, QuerierWrapper, WasmQuery};
 
 use crate::error::{Error, Result};
 
+pub type CodeId = u64;
+
 pub fn validate_addr(querier: &QuerierWrapper<'_>, contract_address: &Addr) -> Result<()> {
     query_info(querier, contract_address).map(|_| ())
 }
@@ -9,7 +11,7 @@ pub fn validate_addr(querier: &QuerierWrapper<'_>, contract_address: &Addr) -> R
 pub fn validate_code_id(
     querier: &QuerierWrapper<'_>,
     contract_address: &Addr,
-    expected_code_id: u64,
+    expected_code_id: CodeId,
 ) -> Result<()> {
     query_info(querier, contract_address).and_then(|info| {
         if info.code_id == expected_code_id {
@@ -77,7 +79,9 @@ pub mod testing {
         to_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
     };
 
-    pub const CODE_ID: u64 = 20;
+    use super::CodeId;
+
+    pub const CODE_ID: CodeId = 20;
 
     pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(

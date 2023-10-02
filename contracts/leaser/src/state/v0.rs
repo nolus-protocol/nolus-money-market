@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use finance::{liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, InterestPaymentSpec, LpnCoin, PositionSpec};
+use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
@@ -9,7 +10,7 @@ use sdk::{
 
 use crate::result::ContractResult;
 
-use super::config::{CodeId, Config as ConfigNew};
+use super::config::Config as ConfigNew;
 
 #[derive(Deserialize)]
 pub struct Config {

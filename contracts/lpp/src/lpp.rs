@@ -155,8 +155,12 @@ where
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
-        contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id().u64())
-            .map_err(ContractError::from)
+        contract::validate_code_id(
+            &deps.querier,
+            lease_addr,
+            self.config.lease_code_id().into(),
+        )
+        .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(

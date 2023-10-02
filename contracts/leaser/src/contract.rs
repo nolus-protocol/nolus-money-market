@@ -45,7 +45,7 @@ pub fn instantiate(
     let lease_code = msg.lease_code_id;
     Config::new(msg).store(deps.storage)?;
 
-    leaser::update_lpp(deps.storage, lease_code.u64(), Batch::default())
+    leaser::update_lpp(deps.storage, lease_code.into(), Batch::default())
         .map(response::response_only_messages)
 }
 
@@ -116,7 +116,7 @@ pub fn execute(
             .and_then(move |()| {
                 leaser::try_migrate_leases(
                     deps.storage,
-                    new_code_id.u64(),
+                    new_code_id.into(),
                     max_leases,
                     migrate_msg(env),
                 )

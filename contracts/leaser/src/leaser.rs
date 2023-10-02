@@ -8,6 +8,7 @@ use lease::api::{
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
+use platform::contract::CodeId;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
@@ -89,7 +90,7 @@ pub(super) fn try_configure(
 
 pub(super) fn try_migrate_leases<MsgFactory>(
     storage: &mut dyn Storage,
-    new_code_id: u64,
+    new_code_id: CodeId,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
@@ -125,7 +126,7 @@ where
 
 pub(super) fn update_lpp(
     storage: &dyn Storage,
-    new_code_id: u64,
+    new_code_id: CodeId,
     mut batch: Batch,
 ) -> ContractResult<Batch> {
     update_lpp_impl(storage, new_code_id, &mut batch).map(|()| batch)
@@ -133,7 +134,7 @@ pub(super) fn update_lpp(
 
 fn update_lpp_impl(
     storage: &dyn Storage,
-    new_code_id: u64,
+    new_code_id: CodeId,
     batch: &mut Batch,
 ) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp_addr;

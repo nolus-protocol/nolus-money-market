@@ -8,6 +8,7 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpec};
+use platform::contract::CodeId;
 
 use sdk::{
     cosmwasm_ext::Response,
@@ -40,7 +41,7 @@ type TheCurrency = Usdc;
 const DENOM: SymbolStatic = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
-fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
+fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,

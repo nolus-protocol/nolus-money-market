@@ -7,6 +7,7 @@ use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
 };
+use platform::contract::CodeId;
 use sdk::cosmwasm_std::{Addr, Uint64};
 
 use super::{test_case::app::App, CwContractWrapper, ADMIN};
@@ -43,7 +44,7 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(
         app: &mut App,
-        lease_code_id: u64,
+        lease_code_id: CodeId,
         lpp_addr: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,

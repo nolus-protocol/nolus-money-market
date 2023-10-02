@@ -9,6 +9,7 @@ use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
+use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::AppResponse,
@@ -27,7 +28,7 @@ impl Instantiator {
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> (Addr, u64)
+    ) -> (Addr, CodeId)
     where
         Lpn: Currency,
     {
@@ -57,7 +58,7 @@ impl Instantiator {
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> (Addr, u64)
+    ) -> (Addr, CodeId)
     where
         Lpn: Currency,
     {

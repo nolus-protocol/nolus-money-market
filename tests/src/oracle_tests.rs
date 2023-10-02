@@ -18,7 +18,7 @@ use oracle::{
     msg::{AlarmsCount, QueryMsg as OracleQ},
     result::ContractResult,
 };
-use platform::{batch::Batch, coin_legacy};
+use platform::{batch::Batch, coin_legacy, contract::CodeId};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
@@ -628,7 +628,7 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
 
 fn instantiate_dummy_contract(
     app: &mut App,
-    dummy_code: u64,
+    dummy_code: CodeId,
     oracle: Addr,
     should_fail: bool,
 ) -> Addr {

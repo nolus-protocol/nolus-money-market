@@ -1,5 +1,5 @@
 use lease::api::MigrateMsg;
-use platform::batch::Batch;
+use platform::{batch::Batch, contract::CodeId};
 use sdk::cosmwasm_std::Addr;
 
 use crate::{msg::MaxLeases, result::ContractResult};
@@ -23,7 +23,7 @@ pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// Consumes the customers iterator to the next customer or error.
 pub fn migrate_leases<I, LI, MsgFactory>(
     mut customers: I,
-    lease_code_id: u64,
+    lease_code_id: CodeId,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
@@ -64,12 +64,12 @@ impl MigrationResult {
 }
 
 struct MigrateBatch {
-    new_code_id: u64,
+    new_code_id: CodeId,
     leases_left: MaxLeases,
     msgs: Batch,
 }
 impl MigrateBatch {
-    fn new(new_code_id: u64, max_leases: MaxLeases) -> Self {
+    fn new(new_code_id: CodeId, max_leases: MaxLeases) -> Self {
         Self {
             new_code_id,
             leases_left: max_leases,
@@ -123,6 +123,7 @@ mod test {
     use std::vec::IntoIter;
 
     use lease::api::MigrateMsg;
+    use platform::contract::CodeId;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -146,7 +147,7 @@ mod test {
     #[test]
     fn no_leases() {
         use std::array::IntoIter;
-        let new_code: u64 = 242;
+        let new_code: CodeId = 242;
         let no_leases: Vec<Customer<IntoIter<Addr, 0>>> = vec![];
         assert_eq!(
             Ok(MigrationResult::default()),
@@ -156,7 +157,7 @@ mod test {
 
     #[test]
     fn more_than_max_leases() {
-        let new_code: u64 = 242;
+        let new_code: CodeId = 242;
         let lease1 = Addr::unchecked(LEASE1);
         let lease2 = Addr::unchecked(LEASE21);
         let lease3 = Addr::unchecked(LEASE22);
@@ -302,7 +303,7 @@ mod test {
         mut exp: MigrationResult,
         lease_addr: &Addr,
         customer: Addr,
-        new_code: u64,
+        new_code: CodeId,
     ) -> MigrationResult {
         exp.msgs
             .schedule_migrate_wasm_no_reply(lease_addr, migrate_msg()(customer), new_code)
