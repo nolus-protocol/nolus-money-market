@@ -30,11 +30,15 @@ pub type LpnCoin = LppLpnCoin;
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {
+    pub(crate) customer: Addr,
     pub(crate) finalizer: Addr,
 }
 impl MigrateMsg {
-    pub fn new(finalizer: Addr) -> Self {
-        Self { finalizer }
+    pub fn new(customer: Addr, finalizer: Addr) -> Self {
+        Self {
+            customer,
+            finalizer,
+        }
     }
 }
 
