@@ -92,7 +92,6 @@ where
         _spec: PositionClose,
         _deps: &mut DepsMut<'_>,
         _env: Env,
-        _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("close position")
     }

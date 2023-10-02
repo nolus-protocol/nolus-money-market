@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
-use crate::{api::StateResponse, error::ContractResult};
+use crate::{
+    api::{PositionClose, StateResponse},
+    error::ContractResult,
+};
 
 use super::{handler::Handler as LeaseHandler, Contract, Response};
 
@@ -45,6 +48,15 @@ where
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.handler.repay(deps, env, info)
+    }
+
+    fn close_position(
+        self,
+        spec: PositionClose,
+        deps: &mut DepsMut<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler.close_position(spec, deps, env)
     }
 
     fn close(
