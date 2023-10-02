@@ -1,10 +1,14 @@
+use std::fmt::Debug;
+
 use prost::DecodeError;
 use thiserror::Error;
 
 use currency::Currency;
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -68,4 +72,11 @@ impl Error {
     }
 }
 
-pub type Result<T> = core::result::Result<T, Error>;
+pub fn log<E, T>(err: E, api: &dyn Api) -> core::result::Result<T, E>
+where
+    E: Debug,
+{
+    //TODO switch to calling this with Result::inspect_err once stabilized
+    api.debug(&format!("{:?}", err));
+    Err(err)
+}

@@ -3,7 +3,7 @@ use finance::percent::Percent;
 use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Addr, Coin, DepsMut};
+use sdk::cosmwasm_std::{Addr, Coin, Storage};
 
 use crate::{
     result::ContractResult,
@@ -15,7 +15,7 @@ use super::Borrow;
 
 impl Borrow {
     pub fn with(
-        deps: DepsMut<'_>,
+        storage: &mut dyn Storage,
         amount: Vec<Coin>,
         customer: Addr,
         admin: Addr,
@@ -23,8 +23,8 @@ impl Borrow {
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
-        Leases::cache_open_req(deps.storage, &customer)
-            .and_then(|()| Config::load(deps.storage))
+        Leases::cache_open_req(storage, &customer)
+            .and_then(|()| Config::load(storage))
             .and_then(|config| {
                 let mut batch = Batch::default();
                 batch
