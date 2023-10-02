@@ -8,7 +8,7 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-contract = ["schema", "storage"]
+contract = ["cosmos", "schema", "storage"]
 schema = ["dep:cosmwasm-schema"]
 storage = ["dep:cosmwasm-storage", "dep:cw-storage-plus"]
 testing = [

@@ -2,7 +2,10 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
-use platform::{batch::Batch, contract, message::Response as MessageResponse, reply, response};
+use platform::{
+    batch::Batch, contract, error as platform_error, message::Response as MessageResponse, reply,
+    response,
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -47,6 +50,7 @@ pub fn instantiate(
 
     leaser::update_lpp(deps.storage, lease_code.into(), Batch::default())
         .map(response::response_only_messages)
+        .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -73,8 +77,8 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
         versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
     };
 
-    // TODO platform log_error resp.or_else(|err| log_error(err, deps.api))
     resp.and_then(response::response)
+        .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -86,7 +90,7 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::OpenLease { currency, max_ltd } => Borrow::with(
-            deps,
+            deps.storage,
             info.funds,
             info.sender,
             env.contract.address.clone(),
@@ -138,6 +142,7 @@ pub fn execute(
             }),
     }
     .map(response::response_only_messages)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -156,6 +161,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
         ),
     }
     .map(response::response_only_messages)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -170,6 +176,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
     }
     .map_err(Into::into)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -186,6 +193,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
             })
         })
         .map(|lease| Response::new().add_attribute("lease_address", lease))
+        .or_else(|err| platform_error::log(err, deps.api))
 }
 
 fn validate_customer(
