@@ -10,7 +10,8 @@ use sdk::{
 
 use crate::{msg::InstantiateMsg, result::ContractResult, ContractError};
 
-type CodeId = u64;
+//TODO use the type instead of u64
+pub(super) type CodeId = u64;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
