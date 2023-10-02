@@ -226,6 +226,7 @@ mod test_check {
     use currency::{lpn::Usdc, test::Dai};
     use finance::{
         coin::Coin,
+        coin::Coin,
         duration::Duration,
         liability::{Liability, Zone},
         percent::Percent,
