@@ -146,9 +146,11 @@ impl PositionSpec {
         obj
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "testing", feature = "migration"))]
     pub fn new(liability: Liability, min_asset: LpnCoin, min_sell_asset: LpnCoin) -> Self {
-        Self::new_internal(liability, min_asset, min_sell_asset)
+        let obj = Self::new_internal(liability, min_asset, min_sell_asset);
+        obj.invariant_held().expect("Leaser invariant to be held");
+        obj
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

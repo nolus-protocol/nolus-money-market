@@ -13,8 +13,9 @@ name = "leaser_schema"
 test = true
 
 [features]
-default = ["contract-with-bindings"]
+default = ["contract-with-bindings", "migration"]
 contract-with-bindings = []
+migration = ["lease/migration"]
 testing = ["currency/testing"]
 
 [dependencies]

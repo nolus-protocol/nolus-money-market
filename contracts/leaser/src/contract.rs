@@ -22,9 +22,9 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-// version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+#[cfg(feature = "migration")]
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -50,9 +50,31 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
-        .and_then(response::response)
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    #[cfg(feature = "migration")]
+    let resp =
+        versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+            deps.storage,
+            version!(CONTRACT_STORAGE_VERSION),
+            |storage: &mut _| {
+                use super::state::v0::Config as ConfigOld;
+                ConfigOld::migrate(storage, msg.min_asset, msg.min_sell_asset)
+                    .and_then(|config_new| config_new.store(storage))
+            },
+            Into::into,
+        )
+        .map(|(release_label, ())| release_label);
+
+    #[cfg(not(feature = "migration"))]
+    let resp = {
+        // Statically assert that the message is empty when doing a software-only update.
+        let MigrateMsg {}: MigrateMsg = msg;
+
+        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into);
+    };
+
+    // TODO platform log_error resp.or_else(|err| log_error(err, deps.api))
+    resp.and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
