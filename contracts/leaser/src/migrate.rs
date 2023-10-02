@@ -21,20 +21,21 @@ pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
 /// Consumes the customers iterator to the next customer or error.
-pub fn migrate_leases<I, LI>(
+pub fn migrate_leases<I, LI, MsgFactory>(
     mut customers: I,
     lease_code_id: u64,
     max_leases: MaxLeases,
-    migrate_msg: MigrateMsg,
+    migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
 where
     I: Iterator<Item = MaybeCustomer<LI>>,
     LI: ExactSizeIterator<Item = Addr>,
+    MsgFactory: Fn(Addr) -> MigrateMsg,
 {
     let mut msgs = MigrateBatch::new(lease_code_id, max_leases);
     customers
         .find_map(|maybe_customer| match maybe_customer {
-            Ok(customer) => msgs.migrate_or_be_next(customer, migrate_msg.clone()),
+            Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
             Err(err) => Some(Err(err)),
         })
         .transpose()
@@ -77,13 +78,14 @@ impl MigrateBatch {
     }
 
     /// None if there is enough room for all customer's leases, otherwise return the customer
-    fn migrate_or_be_next<LI>(
+    fn migrate_or_be_next<LI, MsgFactory>(
         &mut self,
         mut customer: Customer<LI>,
-        migrate_msg: MigrateMsg,
+        migrate_msg: &MsgFactory,
     ) -> Option<ContractResult<Addr>>
     where
         LI: ExactSizeIterator<Item = Addr>,
+        MsgFactory: Fn(Addr) -> MigrateMsg,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = customer.leases.len().try_into();
         match maybe_leases_nb {
@@ -95,7 +97,7 @@ impl MigrateBatch {
                         self.msgs
                             .schedule_migrate_wasm_no_reply(
                                 &lease,
-                                migrate_msg.clone(),
+                                migrate_msg(customer.customer.clone()),
                                 self.new_code_id,
                             )
                             .map(|()| None)
@@ -187,14 +189,22 @@ mod test {
         let lease41 = Addr::unchecked(LEASE41);
         let lease42 = Addr::unchecked(LEASE42);
         let lease43 = Addr::unchecked(LEASE43);
-        let customer_addr1 = Addr::unchecked(CUSTOMER_ADDR1);
-        let customer_addr2 = Addr::unchecked(CUSTOMER_ADDR2);
-        let customer_addr3 = Addr::unchecked(CUSTOMER_ADDR3);
-        let customer_addr4 = Addr::unchecked(CUSTOMER_ADDR4);
+        fn customer1() -> Addr {
+            Addr::unchecked(CUSTOMER_ADDR1)
+        }
+        fn customer2() -> Addr {
+            Addr::unchecked(CUSTOMER_ADDR2)
+        }
+        fn customer3() -> Addr {
+            Addr::unchecked(CUSTOMER_ADDR3)
+        }
+        fn customer4() -> Addr {
+            Addr::unchecked(CUSTOMER_ADDR4)
+        }
 
         {
             let exp = MigrationResult {
-                next_customer: Some(customer_addr1),
+                next_customer: Some(customer1()),
                 ..Default::default()
             };
             assert_eq!(
@@ -203,61 +213,61 @@ mod test {
             );
         }
         {
-            let mut exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            exp.next_customer = Some(customer_addr2.clone());
+            let mut exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
                 super::migrate_leases(test_customers(), new_code, 1, migrate_msg())
             );
         }
         {
-            let mut exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            exp.next_customer = Some(customer_addr2);
+            let mut exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
                 super::migrate_leases(test_customers(), new_code, 2, migrate_msg())
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            let exp = add_expected(exp, &lease21, new_code);
-            let mut exp = add_expected(exp, &lease22, new_code);
-            exp.next_customer = Some(customer_addr3);
+            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let exp = add_expected(exp, &lease21, customer2(), new_code);
+            let mut exp = add_expected(exp, &lease22, customer2(), new_code);
+            exp.next_customer = Some(customer3());
             assert_eq!(
                 Ok(exp),
                 super::migrate_leases(test_customers(), new_code, 3, migrate_msg())
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            let exp = add_expected(exp, &lease21, new_code);
-            let exp = add_expected(exp, &lease22, new_code);
-            let mut exp = add_expected(exp, &lease3, new_code);
-            exp.next_customer = Some(customer_addr4.clone());
+            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let exp = add_expected(exp, &lease21, customer2(), new_code);
+            let exp = add_expected(exp, &lease22, customer2(), new_code);
+            let mut exp = add_expected(exp, &lease3, customer3(), new_code);
+            exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
                 super::migrate_leases(test_customers(), new_code, 4, migrate_msg())
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            let exp = add_expected(exp, &lease21, new_code);
-            let exp = add_expected(exp, &lease22, new_code);
-            let mut exp = add_expected(exp, &lease3, new_code);
-            exp.next_customer = Some(customer_addr4);
+            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let exp = add_expected(exp, &lease21, customer2(), new_code);
+            let exp = add_expected(exp, &lease22, customer2(), new_code);
+            let mut exp = add_expected(exp, &lease3, customer3(), new_code);
+            exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
                 super::migrate_leases(test_customers(), new_code, 5, migrate_msg())
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, new_code);
-            let exp = add_expected(exp, &lease21, new_code);
-            let exp = add_expected(exp, &lease22, new_code);
-            let exp = add_expected(exp, &lease3, new_code);
-            let exp = add_expected(exp, &lease41, new_code);
-            let exp = add_expected(exp, &lease42, new_code);
-            let mut exp = add_expected(exp, &lease43, new_code);
+            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let exp = add_expected(exp, &lease21, customer2(), new_code);
+            let exp = add_expected(exp, &lease22, customer2(), new_code);
+            let exp = add_expected(exp, &lease3, customer3(), new_code);
+            let exp = add_expected(exp, &lease41, customer4(), new_code);
+            let exp = add_expected(exp, &lease42, customer4(), new_code);
+            let mut exp = add_expected(exp, &lease43, customer4(), new_code);
             exp.next_customer = None;
             assert_eq!(
                 Ok(exp),
@@ -288,9 +298,14 @@ mod test {
         );
     }
 
-    fn add_expected(mut exp: MigrationResult, lease_addr: &Addr, new_code: u64) -> MigrationResult {
+    fn add_expected(
+        mut exp: MigrationResult,
+        lease_addr: &Addr,
+        customer: Addr,
+        new_code: u64,
+    ) -> MigrationResult {
         exp.msgs
-            .schedule_migrate_wasm_no_reply(lease_addr, migrate_msg(), new_code)
+            .schedule_migrate_wasm_no_reply(lease_addr, migrate_msg()(customer), new_code)
             .unwrap();
         exp
     }
@@ -318,7 +333,7 @@ mod test {
         vec![Ok(cust1), Ok(cust2), Ok(cust3), Ok(cust4)].into_iter()
     }
 
-    fn migrate_msg() -> MigrateMsg {
-        MigrateMsg::new(Addr::unchecked("finalizer"))
+    fn migrate_msg() -> impl Fn(Addr) -> MigrateMsg {
+        |customer| MigrateMsg::new(customer, Addr::unchecked("finalizer"))
     }
 }

@@ -87,12 +87,15 @@ pub(super) fn try_configure(
     Ok(Default::default())
 }
 
-pub(super) fn try_migrate_leases(
+pub(super) fn try_migrate_leases<MsgFactory>(
     storage: &mut dyn Storage,
     new_code_id: u64,
     max_leases: MaxLeases,
-    migrate_msg: MigrateMsg,
-) -> ContractResult<MessageResponse> {
+    migrate_msg: MsgFactory,
+) -> ContractResult<MessageResponse>
+where
+    MsgFactory: Fn(Addr) -> MigrateMsg,
+{
     Config::update_lease_code(storage, new_code_id)?;
 
     let leases = Leases::iter(storage, None);
@@ -103,12 +106,15 @@ pub(super) fn try_migrate_leases(
         })
 }
 
-pub(super) fn try_migrate_leases_cont(
+pub(super) fn try_migrate_leases_cont<MsgFactory>(
     storage: &mut dyn Storage,
     next_customer: Addr,
     max_leases: MaxLeases,
-    migrate_msg: MigrateMsg,
-) -> ContractResult<MessageResponse> {
+    migrate_msg: MsgFactory,
+) -> ContractResult<MessageResponse>
+where
+    MsgFactory: Fn(Addr) -> MigrateMsg,
+{
     let lease_code_id = Config::load(storage)?.lease_code_id;
 
     let leases = Leases::iter(storage, Some(next_customer));
