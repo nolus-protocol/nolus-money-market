@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use platform::batch::Batch;
+use platform::{batch::Batch, contract::CodeId};
 use sdk::{
     cosmwasm_std::{Addr, Binary, QuerierWrapper, WasmMsg},
     schemars::{self, JsonSchema},
@@ -18,7 +18,7 @@ pub(crate) mod type_defs;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrationSpec<M> {
-    pub code_id: u64,
+    pub code_id: CodeId,
     pub migrate_msg: M,
 }
 

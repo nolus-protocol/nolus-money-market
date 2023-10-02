@@ -10,7 +10,7 @@ use sdk::{
 };
 
 pub use crate::emit::{Emit, Emitter};
-use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
+use crate::{coin_legacy::to_cosmwasm_impl, contract::CodeId, error::Result};
 
 pub type ReplyId = u64;
 
@@ -116,7 +116,7 @@ impl Batch {
 
     pub fn schedule_instantiate_wasm_on_success_reply<M>(
         &mut self,
-        code_id: u64,
+        code_id: CodeId,
         msg: M,
         funds: Option<Vec<CoinCw>>,
         label: &str,
@@ -137,7 +137,7 @@ impl Batch {
         &mut self,
         addr: &Addr,
         msg: M,
-        new_code_id: u64,
+        new_code_id: CodeId,
     ) -> Result<()>
     where
         M: Serialize,
@@ -185,7 +185,7 @@ impl Batch {
     }
 
     fn wasm_init_msg<M>(
-        code_id: u64,
+        code_id: CodeId,
         msg: M,
         funds: Option<Vec<CoinCw>>,
         label: &str,
@@ -210,7 +210,7 @@ impl Batch {
         })
     }
 
-    fn wasm_migrate_msg<M>(addr: &Addr, msg: M, new_code_id: u64) -> Result<WasmMsg>
+    fn wasm_migrate_msg<M>(addr: &Addr, msg: M, new_code_id: CodeId) -> Result<WasmMsg>
     where
         M: Serialize,
     {

@@ -1,3 +1,4 @@
+use platform::contract::CodeId;
 use sdk::cosmwasm_std::Addr;
 
 pub(crate) struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
@@ -8,11 +9,11 @@ pub(crate) struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle,
     lpp_addr: Lpp,
     oracle_addr: Oracle,
     time_alarms_addr: TimeAlarms,
-    lease_code_id: u64,
+    lease_code_id: CodeId,
 }
 
 impl AddressBook<(), (), (), (), (), (), ()> {
-    pub(super) const fn new(lease_code_id: u64) -> Self {
+    pub(super) const fn new(lease_code_id: CodeId) -> Self {
         Self {
             dispatcher_addr: (),
             treasury_addr: (),
@@ -225,7 +226,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
 impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 {
-    pub const fn lease_code_id(&self) -> u64 {
+    pub const fn lease_code_id(&self) -> CodeId {
         self.lease_code_id
     }
 }

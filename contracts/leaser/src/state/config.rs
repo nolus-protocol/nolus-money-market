@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent;
 use lease::api::{ConnectionParams, InterestPaymentSpec, PositionSpec};
+use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
@@ -9,9 +10,6 @@ use sdk::{
 };
 
 use crate::{msg::InstantiateMsg, result::ContractResult, ContractError};
-
-//TODO use the type instead of u64
-pub(super) type CodeId = u64;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -32,7 +30,7 @@ impl Config {
 
     pub fn new(msg: InstantiateMsg) -> Self {
         Self {
-            lease_code_id: msg.lease_code_id.u64(),
+            lease_code_id: msg.lease_code_id.into(),
             lpp_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             lease_position_spec: msg.lease_position_spec,

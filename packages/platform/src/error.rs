@@ -4,6 +4,8 @@ use thiserror::Error;
 use currency::Currency;
 use sdk::cosmwasm_std::{Addr, StdError};
 
+use crate::contract::CodeId;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Platform] Expecting funds of {0} but found none")]
@@ -58,7 +60,7 @@ impl Error {
         Self::UnexpectedFunds(C::TICKER.into())
     }
 
-    pub fn unexpected_code<A>(exp_code_id: u64, instance: A) -> Self
+    pub fn unexpected_code<A>(exp_code_id: CodeId, instance: A) -> Self
     where
         A: Into<Addr>,
     {

@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 use finance::duration::Duration;
+use platform::contract::CodeId;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, InterChainMsg},
     cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper},
@@ -27,7 +28,7 @@ impl App {
     }
 
     #[must_use]
-    pub fn store_code(&mut self, code: Box<dyn CwContract<InterChainMsg, Empty>>) -> u64 {
+    pub fn store_code(&mut self, code: Box<dyn CwContract<InterChainMsg, Empty>>) -> CodeId {
         self.app.store_code(code)
     }
 
@@ -60,7 +61,7 @@ impl App {
 
     pub fn instantiate<'r, T, U>(
         &'r mut self,
-        code_id: u64,
+        code_id: CodeId,
         sender: Addr,
         init_msg: &T,
         send_funds: &[CwCoin],

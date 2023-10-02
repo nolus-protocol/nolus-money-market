@@ -1,14 +1,13 @@
-use address_book::AddressBook;
-use app::App;
 use currency::{Currency, SymbolSlice};
-
 use finance::percent::bound::BoundToHundredPercent;
-
+use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
     testing::{new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender},
 };
+
+use self::{address_book::AddressBook, app::App};
 
 use super::{
     lease::{
@@ -76,7 +75,7 @@ impl TestCase<(), (), (), (), (), (), ()> {
             custom_message_receiver,
         );
 
-        let lease_code_id: u64 = LeaseInstantiator::store(&mut app);
+        let lease_code_id: CodeId = LeaseInstantiator::store(&mut app);
 
         Self {
             app,
