@@ -59,7 +59,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
                 state::load_v5(storage)
                     .and_then(|lease_v5| {
                         FinalizerRef::try_new(_msg.finalizer, &deps.querier).and_then(|finalizer| {
-                            lease_v5.into_last_version(_env.block.time, finalizer)
+                            lease_v5.into_last_version(_env.block.time, _msg.customer, finalizer)
                         })
                     })
                     .and_then(

@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize, Serializer};
 
 use dex::{InspectSpec, MigrateSpec};
-use sdk::cosmwasm_std::Timestamp;
+use platform::message::Response as MessageResponse;
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{contract::finalize::FinalizerRef, error::ContractResult};
 
@@ -30,8 +31,12 @@ pub(crate) trait Migrate
 where
     Self: Sized,
 {
-    fn into_last_version(self, now: Timestamp, finalizer: FinalizerRef)
-        -> ContractResult<Response>;
+    fn into_last_version(
+        self,
+        now: Timestamp,
+        customer: Addr,
+        finalizer: FinalizerRef,
+    ) -> ContractResult<Response>;
 }
 
 #[derive(Deserialize)]
@@ -51,17 +56,18 @@ impl Migrate for State {
     fn into_last_version(
         self,
         now: Timestamp,
+        customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         match self {
-            Self::BuyAsset(inner) => inner.into_last_version(now, finalizer),
-            Self::OpenedActive(inner) => inner.into_last_version(now, finalizer),
-            Self::BuyLpn(inner) => inner.into_last_version(now, finalizer),
-            Self::SellAsset(inner) => inner.into_last_version(now, finalizer),
-            Self::PaidActive(inner) => inner.into_last_version(now, finalizer),
-            Self::ClosingTransferIn(inner) => inner.into_last_version(now, finalizer),
-            Self::Closed(inner) => inner.into_last_version(now, finalizer),
-            Self::Liquidated(inner) => inner.into_last_version(now, finalizer),
+            Self::BuyAsset(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::OpenedActive(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::BuyLpn(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::SellAsset(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::PaidActive(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::ClosingTransferIn(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::Closed(inner) => inner.into_last_version(now, customer, finalizer),
+            Self::Liquidated(inner) => inner.into_last_version(now, customer, finalizer),
         }
     }
 }
@@ -70,6 +76,7 @@ impl Migrate for BuyAsset {
     fn into_last_version(
         self,
         now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         Ok(Response::no_msgs(self.map(|dex| {
@@ -86,6 +93,7 @@ impl Migrate for OpenedActive {
     fn into_last_version(
         self,
         _now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         Ok(Response::no_msgs(
@@ -98,6 +106,7 @@ impl Migrate for BuyLpn {
     fn into_last_version(
         self,
         _now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         Ok(Response::no_msgs(self.map(|dex| {
@@ -114,6 +123,7 @@ impl Migrate for SellAsset {
     fn into_last_version(
         self,
         _now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         let partial: bool = self.inspect(|dex| dex.inspect_spec(|spec| spec.partial()));
@@ -143,6 +153,7 @@ impl Migrate for PaidActive {
     fn into_last_version(
         self,
         _now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         Ok(Response::no_msgs(
@@ -154,6 +165,7 @@ impl Migrate for ClosingTransferIn {
     fn into_last_version(
         self,
         _now: Timestamp,
+        _customer: Addr,
         finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
         Ok(Response::no_msgs(self.map(|dex| {
@@ -167,20 +179,30 @@ impl Migrate for Closed {
     fn into_last_version(
         self,
         _now: Timestamp,
-        _finalizer: FinalizerRef,
+        customer: Addr,
+        finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
-        Ok(Response::no_msgs(self.map::<_, closed::Closed>(Into::into)))
+        finalizer.notify(customer).map(|finalize_msg| {
+            Response::from(
+                MessageResponse::messages_only(finalize_msg),
+                self.map::<_, closed::Closed>(Into::into),
+            )
+        })
     }
 }
 impl Migrate for Liquidated {
     fn into_last_version(
         self,
         _now: Timestamp,
-        _finalizer: FinalizerRef,
+        customer: Addr,
+        finalizer: FinalizerRef,
     ) -> ContractResult<Response> {
-        Ok(Response::no_msgs(
-            self.map::<_, liquidated::Liquidated>(Into::into),
-        ))
+        finalizer.notify(customer).map(|finalize_msg| {
+            Response::from(
+                MessageResponse::messages_only(finalize_msg),
+                self.map::<_, liquidated::Liquidated>(Into::into),
+            )
+        })
     }
 }
 
