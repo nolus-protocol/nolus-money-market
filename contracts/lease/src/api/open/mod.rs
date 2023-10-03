@@ -159,6 +159,10 @@ impl PositionSpec {
             "Min asset amount should be positive",
         )
         .and(Self::check(
+            !self.min_sell_asset.is_zero(),
+            "Min sell asset amount should be positive",
+        ))
+        .and(Self::check(
             self.min_asset.ticker() == self.min_sell_asset.ticker(),
             "The ticker of min asset should be the same as the ticker of min sell asset",
         ))
@@ -267,6 +271,12 @@ mod test_position_spec {
     #[test]
     fn zero_min_asset() {
         let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
+        assert_err(r, "should be positive");
+    }
+
+    #[test]
+    fn zero_min_sell_asset() {
+        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"0","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
     }
 

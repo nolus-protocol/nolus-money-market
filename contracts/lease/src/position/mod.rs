@@ -144,10 +144,15 @@ where
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
-        Self::check(!self.amount.is_zero(), "The amount should be positive").and(Self::check(
-            !self.min_asset.is_zero(),
-            "Min asset amount should be positive",
-        ))
+        Self::check(!self.amount.is_zero(), "The amount should be positive")
+            .and(Self::check(
+                !self.min_asset.is_zero(),
+                "Min asset amount should be positive",
+            ))
+            .and(Self::check(
+                !self.min_sell_asset.is_zero(),
+                "Min sell asset amount should be positive",
+            ))
     }
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
