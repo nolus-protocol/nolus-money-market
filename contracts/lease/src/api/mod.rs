@@ -60,6 +60,9 @@ pub enum ExecuteMsg {
     /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
     /// with amount that would decrease a position less than the minimum asset parameter sent on
     /// lease open. Refer to `NewLeaseForm::position_spec`.
+    ///
+    /// Note that these checks would not be performed on the total position amount if
+    /// a `PositionClose::FullClose` is requested. It is executed irrespective of the amount.
     ClosePosition(PositionClose),
 
     /// Close of a fully paid lease

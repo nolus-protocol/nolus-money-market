@@ -41,11 +41,10 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    pub(crate) fn validate_close(&self, _amount: Coin<Asset>) -> ContractResult<()> {
-        self.price_of_lease_currency().map(|_lpn_in_assets| {
-            // .and_then(|_lpn_in_assets|
-            // TODO pending integration
-            // self.position.validate_close_amount(amount, _lpn_in_assets.inv())
+    pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
+        self.price_of_lease_currency().and_then(|lpn_in_assets| {
+            self.position
+                .validate_close_amount(amount, lpn_in_assets.inv())
         })
     }
 
