@@ -104,7 +104,7 @@ where
         let ltv = Percent::from_ratio(total_due, self.amount);
         self.may_ask_liquidation_liability(total_due, lpn_in_assets)
             .max(self.may_ask_liquidation_overdue(overdue, lpn_in_assets))
-            .map(|liquidation| Status::Liquidation(liquidation))
+            .map(Status::Liquidation)
             .unwrap_or_else(|| {
                 no_liquidation(
                     self.liability,
