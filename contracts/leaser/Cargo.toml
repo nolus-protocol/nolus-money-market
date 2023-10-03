@@ -8,10 +8,6 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[[example]]
-name = "leaser_schema"
-test = true
-
 [features]
 default = ["contract-with-bindings", "migration"]
 contract-with-bindings = []
