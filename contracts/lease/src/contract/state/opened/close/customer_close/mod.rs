@@ -3,7 +3,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::PositionClose,
-    contract::{state::Response, Lease},
+    contract::{cmd::ValidateClosePosition, state::Response, Lease},
     error::ContractResult,
 };
 
@@ -19,9 +19,9 @@ pub(in crate::contract::state::opened) fn start(
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     match close {
-        PositionClose::PartialClose(spec) => {
-            spec.start(lease, MessageResponse::default(), env, querier)
-        }
+        PositionClose::PartialClose(spec) => lease
+            .execute(ValidateClosePosition::new(&spec), querier)
+            .and_then(|()| spec.start(lease, MessageResponse::default(), env, querier)),
         PositionClose::FullClose(spec) => {
             spec.start(lease, MessageResponse::default(), env, querier)
         }

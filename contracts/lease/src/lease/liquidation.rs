@@ -38,7 +38,7 @@ where
         Ok(status)
     }
 
-    fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
+    pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
         Ok(self.oracle.price_of::<Asset>()?)
     }
 }

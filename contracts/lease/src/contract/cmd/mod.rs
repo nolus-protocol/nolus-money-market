@@ -10,6 +10,7 @@ pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoa
 pub(crate) use repay::RepayLeaseFn;
 pub(crate) use repayable::{Emitter as RepayEmitter, Repay, RepayFn, RepayResult};
 pub(crate) use state::LeaseState;
+pub(super) use validate_close_position::Cmd as ValidateClosePosition;
 
 mod close_full;
 mod close_paid;
@@ -20,3 +21,4 @@ mod open_loan;
 mod repay;
 mod repayable;
 mod state;
+mod validate_close_position;

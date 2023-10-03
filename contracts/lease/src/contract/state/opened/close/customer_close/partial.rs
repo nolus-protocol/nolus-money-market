@@ -27,7 +27,6 @@ impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;
 
     fn into(self) -> Self::Repayable {
-        //TODO validate the close.amount against the lease position using a cmd
         Into::into(self)
     }
 }
