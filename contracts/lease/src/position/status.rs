@@ -53,7 +53,7 @@ where
     Asset: Currency,
 {
     #[cfg(test)]
-    pub fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
+    pub(crate) fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
         debug_assert!(!amount.is_zero());
         Self::Liquidation(Liquidation::Partial { amount, cause })
     }
