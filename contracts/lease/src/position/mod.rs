@@ -114,6 +114,35 @@ where
             })
     }
 
+    /// Check if the amount can be used to close the position.
+    /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
+    /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
+    /// `NewLeaseForm::position_spec`.
+    ///
+    /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
+    /// with amount that would decrease a position less than the minimum asset parameter sent on
+    /// lease open. Refer to `NewLeaseForm::position_spec`.
+    pub fn validate_close_amount(
+        &self,
+        amount: Coin<Asset>,
+        lpn_in_assets: Price<Lpn, Asset>,
+    ) -> ContractResult<()> {
+        let min_asset = price::total(self.min_asset, lpn_in_assets);
+        let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
+
+        if amount < min_sell_asset {
+            Err(ContractError::PositionCloseAmountTooSmall(
+                self.min_sell_asset.into(),
+            ))
+        } else if self.amount.saturating_sub(amount) < min_asset {
+            Err(ContractError::PositionCloseAmountTooBig(
+                self.min_asset.into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     fn invariant_held(&self) -> ContractResult<()> {
         Self::check(!self.amount.is_zero(), "The amount should be positive").and(Self::check(
             !self.min_asset.is_zero(),
@@ -159,44 +188,13 @@ where
             Err(ContractError::PositionCloseAmountTooSmall(_)) => None,
             Err(ContractError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
             Err(_) => unreachable!(),
-            Ok(()) => Some(Liquidation::Partial {
-                amount: liquidation,
-                cause,
-            }),
-        }
-    }
-
-    /// Check if the amount can be used to close the position.
-    /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
-    /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
-    /// `NewLeaseForm::position_spec`.
-    ///
-    /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
-    /// with amount that would decrease a position less than the minimum asset parameter sent on
-    /// lease open. Refer to `NewLeaseForm::position_spec`.
-    pub fn validate_close_amount(
-        &self,
-        amount: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
-    ) -> ContractResult<()> {
-        let min_asset = price::total(self.min_asset, lpn_in_assets);
-        let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
-
-        let may_have_error = if amount < min_sell_asset {
-            Some(ContractError::PositionCloseAmountTooSmall(
-                self.min_sell_asset.into(),
-            ))
-        } else if self.amount.saturating_sub(amount) < min_asset {
-            Some(ContractError::PositionCloseAmountTooBig(
-                self.min_asset.into(),
-            ))
-        } else {
-            None
-        };
-
-        match may_have_error {
-            Some(error) => Err(error),
-            None => Ok(()),
+            Ok(()) => {
+                debug_assert!(liquidation < self.amount);
+                Some(Liquidation::Partial {
+                    amount: liquidation,
+                    cause,
+                })
+            }
         }
     }
 }
