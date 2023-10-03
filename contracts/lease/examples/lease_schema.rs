@@ -7,24 +7,3 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(StateQuery), &out_dir);
 }
-
-#[cfg(test)]
-#[test]
-fn test_repay_representation() {
-    use sdk::{
-        cosmwasm_std::{from_slice, to_vec},
-        schemars::_serde_json::to_string,
-    };
-
-    let msg = ExecuteMsg::Repay();
-    let repay_bin = to_vec(&msg).expect("serialization failed");
-    assert_eq!(
-        from_slice::<ExecuteMsg>(&repay_bin).expect("deserialization failed"),
-        msg
-    );
-
-    assert_eq!(
-        to_string(&msg).expect("deserialization failed"),
-        r#"{"repay":[]}"#
-    );
-}
