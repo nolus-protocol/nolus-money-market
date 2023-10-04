@@ -8,12 +8,12 @@ use crate::{
 
 pub(crate) struct LiquidationEmitter<'liq, 'env> {
     cause: &'liq Cause,
-    amount: &'liq LeaseCoin,
+    amount: LeaseCoin,
     env: &'env Env,
 }
 
 impl<'liq, 'env> LiquidationEmitter<'liq, 'env> {
-    pub fn new(cause: &'liq Cause, amount: &'liq LeaseCoin, env: &'env Env) -> Self {
+    pub fn new(cause: &'liq Cause, amount: LeaseCoin, env: &'env Env) -> Self {
         Self { cause, amount, env }
     }
 }
@@ -23,27 +23,27 @@ impl<'liq, 'env> RepayEmitter for LiquidationEmitter<'liq, 'env> {
         Lpn: Currency,
     {
         let emitter = emit_payment_int(Type::Liquidation, self.env, lease, receipt);
-        emit_liquidation_cause(emitter, self.cause).emit_coin_dto("amount", self.amount)
+        emit_liquidation_cause(emitter, self.cause).emit_coin_dto("amount", &self.amount)
     }
 }
 
-pub(crate) struct PositionCloseEmitter<'close, 'env> {
-    amount: &'close LeaseCoin,
+pub(crate) struct PositionCloseEmitter<'env> {
+    amount: LeaseCoin,
     env: &'env Env,
 }
 
-impl<'close, 'env> PositionCloseEmitter<'close, 'env> {
-    pub fn new(amount: &'close LeaseCoin, env: &'env Env) -> Self {
+impl<'env> PositionCloseEmitter<'env> {
+    pub fn new(amount: LeaseCoin, env: &'env Env) -> Self {
         Self { amount, env }
     }
 }
-impl<'close, 'env> RepayEmitter for PositionCloseEmitter<'close, 'env> {
+impl<'env> RepayEmitter for PositionCloseEmitter<'env> {
     fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
     where
         Lpn: Currency,
     {
         let emitter = emit_payment_int(Type::ClosePosition, self.env, lease, receipt);
-        emitter.emit_coin_dto("amount", self.amount)
+        emitter.emit_coin_dto("amount", &self.amount)
     }
 }
 

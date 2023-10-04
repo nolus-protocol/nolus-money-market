@@ -33,14 +33,15 @@ pub(crate) trait CloseAlgo {
 
     fn profit_sender(&self, lease: &Lease) -> Self::ProfitSender;
     fn change_sender(&self, lease: &Lease) -> Self::ChangeSender;
-    fn emitter_fn<'this, 'env>(
+    fn emitter_fn<'this, 'lease, 'env>(
         &'this self,
-        lease: &'this Lease,
+        lease: &'lease Lease,
         env: &'env Env,
     ) -> Self::PaymentEmitter<'this, 'env>
     where
         Self: 'this,
-        'env: 'this;
+        'env: 'this,
+        'this: 'lease;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -88,15 +89,13 @@ where
         let customer = lease.lease.customer.clone();
 
         lease.finalizer.notify(customer).and_then(|finalizer_msgs| {
+            let profit = self.0.profit_sender(&lease);
+            let change = self.0.change_sender(&lease);
+            let emitter_fn = self.0.emitter_fn(&lease, env);
             lease
+                .lease
                 .execute(
-                    FullCloseCmd::new(
-                        amount,
-                        env.block.time,
-                        self.0.profit_sender(&lease),
-                        self.0.change_sender(&lease),
-                        self.0.emitter_fn(&lease, env),
-                    ),
+                    FullCloseCmd::new(amount, env.block.time, profit, change, emitter_fn),
                     querier,
                 )
                 .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))

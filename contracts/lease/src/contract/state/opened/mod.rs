@@ -22,5 +22,7 @@ fn lease_state(
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
-    lease.execute(LeaseState::new(now, in_progress), querier)
+    lease
+        .lease
+        .execute(LeaseState::new(now, in_progress), querier)
 }

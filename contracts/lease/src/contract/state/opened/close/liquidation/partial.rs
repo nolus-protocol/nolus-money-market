@@ -58,6 +58,6 @@ impl RepayAlgo for Spec {
     }
 
     fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env> {
-        Self::PaymentEmitter::new(&self.cause, &self.amount, env)
+        Self::PaymentEmitter::new(&self.cause, self.amount.clone(), env)
     }
 }

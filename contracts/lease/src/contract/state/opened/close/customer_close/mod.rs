@@ -20,6 +20,8 @@ pub(in crate::contract::state::opened) fn start(
 ) -> ContractResult<Response> {
     match close {
         PositionClose::PartialClose(spec) => lease
+            .lease
+            .clone()
             .execute(ValidateClosePosition::new(&spec), querier)
             .and_then(|()| spec.start(lease, MessageResponse::default(), env, querier)),
         PositionClose::FullClose(spec) => {

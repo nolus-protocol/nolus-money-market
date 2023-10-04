@@ -101,12 +101,10 @@ impl Active {
     }
 
     fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        let liquidation_status = self.lease.execute(
-            LiquidationStatusCmd::new(
-                env.block.time,
-                &self.lease.lease.time_alarms,
-                &self.lease.lease.oracle,
-            ),
+        let time_alarms_ref = self.lease.lease.time_alarms.clone();
+        let oracle_ref = self.lease.lease.oracle.clone();
+        let liquidation_status = self.lease.lease.clone().execute(
+            LiquidationStatusCmd::new(env.block.time, &time_alarms_ref, &oracle_ref),
             querier,
         )?;
 

@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable};
 
-use crate::lease::{
-    with_lease::{self, WithLease},
-    LeaseDTO,
-};
+use crate::lease::{with_lease::WithLease, LeaseDTO};
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::FinalizerRef;
@@ -55,25 +52,10 @@ impl Lease {
         timealarms::error::ContractError: Into<Cmd::Error>,
         oracle::error::ContractError: Into<Cmd::Error>,
     {
-        self.execute(cmd, querier).map(|result| {
+        self.lease.execute(cmd, querier).map(|result| {
             let (lease, other) = result.split_into();
             (Self::new(lease, self.dex, self.finalizer), other)
         })
-    }
-
-    fn execute<Cmd>(
-        &self,
-        cmd: Cmd,
-        querier: &QuerierWrapper<'_>,
-    ) -> Result<Cmd::Output, Cmd::Error>
-    where
-        Cmd: WithLease,
-        Cmd::Error: From<lpp::error::ContractError>,
-        currency::error::Error: Into<Cmd::Error>,
-        timealarms::error::ContractError: Into<Cmd::Error>,
-        oracle::error::ContractError: Into<Cmd::Error>,
-    {
-        with_lease::execute(self.lease.clone(), cmd, querier)
     }
 }
 

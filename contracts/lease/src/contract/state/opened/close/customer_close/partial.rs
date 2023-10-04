@@ -51,13 +51,13 @@ impl Closable for Spec {
 impl RepayAlgo for Spec {
     type RepayFn = PartialCloseFn;
 
-    type PaymentEmitter<'close, 'env> = PositionCloseEmitter<'close, 'env>;
+    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'env>;
 
     fn repay_fn(&self) -> Self::RepayFn {
         Self::RepayFn::new(self.amount.clone())
     }
 
     fn emitter_fn<'this, 'env>(&'this self, env: &'env Env) -> Self::PaymentEmitter<'this, 'env> {
-        Self::PaymentEmitter::new(&self.amount, env)
+        Self::PaymentEmitter::new(self.amount.clone(), env)
     }
 }

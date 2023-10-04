@@ -56,7 +56,7 @@ impl CloseAlgo for Spec {
 
     type ChangeSender = Self::ProfitSender;
 
-    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'this, 'env>
+    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'env>
     where
         Self: 'this,
         'env: 'this;
@@ -69,14 +69,15 @@ impl CloseAlgo for Spec {
         Self::ChangeSender::new(lease.lease.customer.clone())
     }
 
-    fn emitter_fn<'this, 'env>(
+    fn emitter_fn<'this, 'lease, 'env>(
         &'this self,
-        lease: &'this Lease,
+        lease: &'lease Lease,
         env: &'env Env,
     ) -> Self::PaymentEmitter<'this, 'env>
     where
         'env: 'this,
+        'this: 'lease,
     {
-        Self::PaymentEmitter::new(self.amount(lease), env)
+        Self::PaymentEmitter::new(self.amount(lease).clone(), env)
     }
 }
