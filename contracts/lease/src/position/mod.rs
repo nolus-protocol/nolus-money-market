@@ -129,6 +129,7 @@ where
     ) -> ContractResult<()> {
         let min_asset = price::total(self.min_asset, lpn_in_assets);
         let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
+        dbg!(amount, min_asset, min_sell_asset);
 
         if amount < min_sell_asset {
             Err(ContractError::PositionCloseAmountTooSmall(
@@ -722,9 +723,15 @@ mod test_validate_close {
     #[test]
     fn too_small_amount() {
         let spec = position(100, 75, 15);
-        let result = spec.validate_close_amount(14.into(), price(1, 1));
+        let result_1 = spec.validate_close_amount(14.into(), price(1, 1));
         assert!(matches!(
-            result,
+            result_1,
+            Err(ContractError::PositionCloseAmountTooSmall(_))
+        ));
+
+        let result_2 = spec.validate_close_amount(6.into(), price(2, 1));
+        assert!(matches!(
+            result_2,
             Err(ContractError::PositionCloseAmountTooSmall(_))
         ));
     }
@@ -732,16 +739,25 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_sell_asset() {
         let spec = position(100, 85, 15);
-        let result = spec.validate_close_amount(15.into(), price(1, 1));
-        assert!(result.is_ok())
+        let result_1 = spec.validate_close_amount(15.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(5.into(), price(3, 1));
+        assert!(result_2.is_ok());
     }
 
     #[test]
     fn too_big_amount() {
         let spec = position(100, 25, 1);
-        let result = spec.validate_close_amount(76.into(), price(1, 1));
+        let result_1 = spec.validate_close_amount(76.into(), price(1, 1));
         assert!(matches!(
-            result,
+            result_1,
+            Err(ContractError::PositionCloseAmountTooBig(_))
+        ));
+
+        let result_2 = spec.validate_close_amount(64.into(), price(2, 3));
+        assert!(matches!(
+            result_2,
             Err(ContractError::PositionCloseAmountTooBig(_))
         ));
     }
@@ -749,18 +765,21 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_asset() {
         let spec = position(100, 25, 1);
-        let result = spec.validate_close_amount(76.into(), price(1, 1));
-        assert!(matches!(
-            result,
-            Err(ContractError::PositionCloseAmountTooBig(_))
-        ));
+        let result_1 = spec.validate_close_amount(75.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(63.into(), price(2, 3));
+        assert!(result_2.is_ok());
     }
 
     #[test]
     fn valid_amount() {
-        let spec = position(100, 40, 15);
-        let result = spec.validate_close_amount(53.into(), price(1, 1));
-        assert!(result.is_ok())
+        let spec = position(100, 40, 10);
+        let result_1 = spec.validate_close_amount(53.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(89.into(), price(4, 1));
+        assert!(result_2.is_ok());
     }
 
     fn position<Asset, Lpn>(
