@@ -7,13 +7,19 @@ use dex::{
 };
 use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
-use platform::state_machine::Response as StateMachineResponse;
+use platform::{
+    bank,
+    batch::{Emit, Emitter},
+    message::Response as MessageResponse,
+    state_machine::Response as StateMachineResponse,
+};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{self, paid::ClosingTrx, StateResponse},
     contract::{
+        cmd::Close,
         state::{
             closed::Closed,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
@@ -23,6 +29,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    lease::{with_lease_paid, LeaseDTO},
 };
 
 type AssetGroup = LeaseGroup;
@@ -60,9 +67,11 @@ impl TransferIn {
         self.lease.lease.position.amount()
     }
 
-    // fn emit_ok(&self) -> Emitter {
-    //     Emitter::of_type(Type::OpeningTransferOut)
-    // }
+    fn emit_ok(&self, env: &Env, lease: &LeaseDTO) -> Emitter {
+        Emitter::of_type(Type::Closed)
+            .emit("id", lease.addr.clone())
+            .emit_tx_info(env)
+    }
 }
 
 impl SwapTask for TransferIn {
@@ -105,10 +114,20 @@ impl SwapTask for TransferIn {
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
         debug_assert!(&amount_out == self.amount());
-        let closed = Closed::default();
-        closed
-            .enter_state(self.lease, env, querier)
-            .map(|response| StateMachineResponse::from(response, closed))
+        let lease_addr = self.lease.lease.addr.clone();
+        let lease_account = bank::account(&lease_addr, querier);
+        let emitter = self.emit_ok(env, &self.lease.lease);
+        let customer = self.lease.lease.customer.clone();
+
+        with_lease_paid::execute(self.lease.lease, Close::new(lease_account))
+            .and_then(|close_msgs| {
+                self.lease
+                    .finalizer
+                    .notify(customer)
+                    .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
+            })
+            .map(|all_messages| MessageResponse::messages_with_events(all_messages, emitter))
+            .map(|response| StateMachineResponse::from(response, Closed::default()))
     }
 }
 
