@@ -1,10 +1,7 @@
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{
-        opened::{OngoingTrx, RepayTrx},
-        LpnCoin, PaymentCoin, StateResponse,
-    },
+    api::LpnCoin,
     contract::{cmd::RepayLeaseFn, state::Response, Lease},
     error::ContractResult,
 };
@@ -25,21 +22,6 @@ pub(super) fn repay(
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     Repay::from(CustomerRepay {}).try_repay(lease, amount, env, querier)
-}
-
-fn query(
-    lease: Lease,
-    payment: PaymentCoin,
-    in_progress: RepayTrx,
-    now: Timestamp,
-    querier: &QuerierWrapper<'_>,
-) -> ContractResult<StateResponse> {
-    let in_progress = OngoingTrx::Repayment {
-        payment,
-        in_progress,
-    };
-
-    super::lease_state(lease, Some(in_progress), now, querier)
 }
 
 pub(super) struct CustomerRepay {}

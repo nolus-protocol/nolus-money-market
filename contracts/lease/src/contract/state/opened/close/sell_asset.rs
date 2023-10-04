@@ -109,10 +109,10 @@ where
 {
     fn state(
         self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
     ) -> SellAssetStateResponse<RepayableT> {
-        self.query(DexState::trx_in_progress(), _now, _querier)
+        self.query(DexState::trx_in_progress(), now, querier)
     }
 }
 

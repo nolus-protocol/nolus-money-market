@@ -11,10 +11,14 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opened::RepayTrx, PaymentCoin},
+    api::{
+        self,
+        opened::{OngoingTrx, RepayTrx},
+        PaymentCoin, StateResponse,
+    },
     contract::{
         state::{
-            opened::repay,
+            opened::{self, repay},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
             SwapResult,
         },
@@ -48,6 +52,20 @@ impl BuyLpn {
     #[cfg(feature = "migration")]
     pub(super) fn migrate_to(lease: Lease, payment: PaymentCoin) -> Self {
         Self::new(lease, payment)
+    }
+
+    fn query(
+        self,
+        in_progress: RepayTrx,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        let in_progress = OngoingTrx::Repayment {
+            payment: self.payment,
+            in_progress,
+        };
+
+        opened::lease_state(self.lease, Some(in_progress), now, querier)
     }
 }
 
@@ -94,44 +112,39 @@ impl SwapTask for BuyLpn {
     }
 }
 
-impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
+impl<DexState> ContractInSwap<DexState, BuyLpnStateResponse> for BuyLpn
+where
+    DexState: InProgressTrx,
+{
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(
-            self.lease,
-            self.payment,
-            RepayTrx::TransferOut,
-            now,
-            querier,
-        )
+        self.query(DexState::trx_in_progress(), now, querier)
     }
 }
 
-impl ContractInSwap<SwapState, BuyLpnStateResponse> for BuyLpn {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(self.lease, self.payment, RepayTrx::Swap, now, querier)
+trait InProgressTrx {
+    fn trx_in_progress() -> RepayTrx;
+}
+
+impl InProgressTrx for TransferOutState {
+    fn trx_in_progress() -> RepayTrx {
+        RepayTrx::TransferOut
     }
 }
 
-impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(
-            self.lease,
-            self.payment,
-            RepayTrx::TransferInInit,
-            now,
-            querier,
-        )
+impl InProgressTrx for SwapState {
+    fn trx_in_progress() -> RepayTrx {
+        RepayTrx::Swap
     }
 }
 
-impl ContractInSwap<TransferInFinishState, BuyLpnStateResponse> for BuyLpn {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
-        repay::query(
-            self.lease,
-            self.payment,
-            RepayTrx::TransferInInit,
-            now,
-            querier,
-        )
+impl InProgressTrx for TransferInInitState {
+    fn trx_in_progress() -> RepayTrx {
+        RepayTrx::TransferInInit
+    }
+}
+
+impl InProgressTrx for TransferInFinishState {
+    fn trx_in_progress() -> RepayTrx {
+        RepayTrx::TransferInFinish
     }
 }
