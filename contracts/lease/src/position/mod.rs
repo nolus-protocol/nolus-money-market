@@ -244,7 +244,7 @@ mod test_check {
     #[test]
     fn no_debt() {
         let warn_ltv = Percent::from_permille(11);
-        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 0.into());
+        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
         assert_eq!(
             spec.check_liability(0.into(), 0.into(), price()),
             Status::NoDebt,
@@ -254,7 +254,7 @@ mod test_check {
     #[test]
     fn warnings_none_zero_liq() {
         let warn_ltv = Percent::from_percent(51);
-        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 0.into());
+        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
         assert_eq!(
             spec.check_liability(1.into(), 0.into(), price()),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
@@ -295,7 +295,7 @@ mod test_check {
             Percent::from_permille(712),
             LEASE_AMOUNT,
             10.into(),
-            0.into(),
+            1.into(),
         );
 
         assert_eq!(
@@ -364,7 +364,7 @@ mod test_check {
             Percent::from_permille(123),
             LEASE_AMOUNT,
             10.into(),
-            0.into(),
+            1.into(),
         );
 
         assert_eq!(
@@ -427,7 +427,7 @@ mod test_check {
     fn warnings_third() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
-        let spec = liability_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 0.into());
+        let spec = liability_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(380.into(), 0.into(), price()),
@@ -504,7 +504,7 @@ mod test_check {
     #[test]
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 0.into());
+        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(880.into(), 1.into(), price()),
@@ -536,7 +536,7 @@ mod test_check {
     #[test]
     fn liquidate_partial_min_asset() {
         let max_ltv = Percent::from_permille(881);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 0.into());
+        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(900.into(), 897.into(), price()),
@@ -554,6 +554,16 @@ mod test_check {
         );
         assert_eq!(
             spec.check_liability(901.into(), 889.into(), price()),
+            Status::partial(
+                900.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check_liability(902.into(), 889.into(), price()),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -564,7 +574,7 @@ mod test_check {
     #[test]
     fn liquidate_full() {
         let max_ltv = Percent::from_permille(768);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 230.into(), 0.into());
+        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 230.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(768.into(), 765.into(), price()),
@@ -595,9 +605,9 @@ mod test_check {
         let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 120.into(), 15.into());
 
         assert_eq!(
-            spec.check_liability(881.into(), 1.into(), price()),
+            spec.check_liability(882.into(), 1.into(), price()),
             Status::partial(
-                879.into(),
+                880.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -605,7 +615,7 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(882.into(), 1.into(), price()),
+            spec.check_liability(883.into(), 1.into(), price()),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -626,11 +636,11 @@ mod test_check {
         let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 326.into(), 15.into());
 
         assert_eq!(
-            spec.check_liability(772.into(), 673.into(), price()),
-            Status::partial(673.into(), Cause::Overdue()),
+            spec.check_liability(772.into(), 674.into(), price()),
+            Status::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(772.into(), 674.into(), price()),
+            spec.check_liability(772.into(), 675.into(), price()),
             Status::full(Cause::Overdue()),
         );
     }
