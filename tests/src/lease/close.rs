@@ -1,49 +1,42 @@
 use finance::price;
 use lease::api::{ExecuteMsg, StateResponse};
-use sdk::{
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin},
-    cw_multi_test::AppResponse,
-};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
 use crate::{
     common::{
-        cwcoin, leaser as leaser_mod,
-        test_case::{
-            response::{RemoteChain as _, ResponseWithInterChainMsgs},
-            TestCase,
-        },
+        leaser as leaser_mod,
+        test_case::{response::ResponseWithInterChainMsgs, TestCase},
         USER,
     },
     lease::repay,
 };
 
-use super::{heal, LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{dex, heal, LeaseCoin, LeaseCurrency, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn state_closed() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
-    let borrowed: PaymentCoin = price::total(
-        super::quote_borrow(&test_case, downpayment),
-        super::price_lpn_of::<PaymentCurrency>().inv(),
-    );
+    let borrowed_lpn = super::quote_borrow(&test_case, downpayment);
+    let borrowed: PaymentCoin =
+        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());
     let lease_amount: LeaseCoin = price::total(
-        price::total(downpayment, super::price_lpn_of())
-            + super::quote_borrow(&test_case, downpayment),
+        price::total(downpayment, super::price_lpn_of()) + borrowed_lpn,
         super::price_lpn_of::<LeaseCurrency>().inv(),
     );
-    repay::repay(&mut test_case, lease_address.clone(), borrowed);
+    repay::repay(
+        &mut test_case,
+        lease_address.clone(),
+        borrowed,
+        lease_amount,
+    );
 
     let customer = Addr::unchecked(USER);
     let user_balance: LeaseCoin =
         platform::bank::balance(&customer, &test_case.app.query()).unwrap();
 
-    close(
-        &mut test_case,
-        lease_address.clone(),
-        &[cwcoin(lease_amount)],
-    );
+    close(&mut test_case, lease_address.clone(), lease_amount);
 
     let query_result = super::state_query(&test_case, lease_address.as_str());
     let expected_result = StateResponse::Closed();
@@ -66,13 +59,15 @@ fn state_closed() {
 fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: Addr,
-    expected_funds: &[CwCoin],
+    expected_funds: LeaseCoin,
 ) -> AppResponse {
-    let response: ResponseWithInterChainMsgs<'_, ()> = send_close(test_case, contract_addr.clone());
-
-    expect_remote_ibc_transfer(response);
-
-    do_remote_ibc_transfer(test_case, contract_addr, expected_funds)
+    dex::expect_init_transfer_in(send_close(test_case, contract_addr.clone()));
+    dex::do_transfer_in(
+        test_case,
+        contract_addr,
+        expected_funds,
+        Option::<LeaseCoin>::None,
+    )
 }
 
 fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
@@ -89,42 +84,4 @@ fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
         )
         .unwrap()
         .ignore_response()
-}
-
-fn expect_remote_ibc_transfer(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-
-    () = response.unwrap_response()
-}
-
-fn do_remote_ibc_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
-    contract_addr: Addr,
-    funds: &[CwCoin],
-) -> AppResponse {
-    assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_all_balances(contract_addr.clone())
-            .unwrap(),
-        &[] as &[CwCoin]
-    );
-
-    test_case
-        .app
-        .send_tokens(Addr::unchecked("ica0"), contract_addr.clone(), funds)
-        .unwrap();
-
-    assert_eq!(
-        test_case.app.query().query_all_balances("ica0").unwrap(),
-        &[] as &[CwCoin]
-    );
-
-    /* Confirm transfer */
-    test_case
-        .app
-        .sudo(contract_addr, &super::construct_response(Binary::default()))
-        .unwrap()
-        .unwrap_response()
 }

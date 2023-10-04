@@ -17,7 +17,7 @@ use crate::{
         },
         ADMIN,
     },
-    lease,
+    lease::{self, dex},
 };
 
 use super::{LeaseCoin, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
@@ -72,7 +72,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
 
     test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
+    let response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .sudo(
             lease_address.clone(),
@@ -98,40 +98,13 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .unwrap()
         .ignore_response();
 
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-
-    () = response.unwrap_response();
-
-    test_case
-        .app
-        .send_tokens(
-            Addr::unchecked("ica0"),
-            lease_address.clone(),
-            &[cwcoin(liquidated_in_lpn)],
-        )
-        .unwrap();
-
-    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
-        .app
-        .sudo(
-            lease_address.clone(),
-            &sdk::neutron_sdk::sudo::msg::SudoMsg::Response {
-                request: sdk::neutron_sdk::sudo::msg::RequestPacket {
-                    sequence: None,
-                    source_port: None,
-                    source_channel: None,
-                    destination_port: None,
-                    destination_channel: None,
-                    data: None,
-                    timeout_height: None,
-                    timeout_timestamp: None,
-                },
-                data: Binary::default(),
-            },
-        )
-        .unwrap();
-    response.expect_empty();
-    let liquidation_end_response = response.unwrap_response();
+    dex::expect_init_transfer_in(response);
+    let liquidation_end_response = dex::do_transfer_in(
+        &mut test_case,
+        lease_address.clone(),
+        liquidated_in_lpn,
+        Some(lease_amount - liquidation_amount),
+    );
 
     assert_eq!(
         test_case

@@ -1,6 +1,6 @@
 use ::lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
-use finance::{coin::Amount, percent::Percent};
+use finance::{coin::Amount, percent::Percent, price};
 use sdk::{
     cosmwasm_std::{Addr, Binary, Event},
     cw_multi_test::AppResponse,
@@ -16,7 +16,7 @@ use crate::{
         },
         ADMIN, USER,
     },
-    lease::{self, LeaseTestCase},
+    lease::{self, dex, LeaseTestCase},
 };
 
 use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
@@ -75,19 +75,36 @@ fn full_liquidation() {
 
     // loan = 1857142857142
     // asset = 2857142857142
-    // the base is chosen to be close to the asset amount to trigger a full liquidation
-    let base = 2857142857140.into();
-    let quote = 1857142857142.into();
+    let lease_amount: LeaseCoin = 2857142857142.into();
+    let borrowed = 1857142857142.into();
 
-    let mut response_with_ica = deliver_new_price(&mut test_case, lease.clone(), base, quote);
+    // base + quote;
+    let liquidated_in_lpn = borrowed;
+    let liquidated_amount: LeaseCoin = price::total(liquidated_in_lpn, lease::price_lpn_of().inv());
+    // the base is chosen to be close to the asset amount to trigger a full liquidation
+    let mut response_with_ica = deliver_new_price(
+        &mut test_case,
+        lease.clone(),
+        lease_amount - 2.into(),
+        borrowed,
+    );
 
     //swap
     response_with_ica.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
     let _ = response_with_ica.unwrap_response();
+    test_case
+        .app
+        .send_tokens(
+            Addr::unchecked("ica0"),
+            Addr::unchecked(ADMIN),
+            &[cwcoin(liquidated_amount)],
+        )
+        .unwrap();
 
-    let liquidated_in_lpn: LpnCoin = quote;
-    let liquidated_amount: Amount = liquidated_in_lpn.into();
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
+    test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
+
+    let liquidated_in_lpn: LpnCoin = borrowed;
+    let response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .sudo(
             lease.clone(),
@@ -103,42 +120,30 @@ fn full_liquidation() {
                     timeout_timestamp: None,
                 },
                 data: Binary(platform::trx::encode_msg_responses(
-                    [swap::trx::build_exact_amount_in_resp(liquidated_amount)].into_iter(),
+                    [swap::trx::build_exact_amount_in_resp(
+                        liquidated_amount.into(),
+                    )]
+                    .into_iter(),
                 )),
             },
         )
         .unwrap()
         .ignore_response();
 
-    //transfer in
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-    () = response.unwrap_response();
+    dex::expect_init_transfer_in(response);
+    let response_transfer_in = dex::do_transfer_in(
+        &mut test_case,
+        lease.clone(),
+        liquidated_in_lpn,
+        Some(lease_amount - liquidated_amount),
+    );
 
-    test_case.send_funds_from_admin(lease.clone(), &[cwcoin(liquidated_in_lpn)]);
-
-    let response_transfer_in = test_case
-        .app
-        .sudo(
-            lease.clone(),
-            &sdk::neutron_sdk::sudo::msg::SudoMsg::Response {
-                request: sdk::neutron_sdk::sudo::msg::RequestPacket {
-                    sequence: None,
-                    source_port: None,
-                    source_channel: None,
-                    destination_port: None,
-                    destination_channel: None,
-                    data: None,
-                    timeout_height: None,
-                    timeout_timestamp: None,
-                },
-                data: Binary::default(),
-            },
-        )
-        .unwrap()
-        .unwrap_response();
     response_transfer_in.assert_event(
         &Event::new("wasm-ls-liquidation")
-            .add_attribute("payment-amount", liquidated_amount.to_string())
+            .add_attribute(
+                "payment-amount",
+                Amount::from(liquidated_amount).to_string(),
+            )
             .add_attribute("loan-close", true.to_string()),
     );
 

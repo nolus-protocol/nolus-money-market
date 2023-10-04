@@ -28,7 +28,9 @@ use crate::{
     lease,
 };
 
-use super::{LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{
+    dex, LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT,
+};
 
 #[test]
 fn partial_repay() {
@@ -45,7 +47,12 @@ fn partial_repay() {
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);
 
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
-    repay(&mut test_case, lease_address.clone(), partial_payment);
+    repay(
+        &mut test_case,
+        lease_address.clone(),
+        partial_payment,
+        quote_result.total.try_into().unwrap(),
+    );
 
     let query_result = super::state_query(&test_case, lease_address.as_str());
 
@@ -66,6 +73,7 @@ fn partial_repay_after_time() {
     let query_result = super::state_query(&test_case, lease_address.as_ref());
 
     let StateResponse::Opened {
+        amount: lease_amount,
         previous_margin_due,
         previous_interest_due,
         current_margin_due,
@@ -90,6 +98,7 @@ fn partial_repay_after_time() {
                 + current_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
         ),
+        lease_amount.try_into().unwrap(),
     );
 
     let query_result = super::state_query(&test_case, lease_address.as_str());
@@ -121,12 +130,19 @@ fn full_repay() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
-    let borrowed: PaymentCoin = price::total(
-        super::quote_borrow(&test_case, downpayment),
-        super::price_lpn_of().inv(),
+    let borrowed_lpn = super::quote_borrow(&test_case, downpayment);
+    let borrowed: PaymentCoin = price::total(borrowed_lpn, super::price_lpn_of().inv());
+    let lease_amount: LeaseCoin = price::total(
+        price::total(downpayment, super::price_lpn_of()) + borrowed_lpn,
+        super::price_lpn_of::<LeaseCurrency>().inv(),
     );
 
-    repay(&mut test_case, lease_address.clone(), borrowed);
+    repay(
+        &mut test_case,
+        lease_address.clone(),
+        borrowed,
+        lease_amount,
+    );
 
     let expected_amount: LeaseCoin = price::total(
         price::total(
@@ -152,13 +168,12 @@ fn full_repay_with_max_ltd() {
     let borrowed = percent.of(DOWNPAYMENT);
     let lease_address = super::open_lease(&mut test_case, downpayment, Some(percent));
 
+    let lease_amount = (Percent::HUNDRED + percent).of(price::total(
+        downpayment,
+        Price::<PaymentCurrency, LeaseCurrency>::identity(),
+    ));
     let expected_result = StateResponse::Opened {
-        amount: (Percent::HUNDRED + percent)
-            .of(price::total(
-                downpayment,
-                Price::<PaymentCurrency, LeaseCurrency>::identity(),
-            ))
-            .into(),
+        amount: lease_amount.into(),
         loan_interest_rate: Percent::from_permille(70),
         margin_interest_rate: Percent::from_permille(30),
         principal_due: price::total(percent.of(downpayment), super::price_lpn_of()).into(),
@@ -173,7 +188,12 @@ fn full_repay_with_max_ltd() {
 
     assert_eq!(query_result, expected_result);
 
-    repay(&mut test_case, lease_address.clone(), borrowed);
+    repay(
+        &mut test_case,
+        lease_address.clone(),
+        borrowed,
+        lease_amount,
+    );
 
     let expected_amount: LeaseCoin = price::total(
         price::total(
@@ -198,13 +218,17 @@ fn full_repay_with_excess() {
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
     let borrowed: PaymentCoin = price::total(
         super::quote_borrow(&test_case, downpayment),
-        /* LPN -> Payment */ super::price_lpn_of().inv(),
+        super::price_lpn_of().inv(),
+    );
+    let lease_amount = price::total(
+        downpayment + borrowed,
+        Price::<PaymentCurrency, LeaseCurrency>::identity(),
     );
 
     let overpayment = super::create_payment_coin(5);
     let payment: PaymentCoin = borrowed + overpayment;
 
-    repay(&mut test_case, lease_address.clone(), payment);
+    repay(&mut test_case, lease_address.clone(), payment, lease_amount);
 
     let query_result = super::state_query(&test_case, lease_address.as_str());
 
@@ -241,6 +265,7 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
     payment: PaymentCoin,
+    lease_amount: LeaseCoin,
 ) -> AppResponse {
     let cw_payment: CwCoin = cwcoin(payment);
 
@@ -254,9 +279,8 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     let response: ResponseWithInterChainMsgs<'_, ()> =
         do_swap(test_case, contract_addr.clone(), &cw_payment, swap_out_lpn);
 
-    expect_remote_ibc_transfer(response);
-
-    do_remote_ibc_transfer(test_case, contract_addr, &cwcoin(swap_out_lpn))
+    dex::expect_init_transfer_in(response);
+    dex::do_transfer_in(test_case, contract_addr, swap_out_lpn, Some(lease_amount))
 }
 
 fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
@@ -333,31 +357,4 @@ fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
         )
         .unwrap()
         .ignore_response()
-}
-
-fn expect_remote_ibc_transfer(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-
-    response.unwrap_response()
-}
-
-fn do_remote_ibc_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
-    contract_addr: Addr,
-    cw_swap_out_lpn: &CwCoin,
-) -> AppResponse {
-    test_case
-        .app
-        .send_tokens(
-            Addr::unchecked("ica0"),
-            contract_addr.clone(),
-            std::slice::from_ref(cw_swap_out_lpn),
-        )
-        .unwrap();
-
-    test_case
-        .app
-        .sudo(contract_addr, &super::construct_response(Binary::default()))
-        .unwrap()
-        .unwrap_response()
 }

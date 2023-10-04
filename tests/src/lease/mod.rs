@@ -26,6 +26,7 @@ use crate::common::{
 
 mod close;
 mod compare_with_lpp;
+mod dex;
 mod heal;
 mod liquidation;
 mod open;
