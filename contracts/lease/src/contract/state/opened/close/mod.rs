@@ -1,11 +1,11 @@
 use dex::Enterable;
 use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
         opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin, StateResponse,
+        LeaseCoin,
     },
     contract::{
         state::{
@@ -71,18 +71,4 @@ where
     T: IntoRepayable,
     DexState<T::Repayable>: Into<State>,
 {
-}
-
-fn query<RepayableT>(
-    lease: Lease,
-    repayable: RepayableT,
-    in_progress: PositionCloseTrx,
-    now: Timestamp,
-    querier: &QuerierWrapper<'_>,
-) -> ContractResult<StateResponse>
-where
-    RepayableT: Closable,
-{
-    let trx = repayable.transaction(&lease, in_progress);
-    super::lease_state(lease, Some(trx), now, querier)
 }

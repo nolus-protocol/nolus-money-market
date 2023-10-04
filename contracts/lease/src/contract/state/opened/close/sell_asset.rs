@@ -11,9 +11,12 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opened::PositionCloseTrx},
+    api::{self, opened::PositionCloseTrx, StateResponse},
     contract::{
-        state::{opened::payment::Repayable, SwapResult},
+        state::{
+            opened::{self, payment::Repayable},
+            SwapResult,
+        },
         Lease,
     },
     error::ContractResult,
@@ -33,6 +36,21 @@ pub(crate) struct SellAsset<RepayableT> {
 impl<RepayableT> SellAsset<RepayableT> {
     pub(in crate::contract::state) fn new(lease: Lease, repayable: RepayableT) -> Self {
         Self { lease, repayable }
+    }
+}
+
+impl<RepayableT> SellAsset<RepayableT>
+where
+    RepayableT: Closable,
+{
+    fn query(
+        self,
+        in_progress: PositionCloseTrx,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        let trx = self.repayable.transaction(&self.lease, in_progress);
+        opened::lease_state(self.lease, Some(trx), now, querier)
     }
 }
 
@@ -83,9 +101,10 @@ where
     }
 }
 
-impl<RepayableT> ContractInSwap<TransferOutState, SellAssetStateResponse<RepayableT>>
+impl<DexState, RepayableT> ContractInSwap<DexState, SellAssetStateResponse<RepayableT>>
     for SellAsset<RepayableT>
 where
+    DexState: InProgressTrx,
     RepayableT: Closable + Repayable,
 {
     fn state(
@@ -93,6 +112,16 @@ where
         _now: Timestamp,
         _querier: &QuerierWrapper<'_>,
     ) -> SellAssetStateResponse<RepayableT> {
+        self.query(DexState::trx_in_progress(), _now, _querier)
+    }
+}
+
+trait InProgressTrx {
+    fn trx_in_progress() -> PositionCloseTrx;
+}
+
+impl InProgressTrx for TransferOutState {
+    fn trx_in_progress() -> PositionCloseTrx {
         // it's due to reusing the same enum dex::State
         // have to define a tailored enum dex::State that starts from SwapExactIn
         unreachable!(
@@ -101,62 +130,20 @@ where
     }
 }
 
-impl<RepayableT> ContractInSwap<SwapState, SellAssetStateResponse<RepayableT>>
-    for SellAsset<RepayableT>
-where
-    RepayableT: Closable + Repayable,
-{
-    fn state(
-        self,
-        now: Timestamp,
-        querier: &QuerierWrapper<'_>,
-    ) -> SellAssetStateResponse<RepayableT> {
-        super::query(
-            self.lease,
-            self.repayable,
-            PositionCloseTrx::Swap,
-            now,
-            querier,
-        )
+impl InProgressTrx for SwapState {
+    fn trx_in_progress() -> PositionCloseTrx {
+        PositionCloseTrx::Swap
     }
 }
 
-impl<RepayableT> ContractInSwap<TransferInInitState, SellAssetStateResponse<RepayableT>>
-    for SellAsset<RepayableT>
-where
-    RepayableT: Closable + Repayable,
-{
-    fn state(
-        self,
-        now: Timestamp,
-        querier: &QuerierWrapper<'_>,
-    ) -> SellAssetStateResponse<RepayableT> {
-        super::query(
-            self.lease,
-            self.repayable,
-            PositionCloseTrx::TransferInInit,
-            now,
-            querier,
-        )
+impl InProgressTrx for TransferInInitState {
+    fn trx_in_progress() -> PositionCloseTrx {
+        PositionCloseTrx::TransferInInit
     }
 }
 
-impl<RepayableT> ContractInSwap<TransferInFinishState, SellAssetStateResponse<RepayableT>>
-    for SellAsset<RepayableT>
-where
-    RepayableT: Closable + Repayable,
-{
-    fn state(
-        self,
-        now: Timestamp,
-        querier: &QuerierWrapper<'_>,
-    ) -> SellAssetStateResponse<RepayableT> {
-        super::query(
-            self.lease,
-            self.repayable,
-            PositionCloseTrx::TransferInFinish,
-            now,
-            querier,
-        )
+impl InProgressTrx for TransferInFinishState {
+    fn trx_in_progress() -> PositionCloseTrx {
+        PositionCloseTrx::TransferInFinish
     }
 }
