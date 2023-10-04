@@ -112,30 +112,43 @@ impl SwapTask for TransferIn {
     }
 }
 
-impl ContractInSwap<TransferOutState, TransferInState> for TransferIn {
+impl<DexState> ContractInSwap<DexState, TransferInState> for TransferIn
+where
+    DexState: InProgressTrx,
+{
     fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> TransferInState {
+        self.state(DexState::trx_in_progress())
+    }
+}
+
+trait InProgressTrx {
+    fn trx_in_progress() -> ClosingTrx;
+}
+
+impl InProgressTrx for TransferOutState {
+    fn trx_in_progress() -> ClosingTrx {
         // it's due to reusing the same enum dex::State
         // have to define a tailored enum dex::State that starts from TransferIn
         unreachable!("The lease asset transfer-in task never goes through a 'TransferOut' state!")
     }
 }
 
-impl ContractInSwap<SwapState, TransferInState> for TransferIn {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> TransferInState {
+impl InProgressTrx for SwapState {
+    fn trx_in_progress() -> ClosingTrx {
         // it's due to reusing the same enum dex::State
         // have to define a tailored enum dex::State that starts from TransferIn
         unreachable!("The lease asset transfer-in task never goes through a 'Swap'!")
     }
 }
 
-impl ContractInSwap<TransferInInitState, TransferInState> for TransferIn {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> TransferInState {
-        self.state(ClosingTrx::TransferInInit)
+impl InProgressTrx for TransferInInitState {
+    fn trx_in_progress() -> ClosingTrx {
+        ClosingTrx::TransferInInit
     }
 }
 
-impl ContractInSwap<TransferInFinishState, TransferInState> for TransferIn {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> TransferInState {
-        self.state(ClosingTrx::TransferInFinish)
+impl InProgressTrx for TransferInFinishState {
+    fn trx_in_progress() -> ClosingTrx {
+        ClosingTrx::TransferInFinish
     }
 }
