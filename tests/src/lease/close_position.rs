@@ -1,4 +1,7 @@
-use ::lease::api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse};
+use ::lease::{
+    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
+    error::ContractError,
+};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -8,7 +11,12 @@ use finance::{
 use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp};
 
 use crate::{
-    common::{self, leaser, test_case::response::ResponseWithInterChainMsgs, USER},
+    common::{
+        self,
+        leaser::{self, Instantiator},
+        test_case::response::ResponseWithInterChainMsgs,
+        USER,
+    },
     lease::{
         self, dex, LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency,
         DOWNPAYMENT,
@@ -19,7 +27,7 @@ use super::LeaseTestCase;
 
 #[test]
 fn full_close() {
-    let lease_amount: LeaseCoin = 2857142857142.into();
+    let lease_amount: LeaseCoin = lease_amount();
     let customer = Addr::unchecked(USER);
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
 
@@ -52,7 +60,7 @@ fn full_close() {
 
 #[test]
 fn partial_close_loan_not_closed() {
-    let lease_amount: LeaseCoin = 2857142857142.into();
+    let lease_amount: LeaseCoin = lease_amount();
     let principal: LpnCoin = price::total(lease_amount, lease::price_lpn_of())
         - price::total(DOWNPAYMENT, lease::price_lpn_of());
     let close_amount: LeaseCoin =
@@ -100,7 +108,7 @@ fn partial_close_loan_not_closed() {
 
 #[test]
 fn partial_close_loan_closed() {
-    let lease_amount: LeaseCoin = 2857142857142.into();
+    let lease_amount: LeaseCoin = lease_amount();
     let principal: LpnCoin = price::total(lease_amount, lease::price_lpn_of())
         - price::total(DOWNPAYMENT, lease::price_lpn_of());
     let exp_change: LpnCoin = 345.into();
@@ -140,6 +148,80 @@ fn partial_close_loan_closed() {
     assert_eq!(
         LeaseCoin::ZERO,
         user_balance::<LeaseCurrency>(&customer, &test_case)
+    );
+}
+
+#[test]
+fn partial_close_invalid_currency() {
+    let mut test_case = lease::create_test_case::<PaymentCurrency>();
+
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
+        amount: PaymentCoin::from(12345678).into(),
+    }));
+
+    let err = test_case
+        .app
+        .execute(Addr::unchecked(USER), lease, msg, &[])
+        .unwrap_err();
+    assert_eq!(
+        err.root_cause().downcast_ref::<finance::error::Error>(),
+        Some(&finance::error::Error::UnexpectedTicker(
+            PaymentCurrency::TICKER.into(),
+            LeaseCurrency::TICKER.into(),
+        ))
+    );
+}
+
+#[test]
+fn partial_close_min_asset() {
+    let min_asset_lpn = Instantiator::position_spec().min_asset.try_into().unwrap();
+    let min_asset = price::total(min_asset_lpn, lease::price_lpn_of().inv());
+    let lease_amount: LeaseCoin = lease_amount();
+
+    let mut test_case = lease::create_test_case::<PaymentCurrency>();
+
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
+        amount: (lease_amount - min_asset + 1.into()).into(),
+    }));
+
+    let err = test_case
+        .app
+        .execute(Addr::unchecked(USER), lease, msg, &[])
+        .unwrap_err();
+    assert_eq!(
+        err.root_cause().downcast_ref::<ContractError>(),
+        Some(&ContractError::PositionCloseAmountTooBig(
+            min_asset_lpn.into()
+        ))
+    );
+}
+
+#[test]
+fn partial_close_min_sell_asset() {
+    let min_sell_asset_lpn = Instantiator::position_spec()
+        .min_sell_asset
+        .try_into()
+        .unwrap();
+    let min_sell_asset: LeaseCoin = price::total(min_sell_asset_lpn, lease::price_lpn_of().inv());
+
+    let mut test_case = lease::create_test_case::<PaymentCurrency>();
+
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
+        amount: (min_sell_asset - 1.into()).into(),
+    }));
+
+    let err = test_case
+        .app
+        .execute(Addr::unchecked(USER), lease, msg, &[])
+        .unwrap_err();
+    assert_eq!(
+        err.root_cause().downcast_ref::<ContractError>(),
+        Some(&ContractError::PositionCloseAmountTooSmall(
+            min_sell_asset_lpn.into()
+        ))
     );
 }
 
@@ -228,4 +310,8 @@ where
 
 fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {
     test_case.app.query().query_all_balances(lease).unwrap()
+}
+
+fn lease_amount() -> LeaseCoin {
+    2857142857142.into()
 }
