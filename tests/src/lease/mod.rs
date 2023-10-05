@@ -248,10 +248,12 @@ pub(super) fn expected_open_state<
     TimeAlarms,
     DownpaymentC,
     PaymentC,
+    AssetC,
 >(
     test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
+    closed: Coin<AssetC>,
     last_paid: Timestamp,
     current_period_start: Timestamp,
     now: Timestamp,
@@ -259,13 +261,14 @@ pub(super) fn expected_open_state<
 where
     DownpaymentC: Currency,
     PaymentC: Currency,
+    AssetC: Currency,
 {
     let quote_result = quote_query(test_case, downpayment);
-    let total: LeaseCoin = quote_result.total.try_into().unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<LeaseCurrency>());
-    let expected: LpnCoin = total_lpn
-        - price::total(downpayment, price_lpn_of::<DownpaymentC>())
-        - price::total(payments, price_lpn_of::<PaymentC>());
+    let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
+    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
+    let expected_principal: LpnCoin = dbg!(total_lpn)
+        - price::total(dbg!(downpayment), price_lpn_of::<DownpaymentC>())
+        - price::total(dbg!(payments), price_lpn_of::<PaymentC>());
     let (overdue, due) = (
         current_period_start
             .nanos()
@@ -273,30 +276,34 @@ where
         now.nanos().saturating_sub(current_period_start.nanos()),
     );
     StateResponse::Opened {
-        amount: total.into(),
+        amount: (total - closed).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
-        principal_due: expected.into(),
+        principal_due: expected_principal.into(),
         previous_margin_due: calculate_interest(
-            expected,
+            expected_principal,
             quote_result.annual_interest_rate_margin,
             overdue,
         )
         .into(),
         previous_interest_due: calculate_interest(
-            expected,
+            expected_principal,
             quote_result.annual_interest_rate,
             overdue,
         )
         .into(),
         current_margin_due: calculate_interest(
-            expected,
+            expected_principal,
             quote_result.annual_interest_rate_margin,
             due,
         )
         .into(),
-        current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due)
-            .into(),
+        current_interest_due: calculate_interest(
+            expected_principal,
+            quote_result.annual_interest_rate,
+            due,
+        )
+        .into(),
         validity: block_time(test_case),
         in_progress: None,
     }
@@ -324,6 +331,7 @@ where
         test_case,
         downpayment,
         payments,
+        Coin::<LeaseCurrency>::default(),
         Timestamp::default(),
         Timestamp::default(),
         Timestamp::default(),

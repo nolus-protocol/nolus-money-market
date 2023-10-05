@@ -103,7 +103,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         &mut test_case,
         lease_address.clone(),
         liquidated_in_lpn,
-        Some(lease_amount - liquidation_amount),
+        lease_amount - liquidation_amount,
     );
 
     assert_eq!(

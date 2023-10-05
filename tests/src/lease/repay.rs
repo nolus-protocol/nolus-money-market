@@ -279,7 +279,7 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
         dex::do_swap(test_case, contract_addr.clone(), payment, swap_out_lpn);
 
     dex::expect_init_transfer_in(response);
-    dex::do_transfer_in(test_case, contract_addr, swap_out_lpn, Some(lease_amount))
+    dex::do_transfer_in(test_case, contract_addr, swap_out_lpn, lease_amount)
 }
 
 fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, PaymentC>(

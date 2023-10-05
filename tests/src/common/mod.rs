@@ -82,6 +82,17 @@ where
 {
     coin_legacy::to_cosmwasm(amount.into())
 }
+pub fn cwcoin_as_balance<C, A>(amount: A) -> Vec<CwCoin>
+where
+    C: Currency,
+    A: Into<Coin<C>> + Copy,
+{
+    if amount.into().is_zero() {
+        vec![]
+    } else {
+        vec![cwcoin(amount)]
+    }
+}
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}

@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin},
+    cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
 };
 
@@ -73,7 +73,7 @@ pub(super) fn do_transfer_in<
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     contract_addr: Addr,
     funds: Coin<C>,
-    funds_at_ica_after: Option<Coin<Asset>>,
+    funds_at_ica_after: Coin<Asset>,
 ) -> AppResponse
 where
     C: Currency,
@@ -97,11 +97,9 @@ where
         )
         .unwrap();
 
-    let cw_funds_at_ica_after: Vec<CwCoin> =
-        funds_at_ica_after.into_iter().map(common::cwcoin).collect();
     assert_eq!(
         test_case.app.query().query_all_balances("ica0").unwrap(),
-        cw_funds_at_ica_after
+        common::cwcoin_as_balance(funds_at_ica_after)
     );
 
     let mut response = test_case

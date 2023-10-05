@@ -1,4 +1,4 @@
-use finance::price;
+use finance::{price, zero::Zero};
 use lease::api::{ExecuteMsg, StateResponse};
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
@@ -62,12 +62,7 @@ fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     expected_funds: LeaseCoin,
 ) -> AppResponse {
     dex::expect_init_transfer_in(send_close(test_case, contract_addr.clone()));
-    dex::do_transfer_in(
-        test_case,
-        contract_addr,
-        expected_funds,
-        Option::<LeaseCoin>::None,
-    )
+    dex::do_transfer_in(test_case, contract_addr, expected_funds, LeaseCoin::ZERO)
 }
 
 fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(

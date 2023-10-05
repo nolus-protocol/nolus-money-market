@@ -132,7 +132,7 @@ fn full_liquidation() {
         &mut test_case,
         lease.clone(),
         liquidated_in_lpn,
-        Some(lease_amount - liquidated_amount),
+        lease_amount - liquidated_amount,
     );
 
     response_transfer_in.assert_event(
