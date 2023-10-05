@@ -147,8 +147,11 @@ impl Handler for Active {
         spec: PositionClose,
         deps: &mut DepsMut<'_>,
         env: Env,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        customer_close::start(spec, self.lease, &env, &deps.querier)
+        access_control::check(&self.lease.lease.customer, &info.sender)
+            .map_err(Into::into)
+            .and_then(|()| customer_close::start(spec, self.lease, &env, &deps.querier))
     }
 
     fn on_time_alarm(

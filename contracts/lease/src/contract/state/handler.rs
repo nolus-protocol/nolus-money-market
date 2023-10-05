@@ -36,6 +36,7 @@ where
         _spec: PositionClose,
         deps: &mut DepsMut<'_>,
         _env: Env,
+        _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("close position", deps.api)
     }

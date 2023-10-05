@@ -146,7 +146,7 @@ fn process_execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Repay() => state.repay(deps, env, info),
-        ExecuteMsg::ClosePosition(spec) => state.close_position(spec, deps, env),
+        ExecuteMsg::ClosePosition(spec) => state.close_position(spec, deps, env, info),
         ExecuteMsg::Close() => state.close(deps, env, info),
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(deps.as_ref(), env, info),
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(deps.as_ref(), env, info),

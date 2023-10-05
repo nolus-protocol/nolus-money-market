@@ -55,8 +55,9 @@ where
         spec: PositionClose,
         deps: &mut DepsMut<'_>,
         env: Env,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.close_position(spec, deps, env)
+        self.handler.close_position(spec, deps, env, info)
     }
 
     fn close(

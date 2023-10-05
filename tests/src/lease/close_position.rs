@@ -15,7 +15,7 @@ use crate::{
         self,
         leaser::{self, Instantiator},
         test_case::response::ResponseWithInterChainMsgs,
-        USER,
+        ADMIN, USER,
     },
     lease::{
         self, dex, LeaseCoin, LeaseCurrency, Lpn, LpnCoin, PaymentCoin, PaymentCurrency,
@@ -24,6 +24,24 @@ use crate::{
 };
 
 use super::LeaseTestCase;
+
+#[test]
+fn close_by_another_user() {
+    let mut test_case = lease::create_test_case::<PaymentCurrency>();
+    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
+    assert_unauthorized(
+        &mut test_case,
+        lease.clone(),
+        ExecuteMsg::ClosePosition(PositionClose::FullClose(FullClose {})),
+    );
+    assert_unauthorized(
+        &mut test_case,
+        lease,
+        ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
+            amount: LeaseCoin::from(1234414).into(),
+        })),
+    );
+}
 
 #[test]
 fn full_close() {
@@ -299,6 +317,21 @@ fn send_close<'r>(
         .execute(Addr::unchecked(USER), contract_addr, msg, &[])
         .unwrap()
         .ignore_response()
+}
+
+fn assert_unauthorized(test_case: &mut LeaseTestCase, lease: Addr, close_msg: ExecuteMsg) {
+    let sender = Addr::unchecked(ADMIN);
+    {
+        let err = test_case
+            .app
+            .execute(sender, lease, &close_msg, &[])
+            .unwrap_err();
+        assert_eq!(
+            err.root_cause()
+                .downcast_ref::<access_control::error::Error>(),
+            Some(&access_control::error::Error::Unauthorized {})
+        );
+    }
 }
 
 fn user_balance<C>(customer: &Addr, test_case: &LeaseTestCase) -> Coin<C>
