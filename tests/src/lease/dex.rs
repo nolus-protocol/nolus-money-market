@@ -11,7 +11,47 @@ use crate::common::{
         response::{RemoteChain, ResponseWithInterChainMsgs},
         TestCase,
     },
+    ADMIN,
 };
+
+pub(super) fn expect_swap(mut response: ResponseWithInterChainMsgs<'_, ()>) {
+    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
+
+    () = response.unwrap_response()
+}
+
+pub(super) fn do_swap<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, In, Out>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+    contract_addr: Addr,
+    swap_in: Coin<In>,
+    swap_out: Coin<Out>,
+) -> ResponseWithInterChainMsgs<'_, ()>
+where
+    In: Currency,
+    Out: Currency,
+{
+    test_case
+        .app
+        .send_tokens(
+            Addr::unchecked("ica0"),
+            Addr::unchecked(ADMIN),
+            &[common::cwcoin(swap_in)],
+        )
+        .unwrap();
+
+    test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[common::cwcoin(swap_out)]);
+
+    test_case
+        .app
+        .sudo(
+            contract_addr,
+            &super::construct_response(Binary(platform::trx::encode_msg_responses(
+                [swap::trx::build_exact_amount_in_resp(swap_out.into())].into_iter(),
+            ))),
+        )
+        .unwrap()
+        .ignore_response()
+}
 
 pub(super) fn expect_init_transfer_in(mut response: ResponseWithInterChainMsgs<'_, ()>) {
     response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);

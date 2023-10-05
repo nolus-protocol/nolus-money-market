@@ -73,12 +73,9 @@ fn full_liquidation() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    // loan = 1857142857142
-    // asset = 2857142857142
     let lease_amount: LeaseCoin = 2857142857142.into();
     let borrowed = 1857142857142.into();
 
-    // base + quote;
     let liquidated_in_lpn = borrowed;
     let liquidated_amount: LeaseCoin = price::total(liquidated_in_lpn, lease::price_lpn_of().inv());
     // the base is chosen to be close to the asset amount to trigger a full liquidation

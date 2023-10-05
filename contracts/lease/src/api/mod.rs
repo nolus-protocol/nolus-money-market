@@ -99,15 +99,15 @@ pub enum FinalizerExecuteMsg {
 
 #[cfg(test)]
 mod test {
-    use crate::api::ExecuteMsg;
+    use sdk::{
+        cosmwasm_std::{from_slice, to_vec},
+        schemars::_serde_json::to_string,
+    };
+
+    use crate::api::{ExecuteMsg, FullClose, PositionClose};
 
     #[test]
     fn test_repay_representation() {
-        use sdk::{
-            cosmwasm_std::{from_slice, to_vec},
-            schemars::_serde_json::to_string,
-        };
-
         let msg = ExecuteMsg::Repay();
         let repay_bin = to_vec(&msg).expect("serialization failed");
         assert_eq!(
@@ -118,6 +118,21 @@ mod test {
         assert_eq!(
             to_string(&msg).expect("deserialization failed"),
             r#"{"repay":[]}"#
+        );
+    }
+
+    #[test]
+    fn test_close_position_representation() {
+        let msg = ExecuteMsg::ClosePosition(PositionClose::FullClose(FullClose {}));
+        let close_bin = to_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            from_slice::<ExecuteMsg>(&close_bin).expect("deserialization failed"),
+            msg
+        );
+
+        assert_eq!(
+            to_string(&msg).expect("deserialization failed"),
+            r#"{"close_position":{"full_close":{}}}"#
         );
     }
 }

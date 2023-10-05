@@ -1,5 +1,6 @@
+use currency::Currency;
 use finance::{
-    coin::Amount,
+    coin::{Amount, Coin},
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
@@ -11,19 +12,19 @@ use finance::{
 use ::lease::api::{ExecuteMsg, StateResponse};
 
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin, Timestamp},
+    cosmwasm_std::{Addr, Binary, Timestamp},
     cw_multi_test::AppResponse,
 };
 
 use crate::{
     common::{
-        cwcoin,
+        self, cwcoin,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
             response::{RemoteChain as _, ResponseWithInterChainMsgs},
             TestCase,
         },
-        ADMIN, USER,
+        USER,
     },
     lease,
 };
@@ -267,41 +268,43 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     payment: PaymentCoin,
     lease_amount: LeaseCoin,
 ) -> AppResponse {
-    let cw_payment: CwCoin = cwcoin(payment);
-
     let response: ResponseWithInterChainMsgs<'_, ()> =
-        send_payment_and_transfer(test_case, contract_addr.clone(), cw_payment.clone());
+        send_payment_and_transfer(test_case, contract_addr.clone(), payment);
 
-    expect_swap(response);
+    dex::expect_swap(response);
 
     let swap_out_lpn: LpnCoin = price::total(payment, super::price_lpn_of());
 
     let response: ResponseWithInterChainMsgs<'_, ()> =
-        do_swap(test_case, contract_addr.clone(), &cw_payment, swap_out_lpn);
+        dex::do_swap(test_case, contract_addr.clone(), payment, swap_out_lpn);
 
     dex::expect_init_transfer_in(response);
     dex::do_transfer_in(test_case, contract_addr, swap_out_lpn, Some(lease_amount))
 }
 
-fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, PaymentC>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
     contract_addr: Addr,
-    cw_payment: CwCoin,
-) -> ResponseWithInterChainMsgs<'_, ()> {
+    payment: Coin<PaymentC>,
+) -> ResponseWithInterChainMsgs<'_, ()>
+where
+    PaymentC: Currency,
+{
+    let payment_cw = vec![common::cwcoin(payment)];
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .execute(
             Addr::unchecked(USER),
             contract_addr.clone(),
             &ExecuteMsg::Repay {},
-            std::slice::from_ref(&cw_payment),
+            &payment_cw,
         )
         .unwrap()
         .ignore_response();
 
     response.expect_ibc_transfer(
         "channel-0",
-        cw_payment.clone(),
+        payment_cw[0].clone(),
         contract_addr.as_str(),
         "ica0",
     );
@@ -310,51 +313,12 @@ fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
 
     test_case
         .app
-        .send_tokens(
-            contract_addr.clone(),
-            Addr::unchecked("ica0"),
-            &[cw_payment],
-        )
+        .send_tokens(contract_addr.clone(), Addr::unchecked("ica0"), &payment_cw)
         .unwrap();
 
     test_case
         .app
         .sudo(contract_addr, &super::construct_response(Binary::default()))
-        .unwrap()
-        .ignore_response()
-}
-
-fn expect_swap(mut response: ResponseWithInterChainMsgs<'_, ()>) {
-    response.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-
-    response.unwrap_response()
-}
-
-fn do_swap<'r, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &'r mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
-    contract_addr: Addr,
-    cw_payment: &CwCoin,
-    swap_out_lpn: LpnCoin,
-) -> ResponseWithInterChainMsgs<'r, ()> {
-    test_case
-        .app
-        .send_tokens(
-            Addr::unchecked("ica0"),
-            Addr::unchecked(ADMIN),
-            std::slice::from_ref(cw_payment),
-        )
-        .unwrap();
-
-    test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(swap_out_lpn)]);
-
-    test_case
-        .app
-        .sudo(
-            contract_addr,
-            &super::construct_response(Binary(platform::trx::encode_msg_responses(
-                [swap::trx::build_exact_amount_in_resp(swap_out_lpn.into())].into_iter(),
-            ))),
-        )
         .unwrap()
         .ignore_response()
 }
