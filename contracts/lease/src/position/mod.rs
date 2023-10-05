@@ -242,7 +242,11 @@ mod test_check {
         let warn_ltv = Percent::from_permille(11);
         let spec = position_with_first(warn_ltv, 100, 1, 1);
         assert_eq!(
-            spec.check_liability(0.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(0.into(), 0.into(), price(1, 1)),
+            Status::NoDebt,
+        );
+        assert_eq!(
+            spec.check_liability(0.into(), 0.into(), price(1, 3)),
             Status::NoDebt,
         );
     }
@@ -252,15 +256,30 @@ mod test_check {
         let warn_ltv = Percent::from_percent(51);
         let spec = position_with_first(warn_ltv, 100, 1, 1);
         assert_eq!(
-            spec.check_liability(1.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(1.into(), 0.into(), price(1, 1)),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            spec.check_liability(50.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(1.into(), 0.into(), price(1, 5)),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            spec.check_liability(51.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(50.into(), 0.into(), price(1, 1)),
+            Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check_liability(25.into(), 0.into(), price(1, 2)),
+            Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check_liability(51.into(), 0.into(), price(1, 1)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(17.into(), 0.into(), price(1, 3)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
@@ -273,11 +292,22 @@ mod test_check {
         let warn_ltv = Percent::from_percent(51);
         let spec = position_with_first(warn_ltv, 100, 1, 15);
         assert_eq!(
-            spec.check_liability(50.into(), 14.into(), price(1_000, 1_000)),
+            spec.check_liability(50.into(), 14.into(), price(1, 1)),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            spec.check_liability(51.into(), 14.into(), price(1_000, 1_000)),
+            spec.check_liability(25.into(), 4.into(), price(3, 2)),
+            Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check_liability(51.into(), 14.into(), price(1, 1)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(17.into(), 4.into(), price(1, 3)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
@@ -290,29 +320,58 @@ mod test_check {
         let spec = position_with_first(Percent::from_permille(712), 1000, 10, 1);
 
         assert_eq!(
-            spec.check_liability(711.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(711.into(), 0.into(), price(1, 1)),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            spec.check_liability(712.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(237.into(), 0.into(), price(1, 3)),
+            Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
+        );
+        assert_eq!(
+            spec.check_liability(712.into(), 0.into(), price(1, 1)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(712.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(178.into(), 0.into(), price(1, 4)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(712.into(), 1.into(), price(1, 1)),
             Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(721.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(89.into(), 1.into(), price(1, 8)),
+            Status::partial(8.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(721.into(), 0.into(), price(1, 1)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(722.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(103.into(), 0.into(), price(1, 7)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(722.into(), 0.into(), price(1, 1)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                spec.liability.third_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(361.into(), 0.into(), price(1, 2)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 spec.liability.third_liq_warn()
@@ -322,25 +381,36 @@ mod test_check {
 
     #[test]
     fn warnings_first_min_sell_asset() {
-        let spec = position_with_first(Percent::from_permille(712), 1000, 10, 2);
+        let spec = position_with_first(Percent::from_permille(712), 1000, 10, 3);
 
         assert_eq!(
-            spec.check_liability(712.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(712.into(), 2.into(), price(1, 1)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(721.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(356.into(), 1.into(), price(1, 2)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(721.into(), 2.into(), price(1_000, 1_000)),
-            Status::partial(2.into(), Cause::Overdue()),
+            spec.check_liability(721.into(), 2.into(), price(1, 1)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(721.into(), 5.into(), price(1, 1)),
+            Status::partial(5.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(240.into(), 3.into(), price(1, 3)),
+            Status::partial(9.into(), Cause::Overdue()),
         );
     }
 
@@ -349,32 +419,53 @@ mod test_check {
         let spec = position_with_second(Percent::from_permille(123), 1000, 10, 1);
 
         assert_eq!(
-            spec.check_liability(122.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(122.into(), 0.into(), price(1, 1)),
             Status::No(Zone::first(
                 spec.liability.first_liq_warn(),
                 spec.liability.second_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(123.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(15.into(), 0.into(), price(1, 8)),
+            Status::No(Zone::first(
+                spec.liability.first_liq_warn(),
+                spec.liability.second_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(123.into(), 0.into(), price(1, 1)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 spec.liability.third_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(123.into(), 4.into(), price(1_000, 1_000)),
+            spec.check_liability(82.into(), 0.into(), price(2, 3)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                spec.liability.third_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(123.into(), 4.into(), price(1, 1)),
             Status::partial(4.into(), Cause::Overdue())
         );
         assert_eq!(
-            spec.check_liability(132.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(132.into(), 0.into(), price(1, 1)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 spec.liability.third_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(133.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(66.into(), 0.into(), price(1, 2)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                spec.liability.third_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(133.into(), 0.into(), price(1, 1)),
             Status::No(Zone::third(
                 spec.liability.third_liq_warn(),
                 spec.liability.max()
@@ -387,14 +478,21 @@ mod test_check {
         let spec = position_with_second(Percent::from_permille(123), 1000, 10, 5);
 
         assert_eq!(
-            spec.check_liability(128.into(), 4.into(), price(1_000, 1_000)),
+            spec.check_liability(128.into(), 4.into(), price(1, 1)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 spec.liability.third_liq_warn()
             )),
         );
         assert_eq!(
-            spec.check_liability(128.into(), 5.into(), price(1_000, 1_000)),
+            spec.check_liability(32.into(), 1.into(), price(1, 4)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                spec.liability.third_liq_warn()
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(128.into(), 5.into(), price(1, 1)),
             Status::partial(5.into(), Cause::Overdue())
         );
     }
@@ -406,26 +504,37 @@ mod test_check {
         let spec = position_with_third(warn_third_ltv, 1000, 100, 1);
 
         assert_eq!(
-            spec.check_liability(380.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(380.into(), 0.into(), price(1, 1)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 warn_third_ltv
             )),
         );
         assert_eq!(
-            spec.check_liability(381.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(190.into(), 0.into(), price(1, 2)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                warn_third_ltv
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(381.into(), 0.into(), price(1, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            spec.check_liability(381.into(), 375.into(), price(1_000, 1_000)),
+            spec.check_liability(381.into(), 375.into(), price(1, 1)),
             Status::partial(375.into(), Cause::Overdue())
         );
         assert_eq!(
-            spec.check_liability(390.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(573.into(), 562.into(), price(3, 2)),
+            Status::partial(374.into(), Cause::Overdue())
+        );
+        assert_eq!(
+            spec.check_liability(390.into(), 0.into(), price(1, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            spec.check_liability(391.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(391.into(), 0.into(), price(1, 1)),
             Status::partial(
                 384.into(),
                 Cause::Liability {
@@ -443,32 +552,53 @@ mod test_check {
         let spec = position_with_third(warn_third_ltv, 1000, 100, 386);
 
         assert_eq!(
-            spec.check_liability(380.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(380.into(), 1.into(), price(1, 1)),
             Status::No(Zone::second(
                 spec.liability.second_liq_warn(),
                 warn_third_ltv
             )),
         );
         assert_eq!(
-            spec.check_liability(381.into(), 375.into(), price(1_000, 1_000)),
+            spec.check_liability(126.into(), 1.into(), price(1, 3)),
+            Status::No(Zone::second(
+                spec.liability.second_liq_warn(),
+                warn_third_ltv
+            )),
+        );
+        assert_eq!(
+            spec.check_liability(381.into(), 375.into(), price(1, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            spec.check_liability(391.into(), 385.into(), price(1_000, 1_000)),
+            spec.check_liability(391.into(), 385.into(), price(1, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            spec.check_liability(391.into(), 386.into(), price(1_000, 1_000)),
+            spec.check_liability(391.into(), 386.into(), price(1, 1)),
             Status::partial(386.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(392.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(392.into(), 0.into(), price(1, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            spec.check_liability(393.into(), 0.into(), price(1_000, 1_000)),
+            spec.check_liability(364.into(), 0.into(), price(1, 2)),
+            Status::No(Zone::third(warn_third_ltv, max_ltv)),
+        );
+        assert_eq!(
+            spec.check_liability(393.into(), 0.into(), price(1, 1)),
             Status::partial(
                 386.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check_liability(788.into(), 0.into(), price(2, 1)),
+            Status::partial(
+                387.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -483,11 +613,15 @@ mod test_check {
         let spec = position_with_max(max_ltv, 1000, 100, 1);
 
         assert_eq!(
-            spec.check_liability(880.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(880.into(), 1.into(), price(1, 1)),
             Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(881.into(), 879.into(), price(1_000, 1_000)),
+            spec.check_liability(139.into(), 1.into(), price(1, 4)),
+            Status::partial(4.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(881.into(), 879.into(), price(1, 1)),
             Status::partial(
                 879.into(),
                 Cause::Liability {
@@ -497,11 +631,22 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(881.into(), 880.into(), price(1_000, 1_000)),
+            spec.check_liability(881.into(), 880.into(), price(1, 1)),
             Status::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(1000.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(294.into(), 294.into(), price(3, 1)),
+            Status::partial(98.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(294.into(), 293.into(), price(1, 3)),
+            Status::full(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+        assert_eq!(
+            spec.check_liability(1000.into(), 1.into(), price(1, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -515,7 +660,7 @@ mod test_check {
         let spec = position_with_max(max_ltv, 1000, 100, 1);
 
         assert_eq!(
-            spec.check_liability(900.into(), 897.into(), price(1_000, 1_000)),
+            spec.check_liability(900.into(), 897.into(), price(1, 1)),
             Status::partial(
                 898.into(),
                 Cause::Liability {
@@ -525,11 +670,15 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(900.into(), 899.into(), price(1_000, 1_000)),
+            spec.check_liability(900.into(), 899.into(), price(1, 1)),
             Status::partial(899.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(901.into(), 889.into(), price(1_000, 1_000)),
+            spec.check_liability(233.into(), 233.into(), price(1, 3)),
+            Status::partial(699.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(901.into(), 889.into(), price(1, 1)),
             Status::partial(
                 900.into(),
                 Cause::Liability {
@@ -539,7 +688,7 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(902.into(), 889.into(), price(1_000, 1_000)),
+            spec.check_liability(902.into(), 889.into(), price(1, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -553,7 +702,7 @@ mod test_check {
         let spec = position_with_max(max_ltv, 1000, 230, 1);
 
         assert_eq!(
-            spec.check_liability(768.into(), 765.into(), price(1_000, 1_000)),
+            spec.check_liability(768.into(), 765.into(), price(1, 1)),
             Status::partial(
                 765.into(),
                 Cause::Liability {
@@ -563,11 +712,25 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(768.into(), 768.into(), price(1_000, 1_000)),
+            spec.check_liability(1560.into(), 1552.into(), price(2, 1)),
+            Status::partial(
+                777.into(),
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            spec.check_liability(768.into(), 768.into(), price(1, 1)),
             Status::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(788.into(), 768.into(), price(1_000, 1_000)),
+            spec.check_liability(1560.into(), 1556.into(), price(2, 1)),
+            Status::partial(778.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(788.into(), 768.into(), price(1, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -581,7 +744,7 @@ mod test_check {
         let spec = position_with_max(max_ltv, 1000, 120, 15);
 
         assert_eq!(
-            spec.check_liability(882.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(882.into(), 1.into(), price(1, 1)),
             Status::partial(
                 880.into(),
                 Cause::Liability {
@@ -591,14 +754,21 @@ mod test_check {
             ),
         );
         assert_eq!(
-            spec.check_liability(883.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(883.into(), 1.into(), price(1, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            spec.check_liability(1000.into(), 1.into(), price(1_000, 1_000)),
+            spec.check_liability(294.into(), 1.into(), price(1, 3)),
+            Status::full(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+        assert_eq!(
+            spec.check_liability(1000.into(), 1.into(), price(1, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -612,11 +782,19 @@ mod test_check {
         let spec = position_with_max(max_ltv, 1000, 326, 15);
 
         assert_eq!(
-            spec.check_liability(772.into(), 674.into(), price(1_000, 1_000)),
+            spec.check_liability(772.into(), 674.into(), price(1, 1)),
             Status::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.check_liability(772.into(), 675.into(), price(1_000, 1_000)),
+            spec.check_liability(1674.into(), 1674.into(), price(2, 1)),
+            Status::partial(837.into(), Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(772.into(), 675.into(), price(1, 1)),
+            Status::full(Cause::Overdue()),
+        );
+        assert_eq!(
+            spec.check_liability(1676.into(), 1676.into(), price(2, 1)),
             Status::full(Cause::Overdue()),
         );
     }
