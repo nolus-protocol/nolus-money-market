@@ -50,11 +50,13 @@ type CwContractWrapper<
 >;
 
 pub mod dispatcher;
+pub mod ibc;
 pub mod lease;
 pub mod leaser;
 pub mod lpp;
 pub mod oracle;
 pub mod profit;
+pub mod swap;
 pub mod test_case;
 pub mod timealarms;
 pub mod treasury;
