@@ -129,7 +129,6 @@ where
     ) -> ContractResult<()> {
         let min_asset = price::total(self.min_asset, lpn_in_assets);
         let min_sell_asset = price::total(self.min_sell_asset, lpn_in_assets);
-        dbg!(amount, min_asset, min_sell_asset);
 
         if amount < min_sell_asset {
             Err(ContractError::PositionCloseAmountTooSmall(
@@ -245,7 +244,7 @@ mod test_check {
     #[test]
     fn no_debt() {
         let warn_ltv = Percent::from_permille(11);
-        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
+        let spec = position_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
         assert_eq!(
             spec.check_liability(0.into(), 0.into(), price()),
             Status::NoDebt,
@@ -255,7 +254,7 @@ mod test_check {
     #[test]
     fn warnings_none_zero_liq() {
         let warn_ltv = Percent::from_percent(51);
-        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
+        let spec = position_with_first(warn_ltv, 100.into(), 1.into(), 1.into());
         assert_eq!(
             spec.check_liability(1.into(), 0.into(), price()),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
@@ -276,7 +275,7 @@ mod test_check {
     #[test]
     fn warnings_none_min_sell_asset() {
         let warn_ltv = Percent::from_percent(51);
-        let spec = liability_with_first(warn_ltv, 100.into(), 1.into(), 15.into());
+        let spec = position_with_first(warn_ltv, 100.into(), 1.into(), 15.into());
         assert_eq!(
             spec.check_liability(50.into(), 14.into(), price()),
             Status::No(Zone::no_warnings(spec.liability.first_liq_warn())),
@@ -292,7 +291,7 @@ mod test_check {
 
     #[test]
     fn warnings_first() {
-        let spec = liability_with_first(
+        let spec = position_with_first(
             Percent::from_permille(712),
             LEASE_AMOUNT,
             10.into(),
@@ -332,7 +331,7 @@ mod test_check {
 
     #[test]
     fn warnings_first_min_sell_asset() {
-        let spec = liability_with_first(
+        let spec = position_with_first(
             Percent::from_permille(712),
             LEASE_AMOUNT,
             10.into(),
@@ -361,7 +360,7 @@ mod test_check {
 
     #[test]
     fn warnings_second() {
-        let spec = liability_with_second(
+        let spec = position_with_second(
             Percent::from_permille(123),
             LEASE_AMOUNT,
             10.into(),
@@ -404,7 +403,7 @@ mod test_check {
 
     #[test]
     fn warnings_second_min_sell_asset() {
-        let spec = liability_with_second(
+        let spec = position_with_second(
             Percent::from_permille(123),
             LEASE_AMOUNT,
             10.into(),
@@ -428,7 +427,7 @@ mod test_check {
     fn warnings_third() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
-        let spec = liability_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 1.into());
+        let spec = position_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(380.into(), 0.into(), price()),
@@ -465,7 +464,7 @@ mod test_check {
     fn warnings_third_min_sell_asset() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
-        let spec = liability_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 386.into());
+        let spec = position_with_third(warn_third_ltv, LEASE_AMOUNT, 100.into(), 386.into());
 
         assert_eq!(
             spec.check_liability(380.into(), 1.into(), price()),
@@ -505,7 +504,7 @@ mod test_check {
     #[test]
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 1.into());
+        let spec = position_with_max(max_ltv, LEASE_AMOUNT, 120.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(880.into(), 1.into(), price()),
@@ -526,6 +525,10 @@ mod test_check {
             Status::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
+            spec.check_liability(881.into(), 881.into(), price()),
+            Status::full(Cause::Overdue()),
+        );
+        assert_eq!(
             spec.check_liability(1000.into(), 1.into(), price()),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -537,7 +540,7 @@ mod test_check {
     #[test]
     fn liquidate_partial_min_asset() {
         let max_ltv = Percent::from_permille(881);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 1.into());
+        let spec = position_with_max(max_ltv, LEASE_AMOUNT, 100.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(900.into(), 897.into(), price()),
@@ -575,7 +578,7 @@ mod test_check {
     #[test]
     fn liquidate_full() {
         let max_ltv = Percent::from_permille(768);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 230.into(), 1.into());
+        let spec = position_with_max(max_ltv, LEASE_AMOUNT, 230.into(), 1.into());
 
         assert_eq!(
             spec.check_liability(768.into(), 765.into(), price()),
@@ -603,7 +606,7 @@ mod test_check {
     #[test]
     fn liquidate_full_liability() {
         let max_ltv = Percent::from_permille(673);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 120.into(), 15.into());
+        let spec = position_with_max(max_ltv, LEASE_AMOUNT, 120.into(), 15.into());
 
         assert_eq!(
             spec.check_liability(882.into(), 1.into(), price()),
@@ -634,7 +637,7 @@ mod test_check {
     #[test]
     fn liquidate_full_overdue() {
         let max_ltv = Percent::from_permille(773);
-        let spec = liability_with_max(max_ltv, LEASE_AMOUNT, 326.into(), 15.into());
+        let spec = position_with_max(max_ltv, LEASE_AMOUNT, 326.into(), 15.into());
 
         assert_eq!(
             spec.check_liability(772.into(), 674.into(), price()),
@@ -652,35 +655,35 @@ mod test_check {
         price::total_of(PRICE_TEST_LPN).is(PRICE_TEST_CURRENCY)
     }
 
-    fn liability_with_first(
+    fn position_with_first(
         warn: Percent,
         asset: Coin<TestCurrency>,
         min_asset: Coin<TestLpn>,
         min_sell_asset: Coin<TestLpn>,
     ) -> Position<TestCurrency, TestLpn> {
-        liability_with_max(warn + STEP + STEP + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP + STEP + STEP, asset, min_asset, min_sell_asset)
     }
 
-    fn liability_with_second(
+    fn position_with_second(
         warn: Percent,
         asset: Coin<TestCurrency>,
         min_asset: Coin<TestLpn>,
         min_sell_asset: Coin<TestLpn>,
     ) -> Position<TestCurrency, TestLpn> {
-        liability_with_max(warn + STEP + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP + STEP, asset, min_asset, min_sell_asset)
     }
 
-    fn liability_with_third(
+    fn position_with_third(
         warn: Percent,
         asset: Coin<TestCurrency>,
         min_asset: Coin<TestLpn>,
         min_sell_asset: Coin<TestLpn>,
     ) -> Position<TestCurrency, TestLpn> {
-        liability_with_max(warn + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP, asset, min_asset, min_sell_asset)
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-    fn liability_with_max(
+    fn position_with_max(
         max: Percent,
         asset: Coin<TestCurrency>,
         min_asset: Coin<TestLpn>,
