@@ -1,5 +1,6 @@
 use sdk::{
-    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin, testing::InterChainMsgReceiver,
+    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin,
+    neutron_sdk::bindings::types::ProtobufAny, testing::InterChainMsgReceiver,
 };
 
 #[must_use]
@@ -38,15 +39,14 @@ pub(crate) trait RemoteChain {
     fn expect_register_ica(&mut self, expected_connection_id: &str, expected_ica_id: &str);
 
     #[track_caller]
-    fn expect_ibc_transfer(&mut self, channel: &str, coin: CwCoin, sender: &str, receiver: &str);
+    fn expect_ibc_transfer(&mut self, channel: &str, sender: &str, receiver: &str) -> CwCoin;
 
     #[track_caller]
     fn expect_submit_tx(
         &mut self,
         expected_connection_id: &str,
         expected_ica_id: &str,
-        expected_tx_count: usize,
-    );
+    ) -> Vec<ProtobufAny>;
 }
 
 impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
@@ -75,7 +75,7 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
     }
 
     #[track_caller]
-    fn expect_ibc_transfer(&mut self, channel: &str, coin: CwCoin, sender: &str, receiver: &str) {
+    fn expect_ibc_transfer(&mut self, channel: &str, sender: &str, receiver: &str) -> CwCoin {
         let message = self
             .receiver
             .try_recv()
@@ -90,11 +90,12 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
         } = message
         {
             assert_eq!(source_channel, channel);
-            assert_eq!(token, coin);
             assert_eq!(actual_sender, sender);
             assert_eq!(actual_receiver, receiver);
+
+            token
         } else {
-            panic!("Expected message for ICA registration, got {message:?}!");
+            panic!("Expected message for IBC transfer, got {message:?}!");
         }
     }
 
@@ -103,8 +104,7 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
         &mut self,
         expected_connection_id: &str,
         expected_ica_id: &str,
-        expected_tx_count: usize,
-    ) {
+    ) -> Vec<ProtobufAny> {
         let message = self
             .receiver
             .try_recv()
@@ -113,15 +113,18 @@ impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
         if let InterChainMsg::SubmitTx {
             connection_id,
             interchain_account_id,
-            msgs,
+            msgs: messages,
             ..
         } = message
         {
             assert_eq!(connection_id, expected_connection_id);
             assert_eq!(interchain_account_id, expected_ica_id);
-            assert_eq!(msgs.len(), expected_tx_count, "{msgs:?}");
+
+            assert!(!messages.is_empty());
+
+            messages
         } else {
-            panic!("Expected message for ICA registration, got {message:?}!");
+            panic!("Expected message for execution of remove transactions, got {message:?}!");
         }
     }
 }
