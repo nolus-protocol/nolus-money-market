@@ -13,7 +13,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
+    cwcoin, cwcoin_dex,
     dispatcher::Instantiator as DispatcherInstantiator,
     leaser::Instantiator as LeaserInstantiator,
     lpp::Instantiator as LppInstantiator,
@@ -37,7 +37,7 @@ where
     Lpn: Currency,
 {
     pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000), cwcoin_dex::<Lpn, _>(10_000)])
     }
 
     pub fn with_reserve(reserve: &[CwCoin]) -> Self {
@@ -149,8 +149,6 @@ impl<Lpn, Dispatcher, Leaser, Lpp> Builder<Lpn, Dispatcher, Addr, (), Leaser, Lp
 where
     Lpn: Currency,
 {
-    const PROFIT_CONNECTION_ID: &str = "dex-connection";
-
     pub fn init_profit(
         self,
         cadence_hours: u16,

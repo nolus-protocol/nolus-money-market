@@ -96,6 +96,14 @@ where
     }
 }
 
+pub fn cwcoin_dex<C, A>(amount: A) -> CwCoin
+where
+    C: Currency,
+    A: Into<Coin<C>>,
+{
+    coin_legacy::to_cosmwasm_on_dex(amount.into())
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
