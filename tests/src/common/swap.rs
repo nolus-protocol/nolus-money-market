@@ -20,9 +20,10 @@ use super::{
 pub(crate) fn expect_swap(
     response: &mut ResponseWithInterChainMsgs<'_, ()>,
     connection_id: &str,
+    ica_id: &str,
 ) -> Vec<RequestMsg> {
     let requests: Vec<RequestMsg> = response
-        .expect_submit_tx(connection_id, "0")
+        .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(|message: ProtobufAny| {
             if message.type_url == RequestMsg::TYPE_URL {
