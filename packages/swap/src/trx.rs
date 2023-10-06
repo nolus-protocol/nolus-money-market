@@ -16,8 +16,15 @@ use crate::{
     SwapGroup, SwapPath, SwapTarget,
 };
 
+#[cfg(not(any(test, feature = "testing")))]
 type RequestMsg = MsgSwapExactAmountIn;
+#[cfg(any(test, feature = "testing"))]
+pub type RequestMsg = MsgSwapExactAmountIn;
+
+#[cfg(not(any(test, feature = "testing")))]
 type ResponseMsg = MsgSwapExactAmountInResponse;
+#[cfg(any(test, feature = "testing"))]
+pub type ResponseMsg = MsgSwapExactAmountInResponse;
 
 pub fn exact_amount_in<G>(
     trx: &mut Transaction,
