@@ -10,7 +10,6 @@ use oracle::error::ContractError as OracleError;
 use platform::error::Error as PlatformError;
 use profit::error::ContractError as ProfitError;
 use sdk::cosmwasm_std::StdError;
-use swap::error::Error as SwapError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
 use crate::api::{LpnCoin, PaymentCoin};
@@ -43,9 +42,6 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),
-
-    #[error("[Lease] {0}")]
-    SwapError(#[from] SwapError),
 
     #[error("[Lease] {0}")]
     DexError(#[from] DexError),

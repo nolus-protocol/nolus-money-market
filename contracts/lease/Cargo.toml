@@ -29,7 +29,6 @@ dex = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }
 platform = { workspace = true }
-swap = { workspace = true, features = ["trx"] }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }
 

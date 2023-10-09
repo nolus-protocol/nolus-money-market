@@ -50,3 +50,16 @@ Use this to see the dependee tree of a Cargo package:
 ```
 cargo tree --workspace -i <package> -e no-dev
 ```
+## Git tagging
+### New version
+```
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin --tags
+```
+### Move the version to another commit
+First delete the local and remote tags
+```
+git tag -d vX.Y.Z
+git push --delete origin vX.Y.Z
+```
+and then create new ones as shown above.

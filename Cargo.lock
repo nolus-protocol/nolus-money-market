@@ -748,7 +748,6 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
- "swap",
  "thiserror",
  "timealarms",
  "versioning",
