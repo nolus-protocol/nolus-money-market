@@ -22,8 +22,8 @@ use platform::{batch::Batch, coin_legacy, contract::CodeId};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
-        coin, wasm_execute, Addr, Attribute, Binary, Coin as CwCoin, Deps, DepsMut, Env, Event,
-        MessageInfo, Storage, Timestamp,
+        coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
+        Storage, Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
@@ -40,7 +40,7 @@ use crate::common::{
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
     },
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -278,7 +278,7 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
     () = response.ignore_response().unwrap_response();
 
