@@ -248,9 +248,9 @@ where
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
     let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
-    let expected_principal: LpnCoin = dbg!(total_lpn)
-        - price::total(dbg!(downpayment), price_lpn_of::<DownpaymentC>())
-        - price::total(dbg!(payments), price_lpn_of::<PaymentC>());
+    let expected_principal: LpnCoin = total_lpn
+        - price::total(downpayment, price_lpn_of::<DownpaymentC>())
+        - price::total(payments, price_lpn_of::<PaymentC>());
     let (overdue, due) = (
         current_period_start
             .nanos()
