@@ -13,13 +13,11 @@ use sdk::{
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
-    cwcoin,
+    cwcoin, ibc,
     test_case::{
-        builder::BlankBuilder as TestCaseBuilder,
-        response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase,
+        builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs, TestCase,
     },
-    Native, ADMIN, USER,
+    CwCoin, Native, ADMIN, USER,
 };
 
 #[test]
@@ -315,23 +313,27 @@ fn on_alarm_foreign_only_transfer() {
         )
         .unwrap();
 
-    response.expect_ibc_transfer(
-        TestCase::PROFIT_ICA_CHANNEL,
-        cwcoin(profit_lpn),
+    let transfer_amount: CwCoin = ibc::expect_transfer(
+        &mut response,
+        TestCase::PROFIT_IBC_CHANNEL,
         test_case.address_book.profit().as_str(),
-        TestCase::PROFIT_ICA_ADDR,
+        test_case.address_book.profit_ica().as_str(),
     );
+
+    assert_eq!(transfer_amount.amount.u128(), profit_lpn.into());
+    assert_eq!(transfer_amount.denom, Lpn::BANK_SYMBOL);
 
     let response: AppResponse = response.unwrap_response();
 
-    test_case
-        .app
-        .send_tokens(
-            test_case.address_book.profit().clone(),
-            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
-            &[cwcoin(profit_lpn)],
-        )
-        .unwrap();
+    () = ibc::do_transfer(
+        &mut test_case.app,
+        test_case.address_book.profit().clone(),
+        test_case.address_book.profit_ica().clone(),
+        false,
+        &transfer_amount,
+    )
+    .ignore_response()
+    .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
@@ -383,23 +385,27 @@ fn on_alarm_native_and_foreign_transfer() {
         )
         .unwrap();
 
-    response.expect_ibc_transfer(
-        TestCase::PROFIT_ICA_CHANNEL,
-        cwcoin(profit_lpn),
+    let transfer_amount: CwCoin = ibc::expect_transfer(
+        &mut response,
+        TestCase::PROFIT_IBC_CHANNEL,
         test_case.address_book.profit().as_str(),
-        TestCase::PROFIT_ICA_ADDR,
+        test_case.address_book.profit_ica().as_str(),
     );
+
+    assert_eq!(transfer_amount.amount.u128(), profit_lpn.into());
+    assert_eq!(transfer_amount.denom, Lpn::BANK_SYMBOL);
 
     let response: AppResponse = response.unwrap_response();
 
-    test_case
-        .app
-        .send_tokens(
-            test_case.address_book.profit().clone(),
-            Addr::unchecked(TestCase::PROFIT_ICA_ADDR),
-            &[cwcoin(profit_lpn)],
-        )
-        .unwrap();
+    () = ibc::do_transfer(
+        &mut test_case.app,
+        test_case.address_book.profit().clone(),
+        test_case.address_book.profit_ica().clone(),
+        false,
+        &transfer_amount,
+    )
+    .ignore_response()
+    .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
