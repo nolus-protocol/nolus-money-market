@@ -11,11 +11,12 @@ use platform::coin_legacy;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
+        testing::mock_env, to_binary, Addr, Binary, BlockInfo, Deps, Empty, Env,
         StdResult, Timestamp,
     },
     testing::{self, new_app, CwApp, InterChainMsgSender},
 };
+pub use sdk::cosmwasm_std::Coin as CwCoin;
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
 pub(crate) const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
