@@ -18,7 +18,7 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
+    cosmwasm_std::{Addr, Event, Timestamp},
     cw_multi_test::AppResponse,
 };
 
@@ -30,7 +30,7 @@ use crate::common::{
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
     test_case::{app::App, builder::BlankBuilder as TestCaseBuilder, TestCase},
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
+    CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -375,7 +375,8 @@ fn deposit_and_withdraw() {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
     let balance_lpp: LppBalanceResponse<Lpn> = test_case
@@ -661,7 +662,8 @@ fn loan_open_and_repay() {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
     // double borrow
@@ -720,7 +722,8 @@ fn loan_open_and_repay() {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
     test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
@@ -1018,7 +1021,8 @@ fn compare_lpp_states() {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
     // double borrow
@@ -1083,7 +1087,8 @@ fn compare_lpp_states() {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
     test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
