@@ -13,13 +13,10 @@ use finance::{
 };
 use lease::api::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
-use sdk::{
-    cosmwasm_std::{coin, Addr, Binary, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
-};
+use sdk::cosmwasm_std::{coin, Addr, Timestamp};
 
 use crate::common::{
-    self, cwcoin, leaser as leaser_mod,
+    self, cwcoin, cwcoin_dex, leaser as leaser_mod,
     test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -27,14 +24,13 @@ use crate::common::{
 mod close;
 mod close_position;
 mod compare_with_lpp;
-mod dex;
 mod heal;
 mod liquidation;
 mod open;
 mod repay;
 
-type Lpn = Usdc;
-type LpnCoin = Coin<Lpn>;
+type LpnCurrency = Usdc;
+type LpnCoin = Coin<LpnCurrency>;
 
 type LeaseCurrency = Cro;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -50,7 +46,7 @@ pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
 }
 
-pub(super) fn price_lpn_of<C>() -> Price<C, Lpn>
+pub(super) fn price_lpn_of<C>() -> Price<C, LpnCurrency>
 where
     C: Currency,
 {
@@ -71,17 +67,21 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<Lpn, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
     ])
     .init_lpp_with_funds(
         None,
         &[coin(
             5_000_000_000_000_000_000_000_000_000,
-            Lpn::BANK_SYMBOL,
+            LpnCurrency::BANK_SYMBOL,
         )],
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -108,10 +108,10 @@ where
 }
 
 pub(super) fn calculate_interest(
-    principal: Coin<Lpn>,
+    principal: Coin<LpnCurrency>,
     interest_rate: Percent,
     duration: u64,
-) -> Coin<Lpn> {
+) -> Coin<LpnCurrency> {
     InterestPeriod::with_interest(interest_rate)
         .and_period(Period::from_length(
             Timestamp::default(),
@@ -130,31 +130,29 @@ where
 {
     try_init_lease(test_case, downpayment, max_ltd);
 
-    let lease = leaser_mod::expect_a_lease(
+    let lease_addr: Addr = leaser_mod::expect_a_lease(
         &test_case.app,
         test_case.address_book.leaser().clone(),
         Addr::unchecked(USER),
     );
 
-    let quote = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
+    let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
         max_ltd,
     );
-    let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
-    let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
+    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
-    common::lease::complete_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
+    common::lease::complete_initialization(
         &mut test_case.app,
-        TestCase::LEASER_CONNECTION_ID,
-        lease.clone(),
+        TestCase::DEX_CONNECTION_ID,
+        lease_addr.clone(),
         downpayment,
-        dbg!(exp_borrow),
-        dbg!(exp_lease),
+        exp_borrow,
     );
 
-    lease
+    lease_addr
 }
 
 pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
@@ -179,25 +177,9 @@ pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlar
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
     () = response.ignore_response().unwrap_response();
-}
-
-pub(super) fn construct_response(data: Binary) -> NeutronSudoMsg {
-    NeutronSudoMsg::Response {
-        request: sdk::neutron_sdk::sudo::msg::RequestPacket {
-            sequence: None,
-            source_port: None,
-            source_channel: None,
-            destination_port: None,
-            destination_channel: None,
-            data: None,
-            timeout_height: None,
-            timeout_timestamp: None,
-        },
-        data,
-    }
 }
 
 pub(super) fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
