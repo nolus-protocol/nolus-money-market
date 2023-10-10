@@ -1,4 +1,4 @@
-use currency::{native::Nls, Group};
+use currency::{native::Nls, BankSymbols, Group};
 use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -11,7 +11,6 @@ use sdk::{
 use crate::{
     batch::Batch,
     coin_legacy::{self},
-    denom::local::BankMapper,
     error::Result,
     ica::HostAccount,
 };
@@ -53,11 +52,9 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        self.amounts
-            .push(coin_legacy::to_cosmwasm_on_network::<G, BankMapper>(
-                amount,
-            )?);
-        Ok(())
+        coin_legacy::to_cosmwasm_on_network::<G, BankSymbols>(amount).map(|coin| {
+            self.amounts.push(coin);
+        })
     }
 
     fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> + 'c {

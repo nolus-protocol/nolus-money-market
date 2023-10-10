@@ -3,15 +3,12 @@ use std::result::Result as StdResult;
 
 use currency::{
     self, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
-    SingleVisitor,
+    SingleVisitor, Symbol, Symbols,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-use crate::{
-    denom::{local::BankMapper, CurrencyMapper},
-    error::{Error, Result},
-};
+use crate::error::{Error, Result};
 
 pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
@@ -52,18 +49,18 @@ pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    to_cosmwasm_on_network_impl::<C, BankMapper>(coin)
+    to_cosmwasm_on_network_impl::<C, BankSymbols>(coin)
 }
 
-pub fn to_cosmwasm_on_network<'a, G, CM>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
+pub fn to_cosmwasm_on_network<G, S>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
     G: Group,
-    CM: CurrencyMapper<'a>,
+    S: Symbols,
 {
     struct CoinTransformer<CM>(PhantomData<CM>);
-    impl<'ci, CM> WithCoin for CoinTransformer<CM>
+    impl<S> WithCoin for CoinTransformer<S>
     where
-        CM: CurrencyMapper<'ci>,
+        S: Symbols,
     {
         type Output = CosmWasmCoin;
         type Error = Error;
@@ -72,18 +69,18 @@ where
         where
             C: Currency,
         {
-            Ok(to_cosmwasm_on_network_impl::<C, CM>(coin))
+            Ok(to_cosmwasm_on_network_impl::<C, S>(coin))
         }
     }
-    coin_dto.with_coin(CoinTransformer(PhantomData::<CM>))
+    coin_dto.with_coin(CoinTransformer(PhantomData::<S>))
 }
 
-fn to_cosmwasm_on_network_impl<'a, C, CM>(coin: Coin<C>) -> CosmWasmCoin
+fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
-    CM: CurrencyMapper<'a>,
+    S: Symbols,
 {
-    CosmWasmCoin::new(coin.into(), CM::map::<C>())
+    CosmWasmCoin::new(coin.into(), <S::Symbol<C>>::VALUE)
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);

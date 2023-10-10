@@ -9,10 +9,10 @@ pub use self::{
         GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult},
-    matcher::{BankSymbols, Matcher, Tickers},
+    matcher::{BankSymbols, DexSymbols, Matcher, Symbol, Symbols, Tickers},
 };
 
-pub(crate) use self::{group::maybe_visit_any, matcher::Symbols};
+pub(crate) use self::group::maybe_visit_any;
 
 mod from_symbol;
 mod from_symbol_any;

@@ -2,11 +2,10 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
 
-use currency::{self, Group, GroupVisit, SymbolSlice, Tickers};
+use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
-    denom::dex::DexMapper,
     ica::HostAccount,
     trx::{self, Transaction},
 };
@@ -95,12 +94,12 @@ fn to_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<G, DexMapper>(token).map_err(Error::from)
+    coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(token).map_err(Error::from)
 }
 
 fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
     Tickers
-        .visit_any::<SwapGroup, _>(ticker, DexMapper {})
+        .visit_any::<SwapGroup, _>(ticker, DexSymbols {})
         .map_err(Error::from)
 }
 
@@ -132,7 +131,7 @@ mod test {
     fn to_dex_symbol_err() {
         assert!(matches!(
             super::to_dex_symbol(INVALID_TICKER),
-            Err(Error::Platform(_))
+            Err(Error::Currency(_))
         ));
     }
 
@@ -164,7 +163,7 @@ mod test {
             pool_id: 2,
             target: INVALID_TICKER.into(),
         }];
-        assert!(matches!(super::to_route(&path), Err(Error::Platform(_))));
+        assert!(matches!(super::to_route(&path), Err(Error::Currency(_))));
     }
 
     #[test]

@@ -3,7 +3,6 @@ pub mod bank_ibc;
 pub mod batch;
 pub mod coin_legacy;
 pub mod contract;
-pub mod denom;
 pub mod dispatcher;
 mod emit;
 pub mod error;

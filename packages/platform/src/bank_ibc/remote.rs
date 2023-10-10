@@ -1,4 +1,4 @@
-use currency::Group;
+use currency::{DexSymbols, Group};
 use finance::coin::CoinDTO;
 use sdk::{
     cosmos_sdk_proto::{
@@ -10,7 +10,6 @@ use sdk::{
 
 use crate::{
     coin_legacy::{self},
-    denom::dex::DexMapper,
     error::Result,
     ica::HostAccount,
     trx::Transaction,
@@ -44,9 +43,11 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        let cw_coin_at_dex = coin_legacy::to_cosmwasm_on_network::<G, DexMapper>(amount)?;
-        self.amounts.push(into_cosmos_sdk_coin(cw_coin_at_dex));
-        Ok(())
+        coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(amount)
+            .map(into_cosmos_sdk_coin)
+            .map(|cosmos_sdk_coin| {
+                self.amounts.push(cosmos_sdk_coin);
+            })
     }
 
     fn into_ibc_msgs(self) -> impl Iterator<Item = MsgTransfer> + 'c {

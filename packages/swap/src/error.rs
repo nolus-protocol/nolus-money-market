@@ -3,6 +3,9 @@ use thiserror::Error;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Swap] {0}")]
+    Currency(#[from] currency::error::Error),
+
+    #[error("[Swap] {0}")]
     Finance(#[from] finance::error::Error),
 
     #[error("[Swap] {0}")]

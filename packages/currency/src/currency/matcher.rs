@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::SymbolSlice;
+use crate::{error::Error, AnyVisitor, AnyVisitorResult, SymbolSlice};
 
 use super::{Currency, SymbolStatic};
 
@@ -73,4 +73,15 @@ impl Symbols for DexSymbols {
     const DESCR: &'static str = "dex symbol";
 
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
+}
+impl AnyVisitor for DexSymbols {
+    type Output = SymbolStatic;
+    type Error = Error;
+
+    fn on<C>(self) -> AnyVisitorResult<Self>
+    where
+        C: Currency,
+    {
+        Ok(<<Self as Symbols>::Symbol<C>>::VALUE)
+    }
 }
