@@ -74,7 +74,11 @@ impl Symbols for DexSymbols {
 
     type Symbol<C: Currency> = DexSymbol<C> where C: Currency;
 }
-impl AnyVisitor for DexSymbols {
+
+impl<T> AnyVisitor for T
+where
+    T: Symbols,
+{
     type Output = SymbolStatic;
     type Error = Error;
 
