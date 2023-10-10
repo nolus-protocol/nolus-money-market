@@ -32,13 +32,7 @@ impl Config {
         samples_number: u16,
         discount_factor: Percent,
     ) -> Self {
-        Self::new_private(
-            min_feeders,
-            dbg!(sample_period),
-            dbg!(samples_number),
-            discount_factor,
-        )
-        .unwrap()
+        Self::new_private(min_feeders, sample_period, samples_number, discount_factor).unwrap()
     }
 
     fn new_private(
