@@ -11,18 +11,19 @@ use finance::{
 };
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
+    cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, AppResponse, ContractWrapper},
 };
 
 use crate::common::{
-    cwcoin, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod, oracle as oracle_mod,
+    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod,
+    oracle as oracle_mod,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
     },
-    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    CwCoin, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Usdc;
@@ -159,7 +160,7 @@ fn open_multiple_loans() {
             )
             .unwrap();
 
-        response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+        response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
         let response: AppResponse = response.unwrap_response();
 
@@ -186,7 +187,7 @@ fn open_multiple_loans() {
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
     let response: AppResponse = response.unwrap_response();
 
@@ -517,8 +518,11 @@ where
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin::<Lpn, _>(1_000_000_000),
+        cwcoin_dex::<Lpn, _>(1_000_000_000),
         cwcoin::<LeaseC, _>(1_000_000_000),
+        cwcoin_dex::<LeaseC, _>(1_000_000_000),
         cwcoin::<DownpaymentC, _>(1_000_000_000),
+        cwcoin_dex::<DownpaymentC, _>(1_000_000_000),
     ])
     .init_lpp(
         None,
@@ -573,8 +577,7 @@ where
         downpayment,
         None,
     );
-    let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
-    let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
+    let exp_borrow: Coin<Lpn> = quote.borrow.try_into().unwrap();
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
@@ -590,17 +593,16 @@ where
         .unwrap()
         .ignore_response();
 
-    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
+    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
     () = response.unwrap_response();
 
-    lease_mod::complete_initialization::<Lpn, DownpaymentC, LeaseC>(
+    lease_mod::complete_initialization(
         &mut test_case.app,
-        TestCase::LEASER_CONNECTION_ID,
+        TestCase::DEX_CONNECTION_ID,
         lease_addr,
         downpayment,
         exp_borrow,
-        exp_lease,
     );
 }
 
