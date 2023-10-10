@@ -7,7 +7,10 @@ use lease::{
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
-use platform::{coin_legacy, contract::CodeId};
+use platform::{
+    coin_legacy::{self, to_cosmwasm},
+    contract::CodeId,
+};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
@@ -274,8 +277,7 @@ where
 
     () = response.unwrap_response();
 
-    assert_eq!(downpayment.amount.u128(), exp_downpayment.into());
-    assert_eq!(downpayment.denom, DownpaymentC::BANK_SYMBOL);
+    assert_eq!(downpayment, to_cosmwasm(exp_downpayment));
 
     check_state_opening(app, lease_addr.clone());
 
@@ -297,8 +299,7 @@ where
 
     () = response.unwrap_response();
 
-    assert_eq!(borrow.amount.u128(), exp_borrow.into());
-    assert_eq!(borrow.denom, Lpn::BANK_SYMBOL);
+    assert_eq!(borrow, to_cosmwasm(exp_borrow));
 
     check_state_opening(app, lease_addr.clone());
 

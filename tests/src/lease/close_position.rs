@@ -8,6 +8,7 @@ use finance::{
     price,
     zero::Zero,
 };
+use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event, Timestamp},
     cw_multi_test::AppResponse,
@@ -17,7 +18,7 @@ use crate::common::{
     self, ibc,
     leaser::{self, Instantiator},
     test_case::{response::ResponseWithInterChainMsgs, TestCase},
-    CwCoin, Lpn, ADMIN, USER,
+    CwCoin, ADMIN, USER,
 };
 
 use super::{
@@ -58,6 +59,7 @@ fn full_close() {
         PositionClose::FullClose(FullClose {}),
         exp_loan_close,
         exp_change,
+        LeaseCoin::ZERO,
     );
     let state = super::state_query(&test_case, lease.as_str());
     assert_eq!(StateResponse::Closed(), state);
@@ -101,6 +103,7 @@ fn partial_close_loan_not_closed() {
         }),
         exp_loan_close,
         exp_change,
+        lease_amount - close_amount,
     );
     let state = super::state_query(&test_case, lease.as_str());
     assert_eq!(
@@ -153,6 +156,7 @@ fn partial_close_loan_closed() {
         }),
         exp_loan_close,
         exp_change,
+        lease_amount - close_amount,
     );
     let state = super::state_query(&test_case, lease.as_str());
     assert_eq!(
@@ -259,13 +263,14 @@ fn partial_close_min_sell_asset() {
 
 fn do_close(
     test_case: &mut LeaseTestCase,
-    customer: &Addr,
+    customer_addr: &Addr,
     close_amount: LeaseCoin,
     close_msg: PositionClose,
     exp_loan_close: bool,
     exp_change: LpnCoin,
+    exp_lease_amount_after: LeaseCoin,
 ) -> Addr {
-    let user_balance_before: PaymentCoin = user_balance(customer, test_case);
+    let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
 
     assert!(matches!(
@@ -305,8 +310,7 @@ fn do_close(
         TestCase::LEASE_ICA_ID,
     );
 
-    assert_eq!(transfer_amount.amount.u128(), close_amount_in_lpn.into());
-    assert_eq!(transfer_amount.denom, Lpn::DEX_SYMBOL);
+    assert_eq!(transfer_amount, to_cosmwasm_on_dex(close_amount_in_lpn));
 
     let response_transfer_in: AppResponse = ibc::do_transfer(
         &mut test_case.app,
@@ -336,9 +340,25 @@ fn do_close(
     );
 
     assert_eq!(
-        user_balance::<PaymentCurrency>(customer, test_case),
+        user_balance::<PaymentCurrency>(customer_addr, test_case),
         user_balance_before - DOWNPAYMENT,
     );
+
+    if !exp_lease_amount_after.is_zero() {
+        assert_eq!(
+            test_case
+                .app
+                .query()
+                .query_all_balances(TestCase::ica_addr(
+                    lease_addr.as_str(),
+                    TestCase::LEASE_ICA_ID
+                ))
+                .unwrap()
+                .as_slice(),
+            &[to_cosmwasm_on_dex(exp_lease_amount_after)],
+        );
+    }
+
     lease_addr
 }
 

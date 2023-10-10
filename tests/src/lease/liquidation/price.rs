@@ -1,6 +1,7 @@
 use ::lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
 use finance::{coin::Amount, percent::Percent};
+use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -16,7 +17,7 @@ use crate::{
     lease::{self, LeaseTestCase},
 };
 
-use super::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, PaymentCurrency, DOWNPAYMENT};
+use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
@@ -114,8 +115,10 @@ fn full_liquidation() {
 
     () = response.unwrap_response();
 
-    assert_eq!(transfer_amount.amount.u128(), lease_amount);
-    assert_eq!(transfer_amount.denom, LpnCurrency::DEX_SYMBOL);
+    assert_eq!(
+        transfer_amount,
+        to_cosmwasm_on_dex(LpnCoin::new(lease_amount))
+    );
 
     let response: AppResponse = ibc::do_transfer(
         &mut test_case.app,

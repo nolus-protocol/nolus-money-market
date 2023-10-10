@@ -1,38 +1,39 @@
 use std::collections::HashMap;
 
 use ::lease::api::{ExecuteMsg, StateResponse};
-use currency::Currency;
-use finance::{coin::Amount, duration::Duration};
+
+use finance::{coin::Amount, duration::Duration, price};
+use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
-use crate::{
-    common::{
-        ibc,
-        leaser::Instantiator as LeaserInstantiator,
-        test_case::{response::ResponseWithInterChainMsgs, TestCase},
-        CwCoin,
-    },
-    lease::{self, LpnCurrency},
+use crate::common::{
+    ibc,
+    leaser::Instantiator as LeaserInstantiator,
+    test_case::{response::ResponseWithInterChainMsgs, TestCase},
+    CwCoin,
 };
 
-use super::{LeaseCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{
+    super::{create_test_case, feed_price, open_lease, price_lpn_of, state_query, LeaseTestCase},
+    LeaseCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT,
+};
 
 fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = lease::create_test_case::<PaymentCurrency>();
+    let mut test_case: LeaseTestCase = create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
-    let lease_addr: Addr = lease::open_lease(&mut test_case, downpayment, None);
+    let lease_addr: Addr = open_lease(&mut test_case, downpayment, None);
 
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    }: StateResponse = lease::state_query(&test_case, lease_addr.as_ref()) else {
+    }: StateResponse = state_query(&test_case, lease_addr.as_ref()) else {
         unreachable!()
     };
     let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();
 
     test_case.app.time_shift(time_pass);
 
-    lease::feed_price(&mut test_case);
+    feed_price(&mut test_case);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
@@ -70,7 +71,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
     )
     .ignore_response();
 
-    let ibc_transfer_coin: CwCoin = ibc::expect_remote_transfer(
+    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -78,15 +79,17 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
 
     () = response.unwrap_response();
 
-    assert_eq!(ibc_transfer_coin.amount.u128(), liquidation_amount.into());
-    assert_eq!(ibc_transfer_coin.denom, LpnCurrency::DEX_SYMBOL);
+    assert_eq!(
+        transfer_amount,
+        to_cosmwasm_on_dex(price::total(liquidation_amount, price_lpn_of()))
+    );
 
     let response: ResponseWithInterChainMsgs<'_, AppResponse> = ibc::do_transfer(
         &mut test_case.app,
         ica_addr,
         lease_addr.clone(),
         true,
-        &ibc_transfer_coin,
+        &transfer_amount,
     );
 
     let liquidation_end_response: AppResponse = response.unwrap_response();
@@ -110,7 +113,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result = lease::state_query(&test_case, lease_addr.as_str());
+    let query_result: StateResponse = state_query(&test_case, lease_addr.as_str());
 
     let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
         .parse::<Amount>()

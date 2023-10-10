@@ -4,7 +4,7 @@ use finance::{
     duration::Duration,
     zero::Zero as _,
 };
-use platform::bank;
+use platform::{bank, coin_legacy::to_cosmwasm};
 use profit::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
 use sdk::{
     cosmwasm_std::{from_binary, Addr, Event},
@@ -320,8 +320,7 @@ fn on_alarm_foreign_only_transfer() {
         test_case.address_book.profit_ica().as_str(),
     );
 
-    assert_eq!(transfer_amount.amount.u128(), profit_lpn.into());
-    assert_eq!(transfer_amount.denom, Lpn::BANK_SYMBOL);
+    assert_eq!(transfer_amount, to_cosmwasm(profit_lpn));
 
     let response: AppResponse = response.unwrap_response();
 
@@ -392,8 +391,7 @@ fn on_alarm_native_and_foreign_transfer() {
         test_case.address_book.profit_ica().as_str(),
     );
 
-    assert_eq!(transfer_amount.amount.u128(), profit_lpn.into());
-    assert_eq!(transfer_amount.denom, Lpn::BANK_SYMBOL);
+    assert_eq!(transfer_amount, to_cosmwasm(profit_lpn));
 
     let response: AppResponse = response.unwrap_response();
 

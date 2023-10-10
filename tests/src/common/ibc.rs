@@ -1,13 +1,7 @@
 use std::slice;
 
-use serde::{de::DeserializeOwned, ser::Serialize};
+use currency::{payment::PaymentGroup, BankSymbols, DexSymbols, Group, SymbolStatic};
 
-use currency::{
-    payment::PaymentGroup, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, DexSymbols, Group,
-    SymbolStatic,
-};
-
-use platform::never::{safe_unwrap, Never};
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin,
@@ -83,39 +77,13 @@ fn do_transfer_no_response(
     on_remote_chain: bool,
     cw_coin: &CwCoin,
 ) {
-    enum SymbolKind {
-        Bank,
-        Dex,
+    let new_symbol: SymbolStatic = if on_remote_chain {
+        PaymentGroup::maybe_visit(&DexSymbols, &cw_coin.denom, BankSymbols).ok()
+    } else {
+        PaymentGroup::maybe_visit(&BankSymbols, &cw_coin.denom, DexSymbols).ok()
     }
-
-    struct SymbolVisitor(SymbolKind);
-
-    impl AnyVisitor for SymbolVisitor {
-        type Output = SymbolStatic;
-
-        type Error = Never;
-
-        fn on<C>(self) -> AnyVisitorResult<Self>
-        where
-            C: Currency + Serialize + DeserializeOwned,
-        {
-            Ok(match self.0 {
-                SymbolKind::Bank => C::BANK_SYMBOL,
-                SymbolKind::Dex => C::DEX_SYMBOL,
-            })
-        }
-    }
-
-    let new_symbol: SymbolStatic = safe_unwrap(
-        if on_remote_chain {
-            PaymentGroup::maybe_visit(&DexSymbols, &cw_coin.denom, SymbolVisitor(SymbolKind::Bank))
-                .ok()
-        } else {
-            PaymentGroup::maybe_visit(&BankSymbols, &cw_coin.denom, SymbolVisitor(SymbolKind::Dex))
-                .ok()
-        }
-        .unwrap(),
-    );
+    .unwrap()
+    .unwrap();
 
     app.send_tokens(
         sender.clone(),
