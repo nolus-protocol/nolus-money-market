@@ -9,7 +9,7 @@ use crate::{
     lease::{self, LeaseCoin},
 };
 
-use super::{Lpn, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{LpnCoin, LpnCurrency, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn manual_calculation() {
@@ -34,7 +34,7 @@ fn manual_calculation() {
         amount: LeaseCoin::from(Amount::from(DOWNPAYMENT + 1_857_142_857_142.into())).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
-        principal_due: Coin::<Lpn>::new(1_857_142_857_142).into(),
+        principal_due: Coin::<LpnCurrency>::new(1_857_142_857_142).into(),
         previous_margin_due: LpnCoin::new(13_737_769_080).into(),
         previous_interest_due: LpnCoin::new(32_054_794_520).into(),
         current_margin_due: LpnCoin::new(13_737_769_080).into(),
@@ -63,7 +63,7 @@ fn lpp_state_implicit_time() {
             - Duration::from_nanos(1),
     );
 
-    let loan_resp: lpp::msg::LoanResponse<Lpn> = test_case
+    let loan_resp: lpp::msg::LoanResponse<LpnCurrency> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -116,7 +116,7 @@ fn lpp_state_explicit_time() {
             - Duration::from_nanos(1),
     );
 
-    let loan: lpp::msg::LoanResponse<Lpn> = test_case
+    let loan: lpp::msg::LoanResponse<LpnCurrency> = test_case
         .app
         .query()
         .query_wasm_smart(
