@@ -1,12 +1,12 @@
-use ::swap::trx::RequestMsg as SwapRequestMsg;
 use finance::price;
 use lease::api::{ExecuteMsg, StateResponse};
+use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
 use crate::common::{
-    leaser as leaser_mod, swap,
+    ibc, leaser as leaser_mod,
     test_case::{response::ResponseWithInterChainMsgs, TestCase},
-    USER,
+    CwCoin, USER,
 };
 
 use super::{
@@ -62,24 +62,22 @@ fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_close(test_case, lease_addr.clone());
 
-    let requests: Vec<SwapRequestMsg> = swap::expect_swap(
+    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     );
 
+    assert_eq!(transfer_amount, to_cosmwasm_on_dex(expected_funds));
+
     () = response.unwrap_response();
 
-    swap::do_swap(
+    ibc::do_transfer(
         &mut test_case.app,
-        lease_addr,
         ica_addr,
-        requests.into_iter(),
-        |amount, _: &str, _: &str| {
-            assert_eq!(amount, expected_funds.into());
-
-            0
-        },
+        lease_addr,
+        true,
+        &transfer_amount,
     )
     .unwrap_response()
 }
