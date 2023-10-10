@@ -1,8 +1,6 @@
-use thiserror::Error;
+use std::convert::Infallible;
 
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Error)]
-#[error("[Platform] Unreachable!")]
-pub enum Never {}
+pub type Never = Infallible;
 
 pub fn safe_unwrap<T>(result: Result<T, Never>) -> T {
     match result {
