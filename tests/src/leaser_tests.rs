@@ -155,7 +155,7 @@ fn open_multiple_loans() {
                     currency: LeaseCurrency::TICKER.into(),
                     max_ltd: None,
                 },
-                &[cwcoin::<Lpn, _>(3)],
+                &[cwcoin::<Lpn, _>(5000)],
             )
             .unwrap();
 
@@ -452,7 +452,7 @@ fn open_loans_lpp_fails() {
     type LeaseCurrency = Atom;
 
     let user_addr = Addr::unchecked(USER);
-    let downpayment = cwcoin::<Lpn, _>(30);
+    let downpayment = cwcoin::<Lpn, _>(5000);
 
     fn mock_lpp_execute(
         deps: DepsMut<'_>,
@@ -534,7 +534,7 @@ where
     .init_leaser()
     .into_generic();
 
-    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
+    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(5000)]);
 
     // 0 => lpp
     // 1 => time alarms
@@ -566,7 +566,7 @@ where
         }
     }
 
-    let downpayment: Coin<DownpaymentC> = Coin::new(40);
+    let downpayment: Coin<DownpaymentC> = Coin::new(5000);
     let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
         &mut test_case.app,
         leaser_addr.clone(),

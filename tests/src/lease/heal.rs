@@ -16,7 +16,7 @@ use crate::{
 #[test]
 fn active_state() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
-    let downpayment = LeaseCoin::new(100);
+    let downpayment = LeaseCoin::new(5000);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
     let query_result = super::state_query(&test_case, &lease.clone().into_string());
@@ -24,7 +24,7 @@ fn active_state() {
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
 
-    let unutilized_amount: LpnCoin = 100.into();
+    let unutilized_amount: LpnCoin = 5000.into();
 
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
     heal_done(&mut test_case, lease.clone());

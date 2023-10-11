@@ -55,6 +55,9 @@ pub enum ContractError {
     #[error("[Lease] Insufficient liquidation amount")]
     InsufficientLiquidation(),
 
+    #[error("[Lease] The position open amount should worth at least {0}")]
+    PositionOpenAmountTooSmall(LpnCoin),
+
     #[error("[Lease] The position close amount should worth at least {0}")]
     PositionCloseAmountTooSmall(LpnCoin),
 

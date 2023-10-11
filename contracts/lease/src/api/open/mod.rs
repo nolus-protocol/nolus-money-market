@@ -153,6 +153,16 @@ impl PositionSpec {
         obj
     }
 
+    pub fn validate_open_amount(self, amount: LpnCoin) -> ContractResult<()> {
+        if amount.amount() < self.min_sell_asset.amount() {
+            Err(ContractError::PositionOpenAmountTooSmall(
+                self.min_sell_asset,
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     fn invariant_held(&self) -> ContractResult<()> {
         Self::check(
             !self.min_asset.is_zero(),

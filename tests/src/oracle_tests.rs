@@ -124,7 +124,7 @@ fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
     oracle_mod::add_feeder(&mut test_case, ADMIN);
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, Coin::new(5000));
 
     // there is no price in the oracle and feed for this alarm
     () = test_case
@@ -157,7 +157,7 @@ fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
     oracle_mod::add_feeder(&mut test_case, ADMIN);
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, Coin::new(5000));
 
     () = test_case
         .app
@@ -189,7 +189,7 @@ fn overwrite_alarm_and_dispatch() {
     let mut test_case = create_test_case();
     oracle_mod::add_feeder(&mut test_case, ADMIN);
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, Coin::new(5000));
 
     () = test_case
         .app
