@@ -226,9 +226,9 @@ fn full_repay_with_excess() {
                 TestCase::LEASE_ICA_ID
             ))
             .unwrap(),
-        &[cwcoin::<LeaseCurrency, _>(price::total(
+        &[to_cosmwasm_on_dex(price::total(
             price::total(downpayment + borrowed, price_lpn_of()),
-            price_lpn_of().inv(),
+            price_lpn_of::<LeaseCurrency>().inv()
         ))],
     );
 
