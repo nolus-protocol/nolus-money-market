@@ -8,11 +8,12 @@ use finance::{
     percent::Percent,
 };
 use platform::coin_legacy;
+pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
-        StdResult, Timestamp,
+        testing::mock_env, to_binary, Addr, Binary, BlockInfo, Deps, Empty, Env, StdResult,
+        Timestamp,
     },
     testing::{self, new_app, CwApp, InterChainMsgSender},
 };
@@ -50,11 +51,13 @@ type CwContractWrapper<
 >;
 
 pub mod dispatcher;
+pub mod ibc;
 pub mod lease;
 pub mod leaser;
 pub mod lpp;
 pub mod oracle;
 pub mod profit;
+pub mod swap;
 pub mod test_case;
 pub mod timealarms;
 pub mod treasury;
@@ -92,6 +95,14 @@ where
     } else {
         vec![cwcoin(amount)]
     }
+}
+
+pub fn cwcoin_dex<C, A>(amount: A) -> CwCoin
+where
+    C: Currency,
+    A: Into<Coin<C>>,
+{
+    coin_legacy::to_cosmwasm_on_dex(amount.into())
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]

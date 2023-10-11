@@ -36,7 +36,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
             bank: "ibc/NA_ST_ATOM",
             /// full ibc route: transfer/channel-??/uatom
-            dex: "ibc/NA_ST_ATOM",
+            dex: "ibc/NA_ST_ATOM_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuatom
@@ -65,7 +65,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
             bank: "ibc/NA_ST_OSMO",
             /// full ibc route: transfer/channel-??/uatom
-            dex: "ibc/NA_ST_OSMO",
+            dex: "ibc/NA_ST_OSMO_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuosmo
@@ -143,7 +143,7 @@ define_symbol! {
             bank: "ibc/NA_AXL",
             /// full ibc route: transfer/channel-3/uaxl
             /// not in use due to the lack of a pool
-            dex: "ibc/NA_AXL",
+            dex: "ibc/NA_AXL_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-208/uaxl
@@ -161,7 +161,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uqatom
             bank: "ibc/NA_Q_ATOM",
             /// full ibc route: transfer/channel-??/uqatom
-            dex: "ibc/NA_Q_ATOM",
+            dex: "ibc/NA_Q_ATOM_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-522/uqatom
@@ -179,7 +179,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/stk/uatom
             bank: "ibc/NA_STK_ATOM",
             /// full ibc route: transfer/channel-??/stk/uatom
-            dex: "ibc/NA_STK_ATOM",
+            dex: "ibc/NA_STK_ATOM_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-4/stk/uatom
@@ -197,7 +197,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/ustrd
             bank: "ibc/NA_STRD",
             /// full ibc route: transfer/channel-??/ustrd
-            dex: "ibc/NA_STRD",
+            dex: "ibc/NA_STRD_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/ustrd
@@ -215,7 +215,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/inj
             bank: "ibc/NA_INJ",
             /// full ibc route: transfer/channel-??/inj
-            dex: "ibc/NA_INJ",
+            dex: "ibc/NA_INJ_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-122/inj
@@ -233,7 +233,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uscrt
             bank: "ibc/NA_SCRT",
             /// full ibc route: transfer/channel-??/uscrt
-            dex: "ibc/NA_SCRT",
+            dex: "ibc/NA_SCRT_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-88/uscrt
@@ -251,7 +251,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/ustars
             bank: "ibc/NA_STARS",
             /// full ibc route: transfer/channel-??/ustars
-            dex: "ibc/NA_STARS",
+            dex: "ibc/NA_STARS_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-75/ustars
@@ -269,7 +269,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/basecro
             bank: "ibc/NA_CRO",
             /// full ibc route: transfer/channel-??/basecro
-            dex: "ibc/NA_CRO",
+            dex: "ibc/NA_CRO_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-5/basecro
@@ -305,7 +305,7 @@ define_symbol! {
             /// full ibc route: transfer/channel-0/transfer/channel-??/aevmos
             bank: "ibc/NA_EVMOS",
             /// full ibc route: transfer/channel-??/aevmos
-            dex: "ibc/NA_EVMOS",
+            dex: "ibc/NA_EVMOS_DEX",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-204/aevmos

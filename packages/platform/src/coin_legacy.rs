@@ -1,6 +1,7 @@
-use std::marker::PhantomData;
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
+#[cfg(any(test, feature = "testing"))]
+use currency::DexSymbols;
 use currency::{
     self, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
     SingleVisitor, Symbol, Symbols,
@@ -43,6 +44,14 @@ where
     C: Currency,
 {
     to_cosmwasm_impl(coin)
+}
+
+#[cfg(any(test, feature = "testing"))]
+pub fn to_cosmwasm_on_dex<C>(coin: Coin<C>) -> CosmWasmCoin
+where
+    C: Currency,
+{
+    to_cosmwasm_on_network_impl::<C, DexSymbols>(coin)
 }
 
 pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin

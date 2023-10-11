@@ -5,6 +5,7 @@ pub(crate) struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle,
     dispatcher_addr: Dispatcher,
     treasury_addr: Treasury,
     profit_addr: Profit,
+    profit_ica_addr: Profit,
     leaser_addr: Leaser,
     lpp_addr: Lpp,
     oracle_addr: Oracle,
@@ -18,6 +19,7 @@ impl AddressBook<(), (), (), (), (), (), ()> {
             dispatcher_addr: (),
             treasury_addr: (),
             profit_addr: (),
+            profit_ica_addr: (),
             leaser_addr: (),
             lpp_addr: (),
             oracle_addr: (),
@@ -38,6 +40,7 @@ impl<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
@@ -66,6 +69,7 @@ impl<Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
@@ -89,11 +93,13 @@ impl<Dispatcher, Treasury, Leaser, Lpp, Oracle, TimeAlarms>
     pub(super) fn with_profit(
         self,
         profit_addr: Addr,
+        profit_ica_addr: Addr,
     ) -> AddressBook<Dispatcher, Treasury, Addr, Leaser, Lpp, Oracle, TimeAlarms> {
         AddressBook {
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr,
+            profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
@@ -109,6 +115,10 @@ impl<Dispatcher, Treasury, Leaser, Lpp, Oracle, TimeAlarms>
     pub const fn profit(&self) -> &Addr {
         &self.profit_addr
     }
+
+    pub const fn profit_ica(&self) -> &Addr {
+        &self.profit_ica_addr
+    }
 }
 
 impl<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>
@@ -122,6 +132,7 @@ impl<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
@@ -150,6 +161,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr,
             oracle_addr: self.oracle_addr,
@@ -178,6 +190,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr,
@@ -206,6 +219,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
             dispatcher_addr: self.dispatcher_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
+            profit_ica_addr: self.profit_ica_addr,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,

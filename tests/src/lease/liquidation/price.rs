@@ -1,22 +1,20 @@
 use ::lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
-use finance::{coin::Amount, percent::Percent, price};
+use finance::{coin::Amount, percent::Percent};
+use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Event},
+    cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
 
 use crate::{
     common::{
-        self, cwcoin,
+        self, ibc,
         leaser::{self, Instantiator as LeaserInstantiator},
-        test_case::{
-            response::{RemoteChain, ResponseWithInterChainMsgs},
-            TestCase,
-        },
-        ADMIN, USER,
+        test_case::{response::ResponseWithInterChainMsgs, TestCase},
+        CwCoin, ADMIN, USER,
     },
-    lease::{self, dex, LeaseTestCase},
+    lease::{self, LeaseTestCase},
 };
 
 use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
@@ -70,90 +68,83 @@ fn liquidation_warning_price_3() {
 
 #[test]
 fn full_liquidation() {
-    let mut test_case = lease::create_test_case::<PaymentCurrency>();
-    let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = lease::create_test_case::<PaymentCurrency>();
 
-    let lease_amount: LeaseCoin = 2857142857142.into();
-    let borrowed = 1857142857142.into();
+    let lease_addr: Addr = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    let liquidated_in_lpn = borrowed;
-    let liquidated_amount: LeaseCoin = price::total(liquidated_in_lpn, lease::price_lpn_of().inv());
+    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+
+    let lease_amount: Amount = 2857142857142;
+    let borrowed_amount: Amount = 1857142857142;
+
     // the base is chosen to be close to the asset amount to trigger a full liquidation
-    let mut response_with_ica = deliver_new_price(
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = deliver_new_price(
         &mut test_case,
-        lease.clone(),
-        lease_amount - 2.into(),
-        borrowed,
+        lease_addr.clone(),
+        (lease_amount - 2).into(),
+        borrowed_amount.into(),
+    )
+    .ignore_response();
+
+    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
+        &mut response,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
-    //swap
-    response_with_ica.expect_submit_tx(TestCase::LEASER_CONNECTION_ID, "0", 1);
-    let _ = response_with_ica.unwrap_response();
-    test_case
-        .app
-        .send_tokens(
-            Addr::unchecked("ica0"),
-            Addr::unchecked(ADMIN),
-            &[cwcoin(liquidated_amount)],
-        )
-        .unwrap();
+    () = response.unwrap_response();
 
-    test_case.send_funds_from_admin(Addr::unchecked("ica0"), &[cwcoin(liquidated_in_lpn)]);
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
+        &mut test_case.app,
+        lease_addr.clone(),
+        ica_addr.clone(),
+        requests.into_iter(),
+        |amount: u128, _: &str, _: &str| {
+            assert_eq!(amount, lease_amount);
 
-    let liquidated_in_lpn: LpnCoin = borrowed;
-    let response: ResponseWithInterChainMsgs<'_, ()> = test_case
-        .app
-        .sudo(
-            lease.clone(),
-            &sdk::neutron_sdk::sudo::msg::SudoMsg::Response {
-                request: sdk::neutron_sdk::sudo::msg::RequestPacket {
-                    sequence: None,
-                    source_port: None,
-                    source_channel: None,
-                    destination_port: None,
-                    destination_channel: None,
-                    data: None,
-                    timeout_height: None,
-                    timeout_timestamp: None,
-                },
-                data: Binary(platform::trx::encode_msg_responses(
-                    [swap::trx::build_exact_amount_in_resp(
-                        liquidated_amount.into(),
-                    )]
-                    .into_iter(),
-                )),
-            },
-        )
-        .unwrap()
-        .ignore_response();
+            amount
+        },
+    )
+    .ignore_response();
 
-    dex::expect_init_transfer_in(response);
-    let response_transfer_in = dex::do_transfer_in(
-        &mut test_case,
-        lease.clone(),
-        liquidated_in_lpn,
-        lease_amount - liquidated_amount,
+    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
+        &mut response,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
     );
 
-    response_transfer_in.assert_event(
+    () = response.unwrap_response();
+
+    assert_eq!(
+        transfer_amount,
+        to_cosmwasm_on_dex(LpnCoin::new(lease_amount))
+    );
+
+    let response: AppResponse = ibc::do_transfer(
+        &mut test_case.app,
+        ica_addr,
+        lease_addr.clone(),
+        true,
+        &transfer_amount,
+    )
+    .unwrap_response();
+
+    response.assert_event(
         &Event::new("wasm-ls-liquidation")
-            .add_attribute(
-                "payment-amount",
-                Amount::from(liquidated_amount).to_string(),
-            )
-            .add_attribute("loan-close", true.to_string()),
+            .add_attribute("payment-amount", lease_amount.to_string())
+            .add_attribute("loan-close", "true"),
     );
 
     assert_eq!(
         test_case
             .app
             .query()
-            .query_all_balances(lease.clone())
+            .query_all_balances(lease_addr.clone())
             .unwrap(),
         &[],
     );
 
-    let state = lease::state_query(&test_case, lease.as_str());
+    let state = lease::state_query(&test_case, lease_addr.as_str());
     assert!(
         matches!(state, StateResponse::Liquidated()),
         "should have been in Liquidated state"

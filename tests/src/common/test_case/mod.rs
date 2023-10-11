@@ -7,8 +7,6 @@ use sdk::{
     testing::{new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender},
 };
 
-use self::{address_book::AddressBook, app::App};
-
 use super::{
     lease::{
         InitConfig, Instantiator as LeaseInstantiator, InstantiatorAddresses,
@@ -16,6 +14,8 @@ use super::{
     },
     mock_app, CwContractWrapper, ADMIN,
 };
+
+use self::{address_book::AddressBook, app::App};
 
 pub mod address_book;
 pub mod app;
@@ -56,13 +56,20 @@ pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Ti
 }
 
 impl TestCase<(), (), (), (), (), (), ()> {
-    pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
+    pub const DEX_CONNECTION_ID: &'static str = "connection-0";
+
     pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
 
-    pub const PROFIT_ICA_CHANNEL: &'static str = "channel-0";
-    pub const PROFIT_ICA_ADDR: &'static str = "ica1";
+    pub const LEASE_ICA_ID: &'static str = "0";
+
+    pub const PROFIT_IBC_CHANNEL: &'static str = "channel-1";
+    pub const PROFIT_ICA_ID: &'static str = "0";
 
     pub const DEFAULT_LPP_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+
+    pub fn ica_addr(local_addr: &str, id: &str) -> Addr {
+        Addr::unchecked(format!("{local}-ica{id}", local = local_addr, id = id))
+    }
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
@@ -115,7 +122,8 @@ impl<Dispatcher, Treasury> TestCase<Dispatcher, Treasury, Addr, Addr, Addr, Addr
             },
             InitConfig::new(lease_currency, 1000.into(), None),
             LeaseInstantiatorConfig::default(),
-            TestCase::LEASER_CONNECTION_ID,
+            TestCase::DEX_CONNECTION_ID,
+            TestCase::LEASE_ICA_ID,
         )
     }
 }
