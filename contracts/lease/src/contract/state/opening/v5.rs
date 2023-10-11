@@ -11,7 +11,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         self, DownpaymentCoin, LoanForm, NewLeaseContract as NewLeaseContract_v6,
-        NewLeaseForm as NewLeaseForm_v6, PositionSpec,
+        NewLeaseForm as NewLeaseForm_v6, PositionSpecDTO,
     },
     contract::{
         cmd::OpenLoanRespResult,
@@ -75,7 +75,7 @@ impl NewLeaseForm {
             customer: self.customer,
             currency: self.currency,
             max_ltd: self.max_ltd,
-            position_spec: PositionSpec::new_internal(
+            position_spec: PositionSpecDTO::new_internal(
                 self.liability,
                 MIN_ASSET.into(),
                 MIN_SELL_ASSET.into(),

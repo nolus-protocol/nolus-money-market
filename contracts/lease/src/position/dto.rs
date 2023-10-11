@@ -2,7 +2,7 @@ use currency::Currency;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{LeaseCoin, PositionSpec},
+    api::{LeaseCoin, PositionSpecDTO},
     error::{ContractError, ContractResult},
 };
 
@@ -12,12 +12,12 @@ use super::Position;
 #[cfg_attr(test, derive(Debug))]
 pub struct PositionDTO {
     amount: LeaseCoin,
-    spec: PositionSpec,
+    spec: PositionSpecDTO,
 }
 
 #[cfg(feature = "migration")]
 impl PositionDTO {
-    pub(crate) fn new(amount: LeaseCoin, spec: PositionSpec) -> Self {
+    pub(crate) fn new(amount: LeaseCoin, spec: PositionSpecDTO) -> Self {
         Self { amount, spec }
     }
 }
@@ -48,7 +48,7 @@ where
     fn from(value: Position<Asset, Lpn>) -> Self {
         Self {
             amount: value.amount.into(),
-            spec: PositionSpec::new_internal(
+            spec: PositionSpecDTO::new_internal(
                 value.liability,
                 value.min_asset.into(),
                 value.min_sell_asset.into(),

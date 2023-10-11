@@ -7,7 +7,7 @@ use finance::{
 };
 
 use crate::{
-    api::{LeaseCoin, PositionSpec},
+    api::{LeaseCoin, PositionSpecDTO},
     error::{ContractError, ContractResult},
 };
 
@@ -46,7 +46,7 @@ where
         obj
     }
 
-    pub fn try_from(amount: LeaseCoin, spec: PositionSpec) -> ContractResult<Self> {
+    pub fn try_from(amount: LeaseCoin, spec: PositionSpecDTO) -> ContractResult<Self> {
         Ok(Self::new_internal(
             amount.try_into()?,
             spec.liability,

@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, PositionSpec},
+    api::{LeaseCoin, PositionSpecDTO},
     loan::LoanDTO,
     position::PositionDTO,
 };
@@ -35,7 +35,11 @@ impl LeaseDTO {
             self.customer,
             PositionDTO::new(
                 self.amount,
-                PositionSpec::new_internal(self.liability, MIN_ASSET.into(), MIN_SELL_ASSET.into()),
+                PositionSpecDTO::new_internal(
+                    self.liability,
+                    MIN_ASSET.into(),
+                    MIN_SELL_ASSET.into(),
+                ),
             ),
             self.loan,
             self.time_alarms,

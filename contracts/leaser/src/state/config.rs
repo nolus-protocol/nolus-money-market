@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent;
-use lease::api::{ConnectionParams, InterestPaymentSpec, PositionSpec};
+use lease::api::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO};
 use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Storage},
@@ -17,7 +17,7 @@ pub struct Config {
     pub lease_code_id: CodeId,
     pub lpp_addr: Addr,
     pub lease_interest_rate_margin: Percent,
-    pub lease_position_spec: PositionSpec,
+    pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_payment: InterestPaymentSpec,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
@@ -66,7 +66,7 @@ impl Config {
     pub fn update(
         storage: &mut dyn Storage,
         lease_interest_rate_margin: Percent,
-        lease_position_spec: PositionSpec,
+        lease_position_spec: PositionSpecDTO,
         repayment: InterestPaymentSpec,
     ) -> Result<(), ContractError> {
         Self::STORAGE.update(storage, |mut c| -> ContractResult<Config> {

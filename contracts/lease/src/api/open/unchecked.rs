@@ -5,7 +5,7 @@ use finance::{duration::Duration, liability::Liability};
 use crate::{api::LpnCoin, error::ContractError};
 
 use super::InterestPaymentSpec as ValidatedInterestPaymentSpec;
-use super::PositionSpec as ValidatedPositionSpec;
+use super::PositionSpecDTO as ValidatedPositionSpec;
 
 /// Brings invariant checking as a step in deserializing a InterestPaymentSpec
 #[derive(Deserialize)]
@@ -27,19 +27,19 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
     }
 }
 
-/// Brings invariant checking as a step in deserializing a PositionSpec
+/// Brings invariant checking as a step in deserializing a PositionSpecDTO
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub(super) struct PositionSpec {
+pub(super) struct PositionSpecDTO {
     liability: Liability,
     min_asset: LpnCoin,
     min_sell_asset: LpnCoin,
 }
 
-impl TryFrom<PositionSpec> for ValidatedPositionSpec {
+impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
     type Error = ContractError;
 
-    fn try_from(value: PositionSpec) -> Result<Self, Self::Error> {
+    fn try_from(value: PositionSpecDTO) -> Result<Self, Self::Error> {
         let res = Self {
             liability: value.liability,
             min_asset: value.min_asset,

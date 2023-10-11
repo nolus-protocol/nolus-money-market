@@ -11,7 +11,7 @@ use sdk::{
 pub use self::{
     open::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, PositionSpec,
+        NewLeaseForm, PositionSpecDTO,
     },
     position::{FullClose, PartialClose, PositionClose},
     query::{opened, opening, paid, StateQuery, StateResponse},
