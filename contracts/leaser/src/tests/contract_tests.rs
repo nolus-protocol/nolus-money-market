@@ -7,7 +7,7 @@ use finance::{
     liability::Liability,
     percent::Percent,
 };
-use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpec};
+use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpecDTO};
 use platform::contract::CodeId;
 
 use sdk::{
@@ -46,7 +46,7 @@ fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
-        lease_position_spec: PositionSpec::new(
+        lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
@@ -141,7 +141,7 @@ fn test_update_config() {
         Percent::from_percent(1),
         Duration::from_hours(12),
     );
-    let expected_position_spec = PositionSpec::new(
+    let expected_position_spec = PositionSpecDTO::new(
         expected_liability,
         lpn_coin(4_211_442_000),
         lpn_coin(100_000),
@@ -174,7 +174,7 @@ fn test_update_config_invalid_liability() {
     pub enum MockSudoMsg {
         Config {
             lease_interest_rate_margin: Percent,
-            lease_position_spec: PositionSpec,
+            lease_position_spec: PositionSpecDTO,
             lease_interest_payment: InterestPaymentSpec,
         },
     }
@@ -191,7 +191,7 @@ fn test_update_config_invalid_liability() {
 
     let mock_msg = MockSudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        lease_position_spec: PositionSpec::new(liability, lpn_coin(6_433_000), lpn_coin(99_000)),
+        lease_position_spec: PositionSpecDTO::new(liability, lpn_coin(6_433_000), lpn_coin(99_000)),
         lease_interest_payment: InterestPaymentSpec::new(
             Duration::from_secs(20),
             Duration::from_secs(10),

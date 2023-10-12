@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
 use finance::percent::Percent;
-use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin, PositionSpec};
+use lease::api::{
+    ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin, PositionSpecDTO,
+};
 use lpp::msg::LpnCoin;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
@@ -18,7 +20,7 @@ pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
     pub lease_interest_rate_margin: Percent,
-    pub lease_position_spec: PositionSpec,
+    pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_payment: InterestPaymentSpec,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
@@ -77,7 +79,7 @@ pub enum SudoMsg {
     SetupDex(ConnectionParams),
     Config {
         lease_interest_rate_margin: Percent,
-        lease_position_spec: PositionSpec,
+        lease_position_spec: PositionSpecDTO,
         lease_interest_payment: InterestPaymentSpec,
     },
 }

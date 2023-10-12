@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize, Serializer};
 
 use finance::{liability::Liability, percent::Percent};
-use lease::api::{ConnectionParams, InterestPaymentSpec, LpnCoin, PositionSpec};
+use lease::api::{ConnectionParams, InterestPaymentSpec, LpnCoin, PositionSpecDTO};
 use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Storage},
@@ -40,7 +40,11 @@ impl Config {
                 lease_code_id: config.lease_code_id,
                 lpp_addr: config.lpp_addr,
                 lease_interest_rate_margin: config.lease_interest_rate_margin,
-                lease_position_spec: PositionSpec::new(config.liability, min_asset, min_sell_asset),
+                lease_position_spec: PositionSpecDTO::new(
+                    config.liability,
+                    min_asset,
+                    min_sell_asset,
+                ),
                 lease_interest_payment: config.lease_interest_payment,
                 time_alarms: config.time_alarms,
                 market_price_oracle: config.market_price_oracle,

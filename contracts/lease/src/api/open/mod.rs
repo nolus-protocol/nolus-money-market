@@ -39,7 +39,7 @@ pub struct NewLeaseForm {
     /// Maximum Loan-to-Downpayment percentage of the new lease, optional.
     pub max_ltd: Option<Percent>,
     /// Position parameters
-    pub position_spec: PositionSpec,
+    pub position_spec: PositionSpecDTO,
     /// Loan parameters
     pub loan: LoanForm,
     /// The time alarms contract the lease uses to get time notifications
@@ -117,9 +117,9 @@ impl InterestPaymentSpec {
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
-    try_from = "unchecked::PositionSpec"
+    try_from = "unchecked::PositionSpecDTO"
 )]
-pub struct PositionSpec {
+pub struct PositionSpecDTO {
     /// Liability constraints
     pub liability: Liability,
     ///  The minimum amount that a lease asset should be evaluated past any
@@ -130,7 +130,7 @@ pub struct PositionSpec {
     pub min_sell_asset: LpnCoin,
 }
 
-impl PositionSpec {
+impl PositionSpecDTO {
     #[cfg(any(test, feature = "testing", feature = "contract", feature = "migration"))]
     pub(crate) fn new_internal(
         liability: Liability,
@@ -244,7 +244,7 @@ mod test_position_spec {
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_slice, StdError};
 
-    use super::PositionSpec;
+    use super::PositionSpecDTO;
 
     type LpnCoin = Coin<Usdc>;
 
@@ -259,7 +259,7 @@ mod test_position_spec {
             Percent::from_percent(2),
             Duration::from_hours(1),
         );
-        let position_spec = PositionSpec::new(
+        let position_spec = PositionSpecDTO::new(
             liability,
             LpnCoin::new(9000000).into(),
             LpnCoin::new(5000).into(),
@@ -286,11 +286,11 @@ mod test_position_spec {
         assert_err(r, "'ATOM' pretending to be");
     }
 
-    fn assert_load_ok(exp: PositionSpec, json: &[u8]) {
-        assert_eq!(Ok(exp), from_slice::<PositionSpec>(json));
+    fn assert_load_ok(exp: PositionSpecDTO, json: &[u8]) {
+        assert_eq!(Ok(exp), from_slice::<PositionSpecDTO>(json));
     }
 
-    fn assert_err(r: Result<PositionSpec, StdError>, msg: &str) {
+    fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {
         assert!(matches!(
             r,
             Err(StdError::ParseErr {

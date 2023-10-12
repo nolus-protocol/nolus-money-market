@@ -3,7 +3,7 @@ use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Per
 use lease::{
     api::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, PositionSpec, StateQuery, StateResponse,
+        NewLeaseForm, PositionSpecDTO, StateQuery, StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
@@ -86,7 +86,7 @@ impl Instantiator {
                 customer: config.customer,
                 currency: lease_currency.into(),
                 max_ltd,
-                position_spec: PositionSpec::new(
+                position_spec: PositionSpecDTO::new(
                     Liability::new(
                         config.liability_init_percent,
                         config.liability_delta_to_healthy_percent,
