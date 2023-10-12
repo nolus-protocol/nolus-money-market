@@ -13,7 +13,7 @@ use crate::{
         IntoDTOResult, Lease,
     },
     loan::Loan,
-    position::Position,
+    position::{Position, Spec as PositionSpec},
 };
 
 use super::{liquidation_status, LiquidationStatus};
@@ -70,7 +70,8 @@ impl WithLeaseDeps for LeaseFactory {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let position = Position::try_from(self.amount, self.form.position_spec)?;
+        let position_spec = PositionSpec::<Lpn>::try_from(self.form.position_spec)?;
+        let position = Position::<Asset, Lpn>::try_from(self.amount, position_spec)?;
 
         let loan = Loan::new(
             self.start_at,

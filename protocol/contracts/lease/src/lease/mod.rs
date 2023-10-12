@@ -158,7 +158,11 @@ mod tests {
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{api::InterestPaymentSpec, loan::Loan, position::Position};
+    use crate::{
+        api::InterestPaymentSpec,
+        loan::Loan,
+        position::{Position, Spec as PositionSpec},
+    };
 
     use super::{Lease, State};
 
@@ -296,23 +300,24 @@ mod tests {
 
         let loan = loan.into();
         let loan = Loan::new(LEASE_START, loan, MARGIN_INTEREST_RATE, interest_spec);
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            RECALC_TIME,
+        );
+        let position_spec = PositionSpec::<TestLpn>::new(
+            liability,
+            Coin::<TestLpn>::new(15_000_000),
+            Coin::<TestLpn>::new(10_000),
+        );
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            Position::<TestCurrency, TestLpn>::new(
-                amount,
-                Liability::new(
-                    Percent::from_percent(65),
-                    Percent::from_percent(5),
-                    Percent::from_percent(10),
-                    Percent::from_percent(2),
-                    Percent::from_percent(3),
-                    Percent::from_percent(2),
-                    RECALC_TIME,
-                ),
-                Coin::<TestLpn>::new(15_000_000),
-                Coin::<TestLpn>::new(10_000),
-            ),
+            Position::<TestCurrency, TestLpn>::new(amount, position_spec),
             loan,
             oracle,
         )
