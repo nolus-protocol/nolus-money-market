@@ -73,7 +73,7 @@ where
         Trasactional: Currency,
     {
         let amount = price::total(amount, trasactional_in_lpn);
-        
+
         if amount < self.min_trasaction_amount {
             Err(ContractError::PositionCloseAmountTooSmall(
                 self.min_trasaction_amount.into(),
