@@ -9,8 +9,7 @@ use crate::{
 #[cfg(dex = "osmosis")]
 pub(crate) mod osmosis;
 
-#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Lpns {}
 
