@@ -4,6 +4,26 @@ use crate::{
     currency, AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
 };
 
+#[cfg(dex = "osmosis")]
+mod currencies {
+    use crate::{
+        lease::osmosis::{Atom, Axl, Cro, Osmo, Weth},
+        lpn::osmosis::Usdc,
+        native::Nls,
+    };
+
+    pub type PaymentC1 = Nls;
+    pub type PaymentC2 = Usdc;
+    pub type PaymentC3 = Atom;
+    pub type PaymentC4 = Axl;
+    pub type PaymentC5 = Osmo;
+    pub type PaymentC6 = Cro;
+    pub type PaymentC7 = Weth;
+
+    pub type StableC1 = Usdc;
+}
+pub use currencies::*;
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
 impl Currency for Usdc {

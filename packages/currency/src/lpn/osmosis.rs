@@ -1,11 +1,6 @@
-use serde::{Deserialize, Serialize};
+use sdk::schemars;
 
-use sdk::schemars::{self, JsonSchema};
-
-use crate::{
-    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult},
-    define_currency, define_symbol, Matcher, SymbolSlice,
-};
+use crate::{define_currency, define_symbol};
 
 define_symbol! {
     USDC {
@@ -25,26 +20,11 @@ define_symbol! {
 }
 define_currency!(Usdc, USDC);
 
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct Lpns {}
-
-impl Group for Lpns {
-    const DESCR: &'static str = "lpns";
-
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        M: Matcher + ?Sized,
-        V: AnyVisitor,
-    {
-        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::{
-        lease::Osmo,
+        lease::osmosis::Osmo,
+        lpn::{osmosis::Usdc, Lpns},
         native::Nls,
         test::group::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
@@ -52,8 +32,6 @@ mod test {
         },
         Currency,
     };
-
-    use super::{Lpns, Usdc};
 
     #[test]
     fn maybe_visit_on_ticker() {

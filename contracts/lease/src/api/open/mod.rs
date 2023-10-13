@@ -240,13 +240,13 @@ mod test_invariant {
 
 #[cfg(test)]
 mod test_position_spec {
-    use currency::lpn::Usdc;
+    use currency::test::StableC1;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_slice, StdError};
 
     use super::PositionSpecDTO;
 
-    type LpnCoin = Coin<Usdc>;
+    type LpnCoin = Coin<StableC1>;
 
     #[test]
     fn new_valid() {

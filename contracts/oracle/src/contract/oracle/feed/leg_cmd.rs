@@ -88,7 +88,7 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use ::currency::lease::{Atom, Cro, Juno, Wbtc, Weth};
+    use currency::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6};
 
     use crate::tests::{self, TheCurrency};
 
@@ -97,94 +97,94 @@ mod test {
     #[test]
     fn leg_cmd_normal_flow() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(1, 1);
-        feeds.add::<Atom, TheCurrency>(2, 1);
-        feeds.add::<Weth, Wbtc>(2, 1);
+        feeds.add::<PaymentC4, TheCurrency>(1, 1);
+        feeds.add::<PaymentC1, TheCurrency>(2, 1);
+        feeds.add::<PaymentC5, PaymentC4>(2, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
             stack: vec![],
         };
         assert_eq!(
-            cmd.on::<Wbtc, TheCurrency>(),
-            Ok(Some(tests::base_price::<Wbtc>(1, 1)))
+            cmd.on::<PaymentC4, TheCurrency>(),
+            Ok(Some(tests::base_price::<PaymentC4>(1, 1)))
         );
-        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(1, 1)]);
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC4>(1, 1)]);
 
         // child
         assert_eq!(
-            cmd.on::<Weth, Wbtc>(),
-            Ok(Some(tests::base_price::<Weth>(2, 1)))
+            cmd.on::<PaymentC5, PaymentC4>(),
+            Ok(Some(tests::base_price::<PaymentC5>(2, 1)))
         );
         assert_eq!(
             cmd.stack,
             vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Weth>(2, 1)
+                tests::base_price::<PaymentC4>(1, 1),
+                tests::base_price::<PaymentC5>(2, 1)
             ]
         );
 
         // hop to the next branch
         assert_eq!(
-            cmd.on::<Atom, TheCurrency>(),
-            Ok(Some(tests::base_price::<Atom>(2, 1)))
+            cmd.on::<PaymentC1, TheCurrency>(),
+            Ok(Some(tests::base_price::<PaymentC1>(2, 1)))
         );
-        assert_eq!(cmd.stack, vec![tests::base_price::<Atom>(2, 1)]);
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC1>(2, 1)]);
     }
 
     #[test]
     fn no_price_in_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(2, 1);
+        feeds.add::<PaymentC4, TheCurrency>(2, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![tests::base_price::<Wbtc>(2, 1)],
+            stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
 
-        assert_eq!(cmd.on::<Cro, Wbtc>(), Ok(None));
-        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
+        assert_eq!(cmd.on::<PaymentC6, PaymentC4>(), Ok(None));
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC4>(2, 1),]);
     }
 
     #[test]
     fn no_parent_price_in_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(2, 1);
-        feeds.add::<Juno, Weth>(3, 1);
+        feeds.add::<PaymentC4, TheCurrency>(2, 1);
+        feeds.add::<PaymentC3, PaymentC5>(3, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![tests::base_price::<Wbtc>(2, 1)],
+            stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
 
-        assert_eq!(cmd.on::<Juno, Weth>(), Ok(None));
-        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
+        assert_eq!(cmd.on::<PaymentC3, PaymentC5>(), Ok(None));
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC4>(2, 1),]);
     }
 
     #[test]
     fn hop_parent_in_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(2, 1);
-        feeds.add::<Juno, Wbtc>(3, 1);
-        feeds.add::<Cro, Wbtc>(4, 1);
+        feeds.add::<PaymentC4, TheCurrency>(2, 1);
+        feeds.add::<PaymentC3, PaymentC4>(3, 1);
+        feeds.add::<PaymentC6, PaymentC4>(4, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
             stack: vec![
-                tests::base_price::<Wbtc>(2, 1),
-                tests::base_price::<Juno>(6, 1),
+                tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC3>(6, 1),
             ],
         };
 
         assert_eq!(
-            cmd.on::<Cro, Wbtc>(),
-            Ok(Some(tests::base_price::<Cro>(8, 1)))
+            cmd.on::<PaymentC6, PaymentC4>(),
+            Ok(Some(tests::base_price::<PaymentC6>(8, 1)))
         );
         assert_eq!(
             cmd.stack,
             vec![
-                tests::base_price::<Wbtc>(2, 1),
-                tests::base_price::<Cro>(8, 1),
+                tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC6>(8, 1),
             ]
         );
     }
@@ -192,25 +192,25 @@ mod test {
     #[test]
     fn hop_to_root() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(2, 1);
-        feeds.add::<Cro, TheCurrency>(4, 1);
+        feeds.add::<PaymentC4, TheCurrency>(2, 1);
+        feeds.add::<PaymentC6, TheCurrency>(4, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![tests::base_price::<Wbtc>(2, 1)],
+            stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
 
         assert_eq!(
-            cmd.on::<Cro, TheCurrency>(),
-            Ok(Some(tests::base_price::<Cro>(4, 1)))
+            cmd.on::<PaymentC6, TheCurrency>(),
+            Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
         );
-        assert_eq!(cmd.stack, vec![tests::base_price::<Cro>(4, 1),]);
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC6>(4, 1),]);
     }
 
     #[test]
     fn price_root_with_empty_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Cro, TheCurrency>(4, 1);
+        feeds.add::<PaymentC6, TheCurrency>(4, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
@@ -218,24 +218,24 @@ mod test {
         };
 
         assert_eq!(
-            cmd.on::<Cro, TheCurrency>(),
-            Ok(Some(tests::base_price::<Cro>(4, 1)))
+            cmd.on::<PaymentC6, TheCurrency>(),
+            Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
         );
-        assert_eq!(cmd.stack, vec![tests::base_price::<Cro>(4, 1),]);
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC6>(4, 1),]);
     }
 
     #[test]
     fn no_price_at_root() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(2, 1);
+        feeds.add::<PaymentC4, TheCurrency>(2, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![tests::base_price::<Wbtc>(2, 1)],
+            stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
 
-        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(None));
+        assert_eq!(cmd.on::<PaymentC6, TheCurrency>(), Ok(None));
         // cleaned on the next successful iteration
-        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
+        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC4>(2, 1),]);
     }
 }

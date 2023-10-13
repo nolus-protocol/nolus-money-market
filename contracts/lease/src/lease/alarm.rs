@@ -107,7 +107,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currency::{lease::Atom, lpn::Usdc};
     use finance::{
         coin::Coin, duration::Duration, fraction::Fraction, liability::Zone, percent::Percent,
         price::total_of,
@@ -124,10 +123,9 @@ mod tests {
         lease::{
             self,
             tests::{
-                loan, open_lease, open_lease_with_payment_spec, LppLoanLocal, OracleLocalStub,
-                LEASE_START, RECALC_TIME,
+                loan, open_lease, open_lease_with_payment_spec, TestLease, TestLpn, LEASE_START,
+                RECALC_TIME,
             },
-            Lease,
         },
     };
 
@@ -328,13 +326,10 @@ mod tests {
     }
 
     fn pricealarms() -> OracleRef {
-        OracleRef::unchecked::<_, Usdc>(ORACLE_ADDR)
+        OracleRef::unchecked::<_, TestLpn>(ORACLE_ADDR)
     }
 
-    fn projected_liability(
-        lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, OracleLocalStub>,
-        at: Timestamp,
-    ) -> Coin<Usdc> {
+    fn projected_liability(lease: &TestLease, at: Timestamp) -> Coin<TestLpn> {
         let l = lease.loan.state(at);
         l.principal_due
             + l.previous_interest_due

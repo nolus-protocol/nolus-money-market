@@ -141,7 +141,10 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use ::currency::{lease::Atom, lpn::Usdc, Currency};
+    use currency::{
+        test::{PaymentC7, StableC1},
+        Currency,
+    };
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
     };
@@ -168,9 +171,10 @@ mod tests {
     const DUE_PERIOD: Duration = Duration::from_days(100);
     const GRACE_PERIOD: Duration = Duration::from_days(10);
     pub(super) const RECALC_TIME: Duration = Duration::from_hours(24);
-    type TestLpn = Usdc;
-    type TestCurrency = Atom;
-    type TestLease = Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+    pub(super) type TestLpn = StableC1;
+    pub(super) type TestCurrency = PaymentC7;
+    pub(super) type TestLease =
+        Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where

@@ -112,10 +112,7 @@ fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        lpn::{Lpns, Usdc},
-        Currency as _, SymbolStatic,
-    };
+    use currency::{payment::PaymentGroup, test::PaymentC1, Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
 
@@ -127,7 +124,7 @@ mod test {
 
     #[test]
     fn to_dex_symbol() {
-        type Currency = Usdc;
+        type Currency = PaymentC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
             super::to_dex_symbol(Currency::TICKER)
@@ -144,10 +141,10 @@ mod test {
 
     #[test]
     fn to_cwcoin() {
-        let coin: Coin<Usdc> = 3541415.into();
+        let coin: Coin<PaymentC1> = 3541415.into();
         assert_eq!(
-            CwCoin::new(coin.into(), Usdc::DEX_SYMBOL),
-            super::to_cwcoin::<Lpns>(&coin.into()).unwrap()
+            CwCoin::new(coin.into(), PaymentC1::DEX_SYMBOL),
+            super::to_cwcoin::<PaymentGroup>(&coin.into()).unwrap()
         );
     }
 
@@ -155,11 +152,11 @@ mod test {
     fn into_route() {
         let path = vec![SwapTarget {
             pool_id: 2,
-            target: Usdc::TICKER.into(),
+            target: PaymentC1::TICKER.into(),
         }];
         let expected = vec![SwapAmountInRoute {
             pool_id: 2,
-            token_out_denom: Usdc::DEX_SYMBOL.into(),
+            token_out_denom: PaymentC1::DEX_SYMBOL.into(),
         }];
         assert_eq!(Ok(expected), super::to_route(&path));
     }

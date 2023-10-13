@@ -106,7 +106,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::{lease::Weth, lpn::Usdc};
+    use currency::test::{PaymentC7, Usdc};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -306,7 +306,7 @@ mod test {
         );
     }
 
-    fn price(c: Amount, q: Amount) -> Price<Weth, Usdc> {
+    fn price(c: Amount, q: Amount) -> Price<PaymentC7, Usdc> {
         price::total_of(Coin::from(c)).is(Coin::from(q))
     }
 }

@@ -226,8 +226,7 @@ fn add_observation(
 #[cfg(test)]
 mod test {
     use currency::{
-        lease::{Atom, Cro, Osmo, Stars, Wbtc},
-        lpn::Usdc,
+        test::{Nls, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         Currency,
     };
     use finance::{
@@ -258,17 +257,22 @@ mod test {
         let storage = MemoryStorage::new();
 
         assert_eq!(
-            Ok(Price::<Atom, Atom>::identity().into()),
-            feeds.price::<Atom, _>(&storage, NOW, TOTAL_FEEDERS, [Atom::TICKER].into_iter())
+            Ok(Price::<PaymentC3, PaymentC3>::identity().into()),
+            feeds.price::<PaymentC3, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [PaymentC3::TICKER].into_iter()
+            )
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(
+            feeds.price::<PaymentC3, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Atom::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC3::TICKER].into_iter()
             )
         );
     }
@@ -277,8 +281,8 @@ mod test {
     fn feed_pair() {
         let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
         let mut storage = MemoryStorage::new();
-        let new_price: SpotPrice = price::total_of(Coin::<Wbtc>::new(1))
-            .is(Coin::<Usdc>::new(18500))
+        let new_price: SpotPrice = price::total_of(Coin::<PaymentC7>::new(1))
+            .is(Coin::<PaymentC4>::new(18500))
             .into();
 
         feeds
@@ -292,20 +296,20 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(
+            feeds.price::<PaymentC3, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Atom::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC3::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price),
-            feeds.price::<Usdc, _>(
+            feeds.price::<PaymentC4, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Usdc::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC4::TICKER].into_iter()
             )
         );
     }
@@ -314,9 +318,9 @@ mod test {
     fn feed_pairs() {
         let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
         let mut storage = MemoryStorage::new();
-        let new_price12 = price::total_of(Coin::<Wbtc>::new(1)).is(Coin::<Osmo>::new(2));
-        let new_price23 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3));
-        let new_price24 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Stars>::new(4));
+        let new_price12 = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<PaymentC5>::new(2));
+        let new_price23 = price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<PaymentC6>::new(3));
+        let new_price24 = price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<PaymentC4>::new(4));
 
         feeds
             .feed(
@@ -329,56 +333,56 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Cro, _>(
+            feeds.price::<Nls, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Cro::TICKER].into_iter()
+                [PaymentC7::TICKER, Nls::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price12.into()),
-            feeds.price::<Osmo, _>(
+            feeds.price::<PaymentC5, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Osmo::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC5::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price23.into()),
-            feeds.price::<Usdc, _>(
+            feeds.price::<PaymentC6, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Osmo::TICKER, Usdc::TICKER].into_iter()
+                [PaymentC5::TICKER, PaymentC6::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price24.into()),
-            feeds.price::<Stars, _>(
+            feeds.price::<PaymentC4, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Osmo::TICKER, Stars::TICKER].into_iter()
+                [PaymentC5::TICKER, PaymentC4::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok((new_price12 * new_price23).into()),
-            feeds.price::<Usdc, _>(
+            feeds.price::<PaymentC6, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Osmo::TICKER, Usdc::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC5::TICKER, PaymentC6::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok((new_price12 * new_price24).into()),
-            feeds.price::<Stars, _>(
+            feeds.price::<PaymentC4, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Osmo::TICKER, Stars::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC5::TICKER, PaymentC4::TICKER].into_iter()
             )
         );
     }

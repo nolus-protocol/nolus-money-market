@@ -11,8 +11,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, Cont
 #[cfg(test)]
 mod tests {
     use currency::{
-        lease::{Cro, Osmo},
-        lpn::Usdc,
+        test::{PaymentC3, PaymentC6, StableC1},
         Currency,
     };
     use finance::{duration::Duration, percent::Percent};
@@ -34,10 +33,10 @@ mod tests {
     fn configure() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            Usdc::TICKER.to_string(),
+            StableC1::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER)),
+            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER)),
         );
         let (mut deps, _info) = setup_test(msg);
 
@@ -67,7 +66,7 @@ mod tests {
             value,
             ConfigResponse {
                 config: Config {
-                    base_asset: Usdc::TICKER.into(),
+                    base_asset: StableC1::TICKER.into(),
                     price_config: PriceConfig::new(
                         Percent::from_percent(44),
                         Duration::from_secs(5),
@@ -83,7 +82,8 @@ mod tests {
     fn config_supported_pairs() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER), (2, Osmo::TICKER));
+        let test_tree =
+            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC6::TICKER));
 
         let res = sudo(
             deps.as_mut(),
@@ -103,17 +103,17 @@ mod tests {
 
         let mut expected = vec![
             SwapLeg {
-                from: Cro::TICKER.into(),
+                from: PaymentC3::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: Usdc::TICKER.into(),
+                    target: StableC1::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: Osmo::TICKER.into(),
+                from: PaymentC6::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: Usdc::TICKER.into(),
+                    target: StableC1::TICKER.into(),
                 },
             },
         ];
@@ -127,7 +127,8 @@ mod tests {
     fn invalid_supported_pairs() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = swap_tree!({ base: Usdc::TICKER }, (1, Cro::TICKER), (2, Cro::TICKER));
+        let test_tree =
+            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC3::TICKER));
 
         let Response {
             messages,

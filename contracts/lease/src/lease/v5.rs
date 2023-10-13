@@ -1,4 +1,4 @@
-use currency::lpn::Usdc;
+use currency::test::StableC1;
 use finance::{coin::Coin, liability::Liability};
 use oracle::stub::OracleRef;
 use serde::Deserialize;
@@ -14,8 +14,8 @@ use crate::{
 
 use super::LeaseDTO as LeaseDTO_v6;
 
-pub(crate) const MIN_ASSET: Coin<Usdc> = Coin::new(15_000_000);
-pub(crate) const MIN_SELL_ASSET: Coin<Usdc> = Coin::new(10_000);
+pub(crate) const MIN_ASSET: Coin<StableC1> = Coin::new(15_000_000);
+pub(crate) const MIN_SELL_ASSET: Coin<StableC1> = Coin::new(10_000);
 
 #[derive(Deserialize)]
 pub(crate) struct LeaseDTO {

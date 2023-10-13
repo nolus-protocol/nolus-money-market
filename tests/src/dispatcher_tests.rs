@@ -1,4 +1,4 @@
-use currency::{lpn::Usdc, native::Nls, Currency};
+use currency::{native::Nls, test::StableC1, Currency};
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},
@@ -11,7 +11,7 @@ use crate::common::{
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = Usdc;
+type Lpn = StableC1;
 
 #[test]
 fn on_alarm_zero_reward() {

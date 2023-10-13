@@ -401,7 +401,7 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use currency::lpn::Usdc;
+    use currency::test::StableC1;
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
         error::ContractError as LppError,
@@ -422,7 +422,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const PROFIT_ADDR: &str = "profit_addr";
 
-    type Lpn = Usdc;
+    type Lpn = StableC1;
     type LppResult<T> = Result<T, LppError>;
 
     mod test_repay {

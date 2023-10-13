@@ -355,12 +355,9 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        lease::Atom,
         native::{Native, Nls},
         payment::PaymentGroup,
-    };
-    use currency::{
-        test::{Dai, TestCurrencies, Usdc},
+        test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
         Currency, Group, SymbolStatic,
     };
     use finance::{
@@ -574,9 +571,9 @@ mod test {
 
     #[test]
     fn total_balance_same_group() {
-        total_balance_tester::<PaymentGroup>(
-            vec![cw_coin(100, Atom::BANK_SYMBOL)],
-            &[Atom::BANK_SYMBOL],
+        total_balance_tester::<TestExtraCurrencies>(
+            vec![cw_coin(100, Dai::BANK_SYMBOL)],
+            &[Dai::BANK_SYMBOL],
         );
     }
 

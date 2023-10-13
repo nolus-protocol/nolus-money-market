@@ -1,6 +1,5 @@
 use currency::{
-    lease::{Atom, Cro},
-    lpn::Usdc,
+    test::{PaymentC3, PaymentC6, StableC1},
     Currency,
 };
 use finance::{
@@ -29,13 +28,13 @@ mod liquidation;
 mod open;
 mod repay;
 
-type LpnCurrency = Usdc;
+type LpnCurrency = StableC1;
 type LpnCoin = Coin<LpnCurrency>;
 
-type LeaseCurrency = Cro;
+type LeaseCurrency = PaymentC6;
 type LeaseCoin = Coin<LeaseCurrency>;
 
-type PaymentCurrency = Atom;
+type PaymentCurrency = PaymentC3;
 type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);

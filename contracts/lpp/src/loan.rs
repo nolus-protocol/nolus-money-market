@@ -1,6 +1,5 @@
-use cosmwasm_std::Storage;
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp},
+    cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

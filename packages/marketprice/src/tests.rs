@@ -1,8 +1,7 @@
 use std::time::SystemTime;
 
 use currency::{
-    lease::{Atom, Cro, Evmos, Juno, Osmo, Wbtc, Weth},
-    lpn::Usdc,
+    test::{PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     Currency,
 };
 use finance::{
@@ -64,11 +63,11 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<Atom, _>(
+        .price::<PaymentC3, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
-            [Osmo::TICKER, Atom::TICKER].into_iter(),
+            [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -97,10 +96,11 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let price1 = price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(5));
-    let price2 = price::total_of(Coin::<Osmo>::new(10000000000)).is(Coin::<Weth>::new(1000000009));
-    let price3 =
-        price::total_of(Coin::<Osmo>::new(10000000000000)).is(Coin::<Wbtc>::new(100000000000002));
+    let price1 = price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(5));
+    let price2 =
+        price::total_of(Coin::<PaymentC5>::new(10000000000)).is(Coin::<PaymentC7>::new(1000000009));
+    let price3 = price::total_of(Coin::<PaymentC5>::new(10000000000000))
+        .is(Coin::<PaymentC4>::new(100000000000002));
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
@@ -113,22 +113,22 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
     let err = market
-        .price::<Atom, _>(
+        .price::<PaymentC3, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
-            [Osmo::TICKER, Atom::TICKER].into_iter(),
+            [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     {
         let price_resp = market
-            .price::<Atom, _>(
+            .price::<PaymentC3, _>(
                 &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
-                [Osmo::TICKER, Atom::TICKER].into_iter(),
+                [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
             )
             .unwrap();
 
@@ -144,91 +144,97 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Weth>::new(1)),
+        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(1)),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(3)),
-    )
-    .unwrap();
-
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Wbtc>::new(3)),
+        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC2>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Osmo>::new(1)),
+        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC7>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(3)),
-    )
-    .unwrap();
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Cro>::new(2)),
+        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC5>::new(1)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Osmo>::new(3)),
+        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC2>::new(3)),
+    )
+    .unwrap();
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<PaymentC1>::new(2)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Evmos>::new(1)).is(Coin::<Wbtc>::new(3)),
+        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC5>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Usdc>::new(1)).is(Coin::<Atom>::new(3)),
+        price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<PaymentC7>::new(3)),
+    )
+    .unwrap();
+
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<PaymentC2>::new(1)).is(Coin::<PaymentC3>::new(3)),
     )
     .unwrap();
 
     let last_feed_time = feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Juno>::new(1)).is(Coin::<Usdc>::new(3)),
+        price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<PaymentC2>::new(3)),
     )
     .unwrap();
 
     let price_resp = market
-        .price::<Usdc, _>(
+        .price::<PaymentC2, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
-            [Atom::TICKER, Osmo::TICKER, Cro::TICKER, Usdc::TICKER].into_iter(),
+            [
+                PaymentC3::TICKER,
+                PaymentC5::TICKER,
+                PaymentC1::TICKER,
+                PaymentC2::TICKER,
+            ]
+            .into_iter(),
         )
         .unwrap();
-    let expected = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(6));
+    let expected = price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC2>::new(6));
     let expected_dto = PriceDTO::from(expected);
 
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
     let price_resp = market
-        .price::<Usdc, _>(
+        .price::<PaymentC2, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
-            [Atom::TICKER, Usdc::TICKER].into_iter(),
+            [PaymentC3::TICKER, PaymentC2::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -236,11 +242,11 @@ fn marketprice_follow_the_path() {
     // second part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<Usdc, _>(
+            .price::<PaymentC2, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Usdc::TICKER].into_iter(),
+                [PaymentC7::TICKER, PaymentC2::TICKER].into_iter(),
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -249,11 +255,11 @@ fn marketprice_follow_the_path() {
     // first part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<Osmo, _>(
+            .price::<PaymentC5, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [Wbtc::TICKER, Osmo::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC5::TICKER].into_iter()
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

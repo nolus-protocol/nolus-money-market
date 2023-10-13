@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Usdc, Currency, SymbolStatic};
+use currency::{test::StableC1, Currency, SymbolStatic};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -36,7 +36,7 @@ const TIMEALARMS_ADDR: &str = "timealarms";
 const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 
-type TheCurrency = Usdc;
+type TheCurrency = StableC1;
 
 const DENOM: SymbolStatic = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);

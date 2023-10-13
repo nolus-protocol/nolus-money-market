@@ -111,7 +111,7 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppRef> {
 
 #[cfg(test)]
 mod test {
-    use currency::{lpn::Usdc, Currency};
+    use currency::{test::StableC1, Currency};
     use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{
@@ -128,9 +128,9 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            currency: ToOwned::to_owned(Usdc::TICKER),
+            currency: ToOwned::to_owned(StableC1::TICKER),
         };
-        let borrow_amount = Coin::<Usdc>::new(10);
+        let borrow_amount = Coin::<StableC1>::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
         let mut lpp_stub = lpp.into_lender(&wrapper);

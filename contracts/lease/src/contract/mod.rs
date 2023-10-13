@@ -1,7 +1,7 @@
-use cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, DexConnectable};
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::lease::{with_lease::WithLease, LeaseDTO};
 

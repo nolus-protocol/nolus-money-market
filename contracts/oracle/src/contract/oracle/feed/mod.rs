@@ -114,8 +114,8 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use ::currency::{
-        lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
+    use currency::{
+        test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         SymbolStatic,
     };
     use finance::{
@@ -163,12 +163,12 @@ mod test {
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         let base = TheCurrency::TICKER;
-        let osmo = Osmo::TICKER;
-        let atom = Atom::TICKER;
-        let weth = Weth::TICKER;
-        let wbtc = Wbtc::TICKER;
-        let juno = Juno::TICKER;
-        let cro = Cro::TICKER;
+        let osmo = PaymentC5::TICKER;
+        let nls = PaymentC1::TICKER;
+        let weth = PaymentC7::TICKER;
+        let atom = PaymentC3::TICKER;
+        let axl = PaymentC4::TICKER;
+        let cro = PaymentC6::TICKER;
 
         serde_json_wasm::from_str(&format!(
             r#"
@@ -176,18 +176,18 @@ mod test {
                 "value":[0,"{base}"],
                 "children":[
                     {{
-                        "value":[4,"{wbtc}"],
+                        "value":[4,"{atom}"],
                         "children":[
                             {{"value":[3,"{weth}"]}}
                         ]
                     }},
                     {{
-                        "value":[2,"{atom}"],
+                        "value":[2,"{nls}"],
                         "children":[
                             {{
                                 "value":[1,"{osmo}"],
                                 "children":[
-                                    {{"value":[5,"{juno}"]}},
+                                    {{"value":[5,"{axl}"]}},
                                     {{"value":[6,"{cro}"]}}
                                 ]
                             }}
@@ -227,12 +227,12 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        tests::dto_price::<Wbtc, TheCurrency>(1, 1),
-                        tests::dto_price::<Atom, TheCurrency>(2, 1),
-                        tests::dto_price::<Weth, Wbtc>(1, 1),
-                        tests::dto_price::<Osmo, Atom>(1, 1),
-                        tests::dto_price::<Cro, Osmo>(3, 1),
-                        tests::dto_price::<Juno, Osmo>(1, 1),
+                        tests::dto_price::<PaymentC3, TheCurrency>(1, 1),
+                        tests::dto_price::<PaymentC1, TheCurrency>(2, 1),
+                        tests::dto_price::<PaymentC7, PaymentC3>(1, 1),
+                        tests::dto_price::<PaymentC5, PaymentC1>(1, 1),
+                        tests::dto_price::<PaymentC6, PaymentC5>(3, 1),
+                        tests::dto_price::<PaymentC4, PaymentC5>(1, 1),
                     ],
                 )
                 .unwrap();
@@ -243,12 +243,12 @@ mod test {
                 .collect();
 
             let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Weth>(1, 1),
-                tests::base_price::<Atom>(2, 1),
-                tests::base_price::<Osmo>(2, 1),
-                tests::base_price::<Juno>(2, 1),
-                tests::base_price::<Cro>(6, 1),
+                tests::base_price::<PaymentC3>(1, 1),
+                tests::base_price::<PaymentC7>(1, 1),
+                tests::base_price::<PaymentC1>(2, 1),
+                tests::base_price::<PaymentC5>(2, 1),
+                tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC6>(6, 1),
             ];
 
             assert_eq!(expected, prices);
@@ -277,21 +277,21 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        // tests::dto_price::<Wbtc, TheCurrency>(1, 1),
-                        tests::dto_price::<Atom, TheCurrency>(2, 1),
-                        tests::dto_price::<Weth, Wbtc>(1, 1),
-                        tests::dto_price::<Osmo, Atom>(1, 1),
-                        tests::dto_price::<Cro, Osmo>(3, 1),
-                        tests::dto_price::<Juno, Osmo>(1, 1),
+                        // tests::dto_price::<PaymentC3, TheCurrency>(1, 1),
+                        tests::dto_price::<PaymentC1, TheCurrency>(2, 1),
+                        tests::dto_price::<PaymentC7, PaymentC3>(1, 1),
+                        tests::dto_price::<PaymentC5, PaymentC1>(1, 1),
+                        tests::dto_price::<PaymentC6, PaymentC5>(3, 1),
+                        tests::dto_price::<PaymentC4, PaymentC5>(1, 1),
                     ],
                 )
                 .unwrap();
 
             let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
-                tests::base_price::<Atom>(2, 1),
-                tests::base_price::<Osmo>(2, 1),
-                tests::base_price::<Juno>(2, 1),
-                tests::base_price::<Cro>(6, 1),
+                tests::base_price::<PaymentC1>(2, 1),
+                tests::base_price::<PaymentC5>(2, 1),
+                tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC6>(6, 1),
             ];
 
             let prices: Vec<_> = oracle

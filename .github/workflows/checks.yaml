@@ -12,6 +12,8 @@ env:
   # Network's name is set to `main` to allow building during checking and testing
   # pipelines, which is ignored during optimized builds.
   NET_NAME: "main"
+  # DEX name to check with
+  DEX: "osmosis"
 
 jobs:
   check_formatting:

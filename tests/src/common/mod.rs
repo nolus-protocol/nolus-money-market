@@ -1,7 +1,7 @@
 use ::lease::api::LpnCoin;
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Usdc, native::Nls, Currency};
+use currency::{native::Nls, test::StableC1, Currency};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -65,7 +65,7 @@ pub mod treasury;
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 pub type Native = Nls;
-pub type Lpn = Usdc;
+pub type Lpn = StableC1;
 
 pub fn native_cwcoin<A>(amount: A) -> CwCoin
 where

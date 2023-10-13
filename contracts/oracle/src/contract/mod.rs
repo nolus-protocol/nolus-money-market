@@ -165,7 +165,10 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
 #[cfg(test)]
 mod tests {
-    use currency::{lease::Osmo, lpn::Usdc, Currency};
+    use currency::{
+        test::{PaymentC5, StableC1},
+        Currency,
+    };
     use finance::{duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
     use swap::SwapTarget;
@@ -182,10 +185,10 @@ mod tests {
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            Usdc::TICKER.to_string(),
+            StableC1::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Usdc::TICKER }, (1, Osmo::TICKER)),
+            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC5::TICKER)),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -194,7 +197,7 @@ mod tests {
         assert_eq!(
             ConfigResponse {
                 config: Config {
-                    base_asset: Usdc::TICKER.into(),
+                    base_asset: StableC1::TICKER.into(),
                     price_config: PriceConfig::new(
                         Percent::from_percent(50),
                         Duration::from_secs(60),
@@ -215,10 +218,10 @@ mod tests {
         let value: Vec<SwapLeg> = from_binary(&res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: Osmo::TICKER.into(),
+            from: PaymentC5::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
-                target: Usdc::TICKER.into(),
+                target: StableC1::TICKER.into(),
             },
         }];
 

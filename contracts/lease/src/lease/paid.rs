@@ -51,7 +51,10 @@ where
 mod tests {
     use std::marker::PhantomData;
 
-    use currency::{lease::Atom, lpn::Usdc, Currency, Group};
+    use currency::{
+        test::{PaymentC3, StableC1},
+        Currency, Group,
+    };
     use finance::{
         coin::{Coin, WithCoin},
         zero::Zero,
@@ -66,8 +69,8 @@ mod tests {
     use super::Lease;
 
     const CUSTOMER: &str = "customer";
-    type TestLpn = Usdc;
-    type TestAsset = Atom;
+    type TestLpn = StableC1;
+    type TestAsset = PaymentC3;
 
     pub struct MockBankView {
         balance: Coin<TestAsset>,

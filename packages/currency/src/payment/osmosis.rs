@@ -1,47 +1,16 @@
-use serde::{Deserialize, Serialize};
-
-use sdk::schemars::{self, JsonSchema};
-
-use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult},
-    lease::LeaseGroup,
-    lpn::Lpns,
-    native::Native,
-    Matcher, SymbolSlice,
-};
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct PaymentGroup {}
-
-impl Group for PaymentGroup {
-    const DESCR: &'static str = "payment";
-
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
-    where
-        M: Matcher + ?Sized,
-        V: AnyVisitor,
-    {
-        LeaseGroup::maybe_visit(matcher, symbol, visitor)
-            .or_else(|v| Lpns::maybe_visit(matcher, symbol, v))
-            .or_else(|v| Native::maybe_visit(matcher, symbol, v))
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::{
-        lease::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth},
-        lpn::Usdc,
+        lease::osmosis::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth},
+        lpn::osmosis::Usdc,
         native::Nls,
+        payment::PaymentGroup,
         test::group::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
         Currency,
     };
-
-    use super::PaymentGroup;
 
     #[test]
     fn maybe_visit_on_ticker() {

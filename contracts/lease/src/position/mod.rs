@@ -223,7 +223,7 @@ where
 #[cfg(test)]
 mod test_check {
 
-    use currency::{lpn::Usdc, test::Dai};
+    use currency::{test::PaymentC3, test::StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -234,8 +234,8 @@ mod test_check {
 
     use crate::position::{Cause, Position, Status};
 
-    type TestCurrency = Dai;
-    type TestLpn = Usdc;
+    type TestCurrency = PaymentC3;
+    type TestLpn = StableC1;
 
     #[test]
     fn no_debt() {
@@ -882,7 +882,7 @@ mod test_check {
 
 #[cfg(test)]
 mod test_validate_close {
-    use currency::{lpn::Usdc, test::Dai};
+    use currency::{test::PaymentC3, test::StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -895,8 +895,8 @@ mod test_validate_close {
 
     use super::Position;
 
-    type TestCurrency = Dai;
-    type TestLpn = Usdc;
+    type TestCurrency = PaymentC3;
+    type TestLpn = StableC1;
 
     #[test]
     fn too_small_amount() {

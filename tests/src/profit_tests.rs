@@ -1,4 +1,4 @@
-use currency::{lpn::Usdc, Currency};
+use currency::{test::StableC1, Currency};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -22,7 +22,7 @@ use crate::common::{
 
 #[test]
 fn update_config() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
 
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
@@ -73,7 +73,7 @@ fn update_config() {
 
 #[test]
 fn update_config_unauthorized() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
 
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
@@ -103,7 +103,7 @@ fn update_config_unauthorized() {
 
 #[test]
 fn on_alarm_from_unknown() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
     let user_addr: Addr = Addr::unchecked(USER);
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
@@ -144,7 +144,7 @@ fn on_alarm_from_unknown() {
 
 #[test]
 fn on_alarm_zero_balance() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
@@ -171,7 +171,7 @@ fn on_alarm_zero_balance() {
 
 #[test]
 fn on_alarm_native_only_transfer() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
@@ -281,7 +281,7 @@ fn on_alarm_native_only_transfer() {
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
@@ -343,7 +343,7 @@ fn on_alarm_foreign_only_transfer() {
 
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
@@ -414,7 +414,7 @@ fn on_alarm_native_and_foreign_transfer() {
 
 #[test]
 fn integration_with_time_alarms() {
-    type Lpn = Usdc;
+    type Lpn = StableC1;
     const CADENCE_HOURS: u16 = 2;
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()

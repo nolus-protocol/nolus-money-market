@@ -1,7 +1,6 @@
 use currency::{
-    lease::{Atom, Cro, Osmo, Wbtc, Weth},
-    lpn::Usdc,
     native::Nls,
+    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
 };
 use currency::{Currency, SymbolOwned};
 use finance::{
@@ -33,7 +32,7 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
-pub(crate) type TheCurrency = Usdc;
+pub(crate) type TheCurrency = StableC1;
 
 pub(crate) fn dto_price<B, Q>(total_of: Amount, is: Amount) -> PriceDTO<SwapGroup, SwapGroup>
 where
@@ -76,7 +75,7 @@ pub(crate) fn dummy_instantiate_msg(
 
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     dummy_instantiate_msg(
-        Usdc::TICKER.to_string(),
+        StableC1::TICKER.to_string(),
         60,
         Percent::from_percent(50),
         serde_json_wasm::from_str(&format!(
@@ -95,19 +94,19 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                         ]
                     }},
                     {{
-                        "value":[4,"{wbtc}"],
+                        "value":[4,"{axl}"],
                         "children":[
                             {{"value":[5,"{cro}"]}}
                         ]
                     }}
                 ]
             }}"#,
-            usdc = Usdc::TICKER,
-            weth = Weth::TICKER,
-            atom = Atom::TICKER,
-            osmo = Osmo::TICKER,
-            wbtc = Wbtc::TICKER,
-            cro = Cro::TICKER,
+            usdc = StableC1::TICKER,
+            weth = PaymentC7::TICKER,
+            atom = PaymentC3::TICKER,
+            osmo = PaymentC5::TICKER,
+            axl = PaymentC4::TICKER,
+            cro = PaymentC6::TICKER,
         ))
         .unwrap(),
     )
@@ -116,14 +115,22 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(12)))
-                .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(32)))
-                .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(12)))
-                .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<Wbtc>::new(10)).is(Coin::<Usdc>::new(120)))
-                .unwrap(),
+            PriceDTO::try_from(
+                price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(12)),
+            )
+            .unwrap(),
+            PriceDTO::try_from(
+                price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
+            )
+            .unwrap(),
+            PriceDTO::try_from(
+                price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(12)),
+            )
+            .unwrap(),
+            PriceDTO::try_from(
+                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
+            )
+            .unwrap(),
         ],
     }
 }

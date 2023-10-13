@@ -172,9 +172,8 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 #[cfg(test)]
 mod tests {
     use currency::{
-        lease::{Akt, Axl, Mars, Wbtc, Weth},
-        lpn::Usdc,
         payment::PaymentGroup,
+        test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
     };
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
@@ -196,7 +195,7 @@ mod tests {
             Config::new(
                 24,
                 Addr::unchecked("DEADCODE"),
-                OracleRef::unchecked::<_, Usdc>("DEADCODE"),
+                OracleRef::unchecked::<_, StableC1>("DEADCODE"),
                 TimeAlarmsRef::unchecked("DEADCODE"),
             ),
             Account::unchecked(
@@ -249,8 +248,8 @@ mod tests {
     #[test]
     fn always_continue() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Weth>::new(100).into(),
-            Coin::<Axl>::new(200).into(),
+            Coin::<PaymentC7>::new(100).into(),
+            Coin::<PaymentC4>::new(200).into(),
         ]);
 
         assert_eq!(
@@ -262,8 +261,8 @@ mod tests {
     #[test]
     fn stop_on_first() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Akt>::new(100).into(),
-            Coin::<Usdc>::new(200).into(),
+            Coin::<PaymentC3>::new(100).into(),
+            Coin::<StableC1>::new(200).into(),
         ]);
 
         assert_eq!(
@@ -275,8 +274,8 @@ mod tests {
     #[test]
     fn stop_on_second() {
         let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<Wbtc>::new(100).into(),
-            Coin::<Mars>::new(200).into(),
+            Coin::<PaymentC6>::new(100).into(),
+            Coin::<PaymentC5>::new(200).into(),
         ]);
 
         assert_eq!(

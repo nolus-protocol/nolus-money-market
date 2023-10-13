@@ -1,4 +1,8 @@
-use currency::{lease::Atom, lpn::Usdc, native::Nls, Currency};
+use currency::{
+    native::Nls,
+    test::{PaymentC3, StableC1},
+    Currency,
+};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -33,8 +37,8 @@ use crate::common::{
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = Usdc;
-type LeaseCurrency = Atom;
+type Lpn = StableC1;
+type LeaseCurrency = PaymentC3;
 
 fn general_interest_rate(
     loan: u32,

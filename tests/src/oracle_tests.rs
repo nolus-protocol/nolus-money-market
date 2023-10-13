@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json_wasm::from_str;
 
 use currency::{
-    lease::{Atom, Cro, Osmo, Wbtc, Weth},
-    lpn::Usdc,
+    test::StableC1,
+    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     Currency,
 };
 use finance::{
@@ -43,10 +43,10 @@ use crate::common::{
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = Usdc;
-type LeaseCurrency = Atom;
+type Lpn = StableC1;
+type LeaseCurrency = PaymentC3;
 type TheCoin = Coin<Lpn>;
-type BaseC = Osmo;
+type BaseC = PaymentC5;
 
 fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where
@@ -109,7 +109,7 @@ fn internal_test_integration_setup_test() {
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
-        Coin::<Usdc>::new(7),
+        Coin::<StableC1>::new(7),
     );
     assert_eq!(response.data, None);
     assert_eq!(
@@ -134,7 +134,7 @@ fn feed_price_with_alarm_issue() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(1)),
+                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(1)),
                     None,
                 ),
             },
@@ -148,7 +148,7 @@ fn feed_price_with_alarm_issue() {
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
-        Coin::<Usdc>::new(7),
+        Coin::<StableC1>::new(7),
     );
 }
 
@@ -166,7 +166,7 @@ fn feed_price_with_alarm() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
+                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
                 ),
             },
@@ -179,8 +179,8 @@ fn feed_price_with_alarm() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<Cro>::new(1),
-        Coin::<Usdc>::new(5),
+        Coin::<PaymentC6>::new(1),
+        Coin::<StableC1>::new(5),
     );
 }
 
@@ -198,8 +198,8 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(5)),
-                    Some(price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(5))),
+                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(5)),
+                    Some(price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(5))),
                 ),
             },
             &[],
@@ -215,7 +215,7 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
+                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
                 ),
             },
@@ -229,8 +229,8 @@ fn overwrite_alarm_and_dispatch() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<Cro>::new(1),
-        Coin::<Usdc>::new(5),
+        Coin::<PaymentC6>::new(1),
+        Coin::<StableC1>::new(5),
     );
 
     let res: AppResponse = test_case
@@ -330,13 +330,13 @@ fn test_config_update() {
         &mut test_case,
         feeder1,
         Coin::<BaseC>::new(base),
-        Coin::<Usdc>::new(quote),
+        Coin::<StableC1>::new(quote),
     );
     oracle_mod::feed_price(
         &mut test_case,
         feeder2,
         Coin::<BaseC>::new(base),
-        Coin::<Usdc>::new(quote),
+        Coin::<StableC1>::new(quote),
     );
 
     let price: SpotPrice = test_case
@@ -352,8 +352,10 @@ fn test_config_update() {
 
     assert_eq!(
         price,
-        PriceDTO::try_from(price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)))
-            .unwrap()
+        PriceDTO::try_from(
+            price::total_of(Coin::<BaseC>::new(base)).is(Coin::<StableC1>::new(quote))
+        )
+        .unwrap()
     );
 
     let response: AppResponse = test_case
@@ -399,10 +401,10 @@ fn swap_tree() -> HumanReadableTree<SwapTarget> {
                     }}
                 ]
             }}"#,
-        usdc = Usdc::TICKER,
+        usdc = StableC1::TICKER,
         base_c = BaseC::TICKER,
-        weth = Weth::TICKER,
-        wbtc = Wbtc::TICKER,
+        weth = PaymentC7::TICKER,
+        wbtc = PaymentC4::TICKER,
     ))
     .unwrap()
 }
@@ -431,8 +433,8 @@ fn test_swap_path() {
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
             &OracleQ::SwapPath {
-                from: Wbtc::TICKER.into(),
-                to: Weth::TICKER.into(),
+                from: PaymentC4::TICKER.into(),
+                to: PaymentC7::TICKER.into(),
             },
         )
         .unwrap();
@@ -444,7 +446,7 @@ fn test_swap_path() {
         },
         SwapTarget {
             pool_id: 2,
-            target: Weth::TICKER.into(),
+            target: PaymentC7::TICKER.into(),
         },
     ];
 
@@ -548,7 +550,7 @@ fn schedule_alarm(
                 &ORACLE_ADDR.load(storage).unwrap(),
                 oracle::msg::ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
-                        price::total_of::<BaseC>(base.into()).is::<Usdc>(quote.into()),
+                        price::total_of::<BaseC>(base.into()).is::<StableC1>(quote.into()),
                         None,
                     ),
                 },
@@ -705,7 +707,7 @@ fn price_alarm_rescheduling() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
-        Coin::<Usdc>::new(1),
+        Coin::<StableC1>::new(1),
     );
 
     let response = dispatch_alarms(
@@ -759,7 +761,7 @@ fn price_alarm_rescheduling() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(4),
-        Coin::<Usdc>::new(1),
+        Coin::<StableC1>::new(1),
     );
 
     let response = dispatch_alarms(
@@ -828,7 +830,7 @@ fn price_alarm_rescheduling_with_failing() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
-        Coin::<Usdc>::new(1),
+        Coin::<StableC1>::new(1),
     );
 
     let response = dispatch_alarms(

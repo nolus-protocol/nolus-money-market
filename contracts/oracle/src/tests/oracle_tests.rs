@@ -1,6 +1,5 @@
 use currency::{
-    lease::{Atom, Osmo, Wbtc, Weth},
-    lpn::Usdc,
+    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC7, StableC1},
     Currency,
 };
 use finance::{coin::Coin, price, price::dto::PriceDTO};
@@ -40,22 +39,23 @@ fn feed_prices_unknown_feeder() {
 fn feed_direct_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    let expected_price =
-        PriceDTO::try_from(price::total_of(Coin::<Wbtc>::new(10)).is(Coin::<Usdc>::new(120)))
-            .unwrap();
+    let expected_price = PriceDTO::try_from(
+        price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
+    )
+    .unwrap();
 
-    // Feed direct price Wbtc/OracleBaseAsset
+    // Feed direct price PaymentC4/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![expected_price.clone()],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for Osmo
+    // query price for PaymentC5
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::Price {
-            currency: Wbtc::TICKER.to_string(),
+            currency: PaymentC4::TICKER.to_string(),
         },
     )
     .unwrap();
@@ -68,34 +68,40 @@ fn feed_indirect_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let price_a_to_b =
-        PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(120)))
-            .unwrap();
+        PriceDTO::try_from(
+            price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(120)),
+        )
+        .unwrap();
     let price_b_to_c =
-        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(5)))
-            .unwrap();
-    let price_c_to_usdc =
-        PriceDTO::try_from(price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(5)))
-            .unwrap();
+        PriceDTO::try_from(
+            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(5)),
+        )
+        .unwrap();
+    let price_c_to_usdc = PriceDTO::try_from(
+        price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(5)),
+    )
+    .unwrap();
 
-    // Feed indirect price from Osmo to OracleBaseAsset
+    // Feed indirect price from PaymentC5 to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![price_a_to_b, price_b_to_c, price_c_to_usdc],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for Osmo
+    // query price for PaymentC5
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::Price {
-            currency: Osmo::TICKER.to_string(),
+            currency: PaymentC5::TICKER.to_string(),
         },
     )
     .unwrap();
 
-    let expected_price =
-        SpotPrice::try_from(price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3)))
-            .unwrap();
+    let expected_price = SpotPrice::try_from(
+        price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)),
+    )
+    .unwrap();
     let value: SpotPrice = from_binary(&res).unwrap();
     assert_eq!(expected_price, value)
 }
@@ -121,10 +127,14 @@ fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let prices = vec![
-        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Wbtc>::new(12)))
-            .unwrap(),
-        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(22)))
-            .unwrap(),
+        PriceDTO::try_from(
+            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)),
+        )
+        .unwrap(),
+        PriceDTO::try_from(
+            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(22)),
+        )
+        .unwrap(),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
@@ -137,7 +147,8 @@ fn deliver_alarm() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
     setup_receiver(&mut deps.querier);
 
-    let current_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23451));
+    let current_price =
+        price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(23451));
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.try_into().unwrap()],
     };
@@ -145,7 +156,8 @@ fn deliver_alarm() {
     assert_eq!(Ok(CwResponse::default()), feed_resp);
 
     {
-        let alarm_below_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23450));
+        let alarm_below_price =
+            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(23450));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
@@ -160,7 +172,8 @@ fn deliver_alarm() {
         assert_eq!(0, dispatch_alarms_resp.messages.len());
     }
     {
-        let alarm_below_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23452));
+        let alarm_below_price =
+            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(23452));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };

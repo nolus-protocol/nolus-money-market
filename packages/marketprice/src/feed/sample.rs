@@ -124,7 +124,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::{lease::Atom, lpn::Usdc};
+    use currency::test::{PaymentC7, Usdc};
     use finance::{coin::Amount, duration::Duration, price};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -133,7 +133,7 @@ mod test {
         sample::{self, Sample},
     };
 
-    type TheCurrency = Atom;
+    type TheCurrency = PaymentC7;
     type TheQuote = Usdc;
 
     #[test]

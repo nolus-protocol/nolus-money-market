@@ -1,7 +1,6 @@
 use currency::{
-    lease::{Atom, Cro, Osmo},
-    lpn::Usdc,
     native::Nls,
+    test::{PaymentC3, PaymentC5, PaymentC6, StableC1},
     Currency,
 };
 use finance::{
@@ -61,10 +60,10 @@ impl Instantiator {
                 ),
             },
             swap_tree: oracle::swap_tree!(
-                { base: Usdc::TICKER },
-                (1, Osmo::TICKER),
-                (3, Cro::TICKER),
-                (13, Atom::TICKER)
+                { base: StableC1::TICKER },
+                (1, PaymentC5::TICKER),
+                (3, PaymentC6::TICKER),
+                (13, PaymentC3::TICKER)
             ),
         };
 
@@ -82,7 +81,7 @@ impl Instantiator {
 }
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
+    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<StableC1>::new(100000000));
 
     match msg {
         QueryMsg::Prices {} => to_binary(&oracle::msg::PricesResponse {

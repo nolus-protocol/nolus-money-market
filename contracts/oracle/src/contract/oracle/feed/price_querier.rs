@@ -65,23 +65,25 @@ where
 
 #[cfg(test)]
 mod test {
-    use ::currency::lease::{Atom, Weth};
+    use currency::test::{PaymentC3, PaymentC7};
     use finance::{coin::Coin, price::total_of};
 
     use super::*;
 
     #[test]
     fn test_maybe_price() {
-        let price = total_of(Coin::<Atom>::new(1)).is(Coin::<Weth>::new(2));
+        let price = total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(2));
         assert_eq!(maybe_price(Ok(price)), Ok(Some(price)));
         assert_eq!(
-            maybe_price::<Atom, Weth>(Err(PriceFeedsError::NoPrice())),
+            maybe_price::<PaymentC3, PaymentC7>(Err(PriceFeedsError::NoPrice())),
             Ok(None)
         );
         // other errors
         let err_msg: String = "test_err".into();
         assert_eq!(
-            maybe_price::<Atom, Weth>(Err(PriceFeedsError::Configuration(err_msg.clone()))),
+            maybe_price::<PaymentC3, PaymentC7>(Err(PriceFeedsError::Configuration(
+                err_msg.clone()
+            ))),
             Err(PriceFeedsError::Configuration(err_msg).into())
         );
     }
