@@ -1,5 +1,9 @@
 use currency::Currency;
-use finance::{coin::Coin, liability::Liability};
+use finance::{
+    coin::Coin,
+    liability::Liability,
+    price::{self, Price},
+};
 
 use crate::{
     api::PositionSpecDTO,
@@ -58,6 +62,46 @@ where
 
     pub fn min_trasaction_amount(&self) -> Coin<Lpn> {
         self.min_trasaction_amount
+    }
+
+    pub fn check_trasaction_amount<Trasactional>(
+        &self,
+        amount: Coin<Trasactional>,
+        trasactional_in_lpn: Price<Trasactional, Lpn>,
+    ) -> ContractResult<()>
+    where
+        Trasactional: Currency,
+    {
+        let amount = price::total(amount, trasactional_in_lpn);
+        
+        if amount < self.min_trasaction_amount {
+            Err(ContractError::PositionCloseAmountTooSmall(
+                self.min_trasaction_amount.into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn check_asset_amount<Trasactional>(
+        &self,
+        asset_amount: Coin<Trasactional>,
+        close_amount: Coin<Trasactional>,
+        trasactional_in_lpn: Price<Trasactional, Lpn>,
+    ) -> ContractResult<()>
+    where
+        Trasactional: Currency,
+    {
+        let asset_amount = price::total(asset_amount, trasactional_in_lpn);
+        let close_amount = price::total(close_amount, trasactional_in_lpn);
+
+        if asset_amount.saturating_sub(close_amount) < self.min_asset {
+            Err(ContractError::PositionCloseAmountTooBig(
+                self.min_asset.into(),
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
