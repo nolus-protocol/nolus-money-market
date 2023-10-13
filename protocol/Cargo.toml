@@ -1,0 +1,75 @@
+[workspace]
+members = ["packages/*", "contracts/*"]
+# members = ["packages/*", "contracts/*", "tests"]
+
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
+license = "Apache-2.0"
+
+[workspace.dependencies]
+# Own Contracts
+lease = { path = "contracts/lease", default-features = false }
+leaser = { path = "contracts/leaser", default-features = false }
+lpp = { path = "contracts/lpp", default-features = false }
+oracle = { path = "contracts/oracle", default-features = false }
+profit = { path = "contracts/profit", default-features = false }
+
+# Own Packages
+dex = { path = "packages/dex", default-features = false }
+marketprice = { path = "packages/marketprice", default-features = false }
+swap = { path = "packages/swap", default-features = false }
+
+# Platform Contracts
+timealarms = { path = "../platform/contracts/timealarms", default-features = false }
+
+# Platform Packages
+access-control = { path = "../platform/packages/access-control", default-features = false }
+currency = { path = "../platform/packages/currency", default-features = false }
+finance = { path = "../platform/packages/finance", default-features = false }
+platform = { path = "../platform/packages/platform", default-features = false }
+schema = { path = "../platform/packages/schema", default-features = false }
+sdk = { path = "../platform/packages/sdk", default-features = false }
+# time-oracle = { path = "../packages/time-oracle", default-features = false }
+tree = { path = "../platform/packages/tree", default-features = false }
+versioning = { path = "../platform/packages/versioning", default-features = false }
+
+# General
+serde = { version = "1", default-features = false }
+serde-json-wasm = { version = "0.5", default-features = false }
+postcard = { version = "1", default-features = false }
+thiserror = { version = "1", default-features = false }
+# anyhow = "1"
+enum_dispatch = { version = "0.3", default-features = false }
+
+# CosmWasm
+# Required as a dependency by `entry_point` attribute macro
+cosmwasm-std = { version = "1.2", default-features = false }
+# cosmwasm-storage = "1.2"
+# cosmwasm-schema = "1.2"
+# cw-storage-plus = "1.1"
+# cw-multi-test = "0.16.1"
+
+# Cosmos-sdk
+# cosmos-sdk-proto = { version = "0.18", default-features = false }
+
+# Other
+# neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
+osmosis-std = { version = "0.19.1", default-features = false }
+
+# TODO figure out how not to provide this second copy of the same info from the `platform` Cargo.toml
+[patch.'https://github.com/neutron-org/neutron-sdk']
+# satisfies the protobuf version check
+protobuf = { version = "~3.2" }
+
+[profile.release]
+opt-level = "s"
+debug = false
+strip = "symbols"
+rpath = false
+lto = true
+debug-assertions = false
+panic = "abort"
+overflow-checks = true

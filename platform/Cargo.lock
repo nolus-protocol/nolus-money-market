@@ -124,21 +124,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chrono"
-version = "0.4.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "defd4e7873dbddba6c7c91e199c7fcb946abc4a6a4ac3195400bcfb01b5de877"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "cobs"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
-
-[[package]]
 name = "const-oid"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -404,21 +389,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dex"
-version = "0.1.1"
-dependencies = [
- "currency",
- "finance",
- "oracle",
- "platform",
- "sdk",
- "serde",
- "swap",
- "thiserror",
- "timealarms",
-]
-
-[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,18 +499,6 @@ dependencies = [
  "sec1 0.7.3",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "enum_dispatch"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f33313078bb8d4d05a2733a94ac4c2d8a0df9a2b84424ebf4f33bfc224a890e"
-dependencies = [
- "once_cell",
- "proc-macro2",
- "quote",
- "syn 2.0.32",
 ]
 
 [[package]]
@@ -664,32 +622,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "integration_tests"
-version = "0.3.0"
-dependencies = [
- "access-control",
- "anyhow",
- "currency",
- "finance",
- "lease",
- "leaser",
- "lpp",
- "marketprice",
- "oracle",
- "platform",
- "profit",
- "rewards_dispatcher",
- "sdk",
- "serde",
- "serde-json-wasm",
- "swap",
- "thiserror",
- "timealarms",
- "treasury",
- "tree",
-]
-
-[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -731,83 +663,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lease"
-version = "0.8.0"
-dependencies = [
- "access-control",
- "cosmwasm-std",
- "currency",
- "dex",
- "enum_dispatch",
- "finance",
- "lpp",
- "marketprice",
- "oracle",
- "platform",
- "profit",
- "schema",
- "sdk",
- "serde",
- "thiserror",
- "timealarms",
- "versioning",
-]
-
-[[package]]
-name = "leaser"
-version = "0.5.3"
-dependencies = [
- "access-control",
- "cosmwasm-std",
- "currency",
- "finance",
- "lease",
- "lpp",
- "oracle",
- "platform",
- "schema",
- "sdk",
- "serde",
- "thiserror",
- "versioning",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cdc71e17332e86d2e1d38c1f99edcb6288ee11b815fb1a4b049eaa2114d369b"
-
-[[package]]
-name = "lpp"
-version = "0.4.2"
-dependencies = [
- "access-control",
- "cosmwasm-std",
- "currency",
- "finance",
- "platform",
- "schema",
- "sdk",
- "serde",
- "serde_json",
- "thiserror",
- "versioning",
-]
-
-[[package]]
-name = "marketprice"
-version = "0.3.0"
-dependencies = [
- "currency",
- "finance",
- "platform",
- "postcard",
- "sdk",
- "serde",
- "swap",
- "thiserror",
-]
 
 [[package]]
 name = "neutron-sdk"
@@ -862,54 +721,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "oracle"
-version = "0.5.8"
-dependencies = [
- "cosmwasm-std",
- "currency",
- "finance",
- "marketprice",
- "platform",
- "schema",
- "sdk",
- "serde",
- "serde-json-wasm",
- "swap",
- "thiserror",
- "tree",
- "versioning",
-]
-
-[[package]]
-name = "osmosis-std"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "088997c4da871db9edb9e090a4e164d1cb12498781491ccb8030246287400300"
-dependencies = [
- "chrono",
- "cosmwasm-std",
- "osmosis-std-derive",
- "prost 0.11.9",
- "prost-types",
- "schemars",
- "serde",
- "serde-cw-value",
-]
-
-[[package]]
-name = "osmosis-std-derive"
-version = "0.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f47f0b2f22adb341bb59e5a3a1b464dde033181954bd055b9ae86d6511ba465b"
-dependencies = [
- "itertools",
- "proc-macro2",
- "prost-types",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -949,41 +760,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "postcard"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d534c6e61df1c7166e636ca612d9820d486fe96ddad37f7abc671517b297488e"
-dependencies = [
- "cobs",
- "serde",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "profit"
-version = "0.5.5"
-dependencies = [
- "access-control",
- "cosmwasm-std",
- "currency",
- "dex",
- "finance",
- "oracle",
- "platform",
- "schema",
- "sdk",
- "serde",
- "thiserror",
- "timealarms",
- "versioning",
 ]
 
 [[package]]
@@ -1084,26 +866,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
-]
-
-[[package]]
-name = "rewards_dispatcher"
-version = "0.5.1"
-dependencies = [
- "access-control",
- "cosmwasm-std",
- "currency",
- "finance",
- "lpp",
- "oracle",
- "platform",
- "schema",
- "sdk",
- "serde",
- "thiserror",
- "timealarms",
- "treasury",
- "versioning",
 ]
 
 [[package]]
@@ -1220,15 +982,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf9e0fcba69a370eed61bcf2b728575f726b50b55cba78064753d708ddc7549e"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde-cw-value"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a75d32da6b8ed758b7d850b6c3c08f1d7df51a4df3cb201296e63e34a78e99d4"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -1359,19 +1112,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dcb1ed7b8330c5eed5441052651dd7a12c75e2ed88f2ec024ae1fa3a5e59945"
 dependencies = [
  "zeroize",
-]
-
-[[package]]
-name = "swap"
-version = "0.1.0"
-dependencies = [
- "currency",
- "finance",
- "osmosis-std",
- "platform",
- "sdk",
- "serde",
- "thiserror",
 ]
 
 [[package]]

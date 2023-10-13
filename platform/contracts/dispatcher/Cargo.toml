@@ -15,8 +15,8 @@ default = ["contract-with-bindings"]
 contract-with-bindings = []
 
 [dependencies]
-lpp = { workspace = true, features = ["stub"] }
-oracle = { workspace = true, features = ["stub", "convert"] }
+# lpp = { workspace = true, features = ["stub"] }
+# oracle = { workspace = true, features = ["stub", "convert"] }
 timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }
 
