@@ -10,18 +10,22 @@ use crate::{
 pub struct Spec<Lpn> {
     liability: Liability,
     min_asset: Coin<Lpn>,
-    min_sell_asset: Coin<Lpn>,
+    min_trasaction_amount: Coin<Lpn>,
 }
 
 impl<Lpn> Spec<Lpn>
 where
     Lpn: Currency,
 {
-    fn new_internal(liability: Liability, min_asset: Coin<Lpn>, min_sell_asset: Coin<Lpn>) -> Self {
+    fn new_internal(
+        liability: Liability,
+        min_asset: Coin<Lpn>,
+        min_trasaction_amount: Coin<Lpn>,
+    ) -> Self {
         let obj = Self {
             liability,
             min_asset,
-            min_sell_asset,
+            min_trasaction_amount,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
@@ -36,8 +40,12 @@ where
     }
 
     #[cfg(test)]
-    pub fn new(liability: Liability, min_asset: Coin<Lpn>, min_sell_asset: Coin<Lpn>) -> Self {
-        Self::new_internal(liability, min_asset, min_sell_asset)
+    pub fn new(
+        liability: Liability,
+        min_asset: Coin<Lpn>,
+        min_trasaction_amount: Coin<Lpn>,
+    ) -> Self {
+        Self::new_internal(liability, min_asset, min_trasaction_amount)
     }
 
     pub fn liability(&self) -> Liability {
@@ -48,8 +56,8 @@ where
         self.min_asset
     }
 
-    pub fn min_sell_asset(&self) -> Coin<Lpn> {
-        self.min_sell_asset
+    pub fn min_trasaction_amount(&self) -> Coin<Lpn> {
+        self.min_trasaction_amount
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
@@ -58,8 +66,8 @@ where
             "Min asset amount should be positive",
         )
         .and(Self::check(
-            !self.min_sell_asset.is_zero(),
-            "Min sell asset amount should be positive",
+            !self.min_trasaction_amount.is_zero(),
+            "Min trasaction amount should be positive",
         ))
     }
 
