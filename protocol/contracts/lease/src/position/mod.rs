@@ -104,23 +104,17 @@ where
     /// lease open. Refer to `NewLeaseForm::position_spec`.
     pub fn validate_close_amount(
         &self,
-        amount: Coin<Asset>,
+        close_amount: Coin<Asset>,
         lpn_in_assets: Price<Lpn, Asset>,
     ) -> ContractResult<()> {
-        let min_asset = price::total(self.spec.min_asset(), lpn_in_assets);
-        let min_sell_asset = price::total(self.spec.min_trasaction_amount(), lpn_in_assets);
+        let trasactional_in_lpn = lpn_in_assets.inv();
 
-        if amount < min_sell_asset {
-            Err(ContractError::PositionCloseAmountTooSmall(
-                self.spec.min_trasaction_amount().into(),
-            ))
-        } else if self.amount.saturating_sub(amount) < min_asset {
-            Err(ContractError::PositionCloseAmountTooBig(
-                self.spec.min_asset().into(),
-            ))
-        } else {
-            Ok(())
-        }
+        self.spec
+            .check_trasaction_amount(close_amount, trasactional_in_lpn)
+            .and_then(|_| {
+                self.spec
+                    .check_asset_amount(self.amount, close_amount, trasactional_in_lpn)
+            })
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
@@ -942,7 +936,7 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(75.into(), price(1, 1));
         assert!(result_1.is_ok());
 
-        let result_2 = spec.validate_close_amount(63.into(), price(2, 3));
+        let result_2 = spec.validate_close_amount(62.into(), price(2, 3));
         assert!(result_2.is_ok());
     }
 
