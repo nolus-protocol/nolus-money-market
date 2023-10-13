@@ -11,7 +11,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings", "migration"]
+default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
