@@ -51,7 +51,7 @@ where
             spec: PositionSpecDTO::new_internal(
                 value.spec.liability(),
                 value.spec.min_asset().into(),
-                value.spec.min_sell_asset().into(),
+                value.spec.min_trasaction_amount().into(),
             ),
         }
     }

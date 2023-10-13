@@ -108,11 +108,11 @@ where
         lpn_in_assets: Price<Lpn, Asset>,
     ) -> ContractResult<()> {
         let min_asset = price::total(self.spec.min_asset(), lpn_in_assets);
-        let min_sell_asset = price::total(self.spec.min_sell_asset(), lpn_in_assets);
+        let min_sell_asset = price::total(self.spec.min_trasaction_amount(), lpn_in_assets);
 
         if amount < min_sell_asset {
             Err(ContractError::PositionCloseAmountTooSmall(
-                self.spec.min_sell_asset().into(),
+                self.spec.min_trasaction_amount().into(),
             ))
         } else if self.amount.saturating_sub(amount) < min_asset {
             Err(ContractError::PositionCloseAmountTooBig(
