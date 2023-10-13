@@ -30,14 +30,26 @@ where
     Asset: Currency,
     Lpn: Currency,
 {
+<<<<<<< HEAD:protocol/contracts/lease/src/position/mod.rs
     fn new_internal(amount: Coin<Asset>, spec: Spec<Lpn>) -> Self {
+=======
+    fn new_internal(amount: Coin<Asset>, spec: PositionSpec<Lpn>) -> Self {
+>>>>>>> a3c9f4eb (chore(lease): Address review comments):contracts/lease/src/position/mod.rs
         let obj = Self { amount, spec };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
     }
 
+<<<<<<< HEAD:protocol/contracts/lease/src/position/mod.rs
     pub fn try_from(amount: LeaseCoin, spec: Spec<Lpn>) -> ContractResult<Self> {
         Ok(Self::new_internal(amount.try_into()?, spec))
+=======
+    pub fn try_from(amount: LeaseCoin, spec: PositionSpec<Lpn>) -> ContractResult<Self> {
+        amount
+            .try_into()
+            .map_err(Into::<ContractError>::into)
+            .map(|amount| Self::new_internal(amount, spec))
+>>>>>>> a3c9f4eb (chore(lease): Address review comments):contracts/lease/src/position/mod.rs
     }
 
     #[cfg(test)]
