@@ -23,7 +23,7 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env NET_NAME="${{ inputs.target_net }}" \
+        --env NET="${{ inputs.target_net }}" \
         --env DEX="osmosis" \
         --env RELEASE_VERSION="${RELEASE_VERSION}" \
         cosmwasm/workspace-optimizer:0.14.0

@@ -14,11 +14,11 @@ macro_rules! define_symbol {
             use $crate::symbols_macro::CurrencySymbols;
 
             $(
-                #[cfg(any($(net_name = $net),+))]
+                #[cfg(any($(net = $net),+))]
                 { CurrencySymbols { $($body)* } }
             )+
-            #[cfg(all($($(not(net_name = $net)),+),+))]
-            { compile_error!(concat!("No symbols defined for network with name \"", env!("NET_NAME"), "\"!")) }
+            #[cfg(all($($(not(net = $net)),+),+))]
+            { compile_error!(concat!("No symbols defined for network with name \"", env!("NET"), "\"!")) }
         };
     };
 }
