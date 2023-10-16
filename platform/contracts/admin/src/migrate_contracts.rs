@@ -4,7 +4,7 @@ use sdk::cosmwasm_std::{Addr, Storage};
 use crate::{
     common::{maybe_migrate_contract, type_defs::Contracts},
     msg::MigrateContracts,
-    result::ContractResult,
+    result::Result,
     state::{contracts as state_contracts, migration_release},
 };
 
@@ -12,7 +12,7 @@ pub(super) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_address: Addr,
     msg: MigrateContracts,
-) -> ContractResult<MessageResponse> {
+) -> Result<MessageResponse> {
     migration_release::store(storage, msg.release)?;
 
     let contracts_addrs: Contracts = state_contracts::load(storage)?;
@@ -21,8 +21,17 @@ pub(super) fn migrate(
 
     maybe_migrate_contract(&mut batch, admin_contract_address, msg.admin_contract);
 
-    Ok(batch
-        .merge(contracts_addrs.clone().migrate(msg.migration_spec))
-        .merge(contracts_addrs.post_migration_execute(msg.post_migration_execute))
-        .into())
+    contracts_addrs
+        .clone()
+        .migrate(msg.migration_spec)
+        .and_then(|migrate_batch: Batch| {
+            contracts_addrs
+                .post_migration_execute(msg.post_migration_execute)
+                .map(|post_migration_execute_batch: Batch| {
+                    batch
+                        .merge(migrate_batch)
+                        .merge(post_migration_execute_batch)
+                        .into()
+                })
+        })
 }

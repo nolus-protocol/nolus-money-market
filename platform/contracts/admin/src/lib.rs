@@ -3,14 +3,14 @@ use platform::response;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Reply, Storage},
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use self::{
-    error::ContractError,
+    error::Error as ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
-    result::ContractResult,
+    result::Result as ContractResult,
     state::{contracts as state_contracts, migration_release},
 };
 
@@ -22,8 +22,8 @@ pub mod result;
 pub mod state;
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -42,14 +42,27 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg { dex }: MigrateMsg,
+) -> ContractResult<CwResponse> {
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage: &mut dyn Storage| state_contracts::migrate(storage, dex),
+        Into::into,
+    )
+    .and_then(|(label, ()): (ReleaseLabel, ())| response::response(label))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
+        SudoMsg::AddDexBoundSet { dex, ref contracts } => {
+            state_contracts::add_dex_bound_set(deps.storage, dex, contracts)
+                .map(|()| response::empty_response())
+        }
         SudoMsg::MigrateContracts(migrate_contracts) => {
             migrate_contracts::migrate(deps.storage, env.contract.address, migrate_contracts)
                 .map(response::response_only_messages)
