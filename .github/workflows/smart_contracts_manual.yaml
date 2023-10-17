@@ -17,7 +17,7 @@ on:
 
 jobs:
   perform_checks:
-    uses: "./.github/workflows/checks.yaml"
+    uses: "./.github/workflows/checks_general.yaml"
     if: "fromJSON(inputs.perform_checks)"
   build_optimized:
     uses: "./.github/workflows/build_optimized.yaml"

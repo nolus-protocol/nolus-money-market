@@ -1,0 +1,21 @@
+name: "Smart Contracts"
+run-name: "Running checks on smart contracts"
+
+on:
+  workflow_call:
+
+jobs:
+  perform_checks_platform:
+    uses: "./.github/workflows/checks.yaml"
+    with:
+      working_directory: "platform"
+  perform_checks_protocol_osmosis:
+    uses: "./.github/workflows/checks.yaml"
+    with:
+      target_dex: "osmosis"
+      working_directory: "protocol"
+  perform_checks_tests_osmosis:
+    uses: "./.github/workflows/checks.yaml"
+    with:
+      target_dex: "osmosis"
+      working_directory: "tests"

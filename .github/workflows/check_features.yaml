@@ -2,6 +2,13 @@ name: "Check features"
 
 on:
   workflow_call:
+    inputs:
+      target_dex:
+        required: false
+        type: "string"
+      working_directory:
+        required: true
+        type: "string"
 
 env:
   CARGO_TERM_COLOR: "always"
@@ -12,7 +19,7 @@ env:
   # pipelines, which is ignored during optimized builds.
   NET: "main"
   # DEX name to check with
-  DEX: "osmosis"
+  DEX: "${{ inputs.target_dex }}"
 
 jobs:
   check_features_debug:
@@ -23,6 +30,7 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:
           profile: "dev"
+          working_directory: "${{ inputs.working_directory }}"
   check_features_test_debug:
     runs-on: "ubuntu-latest"
     steps:
@@ -32,6 +40,7 @@ jobs:
         with:
           profile: "test"
           debug_assertions: "true"
+          working_directory: "${{ inputs.working_directory }}"
   check_features_test_release:
     runs-on: "ubuntu-latest"
     steps:
@@ -41,6 +50,7 @@ jobs:
         with:
           profile: "test"
           debug_assertions: "false"
+          working_directory: "${{ inputs.working_directory }}"
   check_features_release:
     runs-on: "ubuntu-latest"
     steps:
@@ -49,3 +59,4 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:
           profile: "release"
+          working_directory: "${{ inputs.working_directory }}"

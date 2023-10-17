@@ -26,7 +26,7 @@ env:
 
 jobs:
   perform_checks:
-    uses: "./.github/workflows/checks.yaml"
+    uses: "./.github/workflows/checks_general.yaml"
   build_optimized:
     uses: "./.github/workflows/build_optimized.yaml"
     if: "github.ref_type == 'tag'"
@@ -36,17 +36,37 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - "build_optimized"
-    permissions: write-all
+    permissions: "write-all"
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-      - name: Display structure of downloaded files
-        run: ls -R
-      - name: Zip test & main
+      - name: "Download artifacts"
+        uses: "actions/download-artifact@v3"
+      - name: "Display structure of downloaded files"
+        run: "ls -R"
+      - name: "Create ZIP files with binaries"
+        shell: "sh"
         run: |
-          zip -j -r optimized-binaries-dev-net.zip optimized-binaries-dev-net/* 
-          zip -j -r optimized-binaries-test-net.zip optimized-binaries-test-net/* 
-          zip -j -r optimized-binaries-main-net.zip optimized-binaries-main-net/*
+          for dir in optimized-binaries-protocol-*-*/
+          do
+            dir = ${dir%/*}
+
+            stripped = ${dir#*optimized-binaries-protocol-}
+
+            net = ${stripped%-*}
+            dex = ${stripped#*-}
+
+            target_dir = "optimized-binaries-${net}-net/${dex}/"
+
+            mkdir -p "${target_dir}"
+
+            cp -t "${target_dir}" "${dir}"/*
+          done
+
+          zip -j -r optimized-binaries-common.zip optimized-binaries-platform/*
+
+          for dir in optimized-binaries-*-net/
+          do
+            zip -j -r "${dir%/*}".zip "${dir%/*}"/*
+          done
       # temporary using commit as version until it is merged. Updates node version v12 -> v16
       - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
         with:
@@ -54,6 +74,7 @@ jobs:
           prerelease: false
           draft: true
           files: |
+            optimized-binaries-common.zip
             optimized-binaries-dev-net.zip
             optimized-binaries-test-net.zip
             optimized-binaries-main-net.zip

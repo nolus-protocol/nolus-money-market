@@ -4,29 +4,57 @@ author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
   target_net:
-    description: "Whether to build targeting test-net or main-net. This parameter takes one of these two values: \"test\" and \"main\"."
+    description: 'Whether to build targeting dev-net, test-net or main-net. This parameter takes one of these values: "dev", "test" and "main".'
+    required: false
+  target_dex:
+    description: "Indicates which DEX the build targets."
+    required: false
+  release_version:
+    description: ""
+    required: true
+  working_directory:
+    description: ""
     required: true
 
 runs:
   using: composite
   steps:
+    - shell: "sh"
+      run: |
+        if ! test ${{ inputs.target_net }} = ""
+        then
+          echo "docker_env_net=--env NET='${{ inputs.target_net }}'" >> "${GITHUB_ENV}"
+
+          echo "release_version_text= for ${{ inputs.target_net }}-net" >> "${GITHUB_ENV}"
+
+          echo "dash_net_name=-${{ inputs.target_net }}" >> "${GITHUB_ENV}"
+        fi
+
+        if ! test ${{ inputs.target_dex }} = ""
+        then
+          echo "docker_env_dex=--env DEX='${{ inputs.target_dex }}'" >> "${GITHUB_ENV}"
+
+          echo "dash_dex_name=-${{ inputs.target_dex }}" >> "${GITHUB_ENV}"
+        fi
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
         mkdir -p ./artifacts/
-        RELEASE_VERSION="${{ github.ref_name }}-$(date -Iminute)"
-        echo "${RELEASE_VERSION}" >> ./artifacts/release_version
+        echo "${{ inputs.release_version }}" >> ./artifacts/release_version
 
-        sudo docker run --rm -v "$(pwd)/":"/code/" \
+        sudo docker run --rm -v "$(cd ..; pwd)/platform/":"/platform/" \
+        -v "$(cd ..; pwd)/protocol/":"/protocol/" \
+        -v "$(pwd)/":"/code/" \
         -v "$(pwd)/artifacts/":"/code/artifacts/" \
         --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env NET="${{ inputs.target_net }}" \
-        --env DEX="osmosis" \
-        --env RELEASE_VERSION="${RELEASE_VERSION}" \
+        ${docker_env_net} \
+        ${docker_env_dex} \
+        --env RELEASE_VERSION="${{ inputs.release_version }}" \
         cosmwasm/workspace-optimizer:0.14.0
+      working-directory: "./${{ inputs.working_directory }}/"
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
@@ -42,16 +70,14 @@ runs:
             exit 1
           );
         fi
+      working-directory: "./${{ inputs.working_directory }}/"
     - shell: "sh"
-      run: |
-        (
-          echo "Release version for ${{ inputs.target_net }}-net: \`$(cat ./artifacts/release_version)\`"
-        ) >> "${GITHUB_STEP_SUMMARY}"
+      run: '(echo "Release version${release_version_text}: ${{ inputs.release_version }}") >> "${GITHUB_STEP_SUMMARY}"'
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
-      run: "sudo cp \"scripts/deploy-contracts-genesis.sh\" \"artifacts/\""
+      run: 'sudo cp "scripts/deploy-contracts-genesis.sh" "./${{ inputs.working_directory }}/artifacts/"'
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
       uses: "actions/upload-artifact@v3"
       with:
-        name: "optimized-binaries-${{ inputs.target_net }}-net"
-        path: "artifacts/*"
+        name: "optimized-binaries-${{ inputs.working_directory }}${dash_net_name}${dash_dex_name}"
+        path: "./${{ inputs.working_directory }}/artifacts/*"
