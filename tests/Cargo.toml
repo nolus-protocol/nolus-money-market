@@ -1,32 +1,36 @@
 [package]
 name = "integration_tests"
 version = "0.3.0"
+edition = "2021"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
-edition.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-lease = { workspace = true, features = ["contract", "testing"] }
-leaser = { workspace = true, features = ["testing"] }
-lpp = { workspace = true, features = ["contract", "testing"] }
-oracle = { workspace = true, features = ["contract", "testing"] }
-profit = { workspace = true, features = ["contract", "testing"] }
-rewards_dispatcher = { workspace = true, features = [] }
-timealarms = { workspace = true, features = ["contract", "testing"] }
-treasury = { workspace = true, features = ["contract"] }
+lease = { path = "../protocol/contracts/lease", features = ["contract", "testing"] }
+leaser = { path = "../protocol/contracts/leaser", features = ["testing"] }
+lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"] }
+oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"] }
+profit = { path = "../protocol/contracts/profit", features = ["contract", "testing"] }
+rewards_dispatcher = { path = "../platform/contracts/dispatcher", features = [] }
+timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
+treasury = { path = "../platform/contracts/treasury", features = ["contract"] }
 
-access-control = { workspace = true }
-currency = { workspace = true, features = ["testing"]}
-finance = { workspace = true, features = ["testing"] }
-marketprice = { workspace = true, features = ["testing"] }
-platform = { workspace = true, features = ["testing"] }
-sdk = { workspace = true, features = ["cosmos", "neutron", "testing"] }
-tree = { workspace = true, features = ["testing"] }
-swap = { workspace = true, features = ["testing"] }
+access-control = { path = "../platform/packages/access-control" }
+currency = { path = "../platform/packages/currency", features = ["testing"] }
+finance = { path = "../platform/packages/finance", features = ["testing"] }
+marketprice = { path = "../protocol/packages/marketprice", features = ["testing"] }
+platform = { path = "../platform/packages/platform", features = ["testing"] }
+sdk = { path = "../platform/packages/sdk", features = ["cosmos", "neutron", "testing"] }
+tree = { path = "../platform/packages/tree", features = ["testing"] }
+swap = { path = "../protocol/packages/swap", features = ["testing"] }
 
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-serde-json-wasm = { workspace = true }
+anyhow = "1"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+serde-json-wasm = "1"
+
+[patch.'https://github.com/neutron-org/neutron-sdk']
+# satisfies the protobuf version check
+protobuf = { version = "=3.2" }
