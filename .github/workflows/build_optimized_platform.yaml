@@ -1,0 +1,20 @@
+name: "Build optimized platform contracts"
+run-name: 'Building optimized version of "platform" smart contracts'
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        type: "string"
+        required: true
+
+jobs:
+  build_optimized_platform_contracts:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Build optimized binaries of platform contracts"
+        uses: "./.github/actions/optimized_build"
+        with:
+          release_version: "${{ inputs.release_version }}"
+          working_directory: "platform"

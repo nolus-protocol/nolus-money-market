@@ -1,0 +1,31 @@
+name: "Code coverage"
+run-name: "Running code coverage for smart contracts"
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+env:
+  CARGO_TERM_COLOR: "always"
+  # Release version is set to `ci` to allow building during checking and testing
+  # pipelines, which is ignored during optimized builds.
+  RELEASE_VERSION: "ci"
+  # Network's name is set to `main` to allow building during checking and testing
+  # pipelines, which is ignored during optimized builds.
+  NET: "main"
+
+jobs:
+  code_coverage_platform:
+      uses: "./.github/workflows/checks.yaml"
+      with:
+        working_directory: "platform"
+  code_coverage_protocol_osmosis:
+      uses: "./.github/workflows/checks.yaml"
+      with:
+        target_dex: "osmosis"
+        working_directory: "protocol"
+  code_coverage_tests_osmosis:
+      uses: "./.github/workflows/checks.yaml"
+      with:
+        target_dex: "osmosis"
+        working_directory: "tests"
