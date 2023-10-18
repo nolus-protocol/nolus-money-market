@@ -751,6 +751,7 @@ dependencies = [
  "cosmwasm-std",
  "currency",
  "finance",
+ "lpp_platform",
  "platform",
  "schema",
  "sdk",
@@ -758,6 +759,17 @@ dependencies = [
  "serde_json",
  "thiserror",
  "versioning",
+]
+
+[[package]]
+name = "lpp_platform"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "finance",
+ "sdk",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

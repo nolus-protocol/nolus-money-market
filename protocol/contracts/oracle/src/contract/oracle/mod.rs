@@ -159,7 +159,10 @@ where
 
 #[cfg(test)]
 mod test_normalized_price_not_found {
-    use currency::{native::Nls, test::StableC1, Currency as _};
+    use currency::{
+        test::{NativeC, StableC1},
+        Currency as _,
+    };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::{config::Config as PriceConfig, SpotPrice};
     use sdk::cosmwasm_std::{
@@ -178,7 +181,7 @@ mod test_normalized_price_not_found {
 
     type BaseCurrency = StableC1;
 
-    type NlsCoin = Coin<Nls>;
+    type NlsCoin = Coin<NativeC>;
     type UsdcCoin = Coin<StableC1>;
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
@@ -226,7 +229,7 @@ mod test_normalized_price_not_found {
             .unwrap();
 
         SupportedPairs::<BaseCurrency>::new(
-            swap_tree!({ base: StableC1::TICKER }, (1, Nls::TICKER)).into_tree(),
+            swap_tree!({ base: StableC1::TICKER }, (1, NativeC::TICKER)).into_tree(),
         )
         .unwrap()
         .save(storage)

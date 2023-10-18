@@ -9,14 +9,14 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
+use lpp_platform::{LppBalanceResponse, NLpn};
 use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
     error::{ContractError, Result},
     loan::Loan,
-    msg::{LppBalanceResponse, PriceResponse},
-    nlpn::NLpn,
+    msg::PriceResponse,
     state::{Config, Deposit, Total},
 };
 
@@ -110,7 +110,7 @@ where
         }
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse<Lpn>> {
+    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse> {
         let balance = self.balance(&env.contract.address, &deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
@@ -120,9 +120,9 @@ where
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         Ok(LppBalanceResponse {
-            balance,
-            total_principal_due,
-            total_interest_due,
+            balance: lpp_platform::into_usd(balance),
+            total_principal_due: lpp_platform::into_usd(total_principal_due),
+            total_interest_due: lpp_platform::into_usd(total_interest_due),
             balance_nlpn,
         })
     }
@@ -135,7 +135,7 @@ where
     ) -> Result<NTokenPrice<Lpn>> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
-        let price = if balance_nlpn.is_zero() {
+        let price: Price<NLpn, Lpn> = if balance_nlpn.is_zero() {
             Config::initial_derivative_price()
         } else {
             price::total_of(balance_nlpn).is(self.total_lpn(
@@ -146,8 +146,9 @@ where
             )?)
         };
 
+        let init: Price<NLpn, Lpn> = Config::initial_derivative_price::<Lpn>();
         debug_assert!(
-            price >= Config::initial_derivative_price(),
+            price >= init,
             "[Lpp] programming error: nlpn price less than initial"
         );
 
@@ -317,7 +318,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::{test::Usdc, Currency};
+    use currency::{test::StableC1, Currency};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -325,6 +326,7 @@ mod test {
         price::{self, Price},
         zero::Zero,
     };
+    use lpp_platform::NLpn;
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},
@@ -335,13 +337,12 @@ mod test {
         borrow::InterestRate,
         error::ContractError,
         loan::Loan,
-        nlpn::NLpn,
         state::{Config, Deposit, Total},
     };
 
     use super::LiquidityPool;
 
-    type TheCurrency = Usdc;
+    type TheCurrency = StableC1;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

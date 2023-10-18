@@ -10,7 +10,7 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("[Dispatcher] {0}")]
-    LppError(#[from] lpp::error::ContractError),
+    LppPlatformError(#[from] lpp_platform::error::Error),
 
     #[error("[Dispatcher] {0}")]
     Platform(#[from] platform::error::Error),

@@ -1,9 +1,8 @@
 use currency::Currency;
 use finance::coin::Coin;
+use lpp_platform::NLpn;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
-
-use crate::nlpn::NLpn;
 
 pub fn emit_deposit<Lpn>(
     env: Env,

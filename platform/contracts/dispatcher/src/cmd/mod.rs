@@ -1,8 +1,12 @@
-use currency::{lpn::Lpns, native::Native};
-use finance::coin::CoinDTO;
+use currency::NlsPlatform;
+use finance::coin::Coin;
+use lpp_platform::Usd;
 use platform::batch::Batch;
 
-pub(crate) use self::{dispatch::Dispatch, reward_calculator::RewardCalculator};
+pub(crate) use self::{
+    dispatch::Dispatch,
+    reward_calculator::{Reward, RewardCalculator},
+};
 
 mod dispatch;
 mod reward_calculator;
@@ -14,6 +18,6 @@ pub struct Result {
 
 #[derive(Eq, PartialEq)]
 pub struct Receipt {
-    pub in_stable: CoinDTO<Lpns>,
-    pub in_nls: CoinDTO<Native>,
+    pub in_stable: Coin<Usd>,
+    pub in_nls: Coin<NlsPlatform>,
 }

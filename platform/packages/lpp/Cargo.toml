@@ -1,0 +1,17 @@
+[package]
+name = "lpp_platform"
+version = "0.1.0"
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
+edition.workspace = true
+license.workspace = true
+
+[features]
+impl = ["currency/impl"]
+
+[dependencies]
+currency = { workspace = true }
+finance = { workspace = true }
+sdk = { workspace = true, features = ["schema"] }
+
+serde = { workspace = true }
+thiserror = { workspace = true}

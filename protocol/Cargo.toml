@@ -29,6 +29,7 @@ timealarms = { path = "../platform/contracts/timealarms", default-features = fal
 access-control = { path = "../platform/packages/access-control", default-features = false }
 currency = { path = "../platform/packages/currency", default-features = false }
 finance = { path = "../platform/packages/finance", default-features = false }
+lpp_platform = { path = "../platform/packages/lpp", default-features = false }
 platform = { path = "../platform/packages/platform", default-features = false }
 schema = { path = "../platform/packages/schema", default-features = false }
 sdk = { path = "../platform/packages/sdk", default-features = false }

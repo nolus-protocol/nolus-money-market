@@ -170,12 +170,12 @@ mod tests {
 
     /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).cargo fmt
     mod calculate {
+        use crate::borrow::InterestRate;
         use finance::{
             coin::{Amount, Coin},
             percent::{Percent, Units},
         };
-
-        use crate::{borrow::InterestRate, nlpn::NLpn};
+        use lpp_platform::NLpn;
 
         /// Constructs an instance of [`InterestRate`].
         ///

@@ -1,4 +1,4 @@
-use currency::{native::Nls, Group, SymbolSlice};
+use currency::{Group, NlsPlatform, SymbolSlice};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -18,12 +18,12 @@ use crate::error::Result;
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
 //TODO take them as input from the client
-const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
+const ICA_TRANSFER_ACK_TIP: Coin<NlsPlatform> = Coin::new(1);
+const ICA_TRANSFER_TIMEOUT_TIP: Coin<NlsPlatform> = ICA_TRANSFER_ACK_TIP;
 
 //TODO take them as input from the client
-const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
+const ICA_SWAP_ACK_TIP: Coin<NlsPlatform> = Coin::new(1);
+const ICA_SWAP_TIMEOUT_TIP: Coin<NlsPlatform> = ICA_SWAP_ACK_TIP;
 
 pub(super) struct TransferOutTrx<'a> {
     sender: LocalSender<'a>,

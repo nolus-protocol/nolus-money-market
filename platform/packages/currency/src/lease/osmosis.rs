@@ -336,10 +336,13 @@ mod test {
     use crate::{
         lease::LeaseGroup,
         lpn::osmosis::Usdc,
-        test::{group::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        }, NativeC},
+        test::{
+            group::{
+                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+            },
+            NativeC,
+        },
         Currency,
     };
 

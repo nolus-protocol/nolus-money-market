@@ -1,6 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
+use lpp_platform::LppBalanceResponse;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -11,7 +12,7 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 use crate::{
     error::{ContractError, Result},
     lpp::LiquidityPool,
-    msg::{LppBalanceResponse, RewardsResponse},
+    msg::RewardsResponse,
     state::Deposit,
 };
 
@@ -52,12 +53,11 @@ pub(super) fn try_claim_rewards(
     Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<Lpn>>
+pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse>
 where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
-    let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
-    lpp.query_lpp_balance(&deps, &env)
+    LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {

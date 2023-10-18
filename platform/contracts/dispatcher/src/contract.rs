@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
 use finance::{duration::Duration, percent::Percent};
-use lpp::stub::LppRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -21,7 +20,7 @@ use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
 use crate::{
-    cmd::{Dispatch, RewardCalculator},
+    cmd::{Dispatch, Reward, RewardCalculator},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{Config, DispatchLog},
@@ -127,8 +126,10 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
 fn query_reward(storage: &dyn Storage, querier: &QuerierWrapper<'_>) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
 
-    LppRef::try_new(config.lpp, querier)?
-        .execute(RewardCalculator::new(&config.tvl_to_apr), querier)
+    let lpp = lpp_platform::new_stub(config.lpp, querier);
+    RewardCalculator::new(&config.tvl_to_apr)
+        .calculate(&lpp)
+        .map(|Reward { apr, .. }| apr)
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<MessageResponse> {
@@ -144,19 +145,15 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<
 
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
 
-    let lpp_address = config.lpp.clone();
-    let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
-    let result = lpp.execute(
-        Dispatch::new(last_dispatch, config, now, &deps.querier)?,
-        &deps.querier,
-    )?;
+    let lpp = lpp_platform::new_stub(config.lpp.clone(), &deps.querier);
+    let result = Dispatch::new(last_dispatch, config, now, &deps.querier).do_dispatch(&lpp)?;
 
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let emitter = Emitter::of_type("tr-rewards")
         .emit_tx_info(&env)
-        .emit_to_string_value("to", lpp_address)
-        .emit_coin_dto("rewards", &result.receipt.in_nls);
+        .emit_to_string_value("to", config.lpp)
+        .emit_coin("rewards", result.receipt.in_nls);
     Ok(MessageResponse::messages_with_events(
         result.batch.merge(setup_alarm),
         emitter,

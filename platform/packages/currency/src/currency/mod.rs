@@ -43,6 +43,14 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
+pub fn validate_member<C, G>() -> Result<()>
+where
+    C: Currency,
+    G: Group,
+{
+    validate::<G>(C::TICKER)
+}
+
 pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>
 where
     G: Group,

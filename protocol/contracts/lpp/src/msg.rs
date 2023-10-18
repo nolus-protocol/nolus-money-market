@@ -1,17 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
+use currency::{lpn::Lpns, Currency, NlsPlatform, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},
     price::Price,
 };
+use lpp_platform::NLpn;
 use sdk::{
     cosmwasm_std::{Addr, Uint128, Uint64},
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, loan::Loan, nlpn::NLpn};
+use crate::{borrow::InterestRate, loan::Loan};
 
 pub type LpnCoin = CoinDTO<Lpns>;
 
@@ -41,17 +42,26 @@ pub struct MigrateMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    NewLeaseCode { lease_code_id: Uint64 },
+    NewLeaseCode {
+        lease_code_id: Uint64,
+    },
 
-    OpenLoan { amount: LpnCoin },
+    OpenLoan {
+        amount: LpnCoin,
+    },
     RepayLoan(),
 
     Deposit(),
     // CW20 interface, withdraw from lender deposit
-    Burn { amount: Uint128 },
+    Burn {
+        amount: Uint128,
+    },
 
+    /// Implementation of lpp_platform::msg::ExecuteMsg::DistributeRewards
     DistributeRewards(),
-    ClaimRewards { other_recipient: Option<Addr> },
+    ClaimRewards {
+        other_recipient: Option<Addr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
@@ -82,6 +92,7 @@ pub enum QueryMsg {
     Balance {
         address: Addr,
     },
+    /// Implementation of lpp_platform::msg::QueryMsg::LppBalance
     LppBalance(),
     Price(),
     DepositCapacity(),
@@ -123,19 +134,6 @@ where
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LppBalanceResponse<Lpn>
-where
-    Lpn: Currency,
-{
-    pub balance: Coin<Lpn>,
-    pub total_principal_due: Coin<Lpn>,
-    pub total_interest_due: Coin<Lpn>,
-    pub balance_nlpn: Coin<NLpn>,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct RewardsResponse {
-    pub rewards: Coin<Nls>,
+    pub rewards: Coin<NlsPlatform>,
 }

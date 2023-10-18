@@ -669,6 +669,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cdc71e17332e86d2e1d38c1f99edcb6288ee11b815fb1a4b049eaa2114d369b"
 
 [[package]]
+name = "lpp_platform"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "finance",
+ "sdk",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "neutron-sdk"
 version = "0.6.1"
 source = "git+https://github.com/neutron-org/neutron-sdk?tag=v0.6.1#3c95b6c751a73a4ba25c12fdf661ae5c1f1a44a9"
@@ -866,6 +877,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "rewards_dispatcher"
+version = "0.5.1"
+dependencies = [
+ "access-control",
+ "cosmwasm-std",
+ "currency",
+ "finance",
+ "lpp_platform",
+ "platform",
+ "schema",
+ "sdk",
+ "serde",
+ "thiserror",
+ "timealarms",
+ "treasury",
+ "versioning",
 ]
 
 [[package]]

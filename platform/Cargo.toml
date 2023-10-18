@@ -1,8 +1,5 @@
 [workspace]
-# members = ["packages/*", "contracts/*", "tests"]
-# members = ["packages/*", "contracts/*"]
-# TODO dispatcher get rid of dependencies to oracle and lpp
-members = ["packages/*", "contracts/admin", "contracts/timealarms", "contracts/treasury"]
+members = ["packages/*", "contracts/*"]
 
 resolver = "2"
 
@@ -21,6 +18,7 @@ treasury = { path = "contracts/treasury", default-features = false }
 access-control = { path = "packages/access-control", default-features = false }
 currency = { path = "packages/currency", default-features = false }
 finance = { path = "packages/finance", default-features = false }
+lpp_platform = { path = "packages/lpp", default-features = false }
 platform = { path = "packages/platform", default-features = false }
 schema = { path = "packages/schema", default-features = false }
 sdk = { path = "packages/sdk", default-features = false }
@@ -31,10 +29,8 @@ versioning = { path = "packages/versioning", default-features = false }
 # General
 serde = { version = "1", default-features = false }
 serde-json-wasm = { version = "0.5", default-features = false }
-# postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 anyhow = "1"
-# enum_dispatch = { version = "0.3", default-features = false }
 
 # CosmWasm
 cosmwasm-std = { version = "1.2", default-features = false }
@@ -48,7 +44,6 @@ cosmos-sdk-proto = { version = "0.18", default-features = false }
 
 # Other
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
-# osmosis-std = { version = "0.19.1", default-features = false }
 
 [patch.'https://github.com/neutron-org/neutron-sdk']
 # satisfies the protobuf version check

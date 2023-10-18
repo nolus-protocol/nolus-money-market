@@ -15,7 +15,8 @@ default = ["contract-with-bindings"]
 contract-with-bindings = []
 
 [dependencies]
-# lpp = { workspace = true, features = ["stub"] }
+lpp_platform = { workspace = true }
+# TODO get rid of the following dep
 # oracle = { workspace = true, features = ["stub", "convert"] }
 timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }

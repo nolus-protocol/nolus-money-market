@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use currency::{native::Nls, SymbolOwned};
+use currency::SymbolOwned;
 use finance::percent::Percent;
 use lease::api::{
     ConnectionParams, DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpecDTO,
@@ -142,7 +142,7 @@ fn update_lpp_impl(
         lease_code_id: new_code_id.into(),
     };
     batch
-        .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
+        .schedule_execute_wasm_no_reply_no_funds(&lpp, lpp_update_code)
         .map_err(Into::into)
 }
 

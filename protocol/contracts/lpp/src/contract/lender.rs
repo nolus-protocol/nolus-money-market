@@ -2,6 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
 use finance::{coin::Coin, zero::Zero};
+use lpp_platform::NLpn;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -14,7 +15,6 @@ use crate::{
     event,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
-    nlpn::NLpn,
     state::Deposit,
 };
 
@@ -350,9 +350,8 @@ mod test {
                 coin::{Amount, Coin},
                 price::{self, Price},
             };
+            use lpp_platform::NLpn;
             use sdk::cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
-
-            use crate::nlpn::NLpn;
 
             use super::{
                 cwcoin, query_ntoken_price, test_case, try_deposit, TheCurrency, DEPOSIT, LENDER,

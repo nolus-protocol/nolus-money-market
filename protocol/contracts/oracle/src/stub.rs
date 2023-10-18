@@ -1,4 +1,4 @@
-use std::{convert::TryInto, marker::PhantomData, result::Result as StdResult};
+use std::{convert::TryInto, fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
@@ -16,11 +16,6 @@ use crate::{
 };
 
 pub type Result<T> = StdResult<T, ContractError>;
-
-pub struct OracleBatch {
-    pub oracle_ref: OracleRef,
-    pub batch: Batch,
-}
 
 pub trait Oracle<OracleBase>
 where
@@ -98,11 +93,15 @@ impl OracleRef {
         V: WithOracle<OracleBase>,
         ContractError: Into<V::Error>,
     {
-        self.check_base::<OracleBase, _>()?;
+        self.check_base::<OracleBase>();
         cmd.exec(self.into_oracle_stub::<OracleBase>(querier))
     }
 
-    pub fn as_alarms_stub<OracleBase>(&self) -> AlarmsStub<'_, OracleBase> {
+    pub fn as_alarms_stub<OracleBase>(&self) -> AlarmsStub<'_, OracleBase>
+    where
+        OracleBase: Currency,
+    {
+        self.check_base::<OracleBase>();
         AlarmsStub {
             oracle_ref: self,
             batch: Batch::default(),
@@ -123,19 +122,18 @@ impl OracleRef {
             .map_err(ContractError::StubSwapPathQuery)
     }
 
-    fn check_base<OracleBase, Err>(&self) -> StdResult<(), Err>
+    fn check_base<OracleBase>(&self)
     where
         OracleBase: Currency,
-        ContractError: Into<Err>,
     {
         if OracleBase::TICKER != self.base_currency {
-            Err(ContractError::CurrencyMismatch {
-                expected: OracleBase::TICKER.into(),
-                found: self.base_currency.clone(),
-            }
-            .into())
-        } else {
-            Ok(())
+            panic!(
+                "Base currency mismatch {}",
+                ContractError::CurrencyMismatch {
+                    expected: OracleBase::TICKER.into(),
+                    found: self.base_currency.clone(),
+                }
+            );
         }
     }
 
@@ -192,16 +190,14 @@ where
         let msg = QueryMsg::Price {
             currency: C::TICKER.to_string(),
         };
-        let dto: SpotPrice = self
-            .querier
+        self.querier
             .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(|error| ContractError::FailedToFetchPrice {
                 from: C::TICKER.into(),
                 to: OracleBase::TICKER.into(),
                 error,
-            })?;
-
-        Ok(dto.try_into()?)
+            })
+            .and_then(|price: SpotPrice| price.try_into().map_err(Into::into))
     }
 }
 

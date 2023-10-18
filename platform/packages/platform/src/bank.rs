@@ -355,8 +355,9 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        native::{Native, Nls},
+        native::Native,
         payment::PaymentGroup,
+        test::NativeC,
         test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
         Currency, Group, SymbolStatic,
     };
@@ -585,8 +586,11 @@ mod test {
     #[test]
     fn total_balance_mixed_group() {
         total_balance_tester::<Native>(
-            vec![cw_coin(100, Usdc::TICKER), cw_coin(100, Nls::BANK_SYMBOL)],
-            &[Nls::BANK_SYMBOL],
+            vec![
+                cw_coin(100, Usdc::TICKER),
+                cw_coin(100, NativeC::BANK_SYMBOL),
+            ],
+            &[NativeC::BANK_SYMBOL],
         );
     }
 }

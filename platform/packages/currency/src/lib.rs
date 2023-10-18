@@ -31,11 +31,7 @@ mod symbols_macro;
 pub mod test;
 
 #[cfg(feature = "impl")]
-fn maybe_visit_any<M, C, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
+fn maybe_visit_any<M, C, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
     C: Currency + Serialize + DeserializeOwned,

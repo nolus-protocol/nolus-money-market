@@ -11,7 +11,7 @@ pub struct NlsPlatform;
 impl Currency for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
     const BANK_SYMBOL: SymbolStatic = "unls";
-    // TODO Define trait PlatformCurrency as a super trait of Currency and 
+    // TODO Define trait PlatformCurrency as a super trait of Currency and
     // merge NlsPlatform and Nls
     const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
 }

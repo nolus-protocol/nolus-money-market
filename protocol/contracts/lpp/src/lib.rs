@@ -2,7 +2,6 @@ pub mod borrow;
 pub mod error;
 pub mod loan;
 pub mod msg;
-pub mod nlpn;
 pub mod state;
 
 #[cfg(any(feature = "stub", test))]

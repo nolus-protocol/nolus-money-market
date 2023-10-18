@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::result::Result as StdResult;
 
 use currency::{error::CmdError, GroupVisit, Tickers};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{ContractError, Result},
-    msg::{LoanResponse, LppBalanceResponse, QueryLoanResponse, QueryMsg},
+    msg::{LoanResponse, QueryLoanResponse, QueryMsg},
     state::Config,
 };
 
@@ -20,23 +20,6 @@ use self::{
 
 pub mod lender;
 pub mod loan;
-
-pub trait Lpp<Lpn>
-where
-    Lpn: Currency,
-{
-    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>>;
-}
-
-pub trait WithLpp {
-    type Output;
-    type Error;
-
-    fn exec<C, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
-    where
-        L: Lpp<C>,
-        C: Currency;
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
@@ -60,46 +43,6 @@ impl LppRef {
 
     pub fn currency(&self) -> &SymbolSlice {
         &self.currency
-    }
-
-    pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper<'_>) -> StdResult<V::Output, V::Error>
-    where
-        V: WithLpp,
-        ContractError: Into<V::Error>,
-    {
-        struct CurrencyVisitor<'a, V> {
-            cmd: V,
-            lpp_ref: LppRef,
-            querier: &'a QuerierWrapper<'a>,
-        }
-
-        impl<'a, V> AnyVisitor for CurrencyVisitor<'a, V>
-        where
-            V: WithLpp,
-        {
-            type Output = V::Output;
-            type Error = CmdError<V::Error, ContractError>;
-
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Currency + Serialize + DeserializeOwned,
-            {
-                self.cmd
-                    .exec(self.lpp_ref.into_stub::<C>(self.querier))
-                    .map_err(CmdError::from_customer_err)
-            }
-        }
-
-        Tickers
-            .visit_any::<Lpns, _>(
-                &self.currency.clone(),
-                CurrencyVisitor {
-                    cmd,
-                    lpp_ref: self,
-                    querier,
-                },
-            )
-            .map_err(CmdError::into_customer_err)
     }
 
     pub fn execute_loan<Cmd>(
@@ -198,14 +141,6 @@ impl LppRef {
             .map_err(CmdError::into_customer_err)
     }
 
-    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'_>) -> LppStub<'a, C> {
-        LppStub {
-            lpp_ref: self,
-            currency: PhantomData::<C>,
-            querier,
-        }
-    }
-
     fn into_loan<Lpn>(
         self,
         lease: impl Into<Addr>,
@@ -245,30 +180,6 @@ impl LppRef {
             addr: Addr::unchecked(addr),
             currency: Lpn::TICKER.into(),
         }
-    }
-}
-
-struct LppStub<'a, C> {
-    lpp_ref: LppRef,
-    currency: PhantomData<C>,
-    querier: &'a QuerierWrapper<'a>,
-}
-
-impl<'a, C> LppStub<'a, C> {
-    fn id(&self) -> Addr {
-        self.lpp_ref.addr.clone()
-    }
-}
-
-impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
-where
-    Lpn: Currency + DeserializeOwned,
-{
-    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>> {
-        let msg = QueryMsg::LppBalance();
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
     }
 }
 

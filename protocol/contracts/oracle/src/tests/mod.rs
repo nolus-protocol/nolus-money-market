@@ -1,6 +1,6 @@
 use currency::{
-    native::Nls,
     test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+    NlsPlatform,
 };
 use currency::{Currency, SymbolOwned};
 use finance::{
@@ -139,7 +139,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
+    let info = mock_info(CREATOR, &coins(1000, NlsPlatform::TICKER));
     let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 

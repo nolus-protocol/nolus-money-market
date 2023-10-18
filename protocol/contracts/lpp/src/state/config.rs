@@ -2,12 +2,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
+use lpp_platform::NLpn;
 use sdk::{
     cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
 };
 
-use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg, nlpn::NLpn};
+use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
