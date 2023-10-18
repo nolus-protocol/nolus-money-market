@@ -8,6 +8,7 @@ use sdk::{
 use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use self::{
+    common::{type_defs::ProtocolContracts, CheckedAddr, Transform as _},
     error::Error as ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
     result::Result as ContractResult,
@@ -32,20 +33,20 @@ pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    InstantiateMsg::Instantiate { contracts }: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    msg.validate(&deps.querier)?;
-
-    state_contracts::store(deps.storage, msg.contracts).map(|()| response::empty_response())
+    contracts.transform(&deps.querier).and_then(|contracts| {
+        state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
+    })
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { dex }: MigrateMsg,
+    MigrateMsg::Migrate { dex }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
@@ -59,14 +60,20 @@ pub fn migrate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::AddProtocolSet { dex, ref contracts } => {
-            state_contracts::add_dex_bound_set(deps.storage, dex, contracts)
-                .map(|()| response::empty_response())
-        }
-        SudoMsg::MigrateContracts(migrate_contracts) => {
-            migrate_contracts::migrate(deps.storage, env.contract.address, migrate_contracts)
-                .map(response::response_only_messages)
-        }
+        SudoMsg::AddProtocolSet { dex, contracts } => contracts
+            .transform(&deps.querier)
+            .and_then(|contracts: ProtocolContracts| {
+                state_contracts::add_dex_bound_set(deps.storage, dex, contracts)
+            })
+            .map(|()| response::empty_response()),
+        SudoMsg::MigrateContracts(migrate_contracts) => env
+            .contract
+            .address
+            .transform(&deps.querier)
+            .and_then(|admin_contract_addr: CheckedAddr| {
+                migrate_contracts::migrate(deps.storage, admin_contract_addr, migrate_contracts)
+            })
+            .map(response::response_only_messages),
     }
 }
 

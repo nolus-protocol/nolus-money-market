@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, contract::CodeId};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, QuerierWrapper, WasmMsg},
+    cosmwasm_std::{Addr, Binary, WasmMsg},
     schemars::{self, JsonSchema},
 };
 
@@ -19,7 +19,13 @@ use self::type_defs::{
     PlatformContracts, PlatformContractsMigration, PlatformContractsPostMigrationExecute,
     ProtocolContracts, ProtocolContractsMigration, ProtocolContractsPostMigrationExecute,
 };
+pub(crate) use self::{
+    checked::{Addr as CheckedAddr, StoredAddr},
+    transform::Transform,
+};
 
+mod checked;
+mod transform;
 pub(crate) mod type_defs;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -29,11 +35,35 @@ pub struct MigrationSpec<M> {
     pub migrate_msg: M,
 }
 
-pub fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: MaybeMigrateContract) {
+impl<M> Transform for MigrationSpec<M>
+where
+    M: Transform,
+{
+    type Context<'r> = M::Context<'r>;
+
+    type Output = MigrationSpec<M::Output>;
+
+    type Error = M::Error;
+
+    fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
+        self.migrate_msg
+            .transform(ctx)
+            .map(|migrate_msg: M::Output| MigrationSpec {
+                code_id: self.code_id,
+                migrate_msg,
+            })
+    }
+}
+
+pub(crate) fn maybe_migrate_contract(
+    batch: &mut Batch,
+    addr: CheckedAddr,
+    migrate: MaybeMigrateContract,
+) {
     if let Some(migrate) = migrate {
         batch.schedule_execute_on_success_reply(
             WasmMsg::Migrate {
-                contract_addr: addr.into_string(),
+                contract_addr: Addr::from(addr).into_string(),
                 new_code_id: migrate.code_id,
                 msg: Binary(migrate.migrate_msg.into()),
             },
@@ -42,10 +72,14 @@ pub fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: MaybeMigra
     }
 }
 
-pub fn maybe_execute_contract(batch: &mut Batch, addr: Addr, execute: Option<String>) {
+pub(crate) fn maybe_execute_contract(
+    batch: &mut Batch,
+    addr: CheckedAddr,
+    execute: Option<String>,
+) {
     if let Some(execute) = execute {
         batch.schedule_execute_no_reply(WasmMsg::Execute {
-            contract_addr: addr.into_string(),
+            contract_addr: Addr::from(addr).into_string(),
             msg: Binary(execute.into()),
             funds: vec![],
         });
@@ -59,18 +93,33 @@ pub struct ContractsTemplate<T> {
     pub protocol: BTreeMap<String, Protocol<T>>,
 }
 
-impl Contracts {
-    pub(crate) fn validate(&self, querier: &QuerierWrapper<'_>) -> ContractResult<()> {
-        self.platform
-            .validate(querier)
-            .and_then(|()| {
-                self.protocol
-                    .values()
-                    .try_for_each(|protocol: &Protocol<Addr>| protocol.validate(querier))
-            })
-            .map_err(Into::into)
-    }
+impl<T> Transform for ContractsTemplate<T>
+where
+    T: Transform,
+{
+    type Context<'r> = T::Context<'r>;
 
+    type Output = ContractsTemplate<T::Output>;
+
+    type Error = T::Error;
+
+    fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
+        Ok(Self::Output {
+            platform: self.platform.transform(ctx)?,
+            protocol: self
+                .protocol
+                .into_iter()
+                .map(|(key, value): (String, Protocol<T>)| {
+                    value
+                        .transform(ctx)
+                        .map(|value: Protocol<T::Output>| (key, value))
+                })
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl Contracts {
     pub(crate) fn migrate(self, mut migration_msgs: ContractsMigration) -> ContractResult<Batch> {
         let mut batch: Batch = Batch::default();
 
@@ -78,7 +127,7 @@ impl Contracts {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol): (String, Protocol<Addr>)| {
+            .try_for_each(|(dex, protocol): (String, ProtocolContracts)| {
                 migration_msgs
                     .protocol
                     .remove(&dex)
@@ -107,7 +156,7 @@ impl Contracts {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol): (String, Protocol<Addr>)| {
+            .try_for_each(|(dex, protocol): (String, ProtocolContracts)| {
                 execution_msgs
                     .protocol
                     .remove(&dex)
@@ -134,13 +183,26 @@ pub struct Platform<T> {
     pub treasury: T,
 }
 
-impl PlatformContracts {
-    fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), platform::error::Error> {
-        platform::contract::validate_addr(querier, &self.dispatcher)
-            .and_then(|()| platform::contract::validate_addr(querier, &self.timealarms))
-            .and_then(|()| platform::contract::validate_addr(querier, &self.treasury))
-    }
+impl<T> Transform for Platform<T>
+where
+    T: Transform,
+{
+    type Context<'r> = T::Context<'r>;
 
+    type Output = Platform<T::Output>;
+
+    type Error = T::Error;
+
+    fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
+        Ok(Platform {
+            dispatcher: self.dispatcher.transform(ctx)?,
+            timealarms: self.timealarms.transform(ctx)?,
+            treasury: self.treasury.transform(ctx)?,
+        })
+    }
+}
+
+impl PlatformContracts {
     fn migrate(self, batch: &mut Batch, migration_msgs: PlatformContractsMigration) {
         maybe_migrate_contract(batch, self.dispatcher, migration_msgs.dispatcher);
         maybe_migrate_contract(batch, self.timealarms, migration_msgs.timealarms);
@@ -167,14 +229,27 @@ pub struct Protocol<T> {
     pub profit: T,
 }
 
-impl ProtocolContracts {
-    fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), platform::error::Error> {
-        platform::contract::validate_addr(querier, &self.leaser)
-            .and_then(|()| platform::contract::validate_addr(querier, &self.lpp))
-            .and_then(|()| platform::contract::validate_addr(querier, &self.oracle))
-            .and_then(|()| platform::contract::validate_addr(querier, &self.profit))
-    }
+impl<T> Transform for Protocol<T>
+where
+    T: Transform,
+{
+    type Context<'r> = T::Context<'r>;
 
+    type Output = Protocol<T::Output>;
+
+    type Error = T::Error;
+
+    fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
+        Ok(Protocol {
+            leaser: self.leaser.transform(ctx)?,
+            lpp: self.lpp.transform(ctx)?,
+            oracle: self.oracle.transform(ctx)?,
+            profit: self.profit.transform(ctx)?,
+        })
+    }
+}
+
+impl ProtocolContracts {
     fn migrate(self, batch: &mut Batch, migration_msgs: ProtocolContractsMigration) {
         maybe_migrate_contract(batch, self.leaser, migration_msgs.leaser);
         maybe_migrate_contract(batch, self.lpp, migration_msgs.lpp);

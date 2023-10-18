@@ -1,36 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::{Addr, QuerierWrapper},
-    schemars::{self, JsonSchema},
-};
+use sdk::schemars::{self, JsonSchema};
 
-use crate::{
-    common::{
-        type_defs::{
-            Contracts, ContractsMigration, ContractsPostMigrationExecute, MigrateContract,
-        },
-        Protocol,
-    },
-    error::Error,
+use crate::common::type_defs::{
+    ContractsMigration, ContractsPostMigrationExecute, MigrateContract, UncheckedContracts,
+    UncheckedProtocolContracts,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct InstantiateMsg {
-    pub contracts: Contracts,
-}
-
-impl InstantiateMsg {
-    pub(crate) fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), Error> {
-        self.contracts.validate(querier)
-    }
+#[serde(rename_all = "snake_case", deny_unknown_fields, untagged)]
+pub enum InstantiateMsg {
+    Instantiate { contracts: UncheckedContracts },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct MigrateMsg {
-    pub dex: String,
+#[serde(rename_all = "snake_case", deny_unknown_fields, untagged)]
+pub enum MigrateMsg {
+    Migrate { dex: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -38,16 +24,18 @@ pub struct MigrateMsg {
 pub enum SudoMsg {
     AddProtocolSet {
         dex: String,
-        contracts: Protocol<Addr>,
+        contracts: UncheckedProtocolContracts,
     },
     MigrateContracts(MigrateContracts),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct MigrateContracts {
-    pub release: String,
-    pub admin_contract: Option<MigrateContract>,
-    pub migration_spec: ContractsMigration,
-    pub post_migration_execute: ContractsPostMigrationExecute,
+#[serde(rename_all = "snake_case", deny_unknown_fields, untagged)]
+pub enum MigrateContracts {
+    MigrateContracts {
+        release: String,
+        admin_contract: Option<MigrateContract>,
+        migration_spec: ContractsMigration,
+        post_migration_execute: ContractsPostMigrationExecute,
+    },
 }

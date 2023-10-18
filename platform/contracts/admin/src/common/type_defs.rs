@@ -1,13 +1,15 @@
-use sdk::cosmwasm_std::Addr;
+use sdk::cosmwasm_std::Addr as UncheckedAddr;
 
-use super::{ContractsTemplate, Protocol, Platform, MigrationSpec};
+use super::{CheckedAddr, ContractsTemplate, MigrationSpec, Platform, Protocol};
 
 pub type MigrateContract = MigrationSpec<String>;
 pub type MaybeMigrateContract = Option<MigrateContract>;
 
-pub type PlatformContracts = Platform<Addr>;
-pub type ProtocolContracts = Protocol<Addr>;
-pub type Contracts = ContractsTemplate<Addr>;
+pub(crate) type PlatformContracts = Platform<CheckedAddr>;
+pub type UncheckedProtocolContracts = Protocol<UncheckedAddr>;
+pub(crate) type ProtocolContracts = Protocol<CheckedAddr>;
+pub type UncheckedContracts = ContractsTemplate<UncheckedAddr>;
+pub(crate) type Contracts = ContractsTemplate<CheckedAddr>;
 
 pub type PlatformContractsMigration = Platform<MaybeMigrateContract>;
 pub type ProtocolContractsMigration = Protocol<MaybeMigrateContract>;
