@@ -48,11 +48,7 @@ where
     fn from(value: Position<Asset, Lpn>) -> Self {
         Self {
             amount: value.amount.into(),
-            spec: PositionSpecDTO::new_internal(
-                value.spec.liability(),
-                value.spec.min_asset().into(),
-                value.spec.min_trasaction_amount().into(),
-            ),
+            spec: value.spec.into(),
         }
     }
 }

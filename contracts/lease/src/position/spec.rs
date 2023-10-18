@@ -35,15 +35,6 @@ where
         obj
     }
 
-    pub fn try_from(spec: PositionSpecDTO) -> ContractResult<Self> {
-        Ok(Self::new_internal(
-            spec.liability,
-            spec.min_asset.try_into()?,
-            spec.min_sell_asset.try_into()?,
-        ))
-    }
-
-    #[cfg(test)]
     pub fn new(
         liability: Liability,
         min_asset: Coin<Lpn>,
@@ -54,14 +45,6 @@ where
 
     pub fn liability(&self) -> Liability {
         self.liability
-    }
-
-    pub fn min_asset(&self) -> Coin<Lpn> {
-        self.min_asset
-    }
-
-    pub fn min_trasaction_amount(&self) -> Coin<Lpn> {
-        self.min_trasaction_amount
     }
 
     pub fn check_trasaction_amount<Trasactional>(
@@ -117,5 +100,18 @@ where
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
+    }
+}
+
+impl<Lpn> From<Spec<Lpn>> for PositionSpecDTO
+where
+    Lpn: Currency,
+{
+    fn from(spec: Spec<Lpn>) -> Self {
+        PositionSpecDTO::new_internal(
+            spec.liability,
+            spec.min_asset.into(),
+            spec.min_trasaction_amount.into(),
+        )
     }
 }
