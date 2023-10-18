@@ -11,13 +11,13 @@ use crate::{
 };
 
 #[cfg_attr(test, derive(Debug))]
-pub struct PositionSpec<Lpn> {
+pub struct Spec<Lpn> {
     liability: Liability,
     min_asset: Coin<Lpn>,
     min_trasaction_amount: Coin<Lpn>,
 }
 
-impl<Lpn> PositionSpec<Lpn>
+impl<Lpn> Spec<Lpn>
 where
     Lpn: Currency,
 {

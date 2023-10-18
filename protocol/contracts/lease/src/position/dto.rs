@@ -6,7 +6,7 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use super::{Position, Spec as PositionSpec};
+use super::{Position, Spec};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
@@ -36,7 +36,7 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionDTO) -> ContractResult<Self> {
-        Self::try_from(dto.amount, PositionSpec::try_from(dto.spec)?)
+        Self::try_from(dto.amount, Spec::try_from(dto.spec)?)
     }
 }
 
