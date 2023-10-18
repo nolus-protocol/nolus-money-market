@@ -22,7 +22,7 @@ impl Group for LeaseGroup {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        use crate::currency::maybe_visit_any as maybe_visit;
+        use crate::maybe_visit_any as maybe_visit;
         #[cfg(dex = "osmosis")]
         {
             use osmosis::*;

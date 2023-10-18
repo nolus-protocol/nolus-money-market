@@ -12,8 +12,6 @@ pub use self::{
     matcher::{BankSymbols, DexSymbols, Matcher, Symbol, Symbols, Tickers},
 };
 
-pub(crate) use self::group::maybe_visit_any;
-
 mod from_symbol;
 mod from_symbol_any;
 mod group;

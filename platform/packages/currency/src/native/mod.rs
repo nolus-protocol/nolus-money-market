@@ -1,20 +1,16 @@
-use serde::{Deserialize, Serialize};
-
-use sdk::schemars::{self, JsonSchema};
-
 use crate::{
     currency::{AnyVisitor, Group, MaybeAnyVisitResult},
     Matcher, SymbolSlice,
 };
+
 #[cfg(dex = "osmosis")]
 pub(crate) mod osmosis;
 
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct Lpns {}
-
-impl Group for Lpns {
-    const DESCR: &'static str = "lpns";
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+pub struct Native {}
+impl Group for Native {
+    const DESCR: &'static str = "native";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
@@ -24,8 +20,8 @@ impl Group for Lpns {
         use crate::maybe_visit_any as maybe_visit;
         #[cfg(dex = "osmosis")]
         {
-            use osmosis::Usdc;
-            maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
+            use osmosis::Nls;
+            maybe_visit::<_, Nls, _>(matcher, symbol, visitor)
         }
     }
 }

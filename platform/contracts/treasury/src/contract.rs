@@ -1,5 +1,5 @@
 use access_control::SingleUserAccess;
-use currency::native::Nls;
+use currency::NlsPlatform;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
@@ -88,7 +88,7 @@ fn try_configure_reward_dispatcher(
 fn try_send_rewards<B>(
     storage: &dyn Storage,
     sender: Addr,
-    amount: Coin<Nls>,
+    amount: Coin<NlsPlatform>,
     account: &mut B,
 ) -> ContractResult<()>
 where

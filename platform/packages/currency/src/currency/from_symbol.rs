@@ -1,6 +1,6 @@
 use crate::{error::Error, Matcher, SymbolSlice};
 
-use super::{group, Currency};
+use super::Currency;
 
 pub trait SingleVisitor<C> {
     type Output;
@@ -28,7 +28,11 @@ pub trait CurrencyVisit: Matcher {
         C: Currency,
         V: SingleVisitor<C>,
     {
-        group::maybe_visit(self, ticker, visitor)
+        if self.match_::<C>(ticker) {
+            Ok(visitor.on())
+        } else {
+            Err(visitor)
+        }
     }
 }
 impl<M> CurrencyVisit for M where M: Matcher {}

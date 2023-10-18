@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[cfg(dex = "osmosis")]
-pub(crate) mod osmosis;
+mod osmosis;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

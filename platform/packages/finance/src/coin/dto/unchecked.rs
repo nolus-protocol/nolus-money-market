@@ -25,18 +25,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        lpn::Lpns,
-        native::{Native, Nls},
-        payment::PaymentGroup,
-    };
+    use currency::{lpn::Lpns, native::Native, payment::PaymentGroup, test::NativeC};
     use sdk::cosmwasm_std;
 
     use crate::coin::{Coin, CoinDTO};
 
     #[test]
     fn deser_same_group() {
-        let coin: CoinDTO<Native> = Coin::<Nls>::new(4215).into();
+        let coin: CoinDTO<Native> = Coin::<NativeC>::new(4215).into();
         let coin_deser: CoinDTO<Native> = cosmwasm_std::to_vec(&coin)
             .and_then(|buf| cosmwasm_std::from_slice(&buf))
             .expect("correct raw bytes");
@@ -45,7 +41,7 @@ mod test {
 
     #[test]
     fn deser_parent_group() {
-        type CoinCurrency = Nls;
+        type CoinCurrency = NativeC;
         type DirectGroup = Native;
         type ParentGroup = PaymentGroup;
 
@@ -59,7 +55,7 @@ mod test {
 
     #[test]
     fn deser_wrong_group() {
-        let coin: CoinDTO<Native> = Coin::<Nls>::new(4215).into();
+        let coin: CoinDTO<Native> = Coin::<NativeC>::new(4215).into();
         let coin_raw = cosmwasm_std::to_vec(&coin).unwrap();
 
         assert!(cosmwasm_std::from_slice::<CoinDTO<Lpns>>(&coin_raw).is_err());

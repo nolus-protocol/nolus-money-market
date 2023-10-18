@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    currency, AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+    AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
 };
 
 #[cfg(dex = "osmosis")]
@@ -9,7 +9,7 @@ mod currencies {
     use crate::{
         lease::osmosis::{Atom, Axl, Cro, Osmo, Weth},
         lpn::osmosis::Usdc,
-        native::Nls,
+        native::osmosis::Nls,
     };
 
     pub type PaymentC1 = Nls;
@@ -21,6 +21,8 @@ mod currencies {
     pub type PaymentC7 = Weth;
 
     pub type StableC1 = Usdc;
+
+    pub type NativeC = Nls;
 }
 pub use currencies::*;
 
@@ -58,8 +60,8 @@ impl Group for TestCurrencies {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        currency::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
-            .or_else(|visitor| currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor))
+        crate::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
+            .or_else(|visitor| crate::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor))
     }
 }
 
@@ -74,7 +76,7 @@ impl Group for TestExtraCurrencies {
         V: AnyVisitor,
     {
         TestCurrencies::maybe_visit(matcher, symbol, visitor)
-            .or_else(|visitor| currency::maybe_visit_any::<_, Dai, _>(matcher, symbol, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, Dai, _>(matcher, symbol, visitor))
     }
 }
 

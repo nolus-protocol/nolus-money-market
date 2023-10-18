@@ -1,4 +1,4 @@
-use currency::{native::Nls, BankSymbols, Group};
+use currency::{BankSymbols, Group, NlsPlatform};
 use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -32,8 +32,8 @@ impl<'c> Sender<'c> {
         sender: Addr,
         receiver: HostAccount,
         timeout: Timestamp,
-        ack_tip: Coin<Nls>,
-        timeout_tip: Coin<Nls>,
+        ack_tip: Coin<NlsPlatform>,
+        timeout_tip: Coin<NlsPlatform>,
         memo: String,
     ) -> Self {
         Self {
@@ -129,8 +129,8 @@ impl<'c> From<Sender<'c>> for Batch {
 #[cfg(test)]
 mod test {
     use currency::{
-        native::Nls,
         test::{Dai, TestExtraCurrencies, Usdc},
+        NlsPlatform,
     };
     use finance::coin::Coin;
     use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -148,8 +148,8 @@ mod test {
         let sender = Addr::unchecked("sender");
         let receiver = HostAccount::try_from(String::from("receiver")).unwrap();
         let timeout = Timestamp::from_seconds(100);
-        let ack_fee = Coin::<Nls>::new(100);
-        let timeout_fee = Coin::<Nls>::new(50);
+        let ack_fee = Coin::<NlsPlatform>::new(100);
+        let timeout_fee = Coin::<NlsPlatform>::new(50);
         let mut funds_sender = Sender::new(
             channel,
             sender.clone(),
