@@ -1,8 +1,9 @@
+#[cfg(feature = "impl")]
 use currency::{lpn::Lpns, Currency};
 use serde::{Deserialize, Serialize};
 
 use error::Result;
-use finance::coin::{Amount, Coin};
+use finance::coin::Coin;
 use sdk::{
     cosmwasm_std::{Addr, QuerierWrapper},
     schemars::{self, JsonSchema},
@@ -41,6 +42,8 @@ pub fn into_usd<Lpn>(amount: Coin<Lpn>) -> Coin<Usd>
 where
     Lpn: Currency,
 {
+    use finance::coin::Amount;
+
     debug_assert_eq!(currency::validate_member::<Lpn, Lpns>(), Ok(()));
 
     Into::<Amount>::into(amount).into()
