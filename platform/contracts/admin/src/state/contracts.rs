@@ -7,21 +7,21 @@ use sdk::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::type_defs::{Contracts, DexBoundContracts, DexIndependentContracts},
+    common::type_defs::{Contracts, PlatformContracts, ProtocolContracts},
     result::Result as ContractResult,
     ContractError,
 };
 
-const DEX_INDEPENDENT: Item<'_, DexIndependentContracts> = Item::new("dex_independent_contracts");
-const DEX_BOUND: Map<'_, String, DexBoundContracts> = Map::new("dex_bound_contracts");
+const PLATFORM: Item<'_, PlatformContracts> = Item::new("platform_contracts");
+const PROTOCOL: Map<'_, String, ProtocolContracts> = Map::new("protocol_contracts");
 
 pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> ContractResult<()> {
-    DEX_INDEPENDENT
-        .save(storage, &contracts.dex_independent)
+    PLATFORM
+        .save(storage, &contracts.platform)
         .and_then(|()| {
-            contracts.dex_bound.into_iter().try_for_each(
-                |(dex, dex_bound): (String, DexBoundContracts)| {
-                    DEX_BOUND.save(storage, dex, &dex_bound)
+            contracts.protocol.into_iter().try_for_each(
+                |(dex, dex_bound): (String, ProtocolContracts)| {
+                    PROTOCOL.save(storage, dex, &dex_bound)
                 },
             )
         })
@@ -31,25 +31,25 @@ pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> Contract
 pub(crate) fn add_dex_bound_set(
     storage: &mut dyn Storage,
     dex: String,
-    contracts: &DexBoundContracts,
+    contracts: &ProtocolContracts,
 ) -> ContractResult<()> {
-    if DEX_BOUND.has(storage, dex.clone()) {
+    if PROTOCOL.has(storage, dex.clone()) {
         Err(ContractError::DexSetAlreadyExists(dex))
     } else {
-        DEX_BOUND.save(storage, dex, contracts).map_err(Into::into)
+        PROTOCOL.save(storage, dex, contracts).map_err(Into::into)
     }
 }
 
 pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Contracts> {
-    DEX_INDEPENDENT
+    PLATFORM
         .load(storage)
-        .and_then(|dex_independent: DexIndependentContracts| {
-            DEX_BOUND
+        .and_then(|platform: PlatformContracts| {
+            PROTOCOL
                 .range(storage, None, None, Order::Ascending)
                 .collect::<Result<_, _>>()
-                .map(|dex_bound: BTreeMap<String, DexBoundContracts>| Contracts {
-                    dex_independent,
-                    dex_bound,
+                .map(|protocol: BTreeMap<String, ProtocolContracts>| Contracts {
+                    platform,
+                    protocol,
                 })
         })
         .map_err(Into::into)
@@ -85,14 +85,14 @@ pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> ContractResult<
             store(
                 storage,
                 Contracts {
-                    dex_independent: DexIndependentContracts {
+                    platform: PlatformContracts {
                         dispatcher,
                         timealarms,
                         treasury,
                     },
-                    dex_bound: BTreeMap::from([(
+                    protocol: BTreeMap::from([(
                         dex,
-                        DexBoundContracts {
+                        ProtocolContracts {
                             leaser,
                             lpp,
                             oracle,

@@ -59,7 +59,7 @@ pub fn migrate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::AddDexBoundSet { dex, ref contracts } => {
+        SudoMsg::AddProtocolSet { dex, ref contracts } => {
             state_contracts::add_dex_bound_set(deps.storage, dex, contracts)
                 .map(|()| response::empty_response())
         }

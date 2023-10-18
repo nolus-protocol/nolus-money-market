@@ -16,9 +16,8 @@ use crate::{
 };
 
 use self::type_defs::{
-    DexBoundContracts, DexBoundContractsMigration, DexBoundContractsPostMigrationExecute,
-    DexIndependentContracts, DexIndependentContractsMigration,
-    DexIndependentContractsPostMigrationExecute,
+    PlatformContracts, PlatformContractsMigration, PlatformContractsPostMigrationExecute,
+    ProtocolContracts, ProtocolContractsMigration, ProtocolContractsPostMigrationExecute,
 };
 
 pub(crate) mod type_defs;
@@ -56,18 +55,18 @@ pub fn maybe_execute_contract(batch: &mut Batch, addr: Addr, execute: Option<Str
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct ContractsTemplate<T> {
-    pub dex_independent: DexIndependent<T>,
-    pub dex_bound: BTreeMap<String, DexBound<T>>,
+    pub platform: Platform<T>,
+    pub protocol: BTreeMap<String, Protocol<T>>,
 }
 
 impl Contracts {
     pub(crate) fn validate(&self, querier: &QuerierWrapper<'_>) -> ContractResult<()> {
-        self.dex_independent
+        self.platform
             .validate(querier)
             .and_then(|()| {
-                self.dex_bound
+                self.protocol
                     .values()
-                    .try_for_each(|dex_bound: &DexBound<Addr>| dex_bound.validate(querier))
+                    .try_for_each(|protocol: &Protocol<Addr>| protocol.validate(querier))
             })
             .map_err(Into::into)
     }
@@ -75,22 +74,21 @@ impl Contracts {
     pub(crate) fn migrate(self, mut migration_msgs: ContractsMigration) -> ContractResult<Batch> {
         let mut batch: Batch = Batch::default();
 
-        self.dex_independent
-            .migrate(&mut batch, migration_msgs.dex_independent);
+        self.platform.migrate(&mut batch, migration_msgs.platform);
 
-        self.dex_bound
+        self.protocol
             .into_iter()
-            .try_for_each(|(dex, dex_bound): (String, DexBound<Addr>)| {
+            .try_for_each(|(dex, protocol): (String, Protocol<Addr>)| {
                 migration_msgs
-                    .dex_bound
+                    .protocol
                     .remove(&dex)
-                    .map(|migration_msgs: DexBound<MaybeMigrateContract>| {
-                        dex_bound.migrate(&mut batch, migration_msgs)
+                    .map(|migration_msgs: Protocol<MaybeMigrateContract>| {
+                        protocol.migrate(&mut batch, migration_msgs)
                     })
                     .ok_or(ContractError::MissingDex(dex))
             })
             .and_then(|()| {
-                if let Some((dex, _)) = migration_msgs.dex_bound.pop_first() {
+                if let Some((dex, _)) = migration_msgs.protocol.pop_first() {
                     Err(ContractError::UnknownDex(dex))
                 } else {
                     Ok(batch)
@@ -104,22 +102,22 @@ impl Contracts {
     ) -> ContractResult<Batch> {
         let mut batch: Batch = Batch::default();
 
-        self.dex_independent
-            .post_migration_execute(&mut batch, execution_msgs.dex_independent);
+        self.platform
+            .post_migration_execute(&mut batch, execution_msgs.platform);
 
-        self.dex_bound
+        self.protocol
             .into_iter()
-            .try_for_each(|(dex, dex_bound): (String, DexBound<Addr>)| {
+            .try_for_each(|(dex, protocol): (String, Protocol<Addr>)| {
                 execution_msgs
-                    .dex_bound
+                    .protocol
                     .remove(&dex)
-                    .map(|execution_msgs: DexBound<Option<String>>| {
-                        dex_bound.post_migration_execute(&mut batch, execution_msgs)
+                    .map(|execution_msgs: Protocol<Option<String>>| {
+                        protocol.post_migration_execute(&mut batch, execution_msgs)
                     })
                     .ok_or(ContractError::MissingDex(dex))
             })
             .and_then(|()| {
-                if let Some((dex, _)) = execution_msgs.dex_bound.pop_first() {
+                if let Some((dex, _)) = execution_msgs.protocol.pop_first() {
                     Err(ContractError::UnknownDex(dex))
                 } else {
                     Ok(batch)
@@ -130,20 +128,20 @@ impl Contracts {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct DexIndependent<T> {
+pub struct Platform<T> {
     pub dispatcher: T,
     pub timealarms: T,
     pub treasury: T,
 }
 
-impl DexIndependentContracts {
+impl PlatformContracts {
     fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), platform::error::Error> {
         platform::contract::validate_addr(querier, &self.dispatcher)
             .and_then(|()| platform::contract::validate_addr(querier, &self.timealarms))
             .and_then(|()| platform::contract::validate_addr(querier, &self.treasury))
     }
 
-    fn migrate(self, batch: &mut Batch, migration_msgs: DexIndependentContractsMigration) {
+    fn migrate(self, batch: &mut Batch, migration_msgs: PlatformContractsMigration) {
         maybe_migrate_contract(batch, self.dispatcher, migration_msgs.dispatcher);
         maybe_migrate_contract(batch, self.timealarms, migration_msgs.timealarms);
         maybe_migrate_contract(batch, self.treasury, migration_msgs.treasury);
@@ -152,7 +150,7 @@ impl DexIndependentContracts {
     fn post_migration_execute(
         self,
         batch: &mut Batch,
-        execution_msgs: DexIndependentContractsPostMigrationExecute,
+        execution_msgs: PlatformContractsPostMigrationExecute,
     ) {
         maybe_execute_contract(batch, self.dispatcher, execution_msgs.dispatcher);
         maybe_execute_contract(batch, self.timealarms, execution_msgs.timealarms);
@@ -162,14 +160,14 @@ impl DexIndependentContracts {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct DexBound<T> {
+pub struct Protocol<T> {
     pub leaser: T,
     pub lpp: T,
     pub oracle: T,
     pub profit: T,
 }
 
-impl DexBoundContracts {
+impl ProtocolContracts {
     fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), platform::error::Error> {
         platform::contract::validate_addr(querier, &self.leaser)
             .and_then(|()| platform::contract::validate_addr(querier, &self.lpp))
@@ -177,7 +175,7 @@ impl DexBoundContracts {
             .and_then(|()| platform::contract::validate_addr(querier, &self.profit))
     }
 
-    fn migrate(self, batch: &mut Batch, migration_msgs: DexBoundContractsMigration) {
+    fn migrate(self, batch: &mut Batch, migration_msgs: ProtocolContractsMigration) {
         maybe_migrate_contract(batch, self.leaser, migration_msgs.leaser);
         maybe_migrate_contract(batch, self.lpp, migration_msgs.lpp);
         maybe_migrate_contract(batch, self.oracle, migration_msgs.oracle);
@@ -187,7 +185,7 @@ impl DexBoundContracts {
     fn post_migration_execute(
         self,
         batch: &mut Batch,
-        execution_msgs: DexBoundContractsPostMigrationExecute,
+        execution_msgs: ProtocolContractsPostMigrationExecute,
     ) {
         maybe_execute_contract(batch, self.leaser, execution_msgs.leaser);
         maybe_execute_contract(batch, self.lpp, execution_msgs.lpp);

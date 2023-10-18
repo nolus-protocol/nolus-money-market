@@ -10,7 +10,7 @@ use crate::{
         type_defs::{
             Contracts, ContractsMigration, ContractsPostMigrationExecute, MigrateContract,
         },
-        DexBound,
+        Protocol,
     },
     error::Error,
 };
@@ -36,9 +36,9 @@ pub struct MigrateMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum SudoMsg {
-    AddDexBoundSet {
+    AddProtocolSet {
         dex: String,
-        contracts: DexBound<Addr>,
+        contracts: Protocol<Addr>,
     },
     MigrateContracts(MigrateContracts),
 }

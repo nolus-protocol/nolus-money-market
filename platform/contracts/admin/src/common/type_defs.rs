@@ -1,18 +1,18 @@
 use sdk::cosmwasm_std::Addr;
 
-use super::{ContractsTemplate, DexBound, DexIndependent, MigrationSpec};
+use super::{ContractsTemplate, Protocol, Platform, MigrationSpec};
 
 pub type MigrateContract = MigrationSpec<String>;
 pub type MaybeMigrateContract = Option<MigrateContract>;
 
-pub type DexIndependentContracts = DexIndependent<Addr>;
-pub type DexBoundContracts = DexBound<Addr>;
+pub type PlatformContracts = Platform<Addr>;
+pub type ProtocolContracts = Protocol<Addr>;
 pub type Contracts = ContractsTemplate<Addr>;
 
-pub type DexIndependentContractsMigration = DexIndependent<MaybeMigrateContract>;
-pub type DexBoundContractsMigration = DexBound<MaybeMigrateContract>;
+pub type PlatformContractsMigration = Platform<MaybeMigrateContract>;
+pub type ProtocolContractsMigration = Protocol<MaybeMigrateContract>;
 pub type ContractsMigration = ContractsTemplate<MaybeMigrateContract>;
 
-pub type DexIndependentContractsPostMigrationExecute = DexIndependent<Option<String>>;
-pub type DexBoundContractsPostMigrationExecute = DexBound<Option<String>>;
+pub type PlatformContractsPostMigrationExecute = Platform<Option<String>>;
+pub type ProtocolContractsPostMigrationExecute = Protocol<Option<String>>;
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
