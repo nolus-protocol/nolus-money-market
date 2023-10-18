@@ -30,7 +30,6 @@ where
     Asset: Currency,
     Lpn: Currency,
 {
-
     fn new_internal(amount: Coin<Asset>, spec: Spec<Lpn>) -> Self {
         let obj = Self { amount, spec };
         debug_assert_eq!(Ok(()), obj.invariant_held());
@@ -38,7 +37,10 @@ where
     }
 
     pub fn try_from(amount: LeaseCoin, spec: Spec<Lpn>) -> ContractResult<Self> {
-        Ok(Self::new_internal(amount.try_into()?, spec))
+        amount
+            .try_into()
+            .map_err(Into::into)
+            .map(|amount| Self::new_internal(amount, spec))
     }
 
     #[cfg(test)]
