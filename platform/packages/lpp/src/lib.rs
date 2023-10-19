@@ -1,5 +1,5 @@
 #[cfg(feature = "impl")]
-use currency::{lpn::Lpns, Currency};
+use currency::{dex::Lpns, Currency};
 use serde::{Deserialize, Serialize};
 
 use error::Result;

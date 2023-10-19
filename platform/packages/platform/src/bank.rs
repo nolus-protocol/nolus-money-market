@@ -355,8 +355,6 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        native::Native,
-        payment::PaymentGroup,
         test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1},
         Currency, Group, SymbolStatic,
     };
@@ -563,7 +561,7 @@ mod test {
 
     #[test]
     fn total_balance_empty() {
-        total_balance_tester::<PaymentGroup>(vec![], &[]);
+        total_balance_tester::<SubGroup>(vec![], &[]);
     }
 
     #[test]
@@ -576,12 +574,12 @@ mod test {
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<Native>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
+        total_balance_tester::<SuperGroup>(vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)], &[]);
     }
 
     #[test]
     fn total_balance_mixed_group() {
-        total_balance_tester::<Native>(
+        total_balance_tester::<SubGroup>(
             vec![
                 cw_coin(100, SuperGroupTestC1::TICKER),
                 cw_coin(100, SubGroupTestC1::BANK_SYMBOL),

@@ -4,11 +4,10 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     currency::{AnyVisitor, Group, MaybeAnyVisitResult},
-    lease::LeaseGroup,
-    lpn::Lpns,
-    native::Native,
     Matcher, SymbolSlice,
 };
+
+use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
 #[cfg(dex = "osmosis")]
 mod osmosis;

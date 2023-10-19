@@ -5,29 +5,12 @@ mod currency;
 pub use crate::currency::*;
 
 #[cfg(feature = "impl")]
-mod currency_macro;
-
-mod dex;
+pub mod dex;
 
 pub mod error;
 
-#[cfg(feature = "impl")]
-pub mod lease;
-
-#[cfg(feature = "impl")]
-pub mod lpn;
-
-#[cfg(feature = "impl")]
-pub mod native;
-
 mod nls;
 pub use nls::NlsPlatform;
-
-#[cfg(feature = "impl")]
-pub mod payment;
-
-#[cfg(feature = "impl")]
-mod symbols_macro;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test;

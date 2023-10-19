@@ -19,19 +19,19 @@ macro_rules! define_currency {
             PartialOrd,
             Ord,
             Default,
-            $crate::currency_macro::Serialize,
-            $crate::currency_macro::Deserialize,
-            $crate::currency_macro::JsonSchema,
+            $crate::dex::currency_macro::Serialize,
+            $crate::dex::currency_macro::Deserialize,
+            $crate::dex::currency_macro::JsonSchema,
         )]
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
         pub struct $ident {}
 
-        impl $crate::currency_macro::Currency for $ident {
-            const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
+        impl $crate::dex::currency_macro::Currency for $ident {
+            const TICKER: $crate::dex::currency_macro::SymbolStatic = ::core::stringify!($ticker);
 
-            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
+            const BANK_SYMBOL: $crate::dex::currency_macro::SymbolStatic = $ticker.bank;
 
-            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
+            const DEX_SYMBOL: $crate::dex::currency_macro::SymbolStatic = $ticker.dex;
         }
     };
 }

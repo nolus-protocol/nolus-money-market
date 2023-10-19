@@ -1,6 +1,7 @@
+// #[cfg(any(test, dex = "osmosis"))]
 #[cfg(dex = "osmosis")]
 mod currencies {
-    use crate::{
+    use crate::dex::{
         lease::osmosis::{Atom, Axl, Cro, Osmo, Weth},
         lpn::osmosis::Usdc,
         native::osmosis::Nls,

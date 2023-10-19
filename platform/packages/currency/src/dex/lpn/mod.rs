@@ -21,11 +21,7 @@ impl Group for Lpns {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        use crate::maybe_visit_any as maybe_visit;
         #[cfg(dex = "osmosis")]
-        {
-            use osmosis::Usdc;
-            maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
-        }
+        osmosis::maybe_visit(matcher, symbol, visitor)
     }
 }

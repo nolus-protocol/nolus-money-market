@@ -1,6 +1,8 @@
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{
+    define_currency, define_symbol, AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice,
+};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -330,17 +332,47 @@ define_symbol! {
 }
 define_currency!(Mars, MARS);
 
+pub(super) fn maybe_visit<M, V>(
+    matcher: &M,
+    symbol: &SymbolSlice,
+    visitor: V,
+) -> MaybeAnyVisitResult<V>
+where
+    M: Matcher + ?Sized,
+    V: AnyVisitor,
+{
+    use crate::maybe_visit_any as maybe_visit;
+    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
+        .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, StOsmo, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Axl, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, QAtom, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Strd, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Inj, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Secret, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Stars, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cro, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Evmos, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, symbol, visitor))
+}
+
 #[cfg(test)]
 mod test {
 
     use crate::{
-        dex::test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        dex::{
+            test_impl::{
+                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+            },
+            {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
         },
-        lease::LeaseGroup,
-        lpn::osmosis::Usdc,
-        native::osmosis::Nls,
         Currency,
     };
 

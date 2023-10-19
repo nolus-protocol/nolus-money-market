@@ -22,28 +22,7 @@ impl Group for LeaseGroup {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        use crate::maybe_visit_any as maybe_visit;
         #[cfg(dex = "osmosis")]
-        {
-            use osmosis::*;
-            maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
-                .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, StOsmo, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Axl, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, QAtom, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Strd, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Inj, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Secret, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Stars, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Cro, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Evmos, _>(matcher, symbol, visitor))
-                .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, symbol, visitor))
-        }
+        osmosis::maybe_visit(matcher, symbol, visitor)
     }
 }
