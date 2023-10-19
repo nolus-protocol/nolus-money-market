@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
@@ -22,6 +22,8 @@ use super::{finalize::FinalizerRef, state::Migrate};
 #[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 5;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 6;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -40,7 +42,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.lpp)?;
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.profit)?;
 
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     state::new_lease(&mut deps, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
@@ -54,7 +56,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     let resp =
         versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
             deps.storage,
-            version!(CONTRACT_STORAGE_VERSION),
+            CONTRACT_VERSION,
             |storage: &mut _| {
                 state::load_v5(storage)
                     .and_then(|lease_v5| {
@@ -77,7 +79,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
 
     #[cfg(not(feature = "migration"))]
     let resp =
-        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+        versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
             .and_then(response::response);
     resp.or_else(|err| platform_error::log(err, deps.api))
 }

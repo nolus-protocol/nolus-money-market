@@ -10,7 +10,7 @@ use sdk::{
         to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
-use versioning::{package_version, version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -21,6 +21,8 @@ use crate::{
 // version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -29,15 +31,15 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     Ok(response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
-        .and_then(response::response)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response_consuming)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -69,7 +71,7 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwRes
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_json_binary(&package_version!())?),
+        QueryMsg::ContractVersion {} => Ok(to_json_binary(&PACKAGE_VERSION)?),
         QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),

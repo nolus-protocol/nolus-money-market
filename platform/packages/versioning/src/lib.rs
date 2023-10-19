@@ -82,7 +82,7 @@ macro_rules! package_version {
     () => {{
         $crate::SemVer::parse(::core::env!(
             "CARGO_PKG_VERSION",
-            "Cargo package version is not set as an environment variable!",
+            "Cargo package version is not set as an environment variable!"
         ))
     }};
 }

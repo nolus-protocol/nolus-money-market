@@ -8,6 +8,14 @@ pub fn empty_response() -> CwResponse {
     response_only_messages(MessageResponse::default())
 }
 
+pub fn response_consuming<T, E>(response: T) -> Result<CwResponse, E>
+where
+    T: Serialize,
+    error::Error: Into<E>,
+{
+    self::response(&response)
+}
+
 pub fn response<T, E>(response: &T) -> Result<CwResponse, E>
 where
     T: Serialize + ?Sized,
