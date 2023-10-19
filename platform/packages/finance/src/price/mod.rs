@@ -287,7 +287,7 @@ mod test {
         price::{self, Price},
         ratio::Rational,
     };
-    use currency::test::{Nls, Usdc};
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
     use currency::{Currency, SymbolStatic};
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -298,8 +298,8 @@ mod test {
         const DEX_SYMBOL: SymbolStatic = "ibc/cme72hr2";
     }
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
-    type QuoteCoin = CoinT<Usdc>;
-    type Coin = CoinT<Nls>;
+    type QuoteCoin = CoinT<SuperGroupTestC1>;
+    type Coin = CoinT<SuperGroupTestC2>;
 
     #[test]
     fn new_c16n() {
@@ -389,7 +389,8 @@ mod test {
     #[test]
     #[should_panic]
     fn total_overflow() {
-        let price = price::total_of::<Nls>(1.into()).is::<Usdc>((Amount::MAX / 2 + 1).into());
+        let price = price::total_of::<SuperGroupTestC2>(1.into())
+            .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
         super::total(2.into(), price);
     }
 
@@ -620,32 +621,44 @@ mod test {
 #[cfg(test)]
 mod test_invariant {
     use crate::{coin::Coin, price::Price};
-    use currency::test::{Nls, Usdc};
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
     use currency::Currency;
 
     #[test]
     #[should_panic = "zero"]
     fn base_zero() {
-        new_invalid(Coin::<Usdc>::new(0), Coin::<Nls>::new(5));
+        new_invalid(
+            Coin::<SuperGroupTestC1>::new(0),
+            Coin::<SuperGroupTestC2>::new(5),
+        );
     }
 
     #[test]
     #[should_panic = "zero"]
     fn quote_zero() {
-        new_invalid(Coin::<Usdc>::new(10), Coin::<Nls>::new(0));
+        new_invalid(
+            Coin::<SuperGroupTestC1>::new(10),
+            Coin::<SuperGroupTestC2>::new(0),
+        );
     }
 
     #[test]
     #[should_panic = "should be equal to the identity if the currencies match"]
     fn currencies_match() {
-        new_invalid(Coin::<Nls>::new(4), Coin::<Nls>::new(5));
+        new_invalid(
+            Coin::<SuperGroupTestC2>::new(4),
+            Coin::<SuperGroupTestC2>::new(5),
+        );
     }
 
     #[test]
     fn currencies_match_ok() {
         assert_eq!(
             Price::identity(),
-            Price::new(Coin::<Nls>::new(4), Coin::<Nls>::new(4))
+            Price::new(
+                Coin::<SuperGroupTestC2>::new(4),
+                Coin::<SuperGroupTestC2>::new(4)
+            )
         );
     }
 

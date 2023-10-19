@@ -10,7 +10,7 @@ trx = ["sdk/cosmos", "dep:osmosis-std"]
 testing = []
 
 [dependencies]
-currency = { workspace = true }
+currency = { workspace = true, features = ["impl"] }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }

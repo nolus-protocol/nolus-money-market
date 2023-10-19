@@ -334,15 +334,13 @@ define_currency!(Mars, MARS);
 mod test {
 
     use crate::{
+        dex::test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        },
         lease::LeaseGroup,
         lpn::osmosis::Usdc,
-        test::{
-            group::{
-                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-            },
-            NativeC,
-        },
+        native::osmosis::Nls,
         Currency,
     };
 
@@ -358,8 +356,8 @@ mod test {
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(NativeC::TICKER);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(NativeC::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
     }
 
@@ -374,7 +372,7 @@ mod test {
         maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(NativeC::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(NativeC::TICKER);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
     }
 }

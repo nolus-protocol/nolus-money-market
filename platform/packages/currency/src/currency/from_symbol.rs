@@ -39,25 +39,27 @@ impl<M> CurrencyVisit for M where M: Matcher {}
 
 #[cfg(test)]
 mod test {
-    use crate::currency::from_symbol::CurrencyVisit;
-    use crate::test::{Nls, Usdc};
     use crate::{
-        currency::Currency,
+        currency::{
+            from_symbol::CurrencyVisit,
+            test::{Expect, ExpectUnknownCurrency},
+            Currency,
+        },
         error::Error,
-        test::visitor::{Expect, ExpectUnknownCurrency},
+        test::{SuperGroupTestC1, SuperGroupTestC2},
     };
     use crate::{BankSymbols, Tickers};
 
     #[test]
     fn visit_on_ticker() {
-        let v_usdc = Expect::<Usdc>::default();
+        let v_usdc = Expect::<SuperGroupTestC1>::default();
         Tickers
-            .visit(Usdc::BANK_SYMBOL, v_usdc.clone())
+            .visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc.clone())
             .unwrap_err();
-        assert_eq!(Tickers.visit(Usdc::TICKER, v_usdc), Ok(true));
+        assert_eq!(Tickers.visit(SuperGroupTestC1::TICKER, v_usdc), Ok(true));
 
-        let v_nls = Expect::<Nls>::default();
-        assert_eq!(Tickers.visit(Nls::TICKER, v_nls), Ok(true));
+        let v_nls = Expect::<SuperGroupTestC2>::default();
+        assert_eq!(Tickers.visit(SuperGroupTestC2::TICKER, v_nls), Ok(true));
     }
 
     #[test]
@@ -65,23 +67,33 @@ mod test {
         const UNKNOWN_TICKER: &str = "my_fancy_coin";
 
         assert_eq!(
-            Tickers.visit::<Nls, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, Tickers, Nls>(UNKNOWN_TICKER,)),
+            Tickers.visit::<SuperGroupTestC2, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, Tickers, SuperGroupTestC2>(
+                UNKNOWN_TICKER,
+            )),
         );
 
         assert_eq!(
-            Tickers.visit::<Nls, _>(Usdc::TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, Tickers, Nls>(Usdc::TICKER,)),
+            Tickers.visit::<SuperGroupTestC2, _>(SuperGroupTestC1::TICKER, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, Tickers, SuperGroupTestC2>(
+                SuperGroupTestC1::TICKER,
+            )),
         );
     }
 
     #[test]
     fn visit_on_bank_symbol() {
-        let v_usdc = Expect::<Usdc>::default();
-        assert_eq!(BankSymbols.visit(Usdc::BANK_SYMBOL, v_usdc), Ok(true));
+        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        assert_eq!(
+            BankSymbols.visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc),
+            Ok(true)
+        );
 
-        let v_nls = Expect::<Nls>::default();
-        assert_eq!(BankSymbols.visit(Nls::BANK_SYMBOL, v_nls), Ok(true));
+        let v_nls = Expect::<SuperGroupTestC2>::default();
+        assert_eq!(
+            BankSymbols.visit(SuperGroupTestC2::BANK_SYMBOL, v_nls),
+            Ok(true)
+        );
     }
 
     #[test]
@@ -89,8 +101,8 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            BankSymbols.visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, BankSymbols, Nls>(DENOM,)),
+            BankSymbols.visit::<SuperGroupTestC2, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::unexpected_symbol::<_, BankSymbols, SuperGroupTestC2>(DENOM,)),
         );
     }
 }

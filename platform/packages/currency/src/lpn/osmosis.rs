@@ -23,30 +23,29 @@ define_currency!(Usdc, USDC);
 #[cfg(test)]
 mod test {
     use crate::{
-        lpn::Lpns,
-        test::{
-            group::{
-                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-            },
-            NativeC, PaymentC5, StableC1,
+        dex::test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
+        lease::osmosis::Osmo,
+        lpn::{osmosis::Usdc, Lpns},
+        native::osmosis::Nls,
         Currency,
     };
 
     #[test]
     fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<StableC1, Lpns>();
-        maybe_visit_on_ticker_err::<StableC1, Lpns>(StableC1::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<StableC1, Lpns>(NativeC::TICKER);
-        maybe_visit_on_ticker_err::<StableC1, Lpns>(PaymentC5::TICKER);
+        maybe_visit_on_ticker_impl::<Usdc, Lpns>();
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Osmo::TICKER);
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<StableC1, Lpns>();
-        maybe_visit_on_bank_symbol_err::<StableC1, Lpns>(StableC1::TICKER);
-        maybe_visit_on_bank_symbol_err::<StableC1, Lpns>(NativeC::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<StableC1, Lpns>(PaymentC5::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_impl::<Usdc, Lpns>();
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Usdc::TICKER);
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Osmo::BANK_SYMBOL);
     }
 }

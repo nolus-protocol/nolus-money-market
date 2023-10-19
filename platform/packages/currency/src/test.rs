@@ -1,218 +1,75 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic};
+use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-#[cfg(dex = "osmosis")]
-mod currencies {
-    use crate::{
-        lease::osmosis::{Atom, Axl, Cro, Osmo, Weth},
-        lpn::osmosis::Usdc,
-        native::osmosis::Nls,
-    };
-
-    pub type PaymentC1 = Nls;
-    pub type PaymentC2 = Usdc;
-    pub type PaymentC3 = Atom;
-    pub type PaymentC4 = Axl;
-    pub type PaymentC5 = Osmo;
-    pub type PaymentC6 = Cro;
-    pub type PaymentC7 = Weth;
-
-    pub type StableC1 = Usdc;
-
-    pub type NativeC = Nls;
-}
-pub use currencies::*;
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
-pub struct Usdc;
-impl Currency for Usdc {
-    const TICKER: SymbolStatic = "uusdc";
-    const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
-    const DEX_SYMBOL: SymbolStatic = "ibc/dex_uusdc";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
-pub struct Nls;
-impl Currency for Nls {
-    const TICKER: SymbolStatic = "unls";
-    const BANK_SYMBOL: SymbolStatic = "ibc/unls";
-    const DEX_SYMBOL: SymbolStatic = "ibc/dex_unls";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
-pub struct Dai;
-impl Currency for Dai {
-    const TICKER: SymbolStatic = "udai";
-    const BANK_SYMBOL: SymbolStatic = "ibc/udai";
-    const DEX_SYMBOL: SymbolStatic = "ibc/dex_udai";
-}
+pub type SuperGroupTestC1 = impl_::TestC1;
+pub type SuperGroupTestC2 = impl_::TestC2;
+pub type SubGroupTestC1 = impl_::TestC3;
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct TestCurrencies {}
-impl Group for TestCurrencies {
-    const DESCR: &'static str = "test";
+pub struct SuperGroup {}
+impl Group for SuperGroup {
+    const DESCR: &'static str = "super_group";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, Usdc, _>(matcher, symbol, visitor)
-            .or_else(|visitor| crate::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor))
+        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, symbol, visitor).or_else(
+            |visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, symbol, visitor),
+        )
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct TestExtraCurrencies {}
-impl Group for TestExtraCurrencies {
-    const DESCR: &'static str = "test_extra";
+pub struct SubGroup {}
+impl Group for SubGroup {
+    const DESCR: &'static str = "sub_group";
 
     fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        TestCurrencies::maybe_visit(matcher, symbol, visitor)
-            .or_else(|visitor| crate::maybe_visit_any::<_, Dai, _>(matcher, symbol, visitor))
+        SuperGroup::maybe_visit(matcher, symbol, visitor).or_else(|visitor| {
+            crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
+        })
     }
 }
 
-pub mod visitor {
-    use std::marker::PhantomData;
+mod impl_ {
+    use serde::{Deserialize, Serialize};
 
-    use crate::{
-        error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, SingleVisitor,
-    };
+    use crate::{Currency, SymbolStatic};
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
-    pub struct Expect<C>(PhantomData<C>);
-
-    impl<C> Default for Expect<C> {
-        fn default() -> Self {
-            Self(Default::default())
-        }
-    }
-    impl<C> AnyVisitor for Expect<C>
-    where
-        C: 'static,
-    {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<Cin>(self) -> AnyVisitorResult<Self>
-        where
-            Cin: 'static,
-        {
-            Ok(crate::equal::<C, Cin>())
-        }
-    }
-    impl<C> SingleVisitor<C> for Expect<C> {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
-        }
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC1;
+    impl Currency for TestC1 {
+        const TICKER: SymbolStatic = "ticker#1";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#1";
     }
 
-    pub struct ExpectUnknownCurrency;
-    impl AnyVisitor for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<C>(self) -> AnyVisitorResult<Self>
-        where
-            C: Currency,
-        {
-            unreachable!();
-        }
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC2;
+    impl Currency for TestC2 {
+        const TICKER: SymbolStatic = "ticker#2";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#2";
     }
 
-    impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
-        }
-    }
-
-    pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
-    impl<C1, C2> Default for ExpectPair<C1, C2> {
-        fn default() -> Self {
-            Self(Default::default(), Default::default())
-        }
-    }
-    impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
-    where
-        C1: 'static,
-        C2: 'static,
-    {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<C1in, C2in>(self) -> Result<Self::Output, Self::Error>
-        where
-            C1in: Currency,
-            C2in: Currency,
-        {
-            Ok(crate::equal::<C1, C1in>() && crate::equal::<C2, C2in>())
-        }
-    }
-}
-
-pub mod group {
-    use crate::{
-        test::visitor::Expect, BankSymbols, Currency, Group, GroupVisit, SymbolSlice, Tickers,
-    };
-
-    #[track_caller]
-    pub fn maybe_visit_on_ticker_impl<C, G>()
-    where
-        C: Currency,
-        G: Group,
-    {
-        let v = Expect::<C>::default();
-        assert_eq!(Tickers.maybe_visit_any::<G, _>(C::TICKER, v), Ok(Ok(true)));
-    }
-
-    #[track_caller]
-    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: &SymbolSlice)
-    where
-        C: Currency,
-        G: Group,
-    {
-        let v = Expect::<C>::default();
-        assert_eq!(
-            Tickers.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
-            Err(v)
-        );
-    }
-
-    #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_impl<C, G>()
-    where
-        C: Currency,
-        G: Group,
-    {
-        let v = Expect::<C>::default();
-        assert_eq!(
-            BankSymbols.maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
-            Ok(Ok(true))
-        );
-    }
-
-    #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: &SymbolSlice)
-    where
-        C: Currency,
-        G: Group,
-    {
-        let v = Expect::<C>::default();
-        assert_eq!(
-            BankSymbols.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
-            Err(v)
-        );
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC3;
+    impl Currency for TestC3 {
+        const TICKER: SymbolStatic = "ticker#3";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#3";
     }
 }

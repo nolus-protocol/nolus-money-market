@@ -226,7 +226,7 @@ mod test {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        test::{Dai, Nls, TestCurrencies, Usdc},
+        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
     };
 
@@ -286,23 +286,23 @@ mod test {
     #[test]
     fn from_amount_ticker_ok() {
         let amount = 20;
-        type TheCurrency = Usdc;
+        type TheCurrency = SuperGroupTestC1;
         assert_eq!(
             Ok(Coin::<TheCurrency>::from(amount).into()),
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::TICKER.into())
+            super::from_amount_ticker::<SuperGroup>(amount, TheCurrency::TICKER.into())
         );
     }
 
     #[test]
     fn from_amount_ticker_not_found() {
         let amount = 20;
-        type TheCurrency = Usdc;
+        type TheCurrency = SuperGroupTestC1;
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::DEX_SYMBOL.into()),
+            super::from_amount_ticker::<SuperGroup>(amount, TheCurrency::DEX_SYMBOL.into()),
             Err(Error::CurrencyError { .. })
         ));
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::BANK_SYMBOL.into()),
+            super::from_amount_ticker::<SuperGroup>(amount, TheCurrency::BANK_SYMBOL.into()),
             Err(Error::CurrencyError { .. })
         ));
     }
@@ -310,7 +310,7 @@ mod test {
     #[test]
     fn from_amount_ticker_not_in_the_group() {
         assert!(matches!(
-            super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER.into()),
+            super::from_amount_ticker::<SuperGroup>(20, SubGroupTestC1::TICKER.into()),
             Err(Error::CurrencyError { .. })
         ));
     }
@@ -319,9 +319,12 @@ mod test {
     fn display() {
         assert_eq!(
             "25 uusdc",
-            test_coin::<TestCurrencies, Usdc>(25).to_string()
+            test_coin::<SuperGroup, SuperGroupTestC1>(25).to_string()
         );
-        assert_eq!("0 unls", test_coin::<TestCurrencies, Nls>(0).to_string());
+        assert_eq!(
+            "0 unls",
+            test_coin::<SuperGroup, SuperGroupTestC2>(0).to_string()
+        );
     }
 
     fn test_coin<G, C>(amount: Amount) -> CoinDTO<G>

@@ -41,24 +41,30 @@ mod test {
         percent::Percent,
         ratio::Rational,
     };
-    use currency::test::Nls;
+    use currency::test::SuperGroupTestC1;
 
     #[test]
     fn safe_mul() {
         use crate::fractionable::Fractionable;
         assert_eq!(
-            Coin::<Nls>::new(30),
-            Coin::<Nls>::new(3).safe_mul(&Percent::from_percent(1000))
+            Coin::<SuperGroupTestC1>::new(30),
+            Coin::<SuperGroupTestC1>::new(3).safe_mul(&Percent::from_percent(1000))
         );
 
         assert_eq!(
-            Coin::<Nls>::new(1000),
-            Fractionable::<u32>::safe_mul(Coin::<Nls>::new(2), &Rational::new(1000u32, 2u32))
+            Coin::<SuperGroupTestC1>::new(1000),
+            Fractionable::<u32>::safe_mul(
+                Coin::<SuperGroupTestC1>::new(2),
+                &Rational::new(1000u32, 2u32)
+            )
         );
 
         assert_eq!(
-            Coin::<Nls>::new(2 * Amount::from(u32::MAX)),
-            Fractionable::<u32>::safe_mul(Coin::<Nls>::new(2), &Rational::new(u32::MAX, 1u32))
+            Coin::<SuperGroupTestC1>::new(2 * Amount::from(u32::MAX)),
+            Fractionable::<u32>::safe_mul(
+                Coin::<SuperGroupTestC1>::new(2),
+                &Rational::new(u32::MAX, 1u32)
+            )
         );
     }
 }

@@ -4,7 +4,7 @@ const TEST_NET: &str = "dev";
 const TEST_DEX: &str = "osmosis";
 
 fn main() {
-    if option_env("CARGO_CFG_TEST").is_some() || option_env("CARGO_FEATURE_TESTING").is_some() {
+    if option_env("CARGO_FEATURE_TESTING").is_some() {
         enable_net_to_dex(TEST_NET, TEST_DEX)
     } else if option_env("CARGO_FEATURE_IMPL").is_some() {
         enable_net_to_dex(

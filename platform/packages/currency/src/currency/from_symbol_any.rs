@@ -148,33 +148,35 @@ mod impl_any_tickers {
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{from_symbol_any::GroupVisit, matcher::Tickers, Currency, Group},
-        error::Error,
-        test::{
-            visitor::{Expect, ExpectPair, ExpectUnknownCurrency},
-            Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc,
+        currency::{
+            from_symbol_any::GroupVisit,
+            matcher::Tickers,
+            test::{Expect, ExpectPair, ExpectUnknownCurrency},
+            Currency, Group,
         },
+        error::Error,
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
 
     #[test]
     fn visit_any() {
-        let v_usdc = Expect::<Usdc>::default();
+        let v_usdc = Expect::<SuperGroupTestC1>::default();
         assert_eq!(
             Ok(true),
-            Tickers.visit_any::<TestCurrencies, _>(Usdc::TICKER, v_usdc)
+            Tickers.visit_any::<SuperGroup, _>(SuperGroupTestC1::TICKER, v_usdc)
         );
 
-        let v_nls = Expect::<Nls>::default();
+        let v_nls = Expect::<SuperGroupTestC2>::default();
         assert_eq!(
             Ok(true),
-            Tickers.visit_any::<TestCurrencies, _>(Nls::TICKER, v_nls)
+            Tickers.visit_any::<SuperGroup, _>(SuperGroupTestC2::TICKER, v_nls)
         );
 
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, Tickers, TestCurrencies>(
-                Dai::BANK_SYMBOL
+            Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
+                SubGroupTestC1::BANK_SYMBOL
             )),
-            Tickers.visit_any::<TestCurrencies, _>(Dai::BANK_SYMBOL, ExpectUnknownCurrency)
+            Tickers.visit_any::<SuperGroup, _>(SubGroupTestC1::BANK_SYMBOL, ExpectUnknownCurrency)
         );
     }
 
@@ -183,8 +185,8 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            Tickers.visit_any::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::not_in_currency_group::<_, Tickers, TestCurrencies>(
+            Tickers.visit_any::<SuperGroup, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
                 DENOM
             )),
         );
@@ -192,11 +194,11 @@ mod test {
 
     #[test]
     fn visit_any_tickers() {
-        visit_any_tickers_ok::<TestCurrencies, TestCurrencies, Usdc, Nls>();
-        visit_any_tickers_ok::<TestExtraCurrencies, TestCurrencies, Dai, Usdc>();
-        visit_any_tickers_ok::<TestCurrencies, TestCurrencies, Nls, Nls>();
+        visit_any_tickers_ok::<SuperGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
+        visit_any_tickers_ok::<SubGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC1>();
+        visit_any_tickers_ok::<SuperGroup, SuperGroup, SuperGroupTestC2, SuperGroupTestC2>();
 
-        visit_any_tickers_fail::<TestCurrencies, TestCurrencies, Dai, Nls>();
+        visit_any_tickers_fail::<SuperGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC2>();
     }
 
     fn visit_any_tickers_ok<G1, G2, C1, C2>()

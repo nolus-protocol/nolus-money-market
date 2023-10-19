@@ -201,7 +201,7 @@ mod test {
     };
 
     use super::{Liability, Zone};
-    use currency::test::Usdc;
+    use currency::test::SubGroupTestC1;
 
     #[test]
     fn new_valid() {
@@ -415,7 +415,7 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
-        type Currency = Usdc;
+        type Currency = SubGroupTestC1;
 
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);

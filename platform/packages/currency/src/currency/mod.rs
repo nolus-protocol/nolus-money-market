@@ -16,6 +16,7 @@ mod from_symbol;
 mod from_symbol_any;
 mod group;
 mod matcher;
+pub(crate) mod test;
 
 pub type SymbolSlice = str;
 pub type SymbolStatic = &'static SymbolSlice;
@@ -70,23 +71,29 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::{
         error::Error,
-        test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency, Tickers,
     };
 
     #[test]
     fn validate() {
-        assert_eq!(Ok(()), super::validate::<TestCurrencies>(Usdc::TICKER));
-        assert_eq!(Ok(()), super::validate::<TestCurrencies>(Nls::TICKER));
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, Tickers, TestCurrencies>(
-                Dai::TICKER
-            )),
-            super::validate::<TestCurrencies>(Dai::TICKER)
+            Ok(()),
+            super::validate::<SuperGroup>(SuperGroupTestC1::TICKER)
         );
-        assert_eq!(Ok(()), super::validate::<TestExtraCurrencies>(Dai::TICKER));
+        assert_eq!(
+            Ok(()),
+            super::validate::<SuperGroup>(SuperGroupTestC2::TICKER)
+        );
+        assert_eq!(
+            Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
+                SubGroupTestC1::TICKER
+            )),
+            super::validate::<SuperGroup>(SubGroupTestC1::TICKER)
+        );
+        assert_eq!(Ok(()), super::validate::<SubGroup>(SubGroupTestC1::TICKER));
     }
 }

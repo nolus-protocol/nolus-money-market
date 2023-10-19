@@ -129,7 +129,7 @@ impl<'c> From<Sender<'c>> for Batch {
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{Dai, TestExtraCurrencies, Usdc},
+        test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
         NlsPlatform,
     };
     use finance::coin::Coin;
@@ -160,14 +160,10 @@ mod test {
             "MEMO".into(),
         );
 
-        let coin1: Coin<Dai> = 234214.into();
-        let coin2: Coin<Usdc> = 234214.into();
-        funds_sender
-            .send::<TestExtraCurrencies>(&coin1.into())
-            .unwrap();
-        funds_sender
-            .send::<TestExtraCurrencies>(&coin2.into())
-            .unwrap();
+        let coin1: Coin<SubGroupTestC1> = 234214.into();
+        let coin2: Coin<SuperGroupTestC1> = 234214.into();
+        funds_sender.send::<SubGroup>(&coin1.into()).unwrap();
+        funds_sender.send::<SubGroup>(&coin2.into()).unwrap();
 
         assert_eq!(Batch::from(funds_sender), {
             let mut batch = Batch::default();

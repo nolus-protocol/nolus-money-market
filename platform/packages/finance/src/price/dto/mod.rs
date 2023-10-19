@@ -187,38 +187,40 @@ mod test {
         coin::Coin,
         price::{self, dto::PriceDTO, Price},
     };
-    use currency::test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc};
+    use currency::test::{
+        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+    };
 
-    type TestPriceDTO = PriceDTO<TestExtraCurrencies, TestCurrencies>;
+    type TestPriceDTO = PriceDTO<SubGroup, SuperGroup>;
 
     #[test]
     fn test_cmp() {
-        let p1: TestPriceDTO = price::total_of(Coin::<Dai>::new(20))
-            .is(Coin::<Usdc>::new(5000))
+        let p1: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(20))
+            .is(Coin::<SuperGroupTestC1>::new(5000))
             .into();
         assert!(p1 == p1);
         assert_eq!(Some(Ordering::Equal), p1.partial_cmp(&p1));
 
-        let p2 = price::total_of(Coin::<Dai>::new(20))
-            .is(Coin::<Usdc>::new(5001))
+        let p2 = price::total_of(Coin::<SubGroupTestC1>::new(20))
+            .is(Coin::<SuperGroupTestC1>::new(5001))
             .into();
         assert!(p1 < p2);
 
-        let p3: TestPriceDTO = price::total_of(Coin::<Dai>::new(1000000))
-            .is(Coin::<Usdc>::new(789456))
+        let p3: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+            .is(Coin::<SuperGroupTestC1>::new(789456))
             .into();
-        let p4 = price::total_of(Coin::<Dai>::new(1000000))
-            .is(Coin::<Usdc>::new(123456))
+        let p4 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+            .is(Coin::<SuperGroupTestC1>::new(123456))
             .into();
         assert!(p3 >= p4);
 
-        let p5 = price::total_of(Coin::<Dai>::new(1000000))
-            .is(Coin::<Usdc>::new(3456))
+        let p5 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+            .is(Coin::<SuperGroupTestC1>::new(3456))
             .into();
         assert!(p3 >= p5);
 
-        let p6 = price::total_of(Coin::<Dai>::new(1000000))
-            .is(Coin::<Usdc>::new(3456))
+        let p6 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+            .is(Coin::<SuperGroupTestC1>::new(3456))
             .into();
         assert!(p3 >= p6);
     }
@@ -226,9 +228,16 @@ mod test {
     #[test]
     #[should_panic = "The currencies of both prices should match"]
     fn test_cmp_currencies_mismatch() {
-        let p1: PriceDTO<TestCurrencies, TestExtraCurrencies> =
-            Price::new(Coin::<Usdc>::new(20), Coin::<Nls>::new(5000)).into();
-        let p2 = Price::new(Coin::<Usdc>::new(20), Coin::<Dai>::new(5000)).into();
+        let p1: PriceDTO<SuperGroup, SubGroup> = Price::new(
+            Coin::<SuperGroupTestC1>::new(20),
+            Coin::<SuperGroupTestC2>::new(5000),
+        )
+        .into();
+        let p2 = Price::new(
+            Coin::<SuperGroupTestC1>::new(20),
+            Coin::<SubGroupTestC1>::new(5000),
+        )
+        .into();
         let _ = p1 < p2;
     }
 }
@@ -241,17 +250,20 @@ mod test_invariant {
     use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
 
     use crate::coin::{Coin, CoinDTO};
-    use currency::test::{Nls, TestCurrencies, TestExtraCurrencies, Usdc};
+    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
     use currency::{Currency, Group};
 
     use super::PriceDTO;
 
-    type TC = TestExtraCurrencies;
+    type TC = SubGroup;
 
     #[test]
     #[should_panic = "zero"]
     fn base_zero() {
-        new_invalid(Coin::<Usdc>::new(0), Coin::<Nls>::new(5));
+        new_invalid(
+            Coin::<SuperGroupTestC1>::new(0),
+            Coin::<SuperGroupTestC2>::new(5),
+        );
     }
 
     #[test]
@@ -263,7 +275,10 @@ mod test_invariant {
     #[test]
     #[should_panic = "zero"]
     fn quote_zero() {
-        new_invalid(Coin::<Usdc>::new(10), Coin::<Nls>::new(0));
+        new_invalid(
+            Coin::<SuperGroupTestC1>::new(10),
+            Coin::<SuperGroupTestC2>::new(0),
+        );
     }
 
     #[test]
@@ -275,7 +290,10 @@ mod test_invariant {
     #[test]
     #[should_panic = "should be equal to the identity if the currencies match"]
     fn currencies_match() {
-        new_invalid(Coin::<Nls>::new(4), Coin::<Nls>::new(5));
+        new_invalid(
+            Coin::<SuperGroupTestC2>::new(4),
+            Coin::<SuperGroupTestC2>::new(5),
+        );
     }
 
     #[test]
@@ -286,19 +304,28 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_ok() {
-        let p = PriceDTO::<TC, TC>::new(Coin::<Nls>::new(4).into(), Coin::<Nls>::new(4).into());
-        assert_eq!(&CoinDTO::<TC>::from(Coin::<Nls>::new(4)), p.base());
+        let p = PriceDTO::<TC, TC>::new(
+            Coin::<SuperGroupTestC2>::new(4).into(),
+            Coin::<SuperGroupTestC2>::new(4).into(),
+        );
+        assert_eq!(
+            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
+            p.base()
+        );
     }
 
     #[test]
     fn currencies_match_ok_json() {
         let p = load(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "4", "ticker": "unls"}}"#).expect("should have an identity");
-        assert_eq!(&CoinDTO::<TC>::from(Coin::<Nls>::new(4)), p.base());
+        assert_eq!(
+            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
+            p.base()
+        );
     }
 
     #[test]
     fn group_mismatch_json() {
-        let r = load_with_groups::<TC, TestCurrencies>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        let r = load_with_groups::<TC, SuperGroup>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
         assert_err(r, "pretending to be ticker of a currency pertaining to");
     }
 

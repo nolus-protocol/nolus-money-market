@@ -118,17 +118,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use currency::test::SubGroupTestC1;
     use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period,
         ratio::Rational, zero::Zero,
     };
-    use currency::test::Usdc;
 
     use super::InterestPeriod;
 
-    type MyCoin = Coin<Usdc>;
+    type MyCoin = Coin<SubGroupTestC1>;
     const PERIOD_START: Timestamp = Timestamp::from_nanos(0);
     const PERIOD_LENGTH: Duration = Duration::YEAR;
 

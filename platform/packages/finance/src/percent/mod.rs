@@ -180,7 +180,7 @@ pub(super) mod test {
         coin::Coin, fraction::Fraction, fractionable::Percentable, percent::Percent,
         ratio::Rational,
     };
-    use currency::test::Nls;
+    use currency::test::SubGroupTestC1;
 
     use super::Units;
 
@@ -201,9 +201,9 @@ pub(super) mod test {
         let a1 = 0;
         let a2 = 5000;
         let a3 = 1352;
-        let c1 = Coin::<Nls>::new(a1);
-        let c2 = Coin::<Nls>::new(a2);
-        let c3 = Coin::<Nls>::new(a3);
+        let c1 = Coin::<SubGroupTestC1>::new(a1);
+        let c2 = Coin::<SubGroupTestC1>::new(a2);
+        let c3 = Coin::<SubGroupTestC1>::new(a3);
         assert_eq!(Percent::ZERO, Percent::from_ratio(c1, c2));
 
         assert_eq!(from_parts(a3, a2), Percent::from_ratio(c3, c2));
@@ -215,15 +215,18 @@ pub(super) mod test {
 
     #[test]
     fn test_zero() {
-        assert_eq!(Coin::<Nls>::new(0), Percent::ZERO.of(Coin::<Nls>::new(10)))
+        assert_eq!(
+            Coin::<SubGroupTestC1>::new(0),
+            Percent::ZERO.of(Coin::<SubGroupTestC1>::new(10))
+        )
     }
 
     #[test]
     fn test_hundred() {
         let amount = 123;
         assert_eq!(
-            Coin::<Nls>::new(amount),
-            Percent::HUNDRED.of(Coin::<Nls>::new(amount))
+            Coin::<SubGroupTestC1>::new(amount),
+            Percent::HUNDRED.of(Coin::<SubGroupTestC1>::new(amount))
         )
     }
 

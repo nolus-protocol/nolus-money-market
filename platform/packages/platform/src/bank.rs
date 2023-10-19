@@ -357,8 +357,7 @@ mod test {
     use currency::{
         native::Native,
         payment::PaymentGroup,
-        test::NativeC,
-        test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1},
         Currency, Group, SymbolStatic,
     };
     use finance::{
@@ -374,8 +373,8 @@ mod test {
 
     use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
-    type TheCurrency = Usdc;
-    type ExtraCurrency = Dai;
+    type TheCurrency = SuperGroupTestC1;
+    type ExtraCurrency = SubGroupTestC1;
 
     const AMOUNT: Amount = 42;
 
@@ -461,7 +460,7 @@ mod test {
     fn may_received_no_input() {
         assert_eq!(
             None,
-            may_received::<TestCurrencies, _>(vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+            may_received::<SuperGroup, _>(vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
         );
     }
 
@@ -481,7 +480,7 @@ mod test {
 
         assert_eq!(
             None,
-            may_received::<TestCurrencies, _>(vec![in_coin_1, in_coin_2], Expect(coin))
+            may_received::<SuperGroup, _>(vec![in_coin_1, in_coin_2], Expect(coin))
         );
     }
 
@@ -491,7 +490,7 @@ mod test {
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
         assert_eq!(
             Some(Ok(true)),
-            may_received::<TestCurrencies, _>(vec![in_coin_1], Expect(coin))
+            may_received::<SuperGroup, _>(vec![in_coin_1], Expect(coin))
         );
     }
 
@@ -506,17 +505,14 @@ mod test {
         let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
         assert_eq!(
             Some(Ok(true)),
-            may_received::<TestCurrencies, _>(
+            may_received::<SuperGroup, _>(
                 vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
                 Expect(coin_2)
             )
         );
         assert_eq!(
             Some(Ok(true)),
-            may_received::<TestCurrencies, _>(
-                vec![in_coin_1, in_coin_3, in_coin_2],
-                Expect(coin_3),
-            )
+            may_received::<SuperGroup, _>(vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
         );
     }
 
@@ -572,25 +568,25 @@ mod test {
 
     #[test]
     fn total_balance_same_group() {
-        total_balance_tester::<TestExtraCurrencies>(
-            vec![cw_coin(100, Dai::BANK_SYMBOL)],
-            &[Dai::BANK_SYMBOL],
+        total_balance_tester::<SubGroup>(
+            vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)],
+            &[SubGroupTestC1::BANK_SYMBOL],
         );
     }
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<Native>(vec![cw_coin(100, Usdc::BANK_SYMBOL)], &[]);
+        total_balance_tester::<Native>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
     }
 
     #[test]
     fn total_balance_mixed_group() {
         total_balance_tester::<Native>(
             vec![
-                cw_coin(100, Usdc::TICKER),
-                cw_coin(100, NativeC::BANK_SYMBOL),
+                cw_coin(100, SuperGroupTestC1::TICKER),
+                cw_coin(100, SubGroupTestC1::BANK_SYMBOL),
             ],
-            &[NativeC::BANK_SYMBOL],
+            &[SubGroupTestC1::BANK_SYMBOL],
         );
     }
 }

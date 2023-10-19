@@ -68,7 +68,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::coin::{Amount, Coin};
-    use currency::test::{Dai, Usdc};
+    use currency::test::{SubGroupTestC1, SuperGroupTestC1};
 
     mod percent {
         use crate::fraction::Fraction;
@@ -95,7 +95,7 @@ mod test {
         use crate::fractionable::price::test::{c, q};
         use crate::price;
         use crate::ratio::Rational;
-        use currency::test::{Dai, Usdc};
+        use currency::test::{SubGroupTestC1, SuperGroupTestC1};
 
         #[test]
         fn greater_than_one() {
@@ -132,12 +132,12 @@ mod test {
 
         #[track_caller]
         fn test_impl(
-            amount1: Coin<Dai>,
-            quote1: Coin<Usdc>,
+            amount1: Coin<SubGroupTestC1>,
+            quote1: Coin<SuperGroupTestC1>,
             nominator: usize,
             denominator: usize,
-            amount_exp: Coin<Dai>,
-            quote_exp: Coin<Usdc>,
+            amount_exp: Coin<SubGroupTestC1>,
+            quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
             let ratio = Rational::new(nominator, denominator);
@@ -147,11 +147,11 @@ mod test {
             );
         }
     }
-    fn c(a: Amount) -> Coin<Dai> {
-        Coin::<Dai>::from(a)
+    fn c(a: Amount) -> Coin<SubGroupTestC1> {
+        Coin::<SubGroupTestC1>::from(a)
     }
 
-    fn q(a: Amount) -> Coin<Usdc> {
-        Coin::<Usdc>::from(a)
+    fn q(a: Amount) -> Coin<SuperGroupTestC1> {
+        Coin::<SuperGroupTestC1>::from(a)
     }
 }

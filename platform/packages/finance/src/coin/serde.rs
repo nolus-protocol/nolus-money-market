@@ -5,21 +5,23 @@ mod test {
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
     use crate::coin::Coin;
-    use currency::test::{Nls, Usdc};
-    use currency::Currency;
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency,
+    };
     use sdk::cosmwasm_std::{from_slice, to_vec};
 
     #[test]
     fn serialize_deserialize() {
-        serialize_deserialize_coin::<Nls>(u128::MIN, r#"{"amount":"0"}"#);
-        serialize_deserialize_coin::<Nls>(123, r#"{"amount":"123"}"#);
-        serialize_deserialize_coin::<Nls>(
+        serialize_deserialize_coin::<SuperGroupTestC1>(u128::MIN, r#"{"amount":"0"}"#);
+        serialize_deserialize_coin::<SuperGroupTestC1>(123, r#"{"amount":"123"}"#);
+        serialize_deserialize_coin::<SuperGroupTestC1>(
             u128::MAX,
             r#"{"amount":"340282366920938463463374607431768211455"}"#,
         );
-        serialize_deserialize_coin::<Usdc>(u128::MIN, r#"{"amount":"0"}"#);
-        serialize_deserialize_coin::<Usdc>(7368953, r#"{"amount":"7368953"}"#);
-        serialize_deserialize_coin::<Usdc>(
+        serialize_deserialize_coin::<SuperGroupTestC2>(u128::MIN, r#"{"amount":"0"}"#);
+        serialize_deserialize_coin::<SuperGroupTestC2>(7368953, r#"{"amount":"7368953"}"#);
+        serialize_deserialize_coin::<SuperGroupTestC2>(
             u128::MAX,
             r#"{"amount":"340282366920938463463374607431768211455"}"#,
         );
@@ -55,7 +57,7 @@ mod test {
             coin: Coin<C>,
         }
         let coin_container = CoinContainer {
-            coin: Coin::<Usdc>::new(10),
+            coin: Coin::<SuperGroupTestC2>::new(10),
         };
         serialize_deserialize_impl(coin_container, r#"{"coin":{"amount":"10"}}"#);
     }
@@ -64,16 +66,16 @@ mod test {
     fn distinct_repr() {
         let amount = 432;
         assert_eq!(
-            to_vec(&Coin::<Nls>::new(amount)),
-            to_vec(&Coin::<Usdc>::new(amount))
+            to_vec(&Coin::<SuperGroupTestC1>::new(amount)),
+            to_vec(&Coin::<SuperGroupTestC2>::new(amount))
         );
     }
 
     #[test]
     fn currency_tolerant() {
         let amount = 134;
-        let nls_bin = to_vec(&Coin::<Nls>::new(amount)).unwrap();
-        let res = from_slice::<Coin<Usdc>>(&nls_bin);
+        let nls_bin = to_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
+        let res = from_slice::<Coin<SuperGroupTestC2>>(&nls_bin);
         assert_eq!(Ok(amount.into()), res);
     }
 }
