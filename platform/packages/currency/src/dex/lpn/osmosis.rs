@@ -40,7 +40,7 @@ mod test {
     use crate::{
         dex::{
             lease::osmosis::Osmo,
-            lpn::{Lpns, osmosis::Usdc},
+            lpn::{osmosis::Usdc, Lpns},
             native::osmosis::Nls,
             test_impl::{
                 maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
