@@ -16,7 +16,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Dispatcher] {0}")]
-    Oracle(#[from] oracle::ContractError),
+    Oracle(#[from] oracle_platform::error::Error),
 
     #[error("[Dispatcher] {0}")]
     Finance(#[from] finance::error::Error),

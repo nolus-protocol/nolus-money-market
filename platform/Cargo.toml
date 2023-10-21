@@ -18,7 +18,8 @@ treasury = { path = "contracts/treasury", default-features = false }
 access-control = { path = "packages/access-control", default-features = false }
 currency = { path = "packages/currency", default-features = false }
 finance = { path = "packages/finance", default-features = false }
-lpp_platform = { path = "packages/lpp", default-features = false }
+lpp-platform = { path = "packages/lpp", default-features = false }
+oracle-platform = { path = "packages/oracle", default-features = false }
 platform = { path = "packages/platform", default-features = false }
 schema = { path = "packages/schema", default-features = false }
 sdk = { path = "packages/sdk", default-features = false }

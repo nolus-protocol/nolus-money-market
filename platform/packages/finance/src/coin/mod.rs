@@ -225,7 +225,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency,
+    };
 
     use crate::percent::test::test_of;
 
@@ -233,8 +236,14 @@ mod test {
 
     #[test]
     fn display() {
-        assert_eq!("25 unls", coin2(25).to_string());
-        assert_eq!("0 uusdc", coin1(0).to_string());
+        assert_eq!(
+            format!("25 {}", SuperGroupTestC2::TICKER),
+            coin2(25).to_string()
+        );
+        assert_eq!(
+            format!("0 {}", SuperGroupTestC1::TICKER),
+            coin1(0).to_string()
+        );
     }
 
     #[test]

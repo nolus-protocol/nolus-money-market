@@ -318,11 +318,11 @@ mod test {
     #[test]
     fn display() {
         assert_eq!(
-            "25 uusdc",
+            format!("25 {}", SuperGroupTestC1::TICKER),
             test_coin::<SuperGroup, SuperGroupTestC1>(25).to_string()
         );
         assert_eq!(
-            "0 unls",
+            format!("0 {}", SuperGroupTestC2::TICKER),
             test_coin::<SuperGroup, SuperGroupTestC2>(0).to_string()
         );
     }

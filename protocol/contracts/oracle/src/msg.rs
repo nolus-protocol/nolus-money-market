@@ -70,9 +70,11 @@ pub enum QueryMsg {
     IsFeeder {
         address: Addr,
     },
-    // returns all the supported prices
+    /// Provides all supported prices
     Prices {},
-    // returns the price of the denom against the base asset
+    /// Provides the price of the currency against the base asset
+    ///
+    /// Implementation of oracle_platform::msg::QueryMsg::Price
     Price {
         currency: SymbolOwned,
     },

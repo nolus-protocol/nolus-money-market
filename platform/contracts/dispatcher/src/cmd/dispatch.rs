@@ -1,7 +1,7 @@
 use currency::NlsPlatform;
 use finance::{coin::Coin, interest::InterestPeriod, period::Period};
-use lpp_platform::Lpp as LppTrait;
-use oracle::{convert, stub::OracleRef};
+use lpp_platform::{Lpp as LppTrait, UsdGroup};
+use oracle_platform::{convert, OracleRef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
@@ -11,7 +11,7 @@ use super::{reward_calculator::Reward, Result as DispatcherResult, RewardCalcula
 
 pub(crate) struct Dispatch<'a> {
     last_dispatch: Timestamp,
-    config: Config,
+    config: &'a Config,
     block_time: Timestamp,
     querier: &'a QuerierWrapper<'a>,
 }
@@ -19,7 +19,7 @@ pub(crate) struct Dispatch<'a> {
 impl<'a> Dispatch<'a> {
     pub fn new(
         last_dispatch: Timestamp,
-        config: Config,
+        config: &'a Config,
         block_time: Timestamp,
         querier: &'a QuerierWrapper<'a>,
     ) -> Dispatch<'a> {
@@ -52,15 +52,17 @@ impl<'a> Dispatch<'a> {
         }
 
         OracleRef::try_from(self.config.oracle.clone(), self.querier)
-            .and_then(|oracle| convert::from_base(oracle, reward_in_usd, self.querier))
+            .and_then(|oracle| {
+                convert::from_base::<_, _, UsdGroup>(oracle, reward_in_usd, self.querier)
+            })
             .map_err(Into::into)
             .and_then(|reward_unls| {
                 self.create_batch(reward_unls)
                     .map(|batch| DispatcherResult {
                         batch,
                         receipt: super::Receipt {
-                            in_stable: reward_in_usd.into(),
-                            in_nls: reward_unls.into(),
+                            in_stable: reward_in_usd,
+                            in_nls: reward_unls,
                         },
                     })
             })

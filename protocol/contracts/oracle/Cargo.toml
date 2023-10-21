@@ -1,6 +1,6 @@
 [package]
 name = "oracle"
-version = "0.5.8"
+version = "0.5.9"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -22,6 +22,7 @@ stub = []
 currency = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }
+oracle-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 swap = { workspace = true }

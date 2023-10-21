@@ -11,7 +11,7 @@ use sdk::{
 use stub::LppStub;
 
 pub use crate::nlpn::NLpn;
-pub use crate::usd::Usd;
+pub use crate::usd::{Usd, UsdGroup};
 
 pub mod error;
 pub mod msg;

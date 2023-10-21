@@ -10,6 +10,7 @@ use sdk::{
 
 use crate::ContractError;
 
+/// Implementation of oracle_platform::msg::Config
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct Config {
@@ -46,5 +47,31 @@ impl Config {
             })
             .map(|_| ())
             .map_err(ContractError::UpdateConfig)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use finance::duration::Duration;
+    use oracle_platform::msg::Config as PlatformConfig;
+    use marketprice::config::Config as PriceConfig;
+    use std::cosmwasm_std::to_vec;
+
+    use super::Config;
+
+    #[test]
+    fn impl_config() {
+        let base_asset = "base_asset".into();
+        let cfg = Config::new(
+            base_asset,
+            PriceConfig::new(
+                Percent::from_percent(35),
+                Duration::from_secs(10),
+                12,
+                Percent::from_percent(70),
+            ),
+        );
+        let cfg_platform = from_slice::<PlatformConfig>(to_vec(&cfg).unwrap()).unwrap();
+        assert_eq!(cfg_platform.base_asset, base_asset);
     }
 }

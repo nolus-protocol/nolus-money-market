@@ -745,13 +745,13 @@ checksum = "a08173bc88b7955d1b3145aa561539096c421ac8debde8cbc3612ec635fee29b"
 
 [[package]]
 name = "lpp"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
- "lpp_platform",
+ "lpp-platform",
  "platform",
  "schema",
  "sdk",
@@ -762,7 +762,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lpp_platform"
+name = "lpp-platform"
 version = "0.1.0"
 dependencies = [
  "currency",
@@ -840,12 +840,13 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "cosmwasm-std",
  "currency",
  "finance",
  "marketprice",
+ "oracle-platform",
  "platform",
  "schema",
  "sdk",
@@ -855,6 +856,17 @@ dependencies = [
  "thiserror",
  "tree",
  "versioning",
+]
+
+[[package]]
+name = "oracle-platform"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "finance",
+ "sdk",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

@@ -268,8 +268,12 @@ mod test_invariant {
 
     #[test]
     fn base_zero_json() {
-        let r = load(br#"{"amount": {"amount": "0", "ticker": "uusdc"}, "amount_quote": {"amount": "5", "ticker": "unls"}}"#);
-        assert_err(r, "not be zero");
+        let json = format!(
+            r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
+            SuperGroupTestC1::TICKER,
+            SuperGroupTestC2::TICKER
+        );
+        assert_err(load(&json.into_bytes()), "not be zero");
     }
 
     #[test]
@@ -283,8 +287,12 @@ mod test_invariant {
 
     #[test]
     fn quote_zero_json() {
-        let r = load(br#"{"amount": {"amount": "10", "ticker": "uusdc"}, "amount_quote": {"amount": "0", "ticker": "unls"}}"#);
-        assert_err(r, "not be zero");
+        let json = format!(
+            r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
+            SuperGroupTestC1::TICKER,
+            SuperGroupTestC2::TICKER
+        );
+        assert_err(load(&json.into_bytes()), "not be zero");
     }
 
     #[test]
@@ -298,8 +306,15 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_json() {
-        let r = load(br#"{"amount": {"amount": "10", "ticker": "udai"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
-        assert_err(r, "should be equal to the identity if the currencies match");
+        let json = format!(
+            r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
+            SuperGroupTestC1::TICKER,
+            SuperGroupTestC1::TICKER
+        );
+        assert_err(
+            load(&json.into_bytes()),
+            "should be equal to the identity if the currencies match",
+        );
     }
 
     #[test]
@@ -316,10 +331,14 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_ok_json() {
-        let p = load(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "4", "ticker": "unls"}}"#).expect("should have an identity");
+        let json = format!(
+            r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "4", "ticker": "{}"}}}}"#,
+            SuperGroupTestC1::TICKER,
+            SuperGroupTestC1::TICKER
+        );
         assert_eq!(
-            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
-            p.base()
+            load(&json.into_bytes()).unwrap().base(),
+            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC1>::new(4)),
         );
     }
 

@@ -126,15 +126,12 @@ impl OracleRef {
     where
         OracleBase: Currency,
     {
-        if OracleBase::TICKER != self.base_currency {
-            panic!(
-                "Base currency mismatch {}",
-                ContractError::CurrencyMismatch {
-                    expected: OracleBase::TICKER.into(),
-                    found: self.base_currency.clone(),
-                }
-            );
-        }
+        assert_eq!(
+            OracleBase::TICKER,
+            self.base_currency,
+            "Base currency mismatch {}",
+            error::currency_mismatch::<OracleBase>(self.base_currency.clone())
+        );
     }
 
     fn into_oracle_stub<'a, OracleBase>(

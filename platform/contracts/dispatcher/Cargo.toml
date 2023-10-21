@@ -1,6 +1,6 @@
 [package]
 name = "rewards_dispatcher"
-version = "0.5.1"
+version = "0.5.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -15,9 +15,8 @@ default = ["contract-with-bindings"]
 contract-with-bindings = []
 
 [dependencies]
-lpp_platform = { workspace = true }
-# TODO get rid of the following dep
-# oracle = { workspace = true, features = ["stub", "convert"] }
+lpp-platform = { workspace = true }
+oracle-platform = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }
 

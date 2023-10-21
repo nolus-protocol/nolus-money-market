@@ -1,6 +1,6 @@
 [package]
 name = "lpp"
-version = "0.4.2"
+version = "0.4.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -20,7 +20,7 @@ testing = ["currency/testing"]
 access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
-lpp_platform = { workspace = true, features = ["impl"] }
+lpp-platform = { workspace = true, features = ["impl"] }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }

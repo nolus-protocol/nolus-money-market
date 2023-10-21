@@ -146,7 +146,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
 
     let lpp = lpp_platform::new_stub(config.lpp.clone(), &deps.querier);
-    let result = Dispatch::new(last_dispatch, config, now, &deps.querier).do_dispatch(&lpp)?;
+    let result = Dispatch::new(last_dispatch, &config, now, &deps.querier).do_dispatch(&lpp)?;
 
     DispatchLog::update(deps.storage, env.block.time)?;
 
