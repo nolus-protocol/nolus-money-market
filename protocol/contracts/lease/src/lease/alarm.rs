@@ -11,8 +11,9 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use marketprice::SpotPrice;
 use oracle::{
     alarms::Alarm,
-    stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait},
+    stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
 };
+use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -34,7 +35,7 @@ where
     ) -> ContractResult<Batch> {
         self.reschedule_time_alarm(now, time_alarms)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms_stub::<Lpn>();
+                let mut price_alarms = price_alarms.as_alarms::<Lpn>();
                 self.reschedule_price_alarm(now, liquidation_zone, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -113,7 +114,8 @@ mod tests {
     };
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
-    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm, stub::OracleRef};
+    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
+    use oracle_platform::OracleRef;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_binary, Timestamp, WasmMsg};
     use timealarms::{msg::ExecuteMsg::AddAlarm, stub::TimeAlarmsRef};

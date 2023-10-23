@@ -8,8 +8,6 @@ pub mod state;
 
 #[cfg(any(feature = "contract", test))]
 pub mod contract;
-#[cfg(any(feature = "convert", test))]
-pub mod convert;
 #[cfg(any(feature = "stub", test))]
 pub mod stub;
 

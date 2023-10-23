@@ -1,6 +1,10 @@
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::{error::Result, msg::QueryMsg, Lpp, LppBalanceResponse};
+use crate::{
+    error::Result,
+    msg::{LppBalanceResponse, QueryMsg},
+    Lpp,
+};
 
 pub struct LppStub<'a> {
     lpp: Addr,

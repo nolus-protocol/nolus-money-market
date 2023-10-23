@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, Currency, NlsPlatform, SymbolOwned};
+use currency::{dex::Lpns, Currency, NlsPlatform, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},

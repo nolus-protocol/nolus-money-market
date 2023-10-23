@@ -1,4 +1,4 @@
-use std::num::TryFromIntError;
+use std::{num::TryFromIntError, result::Result as StdResult};
 
 use thiserror::Error;
 
@@ -6,11 +6,10 @@ use currency::{Currency, SymbolOwned, SymbolSlice};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
+pub type Result<T> = StdResult<T, ContractError>;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
-    StubConfigQuery(StdError),
-
     #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
     StubSwapPathQuery(StdError),
 
@@ -71,13 +70,6 @@ pub enum ContractError {
     #[error("[Oracle] Invalid feeder address")]
     InvalidAddress {},
 
-    #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
-    FailedToFetchPrice {
-        from: SymbolOwned,
-        to: SymbolOwned,
-        error: StdError,
-    },
-
     #[error("[Oracle] Invalid denom pair ({0}, {1})")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
 
@@ -96,9 +88,6 @@ pub enum ContractError {
     #[error("[Oracle] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
-
     #[error("[Oracle][Base='{base}'] Unsupported currency '{unsupported}'")]
     UnsupportedCurrency {
         base: SymbolOwned,
@@ -107,16 +96,6 @@ pub enum ContractError {
 
     #[error("[Oracle] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
-}
-
-pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> ContractError
-where
-    ExpC: Currency,
-{
-    ContractError::CurrencyMismatch {
-        expected: ExpC::TICKER.into(),
-        found,
-    }
 }
 
 pub fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError

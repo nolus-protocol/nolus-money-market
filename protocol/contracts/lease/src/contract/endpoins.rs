@@ -1,4 +1,4 @@
-use currency::lease::LeaseGroup;
+use currency::dex::LeaseGroup;
 use platform::{error as platform_error, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;

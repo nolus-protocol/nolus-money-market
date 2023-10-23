@@ -1,5 +1,5 @@
 use currency::{
-    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+    dex::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
     NlsPlatform,
 };
 use currency::{Currency, SymbolOwned};

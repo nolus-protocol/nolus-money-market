@@ -160,7 +160,7 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currency::{
-        test::{NativeC, StableC1},
+        dex::test::{NativeC, StableC1},
         Currency as _,
     };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};

@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, SymbolSlice};
+use currency::{dex::LeaseGroup, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     bank,
     batch::{Emit, Emitter},

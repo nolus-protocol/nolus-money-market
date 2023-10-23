@@ -351,7 +351,7 @@ struct AlarmWithSubscriber {
 
 #[cfg(test)]
 pub mod tests {
-    use currency::test::{PaymentC4, PaymentC6, PaymentC7};
+    use currency::dex::test::{PaymentC4, PaymentC6, PaymentC7};
     use finance::{coin::Coin, price};
     use sdk::cosmwasm_std::{testing::MockStorage, Addr};
 

@@ -223,7 +223,7 @@ where
 #[cfg(test)]
 mod test_check {
 
-    use currency::{test::PaymentC3, test::StableC1};
+    use currency::dex::test::{PaymentC3, StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -882,7 +882,7 @@ mod test_check {
 
 #[cfg(test)]
 mod test_validate_close {
-    use currency::{test::PaymentC3, test::StableC1};
+    use currency::dex::test::{PaymentC3, StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,

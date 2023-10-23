@@ -1,6 +1,6 @@
 use currency::{self, Currency};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::Oracle as OracleTrait;
+use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -142,7 +142,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        test::{PaymentC7, StableC1},
+        dex::test::{PaymentC7, StableC1},
         Currency,
     };
     use finance::{
@@ -154,7 +154,7 @@ mod tests {
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
-    use oracle::stub::{Oracle, OracleRef};
+    use oracle_platform::{error::Result as OraclePlatformResult, Oracle, OracleRef};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -254,7 +254,7 @@ mod tests {
         Self: Into<OracleRef>,
         OracleBase: Currency + Serialize,
     {
-        fn price_of<C>(&self) -> oracle::stub::Result<Price<C, OracleBase>>
+        fn price_of<C>(&self) -> OraclePlatformResult<Price<C, OracleBase>>
         where
             C: Currency,
         {

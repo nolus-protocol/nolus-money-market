@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use super::LeaseDTO;
-use ::currency::{lease::LeaseGroup, lpn::Lpns};
+use ::currency::dex::{LeaseGroup, Lpns};
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 
 pub trait WithLeaseTypes {

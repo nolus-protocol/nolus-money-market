@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::lpn::Lpns;
+use currency::dex::Lpns;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 

@@ -14,7 +14,7 @@ pub enum ContractError {
     Finance(#[from] finance::error::Error),
 
     #[error("[Profit] {0}")]
-    Oracle(#[from] oracle::ContractError),
+    OraclePlatform(#[from] oracle_platform::error::Error),
 
     #[error("[Profit] {0}")]
     Platform(#[from] platform::error::Error),

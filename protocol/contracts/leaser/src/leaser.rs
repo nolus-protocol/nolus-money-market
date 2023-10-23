@@ -6,7 +6,7 @@ use lease::api::{
     ConnectionParams, DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpecDTO,
 };
 use lpp::{msg::ExecuteMsg, stub::LppRef};
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 use platform::contract::CodeId;
 use platform::message::Response as MessageResponse;

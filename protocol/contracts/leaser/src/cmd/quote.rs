@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{
-    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit,
-    SymbolOwned, Tickers,
+    dex::{LeaseGroup, Lpns, PaymentGroup},
+    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers,
 };
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
@@ -12,7 +12,7 @@ use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
-use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{msg::QuoteResponse, ContractError};
@@ -28,7 +28,7 @@ impl<'r> WithLppLender for Quote<'r> {
         Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency,
     {
-        self.oracle.execute_as_oracle(
+        self.oracle.execute_as_oracle::<_, Lpns, _>(
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,

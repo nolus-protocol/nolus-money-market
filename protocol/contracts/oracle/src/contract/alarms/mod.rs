@@ -155,7 +155,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{PaymentC5, PaymentC6, PaymentC7};
+    use currency::dex::test::{PaymentC5, PaymentC6, PaymentC7};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::tests::{self, TheCurrency as Base};

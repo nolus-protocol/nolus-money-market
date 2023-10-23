@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::Oracle as OracleTrait;
+use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::Timestamp;
 

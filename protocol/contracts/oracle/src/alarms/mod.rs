@@ -63,7 +63,7 @@ mod test {
     use std::fmt::{Display, Formatter, Result as FmtResult};
 
     use currency::{
-        test::{PaymentC5, PaymentC6, PaymentC7},
+        dex::test::{PaymentC5, PaymentC6, PaymentC7},
         Currency,
     };
     use finance::{

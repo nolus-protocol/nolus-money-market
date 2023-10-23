@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
-use lpp_platform::LppBalanceResponse;
+use lpp_platform::msg::LppBalanceResponse;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -71,7 +71,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::test::Usdc;
+    use currency::dex::test::StableC1;
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
@@ -86,7 +86,7 @@ mod test {
 
     use super::*;
 
-    type TheCurrency = Usdc;
+    type TheCurrency = StableC1;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

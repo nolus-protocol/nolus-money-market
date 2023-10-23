@@ -112,7 +112,7 @@ fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
 
 #[cfg(test)]
 mod test {
-    use currency::{payment::PaymentGroup, test::PaymentC1, Currency as _, SymbolStatic};
+    use currency::{dex::test::PaymentC1, dex::PaymentGroup, Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
 

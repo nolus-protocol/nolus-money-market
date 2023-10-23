@@ -110,7 +110,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::Usdc;
+    use currency::dex::test::StableC1;
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
@@ -125,12 +125,12 @@ mod test {
 
     #[test]
     fn try_from_no_payments() {
-        let lpp_ref = LppRef::unchecked::<_, Usdc>("lpp_address");
+        let lpp_ref = LppRef::unchecked::<_, StableC1>("lpp_address");
         let start = Timestamp::from_seconds(10);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<Usdc>::new(100),
+                principal_due: Coin::<StableC1>::new(100),
                 annual_interest_rate: Percent::from_percent(12),
                 interest_paid: start,
             },
@@ -143,12 +143,12 @@ mod test {
 
     #[test]
     fn try_from_a_few_payments() {
-        let lpp_ref = LppRef::unchecked::<_, Usdc>("lpp_address");
+        let lpp_ref = LppRef::unchecked::<_, StableC1>("lpp_address");
         let start = Timestamp::from_seconds(0);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<Usdc>::new(100),
+                principal_due: Coin::<StableC1>::new(100),
                 annual_interest_rate: Percent::from_percent(12),
                 interest_paid: start,
             },

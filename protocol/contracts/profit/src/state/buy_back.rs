@@ -2,13 +2,16 @@ use std::slice::Iter as SliceIter;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{native::Native, payment::PaymentGroup, Currency, NlsPlatform, SymbolSlice};
+use currency::{
+    dex::{Native, PaymentGroup},
+    Currency, NlsPlatform, SymbolSlice,
+};
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
     SwapTask,
 };
 use finance::coin::{Coin, CoinDTO};
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
@@ -167,9 +170,9 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 
 #[cfg(test)]
 mod tests {
-    use currency::{
-        payment::PaymentGroup,
+    use currency::dex::{
         test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+        PaymentGroup,
     };
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
@@ -179,7 +182,7 @@ mod tests {
 
     fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
         use dex::{Account, ConnectionParams, Ics20Channel};
-        use oracle::stub::OracleRef;
+        use oracle_platform::OracleRef;
         use platform::ica::HostAccount;
         use sdk::cosmwasm_std::Addr;
         use timealarms::stub::TimeAlarmsRef;

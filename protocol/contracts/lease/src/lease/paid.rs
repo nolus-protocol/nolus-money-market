@@ -52,7 +52,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use currency::{
-        test::{PaymentC3, StableC1},
+        dex::test::{PaymentC3, StableC1},
         Currency, Group,
     };
     use finance::{

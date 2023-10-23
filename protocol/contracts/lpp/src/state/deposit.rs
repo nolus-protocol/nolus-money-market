@@ -200,14 +200,14 @@ impl Deposit {
 
 #[cfg(test)]
 mod test {
-    use currency::test::Usdc;
+    use currency::dex::test::StableC1;
     use sdk::cosmwasm_std::testing;
 
     use crate::lpp::NTokenPrice;
 
     use super::*;
 
-    type TheCurrency = Usdc;
+    type TheCurrency = StableC1;
 
     #[test]
     fn test_deposit_and_withdraw() {
@@ -326,7 +326,7 @@ mod test {
 
         // balance_nls = 0, balance_nlpn != 0
         deposit
-            .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
+            .deposit(deps.as_mut().storage, Coin::<StableC1>::new(1000), price)
             .expect("should deposit");
 
         let rewards = deposit
@@ -345,7 +345,7 @@ mod test {
             Deposit::load_or_default(deps.as_ref().storage, addr).expect("should load");
 
         deposit
-            .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
+            .deposit(deps.as_mut().storage, Coin::<StableC1>::new(1000), price)
             .expect("should deposit");
 
         // shouldn't change anything

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, payment::PaymentGroup};
+use currency::dex::{LeaseGroup, PaymentGroup};
 use finance::coin::CoinDTO;
 use lpp::msg::LpnCoin as LppLpnCoin;
 use sdk::{

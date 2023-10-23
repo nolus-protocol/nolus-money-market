@@ -1,6 +1,6 @@
-use currency::test::StableC1;
+use currency::dex::test::StableC1;
 use finance::{coin::Coin, liability::Liability};
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use serde::Deserialize;
 
 use sdk::cosmwasm_std::Addr;

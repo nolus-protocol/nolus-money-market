@@ -1,9 +1,9 @@
 use serde::Deserialize;
 
-use currency::{lpn::Lpns, SymbolSlice};
+use currency::{dex::Lpns, SymbolSlice};
 use dex::{Account, CoinVisitor, IterNext, IterState, SwapTask};
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 

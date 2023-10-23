@@ -7,7 +7,7 @@ use dex::{
     TimeAlarm, TransferOut,
 };
 use lpp::stub::LppRef;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;

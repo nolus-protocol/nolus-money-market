@@ -3,14 +3,15 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use currency::{
-    self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice,
-    Tickers,
+    self,
+    dex::{LeaseGroup, Lpns},
+    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers,
 };
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,
 };
-use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 pub trait WithLeaseDeps {
@@ -41,7 +42,7 @@ where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
-    oracle::error::ContractError: Into<Cmd::Error>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
 {
     Tickers.visit_any::<LeaseGroup, _>(
         asset,
@@ -68,7 +69,7 @@ where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
-    oracle::error::ContractError: Into<Cmd::Error>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -101,7 +102,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: Currency,
     lpp::error::ContractError: Into<Cmd::Error>,
-    oracle::error::ContractError: Into<Cmd::Error>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -111,7 +112,7 @@ where
         Lpn: Currency,
         LppLoan: LppLoanTrait<Lpn>,
     {
-        self.oracle.execute_as_oracle(
+        self.oracle.execute_as_oracle::<_, Lpns, _>(
             FactoryStage4 {
                 cmd: self.cmd,
                 asset: self.asset,

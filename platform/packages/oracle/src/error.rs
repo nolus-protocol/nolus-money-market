@@ -1,7 +1,11 @@
+use std::result::Result as StdResult;
+
 use thiserror::Error;
 
 use currency::{Currency, SymbolOwned};
 use sdk::cosmwasm_std::StdError;
+
+pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

@@ -13,6 +13,7 @@ testing = []
 currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["stub"] }
+oracle-platform = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }

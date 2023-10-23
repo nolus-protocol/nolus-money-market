@@ -22,7 +22,7 @@ access-control = { workspace = true }
 currency = { workspace = true }
 dex = { workspace = true }
 finance = { workspace = true }
-oracle = { workspace = true }
+oracle-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 timealarms = { workspace = true, features = ["stub"] }
@@ -38,7 +38,7 @@ serde = { workspace = true, features = ["derive"] }
 currency = { workspace = true, features = ["testing"] }
 dex = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
-oracle = { workspace = true, features = ["testing"] }
+oracle-platform = { workspace = true, features = ["testing"]  }
 timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 

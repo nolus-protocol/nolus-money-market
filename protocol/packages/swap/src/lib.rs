@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{payment::PaymentGroup, SymbolOwned};
+use currency::{dex::PaymentGroup, SymbolOwned};
 use sdk::schemars::{self, JsonSchema};
 
 pub mod error;

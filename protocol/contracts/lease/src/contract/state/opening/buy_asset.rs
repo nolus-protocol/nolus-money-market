@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, SymbolSlice};
+use currency::{dex::LeaseGroup, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
     SwapTask, TransferOutState,
 };
 use finance::coin::CoinDTO;
 use lpp::stub::LppRef;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,

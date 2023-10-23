@@ -7,11 +7,9 @@ use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::{self, Error},
+    error::{self, Error, Result},
     msg::{Config, QueryMsg},
 };
-
-pub type Result<T> = StdResult<T, Error>;
 
 pub trait Oracle<OracleBase>
 where
@@ -52,6 +50,10 @@ impl OracleRef {
             })
     }
 
+    pub fn addr(&self) -> &Addr {
+        &self.addr
+    }
+
     pub fn owned_by(&self, contract: &Addr) -> bool {
         self.addr == contract
     }
@@ -73,7 +75,7 @@ impl OracleRef {
         cmd.exec(self.into_oracle_stub::<OracleBase, OracleBaseG>(querier))
     }
 
-    fn check_base<OracleBase>(&self)
+    pub fn check_base<OracleBase>(&self)
     where
         OracleBase: Currency,
     {

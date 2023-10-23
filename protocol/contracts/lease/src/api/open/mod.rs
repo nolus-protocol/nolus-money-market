@@ -240,7 +240,7 @@ mod test_invariant {
 
 #[cfg(test)]
 mod test_position_spec {
-    use currency::test::StableC1;
+    use currency::dex::test::StableC1;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_slice, StdError};
 

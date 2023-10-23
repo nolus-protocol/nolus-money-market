@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
-use currency::{lease::LeaseGroup, SymbolOwned, SymbolSlice};
+use currency::{dex::LeaseGroup, SymbolOwned, SymbolSlice};
 use dex::{Account, CoinVisitor, ConnectionParams, IterNext, IterState, MigrateSpec, SwapTask};
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use lpp::stub::LppRef;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 

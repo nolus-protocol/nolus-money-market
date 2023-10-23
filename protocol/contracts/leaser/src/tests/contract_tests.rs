@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{test::StableC1, Currency, SymbolStatic};
+use currency::{dex::test::StableC1, Currency, SymbolStatic};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

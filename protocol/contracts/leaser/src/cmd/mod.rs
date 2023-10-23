@@ -1,7 +1,7 @@
 use currency::SymbolOwned;
 use finance::{liability::Liability, percent::Percent};
 use lease::api::DownpaymentCoin;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 pub mod borrow;

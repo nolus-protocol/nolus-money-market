@@ -3,7 +3,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::{
-    payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned,
+    dex::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned,
     SymbolSlice, Tickers,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
@@ -232,13 +232,13 @@ where
 mod tests {
     use std::cmp::Ordering;
 
-    use currency::{test::Usdc, Currency};
+    use currency::{dex::test::StableC1, Currency};
     use sdk::cosmwasm_std::testing;
     use tree::HumanReadableTree;
 
     use super::*;
 
-    type TheCurrency = Usdc;
+    type TheCurrency = StableC1;
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         let base = TheCurrency::TICKER;
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<Usdc>::new(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::<StableC1>::new(tree.into_tree()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_load_path() {
-        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC1>::new(test_case().into_tree()).unwrap();
 
         let resp: Vec<_> = tree.load_path("token5").unwrap().collect();
         assert_eq!(
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_load_swap_path() {
-        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC1>::new(test_case().into_tree()).unwrap();
 
         assert!(tree.load_swap_path("token5", "token5").unwrap().is_empty());
 
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_load_affected() {
-        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC1>::new(test_case().into_tree()).unwrap();
 
         let mut resp = tree.load_affected(("token2", TheCurrency::TICKER)).unwrap();
         resp.sort();
@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree = SupportedPairs::<Usdc>::new(paths.into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC1>::new(paths.into_tree()).unwrap();
 
         fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
             a.from.cmp(&b.from)

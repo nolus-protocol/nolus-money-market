@@ -18,7 +18,7 @@ testing = ["currency/testing"]
 
 [dependencies]
 access-control = { workspace = true }
-currency = { workspace = true }
+currency = { workspace = true, features = ["impl"] }
 finance = { workspace = true }
 lpp-platform = { workspace = true, features = ["impl"] }
 platform = { workspace = true }

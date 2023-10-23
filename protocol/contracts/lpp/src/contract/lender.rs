@@ -127,7 +127,7 @@ mod test {
     use std::ops::DerefMut as _;
 
     use access_control::ContractOwnerAccess;
-    use currency::{test::Usdc, Currency};
+    use currency::{dex::test::StableC1, Currency};
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
@@ -139,7 +139,7 @@ mod test {
 
     use super::{query_balance, query_ntoken_price, try_deposit, try_withdraw, LiquidityPool};
 
-    type TheCurrency = Usdc;
+    type TheCurrency = StableC1;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

@@ -99,14 +99,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currency::test::Nls;
+    use currency::test::SuperGroupTestC1;
     use finance::coin::Coin;
 
     use crate::loan::RepayReceipt;
 
+    type BorrowC = SuperGroupTestC1;
+
     #[test]
     fn pay_principal_full() {
-        let principal = Coin::<Nls>::new(10);
+        let principal = Coin::<BorrowC>::new(10);
 
         let mut receipt = RepayReceipt::default();
 
@@ -126,9 +128,9 @@ mod tests {
     #[test]
     #[should_panic = "Payment exceeds principal!"]
     fn pay_principal_overpaid() {
-        let principal = Coin::<Nls>::new(10);
+        let principal = Coin::<BorrowC>::new(10);
 
-        let payment = principal + Coin::<Nls>::new(1);
+        let payment = principal + Coin::<BorrowC>::new(1);
 
         let mut receipt = RepayReceipt::default();
 

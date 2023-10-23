@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::LppRef;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,

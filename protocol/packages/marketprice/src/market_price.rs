@@ -226,7 +226,7 @@ fn add_observation(
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{Nls, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+        dex::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         Currency,
     };
     use finance::{
@@ -333,11 +333,11 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Nls, _>(
+            feeds.price::<PaymentC1, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, Nls::TICKER].into_iter()
+                [PaymentC7::TICKER, PaymentC1::TICKER].into_iter()
             )
         );
         assert_eq!(

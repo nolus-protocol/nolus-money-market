@@ -9,7 +9,7 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
-use lpp_platform::{LppBalanceResponse, NLpn};
+use lpp_platform::{msg::LppBalanceResponse, NLpn};
 use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
@@ -318,7 +318,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::{test::StableC1, Currency};
+    use currency::{dex::test::StableC1, Currency};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,

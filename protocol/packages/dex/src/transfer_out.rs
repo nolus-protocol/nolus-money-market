@@ -259,21 +259,21 @@ impl CoinVisitor for Counter {
 
 #[cfg(test)]
 mod test {
-    use currency::test::{TestCurrencies, Usdc};
+    use currency::test::{SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
     use crate::swap_task::{CoinVisitor, CoinsNb, IterNext};
 
     use super::Counter;
 
-    fn coin() -> CoinDTO<TestCurrencies> {
-        Coin::<Usdc>::new(22).into()
+    fn coin() -> CoinDTO<SuperGroup> {
+        Coin::<SuperGroupTestC1>::new(22).into()
     }
 
     #[test]
     fn index_zero() {
         let mut c = Counter::default();
-        let r = c.visit::<TestCurrencies>(&coin()).unwrap();
+        let r = c.visit::<SuperGroup>(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
         assert_eq!(c.last_index(), 0);
     }
@@ -281,9 +281,9 @@ mod test {
     #[test]
     fn index_one() {
         let mut c = Counter::default();
-        let r = c.visit::<TestCurrencies>(&coin()).unwrap();
+        let r = c.visit::<SuperGroup>(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
-        let r = c.visit::<TestCurrencies>(&coin()).unwrap();
+        let r = c.visit::<SuperGroup>(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
         assert_eq!(c.last_index(), 1);
     }
@@ -292,7 +292,7 @@ mod test {
     fn index_max() {
         let mut c = Counter::default();
         for _i in 0..=CoinsNb::MAX {
-            let r = c.visit::<TestCurrencies>(&coin()).unwrap();
+            let r = c.visit::<SuperGroup>(&coin()).unwrap();
             assert_eq!(r, IterNext::Continue);
         }
         assert_eq!(c.last_index(), CoinsNb::MAX);

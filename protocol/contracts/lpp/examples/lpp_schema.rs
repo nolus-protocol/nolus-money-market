@@ -2,7 +2,7 @@ use lpp::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, PriceResponse, QueryLoanResponse,
     QueryMsg, QueryQuoteResponse, RewardsResponse,
 };
-use lpp_platform::{LppBalanceResponse, Usd};
+use lpp_platform::{msg::LppBalanceResponse, Usd};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {

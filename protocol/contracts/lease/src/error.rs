@@ -7,6 +7,7 @@ use dex::Error as DexError;
 use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
 use oracle::error::ContractError as OracleError;
+use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
 use profit::error::ContractError as ProfitError;
 use sdk::cosmwasm_std::StdError;
@@ -39,6 +40,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     OracleError(#[from] OracleError),
+
+    #[error("[Lease] {0}")]
+    OraclePlatformError(#[from] OraclePlatformError),
 
     #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),

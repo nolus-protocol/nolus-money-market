@@ -1,6 +1,6 @@
 pub mod convert;
 pub mod error;
-mod msg;
+pub mod msg;
 mod stub;
 
 pub use stub::*;

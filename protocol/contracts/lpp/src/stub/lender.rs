@@ -111,7 +111,7 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppRef> {
 
 #[cfg(test)]
 mod test {
-    use currency::{test::StableC1, Currency};
+    use currency::{dex::test::StableC1, Currency};
     use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{

@@ -401,7 +401,7 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use currency::test::StableC1;
+    use currency::dex::test::StableC1;
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
         error::ContractError as LppError,

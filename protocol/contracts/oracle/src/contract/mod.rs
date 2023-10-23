@@ -1,4 +1,4 @@
-use currency::lpn::Lpns;
+use currency::dex::Lpns;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
@@ -166,7 +166,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 #[cfg(test)]
 mod tests {
     use currency::{
-        test::{PaymentC5, StableC1},
+        dex::test::{PaymentC5, StableC1},
         Currency,
     };
     use finance::{duration::Duration, percent::Percent};

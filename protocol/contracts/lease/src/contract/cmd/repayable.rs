@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use platform::{
     bank::FixedAddressSender, batch::Emitter as PlatformEmitter,
     message::Response as MessageResponse,

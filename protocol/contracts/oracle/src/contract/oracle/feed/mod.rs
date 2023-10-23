@@ -115,7 +115,7 @@ mod test {
     use std::collections::HashMap;
 
     use currency::{
-        test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+        dex::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         SymbolStatic,
     };
     use finance::{

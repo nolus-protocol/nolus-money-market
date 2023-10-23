@@ -17,7 +17,7 @@ testing = ["currency/testing"]
 [dependencies]
 lease = { workspace = true }
 lpp = { workspace = true }
-oracle = { workspace = true, features = ["stub"] }
+oracle-platform = { workspace = true }
 
 access-control = { workspace = true }
 currency = { workspace = true }

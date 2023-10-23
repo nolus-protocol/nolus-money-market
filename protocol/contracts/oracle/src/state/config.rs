@@ -52,18 +52,19 @@ impl Config {
 
 #[cfg(test)]
 mod test {
-    use finance::duration::Duration;
-    use oracle_platform::msg::Config as PlatformConfig;
+    use currency::SymbolOwned;
+    use finance::{duration::Duration, percent::Percent};
     use marketprice::config::Config as PriceConfig;
-    use std::cosmwasm_std::to_vec;
+    use oracle_platform::msg::Config as PlatformConfig;
+    use sdk::cosmwasm_std::{from_slice, to_vec};
 
     use super::Config;
 
     #[test]
     fn impl_config() {
-        let base_asset = "base_asset".into();
+        let base_asset: SymbolOwned = "base_asset".into();
         let cfg = Config::new(
-            base_asset,
+            base_asset.clone(),
             PriceConfig::new(
                 Percent::from_percent(35),
                 Duration::from_secs(10),
@@ -71,7 +72,7 @@ mod test {
                 Percent::from_percent(70),
             ),
         );
-        let cfg_platform = from_slice::<PlatformConfig>(to_vec(&cfg).unwrap()).unwrap();
+        let cfg_platform = from_slice::<PlatformConfig>(&to_vec(&cfg).unwrap()).unwrap();
         assert_eq!(cfg_platform.base_asset, base_asset);
     }
 }

@@ -51,7 +51,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc};
+    use currency::test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
     use crate::{
@@ -60,12 +60,12 @@ mod test {
         swap_task::{CoinVisitor, IterNext},
     };
 
-    fn coin1() -> CoinDTO<TestCurrencies> {
-        Coin::<Usdc>::new(32).into()
+    fn coin1() -> CoinDTO<SuperGroup> {
+        Coin::<SuperGroupTestC1>::new(32).into()
     }
 
-    fn coin2() -> CoinDTO<TestExtraCurrencies> {
-        Coin::<Dai>::new(28).into()
+    fn coin2() -> CoinDTO<SubGroup> {
+        Coin::<SubGroupTestC1>::new(28).into()
     }
 
     #[test]

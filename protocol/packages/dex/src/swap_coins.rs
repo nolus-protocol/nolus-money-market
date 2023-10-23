@@ -36,7 +36,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
+        test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Group,
     };
 
@@ -45,12 +45,12 @@ mod test {
 
     use crate::swap_task::{CoinVisitor, IterNext, IterState};
 
-    fn coin1() -> CoinDTO<TestCurrencies> {
-        Coin::<Usdc>::new(32).into()
+    fn coin1() -> CoinDTO<SuperGroup> {
+        Coin::<SuperGroupTestC1>::new(32).into()
     }
 
-    fn coin2() -> CoinDTO<TestExtraCurrencies> {
-        Coin::<Dai>::new(28).into()
+    fn coin2() -> CoinDTO<SubGroup> {
+        Coin::<SuperGroupTestC2>::new(28).into()
     }
 
     pub struct TestVisitor<R>(Option<Amount>, R, Option<Amount>, R);

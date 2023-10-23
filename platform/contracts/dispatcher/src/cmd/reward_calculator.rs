@@ -1,5 +1,5 @@
 use finance::{coin::Coin, percent::Percent};
-use lpp_platform::{Lpp as LppTrait, LppBalanceResponse, Usd};
+use lpp_platform::{msg::LppBalanceResponse, Lpp as LppTrait, Usd};
 
 use crate::{result::ContractResult, state::reward_scale::RewardScale};
 

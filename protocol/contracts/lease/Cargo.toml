@@ -19,15 +19,17 @@ testing = ["currency/testing"]
 
 [dependencies]
 access-control = { workspace = true }
-lpp = { workspace = true, features = ["stub"] }
-oracle = { workspace = true, features = ["convert"] }
 profit = { workspace = true, features = ["stub"] }
 timealarms = { workspace = true, features = ["stub"] }
 
 currency = { workspace = true }
 dex = { workspace = true }
 finance = { workspace = true }
+lpp = { workspace = true }
+lpp-platform = { workspace = true }
 marketprice = { workspace = true }
+oracle = { workspace = true, features = ["stub"] }
+oracle-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }

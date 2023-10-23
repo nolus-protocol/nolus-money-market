@@ -2,14 +2,14 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{payment::PaymentGroup, Currency};
+use currency::{dex::PaymentGroup, Currency};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     liability::Liability,
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
-use oracle::{convert, stub::OracleRef};
+use oracle_platform::{convert, OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
@@ -98,7 +98,8 @@ where
     where
         C: Currency,
     {
-        let downpayment_lpn = convert::to_base(self.oracle.clone(), in_amount, self.querier)?;
+        let downpayment_lpn =
+            convert::to_base::<_, _, PaymentGroup>(self.oracle.clone(), in_amount, self.querier)?;
 
         let downpayment = in_amount.into();
 

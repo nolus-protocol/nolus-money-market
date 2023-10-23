@@ -11,7 +11,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, Cont
 #[cfg(test)]
 mod tests {
     use currency::{
-        test::{PaymentC3, PaymentC6, StableC1},
+        dex::test::{PaymentC3, PaymentC6, StableC1},
         Currency,
     };
     use finance::{duration::Duration, percent::Percent};

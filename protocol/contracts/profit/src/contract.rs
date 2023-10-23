@@ -5,7 +5,7 @@ use dex::{
     ConnectionParams, ContinueResult as DexResult, Handler as _, Ics20Channel,
     Response as DexResponse,
 };
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
 };

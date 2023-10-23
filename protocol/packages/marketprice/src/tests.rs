@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use currency::{
-    test::{PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+    dex::test::{PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     Currency,
 };
 use finance::{

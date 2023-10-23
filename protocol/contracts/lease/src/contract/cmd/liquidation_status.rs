@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::Currency;
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;

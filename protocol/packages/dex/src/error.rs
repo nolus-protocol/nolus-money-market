@@ -20,6 +20,9 @@ pub enum Error {
     OracleError(#[from] oracle::error::ContractError),
 
     #[error("[Dex] {0}")]
+    OraclePlatformError(#[from] oracle_platform::error::Error),
+
+    #[error("[Dex] {0}")]
     TimeAlarmError(#[from] timealarms::error::ContractError),
 }
 

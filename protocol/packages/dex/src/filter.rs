@@ -57,7 +57,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency,
     };
     use finance::coin::{Amount, Coin};
@@ -69,9 +69,9 @@ mod test {
 
     use super::CurrencyFilter;
 
-    type FilterCurrency = Usdc;
-    type AnotherCurrency = Nls;
-    type YetAnotherCurrency = Dai;
+    type FilterCurrency = SuperGroupTestC1;
+    type AnotherCurrency = SuperGroupTestC2;
+    type YetAnotherCurrency = SubGroupTestC1;
     const AMOUNT1: Amount = 24;
     const AMOUNT2: Amount = 28;
 
@@ -84,7 +84,7 @@ mod test {
         assert_passed_through::<false>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
+            f.visit::<SuperGroup>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
                 .unwrap(),
             IterNext::Continue
         );
@@ -92,7 +92,7 @@ mod test {
         assert_passed_through::<false>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
+            f.visit::<SuperGroup>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
                 .unwrap(),
             IterNext::Continue
         );
@@ -109,7 +109,7 @@ mod test {
         assert_passed_through::<false>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
+            f.visit::<SuperGroup>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
                 .unwrap(),
             IterNext::Continue
         );
@@ -117,7 +117,7 @@ mod test {
         assert_passed_through::<false>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<AnotherCurrency>::new(AMOUNT1).into())
+            f.visit::<SuperGroup>(&Coin::<AnotherCurrency>::new(AMOUNT1).into())
                 .unwrap(),
             IterNext::Stop
         );
@@ -125,7 +125,7 @@ mod test {
         assert_passed_through::<true>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT2).into())
+            f.visit::<SuperGroup>(&Coin::<FilterCurrency>::new(AMOUNT2).into())
                 .unwrap(),
             IterNext::Continue
         );
@@ -145,7 +145,7 @@ mod test {
         assert_passed_through::<false>(&f);
 
         assert_eq!(
-            f.visit::<TestCurrencies>(&Coin::<AnotherCurrency>::new(AMOUNT1).into())
+            f.visit::<SuperGroup>(&Coin::<AnotherCurrency>::new(AMOUNT1).into())
                 .unwrap(),
             IterNext::Continue
         );
@@ -153,7 +153,7 @@ mod test {
         assert_passed_through::<true>(&f);
 
         assert_eq!(
-            f.visit::<TestExtraCurrencies>(&Coin::<YetAnotherCurrency>::new(AMOUNT2).into())
+            f.visit::<SubGroup>(&Coin::<YetAnotherCurrency>::new(AMOUNT2).into())
                 .unwrap(),
             IterNext::Stop
         );

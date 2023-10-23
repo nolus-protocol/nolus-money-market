@@ -1,6 +1,6 @@
 use currency::{Group, SymbolSlice};
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 

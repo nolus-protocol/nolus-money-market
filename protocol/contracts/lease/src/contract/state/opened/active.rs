@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, payment::PaymentGroup};
+use currency::dex::{Lpns, PaymentGroup};
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
