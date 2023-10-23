@@ -1,4 +1,4 @@
-use currency::{test::StableC1, Currency};
+use currency::Currency;
 use finance::{
     coin::Coin,
     percent::{bound::BoundToHundredPercent, Percent},
@@ -98,7 +98,7 @@ impl Instantiator {
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<StableC1> {
+        QueryMsg::LppBalance() => to_binary(&lpp_platform::msg::LppBalanceResponse {
             balance: Coin::new(1000000000),
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),

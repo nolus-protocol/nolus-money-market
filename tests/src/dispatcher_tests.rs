@@ -1,4 +1,7 @@
-use currency::{native::Nls, test::StableC1, Currency};
+use currency::{
+    dex::test::{NativeC, StableC1},
+    Currency,
+};
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},
@@ -103,9 +106,9 @@ fn on_alarm() {
         test_case
             .app
             .query()
-            .query_balance(test_case.address_book.lpp().clone(), Nls::TICKER)
+            .query_balance(test_case.address_book.lpp().clone(), NativeC::TICKER)
             .unwrap(),
-        CwCoin::new(0, Nls::TICKER)
+        CwCoin::new(0, NativeC::TICKER)
     );
 
     let treasury_balance = test_case
@@ -164,7 +167,7 @@ fn on_alarm() {
             ("idx", "0"),
             ("to", test_case.address_book.lpp().as_str()),
             ("rewards-amount", "11"),
-            ("rewards-symbol", Nls::TICKER),
+            ("rewards-symbol", NativeC::TICKER),
         ]
     );
     let treasury_exec = &res.events[2];

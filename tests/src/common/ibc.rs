@@ -1,6 +1,6 @@
 use std::slice;
 
-use currency::{payment::PaymentGroup, BankSymbols, DexSymbols, Group, SymbolStatic};
+use currency::{dex::PaymentGroup, BankSymbols, DexSymbols, Group, SymbolStatic};
 
 use sdk::{
     cosmos_sdk_proto::{

@@ -1,6 +1,9 @@
 use std::array::from_fn;
 
-use currency::{native::Nls, test::StableC1, Currency};
+use currency::{
+    dex::test::{NativeC, StableC1},
+    Currency,
+};
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
 use sdk::{
@@ -529,7 +532,7 @@ fn test_time_notify() {
 fn test_profit_alarms() {
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin(Coin::<Lpn>::new(1_000_000)),
-        cwcoin(Coin::<Nls>::new(1_000_000)),
+        cwcoin(Coin::<NativeC>::new(1_000_000)),
     ])
     .init_time_alarms()
     .init_oracle(None)
@@ -539,7 +542,7 @@ fn test_profit_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin(Coin::<Nls>::new(100_000))],
+        &[cwcoin(Coin::<NativeC>::new(100_000))],
     );
 
     test_case.app.time_shift(Duration::from_hours(10));

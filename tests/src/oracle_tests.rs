@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json_wasm::from_str;
 
 use currency::{
-    test::StableC1,
-    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+    dex::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
     Currency,
 };
 use finance::{

@@ -1,6 +1,5 @@
 use currency::{
-    native::Nls,
-    test::{PaymentC3, StableC1},
+    dex::test::{NativeC, PaymentC3, StableC1},
     Currency,
 };
 use finance::{
@@ -15,11 +14,13 @@ use finance::{
 use lpp::{
     borrow::InterestRate,
     msg::{
-        BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-        QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse, SudoMsg,
+        BalanceResponse, ExecuteMsg as ExecuteLpp, PriceResponse, QueryLoanResponse,
+        QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse, SudoMsg,
     },
     state::Config,
 };
+use lpp_platform::msg::LppBalanceResponse;
+
 use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Event, Timestamp},
@@ -75,7 +76,7 @@ fn config_update_parameters() {
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin::<NativeC, _>(app_balance),
     ])
     .init_lpp(
         None,
@@ -354,7 +355,7 @@ fn deposit_and_withdraw() {
     );
 
     // loans should not change asserts for lender2, the default loan
-    let balance_lpp: LppBalanceResponse<Lpn> = test_case
+    let balance_lpp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -383,7 +384,7 @@ fn deposit_and_withdraw() {
         TestCase::LEASE_ICA_ID,
     );
 
-    let balance_lpp: LppBalanceResponse<Lpn> = test_case
+    let balance_lpp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -582,7 +583,7 @@ fn loan_open_and_repay() {
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin::<NativeC, _>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -688,7 +689,7 @@ fn loan_open_and_repay() {
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse<Lpn> = test_case
+    let resp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -778,7 +779,9 @@ fn loan_open_and_repay() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(
+                repay_interest_part.into(),
+            )],
         )
         .unwrap();
 
@@ -788,7 +791,9 @@ fn loan_open_and_repay() {
             loan_addr2,
             test_case.address_book.lpp().clone(),
             &ExecuteLpp::RepayLoan(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(
+                repay_interest_part.into(),
+            )],
         )
         .unwrap_err();
 
@@ -883,7 +888,7 @@ fn loan_open_and_repay() {
     let balance = bank::balance(&loan_addr1, &test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse<Lpn> = test_case
+    let resp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -943,7 +948,7 @@ fn compare_lpp_states() {
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
+        coin_legacy::to_cosmwasm::<NativeC>(app_balance.into()),
     ])
     .init_lpp_with_funds(
         None,
@@ -1047,7 +1052,7 @@ fn compare_lpp_states() {
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse<Lpn> = test_case
+    let resp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -1143,7 +1148,9 @@ fn compare_lpp_states() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(
+                repay_interest_part.into(),
+            )],
         )
         .unwrap();
 
@@ -1153,7 +1160,9 @@ fn compare_lpp_states() {
             loan_addr2,
             test_case.address_book.lpp().clone(),
             &ExecuteLpp::RepayLoan(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(
+                repay_interest_part.into(),
+            )],
         )
         .unwrap_err();
 
@@ -1248,7 +1257,7 @@ fn compare_lpp_states() {
     let balance = bank::balance(&loan_addr1, &test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse<Lpn> = test_case
+    let resp: LppBalanceResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -1296,7 +1305,7 @@ fn test_rewards() {
 
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin::<NativeC, _>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -1313,7 +1322,7 @@ fn test_rewards() {
         .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
         .send_funds_from_admin(
             treasury.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(treasury_balance.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(treasury_balance.into())],
         );
 
     // rewards before deposits
@@ -1323,7 +1332,7 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &ExecuteLpp::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards0.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards0.into())],
         )
         .unwrap_err();
 
@@ -1352,7 +1361,7 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &ExecuteLpp::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards1.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards1.into())],
         )
         .unwrap()
         .ignore_response()
@@ -1452,7 +1461,7 @@ fn test_rewards() {
     assert_eq!(resp.rewards, Coin::new(0));
 
     let balance = bank::balance(&lender1, &test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(tot_rewards1));
+    assert_eq!(balance, Coin::<NativeC>::from(tot_rewards1));
 
     () = test_case
         .app
@@ -1460,7 +1469,7 @@ fn test_rewards() {
             treasury,
             test_case.address_book.lpp().clone(),
             &ExecuteLpp::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards2.into())],
+            &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards2.into())],
         )
         .unwrap()
         .ignore_response()
@@ -1508,7 +1517,10 @@ fn test_rewards() {
         .unwrap_response();
 
     let balance = bank::balance(&lender1, &test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(tot_rewards1 + lender_reward1));
+    assert_eq!(
+        balance,
+        Coin::<NativeC>::from(tot_rewards1 + lender_reward1)
+    );
 
     // lender account is removed
     let resp: Result<RewardsResponse, _> = test_case.app.query().query_wasm_smart(
@@ -1544,7 +1556,7 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, Coin::new(0));
     let balance = bank::balance(&recipient, &test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
+    assert_eq!(balance, Coin::<NativeC>::from(lender_reward2));
 }
 
 fn lpn_cwcoin<A>(amount: A) -> CwCoin

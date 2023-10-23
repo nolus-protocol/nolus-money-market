@@ -1,6 +1,5 @@
 use currency::{
-    native::Nls,
-    test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, StableC1},
+    dex::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, StableC1},
     Currency,
 };
 use finance::{
@@ -63,7 +62,7 @@ fn init_lpp_with_unknown_currency() {
 fn open_lease_not_in_lease_currency() {
     type Lpn = StableC1;
 
-    let lease_currency = Nls::TICKER;
+    let lease_currency = NativeC::TICKER;
 
     let user_addr = Addr::unchecked(USER);
 
