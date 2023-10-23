@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{dex::PaymentGroup, Currency};
+use currency::{
+    dex::{Lpns, PaymentGroup},
+    Currency,
+};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     liability::Liability,
@@ -98,8 +101,11 @@ where
     where
         C: Currency,
     {
-        let downpayment_lpn =
-            convert::to_base::<_, _, PaymentGroup>(self.oracle.clone(), in_amount, self.querier)?;
+        let downpayment_lpn = convert::to_base::<Lpn, Lpns, C, PaymentGroup>(
+            self.oracle.clone(),
+            in_amount,
+            self.querier,
+        )?;
 
         let downpayment = in_amount.into();
 

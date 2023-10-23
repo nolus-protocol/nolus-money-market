@@ -1,6 +1,6 @@
-use currency::NlsPlatform;
+use currency::{NativePlatform, NlsPlatform};
 use finance::{coin::Coin, interest::InterestPeriod, period::Period};
-use lpp_platform::{Lpp as LppTrait, UsdGroup};
+use lpp_platform::{Lpp as LppTrait, Usd, UsdGroup};
 use oracle_platform::{convert, OracleRef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
@@ -53,7 +53,11 @@ impl<'a> Dispatch<'a> {
 
         OracleRef::try_from(self.config.oracle.clone(), self.querier)
             .and_then(|oracle| {
-                convert::from_base::<_, _, UsdGroup>(oracle, reward_in_usd, self.querier)
+                convert::from_base::<Usd, UsdGroup, NlsPlatform, NativePlatform>(
+                    oracle,
+                    reward_in_usd,
+                    self.querier,
+                )
             })
             .map_err(Into::into)
             .and_then(|reward_unls| {

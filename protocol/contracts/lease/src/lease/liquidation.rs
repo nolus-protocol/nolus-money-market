@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{dex::LeaseGroup, Currency};
 use finance::{coin::Coin, price::Price, zero::Zero};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -39,6 +39,6 @@ where
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        Ok(self.oracle.price_of::<Asset>()?)
+        Ok(self.oracle.price_of::<Asset, LeaseGroup>()?)
     }
 }

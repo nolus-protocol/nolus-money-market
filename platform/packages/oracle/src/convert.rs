@@ -11,29 +11,33 @@ use crate::{
     stub::{Oracle, OracleRef, WithOracle},
 };
 
-pub fn to_base<BaseC, InC, G>(
+pub fn to_base<BaseC, BaseG, InC, InG>(
     oracle_ref: OracleRef,
     in_amount: Coin<InC>,
     querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<BaseC>, Error>
 where
     BaseC: Currency,
+    BaseG: Group + for<'de> Deserialize<'de>,
     InC: Currency,
-    G: Group + for<'de> Deserialize<'de>,
+    InG: Group + for<'de> Deserialize<'de>,
 {
-    struct PriceConvert<BaseC, In>
+    struct PriceConvert<BaseC, InC, InG>
     where
         BaseC: Currency,
-        In: Currency,
+        InC: Currency,
+        InG: Group,
     {
-        in_amount: Coin<In>,
+        in_amount: Coin<InC>,
+        _in_group: PhantomData<InG>,
         _out: PhantomData<BaseC>,
     }
 
-    impl<BaseC, In> WithOracle<BaseC> for PriceConvert<BaseC, In>
+    impl<BaseC, InC, InG> WithOracle<BaseC> for PriceConvert<BaseC, InC, InG>
     where
         BaseC: Currency,
-        In: Currency,
+        InC: Currency,
+        InG: Group + for<'de> Deserialize<'de>,
     {
         type Output = Coin<BaseC>;
         type Error = Error;
@@ -43,59 +47,68 @@ where
             OracleImpl: Oracle<BaseC>,
         {
             oracle
-                .price_of()
+                .price_of::<InC, InG>()
                 .map(|price| price::total(self.in_amount, price))
         }
     }
 
-    oracle_ref.execute_as_oracle::<_, G, _>(
+    oracle_ref.execute_as_oracle::<BaseC, BaseG, _>(
         PriceConvert {
             in_amount,
-            _out: PhantomData,
+            _in_group: PhantomData::<InG>,
+            _out: PhantomData::<BaseC>,
         },
         querier,
     )
 }
 
-pub fn from_base<BaseC, OutC, G>(
+pub fn from_base<BaseC, BaseG, OutC, OutG>(
     oracle_ref: OracleRef,
     in_amount: Coin<BaseC>,
     querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>, Error>
 where
     BaseC: Currency,
+    BaseG: Group + for<'de> Deserialize<'de>,
     OutC: Currency,
-    G: Group + for<'de> Deserialize<'de>,
+    OutG: Group + for<'de> Deserialize<'de>,
 {
-    struct PriceConvert<BaseC, Out>
+    struct PriceConvert<BaseC, OutC, OutG>
     where
         BaseC: Currency,
-        Out: Currency,
+        OutC: Currency,
+        OutG: Group,
     {
         in_amount: Coin<BaseC>,
-        _out: PhantomData<Out>,
+        _out: PhantomData<OutC>,
+        _out_group: PhantomData<OutG>,
     }
 
-    impl<BaseC, Out> WithOracle<BaseC> for PriceConvert<BaseC, Out>
+    impl<BaseC, OutC, OutG> WithOracle<BaseC> for PriceConvert<BaseC, OutC, OutG>
     where
         BaseC: Currency,
-        Out: Currency,
+        OutC: Currency,
+        OutG: Group + for<'de> Deserialize<'de>,
     {
-        type Output = Coin<Out>;
+        type Output = Coin<OutC>;
         type Error = Error;
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output, Self::Error>
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(self.in_amount, oracle.price_of()?.inv()))
+            Ok(price::total(
+                self.in_amount,
+                oracle.price_of::<OutC, OutG>()?.inv(),
+            ))
         }
     }
 
-    oracle_ref.execute_as_oracle::<_, G, _>(
+    oracle_ref.execute_as_oracle::<BaseC, BaseG, _>(
         PriceConvert {
             in_amount,
-            _out: PhantomData,
+            _out: PhantomData::<OutC>,
+            _out_group: PhantomData::<OutG>,
         },
         querier,
     )

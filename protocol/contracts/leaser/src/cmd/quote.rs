@@ -28,7 +28,7 @@ impl<'r> WithLppLender for Quote<'r> {
         Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency,
     {
-        self.oracle.execute_as_oracle::<_, Lpns, _>(
+        self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
@@ -218,7 +218,10 @@ where
     where
         Asset: 'static + Currency + DeserializeOwned,
     {
-        let downpayment_lpn = total(self.downpayment, self.oracle.price_of()?);
+        let downpayment_lpn = total(
+            self.downpayment,
+            self.oracle.price_of::<Dpc, PaymentGroup>()?,
+        );
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
@@ -228,7 +231,7 @@ where
             .liability
             .init_borrow_amount(downpayment_lpn, self.max_ltd);
 
-        let asset_price = self.oracle.price_of::<Asset>()?.inv();
+        let asset_price = self.oracle.price_of::<Asset, LeaseGroup>()?.inv();
 
         let total_asset = total(downpayment_lpn + borrow, asset_price);
 

@@ -16,9 +16,10 @@ where
     Self: Into<OracleRef>,
     OracleBase: Currency,
 {
-    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
+    fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>
     where
-        C: Currency;
+        C: Currency,
+        G: Group + for<'de> Deserialize<'de>;
 }
 
 pub trait WithOracle<OracleBase>
@@ -132,9 +133,10 @@ where
     OracleBase: Currency,
     OracleBaseG: Group + for<'de> Deserialize<'de>,
 {
-    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
+    fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency,
+        G: Group + for<'de> Deserialize<'de>,
     {
         if currency::equal::<C, OracleBase>() {
             return Ok(Price::identity());
@@ -150,9 +152,7 @@ where
                 to: OracleBase::TICKER.into(),
                 error,
             })
-            .and_then(|price: PriceDTO<OracleBaseG, OracleBaseG>| {
-                price.try_into().map_err(Into::into)
-            })
+            .and_then(|price: PriceDTO<G, OracleBaseG>| price.try_into().map_err(Into::into))
     }
 }
 

@@ -10,7 +10,7 @@ pub mod dex;
 pub mod error;
 
 mod nls;
-pub use nls::NlsPlatform;
+pub use nls::{Native as NativePlatform, NlsPlatform};
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test;

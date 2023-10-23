@@ -252,9 +252,9 @@ mod tests {
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
     where
         Self: Into<OracleRef>,
-        OracleBase: Currency + Serialize,
+        OracleBase: Currency,
     {
-        fn price_of<C>(&self) -> OraclePlatformResult<Price<C, OracleBase>>
+        fn price_of<C, G>(&self) -> OraclePlatformResult<Price<C, OracleBase>>
         where
             C: Currency,
         {
