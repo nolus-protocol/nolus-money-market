@@ -1,4 +1,3 @@
-#[cfg(any(test, feature = "impl"))]
 use serde::{de::DeserializeOwned, Serialize};
 
 mod currency;
@@ -15,7 +14,6 @@ pub use nls::{Native as NativePlatform, NlsPlatform};
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
 
-#[cfg(any(test, feature = "impl"))]
 fn maybe_visit_any<M, C, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
