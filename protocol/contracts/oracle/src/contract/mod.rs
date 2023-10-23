@@ -17,9 +17,9 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     contract::alarms::MarketAlarms,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::supported_pairs::SupportedPairs,
 };
 
 use self::{
@@ -175,8 +175,8 @@ mod tests {
 
     use crate::{
         contract::query,
-        msg::{ConfigResponse, QueryMsg},
-        state::{config::Config, supported_pairs::SwapLeg},
+        msg::{Config, QueryMsg},
+        state::supported_pairs::SwapLeg,
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };
@@ -193,18 +193,16 @@ mod tests {
         let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: ConfigResponse = from_binary(&res).unwrap();
+        let value: Config = from_binary(&res).unwrap();
         assert_eq!(
-            ConfigResponse {
-                config: Config {
-                    base_asset: StableC1::TICKER.into(),
-                    price_config: PriceConfig::new(
-                        Percent::from_percent(50),
-                        Duration::from_secs(60),
-                        1,
-                        Percent::from_percent(88),
-                    )
-                }
+            Config {
+                base_asset: StableC1::TICKER.into(),
+                price_config: PriceConfig::new(
+                    Percent::from_percent(50),
+                    Duration::from_secs(60),
+                    1,
+                    Percent::from_percent(88),
+                )
             },
             value
         );

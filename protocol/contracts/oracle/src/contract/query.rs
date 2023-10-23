@@ -4,10 +4,11 @@ use currency::dex::Lpns;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
+use crate::msg::Config;
 use crate::{
     contract::oracle::Oracle,
     msg::{PricesResponse, QueryMsg, SwapTreeResponse},
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::supported_pairs::SupportedPairs,
     ContractError,
 };
 

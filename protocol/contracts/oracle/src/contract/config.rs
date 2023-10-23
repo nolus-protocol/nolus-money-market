@@ -1,11 +1,9 @@
 use sdk::cosmwasm_std::Storage;
 
-use crate::{msg::ConfigResponse, state::config::Config, ContractError};
+use crate::{msg::Config, ContractError};
 
-pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
-    Config::load(storage)
-        .map_err(ContractError::LoadConfig)
-        .map(|config| ConfigResponse { config })
+pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractError> {
+    Config::load(storage).map_err(ContractError::LoadConfig)
 }
 
 #[cfg(test)]
@@ -23,8 +21,8 @@ mod tests {
 
     use crate::{
         contract::{query, sudo},
-        msg::{ConfigResponse, QueryMsg, SudoMsg},
-        state::{config::Config, supported_pairs::SwapLeg},
+        msg::{Config, QueryMsg, SudoMsg},
+        state::supported_pairs::SwapLeg,
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };
@@ -61,19 +59,17 @@ mod tests {
         assert!(data.is_none());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: ConfigResponse = from_binary(&res).unwrap();
+        let value: Config = from_binary(&res).unwrap();
         assert_eq!(
             value,
-            ConfigResponse {
-                config: Config {
-                    base_asset: StableC1::TICKER.into(),
-                    price_config: PriceConfig::new(
-                        Percent::from_percent(44),
-                        Duration::from_secs(5),
-                        7,
-                        Percent::from_percent(88),
-                    )
-                }
+            Config {
+                base_asset: StableC1::TICKER.into(),
+                price_config: PriceConfig::new(
+                    Percent::from_percent(44),
+                    Duration::from_secs(5),
+                    7,
+                    Percent::from_percent(88),
+                )
             }
         );
     }

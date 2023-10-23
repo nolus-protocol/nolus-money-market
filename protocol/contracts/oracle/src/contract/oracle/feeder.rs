@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use marketprice::feeders::PriceFeeders;
 use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
 
-use crate::{result::ContractResult, state::config::Config, ContractError};
+use crate::{msg::Config, result::ContractResult, ContractError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Feeders {

@@ -12,9 +12,8 @@ use sdk::{
 use crate::{
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
-    msg::{DispatchAlarmsResponse, ExecuteMsg},
+    msg::{Config, DispatchAlarmsResponse, ExecuteMsg},
     result::ContractResult,
-    state::config::Config,
 };
 
 use super::oracle::{feed::Feeds, feeder::Feeders};

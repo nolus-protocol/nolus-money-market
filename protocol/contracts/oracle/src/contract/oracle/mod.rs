@@ -18,9 +18,9 @@ use crate::{
         oracle::feed::{AllPricesIterItem, Feeds},
     },
     error::ContractError,
-    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
+    msg::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     result::ContractResult,
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::supported_pairs::SupportedPairs,
 };
 
 use self::feeder::Feeders;
@@ -171,10 +171,8 @@ mod test_normalized_price_not_found {
     };
 
     use crate::{
-        alarms::Alarm,
-        contract::alarms::MarketAlarms,
-        state::{config::Config, supported_pairs::SupportedPairs},
-        swap_tree,
+        alarms::Alarm, contract::alarms::MarketAlarms, msg::Config,
+        state::supported_pairs::SupportedPairs, swap_tree,
     };
 
     use super::{feed::Feeds, feeder::Feeders, Oracle};

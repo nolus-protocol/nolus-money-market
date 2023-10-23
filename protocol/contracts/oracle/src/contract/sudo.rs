@@ -4,11 +4,10 @@ use currency::dex::Lpns;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::DepsMut;
 
+use crate::msg::Config;
 use crate::{
-    error::ContractError,
-    msg::SudoMsg,
-    result::ContractResult,
-    state::{config::Config, supported_pairs::SupportedPairs},
+    error::ContractError, msg::SudoMsg, result::ContractResult,
+    state::supported_pairs::SupportedPairs,
 };
 
 pub struct SudoWithOracleBase<'a> {

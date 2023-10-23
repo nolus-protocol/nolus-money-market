@@ -22,8 +22,7 @@ use tree::HumanReadableTree;
 
 use crate::{
     contract::{instantiate, sudo},
-    msg::{ExecuteMsg, InstantiateMsg, SudoMsg},
-    state::config::Config,
+    msg::{Config, ExecuteMsg, InstantiateMsg, SudoMsg},
 };
 
 #[cfg(test)]

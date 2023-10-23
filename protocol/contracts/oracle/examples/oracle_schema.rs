@@ -1,7 +1,4 @@
-use oracle::{
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::config::Config,
-};
+use oracle::msg::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 use versioning::SemVer;
 
@@ -12,6 +9,5 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
-    export_schema(&schema_for!(ConfigResponse), &out_dir);
     export_schema(&schema_for!(SemVer), &out_dir);
 }

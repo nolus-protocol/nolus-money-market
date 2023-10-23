@@ -11,8 +11,7 @@ use finance::{
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     contract::{execute, instantiate, query, reply, sudo},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
-    state::config::Config,
+    msg::{Config, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     ContractError,
 };
 use sdk::{

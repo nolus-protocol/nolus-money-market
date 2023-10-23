@@ -9,10 +9,7 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use crate::{
-    alarms::Alarm,
-    state::{config::Config, supported_pairs::SwapLeg},
-};
+use crate::{alarms::Alarm, state::supported_pairs::SwapLeg};
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
@@ -90,12 +87,13 @@ pub enum QueryMsg {
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 
-// We define a custom struct for each query response
+/// Implementation of oracle_platform::msg::Config
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct ConfigResponse {
-    pub config: Config,
+pub struct Config {
+    pub base_asset: SymbolOwned,
+    pub price_config: PriceConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]

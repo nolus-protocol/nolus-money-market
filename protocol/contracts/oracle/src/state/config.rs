@@ -1,22 +1,11 @@
-use serde::{Deserialize, Serialize};
-
 use currency::SymbolOwned;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
 };
 
-use crate::ContractError;
-
-/// Implementation of oracle_platform::msg::Config
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-pub struct Config {
-    pub base_asset: SymbolOwned,
-    pub price_config: PriceConfig,
-}
+use crate::{msg::Config, ContractError};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
