@@ -3,10 +3,10 @@ name: "Check features"
 on:
   workflow_call:
     inputs:
-      target_dex:
-        required: false
-        type: "string"
       working_directory:
+        required: true
+        type: "string"
+      rustflags:
         required: true
         type: "string"
 
@@ -15,11 +15,6 @@ env:
   # Release version is set to `ci` to allow building during checking and testing
   # pipelines, which is ignored during optimized builds.
   RELEASE_VERSION: "ci"
-  # Network's name is set to `main` to allow building during checking and testing
-  # pipelines, which is ignored during optimized builds.
-  NET: "main"
-  # DEX name to check with
-  DEX: "${{ inputs.target_dex }}"
 
 jobs:
   check_features_debug:
@@ -31,6 +26,7 @@ jobs:
         with:
           profile: "dev"
           working_directory: "${{ inputs.working_directory }}"
+          rustflags: "${{ inputs.rustflags }}"
   check_features_test_debug:
     runs-on: "ubuntu-latest"
     steps:
@@ -41,6 +37,7 @@ jobs:
           profile: "test"
           debug_assertions: "true"
           working_directory: "${{ inputs.working_directory }}"
+          rustflags: "${{ inputs.rustflags }}"
   check_features_test_release:
     runs-on: "ubuntu-latest"
     steps:
@@ -51,6 +48,7 @@ jobs:
           profile: "test"
           debug_assertions: "false"
           working_directory: "${{ inputs.working_directory }}"
+          rustflags: "${{ inputs.rustflags }}"
   check_features_release:
     runs-on: "ubuntu-latest"
     steps:
@@ -60,3 +58,4 @@ jobs:
         with:
           profile: "release"
           working_directory: "${{ inputs.working_directory }}"
+          rustflags: "${{ inputs.rustflags }}"

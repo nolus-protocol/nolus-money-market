@@ -17,25 +17,13 @@ inputs:
     required: true
 
 runs:
-  using: composite
+  using: "composite"
   steps:
-    - shell: "sh"
-      run: |
-        if ! test ${{ inputs.target_net }} = ""
-        then
-          echo "docker_env_net=--env NET='${{ inputs.target_net }}'" >> "${GITHUB_ENV}"
-
-          echo "release_version_text= for ${{ inputs.target_net }}-net" >> "${GITHUB_ENV}"
-
-          echo "dash_net_name=-${{ inputs.target_net }}" >> "${GITHUB_ENV}"
-        fi
-
-        if ! test ${{ inputs.target_dex }} = ""
-        then
-          echo "docker_env_dex=--env DEX='${{ inputs.target_dex }}'" >> "${GITHUB_ENV}"
-
-          echo "dash_dex_name=-${{ inputs.target_dex }}" >> "${GITHUB_ENV}"
-        fi
+    - id: "env"
+      uses: "./.github/actions/env"
+      with:
+        target_net: "${{ inputs.target_net }}"
+        target_dex: "${{ inputs.target_dex }}"
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
@@ -50,8 +38,7 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        ${docker_env_net} \
-        ${docker_env_dex} \
+        --env RUSTFLAGS="${{ steps.env.outputs.rustflags }}" \
         --env RELEASE_VERSION="${{ inputs.release_version }}" \
         cosmwasm/workspace-optimizer:0.14.0
       working-directory: "./${{ inputs.working_directory }}/"
