@@ -12,5 +12,5 @@ mod test_impl;
 
 pub use lease::LeaseGroup;
 pub use lpn::Lpns;
-pub use native::Native;
+pub use native::{Native, Nls};
 pub use payment::PaymentGroup;

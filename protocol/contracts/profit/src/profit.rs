@@ -1,4 +1,4 @@
-use currency::NlsPlatform;
+use currency::dex::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::BankAccount,
@@ -16,12 +16,12 @@ use crate::{
 pub struct Profit;
 
 impl Profit {
-    pub const IBC_FEE_RESERVE: Coin<NlsPlatform> = Coin::new(100);
+    pub const IBC_FEE_RESERVE: Coin<Nls> = Coin::new(100);
 
     pub(crate) fn transfer_nls<B>(
         mut from_my_account: B,
         to_treasury: &Addr,
-        mut amount: Coin<NlsPlatform>,
+        mut amount: Coin<Nls>,
         env: &Env,
     ) -> PlatformResponse
     where

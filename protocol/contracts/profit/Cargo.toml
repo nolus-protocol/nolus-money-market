@@ -19,7 +19,7 @@ testing = []
 
 [dependencies]
 access-control = { workspace = true }
-currency = { workspace = true }
+currency = { workspace = true, features = ["impl"] }
 dex = { workspace = true }
 finance = { workspace = true }
 oracle-platform = { workspace = true }

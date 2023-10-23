@@ -5,7 +5,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{dex::PaymentGroup, Currency, Group, NlsPlatform};
+use currency::{
+    dex::{Nls, PaymentGroup},
+    Currency, Group,
+};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
@@ -50,7 +53,7 @@ impl Idle {
         env: &Env,
         querier: &QuerierWrapper<'_>,
         account: B,
-        nls: Coin<NlsPlatform>,
+        nls: Coin<Nls>,
     ) -> ContractResult<PlatformResponse>
     where
         B: BankAccount,
@@ -71,7 +74,7 @@ impl Idle {
     ) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
-        let balances: SplitCoins<NlsPlatform, PaymentGroup> = account
+        let balances: SplitCoins<Nls, PaymentGroup> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
             .transpose()?
             .unwrap_or_default();

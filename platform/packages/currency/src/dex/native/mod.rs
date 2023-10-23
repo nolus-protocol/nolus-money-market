@@ -6,6 +6,9 @@ use crate::{
 #[cfg(dex = "osmosis")]
 pub(crate) mod osmosis;
 
+#[cfg(dex = "osmosis")]
+pub type Nls = osmosis::Nls;
+
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Native {}
@@ -17,11 +20,6 @@ impl Group for Native {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        use crate::maybe_visit_any as maybe_visit;
-        #[cfg(dex = "osmosis")]
-        {
-            use osmosis::Nls;
-            maybe_visit::<_, Nls, _>(matcher, symbol, visitor)
-        }
+        crate::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
     }
 }

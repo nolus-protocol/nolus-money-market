@@ -3,8 +3,8 @@ use std::slice::Iter as SliceIter;
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    dex::{Native, PaymentGroup},
-    Currency, NlsPlatform, SymbolSlice,
+    dex::{Native, Nls, PaymentGroup},
+    Currency, SymbolSlice,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
@@ -51,9 +51,10 @@ impl BuyBack {
         coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
         debug_assert!(
-            coins
-                .iter()
-                .all(|coin_dto: &CoinDTO<PaymentGroup>| coin_dto.ticker() != NlsPlatform::TICKER),
+            coins.iter().all(
+                |coin_dto: &CoinDTO<PaymentGroup>| currency::validate::<Native>(coin_dto.ticker())
+                    .is_err()
+            ),
             "{:?}",
             coins
         );
@@ -90,7 +91,7 @@ impl SwapTask for BuyBack {
     }
 
     fn out_currency(&self) -> &SymbolSlice {
-        NlsPlatform::TICKER
+        Nls::TICKER
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
@@ -121,7 +122,7 @@ impl SwapTask for BuyBack {
     ) -> Self::Result {
         let account = bank::account(&self.profit_contract, querier);
 
-        let balance_nls: Coin<NlsPlatform> = account.balance()?;
+        let balance_nls: Coin<Nls> = account.balance()?;
 
         let bank_response: PlatformResponse =
             Profit::transfer_nls(account, self.config.treasury(), balance_nls, env);
