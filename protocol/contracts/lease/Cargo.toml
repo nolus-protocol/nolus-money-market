@@ -25,7 +25,7 @@ timealarms = { workspace = true, features = ["stub"] }
 currency = { workspace = true }
 dex = { workspace = true }
 finance = { workspace = true }
-lpp = { workspace = true }
+lpp = { workspace = true, features = ["stub"] }
 lpp-platform = { workspace = true }
 marketprice = { workspace = true }
 oracle = { workspace = true, features = ["stub"] }
