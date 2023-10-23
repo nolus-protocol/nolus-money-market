@@ -1,11 +1,17 @@
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Timestamp},
     cw_storage_plus::Item,
+    schemars::{self, JsonSchema},
 };
 
 use crate::ContractError;
 
-use super::DispatchLog;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct DispatchLog {
+    pub last_dispatch: Timestamp,
+}
 
 impl DispatchLog {
     const STORAGE: Item<'static, Self> = Item::new("dispatch_log");
