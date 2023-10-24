@@ -62,8 +62,6 @@ runs:
           );
         fi
       working-directory: "./${{ inputs.working_directory }}/"
-    - shell: "sh"
-      run: '(echo "Release version${release_version_text}: ${{ inputs.release_version }}") >> "${GITHUB_STEP_SUMMARY}"'
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
       run: 'sudo cp "scripts/deploy-contracts-genesis.sh" "./${{ inputs.working_directory }}/artifacts/"'
