@@ -24,10 +24,14 @@ runs:
       with:
         target_net: "${{ inputs.target_net }}"
         target_dex: "${{ inputs.target_dex }}"
+    - name: "Build container image"
+      shell: "sh"
+      run: 'sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"'
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
         mkdir -p ./artifacts/
+
         echo "${{ inputs.release_version }}" >> ./artifacts/release_version
 
         sudo docker run --rm -v "$(cd ..; pwd)/platform/":"/platform/" \
@@ -38,9 +42,9 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env RUSTFLAGS="${{ steps.env.outputs.rustflags }}" \
-        --env RELEASE_VERSION="${{ inputs.release_version }}" \
-        cosmwasm/workspace-optimizer:0.14.0
+        --env 'RUSTFLAGS=${{ env.RUSTFLAGS }}' \
+        --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
+        wasm-optimizer
       working-directory: "./${{ inputs.working_directory }}/"
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
