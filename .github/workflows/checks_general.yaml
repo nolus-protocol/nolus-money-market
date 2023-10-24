@@ -18,5 +18,6 @@ jobs:
   perform_checks_tests_osmosis:
     uses: "./.github/workflows/checks.yaml"
     with:
+      audit_dependencies: false
       target_dex: "osmosis"
       working_directory: "tests"

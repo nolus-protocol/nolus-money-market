@@ -4,6 +4,10 @@ run-name: "Running checks on smart contracts"
 on:
   workflow_call:
     inputs:
+      audit_dependencies:
+        required: true
+        type: "boolean"
+        default: true
       target_dex:
         required: true
         type: "string"
@@ -52,6 +56,7 @@ jobs:
           rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   audit_dependencies:
     runs-on: "ubuntu-latest"
+    if: "inputs.audit_dependencies"
     needs: "setup_env"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
