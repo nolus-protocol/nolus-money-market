@@ -1,3 +1,9 @@
+#[cfg(all(feature = "impl", not(any(dex = "osmosis"))))]
+compile_error!("No dex selected!");
+
+#[cfg(all(feature = "impl", not(any(net = "dev", net = "test", net = "main"))))]
+compile_error!("No net selected!");
+
 use serde::{de::DeserializeOwned, Serialize};
 
 mod currency;
