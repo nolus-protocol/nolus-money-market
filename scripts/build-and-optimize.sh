@@ -6,6 +6,8 @@ rm -rf "/target/"
 
 mkdir "/target/"
 
+rm -rf "/artifacts/"*
+
 for contract in "/code/contracts/"*
 do
     cd "${contract}"
