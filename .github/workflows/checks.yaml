@@ -52,7 +52,7 @@ jobs:
           rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   audit_dependencies:
     runs-on: "ubuntu-latest"
-    if: 'inputs.working_directory != "tests"'
+    if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
@@ -83,7 +83,7 @@ jobs:
       rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   check_unused_deps:
     runs-on: "ubuntu-latest"
-    if: 'inputs.working_directory != "tests"'
+    if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
     steps:
       - uses: "actions/checkout@v3"
@@ -118,7 +118,7 @@ jobs:
         working-directory: "${{ inputs.working_directory }}"
   check_wasm:
     runs-on: "ubuntu-latest"
-    if: 'inputs.working_directory != "tests"'
+    if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
