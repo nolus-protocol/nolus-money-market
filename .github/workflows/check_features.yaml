@@ -20,7 +20,7 @@ jobs:
   check_features_debug:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:
@@ -30,7 +30,7 @@ jobs:
   check_features_test_debug:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:
@@ -41,7 +41,7 @@ jobs:
   check_features_test_release:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:
@@ -52,7 +52,7 @@ jobs:
   check_features_release:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_features@main"
         with:

@@ -15,7 +15,7 @@ jobs:
   build_optimized_protocol_contracts_dev:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - name: "Build optimized binaries of protocol contracts"
         uses: "./.github/actions/optimized_build"
         with:
@@ -26,7 +26,7 @@ jobs:
   build_optimized_protocol_contracts_test:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - name: "Build optimized binaries of protocol contracts"
         uses: "./.github/actions/optimized_build"
         with:
@@ -37,7 +37,7 @@ jobs:
   build_optimized_protocol_contracts_main:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - name: "Build optimized binaries of protocol contracts"
         uses: "./.github/actions/optimized_build"
         with:
