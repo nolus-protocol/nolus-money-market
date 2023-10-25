@@ -1,0 +1,40 @@
+name: "Setup environment"
+description: "Action for setting up environment for smart contracts"
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+inputs:
+  target_net:
+    description: 'Whether to build targeting dev-net, test-net or main-net. This parameter takes one of these values: "dev", "test" and "main".'
+    required: false
+  target_dex:
+    description: "Indicates which DEX the build targets."
+    required: false
+
+outputs:
+  rustflags:
+    description: "Value to be passed on as an environment variable to jobs interacting with the Rust build system."
+    value: "${{ steps.env.outputs.rustflags }}"
+
+runs:
+  using: composite
+  steps:
+    - id: "env"
+      shell: "sh"
+      run: |
+        if ! test "${{ inputs.target_net }}" = ""
+        then
+          RUSTFLAGS="--cfg net=\"${{ inputs.target_net }}\" ${RUSTFLAGS}"
+
+          echo "dash_net_name=-${{ inputs.target_net }}" >> "${GITHUB_ENV}"
+        fi
+
+        if ! test "${{ inputs.target_dex }}" = ""
+        then
+          RUSTFLAGS="--cfg dex=\"${{ inputs.target_dex }}\" ${RUSTFLAGS}"
+
+          echo "dash_dex_name=-${{ inputs.target_dex }}" >> "${GITHUB_ENV}"
+        fi
+
+        echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
+
+        echo "rustflags=${RUSTFLAGS}" >> "${GITHUB_OUTPUT}"

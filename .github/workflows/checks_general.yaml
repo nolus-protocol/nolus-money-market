@@ -5,9 +5,10 @@ on:
   workflow_call:
 
 jobs:
-  perform_checks_platform:
+  perform_checks_platform_osmosis:
     uses: "./.github/workflows/checks.yaml"
     with:
+      target_dex: "osmosis"
       working_directory: "platform"
   perform_checks_protocol_osmosis:
     uses: "./.github/workflows/checks.yaml"

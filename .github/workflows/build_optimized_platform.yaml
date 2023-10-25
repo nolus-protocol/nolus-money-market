@@ -12,7 +12,7 @@ jobs:
   build_optimized_platform_contracts:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4.1.1"
       - name: "Build optimized binaries of platform contracts"
         uses: "./.github/actions/optimized_build"
         with:

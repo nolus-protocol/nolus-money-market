@@ -12,7 +12,12 @@ jobs:
     steps:
       - id: "release_version"
         shell: "sh"
-        run: 'echo "release_version=${{ github.ref_name }}-$(date -Iminute)" >> "$GITHUB_OUTPUT"'
+        run: |
+          release_version="${{ github.ref_name }}-$(date -Iminute)"
+
+          echo "release_version=${release_version}" >> "$GITHUB_OUTPUT"
+
+          echo "Release version: ${release_version}" >> "${GITHUB_STEP_SUMMARY}"
   build_optimized_platform_contracts:
     needs: "generate_release_version"
     uses: "./.github/workflows/build_optimized_platform.yaml"

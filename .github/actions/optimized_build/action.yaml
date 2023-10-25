@@ -17,67 +17,53 @@ inputs:
     required: true
 
 runs:
-  using: composite
+  using: "composite"
   steps:
-    - shell: "sh"
-      run: |
-        if ! test ${{ inputs.target_net }} = ""
-        then
-          echo "docker_env_net=--env NET='${{ inputs.target_net }}'" >> "${GITHUB_ENV}"
-
-          echo "release_version_text= for ${{ inputs.target_net }}-net" >> "${GITHUB_ENV}"
-
-          echo "dash_net_name=-${{ inputs.target_net }}" >> "${GITHUB_ENV}"
-        fi
-
-        if ! test ${{ inputs.target_dex }} = ""
-        then
-          echo "docker_env_dex=--env DEX='${{ inputs.target_dex }}'" >> "${GITHUB_ENV}"
-
-          echo "dash_dex_name=-${{ inputs.target_dex }}" >> "${GITHUB_ENV}"
-        fi
+    - id: "env"
+      uses: "./.github/actions/env"
+      with:
+        target_net: "${{ inputs.target_net }}"
+        target_dex: "${{ inputs.target_dex }}"
+    - name: "Build container image"
+      shell: "sh"
+      run: 'sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"'
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
-        mkdir -p ./artifacts/
-        echo "${{ inputs.release_version }}" >> ./artifacts/release_version
+        mkdir "./artifacts/"
 
-        sudo docker run --rm -v "$(cd ..; pwd)/platform/":"/platform/" \
-        -v "$(cd ..; pwd)/protocol/":"/protocol/" \
-        -v "$(pwd)/":"/code/" \
-        -v "$(pwd)/artifacts/":"/code/artifacts/" \
-        --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
-        --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
-        --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
-        --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        ${docker_env_net} \
-        ${docker_env_dex} \
-        --env RELEASE_VERSION="${{ inputs.release_version }}" \
-        cosmwasm/workspace-optimizer:0.14.0
-      working-directory: "./${{ inputs.working_directory }}/"
+        echo "${{ inputs.release_version }}" >> "./artifacts/release_version"
+
+        sudo docker run --rm -v "$(pwd)/platform/:/platform/" \
+        -v "$(pwd)/protocol/:/protocol/" \
+        -v "$(pwd)/${{ inputs.working_directory }}/:/code/" \
+        -v "$(pwd)/artifacts/:/artifacts/" \
+        --mount "type=volume,source=$(basename \"$(pwd) \")_cache,target=/code/target/" \
+        --mount "type=volume,source=rustup_dir_cache,target=/usr/local/rustup/" \
+        --mount "type=volume,source=cargo_dir_cache,target=/usr/local/cargo/" \
+        --mount "type=volume,source=registry_cache,target=/usr/local/cargo/registry/" \
+        --env 'RUSTFLAGS=${{ env.RUSTFLAGS }}' \
+        --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
+        wasm-optimizer
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        large_files="`find "artifacts/" -size +3M`"
+        large_files="`find "./artifacts/" -size +3M`"
 
         if ! test "${large_files}" = "";
-          then (
-            (
-              echo "These files are larger than the allowed limit:"
-              echo "${large_files}"
-            ) >> "${GITHUB_STEP_SUMMARY}"
+        then
+          (
+            echo "These files are larger than the allowed limit:"
+            echo "${large_files}"
+          ) >> "${GITHUB_STEP_SUMMARY}"
 
-            exit 1
-          );
+          exit 1
         fi
-      working-directory: "./${{ inputs.working_directory }}/"
-    - shell: "sh"
-      run: '(echo "Release version${release_version_text}: ${{ inputs.release_version }}") >> "${GITHUB_STEP_SUMMARY}"'
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
-      run: 'sudo cp "scripts/deploy-contracts-genesis.sh" "./${{ inputs.working_directory }}/artifacts/"'
+      run: 'sudo cp "./scripts/deploy-contracts-genesis.sh" "./artifacts/"'
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
       uses: "actions/upload-artifact@v3"
       with:
-        name: "optimized-binaries-${{ inputs.working_directory }}${dash_net_name}${dash_dex_name}"
-        path: "./${{ inputs.working_directory }}/artifacts/*"
+        name: "optimized-binaries-${{ inputs.working_directory }}${{ env.dash_net_name }}${{ env.dash_dex_name }}"
+        path: "./artifacts/*"
