@@ -18,7 +18,7 @@ WORKDIR "/binaryen/"
 
 RUN ["apt-get", "update"]
 
-RUN ["apt-get", "install", "-y", "wget", "tar", "coreutils"]
+RUN ["apt-get", "install", "-y", "coreutils", "sed", "tar", "wget"]
 
 RUN "wget" "-O" "binaryen.tar.gz" "https://github.com/WebAssembly/binaryen/releases/download/${binaryen_ver}/binaryen-${binaryen_ver}-x86_64-linux.tar.gz"
 

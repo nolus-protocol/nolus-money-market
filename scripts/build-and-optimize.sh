@@ -8,7 +8,7 @@ mkdir "/target/"
 
 rm -rf "/artifacts/"*
 
-for contract in "/code/contracts/"*
+for contract in $(echo "/code/contracts/"* | sed 's/ /\n/g' | sort)
 do
     cd "${contract}"
 
