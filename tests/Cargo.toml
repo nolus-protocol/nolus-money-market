@@ -32,6 +32,10 @@ thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 serde-json-wasm = "1"
 
+[patch.'https://github.com/neutron-org/neutron-sdk']
+# satisfies the protobuf version check
+protobuf = { version = "=3.2" }
+
 [profile.release]
 opt-level = "s"
 debug = false
