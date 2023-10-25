@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/*", "contracts/*"]
+members = ["packages/*", "contracts/*", "tests"]
 
 resolver = "2"
 
@@ -45,6 +45,9 @@ cosmos-sdk-proto = { version = "0.18", default-features = false }
 
 # Other
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
+[patch.'https://github.com/neutron-org/neutron-sdk']
+# satisfies the protobuf version check
+protobuf = { version = "~3.2" }
 
 [profile.release]
 opt-level = "s"
