@@ -30,43 +30,40 @@ runs:
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
-        mkdir -p ./artifacts/
+        mkdir "./artifacts/"
 
-        echo "${{ inputs.release_version }}" >> ./artifacts/release_version
+        echo "${{ inputs.release_version }}" >> "./artifacts/release_version"
 
-        sudo docker run --rm -v "$(cd ..; pwd)/platform/":"/platform/" \
-        -v "$(cd ..; pwd)/protocol/":"/protocol/" \
-        -v "$(pwd)/":"/code/" \
-        -v "$(pwd)/artifacts/":"/code/artifacts/" \
-        --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
-        --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
-        --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
-        --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
+        sudo docker run --rm -v "$(pwd)/platform/:/platform/" \
+        -v "$(pwd)/protocol/:/protocol/" \
+        -v "$(pwd)/${{ inputs.working_directory }}/:/code/" \
+        -v "$(pwd)/artifacts/:/code/artifacts/" \
+        --mount "type=volume,source=$(basename \"$(pwd) \")_cache,target=/code/target/" \
+        --mount "type=volume,source=rustup_dir_cache,target=/usr/local/rustup/" \
+        --mount "type=volume,source=cargo_dir_cache,target=/usr/local/cargo/" \
+        --mount "type=volume,source=registry_cache,target=/usr/local/cargo/registry/" \
         --env 'RUSTFLAGS=${{ env.RUSTFLAGS }}' \
         --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
         wasm-optimizer
-      working-directory: "./${{ inputs.working_directory }}/"
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        large_files="`find "artifacts/" -size +3M`"
+        large_files="`find "./artifacts/" -size +3M`"
 
         if ! test "${large_files}" = "";
-          then (
-            (
-              echo "These files are larger than the allowed limit:"
-              echo "${large_files}"
-            ) >> "${GITHUB_STEP_SUMMARY}"
+        then
+          (
+            echo "These files are larger than the allowed limit:"
+            echo "${large_files}"
+          ) >> "${GITHUB_STEP_SUMMARY}"
 
-            exit 1
-          );
+          exit 1
         fi
-      working-directory: "./${{ inputs.working_directory }}/"
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
-      run: 'sudo cp "scripts/deploy-contracts-genesis.sh" "./${{ inputs.working_directory }}/artifacts/"'
+      run: 'sudo cp "./scripts/deploy-contracts-genesis.sh" "./artifacts/"'
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
       uses: "actions/upload-artifact@v3"
       with:
-        name: "optimized-binaries-${{ inputs.working_directory }}${dash_net_name}${dash_dex_name}"
-        path: "./${{ inputs.working_directory }}/artifacts/*"
+        name: "optimized-binaries-${{ inputs.working_directory }}${{ env.dash_net_name }}${{ env.dash_dex_name }}"
+        path: "./artifacts/*"
