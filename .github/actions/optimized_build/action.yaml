@@ -37,7 +37,7 @@ runs:
         sudo docker run --rm -v "$(pwd)/platform/:/platform/" \
         -v "$(pwd)/protocol/:/protocol/" \
         -v "$(pwd)/${{ inputs.working_directory }}/:/code/" \
-        -v "$(pwd)/artifacts/:/code/artifacts/" \
+        -v "$(pwd)/artifacts/:/artifacts/" \
         --mount "type=volume,source=$(basename \"$(pwd) \")_cache,target=/code/target/" \
         --mount "type=volume,source=rustup_dir_cache,target=/usr/local/rustup/" \
         --mount "type=volume,source=cargo_dir_cache,target=/usr/local/cargo/" \
