@@ -16,7 +16,7 @@ contract-with-bindings = []
 
 [dependencies]
 lpp-platform = { workspace = true }
-oracle-platform = { workspace = true }
+oracle-platform = { workspace = true, features = ["unchecked-base-currency"]  }
 timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }
 

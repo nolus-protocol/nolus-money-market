@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
 };
 
 use crate::{error::ContractError, result::ContractResult};
@@ -12,7 +11,7 @@ use super::reward_scale::RewardScale;
 
 pub type CadenceHours = u16;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Config {
     // Time duration in hours defining the periods of time this instance is awaken
     pub cadence_hours: CadenceHours,

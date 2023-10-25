@@ -1,7 +1,7 @@
 use currency::{NativePlatform, NlsPlatform};
 use finance::{coin::Coin, interest::InterestPeriod, period::Period};
 use lpp_platform::{Lpp as LppTrait, Usd, UsdGroup};
-use oracle_platform::{convert, OracleRef};
+use oracle_platform::convert;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
@@ -51,25 +51,22 @@ impl<'a> Dispatch<'a> {
             return Err(ContractError::ZeroReward {});
         }
 
-        OracleRef::try_from(self.config.oracle.clone(), self.querier)
-            .and_then(|oracle| {
-                convert::from_base::<Usd, UsdGroup, NlsPlatform, NativePlatform>(
-                    oracle,
-                    reward_in_usd,
-                    self.querier,
-                )
-            })
-            .map_err(Into::into)
-            .and_then(|reward_unls| {
-                self.create_batch(reward_unls)
-                    .map(|batch| DispatcherResult {
-                        batch,
-                        receipt: super::Receipt {
-                            in_stable: reward_in_usd,
-                            in_nls: reward_unls,
-                        },
-                    })
-            })
+        convert::from_unchecked_base::<Usd, UsdGroup, NlsPlatform, NativePlatform>(
+            self.config.oracle.clone(),
+            reward_in_usd,
+            self.querier,
+        )
+        .map_err(Into::into)
+        .and_then(|reward_unls| {
+            self.create_batch(reward_unls)
+                .map(|batch| DispatcherResult {
+                    batch,
+                    receipt: super::Receipt {
+                        in_stable: reward_in_usd,
+                        in_nls: reward_unls,
+                    },
+                })
+        })
     }
 
     fn create_batch(&self, reward: Coin<NlsPlatform>) -> ContractResult<Batch> {

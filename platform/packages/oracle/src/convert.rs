@@ -4,6 +4,8 @@ use serde::Deserialize;
 
 use currency::{Currency, Group};
 use finance::{coin::Coin, price};
+#[cfg(feature = "unchecked-base-currency")]
+use sdk::cosmwasm_std::Addr;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
@@ -62,8 +64,9 @@ where
     )
 }
 
-pub fn from_base<BaseC, BaseG, OutC, OutG>(
-    oracle_ref: OracleRef,
+#[cfg(feature = "unchecked-base-currency")]
+pub fn from_unchecked_base<BaseC, BaseG, OutC, OutG>(
+    oracle: Addr,
     in_amount: Coin<BaseC>,
     querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>, Error>
@@ -73,6 +76,8 @@ where
     OutC: Currency,
     OutG: Group + for<'de> Deserialize<'de>,
 {
+    use crate::stub;
+
     struct PriceConvert<BaseC, OutC, OutG>
     where
         BaseC: Currency,
@@ -104,7 +109,8 @@ where
         }
     }
 
-    oracle_ref.execute_as_oracle::<BaseC, BaseG, _>(
+    stub::execute_as_unchecked_base_currency_oracle::<BaseC, BaseG, _>(
+        oracle,
         PriceConvert {
             in_amount,
             _out: PhantomData::<OutC>,

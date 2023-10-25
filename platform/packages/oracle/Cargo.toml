@@ -6,6 +6,8 @@ edition.workspace = true
 license.workspace = true
 
 [features]
+# the 'unchecked-base-currency' feature adds an ability to obtain price with quote currency not matching the oracle's base currency
+unchecked-base-currency = []
 testing = []
 
 [dependencies]
