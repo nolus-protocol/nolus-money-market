@@ -137,6 +137,10 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
+    fn heal(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+        self.on_time_alarm(deps, env)
+    }
+
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
         self.try_complete(deps, env)
     }
