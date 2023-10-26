@@ -2,4 +2,4 @@
 /tests/
 /.dockerignore
 /Containerfile
-/rust-toolchain.toml
+/**/rust-toolchain.toml

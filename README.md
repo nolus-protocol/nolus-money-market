@@ -4,9 +4,9 @@
 
 Implementation of the core business logic as CosmWasm contracts.
 
-## Recommended user workspace
+# Recommended user workspace
 
-### Setup
+## Setup
 
 1. Install the Rust Toolchain Installer
 
@@ -31,50 +31,126 @@ Implementation of the core business logic as CosmWasm contracts.
    cargo install cargo-edit cargo-workspaces cargo-expand
    ```
 
-### Build
+## Build
 
 The build is controlled with a few environment variables:
 * `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `NET` - the name of the targeted network, e.g.: `dev`, `test`, `main`
-* `DEX` - one of the supported DEX-es: `osmosis`
+* `RUSTFLAGS` - set of values that is passed down to the Rust compiler;
+  setting targetted network and DEX happens through setting it to:
+  ```
+  --cfg net="NETWORK" --cfg dex="DEX"
+  ```
+  where `NETWORK` and `DEX` should be replaced with the desired ones,
+  while leaving the quotes.
+  Example:
+  ```
+  --cfg net="main" --cfg dex="osmosis"
+  ```
 
-**A non-optimized version**
+### Workspaces
+
+Th project is separated into three workspaces:
+* `platform` - DEX-agnostic contracts and packages
+* `protocol` - DEX-specific contracts and packages
+* `tests` - integration tests
+
+### A non-optimized version
 
 The command below builds a contract if ran from the contract directory, 
-or builds all contracts if ran from the workspace directory:
+or builds the contracts of the workspace from within which it is ran:
 
 ```sh
-RELEASE_VERSION=dev-release NET=dev DEX=osmosis cargo build --target=wasm32-unknown-unknown
+RELEASE_VERSION='dev-release' RUSTFLAGS='--cfg net="dev" --cfg dex="osmosis"' cargo build --target=wasm32-unknown-unknown
 ```
 
-**An optimized version**
+One way to avoid having to set those environment variables is to
+set them in the editor/IDE's configuration.
 
-The command below builds an optimized and verifiable version of all contracts,
-run from the workspace directory:
+An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown here:
+```json
+{
+  "rust-analyzer.cargo.extraEnv": {
+    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
+    "RELEASE_VERSION": "local",
+  },
+  "terminal.integrated.env.linux": {
+    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
+    "RELEASE_VERSION": "local",
+  },
+  "terminal.integrated.env.osx": {
+    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
+    "RELEASE_VERSION": "local",
+  },
+  "terminal.integrated.env.windows": {
+    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
+    "RELEASE_VERSION": "local",
+  },
+}
+```
+
+### An optimized version
+
+#### Container image
+
+First, the image for building the contracts needs to be built. This happens by
+running the command shown here:
+```sh
+docker build . -t wasm-optimizer --build-arg "rust_ver=1.72"
+```
+
+Do note that the command is an example one and the Rust version, denoted by the
+`rust_ver` build argument, should match the one set in the `rust-toolchain.toml`
+file, located at the root of the project!
+
+#### Running container image
+
+The command shown below builds an optimized and verifiable version of
+each set of contracts, depending on their workspace, indicated by
+`WORKSPACE_DIR_NAME`, and just as the development build uses `RUSTFLAGS`
+to indicate desired target network and DEX:
 
 ```sh
-docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  --env RELEASE_VERSION=`git describe`-`date -Iminute` --env NET=dev \
-  --env DEX=osmosis cosmwasm/workspace-optimizer:0.14.0
+docker run --rm -v "$(pwd)/plaform/:/platform/" \
+  -v "$(pwd)/protocol/:/protocol/" \
+  -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
+  -v "$(pwd)/protocol/:/artifacts/" \
+  --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
+  --env 'RUSTFLAGS=--cfg net="dev" --cfg dex="osmosis"'
+  wasm-optimizer
 ```
+
+**NOTE:** As one might set those environment variables in the settings
+of their editor/IDE, those environment variables still must be provided
+as arguments to the `docker run` command.
+Exception to this should be the `platform` workspace, as it strives to
+be agnostic to the targetted network and DEX.
+
+**NOTE:** Builds are reproducable *as long as* all environment variables
+passed to the container are the exact same. If it is desired to build
+a verification copy of the contracts, one must set the `RELEASE_VERSION`
+environment variable to the one used to build the original instead.
 
 ### Test
 
-Run the following in a package directory or in the workspace root.
+Run the following in a package directory or any workspace.
 
 ```sh
 cargo test
 ```
 
+As with the development build, workspaces may require setting `RUSTFLAGS`
+in the same manner as with the development builds.
+
 ### Lint
 
-Run the following in the workspace root.
+Run the following in the all workspaces.
 
 ```sh
 ./lint.sh
 ```
+
+As with the development build, workspaces may require setting `RUSTFLAGS`
+in the same manner as with the development builds.
 
 ### New contracts
 
