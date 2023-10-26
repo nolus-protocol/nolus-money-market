@@ -1,7 +1,10 @@
+use std::ops::Add;
+
 use currency::Currency;
 use finance::{
     coin::Coin,
     liability::Liability,
+    percent::Percent,
     price::{self, Price},
 };
 
@@ -66,7 +69,26 @@ where
         }
     }
 
-    pub fn check_asset_amount<Trasactional>(
+    pub fn check_asset<Trasactional>(
+        &self,
+        amount: Coin<Trasactional>,
+        trasactional_in_lpn: Price<Trasactional, Lpn>,
+    ) -> ContractResult<()>
+    where
+        Trasactional: Currency,
+    {
+        let asset_amount = price::total(amount, trasactional_in_lpn);
+
+        if asset_amount < self.min_asset {
+            Err(ContractError::InsufficientAssetAmount(
+                self.min_asset.into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn check_asset_amount_on_liq<Trasactional>(
         &self,
         asset_amount: Coin<Trasactional>,
         trasactional_in_lpn: Price<Trasactional, Lpn>,
@@ -83,6 +105,33 @@ where
         } else {
             Ok(())
         }
+    }
+
+    pub fn calc_borrow_amount(
+        &self,
+        downpayment: Coin<Lpn>,
+        may_max_ltd: Option<Percent>,
+    ) -> ContractResult<Coin<Lpn>> {
+        let price: Price<Lpn, Lpn> = price::total_of(1.into()).is(1.into());
+
+        let _ = self
+            .check_trasaction_amount(downpayment, price)
+            .map_err(|err| match err {
+                ContractError::PositionCloseAmountTooSmall(min_amount) => {
+                    ContractError::InsufficientTrasactionAmount(min_amount)
+                }
+                _ => err,
+            });
+        let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
+        self.check_trasaction_amount(borrow, price)
+            .map_err(|err| match err {
+                ContractError::PositionCloseAmountTooSmall(min_amount) => {
+                    ContractError::InsufficientTrasactionAmount(min_amount)
+                }
+                _ => err,
+            })
+            .and_then(|_| self.check_asset(downpayment.add(borrow), price))
+            .map(|_| borrow)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

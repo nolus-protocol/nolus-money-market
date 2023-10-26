@@ -124,11 +124,11 @@ pub struct PositionSpecDTO {
     pub liability: Liability,
     ///  The minimum amount that a lease asset should be evaluated past any
     ///  partial liquidation or close. If not, a full liquidation is performed
-    pub min_asset: LpnCoin,
+    min_asset: LpnCoin,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
     //TODO: rename it to 'min_trasaction_amount' in the next migration
-    pub min_sell_asset: LpnCoin,
+    min_sell_asset: LpnCoin,
 }
 
 impl PositionSpecDTO {
