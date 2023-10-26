@@ -135,7 +135,7 @@ environment variable to the one used to build the original instead.
 Run the following in a package directory or any workspace.
 
 ```sh
-cargo test
+cargo test --all-targets
 ```
 
 As with the development build, workspaces may require setting `RUSTFLAGS`
