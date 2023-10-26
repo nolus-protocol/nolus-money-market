@@ -23,10 +23,11 @@ use crate::{
     cmd::{Dispatch, Reward, RewardCalculator},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::{migration, Config, DispatchLog},
+    state::{Config, DispatchLog},
 };
 
 // version info for migration info
+#[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
@@ -67,6 +68,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     {
         #[cfg(feature = "migration")]
         {
+            use crate::state::migration;
             versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
                 deps.storage,
                 version!(CONTRACT_STORAGE_VERSION),
