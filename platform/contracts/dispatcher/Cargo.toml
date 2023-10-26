@@ -1,6 +1,6 @@
 [package]
 name = "rewards_dispatcher"
-version = "0.5.2"
+version = "0.5.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -11,8 +11,9 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings"]
+default = ["contract-with-bindings", "migration"]
 contract-with-bindings = []
+migration = []
 
 [dependencies]
 lpp-platform = { workspace = true }

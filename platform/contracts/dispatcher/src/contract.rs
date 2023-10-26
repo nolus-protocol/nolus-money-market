@@ -23,12 +23,12 @@ use crate::{
     cmd::{Dispatch, Reward, RewardCalculator},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::{Config, DispatchLog},
+    state::{migration, Config, DispatchLog},
 };
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -39,8 +39,8 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
-    platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
+    platform::contract::validate_addr(&deps.querier, &msg.dex.lpp)?;
+    platform::contract::validate_addr(&deps.querier, &msg.dex.oracle)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
 
@@ -50,14 +50,7 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    Config::new(
-        msg.cadence_hours,
-        msg.lpp,
-        msg.oracle,
-        msg.treasury,
-        msg.tvl_to_apr,
-    )
-    .store(deps.storage)?;
+    Config::new(msg.cadence_hours, msg.dex, msg.treasury, msg.tvl_to_apr).store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     setup_alarm(
@@ -71,8 +64,30 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
-        .and_then(response::response)
+    {
+        #[cfg(feature = "migration")]
+        {
+            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                |storage: &mut dyn Storage| migration::migrate(storage),
+                Into::into,
+            )
+            .map(|(label, ())| label)
+        }
+        #[cfg(not(feature = "migration"))]
+        {
+            // Statically assert that the message is empty when doing a software-only update.
+            let MigrateMsg {}: MigrateMsg = _msg;
+
+            versioning::update_software(
+                deps.storage,
+                version!(CONTRACT_STORAGE_VERSION),
+                Into::into,
+            )
+        }
+    }
+    .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -105,6 +120,9 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::Rewards { tvl_to_apr } => {
             Config::update_tvl_to_apr(deps.storage, tvl_to_apr).map(|()| response::empty_response())
         }
+        SudoMsg::AddDex(dex) => {
+            Config::add_dex(deps.storage, dex).map(|()| response::empty_response())
+        }
     }
 }
 
@@ -126,7 +144,7 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
 fn query_reward(storage: &dyn Storage, querier: &QuerierWrapper<'_>) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
 
-    let lpp = lpp_platform::new_stub(config.lpp, querier);
+    let lpp = lpp_platform::new_stub(config.dexes[0].lpp.clone(), querier);
     RewardCalculator::new(&config.tvl_to_apr)
         .calculate(&lpp)
         .map(|Reward { apr, .. }| apr)
@@ -145,14 +163,14 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<
 
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
 
-    let lpp = lpp_platform::new_stub(config.lpp.clone(), &deps.querier);
+    let lpp = lpp_platform::new_stub(config.dexes[0].lpp.clone(), &deps.querier);
     let result = Dispatch::new(last_dispatch, &config, now, &deps.querier).do_dispatch(&lpp)?;
 
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let emitter = Emitter::of_type("tr-rewards")
         .emit_tx_info(&env)
-        .emit_to_string_value("to", config.lpp)
+        .emit_to_string_value("to", config.dexes[0].lpp.clone())
         .emit_coin("rewards", result.receipt.in_nls);
     Ok(MessageResponse::messages_with_events(
         result.batch.merge(setup_alarm),
@@ -186,7 +204,7 @@ mod tests {
 
     use crate::{
         contract::sudo,
-        msg::{ConfigResponse, InstantiateMsg, QueryMsg, SudoMsg},
+        msg::{ConfigResponse, Dex, InstantiateMsg, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
     };
 
@@ -200,8 +218,10 @@ mod tests {
     fn do_instantiate(deps: DepsMut<'_>) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            lpp: Addr::unchecked(LPP_ADDR),
-            oracle: Addr::unchecked(ORACLE_ADDR),
+            dex: Dex {
+                lpp: Addr::unchecked(LPP_ADDR),
+                oracle: Addr::unchecked(ORACLE_ADDR),
+            },
             timealarms: Addr::unchecked(TIMEALARMS_ADDR),
             treasury: Addr::unchecked(TREASURY_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![

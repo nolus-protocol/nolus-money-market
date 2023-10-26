@@ -11,8 +11,7 @@ use crate::state::{reward_scale::RewardScale, CadenceHours};
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub cadence_hours: CadenceHours,
-    pub lpp: Addr,
-    pub oracle: Addr,
+    pub dex: Dex,
     pub timealarms: Addr,
     pub treasury: Addr,
     pub tvl_to_apr: RewardScale,
@@ -32,6 +31,7 @@ pub enum ExecuteMsg {
 pub enum SudoMsg {
     Config { cadence_hours: CadenceHours },
     Rewards { tvl_to_apr: RewardScale },
+    AddDex(Dex),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -49,3 +49,9 @@ pub struct ConfigResponse {
 }
 
 pub type RewardScaleResponse = RewardScale;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Dex {
+    pub lpp: Addr,
+    pub oracle: Addr,
+}

@@ -52,7 +52,7 @@ impl<'a> Dispatch<'a> {
         }
 
         convert::from_unchecked_base::<Usd, UsdGroup, NlsPlatform, NativePlatform>(
-            self.config.oracle.clone(),
+            self.config.dexes[0].oracle.clone(),
             reward_in_usd,
             self.querier,
         )
@@ -82,7 +82,7 @@ impl<'a> Dispatch<'a> {
 
         batch
             .schedule_execute_wasm_no_reply(
-                &self.config.lpp,
+                &self.config.dexes[0].lpp,
                 lpp_platform::msg::ExecuteMsg::DistributeRewards {},
                 Some(reward),
             )
