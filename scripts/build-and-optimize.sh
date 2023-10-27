@@ -10,7 +10,7 @@ rm -rf "/artifacts/"*
 
 for contract in $(echo "/code/contracts/"* | sed 's/ /\n/g' | sort)
 do
-    cd "${contract}"
+    cd "${contract}" || return
 
     contract_pkgid="$(cargo pkgid)"
     contract_pkgid="${contract_pkgid##*/}"
