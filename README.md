@@ -95,7 +95,7 @@ An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown
 First, the image for building the contracts needs to be built. This happens by
 running the command shown here:
 ```sh
-docker build . -t wasm-optimizer --build-arg "rust_ver=1.72"
+docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"
 ```
 
 Do note that the command is an example one and the Rust version, denoted by the
@@ -110,12 +110,12 @@ each set of contracts, depending on their workspace, indicated by
 to indicate desired target network and DEX:
 
 ```sh
-docker run --rm -v "$(pwd)/plaform/:/platform/" \
+docker run --rm -v "$(pwd)/platform/:/platform/" \
   -v "$(pwd)/protocol/:/protocol/" \
   -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
-  -v "$(pwd)/protocol/:/artifacts/" \
+  -v "$(pwd)/artifacts/:/artifacts/" \
   --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-  --env 'RUSTFLAGS=--cfg net="dev" --cfg dex="osmosis"'
+  --env 'RUSTFLAGS=--cfg net="dev" --cfg dex="osmosis"' \
   wasm-optimizer
 ```
 
