@@ -4,9 +4,9 @@
 
 Implementation of the core business logic as CosmWasm contracts.
 
-# Recommended user workspace
+## Recommended user workspace
 
-## Setup
+### Setup
 
 1. Install the Rust Toolchain Installer
 
@@ -31,32 +31,40 @@ Implementation of the core business logic as CosmWasm contracts.
    cargo install cargo-edit cargo-workspaces cargo-expand
    ```
 
-## Build
+### Build
 
 The build is controlled with a few environment variables:
+
 * `RELEASE_VERSION` - an arbitrary string giving the release a name
 * `RUSTFLAGS` - set of values that is passed down to the Rust compiler;
   setting targetted network and DEX happens through setting it to:
-  ```
+
+  ```sh
   --cfg net="NETWORK" --cfg dex="DEX"
   ```
+
   where `NETWORK` and `DEX` should be replaced with the desired ones,
   while leaving the quotes.
+
   Example:
-  ```
+
+  ```sh
   --cfg net="main" --cfg dex="osmosis"
   ```
 
-### Workspaces
+#### Workspaces
 
 Th project is separated into three workspaces:
+
 * `platform` - DEX-agnostic contracts and packages
 * `protocol` - DEX-specific contracts and packages
 * `tests` - integration tests
 
-### A non-optimized version
+In the instructions below this value is stored in *WORKSPACE_DIR_NAME*.
 
-The command below builds a contract if ran from the contract directory, 
+#### A non-optimized version
+
+The command below builds a contract if ran from the contract directory,
 or builds the contracts of the workspace from within which it is ran:
 
 ```sh
@@ -67,6 +75,7 @@ One way to avoid having to set those environment variables is to
 set them in the editor/IDE's configuration.
 
 An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown here:
+
 ```json
 {
   "rust-analyzer.cargo.extraEnv": {
@@ -88,12 +97,13 @@ An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown
 }
 ```
 
-### An optimized version
+#### An optimized version
 
-#### Container image
+##### Container image
 
 First, the image for building the contracts needs to be built. This happens by
 running the command shown here:
+
 ```sh
 docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"
 ```
@@ -102,20 +112,27 @@ Do note that the command is an example one and the Rust version, denoted by the
 `rust_ver` build argument, should match the one set in the `rust-toolchain.toml`
 file, located at the root of the project!
 
-#### Running container image
+##### Running container image
 
 The command shown below builds an optimized and verifiable version of
-each set of contracts, depending on their workspace, indicated by
-`WORKSPACE_DIR_NAME`, and just as the development build uses `RUSTFLAGS`
+each set of contracts, depending on their workspace (indicated by
+`WORKSPACE_DIR_NAME`) and on the DEX (indicated by `DEX`) and just as the development build uses `RUSTFLAGS`
 to indicate desired target network and DEX:
+
+```sh
+export WORKSPACE_DIR_NAME="platform"/"protocol"
+export DEX="osmosis"
+export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $DEX || echo 'platform')"
+
+```
 
 ```sh
 docker run --rm -v "$(pwd)/platform/:/platform/" \
   -v "$(pwd)/protocol/:/protocol/" \
   -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
-  -v "$(pwd)/artifacts/:/artifacts/" \
+  -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
   --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-  --env 'RUSTFLAGS=--cfg net="dev" --cfg dex="osmosis"' \
+  --env "RUSTFLAGS=--cfg net=\"dev\" --cfg dex=\"${DEX}\"" \
   wasm-optimizer
 ```
 
@@ -157,6 +174,7 @@ in the same manner as with the development builds.
 Contract addresses are dependent on the order in which they are deployed in the script.
 
 When adding a new contract, and it needs to be deployed with the genesis:
+
 1. Add it to the `scripts/deploy-contracts-genesis.sh` script.
 2. Ensure you preserve the order:
     * Your contract **is not** a dependency:
@@ -185,7 +203,7 @@ that address is.
 
 Using the previously installed cargo-edit one can easily upgrade the dependencies.
 
-For more details please refer to 
+For more details please refer to
 
 ```sh
 cargo upgrade --help
@@ -193,171 +211,11 @@ cargo upgrade --help
 
 An example:
 
-```
+```sh
 cargo upgrade --workspace cw-storage-plus
 ```
 
 [Ref](https://github.com/CosmWasm/rust-optimizer#mono-repos)
-
-### Deploy smart contract CLI
-
-* Add new key to be used for the deployment:
-
-Running this command will create a new account called "wallet".
-
-```sh
-nolusd keys add wallet
-
------------- Example Output-----------------
-- name: wallet
-  type: local
-  address: nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A0MFMuJSqWpofT3GIQchGyL9bADlC5GEWu3QJHGL/XHZ"}'
-  mnemonic: ""
-```
-
-* The new key needs some tokens for the deployment
-
-When scripts/init-local-network.sh is started it creates two accounts.
-One of them is the "treasury" account.
-
-To find the address of the treasury account, run the following command:
-
-```sh
-nolusd keys show -a treasury
-> nolus122f36dx292yy72253ufkt2g8rzheml2pkcfckl
-```
-
-Use the treasury address to send tokens to the new "wallet" account.
-
-```sh
-nolusd query bank total $NODE
-nolusd tx bank send $(nolusd keys show -a treasury) $(nolusd keys show -a wallet) 1000000unolus --chain-id nolus-local --keyring-backend test
-nolusd query bank balances $(nolusd keys show -a wallet) --chain-id nolus-local
-```
-
-* set environment
-
-```sh
-export CHAIN_ID="nolus-local"
-export TXFLAG="--chain-id ${CHAIN_ID} --gas-prices 0.025unolus --gas auto --gas-adjustment 1.3"
-```
-
-* see how many codes we have now
-
-```sh
-nolusd query wasm list-code
-```
-
-* now we store the bytecode on chain; you can see the code in the result
-
-```sh
-RES=$(nolusd tx wasm store artifacts/<contract name>.wasm --from wallet $TXFLAG -y --output json -b block)
-```
-
-* you can also get the code this way
-
-```sh
-CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
-```
-
-* no contracts yet, this should return an empty list
-
-```sh
-nolusd query wasm list-contract-by-code $CODE_ID --output json
-```
-
-* you can also download the wasm from the chain and check that the difference between them is empty
-
-```sh
-nolusd query wasm code $CODE_ID download.wasm
-diff artifacts/<contract name>.wasm download.wasm
-```
-
-### Deploy smart contract TypeScript
-
-**We use the [`cosmjs`](https://www.npmjs.com/package/@cosmjs/cli) library to work with smart contracts via TypeScript.**
-
-First of all, make sure you have created a user who has some amount. We will use this user to upload a contract and send it messages. You can use util/ methods in the UAT-test project to create a new user and client or use existing ones.
-Example: the getUserClient() and getUser1Wallet() methods are helper methods (from UAT-tests/src/util) that do this first step:
-
-```ts
-let userClient: SigningCosmWasmClient;
-let userAccount: AccountData;
-userClient = await getUser1Client();
-[userAccount] = await (await getUser1Wallet()).getAccounts();
-```
-
-This userAccount address will be transmitted as a sender when we want to send messages to the contract.
-Тhe essence of this example shows how to deploy the contract and communicate with it:
-
-1. After building the code of the smart contract, we get the .wasm file we need. The first step is to access this file:
-
-   ```ts
-   import * as fs from "fs";
-   
-   const wasmBinary: Buffer = fs.readFileSync("./oracle.wasm");
-   ```
-
-2. Now we can upload a wasm binary:
-
-   ```ts
-   const customFees = {
-       upload: {
-           amount: [{amount: "2000000", denom: "unolus"}],
-           gas: "2000000",
-       },
-       init: {
-           amount: [{amount: "500000", denom: "unolus"}],
-           gas: "500000",
-       },
-       exec: {
-           amount: [{amount: "500000", denom: "unolus"}],
-           gas: "500000",
-       }
-   };
-   
-   const uploadReceipt = await userClient.upload(userAccount.address, wasmBinary, customFees.upload);
-   const codeId = uploadReceipt.codeId;
-   ```
-
-3. Then we can instantiate the contract and get its address:
-
-   ```ts
-   const instatiateMsg = {
-               "base_asset": "ust",
-               "price_feed_period": 60,
-               "feeders_percentage_needed": 50,
-           };
-   const contract: InstantiateResult = await userClient.instantiate(userAccount.address, codeId, instatiateMsg, "test", customFees.init);
-   contractAddress = contract.contractAddress;
-   ```
-   
-   This **contractAddress** variable is our entry point to the contract. When we send an execute or query message, we give this address to the methods.
-
-4. How to send an execute message:
-
-   ```ts
-   const addFeederMsg = {
-               "register_feeder": {
-                   "feeder_address":"nolus1gzk...."
-               },
-           };
-   await userClient.execute(userAccount.address, contractAddress, addFeederMsg, customFees.exec);
-   ```
-
-5. How to send a query message:
-
-   ```ts
-   const isFeederMsg = {
-               "is_feeder": {
-                   "address":"nolus1gzk...."
-               },
-           };
-   await userClient.queryContractSmart(contractAddress, isFeederMsg);
-   ```
-
-These json messages that we form (including the initial message) depend on what the contract expects to receive in order to provide us with certain functionality. We can check this from the generated json schemas.
 
 ### VSCode
 
@@ -374,7 +232,6 @@ Add syntax highlighting for TOML files
 Add dependency versions update by installing `crates` extension
 
 1. Press `Ctrl+Shift+P`
-
 2. Execute `ext install serayuzgur.crates`
 
 ## Resources
