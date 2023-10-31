@@ -10,6 +10,9 @@ schema = ["sdk/schema"]
 testing = []
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "schema"] }
+sdk = { workspace = true, features = ["schema"] }
 
 serde = { workspace = true, features = ["std", "derive"] }
+
+[dev-dependencies]
+sdk = { workspace = true, features = ["cosmos"] }
