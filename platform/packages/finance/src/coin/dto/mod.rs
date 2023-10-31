@@ -268,7 +268,9 @@ mod test {
     fn longer_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
         let coin_len = to_json_vec(&coin).unwrap().len();
-        let coindto_len = to_json_vec(&CoinDTO::<MyTestGroup>::from(coin)).unwrap().len();
+        let coindto_len = to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
+            .unwrap()
+            .len();
         assert!(coin_len < coindto_len);
     }
 

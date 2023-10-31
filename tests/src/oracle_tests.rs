@@ -19,8 +19,8 @@ use oracle::{
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
-    cosmwasm_std::{self, 
-        coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
+    cosmwasm_std::{
+        self, coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
         Storage, Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
@@ -85,8 +85,7 @@ fn test_lease_serde() {
     };
 
     let PriceAlarm {} =
-    cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeasePriceAlarm {}).unwrap())
-            .unwrap();
+        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeasePriceAlarm {}).unwrap()).unwrap();
 }
 
 #[test]

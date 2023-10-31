@@ -76,7 +76,8 @@ pub mod tests {
 #[cfg(any(feature = "testing", test))]
 pub mod testing {
     use sdk::cosmwasm_std::{
-        to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
+        to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
+        WasmQuery,
     };
 
     use super::CodeId;
