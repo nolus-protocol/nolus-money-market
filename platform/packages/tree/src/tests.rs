@@ -1,4 +1,4 @@
-use ::sdk::cosmwasm_std;
+use sdk::cosmwasm_std;
 
 use super::{HumanReadableTree, Tree};
 
