@@ -52,7 +52,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$profit_init_msg"
   _export_to_file "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000000","ticker":"USDC"},"min_sell_asset":{"amount":"10000","ticker":"USDC"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
+  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"USDC"},"min_sell_asset":{"amount":"1000","ticker":"USDC"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$leaser_init_msg"
   _export_to_file "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
