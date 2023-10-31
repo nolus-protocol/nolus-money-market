@@ -10,7 +10,7 @@ schema = ["sdk/schema"]
 testing = []
 
 [dependencies]
-sdk = { workspace = true, features = ["schema"] }
+sdk = { workspace = true, optional = true, features = ["schema"] }
 
 serde = { workspace = true, features = ["std", "derive"] }
 
