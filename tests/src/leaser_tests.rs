@@ -135,8 +135,8 @@ fn open_multiple_loans() {
         .into_generic();
 
     test_case
-        .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)])
-        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(50)]);
+        .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(450)])
+        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(225)]);
 
     leaser_mod::assert_no_leases(
         &test_case.app,
@@ -154,7 +154,7 @@ fn open_multiple_loans() {
                     currency: LeaseCurrency::TICKER.into(),
                     max_ltd: None,
                 },
-                &[cwcoin::<Lpn, _>(3)],
+                &[cwcoin::<Lpn, _>(75)],
             )
             .unwrap();
 
@@ -181,7 +181,7 @@ fn open_multiple_loans() {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd: None,
             },
-            &[cwcoin::<Lpn, _>(30)],
+            &[cwcoin::<Lpn, _>(78)],
         )
         .unwrap();
 
@@ -250,7 +250,7 @@ fn test_quote() {
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(resp.annual_interest_rate, Percent::from_permille(94),);
+    assert_eq!(resp.annual_interest_rate, Percent::from_permille(72),);
 
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
@@ -454,7 +454,7 @@ fn open_loans_lpp_fails() {
     type LeaseCurrency = PaymentC3;
 
     let user_addr = Addr::unchecked(USER);
-    let downpayment = cwcoin::<Lpn, _>(30);
+    let downpayment = cwcoin::<Lpn, _>(86);
 
     fn mock_lpp_execute(
         deps: DepsMut<'_>,
@@ -571,7 +571,7 @@ where
         }
     }
 
-    let downpayment: Coin<DownpaymentC> = Coin::new(40);
+    let downpayment: Coin<DownpaymentC> = Coin::new(79);
     let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
         &test_case.app,
         leaser_addr.clone(),

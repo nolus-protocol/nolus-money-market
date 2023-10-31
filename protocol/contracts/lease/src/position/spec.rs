@@ -107,6 +107,11 @@ where
         }
     }
 
+    /// Calculate the borrow amount.
+    /// Return 'error::ContractError::InsufficientTrasactionAmount' when either the downpayment
+    /// or the borrow amount is with amount less than the minimum trasaction amount.
+    /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
+    /// is with amount less than the minimum asset amount.
     pub fn calc_borrow_amount(
         &self,
         downpayment: Coin<Lpn>,
@@ -162,3 +167,44 @@ where
         )
     }
 }
+
+// #[cfg(test)]
+// mod test_calc_borrow {
+//     use core::borrow;
+
+//     use currency::test::StableC1;
+//     use finance::{
+//         coin::Coin,
+//         liability::Liability,
+//     }
+//     use crate::error::ContractError;
+//     use super::Spec;
+
+//     type TestLpn = StableC1;
+
+//     #[test]
+//     fn downpayment_less_than_min() {
+//         let spec = spec(1_000, 100);
+//         let borrow = spec.calc_borrow_amount(99, None);
+//         assert!(matches!(
+//             result_1,
+//             Err(ContractError::PositionCloseAmountTooBig(_))
+//         ));
+//     }
+
+//     fn spec(min_asset: Coin<Lpn>, min_trasaction_amount: Coin<Lpn>) -> Spec<TestLpn>
+//     where
+//         Lpn: Into<Coin<TestLpn>>,
+//     {
+//         let liability = Liability::new(
+//             Percent::from_percent(65),
+//             Percent::from_percent(5),
+//             Percent::from_percent(10),
+//             Percent::from_percent(2),
+//             Percent::from_percent(3),
+//             Percent::from_percent(2),
+//             Duration::from_hours(1),
+//         );
+//         Spec::new(liability, min_asset.into(), min_trasaction_amount.into())
+//     }
+// }

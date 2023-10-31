@@ -96,8 +96,8 @@ impl Instantiator {
                         config.liability_minus_delta_to_third_liq_warn,
                         config.liability_recalc_time,
                     ),
-                    super::lpn_coin(23_456_986),
-                    super::lpn_coin(23_456),
+                    super::lpn_coin(1478),
+                    super::lpn_coin(345),
                 ),
                 loan: LoanForm {
                     annual_margin_interest: config.annual_margin_interest,
