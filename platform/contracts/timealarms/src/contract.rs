@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
+        to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
 use versioning::{package_version, version, VersionSegment};
@@ -69,8 +69,8 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwRes
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
-        QueryMsg::AlarmsStatus {} => Ok(to_binary(
+        QueryMsg::ContractVersion {} => Ok(to_json_binary(&package_version!())?),
+        QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
     }

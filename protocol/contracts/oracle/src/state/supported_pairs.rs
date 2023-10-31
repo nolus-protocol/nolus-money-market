@@ -243,7 +243,7 @@ mod tests {
     fn test_case() -> HumanReadableTree<SwapTarget> {
         let base = TheCurrency::TICKER;
 
-        serde_json_wasm::from_str(&format!(
+        cosmwasm_std::from_json(format!(
             r#"
             {{
                 "value":[0,"{base}"],
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_base() {
-        let tree = serde_json_wasm::from_str(
+        let tree = cosmwasm_std::from_json(
             r#"{"value":[0,"invalid"],"children":[{"value":[1,"token1"]}]}"#,
         )
         .unwrap();
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_duplicated_nodes() {
-        let tree = serde_json_wasm::from_str(&format!(
+        let tree = cosmwasm_std::from_json(format!(
             r#"{{
                 "value":[0,"{ticker}"],
                 "children":[

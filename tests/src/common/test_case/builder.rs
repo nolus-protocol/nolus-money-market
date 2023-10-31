@@ -7,7 +7,7 @@ use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
+    cosmwasm_std::{self, Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, AppResponse},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -242,7 +242,7 @@ where
                     port_id: "ica-port".into(),
                     channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),
                     counterparty_channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),
-                    counterparty_version: serde_json_wasm::to_string(&OpenAckVersion {
+                    counterparty_version: cosmwasm_std::to_json_string(&OpenAckVersion {
                         version: "1".into(),
                         controller_connection_id: TestCase::DEX_CONNECTION_ID.into(),
                         host_connection_id: "DEADCODE".into(),

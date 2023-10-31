@@ -5,7 +5,7 @@
 use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize};
 
-use sdk::cosmwasm_std::{from_binary, Addr, Api, Binary, Reply, StdError, StdResult};
+use sdk::cosmwasm_std::{from_json, Addr, Api, Binary, Reply, StdError, StdResult};
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,
@@ -31,7 +31,7 @@ where
             .addr_validate(&String::from_utf8(response.address).map_err(|_| {
                 StdError::generic_err("Address field contains invalid UTF-8 data!")
             })?)?,
-        data: maybe_from_binary(response.data)?,
+        data: maybe_from_json(response.data)?,
     })
 }
 
@@ -47,7 +47,7 @@ where
 
     decode::<ReplyData>(reply)
         .map(|data| data.data)
-        .and_then(maybe_from_binary)
+        .and_then(maybe_from_json)
 }
 
 fn decode_raw<M>(message: &[u8]) -> StdResult<M>
@@ -75,11 +75,11 @@ where
     )
 }
 
-fn maybe_from_binary<T>(data: Vec<u8>) -> StdResult<Option<T>>
+fn maybe_from_json<T>(data: Vec<u8>) -> StdResult<Option<T>>
 where
     T: for<'de> Deserialize<'de>,
 {
     (!data.is_empty())
-        .then(|| from_binary(&Binary::from(data)))
+        .then(|| from_json(Binary::from(data)))
         .transpose()
 }

@@ -30,7 +30,6 @@ swap = { path = "../protocol/packages/swap", features = ["testing"] }
 anyhow = "1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
-serde-json-wasm = "1"
 
 [patch.'https://github.com/neutron-org/neutron-sdk']
 # satisfies the protobuf version check

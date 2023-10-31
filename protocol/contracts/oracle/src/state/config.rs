@@ -45,7 +45,7 @@ mod test {
     use finance::{duration::Duration, percent::Percent};
     use marketprice::config::Config as PriceConfig;
     use oracle_platform::msg::Config as PlatformConfig;
-    use sdk::cosmwasm_std::{from_slice, to_vec};
+    use sdk::cosmwasm_std::{from_json, to_json_vec};
 
     use super::Config;
 
@@ -61,7 +61,7 @@ mod test {
                 Percent::from_percent(70),
             ),
         );
-        let cfg_platform = from_slice::<PlatformConfig>(&to_vec(&cfg).unwrap()).unwrap();
+        let cfg_platform = from_json::<PlatformConfig>(&to_json_vec(&cfg).unwrap()).unwrap();
         assert_eq!(cfg_platform.base_asset, base_asset);
     }
 }

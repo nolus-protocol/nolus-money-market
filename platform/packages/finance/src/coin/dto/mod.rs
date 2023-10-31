@@ -222,7 +222,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::{from_slice, to_vec};
+    use sdk::cosmwasm_std::{from_json, to_json_vec};
     use serde::{Deserialize, Serialize};
 
     use currency::{
@@ -267,8 +267,8 @@ mod test {
     #[test]
     fn longer_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
-        let coin_len = to_vec(&coin).unwrap().len();
-        let coindto_len = to_vec(&CoinDTO::<MyTestGroup>::from(coin)).unwrap().len();
+        let coin_len = to_json_vec(&coin).unwrap().len();
+        let coindto_len = to_json_vec(&CoinDTO::<MyTestGroup>::from(coin)).unwrap().len();
         assert!(coin_len < coindto_len);
     }
 
@@ -277,8 +277,8 @@ mod test {
         let coin = Coin::<MyTestCurrency>::new(85);
         assert_eq!(
             coin,
-            to_vec(&CoinDTO::<MyTestGroup>::from(coin))
-                .and_then(|buf| from_slice(&buf))
+            to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
+                .and_then(from_json)
                 .expect("correct raw bytes")
         );
     }

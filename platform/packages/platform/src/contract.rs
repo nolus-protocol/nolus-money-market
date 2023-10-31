@@ -76,7 +76,7 @@ pub mod tests {
 #[cfg(any(feature = "testing", test))]
 pub mod testing {
     use sdk::cosmwasm_std::{
-        to_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
+        to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
     };
 
     use super::CodeId;
@@ -85,7 +85,7 @@ pub mod testing {
 
     pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
-            to_binary(&{
+            to_json_binary(&{
                 let mut response = ContractInfoResponse::default();
 
                 response.code_id = CODE_ID;

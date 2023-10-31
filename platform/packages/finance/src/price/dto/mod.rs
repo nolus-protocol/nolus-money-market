@@ -247,7 +247,7 @@ mod test_invariant {
 
     use serde::Deserialize;
 
-    use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
+    use sdk::cosmwasm_std::{from_json, StdError, StdResult};
 
     use crate::coin::{Coin, CoinDTO};
     use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
@@ -369,7 +369,7 @@ mod test_invariant {
         G: Group + for<'a> Deserialize<'a>,
         QuoteG: Group + for<'a> Deserialize<'a>,
     {
-        from_slice::<PriceDTO<G, QuoteG>>(json)
+        from_json::<PriceDTO<G, QuoteG>>(json)
     }
 
     fn assert_err<G, QuoteG>(r: Result<PriceDTO<G, QuoteG>, StdError>, msg: &str)

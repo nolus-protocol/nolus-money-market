@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json_wasm::from_str;
 
 use currency::{
     dex::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
@@ -20,7 +19,7 @@ use oracle::{
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
-    cosmwasm_std::{
+    cosmwasm_std::{self, 
         coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
         Storage, Timestamp,
     },
@@ -79,13 +78,14 @@ fn create_test_case() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr> {
 fn test_lease_serde() {
     use lease::api::ExecuteMsg::PriceAlarm as LeasePriceAlarm;
     use oracle::msg::ExecuteAlarmMsg::PriceAlarm;
+    use sdk::cosmwasm_std;
 
-    let LeasePriceAlarm {} = serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&PriceAlarm {}).unwrap()).unwrap() else {
+    let LeasePriceAlarm {} = cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap() else {
         unreachable!()
     };
 
     let PriceAlarm {} =
-        serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeasePriceAlarm {}).unwrap())
+    cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeasePriceAlarm {}).unwrap())
             .unwrap();
 }
 
@@ -387,7 +387,7 @@ fn test_config_update() {
 }
 
 fn swap_tree() -> HumanReadableTree<SwapTarget> {
-    from_str(&format!(
+    cosmwasm_std::from_json(format!(
         r#"{{
                 "value":[0,"{usdc}"],
                 "children":[
@@ -494,7 +494,7 @@ fn test_zero_price_dto() {
     oracle_mod::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
-    let price: SpotPrice = from_str(
+    let price: SpotPrice = cosmwasm_std::from_json(
         r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
     )
     .unwrap();

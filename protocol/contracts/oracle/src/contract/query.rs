@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::dex::Lpns;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
-use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
+use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
 use crate::msg::Config;
 use crate::{
@@ -37,12 +37,12 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         match self.msg {
-            QueryMsg::SupportedCurrencyPairs {} => to_binary(
+            QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .swap_pairs_df()
                     .collect::<Vec<_>>(),
             ),
-            QueryMsg::Price { currency } => to_binary(
+            QueryMsg::Price { currency } => to_json_binary(
                 &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,
             ),
@@ -50,18 +50,18 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 let prices = Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_prices(self.env.block.time)?;
 
-                to_binary(&PricesResponse { prices })
+                to_json_binary(&PricesResponse { prices })
             }
-            QueryMsg::SwapPath { from, to } => to_binary(
+            QueryMsg::SwapPath { from, to } => to_json_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .load_swap_path(&from, &to)?,
             ),
-            QueryMsg::SwapTree {} => to_binary(&SwapTreeResponse {
+            QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse {
                 tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .query_swap_tree()
                     .into_human_readable(),
             }),
-            QueryMsg::AlarmsStatus {} => to_binary(
+            QueryMsg::AlarmsStatus {} => to_json_binary(
                 &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_alarms(self.env.block.time)?,
             ),

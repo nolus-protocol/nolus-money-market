@@ -1,4 +1,4 @@
-use serde_json_wasm::from_str;
+use sdk::cosmwasm_std;
 
 use tree::{FindBy, HumanReadableTree, Tree};
 
@@ -7,14 +7,14 @@ mod serde {
 
     #[test]
     fn only_root() {
-        let tree: Tree<u32> = from_str(r#"[{"parent":0,"value":5}]"#).unwrap();
+        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5}]"#).unwrap();
 
         assert_eq!(*tree.root().value(), 5);
     }
 
     #[test]
     fn with_2_levels() {
-        let tree: Tree<u32> = from_str(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":0,"value":3},{"parent":0,"value":6}]"#).unwrap();
+        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":0,"value":3},{"parent":0,"value":6}]"#).unwrap();
 
         assert_eq!(*tree.root().value(), 5);
 
@@ -31,7 +31,7 @@ mod serde {
 
     #[test]
     fn with_3_levels() {
-        let tree: Tree<u32> = from_str(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":1,"value":6},{"parent":0,"value":3},{"parent":1,"value":7}]"#).unwrap();
+        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":1,"value":6},{"parent":0,"value":3},{"parent":1,"value":7}]"#).unwrap();
 
         for (parent_value, expected_value) in [
             (None, 5),
@@ -49,7 +49,7 @@ mod serde {
 
     #[test]
     fn human_readable() {
-        let original: HumanReadableTree<u32> = from_str(
+        let original: HumanReadableTree<u32> = cosmwasm_std::from_json(
             r#"{"value":5,"children":[{"value":4,"children":[{"value":6},{"value":7}]},{"value":3}]}"#,
         )
             .unwrap();
@@ -62,7 +62,7 @@ mod serde {
 
     #[test]
     fn parent_iter() {
-        let tree: Tree<u32> = from_str::<HumanReadableTree<u32>>(
+        let tree: Tree<u32> = cosmwasm_std::from_json::<HumanReadableTree<u32>>(
             r#"{"value":5,"children":[{"value":4,"children":[{"value":6},{"value":7}]},{"value":3}]}"#,
         )
             .unwrap()

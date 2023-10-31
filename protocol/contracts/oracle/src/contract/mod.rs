@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
+        to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
 use versioning::{package_version, version, VersionSegment};
@@ -103,17 +103,19 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => {
-            to_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
+            to_json_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
         }
         QueryMsg::Config {} => {
-            to_binary(&query_config(deps.storage)?).map_err(ContractError::ConvertToBinary)
+            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::ConvertToBinary)
         }
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)
-            .and_then(|ref feeders| to_binary(feeders).map_err(ContractError::ConvertToBinary)),
+            .and_then(|ref feeders| {
+                to_json_binary(feeders).map_err(ContractError::ConvertToBinary)
+            }),
         QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
             .map_err(ContractError::LoadFeeders)
-            .and_then(|ref f| to_binary(&f).map_err(ContractError::ConvertToBinary)),
+            .and_then(|ref f| to_json_binary(&f).map_err(ContractError::ConvertToBinary)),
         _ => QueryWithOracleBase::cmd(deps, env, msg),
     }
 }
@@ -170,7 +172,7 @@ mod tests {
         Currency,
     };
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{from_binary, testing::mock_env};
+    use sdk::cosmwasm_std::{from_json, testing::mock_env};
     use swap::SwapTarget;
 
     use crate::{
@@ -193,7 +195,7 @@ mod tests {
         let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: Config = from_binary(&res).unwrap();
+        let value: Config = from_json(res).unwrap();
         assert_eq!(
             Config {
                 base_asset: StableC1::TICKER.into(),
@@ -213,7 +215,7 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let value: Vec<SwapLeg> = from_binary(&res).unwrap();
+        let value: Vec<SwapLeg> = from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
             from: PaymentC5::TICKER.into(),

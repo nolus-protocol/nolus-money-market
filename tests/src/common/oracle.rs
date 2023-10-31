@@ -15,7 +15,7 @@ use oracle::{
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
+    cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::AppResponse,
     testing::{CwContract, CwContractWrapper},
 };
@@ -83,12 +83,12 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
         price::total_of(Coin::<NativeC>::new(123456789)).is(Coin::<StableC1>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => to_binary(&oracle::msg::PricesResponse {
+        QueryMsg::Prices {} => to_json_binary(&oracle::msg::PricesResponse {
             prices: vec![price.into()],
         })
         .map_err(ContractError::ConvertToBinary),
         QueryMsg::Price { currency: _ } => {
-            to_binary(&SpotPrice::from(price)).map_err(ContractError::ConvertToBinary)
+            to_json_binary(&SpotPrice::from(price)).map_err(ContractError::ConvertToBinary)
         }
         _ => query(deps, env, msg),
     }

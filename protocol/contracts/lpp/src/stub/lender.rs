@@ -116,7 +116,7 @@ mod test {
     use platform::response::{self};
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response as CwResponse},
-        cosmwasm_std::{from_binary, testing::MockQuerier, Addr, QuerierWrapper, ReplyOn, WasmMsg},
+        cosmwasm_std::{from_json, testing::MockQuerier, Addr, QuerierWrapper, ReplyOn, WasmMsg},
     };
 
     use crate::{
@@ -150,7 +150,7 @@ mod test {
         {
             assert_eq!(addr.as_str(), contract_addr);
             assert!(funds.is_empty());
-            let lpp_msg: ExecuteMsg = from_binary(msg).expect("invalid Lpp message");
+            let lpp_msg: ExecuteMsg = from_json(msg).expect("invalid Lpp message");
             if let ExecuteMsg::OpenLoan { amount } = lpp_msg {
                 assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {

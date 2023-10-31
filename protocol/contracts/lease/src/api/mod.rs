@@ -100,7 +100,7 @@ pub enum FinalizerExecuteMsg {
 #[cfg(test)]
 mod test {
     use sdk::{
-        cosmwasm_std::{from_slice, to_vec},
+        cosmwasm_std::{from_json, to_json_vec},
         schemars::_serde_json::to_string,
     };
 
@@ -109,9 +109,9 @@ mod test {
     #[test]
     fn test_repay_representation() {
         let msg = ExecuteMsg::Repay();
-        let repay_bin = to_vec(&msg).expect("serialization failed");
+        let repay_bin = to_json_vec(&msg).expect("serialization failed");
         assert_eq!(
-            from_slice::<ExecuteMsg>(&repay_bin).expect("deserialization failed"),
+            from_json::<ExecuteMsg>(&repay_bin).expect("deserialization failed"),
             msg
         );
 
@@ -124,9 +124,9 @@ mod test {
     #[test]
     fn test_close_position_representation() {
         let msg = ExecuteMsg::ClosePosition(PositionClose::FullClose(FullClose {}));
-        let close_bin = to_vec(&msg).expect("serialization failed");
+        let close_bin = to_json_vec(&msg).expect("serialization failed");
         assert_eq!(
-            from_slice::<ExecuteMsg>(&close_bin).expect("deserialization failed"),
+            from_json::<ExecuteMsg>(&close_bin).expect("deserialization failed"),
             msg
         );
 

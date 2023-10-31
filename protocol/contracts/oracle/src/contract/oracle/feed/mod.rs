@@ -170,7 +170,7 @@ mod test {
         let axl = PaymentC4::TICKER;
         let cro = PaymentC6::TICKER;
 
-        serde_json_wasm::from_str(&format!(
+        cosmwasm_std::from_json(format!(
             r#"
             {{
                 "value":[0,"{base}"],

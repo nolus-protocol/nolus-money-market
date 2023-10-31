@@ -13,9 +13,9 @@ use platform::contract::CodeId;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        coins, from_binary,
+        coins, from_json,
         testing::{mock_env, mock_info},
-        to_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+        to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
     },
     schemars::{self, JsonSchema},
     testing::mock_deps_with_contracts,
@@ -87,7 +87,7 @@ fn setup_test_case(deps: DepsMut<'_>) {
 
 fn query_config(deps: Deps<'_>) -> Config {
     let res = query(deps, mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_binary(&res).unwrap();
+    let config_response: ConfigResponse = from_json(res).unwrap();
     config_response.config
 }
 
@@ -122,7 +122,7 @@ fn proper_initialization() {
 
     // it worked, let's query the state
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_binary(&res).unwrap();
+    let config_response: ConfigResponse = from_json(res).unwrap();
     let config = config_response.config;
     assert_eq!(1, config.lease_code_id);
     assert_eq!(lpp_addr, config.lpp_addr);
@@ -198,7 +198,7 @@ fn test_update_config_invalid_liability() {
         ),
     };
 
-    let msg: SudoMsg = from_binary(&to_binary(&mock_msg).unwrap()).unwrap();
+    let msg: SudoMsg = from_json(to_json_binary(&mock_msg).unwrap()).unwrap();
 
     setup_test_case(deps.as_mut());
 
@@ -260,7 +260,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
         vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 funds: info.funds,
-                msg: to_binary(&msg).unwrap(),
+                msg: to_json_binary(&msg).unwrap(),
                 admin: Some(admin.into()),
                 code_id: 1,
                 label: "lease".to_string(),

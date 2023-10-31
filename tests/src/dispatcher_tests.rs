@@ -282,7 +282,7 @@ fn test_config() {
 //         vec![
 //             SubMsg::new(WasmMsg::Execute {
 //                 contract_addr: "treasury".to_string(),
-//                 msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
+//                 msg: to_json_binary(&treasury::msg::ExecuteMsg::SendRewards {
 //                     amount: Coin::<Nls>::new(44386002),
 //                 })
 //                 .unwrap(),
@@ -290,12 +290,12 @@ fn test_config() {
 //             }),
 //             SubMsg::new(WasmMsg::Execute {
 //                 contract_addr: "lpp".to_string(),
-//                 msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
+//                 msg: to_json_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
 //                 funds: coins(44386002, native_denom),
 //             }),
 //             SubMsg::new(WasmMsg::Execute {
 //                 contract_addr: "timealarms".to_string(),
-//                 msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
+//                 msg: to_json_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
 //                     time: env.block.time.plus_seconds(10 * 60 * 60),
 //                 })
 //                 .unwrap(),

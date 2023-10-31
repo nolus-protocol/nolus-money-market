@@ -8,7 +8,7 @@ use platform::{contract, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        from_binary,
+        from_json,
         testing::{mock_env, mock_info, MockQuerier},
         Event,
     },
@@ -59,7 +59,7 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: SpotPrice = from_binary(&res).unwrap();
+    let value: SpotPrice = from_json(res).unwrap();
     assert_eq!(expected_price, value);
 }
 
@@ -102,7 +102,7 @@ fn feed_indirect_price() {
         price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)),
     )
     .unwrap();
-    let value: SpotPrice = from_binary(&res).unwrap();
+    let value: SpotPrice = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 

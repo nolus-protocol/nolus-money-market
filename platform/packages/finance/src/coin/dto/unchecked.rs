@@ -33,8 +33,8 @@ mod test {
     #[test]
     fn deser_same_group() {
         let coin: CoinDTO<SuperGroup> = Coin::<SuperGroupTestC1>::new(4215).into();
-        let coin_deser: CoinDTO<SuperGroup> = cosmwasm_std::to_vec(&coin)
-            .and_then(|buf| cosmwasm_std::from_slice(&buf))
+        let coin_deser: CoinDTO<SuperGroup> = cosmwasm_std::to_json_vec(&coin)
+            .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
         assert_eq!(coin, coin_deser);
     }
@@ -46,8 +46,8 @@ mod test {
         type ParentGroup = SubGroup;
 
         let coin: CoinDTO<DirectGroup> = Coin::<CoinCurrency>::new(4215).into();
-        let coin_deser: CoinDTO<ParentGroup> = cosmwasm_std::to_vec(&coin)
-            .and_then(|buf| cosmwasm_std::from_slice(&buf))
+        let coin_deser: CoinDTO<ParentGroup> = cosmwasm_std::to_json_vec(&coin)
+            .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
         let coin_exp: CoinDTO<ParentGroup> = Coin::<CoinCurrency>::try_from(coin).unwrap().into();
         assert_eq!(coin_exp, coin_deser);
@@ -56,8 +56,8 @@ mod test {
     #[test]
     fn deser_wrong_group() {
         let coin: CoinDTO<SubGroup> = Coin::<SubGroupTestC1>::new(4215).into();
-        let coin_raw = cosmwasm_std::to_vec(&coin).unwrap();
+        let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
-        assert!(cosmwasm_std::from_slice::<CoinDTO<SuperGroup>>(&coin_raw).is_err());
+        assert!(cosmwasm_std::from_json::<CoinDTO<SuperGroup>>(&coin_raw).is_err());
     }
 }

@@ -38,7 +38,6 @@ versioning = { path = "../platform/packages/versioning", default-features = fals
 
 # General
 serde = { version = "1", default-features = false }
-serde-json-wasm = { version = "0.5", default-features = false }
 postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 enum_dispatch = { version = "0.3", default-features = false }

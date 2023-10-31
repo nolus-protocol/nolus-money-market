@@ -11,7 +11,7 @@ use lpp::{
 };
 use platform::contract::CodeId;
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
+    cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::AppResponse,
     testing::CwContract,
 };
@@ -98,7 +98,7 @@ impl Instantiator {
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::LppBalance() => to_binary(&lpp_platform::msg::LppBalanceResponse {
+        QueryMsg::LppBalance() => to_json_binary(&lpp_platform::msg::LppBalanceResponse {
             balance: Coin::new(1000000000),
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),
@@ -116,7 +116,7 @@ pub(crate) fn mock_quote_query(
     msg: QueryMsg,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::Quote { amount: _amount } => to_binary(
+        QueryMsg::Quote { amount: _amount } => to_json_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),
         ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),

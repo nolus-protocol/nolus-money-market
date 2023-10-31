@@ -16,7 +16,6 @@ sdk = { workspace = true, features = ["cosmos", "cosmos_ibc", "neutron"] }
 prost = "0.11.8"
 thiserror = { workspace = true }
 serde = { workspace = true }
-serde-json-wasm = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }

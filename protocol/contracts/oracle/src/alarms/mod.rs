@@ -70,7 +70,7 @@ mod test {
         coin::{Coin, CoinDTO},
         price::{self, dto::PriceDTO, Price},
     };
-    use sdk::cosmwasm_std::{from_slice, to_vec, StdError};
+    use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
     use swap::SwapGroup;
 
     use super::*;
@@ -262,7 +262,7 @@ mod test {
             || format!(r#"{{{}}}"#, below.as_ref()),
             |above| format!(r#"{{{}, {}}}"#, below.as_ref(), above.as_ref()),
         );
-        from_slice(&dbg!(full_json).into_bytes())
+        from_json(dbg!(full_json).into_bytes())
     }
 
     enum AlarmPrice {
@@ -312,6 +312,6 @@ mod test {
     where
         S: Serialize,
     {
-        String::from_utf8(to_vec(to_serialize).unwrap()).unwrap()
+        String::from_utf8(to_json_vec(to_serialize).unwrap()).unwrap()
     }
 }

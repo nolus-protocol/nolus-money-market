@@ -6,13 +6,10 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-schema = ["dep:sdk"]
+schema = ["sdk/schema"]
 testing = []
 
 [dependencies]
-sdk = { workspace = true, optional = true, features = ["schema"] }
+sdk = { workspace = true, features = ["schema"] }
 
 serde = { workspace = true, features = ["std", "derive"] }
-
-[dev-dependencies]
-serde-json-wasm = { workspace = true }

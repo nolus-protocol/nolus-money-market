@@ -4,7 +4,7 @@ use platform::{error as platform_error, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{version, VersionSegment};
@@ -133,7 +133,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     state::load(deps.storage)
         .and_then(|state| state.state(env.block.time, &deps.querier))
-        .and_then(|resp| to_binary(&resp).map_err(Into::into))
+        .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
         .or_else(|err| platform_error::log(err, deps.api))
 }
 

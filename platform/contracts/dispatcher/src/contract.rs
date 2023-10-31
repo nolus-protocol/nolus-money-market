@@ -12,7 +12,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdResult,
+        to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdResult,
         Storage, Timestamp,
     },
 };
@@ -131,9 +131,9 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
+        QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::CalculateRewards {} => {
-            to_binary(&query_reward(deps.storage, &deps.querier)?.units())
+            to_json_binary(&query_reward(deps.storage, &deps.querier)?.units())
         }
     }
     .map_err(Into::into)
@@ -197,7 +197,7 @@ mod tests {
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
-            coins, from_binary,
+            coins, from_json,
             testing::{mock_dependencies_with_balance, mock_env, mock_info},
             Addr, DepsMut,
         },
@@ -253,7 +253,7 @@ mod tests {
         do_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: ConfigResponse = from_binary(&res).unwrap();
+        let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(10, value.cadence_hours);
     }
 
@@ -286,7 +286,7 @@ mod tests {
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: ConfigResponse = from_binary(&res).unwrap();
+        let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 12);
 
         let CwResponse {
@@ -309,7 +309,7 @@ mod tests {
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: ConfigResponse = from_binary(&res).unwrap();
+        let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 20);
     }
 }

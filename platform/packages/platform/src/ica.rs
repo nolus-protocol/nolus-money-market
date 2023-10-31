@@ -64,7 +64,7 @@ where
 }
 
 pub fn parse_register_response(response: &str) -> Result<HostAccount> {
-    let open_ack = serde_json_wasm::from_str::<OpenAckVersion>(response)?;
+    let open_ack = sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)?;
     open_ack.address.try_into()
 }
 

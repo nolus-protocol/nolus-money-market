@@ -190,7 +190,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::{from_slice, StdError};
+    use sdk::cosmwasm_std::{from_json, StdError};
 
     use crate::{
         coin::{Amount, Coin},
@@ -396,13 +396,13 @@ mod test {
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
-        assert_eq!(Ok(exp), from_slice::<Liability>(json));
+        assert_eq!(Ok(exp), from_json::<Liability>(json));
     }
 
     #[track_caller]
     fn assert_load_err(json: &[u8], msg: &str) {
         assert!(matches!(
-            from_slice::<Liability>(json),
+            from_json::<Liability>(json),
             Err(StdError::ParseErr {
                 target_type,
                 msg: real_msg

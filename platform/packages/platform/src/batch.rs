@@ -6,7 +6,7 @@ use currency::Currency;
 use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{to_binary, Addr, Coin as CoinCw, WasmMsg},
+    cosmwasm_std::{to_json_binary, Addr, Coin as CoinCw, WasmMsg},
 };
 
 pub use crate::emit::{Emit, Emitter};
@@ -168,7 +168,7 @@ impl Batch {
         Ok(WasmMsg::Execute {
             contract_addr: addr.into(),
             funds: vec![],
-            msg: to_binary(&msg)?,
+            msg: to_json_binary(&msg)?,
         })
     }
 
@@ -180,7 +180,7 @@ impl Batch {
         Ok(WasmMsg::Execute {
             contract_addr: addr.into(),
             funds: funds.into_iter().map(to_cosmwasm_impl).collect(),
-            msg: to_binary(&msg)?,
+            msg: to_json_binary(&msg)?,
         })
     }
 
@@ -195,7 +195,7 @@ impl Batch {
         M: Serialize,
     {
         let admin_str = admin.map(Into::into);
-        let msg_bin = to_binary(&msg)?;
+        let msg_bin = to_json_binary(&msg)?;
         let mut funds_cw = vec![];
         if let Some(coin) = funds {
             funds_cw = coin;
@@ -214,7 +214,7 @@ impl Batch {
     where
         M: Serialize,
     {
-        let msg_bin = to_binary(&msg)?;
+        let msg_bin = to_json_binary(&msg)?;
 
         Ok(WasmMsg::Migrate {
             contract_addr: addr.into(),

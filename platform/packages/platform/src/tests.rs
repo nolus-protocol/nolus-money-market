@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{from_binary, Binary, Event};
+use sdk::cosmwasm_std::{from_json, Binary, Event};
 use serde::de::DeserializeOwned;
 
 pub trait EventSource<'a> {
@@ -31,5 +31,5 @@ pub fn parse_resp<Resp>(resp: &Option<Binary>) -> Option<Resp>
 where
     Resp: DeserializeOwned,
 {
-    resp.as_ref().map(|data| from_binary(data).unwrap())
+    resp.as_ref().map(|data| from_json(data).unwrap())
 }

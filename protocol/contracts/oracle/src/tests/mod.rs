@@ -76,7 +76,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         StableC1::TICKER.to_string(),
         60,
         Percent::from_percent(50),
-        serde_json_wasm::from_str(&format!(
+        cosmwasm_std::from_json(format!(
             r#"{{
                 "value":[0,"{usdc}"],
                 "children":[

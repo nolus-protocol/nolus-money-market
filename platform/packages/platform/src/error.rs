@@ -39,9 +39,6 @@ pub enum Error {
     #[error("[ICA] Invalid ICA host account")]
     InvalidICAHostAccount(),
 
-    #[error("[ICA] [Deserialization] {0}")]
-    Deserialization(#[from] serde_json_wasm::de::Error),
-
     #[error("[Platform] [ProtobufDecode] {0}")]
     ProtobufDecode(#[from] DecodeError),
 

@@ -166,7 +166,7 @@ mod unchecked {
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{from_slice, to_vec, StdError, Timestamp};
+    use sdk::cosmwasm_std::{from_json, to_json_vec, StdError, Timestamp};
 
     use crate::config::Config;
 
@@ -265,7 +265,7 @@ mod test {
             samples_number,
             Percent::from_permille(discount_factor),
         );
-        assert_eq!(from_slice(&to_vec(&c).unwrap()), Ok(c));
+        assert_eq!(from_json(to_json_vec(&c).unwrap()), Ok(c));
     }
 
     fn deserialize_pass(
@@ -303,7 +303,7 @@ mod test {
         samples_number: u16,
         discount_factor: u32,
     ) -> Result<Config, StdError> {
-        from_slice(
+        from_json(
             format!("{{\"min_feeders\": {min_feeders}, \"sample_period_secs\": {sample_period},\"samples_number\": {samples_number}, \"discount_factor\": {discount_factor}}}")
                 .as_bytes(),
         )

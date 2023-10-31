@@ -117,7 +117,7 @@ mod tests {
     use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{to_binary, Timestamp, WasmMsg};
+    use sdk::cosmwasm_std::{to_json_binary, Timestamp, WasmMsg};
     use timealarms::{msg::ExecuteMsg::AddAlarm, stub::TimeAlarmsRef};
 
     use crate::{
@@ -155,7 +155,7 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
+                msg: to_json_binary(&AddAlarm { time: recalc_time }).unwrap(),
                 funds: vec![],
             });
 
@@ -164,7 +164,7 @@ mod tests {
                 .into();
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm {
                     alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
@@ -197,13 +197,13 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
+                msg: to_json_binary(&AddAlarm { time: recalc_time }).unwrap(),
                 funds: vec![],
             });
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm {
                     alarm: Alarm::new(exp_below, None),
                 })
                 .unwrap(),
@@ -251,13 +251,13 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
+                msg: to_json_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
                 funds: vec![],
             });
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm {
                     alarm: Alarm::new(exp_below, None),
                 })
                 .unwrap(),
@@ -306,13 +306,13 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: recalc_at }).unwrap(),
+                msg: to_json_binary(&AddAlarm { time: recalc_at }).unwrap(),
                 funds: vec![],
             });
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm {
                     alarm: Alarm::new(exp_below, Some(exp_above)),
                 })
                 .unwrap(),
@@ -364,13 +364,13 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
+                msg: to_json_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
                 funds: vec![],
             });
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm {
                     alarm: Alarm::new(exp_below, None),
                 })
                 .unwrap(),

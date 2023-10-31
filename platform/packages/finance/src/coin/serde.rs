@@ -9,7 +9,7 @@ mod test {
         test::{SuperGroupTestC1, SuperGroupTestC2},
         Currency,
     };
-    use sdk::cosmwasm_std::{from_slice, to_vec};
+    use sdk::cosmwasm_std::{from_json, to_json_vec};
 
     #[test]
     fn serialize_deserialize() {
@@ -39,13 +39,13 @@ mod test {
     where
         T: Serialize + DeserializeOwned + PartialEq + Debug,
     {
-        let obj_bin = to_vec(&obj).unwrap();
-        assert_eq!(obj, from_slice(&obj_bin).unwrap());
+        let obj_bin = to_json_vec(&obj).unwrap();
+        assert_eq!(obj, from_json(&obj_bin).unwrap());
 
         let obj_txt = String::from_utf8(obj_bin).unwrap();
         assert_eq!(exp_txt, obj_txt);
 
-        assert_eq!(obj, from_slice(exp_txt.as_bytes()).unwrap());
+        assert_eq!(obj, from_json(exp_txt.as_bytes()).unwrap());
     }
     #[test]
     fn serialize_deserialize_as_field() {
@@ -66,16 +66,16 @@ mod test {
     fn distinct_repr() {
         let amount = 432;
         assert_eq!(
-            to_vec(&Coin::<SuperGroupTestC1>::new(amount)),
-            to_vec(&Coin::<SuperGroupTestC2>::new(amount))
+            to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)),
+            to_json_vec(&Coin::<SuperGroupTestC2>::new(amount))
         );
     }
 
     #[test]
     fn currency_tolerant() {
         let amount = 134;
-        let nls_bin = to_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
-        let res = from_slice::<Coin<SuperGroupTestC2>>(&nls_bin);
+        let nls_bin = to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
+        let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin);
         assert_eq!(Ok(amount.into()), res);
     }
 }

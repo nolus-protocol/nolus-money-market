@@ -176,7 +176,7 @@ impl PositionSpecDTO {
 #[cfg(test)]
 mod test_invariant {
     use finance::duration::Duration;
-    use sdk::cosmwasm_std::{from_slice, StdError};
+    use sdk::cosmwasm_std::{from_json, StdError};
 
     use super::InterestPaymentSpec;
 
@@ -188,7 +188,7 @@ mod test_invariant {
 
     #[test]
     fn due_period_zero_json() {
-        let r = from_slice(br#"{"due_period": 0, "grace_period": 10}"#);
+        let r = from_json(br#"{"due_period": 0, "grace_period": 10}"#);
         assert_err(r, "non-zero length");
     }
 
@@ -203,7 +203,7 @@ mod test_invariant {
 
     #[test]
     fn due_shorter_than_grace_json() {
-        let r = from_slice(br#"{"due_period": 9, "grace_period": 10}"#);
+        let r = from_json(br#"{"due_period": 9, "grace_period": 10}"#);
         assert_err(r, "should be longer than");
     }
 
@@ -215,7 +215,7 @@ mod test_invariant {
 
     #[test]
     fn due_equal_to_grace_json() {
-        let r = from_slice(br#"{"due_period": 10, "grace_period": 10}"#);
+        let r = from_json(br#"{"due_period": 10, "grace_period": 10}"#);
         assert_err(r, "should be longer than");
     }
 
@@ -242,7 +242,7 @@ mod test_invariant {
 mod test_position_spec {
     use currency::dex::test::StableC1;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
-    use sdk::cosmwasm_std::{from_slice, StdError};
+    use sdk::cosmwasm_std::{from_json, StdError};
 
     use super::PositionSpecDTO;
 
@@ -270,24 +270,24 @@ mod test_position_spec {
 
     #[test]
     fn zero_min_asset() {
-        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
+        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
     }
 
     #[test]
     fn zero_min_sell_asset() {
-        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"0","ticker":"USDC"}}"#);
+        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"0","ticker":"USDC"}}"#);
         assert_err(r, "should be positive");
     }
 
     #[test]
     fn invalid_ticker() {
-        let r = from_slice(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"ATOM"}}"#);
+        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"ATOM"}}"#);
         assert_err(r, "'ATOM' pretending to be");
     }
 
     fn assert_load_ok(exp: PositionSpecDTO, json: &[u8]) {
-        assert_eq!(Ok(exp), from_slice::<PositionSpecDTO>(json));
+        assert_eq!(Ok(exp), from_json::<PositionSpecDTO>(json));
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {

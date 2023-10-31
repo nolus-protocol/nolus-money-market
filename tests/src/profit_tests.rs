@@ -7,7 +7,7 @@ use finance::{
 use platform::{bank, coin_legacy::to_cosmwasm};
 use profit::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
 use sdk::{
-    cosmwasm_std::{from_binary, Addr, Event},
+    cosmwasm_std::{from_json, Addr, Event},
     cw_multi_test::AppResponse,
 };
 use timealarms::msg::DispatchAlarmsResponse;
@@ -453,7 +453,7 @@ fn integration_with_time_alarms() {
         .unwrap_response();
 
     assert_eq!(
-        from_binary(&resp.data.clone().unwrap()),
+        from_json(resp.data.clone().unwrap()),
         Ok(DispatchAlarmsResponse(1))
     );
 

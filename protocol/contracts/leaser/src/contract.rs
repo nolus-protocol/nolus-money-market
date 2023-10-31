@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+        to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
     },
 };
 use versioning::{version, VersionSegment};
@@ -167,13 +167,13 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&Leaser::new(deps).config()?),
+        QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
         QueryMsg::Quote {
             downpayment,
             lease_asset,
             max_ltd,
-        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltd)?),
-        QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
+        } => to_json_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltd)?),
+        QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
     }
     .map_err(Into::into)
     .or_else(|err| platform_error::log(err, deps.api))

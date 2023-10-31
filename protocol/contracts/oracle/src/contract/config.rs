@@ -15,7 +15,7 @@ mod tests {
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
-        cosmwasm_std::{from_binary, testing::mock_env},
+        cosmwasm_std::{from_json, testing::mock_env},
     };
     use swap::SwapTarget;
 
@@ -59,7 +59,7 @@ mod tests {
         assert!(data.is_none());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: Config = from_binary(&res).unwrap();
+        let value: Config = from_json(res).unwrap();
         assert_eq!(
             value,
             Config {
@@ -94,7 +94,7 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let mut value: Vec<SwapLeg> = from_binary(&res).unwrap();
+        let mut value: Vec<SwapLeg> = from_json(res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![

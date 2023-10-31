@@ -9,7 +9,7 @@ use platform::{message::Response as PlatformResponse, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{version, VersionSegment};
 
@@ -255,19 +255,19 @@ impl<'a> QueryWithLpn<'a> {
             QueryMsg::Quote { amount } => {
                 let quote = amount.try_into()?;
 
-                to_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
+                to_json_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
             }
             QueryMsg::Loan { lease_addr } => {
-                to_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
+                to_json_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
             }
             QueryMsg::LppBalance() => {
-                to_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
+                to_json_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
             }
             QueryMsg::Price() => {
-                to_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
+                to_json_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
             }
             QueryMsg::DepositCapacity() => {
-                to_binary(&lender::deposit_capacity::<Lpn>(self.deps, self.env)?)
+                to_json_binary(&lender::deposit_capacity::<Lpn>(self.deps, self.env)?)
             }
             _ => unreachable!("Variants should have been exhausted!"),
         }?;
@@ -299,12 +299,12 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
-        QueryMsg::Config() => to_binary(&Config::load(deps.storage)?).map_err(Into::into),
+        QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
         QueryMsg::Balance { address } => {
-            to_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
+            to_json_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
         }
         QueryMsg::Rewards { address } => {
-            to_binary(&rewards::query_rewards(deps.storage, address)?).map_err(Into::into)
+            to_json_binary(&rewards::query_rewards(deps.storage, address)?).map_err(Into::into)
         }
         _ => QueryWithLpn::cmd(deps, env, msg),
     }

@@ -30,7 +30,7 @@ mod mock_lease {
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{
-            to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult,
+            to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult,
         },
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
@@ -89,7 +89,7 @@ mod mock_lease {
                 if gate {
                     Ok(Response::new()
                         .add_attribute("lease_reply", env.block.time.to_string())
-                        .set_data(to_binary(&env.contract.address)?))
+                        .set_data(to_json_binary(&env.contract.address)?))
                 } else {
                     Err(StdError::generic_err("closed gate"))
                 }
@@ -195,14 +195,15 @@ type Lpn = StableC1;
 #[test]
 fn test_lease_serde() {
     use lease::api::ExecuteMsg::TimeAlarm as LeaseTimeAlarm;
+    use sdk::cosmwasm_std;
     use timealarms::msg::ExecuteAlarmMsg::TimeAlarm;
 
-    let LeaseTimeAlarm {} = serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&TimeAlarm {}).unwrap()).unwrap() else {
+    let LeaseTimeAlarm {} = cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&TimeAlarm {}).unwrap()).unwrap() else {
         unreachable!()
     };
 
     let TimeAlarm {} =
-        serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
+        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
 fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {

@@ -29,7 +29,6 @@ versioning = { path = "packages/versioning", default-features = false }
 
 # General
 serde = { version = "1", default-features = false }
-serde-json-wasm = { version = "0.5", default-features = false }
 thiserror = { version = "1", default-features = false }
 anyhow = "1"
 

@@ -56,7 +56,7 @@ mod tests {
 
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{from_binary, testing::mock_env, Addr, DepsMut},
+        cosmwasm_std::{from_json, testing::mock_env, Addr, DepsMut},
     };
 
     use crate::{
@@ -75,7 +75,7 @@ mod tests {
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(2, resp.len());
         assert!(resp.contains(&Addr::unchecked("addr0000")));
 
@@ -86,7 +86,7 @@ mod tests {
         register(deps.as_mut(), "addr0001").unwrap();
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(resp.contains(&Addr::unchecked("addr0000")));
         assert!(resp.contains(&Addr::unchecked("addr0001")));
@@ -103,7 +103,7 @@ mod tests {
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(5, resp.len());
         assert!(resp.contains(&Addr::unchecked("addr0000")));
         assert!(resp.contains(&Addr::unchecked("addr0001")));
@@ -111,7 +111,7 @@ mod tests {
         remove(deps.as_mut(), "addr0000");
         remove(deps.as_mut(), "addr0001");
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(!resp.contains(&Addr::unchecked("addr0000")));
         assert!(!resp.contains(&Addr::unchecked("addr0001")));
