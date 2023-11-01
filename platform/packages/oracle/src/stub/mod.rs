@@ -15,6 +15,24 @@ use crate::{
 
 use self::impl_::{CheckedConverter, OracleStub};
 
+#[cfg(feature = "unchecked-base-currency")]
+pub fn new_unchecked_base_currency_stub<'a, 'q, OracleBase, OracleBaseG>(
+    oracle: Addr,
+    querier: &'q QuerierWrapper<'q>,
+) -> impl Oracle<OracleBase> + 'a
+where
+    'q: 'a,
+    OracleBase: Currency,
+    OracleBaseG: Group + for<'de> Deserialize<'de> + 'a,
+{
+    use self::impl_::BaseCUncheckedConverter;
+
+    OracleStub::<OracleBase, OracleBaseG, BaseCUncheckedConverter>::new(
+        OracleRef::new(oracle, OracleBase::TICKER.into()),
+        querier,
+    )
+}
+
 pub trait Oracle<OracleBase>
 where
     Self: Into<OracleRef>,
@@ -79,7 +97,6 @@ impl OracleRef {
         Error: Into<V::Error>,
     {
         self.check_base::<OracleBase>();
-        validate::<OracleBase, OracleBaseG>();
         cmd.exec(OracleStub::<OracleBase, OracleBaseG, CheckedConverter>::new(self, querier))
     }
 
@@ -108,36 +125,4 @@ impl OracleRef {
             base_currency: C::TICKER.into(),
         }
     }
-}
-
-#[cfg(feature = "unchecked-base-currency")]
-pub fn execute_as_unchecked_base_currency_oracle<OracleBase, OracleBaseG, V>(
-    oracle: Addr,
-    cmd: V,
-    querier: &QuerierWrapper<'_>,
-) -> StdResult<V::Output, V::Error>
-where
-    OracleBase: Currency,
-    OracleBaseG: Group + for<'de> Deserialize<'de>,
-    V: WithOracle<OracleBase>,
-    Error: Into<V::Error>,
-{
-    use self::impl_::BaseCUncheckedConverter;
-
-    validate::<OracleBase, OracleBaseG>();
-    cmd.exec(
-        OracleStub::<OracleBase, OracleBaseG, BaseCUncheckedConverter>::new(
-            OracleRef::new(oracle, OracleBase::TICKER.into()),
-            querier,
-        ),
-    )
-}
-
-fn validate<OracleBase, OracleBaseG>()
-where
-    OracleBase: Currency,
-    OracleBaseG: Group,
-{
-    currency::validate_member::<OracleBase, OracleBaseG>()
-        .expect("execute OracleRef as Oracle with an appropriate currency and group");
 }

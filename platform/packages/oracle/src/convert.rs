@@ -4,8 +4,6 @@ use serde::Deserialize;
 
 use currency::{Currency, Group};
 use finance::{coin::Coin, price};
-#[cfg(feature = "unchecked-base-currency")]
-use sdk::cosmwasm_std::Addr;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
@@ -64,21 +62,31 @@ where
     )
 }
 
-#[cfg(feature = "unchecked-base-currency")]
-pub fn from_unchecked_base<BaseC, BaseG, OutC, OutG>(
-    oracle: Addr,
+pub fn from_base<BaseC, BaseG, OracleS, OutC, OutG>(
+    oracle: &OracleS,
     in_amount: Coin<BaseC>,
-    querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>, Error>
 where
     BaseC: Currency,
     BaseG: Group + for<'de> Deserialize<'de>,
+    OracleS: Oracle<BaseC>,
     OutC: Currency,
     OutG: Group + for<'de> Deserialize<'de>,
 {
-    use crate::stub;
+    from_base::PriceConvert::<_, _, OutG>::new(in_amount).do_convert(oracle)
+}
 
-    struct PriceConvert<BaseC, OutC, OutG>
+mod from_base {
+    use std::marker::PhantomData;
+
+    use serde::Deserialize;
+
+    use currency::{Currency, Group};
+    use finance::{coin::Coin, price};
+
+    use crate::{error::Error, Oracle};
+
+    pub(super) struct PriceConvert<BaseC, OutC, OutG>
     where
         BaseC: Currency,
         OutC: Currency,
@@ -89,33 +97,30 @@ where
         _out_group: PhantomData<OutG>,
     }
 
-    impl<BaseC, OutC, OutG> WithOracle<BaseC> for PriceConvert<BaseC, OutC, OutG>
+    impl<BaseC, OutC, OutG> PriceConvert<BaseC, OutC, OutG>
     where
         BaseC: Currency,
         OutC: Currency,
-        OutG: Group + for<'de> Deserialize<'de>,
+        OutG: Group + for<'a> Deserialize<'a>,
     {
-        type Output = Coin<OutC>;
-        type Error = Error;
+        pub(super) fn new(in_amount: Coin<BaseC>) -> Self {
+            Self {
+                in_amount,
+                _out: PhantomData,
+                _out_group: PhantomData,
+            }
+        }
 
-        fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output, Self::Error>
+        pub(super) fn do_convert<OracleImpl>(
+            &self,
+            oracle: &OracleImpl,
+        ) -> Result<Coin<OutC>, Error>
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(
-                self.in_amount,
-                oracle.price_of::<OutC, OutG>()?.inv(),
-            ))
+            oracle
+                .price_of::<OutC, OutG>()
+                .map(|price| price::total(self.in_amount, price.inv()))
         }
     }
-
-    stub::execute_as_unchecked_base_currency_oracle::<BaseC, BaseG, _>(
-        oracle,
-        PriceConvert {
-            in_amount,
-            _out: PhantomData::<OutC>,
-            _out_group: PhantomData::<OutG>,
-        },
-        querier,
-    )
 }

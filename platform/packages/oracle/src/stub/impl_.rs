@@ -64,8 +64,14 @@ pub struct OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT> {
 
 impl<'a, OracleBase, OracleBaseG, PriceConverterT>
     OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>
+where
+    OracleBase: Currency,
+    OracleBaseG: Group,
 {
     pub fn new(oracle_ref: OracleRef, querier: &'a QuerierWrapper<'a>) -> Self {
+        currency::validate_member::<OracleBase, OracleBaseG>()
+            .expect("create OracleStub with an appropriate currency and a group");
+
         Self {
             oracle_ref,
             querier,
@@ -100,7 +106,7 @@ where
             currency: C::TICKER.to_string(),
         };
         self.querier
-            .query_wasm_smart(self.addr().clone(), &msg)
+            .query_wasm_smart(self.addr(), &msg)
             .map_err(|error| Error::FailedToFetchPrice {
                 from: C::TICKER.into(),
                 to: OracleBase::TICKER.into(),
