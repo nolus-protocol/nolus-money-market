@@ -47,18 +47,18 @@ where
         self.liability
     }
 
-    pub fn check_trasaction_amount<Trasactional>(
+    pub fn check_trasaction_amount<Trasaction>(
         &self,
-        amount: Coin<Trasactional>,
-        trasactional_in_lpn: Price<Trasactional, Lpn>,
+        amount: Coin<Trasaction>,
+        trasaction_in_lpn: Price<Trasaction, Lpn>,
     ) -> ContractResult<()>
     where
-        Trasactional: Currency,
+        Trasaction: Currency,
     {
-        let amount = price::total(amount, trasactional_in_lpn);
+        let amount = price::total(amount, trasaction_in_lpn);
 
         if amount < self.min_trasaction_amount {
-            Err(ContractError::PositionCloseAmountTooSmall(
+            Err(ContractError::InsufficientTrasactionAmount(
                 self.min_trasaction_amount.into(),
             ))
         } else {
@@ -66,20 +66,18 @@ where
         }
     }
 
-    pub fn check_asset_amount<Trasactional>(
+    pub fn check_asset_amount<Trasaction>(
         &self,
-        asset_amount: Coin<Trasactional>,
-        close_amount: Coin<Trasactional>,
-        trasactional_in_lpn: Price<Trasactional, Lpn>,
+        asset_amount: Coin<Trasaction>,
+        trasaction_in_lpn: Price<Trasaction, Lpn>,
     ) -> ContractResult<()>
     where
-        Trasactional: Currency,
+        Trasaction: Currency,
     {
-        let asset_amount = price::total(asset_amount, trasactional_in_lpn);
-        let close_amount = price::total(close_amount, trasactional_in_lpn);
+        let asset_amount = price::total(asset_amount, trasaction_in_lpn);
 
-        if asset_amount.saturating_sub(close_amount) < self.min_asset {
-            Err(ContractError::PositionCloseAmountTooBig(
+        if asset_amount < self.min_asset {
+            Err(ContractError::InsufficientAssetAmount(
                 self.min_asset.into(),
             ))
         } else {

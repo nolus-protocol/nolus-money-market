@@ -107,13 +107,25 @@ where
         close_amount: Coin<Asset>,
         lpn_in_assets: Price<Lpn, Asset>,
     ) -> ContractResult<()> {
-        let trasactional_in_lpn = lpn_in_assets.inv();
+        let trasaction_in_lpn = lpn_in_assets.inv();
 
         self.spec
-            .check_trasaction_amount(close_amount, trasactional_in_lpn)
+            .check_trasaction_amount(close_amount, trasaction_in_lpn)
+            .map_err(|err| match err {
+                ContractError::InsufficientTrasactionAmount(min_trasaction_amount) => {
+                    ContractError::PositionCloseAmountTooSmall(min_trasaction_amount)
+                }
+                _ => err,
+            })
             .and_then(|_| {
                 self.spec
-                    .check_asset_amount(self.amount, close_amount, trasactional_in_lpn)
+                    .check_asset_amount(self.amount.saturating_sub(close_amount), trasaction_in_lpn)
+            })
+            .map_err(|err| match err {
+                ContractError::InsufficientAssetAmount(min_asset) => {
+                    ContractError::PositionCloseAmountTooBig(min_asset)
+                }
+                _ => err,
             })
     }
 
