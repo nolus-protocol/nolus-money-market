@@ -16,8 +16,6 @@ where
     Asset: Currency,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        let lpn_in_assets = self.price_of_lease_currency()?.inv();
-
         let LiabilityStatus {
             total: total_due,
             previous_interest,
@@ -29,16 +27,15 @@ where
             Coin::ZERO
         };
 
-        let status = self
-            .position
-            .check_liability(total_due, overdue, lpn_in_assets);
-        //TODO rename to #[cfg(debug_assertions)]
-        #[cfg(debug_assertion)]
-        debug_assert!(status.amount() <= self.amount());
-        Ok(status)
+        self.price_of_lease_currency().map(|assert_in_lpn| {
+            self.position
+                .check_liability(total_due, overdue, assert_in_lpn.inv())
+        })
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        Ok(self.oracle.price_of::<Asset, LeaseGroup>()?)
+        self.oracle
+            .price_of::<Asset, LeaseGroup>()
+            .map_err(Into::into)
     }
 }

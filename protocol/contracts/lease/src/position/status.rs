@@ -24,15 +24,10 @@ impl<Asset> Liquidation<Asset>
 where
     Asset: Currency,
 {
-    //TODO rename to #[cfg(debug_assertions)]
-    #[cfg(debug_assertion)]
-    pub(crate) fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
-        &self,
-        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-    ) -> Coin<Asset> {
-        match self {
-            Self::Partial { amount, cause: _ } => *amount,
-            Self::Full(_) => lease.amount,
+    #[cfg(debug_assertions)]
+    fn check_amount(&self, lease_position: &Coin<Asset>) {
+        if let Self::Partial { amount, cause: _ } = self {
+            debug_assert!(amount <= lease_position);
         }
     }
 }
@@ -63,16 +58,12 @@ where
         Self::Liquidation(Liquidation::Full(cause))
     }
 
-    //TODO rename to #[cfg(debug_assertions)]
-    #[cfg(debug_assertion)]
-    fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
-        &self,
-        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-    ) -> Coin<Asset> {
+    #[cfg(debug_assertions)]
+    pub(super) fn check_amount(&self, lease_position: &Coin<Asset>) {
         match self {
-            Self::NoDebt => Default::default(),
-            Self::No(_) => Default::default(),
-            Self::Liquidation(liq) => liq.amount(lease),
+            Self::NoDebt => {}
+            Self::No(_) => {}
+            Self::Liquidation(liq) => liq.check_amount(lease_position),
         }
     }
 }
