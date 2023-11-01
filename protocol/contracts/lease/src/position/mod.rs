@@ -102,8 +102,7 @@ where
         debug_assert!(overdue <= total_due);
 
         let ltv = Percent::from_ratio(total_due, self.amount);
-        let status = self
-            .may_ask_liquidation_liability(total_due, lpn_in_assets)
+        self.may_ask_liquidation_liability(total_due, lpn_in_assets)
             .max(self.may_ask_liquidation_overdue(overdue, lpn_in_assets))
             .map(Status::Liquidation)
             .unwrap_or_else(|| {
@@ -112,10 +111,7 @@ where
                     total_due,
                     ltv.min(self.liability.third_liq_warn()),
                 )
-            });
-        #[cfg(debug_assertions)]
-        status.check_amount(&self.amount);
-        status
+            })
     }
 
     /// Check if the amount can be used to close the position.

@@ -20,18 +20,6 @@ where
     Full(Cause),
 }
 
-impl<Asset> Liquidation<Asset>
-where
-    Asset: Currency,
-{
-    #[cfg(debug_assertions)]
-    fn check_amount(&self, lease_position: &Coin<Asset>) {
-        if let Self::Partial { amount, cause: _ } = self {
-            debug_assert!(amount <= lease_position);
-        }
-    }
-}
-
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(test, derive(Debug))]
 pub enum Status<Asset>
@@ -56,15 +44,6 @@ where
     #[cfg(test)]
     pub(crate) fn full(cause: Cause) -> Self {
         Self::Liquidation(Liquidation::Full(cause))
-    }
-
-    #[cfg(debug_assertions)]
-    pub(super) fn check_amount(&self, lease_position: &Coin<Asset>) {
-        match self {
-            Self::NoDebt => {}
-            Self::No(_) => {}
-            Self::Liquidation(liq) => liq.check_amount(lease_position),
-        }
     }
 }
 
