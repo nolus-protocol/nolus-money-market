@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, SymbolOwned};
+use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
@@ -8,7 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{error::ContractError, error::ContractResult, position::Spec as PositionSpec};
+use crate::{error::ContractError, error::ContractResult};
 
 use super::LpnCoin;
 
@@ -171,21 +171,6 @@ impl PositionSpecDTO {
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
-    }
-}
-
-impl<Lpn> TryFrom<PositionSpecDTO> for PositionSpec<Lpn>
-where
-    Lpn: Currency,
-{
-    type Error = ContractError;
-
-    fn try_from(dto: PositionSpecDTO) -> ContractResult<Self> {
-        Ok(Self::new(
-            dto.liability,
-            dto.min_asset.try_into()?,
-            dto.min_sell_asset.try_into()?,
-        ))
     }
 }
 
