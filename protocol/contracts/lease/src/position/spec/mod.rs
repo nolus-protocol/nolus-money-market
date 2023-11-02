@@ -1,13 +1,16 @@
-mod dto;
+use std::ops::Add;
 
 use currency::Currency;
 use finance::{
     coin::Coin,
     liability::Liability,
+    percent::Percent,
     price::{self, Price},
 };
 
 use crate::error::{ContractError, ContractResult};
+
+mod dto;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Spec<Lpn> {
@@ -74,6 +77,38 @@ where
         } else {
             Ok(())
         }
+    }
+
+    /// Calculate the borrow amount.
+    /// Return 'error::ContractError::InsufficientTrasactionAmount' when either the downpayment
+    /// or the borrow amount is with amount less than the minimum trasaction amount.
+    /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
+    /// is with amount less than the minimum asset amount.
+    pub fn calc_borrow_amount(
+        &self,
+        downpayment: Coin<Lpn>,
+        may_max_ltd: Option<Percent>,
+    ) -> ContractResult<Coin<Lpn>> {
+        let price: Price<Lpn, Lpn> = price::total_of(1.into()).is(1.into());
+
+        let _ = self
+            .check_trasaction_amount(downpayment, price)
+            .map_err(|err| match err {
+                ContractError::PositionCloseAmountTooSmall(min_amount) => {
+                    ContractError::InsufficientTrasactionAmount(min_amount)
+                }
+                _ => err,
+            });
+        let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
+        self.check_trasaction_amount(borrow, price)
+            .map_err(|err| match err {
+                ContractError::PositionCloseAmountTooSmall(min_amount) => {
+                    ContractError::InsufficientTrasactionAmount(min_amount)
+                }
+                _ => err,
+            })
+            .and_then(|_| self.check_asset_amount(downpayment.add(borrow), price))
+            .map(|_| borrow)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

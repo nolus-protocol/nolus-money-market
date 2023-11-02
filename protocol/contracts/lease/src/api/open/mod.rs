@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, SymbolOwned};
+use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
@@ -8,7 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{error::ContractError, error::ContractResult, position::Spec as PositionSpec};
+use crate::{error::ContractError, error::ContractResult};
 
 use super::LpnCoin;
 
@@ -124,11 +124,11 @@ pub struct PositionSpecDTO {
     pub liability: Liability,
     ///  The minimum amount that a lease asset should be evaluated past any
     ///  partial liquidation or close. If not, a full liquidation is performed
-    min_asset: LpnCoin,
+    pub min_asset: LpnCoin,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
     //TODO: rename it to 'min_trasaction_amount' in the next migration
-    min_sell_asset: LpnCoin,
+    pub min_sell_asset: LpnCoin,
 }
 
 impl PositionSpecDTO {
@@ -171,21 +171,6 @@ impl PositionSpecDTO {
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
-    }
-}
-
-impl<Lpn> TryFrom<PositionSpecDTO> for PositionSpec<Lpn>
-where
-    Lpn: Currency,
-{
-    type Error = ContractError;
-
-    fn try_from(dto: PositionSpecDTO) -> ContractResult<Self> {
-        Ok(Self::new(
-            dto.liability,
-            dto.min_asset.try_into()?,
-            dto.min_sell_asset.try_into()?,
-        ))
     }
 }
 
