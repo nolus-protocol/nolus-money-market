@@ -20,7 +20,7 @@ impl<Lpn> Spec<Lpn>
 where
     Lpn: Currency,
 {
-    fn new_internal(
+    pub fn new(
         liability: Liability,
         min_asset: Coin<Lpn>,
         min_trasaction_amount: Coin<Lpn>,
@@ -32,14 +32,6 @@ where
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
-    }
-
-    pub fn new(
-        liability: Liability,
-        min_asset: Coin<Lpn>,
-        min_trasaction_amount: Coin<Lpn>,
-    ) -> Self {
-        Self::new_internal(liability, min_asset, min_trasaction_amount)
     }
 
     pub fn liability(&self) -> Liability {
