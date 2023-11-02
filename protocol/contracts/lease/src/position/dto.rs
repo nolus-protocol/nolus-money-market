@@ -40,21 +40,6 @@ where
     }
 }
 
-impl<Lpn> TryFrom<PositionSpecDTO> for Spec<Lpn>
-where
-    Lpn: Currency,
-{
-    type Error = ContractError;
-
-    fn try_from(dto: PositionSpecDTO) -> ContractResult<Self> {
-        Ok(Self::new(
-            dto.liability,
-            dto.min_asset.try_into()?,
-            dto.min_sell_asset.try_into()?,
-        ))
-    }
-}
-
 impl<Asset, Lpn> From<Position<Asset, Lpn>> for PositionDTO
 where
     Asset: Currency,
