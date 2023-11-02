@@ -13,7 +13,7 @@ use crate::{
         IntoDTOResult, Lease,
     },
     loan::Loan,
-    position::Position,
+    position::{Position, Spec as PositionSpec},
 };
 
 use super::{liquidation_status, LiquidationStatus};
@@ -70,22 +70,23 @@ impl WithLeaseDeps for LeaseFactory {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        let position = Position::try_from(self.amount, self.form.position_spec)?;
-
-        let loan = Loan::new(
-            self.start_at,
-            lpp_loan,
-            self.form.loan.annual_margin_interest,
-            self.form.loan.interest_payment,
-        );
-
-        let lease = Lease::<_, Asset, _, _>::new(
-            self.lease_addr,
-            self.form.customer,
-            position,
-            loan,
-            oracle,
-        );
+        let lease = PositionSpec::<Lpn>::try_from(self.form.position_spec)
+            .and_then(|spec| Position::<Asset, Lpn>::try_from(self.amount, spec))
+            .map(|position| {
+                let loan = Loan::new(
+                    self.start_at,
+                    lpp_loan,
+                    self.form.loan.annual_margin_interest,
+                    self.form.loan.interest_payment,
+                );
+                Lease::<_, Asset, _, _>::new(
+                    self.lease_addr,
+                    self.form.customer,
+                    position,
+                    loan,
+                    oracle,
+                )
+            })?;
 
         let alarms = match liquidation_status::status_and_schedule(
             &lease,
