@@ -91,22 +91,10 @@ where
     ) -> ContractResult<Coin<Lpn>> {
         let amount_in_lpn: Price<Lpn, Lpn> = Price::identity();
 
-        let _ = self
-            .check_trasaction_amount(downpayment, amount_in_lpn)
-            .map_err(|err| match err {
-                ContractError::PositionCloseAmountTooSmall(min_amount) => {
-                    ContractError::InsufficientTrasactionAmount(min_amount)
-                }
-                _ => err,
-            });
+        self.check_trasaction_amount(downpayment, amount_in_lpn)?;
+
         let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
         self.check_trasaction_amount(borrow, amount_in_lpn)
-            .map_err(|err| match err {
-                ContractError::PositionCloseAmountTooSmall(min_amount) => {
-                    ContractError::InsufficientTrasactionAmount(min_amount)
-                }
-                _ => err,
-            })
             .and_then(|_| self.check_asset_amount(downpayment.add(borrow), amount_in_lpn))
             .map(|_| borrow)
     }
@@ -124,5 +112,87 @@ where
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
+    }
+}
+
+#[cfg(test)]
+mod test_calc_borrow {
+    use currency::dex::test::StableC1;
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+
+    use crate::error::ContractError;
+
+    use super::Spec;
+
+    type TestLpn = StableC1;
+
+    #[test]
+    fn downpayment_less_than_min() {
+        let spec = spec(1_000, 100);
+        let borrow = spec.calc_borrow_amount(99.into(), None);
+
+        assert!(matches!(
+            borrow,
+            Err(ContractError::InsufficientTrasactionAmount(_))
+        ));
+    }
+
+    #[test]
+    fn borrow_less_than_min() {
+        let spec = spec(1_000, 100);
+        let borrow = spec.calc_borrow_amount(100.into(), Some(Percent::from_percent(43)));
+
+        assert!(matches!(
+            borrow,
+            Err(ContractError::InsufficientTrasactionAmount(_))
+        ));
+    }
+
+    #[test]
+    fn lease_less_than_min() {
+        let spec = spec(1_000, 200);
+        let borrow_1 = spec.calc_borrow_amount(250.into(), None);
+        assert!(matches!(
+            borrow_1,
+            Err(ContractError::InsufficientAssetAmount(_))
+        ));
+
+        let borrow_2 = spec.calc_borrow_amount(550.into(), Some(Percent::from_percent(81)));
+        assert!(matches!(
+            borrow_2,
+            Err(ContractError::InsufficientAssetAmount(_))
+        ));
+    }
+
+    #[test]
+    fn valid_borrow_amount() {
+        let spec = spec(1_000, 300);
+        let borrow_1 = spec.calc_borrow_amount(540.into(), None);
+        assert_eq!(Coin::<TestLpn>::new(1002), borrow_1.unwrap());
+
+        let borrow_2 = spec.calc_borrow_amount(550.into(), Some(Percent::from_percent(82)));
+        assert_eq!(Coin::<TestLpn>::new(451), borrow_2.unwrap());
+
+        let borrow_3 = spec.calc_borrow_amount(870.into(), Some(Percent::from_percent(100)));
+        assert_eq!(Coin::<TestLpn>::new(870), borrow_3.unwrap());
+
+        let borrow_4 = spec.calc_borrow_amount(650.into(), Some(Percent::from_percent(150)));
+        assert_eq!(Coin::<TestLpn>::new(975), borrow_4.unwrap());
+    }
+
+    fn spec<Lpn>(min_asset: Lpn, min_trasaction_amount: Lpn) -> Spec<TestLpn>
+    where
+        Lpn: Into<Coin<TestLpn>>,
+    {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        Spec::new(liability, min_asset.into(), min_trasaction_amount.into())
     }
 }
