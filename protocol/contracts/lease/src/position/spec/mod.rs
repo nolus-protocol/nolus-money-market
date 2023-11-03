@@ -89,10 +89,10 @@ where
         downpayment: Coin<Lpn>,
         may_max_ltd: Option<Percent>,
     ) -> ContractResult<Coin<Lpn>> {
-        let price: Price<Lpn, Lpn> = price::total_of(1.into()).is(1.into());
+        let amount_in_lpn: Price<Lpn, Lpn> = Price::identity();
 
         let _ = self
-            .check_trasaction_amount(downpayment, price)
+            .check_trasaction_amount(downpayment, amount_in_lpn)
             .map_err(|err| match err {
                 ContractError::PositionCloseAmountTooSmall(min_amount) => {
                     ContractError::InsufficientTrasactionAmount(min_amount)
@@ -100,14 +100,14 @@ where
                 _ => err,
             });
         let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
-        self.check_trasaction_amount(borrow, price)
+        self.check_trasaction_amount(borrow, amount_in_lpn)
             .map_err(|err| match err {
                 ContractError::PositionCloseAmountTooSmall(min_amount) => {
                     ContractError::InsufficientTrasactionAmount(min_amount)
                 }
                 _ => err,
             })
-            .and_then(|_| self.check_asset_amount(downpayment.add(borrow), price))
+            .and_then(|_| self.check_asset_amount(downpayment.add(borrow), amount_in_lpn))
             .map(|_| borrow)
     }
 
