@@ -2,7 +2,7 @@ use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::Storage;
 
 use crate::{
-    common::{maybe_migrate_contract, type_defs::Contracts, CheckedAddr},
+    common::{maybe_migrate_contract, type_defs::ContractsGroupedByDex, CheckedAddr},
     msg::MigrateContracts,
     result::Result,
     state::{contracts as state_contracts, migration_release},
@@ -20,7 +20,7 @@ pub(super) fn migrate(
 ) -> Result<MessageResponse> {
     migration_release::store(storage, release)?;
 
-    let contracts_addrs: Contracts = state_contracts::load(storage)?;
+    let contracts_addrs: ContractsGroupedByDex = state_contracts::load(storage)?;
 
     let mut batch: Batch = Batch::default();
 

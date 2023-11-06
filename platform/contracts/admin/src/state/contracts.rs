@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{
-        type_defs::{Contracts, ProtocolContracts},
-        Platform, Protocol, StoredAddr, Transform as _,
+        type_defs::ContractsGroupedByDex, CheckedAddr, ContractsTemplate, Platform, Protocol,
+        StoredAddr, Transform as _,
     },
     result::Result as ContractResult,
     ContractError,
@@ -19,23 +19,28 @@ use crate::{
 const PLATFORM: Item<'_, Platform<StoredAddr>> = Item::new("platform_contracts");
 const PROTOCOL: Map<'_, String, Protocol<StoredAddr>> = Map::new("protocol_contracts");
 
-pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> ContractResult<()> {
+pub(crate) fn store(
+    storage: &mut dyn Storage,
+    contracts: ContractsGroupedByDex,
+) -> ContractResult<()> {
     PLATFORM
         .save(storage, &safe_unwrap(contracts.platform.transform(&())))
+        .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
-                |(dex, protocol): (String, ProtocolContracts)| {
-                    PROTOCOL.save(storage, dex, &safe_unwrap(protocol.transform(&())))
+                |(dex, protocol): (String, Protocol<CheckedAddr>)| {
+                    PROTOCOL
+                        .save(storage, dex, &safe_unwrap(protocol.transform(&())))
+                        .map_err(Into::into)
                 },
             )
         })
-        .map_err(Into::into)
 }
 
 pub(crate) fn add_dex_bound_set(
     storage: &mut dyn Storage,
     dex: String,
-    contracts: ProtocolContracts,
+    contracts: Protocol<CheckedAddr>,
 ) -> ContractResult<()> {
     if PROTOCOL.has(storage, dex.clone()) {
         Err(ContractError::DexSetAlreadyExists(dex))
@@ -46,7 +51,7 @@ pub(crate) fn add_dex_bound_set(
     }
 }
 
-pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Contracts> {
+pub(crate) fn load(storage: &dyn Storage) -> ContractResult<ContractsGroupedByDex> {
     PLATFORM
         .load(storage)
         .and_then(|platform: Platform<StoredAddr>| {
@@ -58,10 +63,12 @@ pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Contracts> {
                     })
                 })
                 .collect::<Result<_, _>>()
-                .map(|protocol: BTreeMap<String, ProtocolContracts>| Contracts {
-                    platform: safe_unwrap(platform.transform(&())),
-                    protocol,
-                })
+                .map(
+                    |protocol: BTreeMap<String, Protocol<CheckedAddr>>| ContractsTemplate {
+                        platform: safe_unwrap(platform.transform(&())),
+                        protocol,
+                    },
+                )
         })
         .map_err(Into::into)
 }
@@ -81,43 +88,42 @@ pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> ContractResult<
 
     const CONTRACTS: Item<'_, OldContracts> = Item::new("contracts");
 
-    CONTRACTS.load(storage).map_err(Into::into).and_then(
-        |OldContracts {
-             dispatcher,
-             leaser,
-             lpp,
-             oracle,
-             profit,
-             timealarms,
-             treasury,
-         }: OldContracts| {
-            CONTRACTS.remove(storage);
+    CONTRACTS
+        .load(storage)
+        .and_then(
+            |OldContracts {
+                 dispatcher,
+                 leaser,
+                 lpp,
+                 oracle,
+                 profit,
+                 timealarms,
+                 treasury,
+             }: OldContracts| {
+                CONTRACTS.remove(storage);
 
-            store(
-                storage,
-                Contracts {
-                    platform: safe_unwrap(
-                        Platform {
+                PLATFORM
+                    .save(
+                        storage,
+                        &Platform {
                             dispatcher,
                             timealarms,
                             treasury,
-                        }
-                        .transform(&()),
-                    ),
-                    protocol: BTreeMap::from([(
-                        dex,
-                        safe_unwrap(
-                            Protocol {
+                        },
+                    )
+                    .and_then(|()| {
+                        PROTOCOL.save(
+                            storage,
+                            dex,
+                            &Protocol {
                                 leaser,
                                 lpp,
                                 oracle,
                                 profit,
-                            }
-                            .transform(&()),
-                        ),
-                    )]),
-                },
-            )
-        },
-    )
+                            },
+                        )
+                    })
+            },
+        )
+        .map_err(Into::into)
 }

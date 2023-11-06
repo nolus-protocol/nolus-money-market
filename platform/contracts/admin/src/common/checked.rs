@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use platform::never::Never;
-use sdk::cosmwasm_std::{Addr as UncheckedAddr, QuerierWrapper};
+pub(crate) use sdk::cosmwasm_std::Addr as UncheckedAddr;
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::error::Error;
 

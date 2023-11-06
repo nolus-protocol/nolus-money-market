@@ -9,19 +9,20 @@ use sdk::{
 };
 
 use crate::{
-    common::type_defs::{
-        Contracts, ContractsMigration, ContractsPostMigrationExecute, MaybeMigrateContract,
-    },
+    common::type_defs::{ContractsMigration, ContractsPostMigrationExecute, MaybeMigrateContract},
     ContractError, ContractResult,
 };
 
-use self::type_defs::{
-    PlatformContracts, PlatformContractsMigration, PlatformContractsPostMigrationExecute,
-    ProtocolContracts, ProtocolContractsMigration, ProtocolContractsPostMigrationExecute,
-};
 pub(crate) use self::{
     checked::{Addr as CheckedAddr, StoredAddr},
     transform::Transform,
+};
+use self::{
+    transform::TransformByValue,
+    type_defs::{
+        ContractsGroupedByDex, PlatformContracts, PlatformContractsMigration,
+        PlatformContractsPostMigrationExecute,
+    },
 };
 
 mod checked;
@@ -33,26 +34,6 @@ pub(crate) mod type_defs;
 pub struct MigrationSpec<M> {
     pub code_id: CodeId,
     pub migrate_msg: M,
-}
-
-impl<M> Transform for MigrationSpec<M>
-where
-    M: Transform,
-{
-    type Context<'r> = M::Context<'r>;
-
-    type Output = MigrationSpec<M::Output>;
-
-    type Error = M::Error;
-
-    fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
-        self.migrate_msg
-            .transform(ctx)
-            .map(|migrate_msg: M::Output| MigrationSpec {
-                code_id: self.code_id,
-                migrate_msg,
-            })
-    }
 }
 
 pub(crate) fn maybe_migrate_contract(
@@ -88,38 +69,30 @@ pub(crate) fn maybe_execute_contract(
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ContractsTemplate<T> {
+pub struct ContractsTemplate<T, U = Protocol<BTreeMap<String, T>>> {
     pub platform: Platform<T>,
-    pub protocol: BTreeMap<String, Protocol<T>>,
+    pub protocol: U,
 }
 
-impl<T> Transform for ContractsTemplate<T>
+impl<T> Transform for ContractsTemplate<T, BTreeMap<String, Protocol<T>>>
 where
     T: Transform,
 {
     type Context<'r> = T::Context<'r>;
 
-    type Output = ContractsTemplate<T::Output>;
+    type Output = ContractsTemplate<T::Output, BTreeMap<String, Protocol<T::Output>>>;
 
     type Error = T::Error;
 
     fn transform(self, ctx: &Self::Context<'_>) -> Result<Self::Output, Self::Error> {
         Ok(Self::Output {
             platform: self.platform.transform(ctx)?,
-            protocol: self
-                .protocol
-                .into_iter()
-                .map(|(key, value): (String, Protocol<T>)| {
-                    value
-                        .transform(ctx)
-                        .map(|value: Protocol<T::Output>| (key, value))
-                })
-                .collect::<Result<_, _>>()?,
+            protocol: TransformByValue::new(self.protocol).transform(ctx)?,
         })
     }
 }
 
-impl Contracts {
+impl ContractsGroupedByDex {
     pub(crate) fn migrate(self, mut migration_msgs: ContractsMigration) -> ContractResult<Batch> {
         let mut batch: Batch = Batch::default();
 
@@ -127,22 +100,15 @@ impl Contracts {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol): (String, ProtocolContracts)| {
-                migration_msgs
-                    .protocol
-                    .remove(&dex)
-                    .map(|migration_msgs: Protocol<MaybeMigrateContract>| {
+            .try_for_each(|(dex, protocol): (String, Protocol<CheckedAddr>)| {
+                migration_msgs.protocol.extract_entry(dex).map(
+                    |migration_msgs: Protocol<MaybeMigrateContract>| {
                         protocol.migrate(&mut batch, migration_msgs)
-                    })
-                    .ok_or(ContractError::MissingDex(dex))
+                    },
+                )
             })
-            .and_then(|()| {
-                if let Some((dex, _)) = migration_msgs.protocol.pop_first() {
-                    Err(ContractError::UnknownDex(dex))
-                } else {
-                    Ok(batch)
-                }
-            })
+            .and_then(|()| migration_msgs.protocol.ensure_empty())
+            .map(|()| batch)
     }
 
     pub(crate) fn post_migration_execute(
@@ -156,22 +122,15 @@ impl Contracts {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol): (String, ProtocolContracts)| {
-                execution_msgs
-                    .protocol
-                    .remove(&dex)
-                    .map(|execution_msgs: Protocol<Option<String>>| {
+            .try_for_each(|(dex, protocol): (String, Protocol<CheckedAddr>)| {
+                execution_msgs.protocol.extract_entry(dex).map(
+                    |execution_msgs: Protocol<Option<String>>| {
                         protocol.post_migration_execute(&mut batch, execution_msgs)
-                    })
-                    .ok_or(ContractError::MissingDex(dex))
+                    },
+                )
             })
-            .and_then(|()| {
-                if let Some((dex, _)) = execution_msgs.protocol.pop_first() {
-                    Err(ContractError::UnknownDex(dex))
-                } else {
-                    Ok(batch)
-                }
-            })
+            .and_then(|()| execution_msgs.protocol.ensure_empty())
+            .map(|()| batch)
     }
 }
 
@@ -229,6 +188,65 @@ pub struct Protocol<T> {
     pub profit: T,
 }
 
+impl Protocol<CheckedAddr> {
+    fn migrate(self, batch: &mut Batch, migration_msgs: Protocol<MaybeMigrateContract>) {
+        maybe_migrate_contract(batch, self.leaser, migration_msgs.leaser);
+
+        maybe_migrate_contract(batch, self.lpp, migration_msgs.lpp);
+
+        maybe_migrate_contract(batch, self.oracle, migration_msgs.oracle);
+
+        maybe_migrate_contract(batch, self.profit, migration_msgs.profit);
+    }
+
+    fn post_migration_execute(self, batch: &mut Batch, migration_msgs: Protocol<Option<String>>) {
+        maybe_execute_contract(batch, self.leaser, migration_msgs.leaser);
+
+        maybe_execute_contract(batch, self.lpp, migration_msgs.lpp);
+
+        maybe_execute_contract(batch, self.oracle, migration_msgs.oracle);
+
+        maybe_execute_contract(batch, self.profit, migration_msgs.profit);
+    }
+}
+
+impl<T> Protocol<BTreeMap<String, T>> {
+    fn extract_entry(&mut self, dex: String) -> ContractResult<Protocol<T>> {
+        if let Some((leaser, lpp, oracle, profit)) =
+            self.leaser.remove(&dex).and_then(|leaser: T| {
+                self.lpp.remove(&dex).and_then(|lpp: T| {
+                    self.oracle.remove(&dex).and_then(|oracle: T| {
+                        self.profit
+                            .remove(&dex)
+                            .map(|profit: T| (leaser, lpp, oracle, profit))
+                    })
+                })
+            })
+        {
+            Ok(Protocol {
+                leaser,
+                lpp,
+                oracle,
+                profit,
+            })
+        } else {
+            Err(ContractError::MissingDex(dex))
+        }
+    }
+
+    fn ensure_empty(self) -> ContractResult<()> {
+        [self.leaser, self.lpp, self.oracle, self.profit]
+            .into_iter()
+            .try_for_each(|mut map: BTreeMap<String, T>| {
+                if let Some((dex, _)) = map.pop_last() {
+                    Err(ContractError::MissingDex(dex))
+                } else {
+                    Ok(())
+                }
+            })
+    }
+}
+
 impl<T> Transform for Protocol<T>
 where
     T: Transform,
@@ -246,25 +264,5 @@ where
             oracle: self.oracle.transform(ctx)?,
             profit: self.profit.transform(ctx)?,
         })
-    }
-}
-
-impl ProtocolContracts {
-    fn migrate(self, batch: &mut Batch, migration_msgs: ProtocolContractsMigration) {
-        maybe_migrate_contract(batch, self.leaser, migration_msgs.leaser);
-        maybe_migrate_contract(batch, self.lpp, migration_msgs.lpp);
-        maybe_migrate_contract(batch, self.oracle, migration_msgs.oracle);
-        maybe_migrate_contract(batch, self.profit, migration_msgs.profit);
-    }
-
-    fn post_migration_execute(
-        self,
-        batch: &mut Batch,
-        execution_msgs: ProtocolContractsPostMigrationExecute,
-    ) {
-        maybe_execute_contract(batch, self.leaser, execution_msgs.leaser);
-        maybe_execute_contract(batch, self.lpp, execution_msgs.lpp);
-        maybe_execute_contract(batch, self.oracle, execution_msgs.oracle);
-        maybe_execute_contract(batch, self.profit, execution_msgs.profit);
     }
 }

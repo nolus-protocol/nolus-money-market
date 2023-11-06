@@ -8,7 +8,7 @@ use sdk::{
 use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use self::{
-    common::{type_defs::ProtocolContracts, CheckedAddr, Transform as _},
+    common::{type_defs::ContractsGroupedByDex, CheckedAddr, Protocol, Transform as _},
     error::Error as ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
     result::Result as ContractResult,
@@ -37,9 +37,11 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    contracts.transform(&deps.querier).and_then(|contracts| {
-        state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
-    })
+    contracts
+        .transform(&deps.querier)
+        .and_then(|contracts: ContractsGroupedByDex| {
+            state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
+        })
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -62,7 +64,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
     match msg {
         SudoMsg::AddProtocolSet { dex, contracts } => contracts
             .transform(&deps.querier)
-            .and_then(|contracts: ProtocolContracts| {
+            .and_then(|contracts: Protocol<CheckedAddr>| {
                 state_contracts::add_dex_bound_set(deps.storage, dex, contracts)
             })
             .map(|()| response::empty_response()),
