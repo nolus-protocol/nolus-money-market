@@ -332,6 +332,24 @@ define_symbol! {
 }
 define_currency!(Mars, MARS);
 
+define_symbol! {
+    TIA {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-???/utia
+            bank: "ibc/NA_TIA",
+            /// full ibc route: transfer/channel-???/utia
+            dex: "ibc/NA_TIA_DEX",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-6994/utia
+            bank: "ibc/6C349F0EB135C5FA99301758F35B87DB88403D690E5E314AB080401FEE4066E5",
+            /// full ibc route: transfer/channel-6994/utia
+            dex: "ibc/D79E7D83AB399BFFF93433E54FAA480C191248FC556924A2A8351AE2638B3877",
+        },
+    }
+}
+define_currency!(Tia, TIA);
+
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
     symbol: &SymbolSlice,
@@ -360,6 +378,7 @@ where
         .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Evmos, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Tia, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -376,7 +395,7 @@ mod test {
         Currency,
     };
 
-    use super::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth};
+    use super::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth, Tia};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -386,6 +405,7 @@ mod test {
         maybe_visit_on_ticker_impl::<StOsmo, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
         maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
@@ -401,6 +421,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<StOsmo, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
