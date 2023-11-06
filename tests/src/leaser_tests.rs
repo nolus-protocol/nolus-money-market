@@ -236,7 +236,7 @@ fn test_quote() {
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
-        &mut test_case.app,
+        &test_case.app,
         leaser,
         downpayment,
         None,
@@ -257,7 +257,7 @@ fn test_quote() {
 
     let leaser = test_case.address_book.leaser().clone();
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
-        &mut test_case.app,
+        &test_case.app,
         leaser,
         Coin::new(15),
         None,
@@ -341,7 +341,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     oracle_mod::feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
 
     let resp = leaser_mod::query_quote::<Osmo, LeaseCurrency>(
-        &mut test_case.app,
+        &test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
         None,
@@ -413,7 +413,7 @@ fn test_quote_fixed_rate() {
         Coin::<Lpn>::new(1),
     );
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
-        &mut test_case.app,
+        &test_case.app,
         test_case.address_book.leaser().clone(),
         Coin::<Downpayment>::new(100),
         None,
@@ -568,7 +568,7 @@ where
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
     let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
-        &mut test_case.app,
+        &test_case.app,
         leaser_addr.clone(),
         downpayment,
         None,
