@@ -6,7 +6,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny,
 };
-use swap::trx::{RequestMsg, ExactAmountIn};
+use swap::trx::{ExactAmountIn, RequestMsg};
 
 use super::{
     ibc,
