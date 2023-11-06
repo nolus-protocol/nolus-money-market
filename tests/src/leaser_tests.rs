@@ -509,6 +509,18 @@ fn open_loans_lpp_fails() {
         .unwrap_response();
 }
 
+#[test]
+#[should_panic(expected = "The trasaction amount should worth")]
+fn open_loans_insufficient_trasaction_amount() {
+    open_loans_insufficient_amount(49);
+}
+
+#[test]
+#[should_panic(expected = "The asset amount should worth")]
+fn open_loans_insufficient_asset() {
+    open_loans_insufficient_amount(62);
+}
+
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
     Lpn: Currency,
@@ -618,4 +630,44 @@ fn lease_addr(events: &[Event]) -> Addr {
             .value
             .clone(),
     )
+}
+
+fn open_loans_insufficient_amount(downpayment: Amount) {
+    type Lpn = StableC1;
+    type LeaseCurrency = PaymentC3;
+
+    let user_addr = Addr::unchecked(USER);
+    let incoming_funds = cwcoin::<Lpn, _>(200);
+    let downpayment_amount = cwcoin::<Lpn, _>(downpayment);
+
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
+
+    test_case.send_funds_from_admin(user_addr.clone(), std::slice::from_ref(&incoming_funds));
+
+    let _res: AppResponse = test_case
+        .app
+        .execute(
+            user_addr,
+            test_case.address_book.leaser().clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: LeaseCurrency::TICKER.into(),
+                max_ltd: None,
+            },
+            &[downpayment_amount],
+        )
+        .unwrap()
+        .unwrap_response();
 }
