@@ -7,6 +7,8 @@ pub enum Error {
     #[error("[Admin] [Std] {0}")]
     StdError(#[from] StdError),
     #[error("[Admin] {0}")]
+    AccessControl(#[from] access_control::error::Error),
+    #[error("[Admin] {0}")]
     Platform(#[from] platform::error::Error),
     #[error("No data in migration response!")]
     NoMigrationResponseData {},

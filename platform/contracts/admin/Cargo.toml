@@ -16,6 +16,7 @@ contract-with-bindings = ["contract"]
 contract = []
 
 [dependencies]
+access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
