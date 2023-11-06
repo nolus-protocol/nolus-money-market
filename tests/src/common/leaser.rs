@@ -21,6 +21,8 @@ impl Instantiator {
 
     pub const GRACE_PERIOD: Duration = Duration::from_days(10);
 
+    pub const RECALC_TIME: Duration = Duration::from_hours(1);
+
     pub fn liability() -> Liability {
         Liability::new(
             Percent::from_percent(65),
@@ -29,7 +31,7 @@ impl Instantiator {
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
-            Duration::from_hours(1),
+            Self::RECALC_TIME,
         )
     }
 
@@ -78,7 +80,7 @@ impl Instantiator {
 }
 
 pub(crate) fn query_quote<DownpaymentC, LeaseC>(
-    app: &mut App,
+    app: &App,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,

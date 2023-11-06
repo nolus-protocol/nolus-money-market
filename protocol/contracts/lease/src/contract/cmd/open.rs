@@ -22,6 +22,7 @@ pub(crate) fn open_lease(
     form: NewLeaseForm,
     lease_addr: Addr,
     start_at: Timestamp,
+    now: Timestamp,
     amount: LeaseCoin,
     querier: &QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
@@ -38,6 +39,7 @@ pub(crate) fn open_lease(
         time_alarms: deps.2,
         price_alarms: deps.1.clone(),
         start_at,
+        now,
         amount,
     };
     //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
@@ -52,6 +54,7 @@ struct LeaseFactory {
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
+    now: Timestamp,
     amount: LeaseCoin,
 }
 
@@ -90,7 +93,7 @@ impl WithLeaseDeps for LeaseFactory {
 
         let alarms = match liquidation_status::status_and_schedule(
             &lease,
-            self.start_at,
+            self.now,
             &self.time_alarms,
             &self.price_alarms,
         )? {

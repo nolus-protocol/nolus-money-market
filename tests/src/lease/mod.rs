@@ -11,7 +11,7 @@ use finance::{
     price::{self, Price},
 };
 use lease::api::{StateQuery, StateResponse};
-use leaser::msg::{QueryMsg, QuoteResponse};
+use leaser::msg::QuoteResponse;
 use sdk::cosmwasm_std::{coin, Addr, Timestamp};
 
 use crate::common::{
@@ -127,38 +127,17 @@ pub(super) fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, 
 where
     DownpaymentC: Currency,
 {
-    try_init_lease(test_case, downpayment, max_ltd);
-
-    let lease_addr: Addr = leaser_mod::expect_a_lease(
-        &test_case.app,
-        test_case.address_book.leaser().clone(),
-        Addr::unchecked(USER),
-    );
-
-    let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
-        &mut test_case.app,
-        test_case.address_book.leaser().clone(),
-        downpayment,
-        max_ltd,
-    );
-    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
-
-    common::lease::complete_initialization(
-        &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
-        lease_addr.clone(),
-        downpayment,
-        exp_borrow,
-    );
-
-    lease_addr
+    let lease = try_init_lease(test_case, downpayment, max_ltd);
+    complete_init_lease(test_case, downpayment, max_ltd, &lease);
+    lease
 }
 
 pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
-) where
+) -> Addr
+where
     D: Currency,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
@@ -177,8 +156,46 @@ pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlar
         .unwrap();
 
     response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
-
     () = response.ignore_response().unwrap_response();
+
+    leaser_mod::expect_a_lease(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        Addr::unchecked(USER),
+    )
+}
+
+pub(super) fn complete_init_lease<
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    downpayment: Coin<DownpaymentC>,
+    max_ltd: Option<Percent>,
+    lease: &Addr,
+) where
+    DownpaymentC: Currency,
+{
+    let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        downpayment,
+        max_ltd,
+    );
+    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
+
+    common::lease::complete_initialization(
+        &mut test_case.app,
+        TestCase::DEX_CONNECTION_ID,
+        lease.clone(),
+        downpayment,
+        exp_borrow,
+    );
 }
 
 pub(super) fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
@@ -195,18 +212,12 @@ pub(super) fn quote_query<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms,
 where
     DownpaymentC: Currency,
 {
-    test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.leaser().clone(),
-            &QueryMsg::Quote {
-                downpayment: downpayment.into(),
-                lease_asset: LeaseCurrency::TICKER.into(),
-                max_ltd: None,
-            },
-        )
-        .unwrap()
+    common::leaser::query_quote::<_, LeaseCurrency>(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        downpayment,
+        None,
+    )
 }
 
 pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(

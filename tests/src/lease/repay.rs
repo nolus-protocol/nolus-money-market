@@ -12,7 +12,6 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
-use leaser::msg::QuoteResponse;
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
@@ -37,8 +36,7 @@ fn partial_repay() {
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;
 
-    let quote_result: QuoteResponse = super::quote_query(&test_case, downpayment);
-    let amount: LpnCoin = quote_result.borrow.try_into().unwrap();
+    let amount = super::quote_borrow(&test_case, downpayment);
     let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
         &Rational::new(1, 2),
         super::create_payment_coin(amount.into()),
