@@ -1,4 +1,3 @@
-// #[cfg(any(test, dex = "osmosis"))]
 #[cfg(dex = "osmosis")]
 mod currencies {
     use crate::dex::{

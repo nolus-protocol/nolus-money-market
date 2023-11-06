@@ -15,7 +15,7 @@ use sdk::{
     cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData,
     cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp},
 };
-use swap::trx as swap_trx;
+use swap::trx::{self as swap_trx, ExactAmountIn};
 
 #[cfg(debug_assertions)]
 use crate::swap_task::IterState;
@@ -104,7 +104,7 @@ where
             where
                 G: Group,
             {
-                self.1 += swap_trx::exact_amount_in_resp(&mut self.0)?;
+                self.1 += swap_trx::exact_amount_in().parse(&mut self.0)?;
                 Ok(IterNext::Continue)
             }
         }

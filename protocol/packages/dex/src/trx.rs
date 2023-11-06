@@ -12,7 +12,7 @@ use platform::{
     trx::Transaction,
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use swap::trx;
+use swap::trx::{self, ExactAmountIn};
 
 use crate::error::Result;
 
@@ -98,11 +98,14 @@ impl<'a> SwapTrx<'a> {
     where
         G: Group,
     {
-        let swap_path =
-            self.oracle
-                .swap_path(amount.ticker().into(), currency_out.into(), self.querier)?;
-        trx::exact_amount_in(&mut self.trx, self.ica_account.clone(), amount, &swap_path)?;
-        Ok(())
+        self.oracle
+            .swap_path(amount.ticker().into(), currency_out.into(), self.querier)
+            .map_err(Into::into)
+            .and_then(|swap_path| {
+                trx::exact_amount_in()
+                    .build(&mut self.trx, self.ica_account.clone(), amount, &swap_path)
+                    .map_err(Into::into)
+            })
     }
 }
 

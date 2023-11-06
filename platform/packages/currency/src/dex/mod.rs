@@ -5,6 +5,7 @@ mod native;
 mod payment;
 mod symbols_macro;
 
+#[cfg(feature = "testing")]
 pub mod test;
 
 #[cfg(test)]

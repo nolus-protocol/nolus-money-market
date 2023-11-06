@@ -6,9 +6,6 @@ pub enum Error {
     Currency(#[from] currency::error::Error),
 
     #[error("[Swap] {0}")]
-    Finance(#[from] finance::error::Error),
-
-    #[error("[Swap] {0}")]
     Platform(#[from] platform::error::Error),
 
     #[error("[Swap] The value {0} is an invalid amount")]
