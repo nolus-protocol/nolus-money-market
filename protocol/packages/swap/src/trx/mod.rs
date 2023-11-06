@@ -3,6 +3,8 @@ mod osmosis;
 
 #[cfg(feature = "testing")]
 pub mod test;
+#[cfg(feature = "testing")]
+pub use test::*;
 
 use currency::{self, Group};
 use finance::coin::{Amount, CoinDTO};

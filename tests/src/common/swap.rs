@@ -6,7 +6,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny,
 };
-use swap::trx::RequestMsg;
+use swap::trx::{RequestMsg, ExactAmountIn};
 
 use super::{
     ibc,
@@ -100,7 +100,7 @@ fn send_response<'r>(
             amounts
                 .iter()
                 .copied()
-                .map(swap::trx::build_exact_amount_in_resp),
+                .map(|amount| swap::trx::exact_amount_in().build_resp(amount)),
         )),
     )
 }
