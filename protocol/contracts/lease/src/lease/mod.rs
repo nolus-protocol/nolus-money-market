@@ -266,6 +266,12 @@ mod tests {
         }
     }
 
+    impl AsRef<Self> for OracleLocalStub {
+        fn as_ref(&self) -> &Self {
+            self
+        }
+    }
+
     impl From<OracleLocalStub> for OracleRef {
         fn from(stub: OracleLocalStub) -> Self {
             OracleRef::unchecked::<_, TestCurrency>(stub.address)
