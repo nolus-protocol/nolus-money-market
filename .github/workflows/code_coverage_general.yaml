@@ -15,9 +15,10 @@ env:
   NET: "main"
 
 jobs:
-  code_coverage_platform:
+  code_coverage_platform_osmosis:
       uses: "./.github/workflows/checks.yaml"
       with:
+        target_dex: "osmosis"
         working_directory: "platform"
   code_coverage_protocol_osmosis:
       uses: "./.github/workflows/checks.yaml"
