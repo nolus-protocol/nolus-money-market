@@ -35,7 +35,7 @@ where
 
 pub trait Oracle<OracleBase>
 where
-    Self: Into<OracleRef>,
+    Self: Into<OracleRef> + AsRef<Self>,
     OracleBase: Currency,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>

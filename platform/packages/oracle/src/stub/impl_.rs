@@ -117,6 +117,15 @@ where
 }
 
 impl<'a, OracleBase, OracleBaseG, PriceConverterT>
+    AsRef<OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>>
+    for OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>
+{
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl<'a, OracleBase, OracleBaseG, PriceConverterT>
     From<OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>> for OracleRef
 {
     fn from(stub: OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>) -> Self {

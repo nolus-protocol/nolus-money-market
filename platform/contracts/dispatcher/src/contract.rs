@@ -1,12 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
-use finance::{duration::Duration, percent::Percent};
-use platform::{
-    batch::{Batch, Emit, Emitter},
-    message::Response as MessageResponse,
-    response,
-};
+use finance::{duration::Duration, percent::Percent, period::Period};
+use lpp_platform::UsdGroup;
+use platform::{batch::Batch, message::Response as MessageResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -20,7 +17,7 @@ use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
 use crate::{
-    cmd::{Dispatch, Reward, RewardCalculator},
+    cmd::{self, RewardCalculator},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{Config, DispatchLog},
@@ -107,7 +104,7 @@ pub fn execute(
             )
             .check(&info.sender)?;
 
-            try_dispatch(deps, env, info.sender).map(response::response_only_messages)
+            try_dispatch(deps, &env, info.sender).map(response::response_only_messages)
         }
     }
 }
@@ -129,11 +126,11 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::CalculateRewards {} => {
-            to_json_binary(&query_reward(deps.storage, &deps.querier)?.units())
+            to_json_binary(&query_reward(deps.storage, &deps.querier, &env)?.units())
         }
     }
     .map_err(Into::into)
@@ -143,16 +140,22 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
 }
 
-fn query_reward(storage: &dyn Storage, querier: &QuerierWrapper<'_>) -> ContractResult<Percent> {
+fn query_reward(
+    storage: &dyn Storage,
+    querier: &QuerierWrapper<'_>,
+    env: &Env,
+) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
 
-    let lpp = lpp_platform::new_stub(config.dexes[0].lpp.clone(), querier);
-    RewardCalculator::new(&config.tvl_to_apr)
-        .calculate(&lpp)
-        .map(|Reward { apr, .. }| apr)
+    let lpps = config
+        .dexes
+        .iter()
+        .map(|dex| lpp_platform::new_stub(&dex.lpp, querier, env));
+
+    RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
 }
 
-fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<MessageResponse> {
+fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult<MessageResponse> {
     let now = env.block.time;
 
     let config = Config::load(deps.storage)?;
@@ -163,21 +166,28 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<
         &deps.querier,
     )?;
 
-    let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
-
-    let lpp = lpp_platform::new_stub(config.dexes[0].lpp.clone(), &deps.querier);
-    let result = Dispatch::new(last_dispatch, &config, now, &deps.querier).do_dispatch(&lpp)?;
-
+    let last_dispatch = DispatchLog::last_dispatch(deps.storage);
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let emitter = Emitter::of_type("tr-rewards")
-        .emit_tx_info(&env)
-        .emit_to_string_value("to", config.dexes[0].lpp.clone())
-        .emit_coin("rewards", result.receipt.in_nls);
-    Ok(MessageResponse::messages_with_events(
-        result.batch.merge(setup_alarm),
-        emitter,
-    ))
+    let lpps = config
+        .dexes
+        .iter()
+        .map(|dex| lpp_platform::new_stub(&dex.lpp, &deps.querier, env));
+    let oracles = config.dexes.iter().map(|dex| {
+        oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
+            dex.oracle.clone(),
+            &deps.querier,
+        )
+    });
+
+    cmd::dispatch(
+        Period::from_till(last_dispatch, now),
+        &config.tvl_to_apr,
+        lpps,
+        oracles,
+        &config.treasury,
+    )
+    .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
 }
 
 fn setup_alarm(

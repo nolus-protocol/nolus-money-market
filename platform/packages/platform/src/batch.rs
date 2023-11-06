@@ -49,6 +49,8 @@ impl Batch {
         Ok(())
     }
 
+    // TODO get the Addr by value to move up the stack the decision to copy
+    // TODO get self by value
     pub fn schedule_execute_wasm_no_reply<M, C>(
         &mut self,
         addr: &Addr,

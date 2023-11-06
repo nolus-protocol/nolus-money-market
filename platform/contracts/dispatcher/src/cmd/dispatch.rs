@@ -1,93 +1,209 @@
-use currency::{NativePlatform, NlsPlatform};
-use finance::{coin::Coin, interest::InterestPeriod, period::Period};
-use lpp_platform::{Lpp as LppTrait, UsdGroup};
-use oracle_platform::convert;
-use platform::batch::Batch;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use currency::NlsPlatform;
+use finance::{coin::Coin, period::Period};
+use lpp_platform::{Lpp as LppTrait, Usd};
+use oracle_platform::Oracle as OracleTrait;
+use platform::{batch::Batch, message::Response as MessageResponse};
+use sdk::cosmwasm_std::Addr;
 
-use crate::{result::ContractResult, state::Config, ContractError};
+use crate::{result::ContractResult, state::reward_scale::RewardScale, ContractError};
 
-use super::{reward_calculator::Reward, Result as DispatcherResult, RewardCalculator};
+use super::RewardCalculator;
 
-pub(crate) struct Dispatch<'a> {
-    last_dispatch: Timestamp,
-    config: &'a Config,
-    block_time: Timestamp,
-    querier: &'a QuerierWrapper<'a>,
+/// Dispatches the rewards to Lpp-s for further distribution among the liquidity providers
+///
+/// The total amount is transferred from the Treasury.
+/// `lpps` and `oracles` should match in length.
+pub fn dispatch<Lpps, Oracle, Oracles>(
+    period: Period,
+    scale: &RewardScale,
+    lpps: Lpps,
+    oracles: Oracles,
+    treasury: &Addr,
+) -> ContractResult<MessageResponse>
+where
+    Lpps: IntoIterator,
+    Lpps::Item: LppTrait,
+    Oracle: OracleTrait<Usd>,
+    Oracles: IntoIterator,
+    Oracles::Item: AsRef<Oracle>,
+{
+    let lpps: Vec<_> = lpps.into_iter().collect();
+    RewardCalculator::new(lpps.iter(), scale)
+        .and_then(|calc| {
+            let rewards = calc.calculate(period, oracles);
+            build_lpp_rewards(lpps, rewards).unwrap_or_else(|| Ok(Default::default()))
+        })
+        .and_then(|(total, lpp_responses)| {
+            if total.is_zero() {
+                Err(ContractError::ZeroReward {})
+            } else {
+                // the total should precede the lpp messages!
+                create_total(total, treasury).map(|resp| resp.merge_with(lpp_responses))
+            }
+        })
 }
 
-impl<'a> Dispatch<'a> {
-    pub fn new(
-        last_dispatch: Timestamp,
-        config: &'a Config,
-        block_time: Timestamp,
-        querier: &'a QuerierWrapper<'a>,
-    ) -> Dispatch<'a> {
-        Self {
-            last_dispatch,
-            config,
-            block_time,
-            querier,
-        }
-    }
+fn create_total(reward: Coin<NlsPlatform>, treasury: &Addr) -> ContractResult<MessageResponse> {
+    let mut batch = Batch::default();
+    batch
+        .schedule_execute_wasm_no_reply_no_funds(
+            treasury,
+            treasury::msg::ExecuteMsg::SendRewards { amount: reward },
+        )
+        .map(|()| batch.into())
+        .map_err(Into::into)
+}
 
-    pub fn do_dispatch<Lpp>(self, lpp: &Lpp) -> ContractResult<DispatcherResult>
-    where
-        Lpp: LppTrait,
-    {
-        // get annual percentage of return from configuration
-        let Reward {
-            tvl,
-            apr: apr_permille,
-        } = RewardCalculator::new(&self.config.tvl_to_apr).calculate(lpp)?;
-
-        // Calculate the reward in LPN,
-        // which matches TVLdenom, since the last calculation
-        let reward_in_usd = InterestPeriod::with_interest(apr_permille)
-            .and_period(Period::from_till(self.last_dispatch, self.block_time))
-            .interest(tvl);
-
-        if reward_in_usd.is_zero() {
-            return Err(ContractError::ZeroReward {});
-        }
-
-        let oracle = oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
-            self.config.dexes[0].oracle.clone(),
-            self.querier,
-        );
-        convert::from_base::<_, UsdGroup, _, _, NativePlatform>(&oracle, reward_in_usd)
-            .map_err(Into::into)
-            .and_then(|reward_unls| {
-                self.create_batch(reward_unls)
-                    .map(|batch| DispatcherResult {
-                        batch,
-                        receipt: super::Receipt {
-                            in_stable: reward_in_usd,
-                            in_nls: reward_unls,
-                        },
-                    })
+fn build_lpp_rewards<LppIter, RewardsIter>(
+    lpps: LppIter,
+    mut rewards: RewardsIter,
+) -> Option<ContractResult<(Coin<NlsPlatform>, MessageResponse)>>
+where
+    LppIter: IntoIterator,
+    LppIter::Item: LppTrait,
+    RewardsIter: Iterator<Item = ContractResult<Coin<NlsPlatform>>>,
+{
+    let res = lpps
+        .into_iter()
+        .map(|lpp| {
+            rewards
+                .next()
+                .expect("Lpps match oracles")
+                .and_then(|reward| {
+                    lpp.ditribute_rewards(reward)
+                        .map(|response| (reward, response))
+                        .map_err(Into::into)
+                })
+        })
+        .reduce(|resp1, resp2| {
+            resp1.and_then(|(reward1, lpp_resp1)| {
+                resp2.map(|(reward2, lpp_resp2)| {
+                    (reward1 + reward2, lpp_resp1.merge_with(lpp_resp2))
+                })
             })
+        });
+    debug_assert_eq!(rewards.next(), None);
+    res
+}
+
+#[cfg(test)]
+mod test {
+    use currency::{NativePlatform, NlsPlatform};
+    use finance::{
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period, price,
+    };
+    use lpp_platform::{test::DummyLpp, CoinUsd, Usd};
+    use oracle_platform::{test::DummyOracle, Oracle as OracleTrait};
+    use platform::{batch::Batch, response};
+    use sdk::cosmwasm_std::{Addr, Timestamp};
+
+    use crate::{
+        state::reward_scale::{RewardScale, TotalValueLocked},
+        ContractError,
+    };
+
+    #[test]
+    fn dispatch() {
+        let apr = Percent::from_percent(12);
+        let scale = RewardScale::new(apr);
+        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
+        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpps = vec![
+            DummyLpp::with_tvl(lpp0_tvl),
+            DummyLpp::with_tvl(lpp1_tvl),
+            DummyLpp::with_tvl(lpp2_tvl),
+        ];
+        let oracles = vec![
+            DummyOracle::with_price(2),
+            DummyOracle::with_price(3),
+            DummyOracle::with_price(1),
+        ];
+        let treasury = Addr::unchecked("Treasury");
+
+        let resp = response::response_only_messages(
+            super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury).unwrap(),
+        );
+        assert_eq!(resp.messages.len(), 3 + 1);
+        let reward1 = reward(&apr, lpp0_tvl, &oracles[0]);
+        let reward2 = reward(&apr, lpp1_tvl, &oracles[1]);
+        let reward3 = reward(&apr, lpp2_tvl, &oracles[2]);
+        let total_rewards = reward1 + reward2 + reward3;
+        let mut msgs = Batch::default();
+        msgs.schedule_execute_wasm_no_reply_no_funds(
+            &treasury,
+            treasury::msg::ExecuteMsg::SendRewards {
+                amount: total_rewards,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            resp.messages[0],
+            response::response_only_messages(msgs).messages[0]
+        );
+        assert_eq!(resp.events.len(), 3);
     }
 
-    fn create_batch(&self, reward: Coin<NlsPlatform>) -> ContractResult<Batch> {
-        let mut batch = Batch::default();
-        // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
-        batch
-            .schedule_execute_wasm_no_reply::<_, NlsPlatform>(
-                &self.config.treasury,
-                treasury::msg::ExecuteMsg::SendRewards { amount: reward },
-                None,
-            )
-            .map_err(ContractError::from)?;
+    #[test]
+    fn balance_err() {
+        let apr = Percent::from_percent(12);
+        let scale = RewardScale::new(apr);
+        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpps = vec![
+            DummyLpp::with_tvl(lpp0_tvl),
+            DummyLpp::failing(),
+            DummyLpp::with_tvl(lpp2_tvl),
+        ];
+        let oracles = vec![
+            DummyOracle::with_price(2),
+            DummyOracle::with_price(3),
+            DummyOracle::with_price(1),
+        ];
+        let treasury = Addr::unchecked("Treasury");
 
-        batch
-            .schedule_execute_wasm_no_reply(
-                &self.config.dexes[0].lpp,
-                lpp_platform::msg::ExecuteMsg::DistributeRewards {},
-                Some(reward),
-            )
-            .map_err(ContractError::from)?;
+        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury);
+        assert!(matches!(resp, Err(ContractError::LppPlatformError(_))));
+    }
 
-        Ok(batch)
+    #[test]
+    fn oracle_err() {
+        let apr = Percent::from_percent(12);
+        let scale = RewardScale::new(apr);
+        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
+        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpps = vec![
+            DummyLpp::with_tvl(lpp0_tvl),
+            DummyLpp::with_tvl(lpp1_tvl),
+            DummyLpp::with_tvl(lpp2_tvl),
+        ];
+        let oracles = vec![
+            DummyOracle::with_price(2),
+            DummyOracle::with_price(3),
+            DummyOracle::failing(),
+        ];
+        let treasury = Addr::unchecked("Treasury");
+
+        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury);
+        assert!(matches!(resp, Err(ContractError::Oracle(_))));
+    }
+
+    fn reward<Oracle>(apr: &Percent, tvl: CoinUsd, oracle: &Oracle) -> Coin<NlsPlatform>
+    where
+        Oracle: OracleTrait<Usd>,
+    {
+        price::total(
+            apr.of(tvl),
+            oracle
+                .price_of::<NlsPlatform, NativePlatform>()
+                .unwrap()
+                .inv(),
+        )
+    }
+
+    fn year() -> Period {
+        Period::from_length(Timestamp::from_nanos(0), Duration::YEAR)
     }
 }

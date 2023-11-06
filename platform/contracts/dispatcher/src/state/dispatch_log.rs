@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cosmwasm_std::{Storage, Timestamp},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -20,11 +20,12 @@ impl DispatchLog {
         DispatchLog { last_dispatch }
     }
 
-    pub fn last_dispatch(storage: &dyn Storage) -> StdResult<Timestamp> {
-        match Self::STORAGE.load(storage) {
-            Ok(l) => Ok(l.last_dispatch),
-            Err(_) => Ok(Timestamp::default()),
-        }
+    // TODO merge the functionality of this and `update`
+    pub fn last_dispatch(storage: &dyn Storage) -> Timestamp {
+        Self::STORAGE
+            .load(storage)
+            .map(|log| log.last_dispatch)
+            .unwrap_or_default()
     }
 
     pub fn update(

@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter},
+    iter::Sum,
     marker::PhantomData,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
@@ -223,6 +224,22 @@ where
     }
 }
 
+impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>
+where
+    CoinCRef: AsRef<Coin<C>>,
+    C: Currency,
+{
+    fn sum<I: Iterator<Item = CoinCRef>>(coins: I) -> Self {
+        coins.fold(Self::default(), |acc, next_coin| acc + *next_coin.as_ref())
+    }
+}
+
+impl<C> AsRef<Self> for Coin<C> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 #[cfg(test)]
 mod test {
     use currency::{
@@ -364,6 +381,14 @@ mod test {
         coprime_impl(13, 13, 13);
         coprime_impl(13, 13, 26);
         coprime_impl(Amount::MAX, Amount::MAX, Amount::MAX);
+    }
+
+    #[test]
+    fn sum() {
+        let coins = vec![coin1(1), coin1(2), coin1(3), coin1(4), coin1(5)];
+        let exp_sum = coin1(15);
+        assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
+        assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {

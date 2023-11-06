@@ -12,7 +12,11 @@ testing = []
 [dependencies]
 currency = { workspace = true }
 finance = { workspace = true }
+platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }
 
 serde = { workspace = true }
 thiserror = { workspace = true}
+
+[dev-dependencies]
+platform = { workspace = true, features = ["testing"] }

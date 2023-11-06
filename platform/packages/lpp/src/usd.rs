@@ -1,3 +1,4 @@
+use finance::coin::Coin;
 use serde::{Deserialize, Serialize};
 
 use currency::{
@@ -15,6 +16,8 @@ impl Currency for Usd {
     const BANK_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
     const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
 }
+
+pub type CoinUsd = Coin<Usd>;
 
 #[derive(PartialEq, Eq, Deserialize)]
 pub struct UsdGroup;
