@@ -115,8 +115,8 @@ where
         self.spec
             .check_transaction_amount(close_amount, transaction_currency_in_lpn)
             .map_err(|err| match err {
-                ContractError::InsufficientTransactionAmount(min_transaction_amount) => {
-                    ContractError::PositionCloseAmountTooSmall(min_transaction_amount)
+                ContractError::InsufficientTransactionAmount(min_transaction) => {
+                    ContractError::PositionCloseAmountTooSmall(min_transaction)
                 }
                 _ => err,
             })
