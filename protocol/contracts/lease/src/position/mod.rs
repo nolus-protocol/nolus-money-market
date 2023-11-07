@@ -110,19 +110,21 @@ where
         close_amount: Coin<Asset>,
         lpn_in_assets: Price<Lpn, Asset>,
     ) -> ContractResult<()> {
-        let trasaction_in_lpn = lpn_in_assets.inv();
+        let transaction_currency_in_lpn = lpn_in_assets.inv();
 
         self.spec
-            .check_trasaction_amount(close_amount, trasaction_in_lpn)
+            .check_transaction_amount(close_amount, transaction_currency_in_lpn)
             .map_err(|err| match err {
-                ContractError::InsufficientTrasactionAmount(min_trasaction_amount) => {
-                    ContractError::PositionCloseAmountTooSmall(min_trasaction_amount)
+                ContractError::InsufficientTransactionAmount(min_transaction_amount) => {
+                    ContractError::PositionCloseAmountTooSmall(min_transaction_amount)
                 }
                 _ => err,
             })
-            .and_then(|_| {
-                self.spec
-                    .check_asset_amount(self.amount.saturating_sub(close_amount), trasaction_in_lpn)
+            .and_then(|()| {
+                self.spec.check_asset_amount(
+                    self.amount.saturating_sub(close_amount),
+                    transaction_currency_in_lpn,
+                )
             })
             .map_err(|err| match err {
                 ContractError::InsufficientAssetAmount(min_asset) => {

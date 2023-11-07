@@ -510,8 +510,8 @@ fn open_loans_lpp_fails() {
 }
 
 #[test]
-#[should_panic(expected = "The trasaction amount should worth")]
-fn open_loans_insufficient_trasaction_amount() {
+#[should_panic(expected = "The transaction amount should worth")]
+fn open_loans_insufficient_transaction_amount() {
     open_loans_insufficient_amount(49);
 }
 

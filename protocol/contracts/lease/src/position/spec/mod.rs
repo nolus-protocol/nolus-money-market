@@ -16,7 +16,7 @@ mod dto;
 pub struct Spec<Lpn> {
     liability: Liability,
     min_asset: Coin<Lpn>,
-    min_trasaction_amount: Coin<Lpn>,
+    min_transaction_amount: Coin<Lpn>,
 }
 
 impl<Lpn> Spec<Lpn>
@@ -26,12 +26,12 @@ where
     pub fn new(
         liability: Liability,
         min_asset: Coin<Lpn>,
-        min_trasaction_amount: Coin<Lpn>,
+        min_transaction_amount: Coin<Lpn>,
     ) -> Self {
         let obj = Self {
             liability,
             min_asset,
-            min_trasaction_amount,
+            min_transaction_amount,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
@@ -41,34 +41,34 @@ where
         self.liability
     }
 
-    pub fn check_trasaction_amount<Trasaction>(
+    pub fn check_transaction_amount<TransactionC>(
         &self,
-        amount: Coin<Trasaction>,
-        trasaction_in_lpn: Price<Trasaction, Lpn>,
+        amount: Coin<TransactionC>,
+        transaction_currency_in_lpn: Price<TransactionC, Lpn>,
     ) -> ContractResult<()>
     where
-        Trasaction: Currency,
+        TransactionC: Currency,
     {
-        let amount = price::total(amount, trasaction_in_lpn);
+        let amount = price::total(amount, transaction_currency_in_lpn);
 
-        if amount < self.min_trasaction_amount {
-            Err(ContractError::InsufficientTrasactionAmount(
-                self.min_trasaction_amount.into(),
+        if amount < self.min_transaction_amount {
+            Err(ContractError::InsufficientTransactionAmount(
+                self.min_transaction_amount.into(),
             ))
         } else {
             Ok(())
         }
     }
 
-    pub fn check_asset_amount<Trasaction>(
+    pub fn check_asset_amount<TransactionC>(
         &self,
-        asset_amount: Coin<Trasaction>,
-        trasaction_in_lpn: Price<Trasaction, Lpn>,
+        asset_amount: Coin<TransactionC>,
+        transaction_currency_in_lpn: Price<TransactionC, Lpn>,
     ) -> ContractResult<()>
     where
-        Trasaction: Currency,
+        TransactionC: Currency,
     {
-        let asset_amount = price::total(asset_amount, trasaction_in_lpn);
+        let asset_amount = price::total(asset_amount, transaction_currency_in_lpn);
 
         if asset_amount < self.min_asset {
             Err(ContractError::InsufficientAssetAmount(
@@ -80,23 +80,24 @@ where
     }
 
     /// Calculate the borrow amount.
-    /// Return 'error::ContractError::InsufficientTrasactionAmount' when either the downpayment
-    /// or the borrow amount is with amount less than the minimum trasaction amount.
+    /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
+    /// or the borrow amount is less than the minimum transaction amount.
     /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
-    /// is with amount less than the minimum asset amount.
+    /// is less than the minimum asset amount.
     pub fn calc_borrow_amount(
         &self,
         downpayment: Coin<Lpn>,
         may_max_ltd: Option<Percent>,
     ) -> ContractResult<Coin<Lpn>> {
-        let amount_in_lpn: Price<Lpn, Lpn> = Price::identity();
-
-        self.check_trasaction_amount(downpayment, amount_in_lpn)?;
-
-        let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
-        self.check_trasaction_amount(borrow, amount_in_lpn)
-            .and_then(|_| self.check_asset_amount(downpayment.add(borrow), amount_in_lpn))
-            .map(|_| borrow)
+        self.check_transaction_amount(downpayment, Price::identity())
+            .map(|()| self.liability.init_borrow_amount(downpayment, may_max_ltd))
+            .and_then(|borrow| {
+                self.check_transaction_amount(borrow, Price::identity())
+                    .and_then(|()| {
+                        self.check_asset_amount(downpayment.add(borrow), Price::identity())
+                    })
+                    .map(|()| borrow)
+            })
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
@@ -105,8 +106,8 @@ where
             "Min asset amount should be positive",
         )
         .and(Self::check(
-            !self.min_trasaction_amount.is_zero(),
-            "Min trasaction amount should be positive",
+            !self.min_transaction_amount.is_zero(),
+            "Min transaction amount should be positive",
         ))
     }
 
@@ -128,30 +129,30 @@ mod test_calc_borrow {
 
     #[test]
     fn downpayment_less_than_min() {
-        let spec = spec(1_000, 100);
-        let borrow = spec.calc_borrow_amount(99.into(), None);
+        let spec = spec(1_000, 300);
+        let borrow = spec.calc_borrow_amount(299.into(), None);
 
         assert!(matches!(
             borrow,
-            Err(ContractError::InsufficientTrasactionAmount(_))
+            Err(ContractError::InsufficientTransactionAmount(_))
         ));
     }
 
     #[test]
     fn borrow_less_than_min() {
-        let spec = spec(1_000, 100);
-        let borrow = spec.calc_borrow_amount(100.into(), Some(Percent::from_percent(43)));
+        let spec = spec(1_000, 300);
+        let borrow = spec.calc_borrow_amount(300.into(), Some(Percent::from_percent(99)));
 
         assert!(matches!(
             borrow,
-            Err(ContractError::InsufficientTrasactionAmount(_))
+            Err(ContractError::InsufficientTransactionAmount(_))
         ));
     }
 
     #[test]
     fn lease_less_than_min() {
-        let spec = spec(1_000, 200);
-        let borrow_1 = spec.calc_borrow_amount(250.into(), None);
+        let spec = spec(1_000, 300);
+        let borrow_1 = spec.calc_borrow_amount(349.into(), None);
         assert!(matches!(
             borrow_1,
             Err(ContractError::InsufficientAssetAmount(_))
@@ -180,9 +181,9 @@ mod test_calc_borrow {
         assert_eq!(Coin::<TestLpn>::new(975), borrow_4.unwrap());
     }
 
-    fn spec<Lpn>(min_asset: Lpn, min_trasaction_amount: Lpn) -> Spec<TestLpn>
+    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction_amount: LpnAmount) -> Spec<TestLpn>
     where
-        Lpn: Into<Coin<TestLpn>>,
+        LpnAmount: Into<Coin<TestLpn>>,
     {
         let liability = Liability::new(
             Percent::from_percent(65),
@@ -193,6 +194,6 @@ mod test_calc_borrow {
             Percent::from_percent(2),
             Duration::from_hours(1),
         );
-        Spec::new(liability, min_asset.into(), min_trasaction_amount.into())
+        Spec::new(liability, min_asset.into(), min_transaction_amount.into())
     }
 }

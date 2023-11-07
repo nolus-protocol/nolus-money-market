@@ -71,15 +71,13 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
             return Err(Self::Error::InsufficientPayment(downpayment));
         }
 
-        let borrow_lpn = PositionSpec::try_from(self.position_spec)
-            .and_then(|spec| spec.calc_borrow_amount(downpayment_lpn, self.max_ltd))?;
-
-        lpp.open_loan_req(borrow_lpn)?;
-
-        Ok(Self::Output {
-            batch: lpp.into().batch,
-            downpayment,
-        })
+        PositionSpec::try_from(self.position_spec)
+            .and_then(|spec| spec.calc_borrow_amount(downpayment_lpn, self.max_ltd))
+            .and_then(|borrow_lpn| lpp.open_loan_req(borrow_lpn).map_err(ContractError::from))
+            .map(|()| Self::Output {
+                batch: lpp.into().batch,
+                downpayment,
+            })
     }
 }
 
