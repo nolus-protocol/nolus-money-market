@@ -6,17 +6,17 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-trx = ["sdk/cosmos", "dep:osmosis-std"]
+osmosis = ["thiserror", "sdk/cosmos", "dep:finance", "dep:platform", "dep:osmosis-std"]
 testing = []
 
 [dependencies]
 currency = { workspace = true, features = ["impl"] }
-finance = { workspace = true }
-platform = { workspace = true }
+finance = { workspace = true, optional = true }
+platform = { workspace = true, optional = true }
 sdk = { workspace = true, features = ["schema"] }
 
 osmosis-std = { workspace = true, optional = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, optional = true  }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]

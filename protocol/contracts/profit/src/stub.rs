@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use platform::bank::LazySenderStub;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError};
+use thiserror::Error;
 
-use crate::{
-    msg::{ConfigResponse, QueryMsg},
-    result::ContractResult,
-};
+use crate::msg::{ConfigResponse, QueryMsg};
 
 pub type ProfitStub = LazySenderStub;
 
@@ -15,8 +13,14 @@ pub struct ProfitRef {
     addr: Addr,
 }
 
+#[derive(Debug, PartialEq, Error)]
+pub enum Error {
+    #[error("[Profit] [Std] {0}")]
+    Std(#[from] StdError),
+}
+
 impl ProfitRef {
-    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
+    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
             .map(|_: ConfigResponse| Self { addr })

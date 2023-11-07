@@ -3,12 +3,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use currency::{dex::PaymentGroup, SymbolOwned};
 use sdk::schemars::{self, JsonSchema};
 
+#[cfg(feature = "osmosis")]
 pub mod error;
-#[cfg(feature = "trx")]
+#[cfg(feature = "osmosis")]
 pub mod trx;
 
 pub type PoolId = u64;
-pub type SwapGroup = PaymentGroup;
+pub type SwapGroup = PaymentGroup; //TODO revisit its necessity
 
 #[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
 #[schemars(with = "(PoolId, SymbolOwned)")]

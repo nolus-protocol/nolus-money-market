@@ -1,4 +1,4 @@
-#[cfg(dex = "osmosis")]
+#[cfg(feature = "osmosis")]
 mod osmosis;
 
 #[cfg(feature = "testing")]
@@ -13,8 +13,9 @@ use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
 
 use crate::{error::Result, SwapPath};
 
+#[cfg(feature = "osmosis")]
 pub fn exact_amount_in() -> impl ExactAmountIn {
-    #[cfg(dex = "osmosis")]
+    #[cfg(feature = "osmosis")]
     {
         osmosis::Impl {}
     }

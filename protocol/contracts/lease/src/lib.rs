@@ -1,13 +1,20 @@
+#[cfg(feature = "api")]
 pub mod api;
+
+#[cfg(feature = "api")]
 pub mod error;
 
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "osmosis")]
 pub mod contract;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
 mod event;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
 mod lease;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
 mod loan;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
 mod position;

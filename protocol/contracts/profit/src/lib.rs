@@ -1,18 +1,25 @@
-pub use crate::error::ContractError;
-
-pub mod error;
+#[cfg(feature = "api")]
 pub mod msg;
-pub mod result;
+#[cfg(feature = "api")]
 pub mod typedefs;
 
-#[cfg(any(feature = "stub", test))]
+#[cfg(feature = "stub")]
 pub mod stub;
 
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "osmosis")]
 mod access_control;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
 pub mod contract;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
+pub mod error;
+
+#[cfg(feature = "osmosis")]
 pub mod profit;
-#[cfg(any(feature = "contract", test))]
+
+#[cfg(feature = "osmosis")]
+pub mod result;
+
+#[cfg(feature = "osmosis")]
 pub mod state;

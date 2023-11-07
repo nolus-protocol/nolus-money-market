@@ -11,9 +11,10 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings"]
-contract-with-bindings = ["contract"]
-contract = []
+default = ["contract-with-bindings", "osmosis"]
+contract-with-bindings = []                                          # TODO rename to cosmwasm-bindings
+api = ["dex/api"]
+osmosis = ["api", "dex/osmosis"]
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
 testing = ["currency/testing", "finance/testing"]
 
@@ -23,7 +24,7 @@ profit = { workspace = true, features = ["stub"] }
 timealarms = { workspace = true, features = ["stub"] }
 
 currency = { workspace = true }
-dex = { workspace = true }
+dex = { workspace = true, optional = true }
 finance = { workspace = true }
 lpp = { workspace = true, features = ["stub"] }
 lpp-platform = { workspace = true }

@@ -9,7 +9,7 @@ use lpp::error::ContractError as LppError;
 use oracle::error::ContractError as OracleError;
 use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
-use profit::error::ContractError as ProfitError;
+use profit::stub::Error as ProfitError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 

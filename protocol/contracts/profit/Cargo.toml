@@ -11,16 +11,20 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings"]
-contract-with-bindings = ["contract"]
-contract = ["stub"]
-stub = []
+default = [
+    "contract-with-bindings",
+    "osmosis",
+] # TODO get rid of default features
+contract-with-bindings = []
+api = []
+osmosis = ["api", "dex/osmosis"]
+stub = ["api"]
 testing = []
 
 [dependencies]
 access-control = { workspace = true }
 currency = { workspace = true, features = ["impl"] }
-dex = { workspace = true }
+dex = { workspace = true, optional = true }
 finance = { workspace = true }
 oracle-platform = { workspace = true }
 platform = { workspace = true }
@@ -38,7 +42,7 @@ serde = { workspace = true, features = ["derive"] }
 currency = { workspace = true, features = ["testing"] }
 dex = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
-oracle-platform = { workspace = true, features = ["testing"]  }
+oracle-platform = { workspace = true, features = ["testing"] }
 timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 
