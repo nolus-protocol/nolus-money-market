@@ -152,3 +152,90 @@ fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {
 fn save_version(storage: &mut dyn Storage, new: &Version) -> Result<(), StdError> {
     VERSION_STORAGE_KEY.save(storage, new)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::SemVer;
+
+    #[test]
+    fn valid() {
+        const VERSIONS: &[(&str, SemVer)] = &[
+            (
+                "0.0.1",
+                SemVer {
+                    major: 0,
+                    minor: 0,
+                    patch: 1,
+                },
+            ),
+            (
+                "1.3.2",
+                SemVer {
+                    major: 1,
+                    minor: 3,
+                    patch: 2,
+                },
+            ),
+            (
+                "12.34.56",
+                SemVer {
+                    major: 12,
+                    minor: 34,
+                    patch: 56,
+                },
+            ),
+        ];
+
+        for &(version, expected) in VERSIONS {
+            assert_eq!(SemVer::parse(version), expected);
+        }
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_empty() {
+        _ = SemVer::parse("");
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_one_segment() {
+        _ = SemVer::parse("1");
+    }
+
+    #[test]
+    #[should_panic = "Version can't end with a dot!"]
+    fn invalid_one_segment_and_dot() {
+        _ = SemVer::parse("1.");
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_two_segments() {
+        _ = SemVer::parse("1.2");
+    }
+
+    #[test]
+    #[should_panic = "Version can't end with a dot!"]
+    fn invalid_two_segments_and_dot() {
+        _ = SemVer::parse("1.2.");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected segment!"]
+    fn invalid_three_segments_and_dot() {
+        _ = SemVer::parse("1.2.3.");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected segment!"]
+    fn invalid_four_segments() {
+        _ = SemVer::parse("1.2.3.4");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected symbol encountered! Expected an ASCII number or an ASCII dot!"]
+    fn excluded_postfix() {
+        _ = SemVer::parse("1.2.3-rc1");
+    }
+}
