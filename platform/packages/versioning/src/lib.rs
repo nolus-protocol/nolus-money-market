@@ -38,21 +38,21 @@ impl SemVer {
                 b'.' => {
                     segment_index += 1;
 
-                    if segment_index == segments.len() {
-                        panic!("Unexpected segment!");
-                    } else if version_index + 1 == version.len() {
-                        panic!("Version can't end with a dot!");
-                    }
+                    assert!(segment_index != segments.len(), "Unexpected segment!");
+                    assert!(
+                        version_index + 1 < version.len(),
+                        "Version can't end with a dot!"
+                    );
                 }
-                _ => unreachable!(),
+                _ => panic!(
+                    "Unexpected symbol encountered! Expected an ASCII number or an ASCII dot!"
+                ),
             }
 
             version_index += 1;
         }
 
-        if segment_index < segments.len() - 1 {
-            unreachable!()
-        }
+        assert!(segment_index + 1 == segments.len(), "Invalid version string! Expected three segments (major, minor and patch), but got less!");
 
         let [major, minor, patch]: [VersionSegment; 3] = segments;
 
