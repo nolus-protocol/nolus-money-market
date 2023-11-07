@@ -127,7 +127,7 @@ pub struct PositionSpecDTO {
     pub min_asset: LpnCoin,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
-    //TODO: rename it to 'min_trasaction_amount' in the next migration
+    //TODO: rename it to 'min_transaction' in the next migration
     pub min_sell_asset: LpnCoin,
 }
 

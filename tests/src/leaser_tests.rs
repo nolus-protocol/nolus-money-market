@@ -135,8 +135,8 @@ fn open_multiple_loans() {
         .into_generic();
 
     test_case
-        .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)])
-        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(50)]);
+        .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(450)])
+        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(225)]);
 
     leaser_mod::assert_no_leases(
         &test_case.app,
@@ -154,7 +154,7 @@ fn open_multiple_loans() {
                     currency: LeaseCurrency::TICKER.into(),
                     max_ltd: None,
                 },
-                &[cwcoin::<Lpn, _>(3)],
+                &[cwcoin::<Lpn, _>(75)],
             )
             .unwrap();
 
@@ -181,7 +181,7 @@ fn open_multiple_loans() {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd: None,
             },
-            &[cwcoin::<Lpn, _>(30)],
+            &[cwcoin::<Lpn, _>(78)],
         )
         .unwrap();
 
@@ -250,7 +250,7 @@ fn test_quote() {
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(resp.annual_interest_rate, Percent::from_permille(94),);
+    assert_eq!(resp.annual_interest_rate, Percent::from_permille(72),);
 
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
@@ -454,7 +454,7 @@ fn open_loans_lpp_fails() {
     type LeaseCurrency = PaymentC3;
 
     let user_addr = Addr::unchecked(USER);
-    let downpayment = cwcoin::<Lpn, _>(30);
+    let downpayment = cwcoin::<Lpn, _>(86);
 
     fn mock_lpp_execute(
         deps: DepsMut<'_>,
@@ -507,6 +507,18 @@ fn open_loans_lpp_fails() {
         )
         .unwrap()
         .unwrap_response();
+}
+
+#[test]
+#[should_panic(expected = "The transaction amount should worth")]
+fn open_loans_insufficient_transaction_amount() {
+    open_loans_insufficient_amount(49);
+}
+
+#[test]
+#[should_panic(expected = "The asset amount should worth")]
+fn open_loans_insufficient_asset() {
+    open_loans_insufficient_amount(62);
 }
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
@@ -571,7 +583,7 @@ where
         }
     }
 
-    let downpayment: Coin<DownpaymentC> = Coin::new(40);
+    let downpayment: Coin<DownpaymentC> = Coin::new(79);
     let quote = leaser_mod::query_quote::<DownpaymentC, LeaseC>(
         &test_case.app,
         leaser_addr.clone(),
@@ -618,4 +630,44 @@ fn lease_addr(events: &[Event]) -> Addr {
             .value
             .clone(),
     )
+}
+
+fn open_loans_insufficient_amount(downpayment: Amount) {
+    type Lpn = StableC1;
+    type LeaseCurrency = PaymentC3;
+
+    let user_addr = Addr::unchecked(USER);
+    let incoming_funds = cwcoin::<Lpn, _>(200);
+    let downpayment_amount = cwcoin::<Lpn, _>(downpayment);
+
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
+
+    test_case.send_funds_from_admin(user_addr.clone(), std::slice::from_ref(&incoming_funds));
+
+    let _res: AppResponse = test_case
+        .app
+        .execute(
+            user_addr,
+            test_case.address_book.leaser().clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: LeaseCurrency::TICKER.into(),
+                max_ltd: None,
+            },
+            &[downpayment_amount],
+        )
+        .unwrap()
+        .unwrap_response();
 }

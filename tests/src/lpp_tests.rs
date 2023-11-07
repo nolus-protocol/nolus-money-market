@@ -200,7 +200,7 @@ fn open_loan_no_liquidity() {
             lease_addr,
             test_case.address_book.lpp().clone(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: test::funds::<_, Lpn>(100),
+                amount: test::funds::<_, Lpn>(2500),
             },
             &[lpn_cwcoin(200)],
         )

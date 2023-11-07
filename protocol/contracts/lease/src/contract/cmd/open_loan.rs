@@ -8,7 +8,6 @@ use currency::{
 };
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
-    liability::Liability,
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
@@ -17,12 +16,13 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{DownpaymentCoin, LpnCoin},
+    api::{DownpaymentCoin, LpnCoin, PositionSpecDTO},
     error::ContractError,
+    position::Spec as PositionSpec,
 };
 
 pub struct OpenLoanReq<'a> {
-    liability: &'a Liability,
+    position_spec: PositionSpecDTO,
     funds_in: Vec<CwCoin>,
     max_ltd: Option<Percent>,
     oracle: OracleRef,
@@ -31,14 +31,14 @@ pub struct OpenLoanReq<'a> {
 
 impl<'a> OpenLoanReq<'a> {
     pub fn new(
-        liability: &'a Liability,
+        position_spec: PositionSpecDTO,
         funds_in: Vec<CwCoin>,
         max_ltd: Option<Percent>,
         oracle: OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> Self {
         Self {
-            liability,
+            position_spec,
             funds_in,
             max_ltd,
             oracle,
@@ -71,16 +71,13 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
             return Err(Self::Error::InsufficientPayment(downpayment));
         }
 
-        let borrow_lpn = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd);
-
-        lpp.open_loan_req(borrow_lpn)?;
-
-        Ok(Self::Output {
-            batch: lpp.into().batch,
-            downpayment,
-        })
+        PositionSpec::try_from(self.position_spec)
+            .and_then(|spec| spec.calc_borrow_amount(downpayment_lpn, self.max_ltd))
+            .and_then(|borrow_lpn| lpp.open_loan_req(borrow_lpn).map_err(ContractError::from))
+            .map(|()| Self::Output {
+                batch: lpp.into().batch,
+                downpayment,
+            })
     }
 }
 

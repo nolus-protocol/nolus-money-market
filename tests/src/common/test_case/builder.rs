@@ -321,7 +321,7 @@ where
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         self.init_lpp_with_funds(
             custom_wrapper,
-            &[CwCoin::new(400, Lpn::BANK_SYMBOL)],
+            &[CwCoin::new(2500, Lpn::BANK_SYMBOL)],
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,

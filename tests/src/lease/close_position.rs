@@ -211,7 +211,7 @@ fn partial_close_invalid_currency() {
 
 #[test]
 fn partial_close_min_asset() {
-    let min_asset_lpn = Instantiator::position_spec().min_asset.try_into().unwrap();
+    let min_asset_lpn = Instantiator::min_asset().try_into().unwrap();
     let min_asset = price::total(min_asset_lpn, super::price_lpn_of().inv());
     let lease_amount: LeaseCoin = lease_amount();
 
@@ -236,10 +236,7 @@ fn partial_close_min_asset() {
 
 #[test]
 fn partial_close_min_sell_asset() {
-    let min_sell_asset_lpn = Instantiator::position_spec()
-        .min_sell_asset
-        .try_into()
-        .unwrap();
+    let min_sell_asset_lpn = Instantiator::min_sell_asset().try_into().unwrap();
     let min_sell_asset: LeaseCoin = price::total(min_sell_asset_lpn, super::price_lpn_of().inv());
 
     let mut test_case = super::create_test_case::<PaymentCurrency>();

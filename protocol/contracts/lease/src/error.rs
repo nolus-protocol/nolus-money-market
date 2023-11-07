@@ -62,8 +62,8 @@ pub enum ContractError {
     #[error("[Lease] The asset amount should worth at least {0}")]
     InsufficientAssetAmount(LpnCoin),
 
-    #[error("[Lease] The trasaction amount should worth at least {0}")]
-    InsufficientTrasactionAmount(LpnCoin),
+    #[error("[Lease] The transaction amount should worth at least {0}")]
+    InsufficientTransactionAmount(LpnCoin),
 
     #[error("[Lease] The position close amount should worth at least {0}")]
     PositionCloseAmountTooSmall(LpnCoin),
