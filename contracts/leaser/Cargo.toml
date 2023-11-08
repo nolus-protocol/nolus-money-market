@@ -9,7 +9,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings", "migration"]
+default = ["contract-with-bindings"]
 contract-with-bindings = []
 migration = ["lease/migration"]
 testing = ["currency/testing", "lease/testing"]
