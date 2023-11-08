@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["contract-with-bindings", "migration"]
 contract-with-bindings = []
 migration = ["lease/migration"]
-testing = ["currency/testing"]
+testing = ["currency/testing", "lease/testing"]
 
 [dependencies]
 lease = { workspace = true }
