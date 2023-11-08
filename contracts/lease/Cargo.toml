@@ -15,7 +15,7 @@ default = ["contract-with-bindings", "migration"]
 contract-with-bindings = ["contract"]
 contract = []
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
-testing = ["currency/testing"]
+testing = ["currency/testing", "finance/testing"]
 
 [dependencies]
 access-control = { workspace = true }
