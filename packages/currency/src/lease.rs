@@ -403,7 +403,7 @@ mod test {
         Currency,
     };
 
-    use super::{Atom, LeaseGroup, StAtom, StOsmo, Wbtc, Weth, Tia};
+    use super::{Atom, LeaseGroup, StAtom, StOsmo, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {

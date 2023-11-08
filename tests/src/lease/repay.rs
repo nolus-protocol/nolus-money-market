@@ -1,3 +1,4 @@
+use ::lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -8,7 +9,6 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
-use ::lease::api::{ExecuteMsg, StateResponse};
 use sdk::{
     cosmwasm_std::{Addr, Binary, Timestamp},
     cw_multi_test::AppResponse,

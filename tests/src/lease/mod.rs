@@ -12,7 +12,7 @@ use finance::{
     price::{self, Price},
 };
 use lease::api::{StateQuery, StateResponse};
-use leaser::msg::{QueryMsg, QuoteResponse};
+use leaser::msg::QuoteResponse;
 use sdk::{
     cosmwasm_std::{coin, Addr, Binary, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
@@ -190,13 +190,15 @@ pub(super) fn complete_init_lease<
         max_ltd,
     );
     let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
+    let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
 
     common::lease::complete_initialization(
         &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASER_CONNECTION_ID,
         lease.clone(),
         downpayment,
         exp_borrow,
+        exp_lease,
     );
 }
 
