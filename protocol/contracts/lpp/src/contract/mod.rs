@@ -29,8 +29,8 @@ mod rewards;
 #[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-const CONTRACT_VERSION: SemVer = package_version!();
-const COMPLETE_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, CONTRACT_VERSION);
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -43,7 +43,7 @@ impl<'a> InstantiateWithLpn<'a> {
     where
         Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
-        versioning::initialize(self.deps.storage, COMPLETE_VERSION)?;
+        versioning::initialize(self.deps.storage, CONTRACT_VERSION)?;
 
         SingleUserAccess::new(
             self.deps.storage.deref_mut(),
@@ -94,7 +94,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
         {
             versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
                 deps.storage,
-                COMPLETE_VERSION,
+                CONTRACT_VERSION,
                 |storage: &mut dyn sdk::cosmwasm_std::Storage| {
                     self::migrate::migrate(storage, msg.min_utilization)
                 },
@@ -107,7 +107,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
             // Statically assert that the message is empty when doing a software-only update.
             let MigrateMsg {}: MigrateMsg = msg;
 
-            versioning::update_software(deps.storage, COMPLETE_VERSION, Into::into)
+            versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         }
     }
     .and_then(response::response_consuming)
