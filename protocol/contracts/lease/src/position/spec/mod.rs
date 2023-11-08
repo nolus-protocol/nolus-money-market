@@ -56,25 +56,20 @@ where
     {
         let transaction_currency_in_lpn = lpn_in_assets.inv();
 
-        self.check_transaction_amount(close_amount, transaction_currency_in_lpn)
-            .map_err(|err| match err {
-                ContractError::InsufficientTransactionAmount(min_transaction) => {
-                    ContractError::PositionCloseAmountTooSmall(min_transaction)
-                }
-                _ => err,
-            })
-            .and_then(|()| {
-                self.check_asset_amount(
-                    asset.saturating_sub(close_amount),
-                    transaction_currency_in_lpn,
-                )
-            })
-            .map_err(|err| match err {
-                ContractError::InsufficientAssetAmount(min_asset) => {
-                    ContractError::PositionCloseAmountTooBig(min_asset)
-                }
-                _ => err,
-            })
+        if !self.valid_transaction(close_amount, transaction_currency_in_lpn) {
+            return Err(ContractError::PositionCloseAmountTooSmall(
+                self.min_transaction.into(),
+            ));
+        }
+        if !self.valid_asset(
+            asset.saturating_sub(close_amount),
+            transaction_currency_in_lpn,
+        ) {
+            return Err(ContractError::PositionCloseAmountTooBig(
+                self.min_asset.into(),
+            ));
+        }
+        Ok(())
     }
 
     /// Calculate the borrow amount.
@@ -87,15 +82,25 @@ where
         downpayment: Coin<Lpn>,
         may_max_ltd: Option<Percent>,
     ) -> ContractResult<Coin<Lpn>> {
-        self.check_transaction_amount(downpayment, Price::identity())
-            .map(|()| self.liability.init_borrow_amount(downpayment, may_max_ltd))
-            .and_then(|borrow| {
-                self.check_transaction_amount(borrow, Price::identity())
-                    .and_then(|()| {
-                        self.check_asset_amount(downpayment.add(borrow), Price::identity())
-                    })
-                    .map(|()| borrow)
-            })
+        let one = Price::identity();
+
+        if !self.valid_transaction(downpayment, one) {
+            return Err(ContractError::InsufficientTransactionAmount(
+                self.min_transaction.into(),
+            ));
+        }
+        let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
+        if !self.valid_transaction(borrow, one) {
+            return Err(ContractError::InsufficientTransactionAmount(
+                self.min_transaction.into(),
+            ));
+        }
+        if !self.valid_asset(downpayment.add(borrow), one) {
+            return Err(ContractError::InsufficientAssetAmount(
+                self.min_asset.into(),
+            ));
+        }
+        Ok(borrow)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
@@ -113,42 +118,30 @@ where
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 
-    fn check_transaction_amount<TransactionC>(
+    fn valid_transaction<TransactionC>(
         &self,
         amount: Coin<TransactionC>,
         transaction_currency_in_lpn: Price<TransactionC, Lpn>,
-    ) -> ContractResult<()>
+    ) -> bool
     where
         TransactionC: Currency,
     {
         let amount = price::total(amount, transaction_currency_in_lpn);
 
-        if amount < self.min_transaction {
-            Err(ContractError::InsufficientTransactionAmount(
-                self.min_transaction.into(),
-            ))
-        } else {
-            Ok(())
-        }
+        amount >= self.min_transaction
     }
 
-    fn check_asset_amount<TransactionC>(
+    fn valid_asset<TransactionC>(
         &self,
         asset_amount: Coin<TransactionC>,
         transaction_currency_in_lpn: Price<TransactionC, Lpn>,
-    ) -> ContractResult<()>
+    ) -> bool
     where
         TransactionC: Currency,
     {
         let asset_amount = price::total(asset_amount, transaction_currency_in_lpn);
 
-        if asset_amount < self.min_asset {
-            Err(ContractError::InsufficientAssetAmount(
-                self.min_asset.into(),
-            ))
-        } else {
-            Ok(())
-        }
+        asset_amount >= self.min_asset
     }
 }
 
@@ -163,7 +156,10 @@ mod test_validate_close {
         price::{self, Price},
     };
 
-    use crate::{error::ContractError, position::{Position, Spec}};
+    use crate::{
+        error::ContractError,
+        position::{Position, Spec},
+    };
 
     type TestCurrency = PaymentC3;
     type TestLpn = StableC1;
