@@ -33,7 +33,7 @@ const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VER
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
     InstantiateMsg::Instantiate {
@@ -43,7 +43,7 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    ContractOwnerAccess::new(&mut *deps.storage).grant_to(&contract_owner)?;
+    ContractOwnerAccess::new(deps.branch().storage).grant_to(&contract_owner)?;
 
     contracts
         .transform(&deps.querier)
