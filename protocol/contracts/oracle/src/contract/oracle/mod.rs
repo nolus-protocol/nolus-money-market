@@ -115,7 +115,7 @@ where
     OracleBase: Currency + DeserializeOwned,
 {
     const REPLY_ID: Id = 0;
-    const EVENT_TYPE: &'_ str = "pricealarm";
+    const EVENT_TYPE: &'static str = "pricealarm";
 
     pub(super) fn try_notify_alarms(
         &mut self,

@@ -788,7 +788,6 @@ version = "0.3.0"
 dependencies = [
  "currency",
  "finance",
- "platform",
  "postcard",
  "sdk",
  "serde",

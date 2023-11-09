@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["contract-with-bindings", "osmosis"]
 contract-with-bindings = []                                          # TODO rename to cosmwasm-bindings
-api = ["dex/api"]
+api = ["dep:dex"]
 skel = ["api"]
 osmosis = ["skel", "dex/osmosis"]
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]

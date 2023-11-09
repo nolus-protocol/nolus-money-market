@@ -6,8 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-osmosis = ["api", "swap/osmosis"]
-api = ["swap/api"]
+osmosis = ["swap/osmosis"]
 migration = []
 testing = []
 
@@ -19,7 +18,7 @@ oracle-platform = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }
-swap = { workspace = true, optional = true }
+swap = { workspace = true, features = ["api"] }
 
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
