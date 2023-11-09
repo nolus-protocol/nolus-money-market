@@ -98,7 +98,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         CONTRACT_VERSION,
         ContractError::UpdateSoftware,
     )
-    .and_then(response::response_consuming)
+    .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

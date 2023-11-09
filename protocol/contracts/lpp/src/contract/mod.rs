@@ -110,7 +110,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwRespon
             versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         }
     }
-    .and_then(response::response_consuming)
+    .and_then(response::response)
 }
 
 struct ExecuteWithLpn<'a> {

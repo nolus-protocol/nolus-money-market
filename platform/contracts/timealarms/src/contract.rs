@@ -39,7 +39,7 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response_consuming)
+        .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -58,7 +58,7 @@ pub fn execute(
         ExecuteMsg::DispatchAlarms { max_count } => time_alarms
             .try_notify(env.block.time, max_count)
             .and_then(|(total, resp)| {
-                response::response_with_messages(&DispatchAlarmsResponse(total), resp)
+                response::response_with_messages(DispatchAlarmsResponse(total), resp)
             }),
     }
 }
