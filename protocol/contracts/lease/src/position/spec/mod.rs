@@ -37,6 +37,38 @@ where
         self.liability
     }
 
+    /// Calculate the borrow amount.
+    /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
+    /// or the borrow amount is less than the minimum transaction amount.
+    /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
+    /// is less than the minimum asset amount.
+    pub fn calc_borrow_amount(
+        &self,
+        downpayment: Coin<Lpn>,
+        may_max_ltd: Option<Percent>,
+    ) -> ContractResult<Coin<Lpn>> {
+        let one = Price::identity();
+
+        if !self.valid_transaction(downpayment, one) {
+            Err(ContractError::InsufficientTransactionAmount(
+                self.min_transaction.into(),
+            ))
+        } else {
+            let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
+            if !self.valid_transaction(borrow, one) {
+                Err(ContractError::InsufficientTransactionAmount(
+                    self.min_transaction.into(),
+                ))
+            } else if !self.valid_asset(downpayment.add(borrow), one) {
+                Err(ContractError::InsufficientAssetAmount(
+                    self.min_asset.into(),
+                ))
+            } else {
+                Ok(borrow)
+            }
+        }
+    }
+
     /// Check if the amount can be used to close the position.
     /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
     /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
@@ -57,50 +89,19 @@ where
         let transaction_currency_in_lpn = lpn_in_assets.inv();
 
         if !self.valid_transaction(close_amount, transaction_currency_in_lpn) {
-            return Err(ContractError::PositionCloseAmountTooSmall(
+            Err(ContractError::PositionCloseAmountTooSmall(
                 self.min_transaction.into(),
-            ));
-        }
-        if !self.valid_asset(
+            ))
+        } else if !self.valid_asset(
             asset.saturating_sub(close_amount),
             transaction_currency_in_lpn,
         ) {
-            return Err(ContractError::PositionCloseAmountTooBig(
+            Err(ContractError::PositionCloseAmountTooBig(
                 self.min_asset.into(),
-            ));
+            ))
+        } else {
+            Ok(())
         }
-        Ok(())
-    }
-
-    /// Calculate the borrow amount.
-    /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
-    /// or the borrow amount is less than the minimum transaction amount.
-    /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
-    /// is less than the minimum asset amount.
-    pub fn calc_borrow_amount(
-        &self,
-        downpayment: Coin<Lpn>,
-        may_max_ltd: Option<Percent>,
-    ) -> ContractResult<Coin<Lpn>> {
-        let one = Price::identity();
-
-        if !self.valid_transaction(downpayment, one) {
-            return Err(ContractError::InsufficientTransactionAmount(
-                self.min_transaction.into(),
-            ));
-        }
-        let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
-        if !self.valid_transaction(borrow, one) {
-            return Err(ContractError::InsufficientTransactionAmount(
-                self.min_transaction.into(),
-            ));
-        }
-        if !self.valid_asset(downpayment.add(borrow), one) {
-            return Err(ContractError::InsufficientAssetAmount(
-                self.min_asset.into(),
-            ));
-        }
-        Ok(borrow)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

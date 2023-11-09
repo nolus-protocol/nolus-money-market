@@ -97,6 +97,14 @@ where
             })
     }
 
+    /// Check if the amount can be used to close the position.
+    /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
+    /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
+    /// `NewLeaseForm::position_spec`.
+    ///
+    /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
+    /// with amount that would decrease a position less than the minimum asset parameter sent on
+    /// lease open. Refer to `NewLeaseForm::position_spec`.
     pub fn validate_close_amount(
         &self,
         close_amount: Coin<Asset>,
