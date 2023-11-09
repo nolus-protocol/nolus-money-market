@@ -54,14 +54,14 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     MigrateMsg::Migrate {
         dex,
         contract_owner,
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(&mut *deps.storage)
+    ContractOwnerAccess::new(deps.branch().storage)
         .grant_to(&contract_owner)
         .map_err(Into::into)
         .and_then(|()| {
@@ -77,12 +77,12 @@ pub fn migrate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(&mut *deps.storage).check(&info.sender)?;
+    ContractOwnerAccess::new(deps.branch().storage).check(&info.sender)?;
 
     match msg {
         ExecuteMsg::Instantiate {
