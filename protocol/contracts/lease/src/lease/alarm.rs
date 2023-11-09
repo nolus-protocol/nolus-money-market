@@ -1,6 +1,4 @@
-use platform::batch::Batch;
-
-use currency::{self, Currency};
+use currency::Currency;
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -14,6 +12,7 @@ use oracle::{
     stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
 };
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
+use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 

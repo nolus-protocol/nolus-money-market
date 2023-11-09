@@ -17,7 +17,7 @@ use sdk::{
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -29,6 +29,8 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -41,7 +43,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
@@ -64,7 +66,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
 

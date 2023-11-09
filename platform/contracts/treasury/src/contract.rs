@@ -12,7 +12,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg},
@@ -22,6 +22,8 @@ use crate::{
 // version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -30,7 +32,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     try_configure_reward_dispatcher(deps.storage, &msg.rewards_dispatcher)?;
 
@@ -39,7 +41,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
 

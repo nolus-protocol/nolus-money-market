@@ -1,10 +1,10 @@
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Storage};
 
-use crate::result::ContractResult;
 use crate::{
     common::{maybe_migrate_contract, type_defs::Contracts},
     msg::MigrateContracts,
+    result::ContractResult,
     state::{contracts as state_contracts, migration_release},
 };
 

@@ -1,4 +1,4 @@
-use currency::{self, Currency};
+use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     api::{

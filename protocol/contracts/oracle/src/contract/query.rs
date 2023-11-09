@@ -1,13 +1,11 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::dex::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
-use crate::msg::Config;
 use crate::{
     contract::oracle::Oracle,
-    msg::{PricesResponse, QueryMsg, SwapTreeResponse},
+    msg::{Config, PricesResponse, QueryMsg, SwapTreeResponse},
     state::supported_pairs::SupportedPairs,
     ContractError,
 };

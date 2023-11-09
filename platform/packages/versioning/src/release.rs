@@ -95,105 +95,105 @@ fn release_type() -> Type {
 
 #[cfg(test)]
 mod test {
-    use crate::{parse_semver, Version};
+    use crate::{SemVer, Version};
 
     use super::{allow_software_and_storage_update_type, allow_software_update_type, Type};
 
     #[test]
     fn prod_software() {
-        let current = Version::new(1, parse_semver("0.3.4"));
+        let current = Version::new(1, SemVer::parse("0.3.4"));
         allow_software_update_type(Type::Prod, &current, &current).unwrap_err();
         allow_software_update_type(
             Type::Prod,
             &current,
-            &Version::new(current.storage + 1, parse_semver("0.3.4")),
+            &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_update_type(
             Type::Prod,
             &current,
-            &Version::new(current.storage, parse_semver("0.3.3")),
+            &Version::new(current.storage, SemVer::parse("0.3.3")),
         )
         .unwrap_err();
 
-        let new = Version::new(1, parse_semver("0.3.5"));
+        let new = Version::new(1, SemVer::parse("0.3.5"));
         allow_software_update_type(Type::Prod, &current, &new).unwrap();
     }
 
     #[test]
     fn dev_software() {
-        let current = Version::new(1, parse_semver("0.3.4"));
+        let current = Version::new(1, SemVer::parse("0.3.4"));
         allow_software_update_type(Type::Dev, &current, &current).unwrap();
         allow_software_update_type(
             Type::Prod,
             &current,
-            &Version::new(current.storage + 1, parse_semver("0.3.4")),
+            &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_update_type(
             Type::Prod,
             &current,
-            &Version::new(current.storage, parse_semver("0.3.3")),
+            &Version::new(current.storage, SemVer::parse("0.3.3")),
         )
         .unwrap_err();
 
-        let new = Version::new(1, parse_semver("0.3.5"));
+        let new = Version::new(1, SemVer::parse("0.3.5"));
         allow_software_update_type(Type::Prod, &current, &new).unwrap();
     }
 
     #[test]
     fn prod_software_and_storage() {
-        let current = Version::new(1, parse_semver("0.3.4"));
+        let current = Version::new(1, SemVer::parse("0.3.4"));
         allow_software_and_storage_update_type::<0>(Type::Prod, &current, &current).unwrap_err();
         allow_software_and_storage_update_type::<1>(Type::Prod, &current, &current).unwrap_err();
 
         allow_software_and_storage_update_type::<0>(
             Type::Prod,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Prod,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
         allow_software_and_storage_update_type::<1>(
             Type::Prod,
             &current,
-            &Version::new(2, parse_semver("0.3.5")),
+            &Version::new(2, SemVer::parse("0.3.5")),
         )
         .unwrap();
         allow_software_and_storage_update_type::<2>(
             Type::Prod,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Prod,
             &current,
-            &Version::new(2, parse_semver("0.3.3")),
+            &Version::new(2, SemVer::parse("0.3.3")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Prod,
             &current,
-            &Version::new(1, parse_semver("0.3.5")),
+            &Version::new(1, SemVer::parse("0.3.5")),
         )
         .unwrap_err();
 
-        let new = Version::new(2, parse_semver("0.3.5"));
+        let new = Version::new(2, SemVer::parse("0.3.5"));
         allow_software_and_storage_update_type::<1>(Type::Prod, &current, &new).unwrap();
         allow_software_and_storage_update_type::<2>(
             Type::Prod,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
             &new,
         )
         .unwrap_err();
@@ -201,55 +201,55 @@ mod test {
 
     #[test]
     fn dev_software_and_storage() {
-        let current = Version::new(1, parse_semver("0.3.4"));
+        let current = Version::new(1, SemVer::parse("0.3.4"));
         allow_software_and_storage_update_type::<0>(Type::Dev, &current, &current).unwrap_err();
         allow_software_and_storage_update_type::<1>(Type::Dev, &current, &current).unwrap_err();
 
         allow_software_and_storage_update_type::<0>(
             Type::Dev,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Dev,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap();
         allow_software_and_storage_update_type::<1>(
             Type::Dev,
             &current,
-            &Version::new(2, parse_semver("0.3.5")),
+            &Version::new(2, SemVer::parse("0.3.5")),
         )
         .unwrap();
         allow_software_and_storage_update_type::<2>(
             Type::Dev,
             &current,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Dev,
             &current,
-            &Version::new(2, parse_semver("0.3.3")),
+            &Version::new(2, SemVer::parse("0.3.3")),
         )
         .unwrap_err();
 
         allow_software_and_storage_update_type::<1>(
             Type::Dev,
             &current,
-            &Version::new(1, parse_semver("0.3.5")),
+            &Version::new(1, SemVer::parse("0.3.5")),
         )
         .unwrap_err();
 
-        let new = Version::new(2, parse_semver("0.3.5"));
+        let new = Version::new(2, SemVer::parse("0.3.5"));
         allow_software_and_storage_update_type::<1>(Type::Dev, &current, &new).unwrap();
         allow_software_and_storage_update_type::<2>(
             Type::Dev,
-            &Version::new(2, parse_semver("0.3.4")),
+            &Version::new(2, SemVer::parse("0.3.4")),
             &new,
         )
         .unwrap_err();

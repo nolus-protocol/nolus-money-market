@@ -8,9 +8,9 @@ pub fn empty_response() -> CwResponse {
     response_only_messages(MessageResponse::default())
 }
 
-pub fn response<T, E>(response: &T) -> Result<CwResponse, E>
+pub fn response<T, E>(response: T) -> Result<CwResponse, E>
 where
-    T: Serialize + ?Sized,
+    T: Serialize,
     error::Error: Into<E>,
 {
     response_with_messages(response, MessageResponse::default())
@@ -31,13 +31,13 @@ where
         .fold(cw_resp, |res, event| res.add_event(event.into()))
 }
 
-pub fn response_with_messages<T, M, E>(response: &T, messages: M) -> Result<CwResponse, E>
+pub fn response_with_messages<T, M, E>(response: T, messages: M) -> Result<CwResponse, E>
 where
-    T: Serialize + ?Sized,
+    T: Serialize,
     error::Error: Into<E>,
     M: Into<MessageResponse>,
 {
-    to_json_binary(response)
+    to_json_binary(&response)
         .map_err(error::Error::from)
         .map_err(Into::into)
         .map(|resp_bin| response_only_messages(messages).set_data(resp_bin))

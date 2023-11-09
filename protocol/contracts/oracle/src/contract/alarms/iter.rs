@@ -2,7 +2,7 @@ use std::{iter, ops::Deref};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};

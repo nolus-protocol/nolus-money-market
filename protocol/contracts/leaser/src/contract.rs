@@ -14,7 +14,7 @@ use sdk::{
         to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
     },
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -28,6 +28,8 @@ use crate::{
 #[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -41,7 +43,7 @@ pub fn instantiate(
     contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
     contract::validate_addr(&deps.querier, &msg.profit)?;
 
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
@@ -59,7 +61,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
     let resp =
         versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
             deps.storage,
-            version!(CONTRACT_STORAGE_VERSION),
+            CONTRACT_VERSION,
             |storage: &mut _| {
                 use super::state::v0::Config as ConfigOld;
                 ConfigOld::migrate(storage, msg.min_asset, msg.min_sell_asset)
@@ -74,7 +76,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
         // Statically assert that the message is empty when doing a software-only update.
         let MigrateMsg {}: MigrateMsg = msg;
 
-        versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+        versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
     };
 
     resp.and_then(response::response)

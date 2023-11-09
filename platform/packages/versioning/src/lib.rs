@@ -21,6 +21,49 @@ pub struct SemVer {
     patch: VersionSegment,
 }
 
+impl SemVer {
+    pub const fn parse(version: &str) -> Self {
+        let version: &[u8] = version.as_bytes();
+        let mut version_index: usize = 0;
+
+        let mut segments: [VersionSegment; 3] = [0; 3];
+        let mut segment_index: usize = 0;
+
+        while version_index < version.len() {
+            match version[version_index] {
+                digit @ b'0'..=b'9' => {
+                    segments[segment_index] *= 10;
+                    segments[segment_index] += (digit - b'0') as VersionSegment;
+                }
+                b'.' => {
+                    segment_index += 1;
+
+                    assert!(segment_index != segments.len(), "Unexpected segment!");
+                    assert!(
+                        version_index + 1 < version.len(),
+                        "Version can't end with a dot!"
+                    );
+                }
+                _ => panic!(
+                    "Unexpected symbol encountered! Expected an ASCII number or an ASCII dot!"
+                ),
+            }
+
+            version_index += 1;
+        }
+
+        assert!(segment_index + 1 == segments.len(), "Invalid version string! Expected three segments (major, minor and patch), but got less!");
+
+        let [major, minor, patch]: [VersionSegment; 3] = segments;
+
+        Self {
+            major,
+            minor,
+            patch,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Version {
@@ -34,49 +77,12 @@ impl Version {
     }
 }
 
-pub fn parse_semver(version: &str) -> SemVer {
-    fn parse_segment<'r, I>(
-        iter: &mut I,
-        lowercase_name: &str,
-        pascal_case_name: &str,
-    ) -> VersionSegment
-    where
-        I: Iterator<Item = &'r str> + ?Sized,
-    {
-        iter.next()
-            .unwrap_or_else(|| panic!("No {} segment in version string!", lowercase_name))
-            .parse()
-            .unwrap_or_else(|_| {
-                panic!(
-                    "{} segment in version string is not a number!",
-                    pascal_case_name
-                )
-            })
-    }
-
-    let mut iter = version.split('.');
-
-    let major: VersionSegment = parse_segment(&mut iter, "major", "Major");
-    let minor: VersionSegment = parse_segment(&mut iter, "minor", "Minor");
-    let patch: VersionSegment = parse_segment(&mut iter, "patch", "Patch");
-
-    if iter.next().is_some() {
-        panic!("Unexpected fourth segment found in version string!");
-    };
-
-    SemVer {
-        major,
-        minor,
-        patch,
-    }
-}
-
 #[macro_export]
 macro_rules! package_version {
     () => {{
-        $crate::parse_semver(::core::env!(
+        $crate::SemVer::parse(::core::env!(
             "CARGO_PKG_VERSION",
-            "Cargo package version is not set as an environment variable!",
+            "Cargo package version is not set as an environment variable!"
         ))
     }};
 }
@@ -85,6 +91,9 @@ macro_rules! package_version {
 macro_rules! version {
     ($storage: expr) => {{
         $crate::Version::new($storage, $crate::package_version!())
+    }};
+    ($storage: expr, $version: expr) => {{
+        $crate::Version::new($storage, $version)
     }};
 }
 
@@ -142,4 +151,91 @@ fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {
 
 fn save_version(storage: &mut dyn Storage, new: &Version) -> Result<(), StdError> {
     VERSION_STORAGE_KEY.save(storage, new)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::SemVer;
+
+    #[test]
+    fn valid() {
+        const VERSIONS: &[(&str, SemVer)] = &[
+            (
+                "0.0.1",
+                SemVer {
+                    major: 0,
+                    minor: 0,
+                    patch: 1,
+                },
+            ),
+            (
+                "1.3.2",
+                SemVer {
+                    major: 1,
+                    minor: 3,
+                    patch: 2,
+                },
+            ),
+            (
+                "12.34.56",
+                SemVer {
+                    major: 12,
+                    minor: 34,
+                    patch: 56,
+                },
+            ),
+        ];
+
+        for &(version, expected) in VERSIONS {
+            assert_eq!(SemVer::parse(version), expected);
+        }
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_empty() {
+        _ = SemVer::parse("");
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_one_segment() {
+        _ = SemVer::parse("1");
+    }
+
+    #[test]
+    #[should_panic = "Version can't end with a dot!"]
+    fn invalid_one_segment_and_dot() {
+        _ = SemVer::parse("1.");
+    }
+
+    #[test]
+    #[should_panic = "Invalid version string! Expected three segments (major, minor and patch), but got less!"]
+    fn invalid_two_segments() {
+        _ = SemVer::parse("1.2");
+    }
+
+    #[test]
+    #[should_panic = "Version can't end with a dot!"]
+    fn invalid_two_segments_and_dot() {
+        _ = SemVer::parse("1.2.");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected segment!"]
+    fn invalid_three_segments_and_dot() {
+        _ = SemVer::parse("1.2.3.");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected segment!"]
+    fn invalid_four_segments() {
+        _ = SemVer::parse("1.2.3.4");
+    }
+
+    #[test]
+    #[should_panic = "Unexpected symbol encountered! Expected an ASCII number or an ASCII dot!"]
+    fn excluded_postfix() {
+        _ = SemVer::parse("1.2.3-rc1");
+    }
 }

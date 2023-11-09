@@ -1,11 +1,11 @@
-use platform::response::{self};
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use self::{
     error::ContractError,
@@ -24,6 +24,8 @@ pub mod state;
 // version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -32,7 +34,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     msg.validate(&deps.querier)?;
 
@@ -41,7 +43,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION), Into::into)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
 

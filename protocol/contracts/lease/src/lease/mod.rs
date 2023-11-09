@@ -1,4 +1,4 @@
-use currency::{self, Currency};
+use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;

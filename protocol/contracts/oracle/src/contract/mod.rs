@@ -1,5 +1,4 @@
-use currency::dex::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
     response,
@@ -12,7 +11,7 @@ use sdk::{
         to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
-use versioning::{package_version, version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     contract::alarms::MarketAlarms,
@@ -37,6 +36,8 @@ mod sudo;
 // version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const PACKAGE_VERSION: SemVer = package_version!();
+const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 struct InstantiateWithCurrency<'a> {
     deps: DepsMut<'a>,
@@ -81,7 +82,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+    versioning::initialize(deps.storage, CONTRACT_VERSION)
         .map_err(ContractError::InitializeVersioning)?;
 
     InstantiateWithCurrency::cmd(deps, msg)?;
@@ -93,7 +94,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(
         deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
+        CONTRACT_VERSION,
         ContractError::UpdateSoftware,
     )
     .and_then(response::response)
