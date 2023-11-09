@@ -6,8 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-osmosis = ["any_dex", "swap/osmosis"]
-any_dex = ["api"]
+osmosis = ["api", "swap/osmosis"]
 api = ["swap/api"]
 migration = []
 testing = []

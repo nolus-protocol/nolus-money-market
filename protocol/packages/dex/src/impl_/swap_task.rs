@@ -4,7 +4,7 @@ use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::account::Account;
+use super::Account;
 
 pub type CoinsNb = u8;
 

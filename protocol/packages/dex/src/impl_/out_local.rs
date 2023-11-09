@@ -64,7 +64,7 @@ where
 }
 
 mod impl_into {
-    use crate::{
+    use crate::impl_::{
         swap_task::SwapTask as SwapTaskT, ForwardToInner, SwapExactIn, SwapExactInPostRecoverIca,
         SwapExactInPreRecoverIca, SwapExactInRecoverIca, SwapExactInRecoverIcaRespDelivery,
         TransferInFinish, TransferInInit, TransferInInitPostRecoverIca,
@@ -258,7 +258,7 @@ mod impl_into {
 mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply};
 
-    use crate::{
+    use crate::impl_::{
         response::{ContinueResult, Result},
         swap_task::SwapTask as SwapTaskT,
         Handler,
@@ -630,7 +630,7 @@ mod impl_handler {
 mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use crate::{
+    use crate::impl_::{
         swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, ForwardToInner, SwapState,
         TransferInFinishState, TransferInInitState, TransferOutState,
     };
@@ -679,7 +679,7 @@ mod impl_display {
     use std::fmt::Display;
 
     use super::State;
-    use crate::swap_task::SwapTask as SwapTaskT;
+    use crate::impl_::swap_task::SwapTask as SwapTaskT;
 
     impl<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> Display
         for State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>
@@ -712,7 +712,7 @@ mod impl_display {
 mod impl_migration {
 
     use super::State;
-    use crate::{
+    use crate::impl_::{
         migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, ForwardToInner, InspectSpec,
     };
 

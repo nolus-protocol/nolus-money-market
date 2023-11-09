@@ -15,22 +15,19 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{
-    error::{Error, Result},
-    ica_connector::Enterable,
-    response::{self, ContinueResult, Handler, Result as HandlerResult},
-    swap_task::{CoinVisitor, IterNext},
-    timeout,
-    trx::TransferOutTrx,
-    Contract, ContractInSwap, TimeAlarm, TransferOutState,
-};
+use crate::error::{Error, Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
 use super::{
     coin_index,
+    ica_connector::Enterable,
+    response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
-    swap_task::{CoinsNb, IterState, SwapTask as SwapTaskT},
+    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask as SwapTaskT},
+    timeout,
+    trx::TransferOutTrx,
+    Contract, ContractInSwap, TimeAlarm, TransferOutState,
 };
 
 /// Transfer out a list of coins to DEX
@@ -262,7 +259,7 @@ mod test {
     use currency::test::{SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
-    use crate::swap_task::{CoinVisitor, CoinsNb, IterNext};
+    use crate::impl_::swap_task::{CoinVisitor, CoinsNb, IterNext};
 
     use super::Counter;
 

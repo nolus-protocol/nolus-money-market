@@ -43,7 +43,7 @@ mod test {
     use finance::coin::{Amount, Coin, CoinDTO};
     use platform::never::{self, Never};
 
-    use crate::swap_task::{CoinVisitor, IterNext, IterState};
+    use crate::impl_::swap_task::{CoinVisitor, IterNext, IterState};
 
     fn coin1() -> CoinDTO<SuperGroup> {
         Coin::<SuperGroupTestC1>::new(32).into()

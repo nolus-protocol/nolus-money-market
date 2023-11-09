@@ -6,10 +6,11 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, Env};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{
+use crate::error::Result;
+
+use super::{
     connectable::DexConnectable,
     entry_delay::EntryDelay,
-    error::Result,
     ica_connector::{Enterable, IcaConnector},
     ica_recover::InRecovery,
 };

@@ -7,9 +7,9 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::Result as DexResult, Contract, Handler, Result};
 #[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
+use crate::impl_::{InspectSpec, MigrateSpec};
+use crate::{error::Result as DexResult, Contract, Handler, Result};
 
 use super::{ica_connector::Enterable as EnterableT, Response};
 

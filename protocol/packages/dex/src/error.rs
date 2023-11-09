@@ -24,10 +24,10 @@ pub enum Error {
     TimeAlarmError(#[from] timealarms::error::ContractError),
 }
 
-#[cfg(feature = "any_dex")]
+#[cfg(feature = "osmosis")]
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[cfg(feature = "any_dex")]
+#[cfg(feature = "osmosis")]
 impl Error {
     pub(crate) fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
     where

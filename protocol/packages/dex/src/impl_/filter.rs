@@ -62,7 +62,7 @@ mod test {
     };
     use finance::coin::{Amount, Coin};
 
-    use crate::{
+    use crate::impl_::{
         swap_coins::TestVisitor,
         swap_task::{CoinVisitor, IterNext},
     };

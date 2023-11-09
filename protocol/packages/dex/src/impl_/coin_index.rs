@@ -54,7 +54,7 @@ mod test {
     use currency::test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
-    use crate::{
+    use crate::impl_::{
         coin_index::CoinsIndexVisitor,
         swap_coins::TestVisitor,
         swap_task::{CoinVisitor, IterNext},

@@ -13,8 +13,8 @@ use sdk::cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, QuerierWrapper, Reply,
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::Result as DexResult, response::Result, ContinueResult, Contract, ForwardToInner,
-    Handler, TimeAlarm,
+    error::Result as DexResult,
+    impl_::{response::Result, ContinueResult, Contract, ForwardToInner, Handler, TimeAlarm},
 };
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};

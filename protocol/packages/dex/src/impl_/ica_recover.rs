@@ -9,14 +9,11 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{
-    account::Account, connectable::DexConnectable, connection::ConnectionParams,
-    entry_delay::EntryDelay, error::Result as DexResult, Contract, TimeAlarm,
-};
+use crate::{error::Result as DexResult, ConnectionParams};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
-use super::ica_connector::{Enterable, IcaConnectee};
+use super::{Account, Contract, DexConnectable, Enterable, EntryDelay, IcaConnectee, TimeAlarm};
 
 #[derive(Serialize, Deserialize)]
 pub struct InRecovery<S, SEnum> {

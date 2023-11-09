@@ -17,12 +17,15 @@ use sdk::{
 };
 use swap::trx::{self as swap_trx, ExactAmountIn};
 
-#[cfg(debug_assertions)]
-use crate::swap_task::IterState;
 use crate::{
-    connectable::DexConnectable,
     connection::ConnectionParams,
     error::{Error, Result},
+};
+
+#[cfg(debug_assertions)]
+use crate::impl_::swap_task::IterState;
+use crate::impl_::{
+    connectable::DexConnectable,
     filter::CurrencyFilter,
     ica_connector::Enterable,
     response::{self, ContinueResult, Handler, Result as HandlerResult},

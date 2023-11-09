@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::{Binary, Deps, Env};
 
-use crate::{
+use crate::impl_::{
     response::{self, ContinueResult as ResponseContinueResult, Result as ResponseResult},
     Handler,
 };

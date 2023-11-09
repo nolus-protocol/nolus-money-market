@@ -12,15 +12,14 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{
-    account::Account,
-    connectable::DexConnectable,
-    error::Result,
-    response::{ContinueResult, Handler},
-    Contract, Response, TimeAlarm,
-};
+use crate::error::Result;
 #[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
+use crate::impl_::{InspectSpec, MigrateSpec};
+
+use super::{
+    response::{ContinueResult, Handler},
+    Account, Contract, DexConnectable, Response, TimeAlarm,
+};
 
 pub trait Enterable {
     fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch>;

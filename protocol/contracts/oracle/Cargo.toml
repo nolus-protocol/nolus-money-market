@@ -15,7 +15,7 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub"]
 testing = ["stub", "marketprice/testing"]
-stub = []
+stub = [] # TODO strip off any unnecessary dependency
 
 [dependencies]
 currency = { workspace = true }

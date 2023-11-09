@@ -10,15 +10,16 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{
-    response::{self, Handler, Result as HandlerResult},
-    swap_task::SwapTask as SwapTaskT,
-    transfer_in, Contract, ContractInSwap, Enterable, TransferInFinishState,
-};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
-use super::transfer_in_init::TransferInInit;
+use super::{
+    response::{self, Handler, Result as HandlerResult},
+    swap_task::SwapTask as SwapTaskT,
+    transfer_in,
+    transfer_in_init::TransferInInit,
+    Contract, ContractInSwap, Enterable, TransferInFinishState,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInFinish<SwapTask, SEnum>
