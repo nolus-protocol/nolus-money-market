@@ -72,6 +72,34 @@ where
         }
     }
 
+    // TODO return the next `recalc_time` as well to simplify the API and its usage
+    // remove the `fn recalc_time`
+    // compute the point of time based on the  provided current time
+    pub fn check_liability<Asset>(
+        &self,
+        asset: Coin<Asset>,
+        total_due: Coin<Lpn>,
+        overdue: Coin<Lpn>,
+        lpn_in_assets: Price<Lpn, Asset>,
+    ) -> Status<Asset>
+    where
+        Asset: Currency,
+    {
+        debug_assert!(overdue <= total_due);
+
+        let total_due = price::total(total_due, lpn_in_assets);
+        let overdue = price::total(overdue, lpn_in_assets);
+        debug_assert!(overdue <= total_due);
+
+        let ltv = Percent::from_ratio(total_due, asset);
+        self.may_ask_liquidation_liability(asset, total_due, lpn_in_assets)
+            .max(self.may_ask_liquidation_overdue(asset, overdue, lpn_in_assets))
+            .map(Status::Liquidation)
+            .unwrap_or_else(|| {
+                self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
+            })
+    }
+
     /// Check if the amount can be used to close the position.
     /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
     /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
@@ -105,34 +133,6 @@ where
         } else {
             Ok(())
         }
-    }
-
-    // TODO return the next `recalc_time` as well to simplify the API and its usage
-    // remove the `fn recalc_time`
-    // compute the point of time based on the  provided current time
-    pub fn check_liability<Asset>(
-        &self,
-        asset: Coin<Asset>,
-        total_due: Coin<Lpn>,
-        overdue: Coin<Lpn>,
-        lpn_in_assets: Price<Lpn, Asset>,
-    ) -> Status<Asset>
-    where
-        Asset: Currency,
-    {
-        debug_assert!(overdue <= total_due);
-
-        let total_due = price::total(total_due, lpn_in_assets);
-        let overdue = price::total(overdue, lpn_in_assets);
-        debug_assert!(overdue <= total_due);
-
-        let ltv = Percent::from_ratio(total_due, asset);
-        self.may_ask_liquidation_liability(asset, total_due, lpn_in_assets)
-            .max(self.may_ask_liquidation_overdue(asset, overdue, lpn_in_assets))
-            .map(Status::Liquidation)
-            .unwrap_or_else(|| {
-                self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
-            })
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
