@@ -139,7 +139,7 @@ mod test {
         }));
         let emitter = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY2, VALUE2);
         let resp: Response = super::response_with_messages::<_, _, Error>(
-            &ret,
+            ret,
             MessageResponse::messages_with_events(b, emitter),
         )
         .unwrap();
