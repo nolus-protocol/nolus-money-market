@@ -1,7 +1,7 @@
 #[cfg(feature = "api")]
 pub mod api;
 
-#[cfg(feature = "api")]
+#[cfg(feature = "skel")]
 pub mod error;
 
 #[cfg(feature = "osmosis")]

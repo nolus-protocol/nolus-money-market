@@ -15,7 +15,7 @@ migration = ["lease/migration"]
 testing = ["currency/testing", "lease/testing"]
 
 [dependencies]
-lease = { workspace = true, features = ["api"] }
+lease = { workspace = true, features = ["skel"] }
 lpp = { workspace = true }
 oracle-platform = { workspace = true }
 

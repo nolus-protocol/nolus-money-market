@@ -1,11 +1,9 @@
 [package]
 name = "lease"
-version = "0.8.0"
+version = "0.8.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -14,7 +12,8 @@ crate-type = ["cdylib", "rlib"]
 default = ["contract-with-bindings", "osmosis"]
 contract-with-bindings = []                                          # TODO rename to cosmwasm-bindings
 api = ["dex/api"]
-osmosis = ["api", "dex/osmosis"]
+skel = ["api"]
+osmosis = ["skel", "dex/osmosis"]
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
 testing = ["currency/testing", "finance/testing"]
 

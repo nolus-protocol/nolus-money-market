@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -26,13 +24,15 @@ pub enum Error {
     TimeAlarmError(#[from] timealarms::error::ContractError),
 }
 
+#[cfg(feature = "any_dex")]
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[cfg(feature = "any_dex")]
 impl Error {
-    pub fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
+    pub(crate) fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
     where
         Op: Into<String>,
-        State: Display,
+        State: std::fmt::Display,
     {
         Self::UnsupportedOperation(op.into(), format!("{state}"))
     }

@@ -1,5 +1,7 @@
 #[cfg(feature = "api")]
 mod connection;
+#[cfg(feature = "api")]
+pub use connection::{ConnectionParams, Ics20Channel};
 
 #[cfg(feature = "osmosis")]
 mod account;
@@ -13,7 +15,7 @@ mod connectable;
 #[cfg(feature = "osmosis")]
 mod entry_delay;
 
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "api")]
 mod error;
 
 #[cfg(feature = "osmosis")]
@@ -67,6 +69,12 @@ mod transfer_out;
 #[cfg(feature = "osmosis")]
 mod trx;
 
+#[cfg(feature = "api")]
+pub use crate::error::Error;
+
+#[cfg(feature = "any_dex")]
+pub use crate::error::Result as DexResult;
+
 #[cfg(feature = "osmosis")]
 mod impl_ {
 
@@ -80,8 +88,6 @@ mod impl_ {
     pub use crate::{
         account::Account,
         connectable::DexConnectable,
-        connection::{ConnectionParams, Ics20Channel},
-        error::{Error, Result as DexResult},
         ica_connector::{
             Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
             NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
@@ -102,6 +108,8 @@ mod impl_ {
         transfer_out::TransferOut,
     };
     use crate::{entry_delay::EntryDelay, response, SwapTask as SwapTaskT};
+
+    use super::DexResult;
 
     pub type TransferOutRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
         ResponseDelivery<TransferOut<SwapTask, SEnum>, ForwardToInnerMsg>;

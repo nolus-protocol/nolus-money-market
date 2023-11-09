@@ -3,9 +3,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use currency::{dex::PaymentGroup, SymbolOwned};
 use sdk::schemars::{self, JsonSchema};
 
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "api")]
 pub mod error;
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "api")]
 pub mod trx;
 
 pub type PoolId = u64;
