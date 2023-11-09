@@ -1,7 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::{error::CmdError, AnyVisitorPair, Currency, Group};
+
 use crate::error::Error;
-use currency::{self, error::CmdError, AnyVisitorPair, Currency, Group};
 
 use super::{PriceDTO, WithPrice};
 

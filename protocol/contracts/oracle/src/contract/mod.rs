@@ -1,5 +1,4 @@
-use currency::dex::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
     response,

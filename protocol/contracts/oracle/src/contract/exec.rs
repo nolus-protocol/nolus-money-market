@@ -1,7 +1,6 @@
 use serde::de::DeserializeOwned;
 
-use currency::dex::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use marketprice::SpotPrice;
 use platform::{contract, response};
 use sdk::{
@@ -73,7 +72,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 Oracle::<_, OracleBase>::load(self.deps.storage)?
                     .try_notify_alarms(self.env.block.time, max_count)
                     .and_then(|(total, resp)| {
-                        response::response_with_messages(&DispatchAlarmsResponse(total), resp)
+                        response::response_with_messages(DispatchAlarmsResponse(total), resp)
                     })
             }
             ExecuteMsg::AddPriceAlarm { alarm } => {

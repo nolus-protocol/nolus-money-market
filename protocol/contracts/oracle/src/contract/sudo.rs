@@ -1,14 +1,9 @@
 use serde::de::DeserializeOwned;
 
-use currency::dex::Lpns;
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::DepsMut;
 
-use crate::msg::Config;
-use crate::{
-    error::ContractError, msg::SudoMsg, result::ContractResult,
-    state::supported_pairs::SupportedPairs,
-};
+use crate::{msg::{Config, SudoMsg}, error::ContractError, result::ContractResult, state::supported_pairs::SupportedPairs};
 
 pub struct SudoWithOracleBase<'a> {
     deps: DepsMut<'a>,

@@ -1,10 +1,8 @@
-mod impl_;
-
 use std::{fmt::Debug, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, Currency, Group, SymbolOwned};
+use currency::{Currency, Group, SymbolOwned};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -14,6 +12,8 @@ use crate::{
 };
 
 use self::impl_::{CheckedConverter, OracleStub};
+
+mod impl_;
 
 #[cfg(feature = "unchecked-base-currency")]
 pub fn new_unchecked_base_currency_stub<'a, 'q, OracleBase, OracleBaseG>(

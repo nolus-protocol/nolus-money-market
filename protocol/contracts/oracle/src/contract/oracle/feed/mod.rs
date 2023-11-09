@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use currency::{self, Currency, SymbolOwned};
+use currency::{Currency, SymbolOwned};
 use finance::price::base::BasePrice;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
