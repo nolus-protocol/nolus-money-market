@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 api = ["dep:finance", "dep:platform", "thiserror"]
-osmosis = ["sdk/cosmos", "dep:osmosis-std"]
+osmosis = ["api", "sdk/cosmos", "dep:osmosis-std"]
 testing = []
 
 [dependencies]
