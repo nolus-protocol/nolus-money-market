@@ -23,7 +23,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    lease::v5::{MIN_ASSET, MIN_SELL_ASSET},
+    lease::v5::{MIN_ASSET, MIN_TRANSACTION},
 };
 
 use super::{buy_asset::BuyAsset as BuyAsset_v6, open_ica::OpenIcaAccount as OpenIcaAccount_v6};
@@ -78,7 +78,7 @@ impl NewLeaseForm {
             position_spec: PositionSpecDTO::new_internal(
                 self.liability,
                 MIN_ASSET.into(),
-                MIN_SELL_ASSET.into(),
+                MIN_TRANSACTION.into(),
             ),
             loan: self.loan,
             time_alarms: self.time_alarms,

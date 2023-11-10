@@ -29,7 +29,7 @@ where
         Ok(Self::new(
             dto.liability,
             dto.min_asset.try_into()?,
-            dto.min_sell_asset.try_into()?,
+            dto.min_transaction.try_into()?,
         ))
     }
 }

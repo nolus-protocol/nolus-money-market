@@ -33,7 +33,8 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
 pub(super) struct PositionSpecDTO {
     liability: Liability,
     min_asset: LpnCoin,
-    min_sell_asset: LpnCoin,
+    #[serde(alias = "min_sell_asset")]
+    min_transaction: LpnCoin,
 }
 
 impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
@@ -43,7 +44,7 @@ impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
         let res = Self {
             liability: value.liability,
             min_asset: value.min_asset,
-            min_sell_asset: value.min_sell_asset,
+            min_transaction: value.min_transaction,
         };
         res.invariant_held().map(|_| res)
     }
