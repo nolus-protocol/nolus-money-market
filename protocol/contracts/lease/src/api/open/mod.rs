@@ -266,7 +266,7 @@ mod test_position_spec {
     }
 
     #[test]
-    fn correct_deserialization() {
+    fn deserialize_an_alternative_name() {
         assert_load_ok(spec_dto(), br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
     }
 
