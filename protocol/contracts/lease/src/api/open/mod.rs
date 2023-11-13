@@ -161,7 +161,8 @@ impl PositionSpecDTO {
     #[cfg(any(test, feature = "testing", feature = "migration"))]
     pub fn new(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
         let obj = Self::new_internal(liability, min_asset, min_transaction);
-        obj.invariant_held().expect("Leaser invariant to be held");
+        obj.invariant_held()
+            .expect("PositionSpecDTO invariant to be held");
         obj
     }
 
