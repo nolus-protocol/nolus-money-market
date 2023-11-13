@@ -1,37 +1,28 @@
 use std::collections::BTreeMap;
 
-use platform::never::safe_unwrap;
 use sdk::{
-    cosmwasm_std::{Order, StdError as CwError, Storage},
+    cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{Item, Map},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::{
-        type_defs::ContractsGroupedByDex, CheckedAddr, ContractsTemplate, Platform, Protocol,
-        StoredAddr, Transform as _,
-    },
-    result::Result as ContractResult,
-    ContractError,
+    contracts::{ContractsGroupedByDex, ContractsTemplate, Platform, Protocol},
+    error::Error,
+    result::Result,
 };
 
-const PLATFORM: Item<'_, Platform<StoredAddr>> = Item::new("platform_contracts");
-const PROTOCOL: Map<'_, String, Protocol<StoredAddr>> = Map::new("protocol_contracts");
+const PLATFORM: Item<'_, Platform<Addr>> = Item::new("platform_contracts");
+const PROTOCOL: Map<'_, String, Protocol<Addr>> = Map::new("protocol_contracts");
 
-pub(crate) fn store(
-    storage: &mut dyn Storage,
-    contracts: ContractsGroupedByDex,
-) -> ContractResult<()> {
+pub(crate) fn store(storage: &mut dyn Storage, contracts: ContractsGroupedByDex) -> Result<()> {
     PLATFORM
-        .save(storage, &safe_unwrap(contracts.platform.transform(&())))
+        .save(storage, &contracts.platform)
         .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
-                |(dex, protocol): (String, Protocol<CheckedAddr>)| {
-                    PROTOCOL
-                        .save(storage, dex, &safe_unwrap(protocol.transform(&())))
-                        .map_err(Into::into)
+                |(dex, ref protocol): (String, Protocol<Addr>)| {
+                    PROTOCOL.save(storage, dex, protocol).map_err(Into::into)
                 },
             )
         })
@@ -40,32 +31,25 @@ pub(crate) fn store(
 pub(crate) fn add_dex_bound_set(
     storage: &mut dyn Storage,
     dex: String,
-    contracts: Protocol<CheckedAddr>,
-) -> ContractResult<()> {
+    contracts: &Protocol<Addr>,
+) -> Result<()> {
     if PROTOCOL.has(storage, dex.clone()) {
-        Err(ContractError::DexSetAlreadyExists(dex))
+        Err(Error::DexSetAlreadyExists(dex))
     } else {
-        PROTOCOL
-            .save(storage, dex, &safe_unwrap(contracts.transform(&())))
-            .map_err(Into::into)
+        PROTOCOL.save(storage, dex, contracts).map_err(Into::into)
     }
 }
 
-pub(crate) fn load(storage: &dyn Storage) -> ContractResult<ContractsGroupedByDex> {
+pub(crate) fn load(storage: &dyn Storage) -> Result<ContractsGroupedByDex> {
     PLATFORM
         .load(storage)
-        .and_then(|platform: Platform<StoredAddr>| {
+        .and_then(|platform: Platform<Addr>| {
             PROTOCOL
                 .range(storage, None, None, Order::Ascending)
-                .map(|result: Result<(String, Protocol<StoredAddr>), CwError>| {
-                    result.map(|(dex, protocol): (String, Protocol<StoredAddr>)| {
-                        (dex, safe_unwrap(protocol.transform(&())))
-                    })
-                })
-                .collect::<Result<_, _>>()
+                .collect::<::std::result::Result<_, _>>()
                 .map(
-                    |protocol: BTreeMap<String, Protocol<CheckedAddr>>| ContractsTemplate {
-                        platform: safe_unwrap(platform.transform(&())),
+                    |protocol: BTreeMap<String, Protocol<Addr>>| ContractsTemplate {
+                        platform,
                         protocol,
                     },
                 )
@@ -73,17 +57,17 @@ pub(crate) fn load(storage: &dyn Storage) -> ContractResult<ContractsGroupedByDe
         .map_err(Into::into)
 }
 
-pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> ContractResult<()> {
+pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> Result<()> {
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "snake_case", deny_unknown_fields)]
     struct OldContracts {
-        pub dispatcher: StoredAddr,
-        pub leaser: StoredAddr,
-        pub lpp: StoredAddr,
-        pub oracle: StoredAddr,
-        pub profit: StoredAddr,
-        pub timealarms: StoredAddr,
-        pub treasury: StoredAddr,
+        pub dispatcher: Addr,
+        pub leaser: Addr,
+        pub lpp: Addr,
+        pub oracle: Addr,
+        pub profit: Addr,
+        pub timealarms: Addr,
+        pub treasury: Addr,
     }
 
     const CONTRACTS: Item<'_, OldContracts> = Item::new("contracts");

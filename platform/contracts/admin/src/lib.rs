@@ -8,22 +8,23 @@ use sdk::{
         ensure_eq, Addr, Binary, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use self::{
-    common::{type_defs::ContractsGroupedByDex, CheckedAddr, Protocol, Transform as _},
+    contracts::Protocol,
     error::Error as ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, SudoMsg},
     result::Result as ContractResult,
     state::{contracts as state_contracts, migration_release},
+    validate::Validate as _,
 };
 
-pub mod common;
+pub mod contracts;
 pub mod error;
-pub mod migrate_contracts;
 pub mod msg;
 pub mod result;
 pub mod state;
+pub mod validate;
 
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -36,33 +37,28 @@ pub fn instantiate(
     mut deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    InstantiateMsg::Instantiate {
-        contract_owner,
+    InstantiateMsg {
+        ref dex_admin,
         contracts,
     }: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    ContractOwnerAccess::new(deps.branch().storage).grant_to(&contract_owner)?;
+    ContractOwnerAccess::new(deps.branch().storage).grant_to(dex_admin)?;
 
-    contracts
-        .transform(&deps.querier)
-        .and_then(|contracts: ContractsGroupedByDex| {
-            state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
-        })
+    contracts.validate(deps.querier)?;
+
+    state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(
     mut deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg::Migrate {
-        dex,
-        contract_owner,
-    }: MigrateMsg,
+    MigrateMsg { dex, ref dex_admin }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     ContractOwnerAccess::new(deps.branch().storage)
-        .grant_to(&contract_owner)
+        .grant_to(dex_admin)
         .map_err(Into::into)
         .and_then(|()| {
             versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
@@ -72,7 +68,7 @@ pub fn migrate(
                 Into::into,
             )
         })
-        .and_then(|(label, ()): (ReleaseLabel, ())| response::response(label))
+        .and_then(|(label, ())| response::response(label))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -102,8 +98,8 @@ pub fn execute(
 
             Ok(response::response_only_messages(batch))
         }
-        ExecuteMsg::AddProtocolSet { dex, contracts } => {
-            add_protocol_set(deps.storage, &deps.querier, dex, contracts)
+        ExecuteMsg::RegisterDex { dex, ref contracts } => {
+            register_dex(deps.storage, deps.querier, dex, contracts)
         }
     }
 }
@@ -111,36 +107,43 @@ pub fn execute(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::ChangeOwner { address } => ContractOwnerAccess::new(deps.storage)
-            .grant_to(&address)
+        SudoMsg::ChangeDexAdmin { ref new_dex_admin } => ContractOwnerAccess::new(deps.storage)
+            .grant_to(new_dex_admin)
             .map(|()| response::empty_response())
             .map_err(Into::into),
-        SudoMsg::AddProtocolSet { dex, contracts } => {
-            add_protocol_set(deps.storage, &deps.querier, dex, contracts)
+        SudoMsg::RegisterDex { dex, ref contracts } => {
+            register_dex(deps.storage, deps.querier, dex, contracts)
         }
-        SudoMsg::MigrateContracts(migrate_contracts) => env
-            .contract
-            .address
-            .transform(&deps.querier)
-            .and_then(|admin_contract_addr: CheckedAddr| {
-                migrate_contracts::migrate(deps.storage, admin_contract_addr, migrate_contracts)
-            })
-            .map(response::response_only_messages),
+        SudoMsg::MigrateContracts(MigrateContracts {
+            release,
+            admin_contract,
+            migration_spec,
+            post_migration_execute,
+        }) => {
+            env.contract.address.validate(deps.querier)?;
+
+            contracts::migrate(
+                deps.storage,
+                env.contract.address,
+                release,
+                admin_contract,
+                migration_spec,
+                post_migration_execute,
+            )
+            .map(response::response_only_messages)
+        }
     }
 }
 
-fn add_protocol_set(
+fn register_dex(
     storage: &mut dyn Storage,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
     dex: String,
-    contracts: Protocol<Addr>,
+    contracts: &Protocol<Addr>,
 ) -> ContractResult<CwResponse> {
-    contracts
-        .transform(querier)
-        .and_then(|contracts: Protocol<CheckedAddr>| {
-            state_contracts::add_dex_bound_set(storage, dex, contracts)
-        })
-        .map(|()| response::empty_response())
+    contracts.validate(querier)?;
+
+    state_contracts::add_dex_bound_set(storage, dex, contracts).map(|()| response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
