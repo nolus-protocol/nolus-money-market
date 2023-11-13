@@ -15,7 +15,7 @@ use crate::{
 use super::LeaseDTO as LeaseDTO_v6;
 
 pub(crate) const MIN_ASSET: Coin<StableC1> = Coin::new(15_000_000);
-pub(crate) const MIN_SELL_ASSET: Coin<StableC1> = Coin::new(10_000);
+pub(crate) const MIN_TRANSACTION: Coin<StableC1> = Coin::new(10_000);
 
 #[derive(Deserialize)]
 pub(crate) struct LeaseDTO {
@@ -38,7 +38,7 @@ impl LeaseDTO {
                 PositionSpecDTO::new_internal(
                     self.liability,
                     MIN_ASSET.into(),
-                    MIN_SELL_ASSET.into(),
+                    MIN_TRANSACTION.into(),
                 ),
             ),
             self.loan,

@@ -282,7 +282,7 @@ mod test_validate_close {
     }
 
     #[test]
-    fn amount_as_min_sell_asset() {
+    fn amount_as_min_transaction() {
         let spec = position(100, 85, 15);
         let result_1 = spec.validate_close_amount(15.into(), price(1, 1));
         assert!(result_1.is_ok());
@@ -330,7 +330,7 @@ mod test_validate_close {
     fn position<Asset, Lpn>(
         amount: Asset,
         min_asset: Lpn,
-        min_sell_asset: Lpn,
+        min_transaction: Lpn,
     ) -> Position<TestCurrency, TestLpn>
     where
         Asset: Into<Coin<TestCurrency>>,
@@ -345,7 +345,7 @@ mod test_validate_close {
             Percent::from_percent(2),
             Duration::from_hours(1),
         );
-        let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_sell_asset.into());
+        let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into());
 
         Position::<TestCurrency, TestLpn>::new(amount.into(), spec)
     }
@@ -531,7 +531,7 @@ mod test_check_liability {
     }
 
     #[test]
-    fn warnings_none_min_sell_asset() {
+    fn warnings_none_min_transaction() {
         let warn_ltv = Percent::from_percent(51);
         let position = position_with_first(warn_ltv, 100, 1, 15);
         assert_eq!(
@@ -623,7 +623,7 @@ mod test_check_liability {
     }
 
     #[test]
-    fn warnings_first_min_sell_asset() {
+    fn warnings_first_min_transaction() {
         let position = position_with_first(Percent::from_permille(712), 1000, 10, 3);
 
         assert_eq!(
@@ -717,7 +717,7 @@ mod test_check_liability {
     }
 
     #[test]
-    fn warnings_second_min_sell_asset() {
+    fn warnings_second_min_transaction() {
         let position = position_with_second(Percent::from_permille(123), 1000, 10, 5);
 
         assert_eq!(
@@ -789,7 +789,7 @@ mod test_check_liability {
     }
 
     #[test]
-    fn warnings_third_min_sell_asset() {
+    fn warnings_third_min_transaction() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let position = position_with_third(warn_third_ltv, 1000, 100, 386);
@@ -1056,39 +1056,39 @@ mod test_check_liability {
         warn: Percent,
         asset: Asset,
         min_asset: Lpn,
-        min_sell_asset: Lpn,
+        min_transaction: Lpn,
     ) -> Position<TestCurrency, TestLpn>
     where
         Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP + STEP + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP + STEP + STEP, asset, min_asset, min_transaction)
     }
 
     fn position_with_second<Asset, Lpn>(
         warn: Percent,
         asset: Asset,
         min_asset: Lpn,
-        min_sell_asset: Lpn,
+        min_transaction: Lpn,
     ) -> Position<TestCurrency, TestLpn>
     where
         Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP + STEP, asset, min_asset, min_transaction)
     }
 
     fn position_with_third<Asset, Lpn>(
         warn: Percent,
         asset: Asset,
         min_asset: Lpn,
-        min_sell_asset: Lpn,
+        min_transaction: Lpn,
     ) -> Position<TestCurrency, TestLpn>
     where
         Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP, asset, min_asset, min_sell_asset)
+        position_with_max(warn + STEP, asset, min_asset, min_transaction)
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
@@ -1096,7 +1096,7 @@ mod test_check_liability {
         max: Percent,
         asset: Asset,
         min_asset: Lpn,
-        min_sell_asset: Lpn,
+        min_transaction: Lpn,
     ) -> Position<TestCurrency, TestLpn>
     where
         Asset: Into<Coin<TestCurrency>>,
@@ -1114,7 +1114,7 @@ mod test_check_liability {
             STEP,
             Duration::from_hours(1),
         );
-        let spec = Spec::new(liability, min_asset.into(), min_sell_asset.into());
+        let spec = Spec::new(liability, min_asset.into(), min_transaction.into());
 
         Position::new(asset.into(), spec)
     }

@@ -235,15 +235,15 @@ fn partial_close_min_asset() {
 }
 
 #[test]
-fn partial_close_min_sell_asset() {
-    let min_sell_asset_lpn = Instantiator::min_sell_asset().try_into().unwrap();
-    let min_sell_asset: LeaseCoin = price::total(min_sell_asset_lpn, super::price_lpn_of().inv());
+fn partial_close_min_transaction() {
+    let min_transaction_lpn = Instantiator::min_transaction().try_into().unwrap();
+    let min_transaction: LeaseCoin = price::total(min_transaction_lpn, super::price_lpn_of().inv());
 
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let lease = super::open_lease(&mut test_case, DOWNPAYMENT, None);
     let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-        amount: (min_sell_asset - 1.into()).into(),
+        amount: (min_transaction - 1.into()).into(),
     }));
 
     let err = test_case
@@ -253,7 +253,7 @@ fn partial_close_min_sell_asset() {
     assert_eq!(
         err.root_cause().downcast_ref::<ContractError>(),
         Some(&ContractError::PositionCloseAmountTooSmall(
-            min_sell_asset_lpn.into()
+            min_transaction_lpn.into()
         ))
     );
 }
