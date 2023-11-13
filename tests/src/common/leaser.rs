@@ -39,12 +39,12 @@ impl Instantiator {
         super::lpn_coin(200)
     }
 
-    pub fn min_sell_asset() -> LpnCoin {
+    pub fn min_transaction() -> LpnCoin {
         super::lpn_coin(50)
     }
 
     pub fn position_spec() -> PositionSpecDTO {
-        PositionSpecDTO::new(Self::liability(), Self::min_asset(), Self::min_sell_asset())
+        PositionSpecDTO::new(Self::liability(), Self::min_asset(), Self::min_transaction())
     }
 
     #[track_caller]

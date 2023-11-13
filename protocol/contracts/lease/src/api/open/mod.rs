@@ -262,22 +262,12 @@ mod test_position_spec {
 
     #[test]
     fn new_valid() {
-        let liability = Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
-            Duration::from_hours(1),
-        );
-        let position_spec = PositionSpecDTO::new(
-            liability,
-            LpnCoin::new(9000000).into(),
-            LpnCoin::new(5000).into(),
-        );
+        assert_load_ok(spec_dto(), br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_transaction":{"amount":"5000","ticker":"USDC"}}"#);
+    }
 
-        assert_load_ok(position_spec, br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_transaction":{"amount":"5000","ticker":"USDC"}}"#);
+    #[test]
+    fn correct_deserialization() {
+        assert_load_ok(spec_dto(), br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
     }
 
     #[test]
@@ -310,5 +300,22 @@ mod test_position_spec {
                 msg: real_msg
             }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
         ));
+    }
+
+    fn spec_dto() -> PositionSpecDTO {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        PositionSpecDTO::new(
+            liability,
+            LpnCoin::new(9000000).into(),
+            LpnCoin::new(5000).into(),
+        )
     }
 }
