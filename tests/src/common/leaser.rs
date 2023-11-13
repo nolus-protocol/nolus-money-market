@@ -44,7 +44,11 @@ impl Instantiator {
     }
 
     pub fn position_spec() -> PositionSpecDTO {
-        PositionSpecDTO::new(Self::liability(), Self::min_asset(), Self::min_transaction())
+        PositionSpecDTO::new(
+            Self::liability(),
+            Self::min_asset(),
+            Self::min_transaction(),
+        )
     }
 
     #[track_caller]
