@@ -9,10 +9,14 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings", "osmosis"]
-contract-with-bindings = []                                          # TODO rename to cosmwasm-bindings
+default = [
+    "contract-with-bindings",
+    "osmosis",
+] # TODO get rid of default features
+contract-with-bindings = [] # TODO rename to cosmwasm-bindings
 api = ["dep:dex"]
 skel = ["api"]
+astroport = ["skel", "dex/astroport"]
 osmosis = ["skel", "dex/osmosis"]
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
 testing = ["currency/testing", "finance/testing"]

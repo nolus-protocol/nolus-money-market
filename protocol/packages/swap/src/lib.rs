@@ -5,7 +5,7 @@ use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "api")]
 pub mod error;
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod trx;
 
 pub type PoolId = u64;

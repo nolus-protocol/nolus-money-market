@@ -6,20 +6,20 @@ pub mod typedefs;
 #[cfg(feature = "stub")]
 pub mod stub;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 mod access_control;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod contract;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod error;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod profit;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod result;
 
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub mod state;

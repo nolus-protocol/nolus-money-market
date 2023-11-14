@@ -18,7 +18,7 @@ testing = [
     "dep:anyhow",
     "cosmos_ibc",
 ]
-cosmos_ibc = ["cosmos", "cosmwasm-std/ibc3", "dep:cosmos-sdk-proto"]
+cosmos_ibc = ["cosmos", "cosmwasm-std/ibc3", "cosmos-sdk-proto/cosmwasm"]
 cosmos = []
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 

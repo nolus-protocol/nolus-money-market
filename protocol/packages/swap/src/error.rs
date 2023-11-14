@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use sdk::cosmwasm_std::StdError;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Swap] {0}")]
@@ -7,6 +9,9 @@ pub enum Error {
 
     #[error("[Swap] {0}")]
     Platform(#[from] platform::error::Error),
+
+    #[error("[Swap] {0}")]
+    Std(#[from] StdError),
 
     #[error("[Swap] The value {0} is an invalid amount")]
     InvalidAmount(String),

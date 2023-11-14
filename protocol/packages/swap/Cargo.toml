@@ -7,6 +7,7 @@ license.workspace = true
 
 [features]
 api = ["dep:finance", "dep:platform", "thiserror"]
+astroport = ["api", "sdk/cosmos_ibc", "dep:astroport"]
 osmosis = ["api", "sdk/cosmos", "dep:osmosis-std"]
 testing = []
 
@@ -16,6 +17,7 @@ finance = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true, features = ["schema"] }
 
+astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }

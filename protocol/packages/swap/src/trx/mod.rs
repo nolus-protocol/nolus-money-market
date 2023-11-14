@@ -1,3 +1,5 @@
+#[cfg(feature = "astroport")]
+mod astroport;
 #[cfg(feature = "osmosis")]
 mod osmosis;
 
@@ -14,13 +16,18 @@ use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
 use crate::{error::Result, SwapPath};
 
 pub fn exact_amount_in() -> impl ExactAmountIn {
-    #[cfg(feature = "osmosis")]
+    #[cfg(feature = "astroport")]
+    {
+        astroport::Impl {}
+    }
+    #[cfg(all(not(feature = "astroport"), feature = "osmosis"))]
     {
         osmosis::Impl {}
     }
 }
 
 pub trait ExactAmountIn {
+    /// `swap_path` should be a non-empty list
     fn build<G>(
         &self,
         trx: &mut Transaction,

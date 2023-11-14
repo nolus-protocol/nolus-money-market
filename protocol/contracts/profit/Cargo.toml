@@ -17,6 +17,7 @@ default = [
 ] # TODO get rid of default features
 contract-with-bindings = []
 api = []
+astroport = ["api", "dex/astroport"]
 osmosis = ["api", "dex/osmosis"]
 stub = ["api"]
 testing = []
