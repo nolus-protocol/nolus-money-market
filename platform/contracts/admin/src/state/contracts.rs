@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{Item, Map},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     contracts::{ContractsGroupedByDex, ContractsTemplate, Platform, Protocol},
@@ -28,7 +29,7 @@ pub(crate) fn store(storage: &mut dyn Storage, contracts: ContractsGroupedByDex)
         })
 }
 
-pub(crate) fn add_dex_bound_set(
+pub(crate) fn add_protocol_set(
     storage: &mut dyn Storage,
     dex: String,
     contracts: &Protocol<Addr>,
@@ -57,7 +58,7 @@ pub(crate) fn load(storage: &dyn Storage) -> Result<ContractsGroupedByDex> {
         .map_err(Into::into)
 }
 
-pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> Result<()> {
+pub(crate) fn migrate(storage: &mut dyn Storage, protocol_name: String) -> Result<()> {
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "snake_case", deny_unknown_fields)]
     struct OldContracts {
@@ -98,7 +99,7 @@ pub(crate) fn migrate(storage: &mut dyn Storage, dex: String) -> Result<()> {
                     .and_then(|()| {
                         PROTOCOL.save(
                             storage,
-                            dex,
+                            protocol_name,
                             &Protocol {
                                 leaser,
                                 lpp,

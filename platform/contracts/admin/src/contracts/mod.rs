@@ -10,7 +10,7 @@ use sdk::{
 
 use crate::{
     result::Result,
-    state::{contracts as state_contracts, migration_release},
+    state::{contract::Contract as ContractState, contracts as state_contracts},
     validate::{Validate, ValidateValues},
 };
 
@@ -27,7 +27,7 @@ pub(crate) fn migrate(
     migration_spec: ContractsMigration,
     post_migration_execute: ContractsPostMigrationExecute,
 ) -> Result<MessageResponse> {
-    migration_release::store(storage, release)?;
+    ContractState::Migration { release }.store(storage)?;
 
     let contracts_addrs: ContractsGroupedByDex = state_contracts::load(storage)?;
 

@@ -21,7 +21,7 @@ pub struct InstantiateMsg {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateMsg {
-    pub dex: String,
+    pub protocol_name: String,
     pub dex_admin: Addr,
 }
 
@@ -30,11 +30,13 @@ pub struct MigrateMsg {
 pub enum ExecuteMsg {
     Instantiate {
         code_id: CodeId,
+        expected_address: Addr,
+        protocol: String,
         label: String,
         message: String,
     },
-    RegisterDex {
-        dex: String,
+    RegisterProtocol {
+        name: String,
         contracts: Protocol<Addr>,
     },
 }
@@ -45,8 +47,8 @@ pub enum SudoMsg {
     ChangeDexAdmin {
         new_dex_admin: Addr,
     },
-    RegisterDex {
-        dex: String,
+    RegisterProtocol {
+        name: String,
         contracts: Protocol<Addr>,
     },
     MigrateContracts(MigrateContracts),
@@ -59,4 +61,10 @@ pub struct MigrateContracts {
     pub admin_contract: Option<MigrationSpec>,
     pub migration_spec: ContractsMigration,
     pub post_migration_execute: ContractsPostMigrationExecute,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum QueryMsg {
+    InstantiateAddress { code_id: CodeId, protocol: String },
 }
