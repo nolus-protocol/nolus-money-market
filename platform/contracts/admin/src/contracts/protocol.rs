@@ -48,13 +48,13 @@ impl Protocol<Addr> {
 }
 
 impl<T> Protocol<BTreeMap<String, T>> {
-    pub(super) fn extract_entry(&mut self, dex: String) -> Result<Protocol<T>> {
+    pub(super) fn extract_entry(&mut self, protocol: String) -> Result<Protocol<T>> {
         if let Some((leaser, lpp, oracle, profit)) =
-            self.leaser.remove(&dex).and_then(|leaser: T| {
-                self.lpp.remove(&dex).and_then(|lpp: T| {
-                    self.oracle.remove(&dex).and_then(|oracle: T| {
+            self.leaser.remove(&protocol).and_then(|leaser: T| {
+                self.lpp.remove(&protocol).and_then(|lpp: T| {
+                    self.oracle.remove(&protocol).and_then(|oracle: T| {
                         self.profit
-                            .remove(&dex)
+                            .remove(&protocol)
                             .map(|profit: T| (leaser, lpp, oracle, profit))
                     })
                 })
@@ -67,7 +67,7 @@ impl<T> Protocol<BTreeMap<String, T>> {
                 profit,
             })
         } else {
-            Err(Error::MissingDex(dex))
+            Err(Error::MissingProtocol(protocol))
         }
     }
 
@@ -75,8 +75,8 @@ impl<T> Protocol<BTreeMap<String, T>> {
         [self.leaser, self.lpp, self.oracle, self.profit]
             .into_iter()
             .try_for_each(|mut map: BTreeMap<String, T>| {
-                if let Some((dex, _)) = map.pop_last() {
-                    Err(Error::MissingDex(dex))
+                if let Some((protocol, _)) = map.pop_last() {
+                    Err(Error::MissingProtocol(protocol))
                 } else {
                     Ok(())
                 }

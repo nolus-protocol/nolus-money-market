@@ -7,7 +7,7 @@ use sdk::{
 };
 
 use crate::contracts::{
-    ContractsGroupedByDex, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
+    ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
     Protocol,
 };
 
@@ -15,7 +15,7 @@ use crate::contracts::{
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct InstantiateMsg {
     pub dex_admin: Addr,
-    pub contracts: ContractsGroupedByDex,
+    pub contracts: ContractsGroupedByProtocol,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]

@@ -23,12 +23,14 @@ pub enum Error {
     FindContractAddress {},
     #[error("Contract address exists but code id is different! \"{reported}\" was returned, but \"{expected}\" was expected!")]
     DifferentInstantiatedCodeId { reported: CodeId, expected: CodeId },
-    #[error("Dex not mentioned under either migration messages, or post-migration execution messages! Dex's friendly name: {0}")]
-    MissingDex(String),
+    #[error("Protocol not mentioned under either migration messages, or post-migration execution messages! Protocol's friendly name: {0}")]
+    MissingProtocol(String),
     #[error(
-        "Dex-bound set of contracts already exists for this dex name! Dex's friendly name: {0}"
+        "Protocol set of contracts already exists for this protocl name! Protocol's friendly name: {0}"
     )]
-    DexSetAlreadyExists(String),
-    #[error("No dex-bound set of contracts exists for this dex name! Dex's friendly name: {0}")]
-    UnknownDex(String),
+    ProtocolSetAlreadyExists(String),
+    #[error(
+        "No protocol set of contracts exists for this protocol name! Protocol's friendly name: {0}"
+    )]
+    UnknownProtocol(String),
 }

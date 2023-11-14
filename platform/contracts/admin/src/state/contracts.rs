@@ -8,7 +8,7 @@ use sdk::{
 };
 
 use crate::{
-    contracts::{ContractsGroupedByDex, ContractsTemplate, Platform, Protocol},
+    contracts::{ContractsGroupedByProtocol, ContractsTemplate, Platform, Protocol},
     error::Error,
     result::Result,
 };
@@ -16,14 +16,19 @@ use crate::{
 const PLATFORM: Item<'_, Platform<Addr>> = Item::new("platform_contracts");
 const PROTOCOL: Map<'_, String, Protocol<Addr>> = Map::new("protocol_contracts");
 
-pub(crate) fn store(storage: &mut dyn Storage, contracts: ContractsGroupedByDex) -> Result<()> {
+pub(crate) fn store(
+    storage: &mut dyn Storage,
+    contracts: ContractsGroupedByProtocol,
+) -> Result<()> {
     PLATFORM
         .save(storage, &contracts.platform)
         .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
-                |(dex, ref protocol): (String, Protocol<Addr>)| {
-                    PROTOCOL.save(storage, dex, protocol).map_err(Into::into)
+                |(protocol, ref contracts): (String, Protocol<Addr>)| {
+                    PROTOCOL
+                        .save(storage, protocol, contracts)
+                        .map_err(Into::into)
                 },
             )
         })
@@ -31,17 +36,19 @@ pub(crate) fn store(storage: &mut dyn Storage, contracts: ContractsGroupedByDex)
 
 pub(crate) fn add_protocol_set(
     storage: &mut dyn Storage,
-    dex: String,
+    protocol: String,
     contracts: &Protocol<Addr>,
 ) -> Result<()> {
-    if PROTOCOL.has(storage, dex.clone()) {
-        Err(Error::DexSetAlreadyExists(dex))
+    if PROTOCOL.has(storage, protocol.clone()) {
+        Err(Error::ProtocolSetAlreadyExists(protocol))
     } else {
-        PROTOCOL.save(storage, dex, contracts).map_err(Into::into)
+        PROTOCOL
+            .save(storage, protocol, contracts)
+            .map_err(Into::into)
     }
 }
 
-pub(crate) fn load(storage: &dyn Storage) -> Result<ContractsGroupedByDex> {
+pub(crate) fn load(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
     PLATFORM
         .load(storage)
         .and_then(|platform: Platform<Addr>| {

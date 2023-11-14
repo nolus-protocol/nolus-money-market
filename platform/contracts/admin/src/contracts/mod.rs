@@ -29,7 +29,7 @@ pub(crate) fn migrate(
 ) -> Result<MessageResponse> {
     ContractState::Migration { release }.store(storage)?;
 
-    let contracts_addrs: ContractsGroupedByDex = state_contracts::load(storage)?;
+    let contracts_addrs: ContractsGroupedByProtocol = state_contracts::load(storage)?;
 
     let mut batch: Batch = Batch::default();
 
@@ -65,11 +65,11 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol)| {
+            .try_for_each(|(protocol, contracts)| {
                 migration_msgs
                     .protocol
-                    .extract_entry(dex)
-                    .map(|migration_msgs| protocol.migrate(&mut batch, migration_msgs))
+                    .extract_entry(protocol)
+                    .map(|migration_msgs| contracts.migrate(&mut batch, migration_msgs))
             })
             .and_then(|()| migration_msgs.protocol.ensure_empty())
             .map(|()| batch)
@@ -86,10 +86,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(dex, protocol)| {
-                execution_msgs.protocol.extract_entry(dex).map(
+            .try_for_each(|(protocol, contracts)| {
+                execution_msgs.protocol.extract_entry(protocol).map(
                     |execution_msgs: Protocol<Option<String>>| {
-                        protocol.post_migration_execute(&mut batch, execution_msgs)
+                        contracts.post_migration_execute(&mut batch, execution_msgs)
                     },
                 )
             })
@@ -117,7 +117,7 @@ pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
 
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
 
-pub(crate) type ContractsGroupedByDex = ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>>;
+pub(crate) type ContractsGroupedByProtocol = ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
