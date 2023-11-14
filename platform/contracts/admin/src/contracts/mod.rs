@@ -117,7 +117,8 @@ pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
 
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
 
-pub(crate) type ContractsGroupedByProtocol = ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>>;
+pub(crate) type ContractsGroupedByProtocol =
+    ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
