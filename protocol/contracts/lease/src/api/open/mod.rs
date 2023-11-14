@@ -147,7 +147,8 @@ impl PositionSpecDTO {
         test,
         feature = "astroport",
         feature = "osmosis",
-        feature = "migration"
+        feature = "migration",
+        feature = "testing"
     ))]
     pub(crate) fn new_internal(
         liability: Liability,
