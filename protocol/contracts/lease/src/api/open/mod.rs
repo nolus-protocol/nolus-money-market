@@ -143,7 +143,12 @@ pub struct PositionSpecDTO {
 
 #[cfg(feature = "skel")]
 impl PositionSpecDTO {
-    #[cfg(any(test, feature = "astroport", feature = "osmosis", feature = "migration"))]
+    #[cfg(any(
+        test,
+        feature = "astroport",
+        feature = "osmosis",
+        feature = "migration"
+    ))]
     pub(crate) fn new_internal(
         liability: Liability,
         min_asset: LpnCoin,
