@@ -133,5 +133,5 @@ jobs:
         working-directory: "${{ inputs.working_directory }}"
       - name: "Checking WASM binaries"
         shell: "sh"
-        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/release/*.wasm"
+        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,cosmwasm_1_2,iterator,neutron ./target/wasm32-unknown-unknown/release/*.wasm"
         working-directory: "${{ inputs.working_directory }}"

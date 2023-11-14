@@ -1,4 +1,4 @@
-use admin_contract::msg::{InstantiateMsg, MigrateMsg, SudoMsg};
+use admin_contract::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {
@@ -6,5 +6,6 @@ fn main() {
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(MigrateMsg), &out_dir);
+    export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(SudoMsg), &out_dir);
 }

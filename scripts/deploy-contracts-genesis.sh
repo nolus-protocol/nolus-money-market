@@ -8,6 +8,8 @@ add_wasm_messages() {
   local -r treasury_init_tokens="$3"
   local -r lpp_native="$4"
   local -r contracts_info_file="$5"
+  local -r dex_admin="$6"
+  local -r protocol_identifier="$7"
 
   local -r LEASE_CODE_ID=2
   local -r TREASURY_ADDRESS=$(treasury_instance_addr)
@@ -64,7 +66,7 @@ add_wasm_messages() {
   _export_to_file "rewards_dispatcher" "$REWARDS_DISPATCHER_ADDRESS" \
     "$contracts_info_file"
 
-  local -r admin_contract_init_msg='{"contracts":{"dispatcher":"'"$REWARDS_DISPATCHER_ADDRESS"'","leaser":"'"$LEASER_ADDRESS"'","lpp":"'"$LPP_ADDRESS"'","oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","treasury":"'"$TREASURY_ADDRESS"'"}}'
+  local -r admin_contract_init_msg='{"dex_admin":"'"$dex_admin"'","contracts":{"platform":{"dispatcher":"'"$REWARDS_DISPATCHER_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","treasury":"'"$TREASURY_ADDRESS"'"},"protocol":{"'"$protocol_identifier"'":{"leaser":"'"$LEASER_ADDRESS"'","lpp":"'"$LPP_ADDRESS"'","oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'"}}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
     "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$admin_contract_init_msg"

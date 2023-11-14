@@ -1,14 +1,19 @@
+use serde::Serialize;
+
 use sdk::cosmwasm_std::StdError;
 
-use crate::{Version, VersionSegment};
+use super::{Version, VersionSegment};
 
-pub type ReleaseLabel = &'static str;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct ReleaseLabel(&'static str);
 
-const RELEASE_LABEL: ReleaseLabel = env!(
+const RELEASE_LABEL: ReleaseLabel = ReleaseLabel(env!(
     "RELEASE_VERSION",
-    r#"No release label provided as an environment variable! Please set "RELEASE_VERSION" environment variable!"#,
-);
-const RELEASE_LABEL_DEV: &str = "dev-release";
+    "No release label provided as an environment variable! Please set \"RELEASE_VERSION\" environment variable!",
+));
+const RELEASE_LABEL_DEV: ReleaseLabel = ReleaseLabel("dev-release");
 
 pub fn label() -> ReleaseLabel {
     self::RELEASE_LABEL

@@ -135,7 +135,7 @@ impl<'a> ExecuteWithLpn<'a> {
                 })
                 .and_then(|(loan_resp, message_response)| {
                     response::response_with_messages::<_, _, ContractError>(
-                        &loan_resp,
+                        loan_resp,
                         message_response,
                     )
                 }),
@@ -144,7 +144,7 @@ impl<'a> ExecuteWithLpn<'a> {
             )
             .and_then(|(excess_amount, message_response)| {
                 response::response_with_messages::<_, _, ContractError>(
-                    &excess_amount,
+                    excess_amount,
                     message_response,
                 )
             }),
