@@ -14,3 +14,6 @@ sdk = { workspace = true, features = ["schema"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+currency = { workspace = true, features = ["testing"] }

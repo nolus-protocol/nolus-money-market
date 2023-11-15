@@ -19,7 +19,7 @@ skel = ["api"]
 astroport = ["skel", "dex/astroport"]
 osmosis = ["skel", "dex/osmosis"]
 migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
-testing = ["currency/testing", "finance/testing"]
+testing = ["currencies/testing", "currency/testing", "finance/testing"]
 
 [dependencies]
 access-control = { workspace = true }
