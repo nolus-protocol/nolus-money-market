@@ -1,9 +1,13 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-#[cfg(dex = "osmosis")]
-pub(crate) mod osmosis;
+#[cfg(dex = "astroport")]
+pub(crate) mod astroport;
+#[cfg(dex = "astroport")]
+pub type Nls = astroport::Nls;
 
-#[cfg(dex = "osmosis")]
+#[cfg(all(not(dex = "astroport"), dex = "osmosis"))]
+pub(crate) mod osmosis;
+#[cfg(all(not(dex = "astroport"), dex = "osmosis"))]
 pub type Nls = osmosis::Nls;
 
 #[derive(Clone, PartialEq, Eq)]
