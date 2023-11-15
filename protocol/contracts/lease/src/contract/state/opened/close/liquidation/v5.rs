@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
-use currency::{dex::Lpns, SymbolSlice};
+use currencies::Lpns;
+use currency::SymbolSlice;
 use dex::{Account, CoinVisitor, IterNext, IterState, SwapTask};
 use finance::coin::CoinDTO;
 use oracle_platform::OracleRef;

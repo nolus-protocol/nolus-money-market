@@ -1,7 +1,5 @@
-use currency::{
-    dex::test::{PaymentC3, PaymentC6, StableC1},
-    Currency,
-};
+use currencies::test::{PaymentC3, PaymentC6, StableC1};
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

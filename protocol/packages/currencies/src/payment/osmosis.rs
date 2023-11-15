@@ -1,17 +1,16 @@
 #[cfg(test)]
 mod test {
+    use currency::Currency;
+
     use crate::{
-        dex::test_impl::{
+        lease::osmosis::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth},
+        lpn::osmosis::Usdc,
+        native::osmosis::Nls,
+        payment::PaymentGroup,
+        test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        dex::{
-            lease::osmosis::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth},
-            lpn::osmosis::Usdc,
-            native::osmosis::Nls,
-            payment::PaymentGroup,
-        },
-        Currency,
     };
 
     #[test]

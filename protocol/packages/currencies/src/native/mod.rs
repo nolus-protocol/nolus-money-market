@@ -1,7 +1,4 @@
-use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult},
-    Matcher, SymbolSlice,
-};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 #[cfg(dex = "osmosis")]
 pub(crate) mod osmosis;
@@ -20,6 +17,6 @@ impl Group for Native {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
     }
 }

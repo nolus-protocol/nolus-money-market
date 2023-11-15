@@ -1,3 +1,9 @@
+#[cfg(not(any(dex = "osmosis")))]
+compile_error!("No dex selected!");
+
+#[cfg(not(any(net = "dev", net = "test", net = "main")))]
+compile_error!("No net selected!");
+
 mod currency_macro;
 mod lease;
 mod lpn;

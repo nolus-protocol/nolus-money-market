@@ -1,6 +1,4 @@
-use currency::dex::test::{
-    NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1,
-};
+use currencies::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
 use currency::{Currency, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},

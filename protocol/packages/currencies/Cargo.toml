@@ -1,5 +1,5 @@
 [package]
-name = "lpp-platform"
+name = "currencies"
 version = "0.1.0"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
@@ -10,12 +10,7 @@ testing = []
 
 [dependencies]
 currency = { workspace = true }
-finance = { workspace = true }
-platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }
 
-serde = { workspace = true }
-thiserror = { workspace = true}
-
-[dev-dependencies]
-platform = { workspace = true, features = ["testing"] }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }

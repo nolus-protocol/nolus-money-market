@@ -155,11 +155,11 @@ fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
 #[cfg(test)]
 mod test {
     use astroport::{asset::AssetInfo, router::SwapOperation};
-    use currency::{
-        dex::test::{PaymentC1, StableC1},
-        dex::{test::PaymentC7, PaymentGroup},
-        Currency as _, SymbolStatic,
+    use currencies::{
+        test::{PaymentC1, PaymentC7, StableC1},
+        PaymentGroup,
     };
+    use currency::{Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 

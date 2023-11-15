@@ -1,7 +1,5 @@
-use currency::{
-    dex::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC7, StableC1},
-    Currency,
-};
+use currencies::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC7, StableC1};
+use currency::Currency;
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use marketprice::SpotPrice;
 use platform::{contract, tests};

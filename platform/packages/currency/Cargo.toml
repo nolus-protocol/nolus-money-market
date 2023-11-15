@@ -6,10 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-# TODO check if this feature is used only by the protocol and if yes, take it out 
-# into a `currency` package at `protocol` level
-impl = []          # DEX- and NET- specific Currency and Group implementations
-testing = ["impl"]
+testing = []
 
 [dependencies]
 sdk = { workspace = true, features = ["schema"] }

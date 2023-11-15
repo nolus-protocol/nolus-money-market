@@ -1,10 +1,8 @@
 use ::lease::api::LpnCoin;
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    dex::test::{NativeC, StableC1},
-    Currency,
-};
+use currencies::test::{NativeC, StableC1};
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

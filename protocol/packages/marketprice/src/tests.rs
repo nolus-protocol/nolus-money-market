@@ -1,9 +1,9 @@
 use std::time::SystemTime;
 
-use currency::{
-    dex::test::{PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-    Currency,
+use currencies::test::{
+    PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
 };
+use currency::Currency;
 use finance::{
     coin::Coin,
     duration::Duration,

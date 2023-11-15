@@ -259,7 +259,7 @@ mod test_invariant {
 
 #[cfg(all(test, feature = "skel"))]
 mod test_position_spec {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_json, StdError};
 

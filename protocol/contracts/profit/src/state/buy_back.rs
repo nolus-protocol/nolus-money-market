@@ -2,10 +2,8 @@ use std::slice::Iter as SliceIter;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    dex::{Native, Nls, PaymentGroup},
-    Currency, SymbolSlice,
-};
+use currencies::{Native, Nls, PaymentGroup};
+use currency::{Currency, SymbolSlice};
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
     SwapTask,
@@ -171,7 +169,7 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 
 #[cfg(test)]
 mod tests {
-    use currency::dex::{
+    use currencies::{
         test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
         PaymentGroup,
     };

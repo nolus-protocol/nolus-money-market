@@ -18,6 +18,7 @@ testing = ["stub", "marketprice/testing"]
 stub = [] # TODO strip off any unnecessary dependency
 
 [dependencies]
+currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }

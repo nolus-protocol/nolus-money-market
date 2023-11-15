@@ -17,6 +17,7 @@ oracle = { path = "contracts/oracle", default-features = false }
 profit = { path = "contracts/profit", default-features = false }
 
 # Own Packages
+currencies = { path = "packages/currencies", default-features = false }
 dex = { path = "packages/dex", default-features = false }
 marketprice = { path = "packages/marketprice", default-features = false }
 swap = { path = "packages/swap", default-features = false }

@@ -1,6 +1,6 @@
 #[cfg(dex = "osmosis")]
 mod currencies {
-    use crate::dex::{
+    use crate::{
         lease::osmosis::{Atom, Axl, Cro, Osmo, Weth},
         lpn::osmosis::Usdc,
         native::osmosis::Nls,
@@ -18,4 +18,5 @@ mod currencies {
 
     pub type NativeC = Nls;
 }
+#[cfg(dex = "osmosis")]
 pub use currencies::*;

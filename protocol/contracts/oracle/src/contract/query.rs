@@ -1,6 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currencies::Lpns;
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
 use crate::{

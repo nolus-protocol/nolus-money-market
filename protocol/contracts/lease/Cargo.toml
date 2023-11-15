@@ -26,6 +26,7 @@ access-control = { workspace = true }
 profit = { workspace = true, features = ["stub"] }
 timealarms = { workspace = true, features = ["stub"] }
 
+currencies = { workspace = true }
 currency = { workspace = true }
 dex = { workspace = true, optional = true }
 finance = { workspace = true }
@@ -52,6 +53,7 @@ profit = { workspace = true, features = ["testing"] }
 oracle = { workspace = true, features = ["testing"] }
 oracle-platform = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
+currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 marketprice = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }

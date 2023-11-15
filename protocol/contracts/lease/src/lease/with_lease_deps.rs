@@ -2,11 +2,8 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use currency::{
-    self,
-    dex::{LeaseGroup, Lpns},
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers,
-};
+use currencies::{LeaseGroup, Lpns};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,

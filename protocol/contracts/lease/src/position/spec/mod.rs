@@ -248,7 +248,7 @@ where
 
 #[cfg(test)]
 mod test_validate_close {
-    use currency::dex::test::{PaymentC3, StableC1};
+    use currencies::test::{PaymentC3, StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -361,7 +361,7 @@ mod test_validate_close {
 
 #[cfg(test)]
 mod test_calc_borrow {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -464,7 +464,7 @@ mod test_calc_borrow {
 #[cfg(test)]
 mod test_check_liability {
 
-    use currency::dex::test::{PaymentC3, StableC1};
+    use currencies::test::{PaymentC3, StableC1};
     use finance::{
         coin::Coin,
         duration::Duration,

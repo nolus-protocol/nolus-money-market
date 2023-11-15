@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    dex::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
-    Currency,
-};
+use currencies::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

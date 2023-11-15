@@ -1,6 +1,5 @@
-use currency::{
-    dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers,
-};
+use currencies::Lpns;
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 

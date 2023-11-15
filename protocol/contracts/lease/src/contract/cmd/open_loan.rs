@@ -2,10 +2,8 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    dex::{Lpns, PaymentGroup},
-    Currency,
-};
+use currencies::{Lpns, PaymentGroup};
+use currency::Currency;
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     percent::Percent,

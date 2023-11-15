@@ -124,7 +124,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::{PaymentC7, StableC1};
+    use currencies::test::{PaymentC7, StableC1};
     use finance::{coin::Amount, duration::Duration, price};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 

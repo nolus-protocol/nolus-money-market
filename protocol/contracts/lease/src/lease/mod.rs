@@ -141,10 +141,8 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        dex::test::{PaymentC7, StableC1},
-        Currency,
-    };
+    use currencies::test::{PaymentC7, StableC1};
+    use currency::Currency;
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
     };

@@ -1,8 +1,8 @@
 use sdk::schemars;
 
-use crate::{
-    define_currency, define_symbol, AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice,
-};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+
+use crate::{define_currency, define_symbol};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -359,7 +359,7 @@ where
     M: Matcher + ?Sized,
     V: AnyVisitor,
 {
-    use crate::maybe_visit_any as maybe_visit;
+    use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, symbol, visitor))
@@ -383,16 +383,14 @@ where
 
 #[cfg(test)]
 mod test {
+    use currency::Currency;
 
     use crate::{
-        dex::{
-            test_impl::{
-                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-            },
-            {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
+        test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        Currency,
+        {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
     };
 
     use super::{Atom, Osmo, StAtom, StOsmo, Tia, Wbtc, Weth};

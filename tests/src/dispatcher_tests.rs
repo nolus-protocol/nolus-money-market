@@ -1,7 +1,5 @@
-use currency::{
-    dex::test::{NativeC, StableC1},
-    Currency,
-};
+use currencies::test::{NativeC, StableC1};
+use currency::Currency;
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},

@@ -115,7 +115,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, zero::Zero,
     };
@@ -233,7 +233,7 @@ mod test {
     }
 
     mod persistence {
-        use currency::dex::test::StableC1;
+        use currencies::test::StableC1;
         use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
         use sdk::cosmwasm_std::{testing, Addr, Timestamp};
 

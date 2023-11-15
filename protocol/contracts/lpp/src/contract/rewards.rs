@@ -71,7 +71,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},

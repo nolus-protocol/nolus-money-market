@@ -2,10 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{
-    currency::{AnyVisitor, Group, MaybeAnyVisitResult},
-    Matcher, SymbolSlice,
-};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+
 #[cfg(dex = "osmosis")]
 pub(crate) mod osmosis;
 

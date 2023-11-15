@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
-use currency::{dex::LeaseGroup, SymbolOwned, SymbolSlice};
+use currencies::LeaseGroup;
+use currency::{SymbolOwned, SymbolSlice};
 use dex::{Account, CoinVisitor, ConnectionParams, IterNext, IterState, MigrateSpec, SwapTask};
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use lpp::stub::LppRef;

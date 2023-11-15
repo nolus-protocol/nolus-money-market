@@ -49,7 +49,7 @@ where
 
 #[cfg(test)]
 mod test_status {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::percent::Percent;
 
     use super::{Cause, Liquidation, Status, Zone};
