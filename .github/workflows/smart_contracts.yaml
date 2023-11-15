@@ -15,15 +15,6 @@ on:
     paths-ignore:
       - "README.md"
 
-env:
-  CARGO_TERM_COLOR: "always"
-  # Release version is set to `ci` to allow building during checking and testing
-  # pipelines, which is ignored during optimized builds.
-  RELEASE_VERSION: "ci"
-  # Network's name is set to `main` to allow building during checking and testing
-  # pipelines, which is ignored during optimized builds.
-  NET: "main"
-
 jobs:
   perform_checks:
     uses: "./.github/workflows/checks_general.yaml"
@@ -47,21 +38,21 @@ jobs:
         run: |
           for dir in optimized-binaries-protocol-*-*/
           do
-            dir = ${dir%/*}
+            dir="${dir%/*}"
 
-            stripped = ${dir#*optimized-binaries-protocol-}
+            stripped="${dir#*optimized-binaries-protocol-}"
 
-            net = ${stripped%-*}
-            dex = ${stripped#*-}
+            net="${stripped%%-*}"
+            protocol="${stripped#*-}"
 
-            target_dir = "optimized-binaries-${net}-net/${dex}/"
+            target_dir="optimized-binaries-${net}-net/${protocol}/"
 
             mkdir -p "${target_dir}"
 
             cp -t "${target_dir}" "${dir}"/*
           done
 
-          zip -j -r optimized-binaries-common.zip optimized-binaries-platform/*
+          zip -j -r "optimized-binaries-common.zip" "optimized-binaries-platform"/*
 
           for dir in optimized-binaries-*-net/
           do
