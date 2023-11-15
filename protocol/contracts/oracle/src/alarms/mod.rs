@@ -62,10 +62,8 @@ pub struct AlarmError(&'static str);
 mod test {
     use std::fmt::{Display, Formatter, Result as FmtResult};
 
-    use currency::{
-        dex::test::{PaymentC5, PaymentC6, PaymentC7},
-        Currency,
-    };
+    use currencies::test::{PaymentC5, PaymentC6, PaymentC7};
+    use currency::Currency;
     use finance::{
         coin::{Coin, CoinDTO},
         price::{self, dto::PriceDTO, Price},

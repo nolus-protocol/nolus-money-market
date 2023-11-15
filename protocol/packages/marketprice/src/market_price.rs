@@ -225,10 +225,8 @@ fn add_observation(
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        dex::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-        Currency,
-    };
+    use currencies::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7};
+    use currency::Currency;
     use finance::{
         coin::Coin,
         duration::Duration,

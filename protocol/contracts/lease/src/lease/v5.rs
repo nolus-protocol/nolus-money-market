@@ -1,4 +1,4 @@
-use currency::dex::test::StableC1;
+use currencies::test::StableC1;
 use finance::{coin::Coin, liability::Liability};
 use oracle_platform::OracleRef;
 use serde::Deserialize;

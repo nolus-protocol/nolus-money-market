@@ -12,7 +12,8 @@ osmosis = ["api", "sdk/cosmos", "dep:osmosis-std"]
 testing = []
 
 [dependencies]
-currency = { workspace = true, features = ["impl"] }
+currencies = { workspace = true }
+currency = { workspace = true }
 finance = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true, features = ["schema"] }

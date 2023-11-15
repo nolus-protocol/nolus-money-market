@@ -68,10 +68,7 @@ mod impl_any_tickers {
 
     use serde::{de::DeserializeOwned, Serialize};
 
-    use crate::{
-        currency::{matcher::Tickers, Currency, Group, SymbolSlice},
-        error::Error,
-    };
+    use crate::{error::Error, matcher::Tickers, Currency, Group, SymbolSlice};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, GroupVisit};
 
@@ -148,14 +145,14 @@ mod impl_any_tickers {
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{
-            from_symbol_any::GroupVisit,
-            matcher::Tickers,
-            test::{Expect, ExpectPair, ExpectUnknownCurrency},
-            Currency, Group,
-        },
         error::Error,
-        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        from_symbol_any::GroupVisit,
+        matcher::Tickers,
+        test::{
+            Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC1, SuperGroup,
+            SuperGroupTestC1, SuperGroupTestC2,
+        },
+        Currency, Group,
     };
 
     #[test]

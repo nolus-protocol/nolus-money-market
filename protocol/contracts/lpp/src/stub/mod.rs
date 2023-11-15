@@ -2,9 +2,10 @@ use std::result::Result as StdResult;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currencies::Lpns;
 use currency::{
-    dex::Lpns, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned,
-    SymbolSlice, Tickers,
+    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice,
+    Tickers,
 };
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};

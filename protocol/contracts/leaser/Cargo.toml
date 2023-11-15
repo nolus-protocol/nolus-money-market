@@ -20,6 +20,7 @@ lpp = { workspace = true }
 oracle-platform = { workspace = true }
 
 access-control = { workspace = true }
+currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }

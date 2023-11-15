@@ -1,6 +1,7 @@
 use serde::de::DeserializeOwned;
 
-use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currencies::Lpns;
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::DepsMut;
 
 use crate::{

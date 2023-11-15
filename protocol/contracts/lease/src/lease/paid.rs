@@ -51,10 +51,8 @@ where
 mod tests {
     use std::marker::PhantomData;
 
-    use currency::{
-        dex::test::{PaymentC3, StableC1},
-        Currency, Group,
-    };
+    use currencies::test::{PaymentC3, StableC1};
+    use currency::{Currency, Group};
     use finance::{
         coin::{Coin, WithCoin},
         zero::Zero,

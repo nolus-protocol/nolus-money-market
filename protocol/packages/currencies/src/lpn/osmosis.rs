@@ -1,8 +1,8 @@
 use sdk::schemars;
 
-use crate::{
-    define_currency, define_symbol, AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice,
-};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+
+use crate::{define_currency, define_symbol};
 
 define_symbol! {
     USDC {
@@ -31,23 +31,22 @@ where
     M: Matcher + ?Sized,
     V: AnyVisitor,
 {
-    use crate::maybe_visit_any as maybe_visit;
+    use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
 }
 
 #[cfg(test)]
 mod test {
+    use currency::Currency;
+
     use crate::{
-        dex::{
-            lease::osmosis::Osmo,
-            lpn::{osmosis::Usdc, Lpns},
-            native::osmosis::Nls,
-            test_impl::{
-                maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-                maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-            },
+        lease::osmosis::Osmo,
+        lpn::{osmosis::Usdc, Lpns},
+        native::osmosis::Nls,
+        test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        Currency,
     };
 
     #[test]

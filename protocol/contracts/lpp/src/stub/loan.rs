@@ -110,7 +110,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;

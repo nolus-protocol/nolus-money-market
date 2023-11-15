@@ -1,9 +1,7 @@
 use std::marker::PhantomData;
 
-use currency::{
-    dex::{LeaseGroup, Lpns},
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers,
-};
+use currencies::{LeaseGroup, Lpns};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 
 use super::LeaseDTO;
 

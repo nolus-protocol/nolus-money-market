@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::Currency;
@@ -120,9 +121,9 @@ where
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         Ok(LppBalanceResponse {
-            balance: lpp_platform::into_usd(balance),
-            total_principal_due: lpp_platform::into_usd(total_principal_due),
-            total_interest_due: lpp_platform::into_usd(total_interest_due),
+            balance: lpp_platform::into_usd::<_, Lpns>(balance),
+            total_principal_due: lpp_platform::into_usd::<_, Lpns>(total_principal_due),
+            total_interest_due: lpp_platform::into_usd::<_, Lpns>(total_interest_due),
             balance_nlpn,
         })
     }
@@ -310,7 +311,8 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currency::{dex::test::StableC1, Currency};
+    use currencies::test::StableC1;
+    use currency::Currency;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,

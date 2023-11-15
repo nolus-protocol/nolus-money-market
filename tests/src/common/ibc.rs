@@ -1,7 +1,7 @@
 use std::slice;
 
-use currency::{dex::PaymentGroup, BankSymbols, DexSymbols, Group, SymbolStatic};
-
+use currencies::PaymentGroup;
+use currency::{BankSymbols, DexSymbols, Group, SymbolStatic};
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin,

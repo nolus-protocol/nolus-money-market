@@ -131,7 +131,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{dex::PaymentGroup, SymbolOwned};
+use currencies::PaymentGroup;
+use currency::SymbolOwned;
 use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "api")]

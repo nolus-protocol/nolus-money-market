@@ -1,9 +1,6 @@
 use thiserror::Error;
 
-use crate::{
-    currency::{Currency, Group, SymbolOwned},
-    Symbols,
-};
+use crate::{Currency, Group, SymbolOwned, Symbols};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

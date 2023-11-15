@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{dex::LeaseGroup, SymbolSlice};
+use currencies::LeaseGroup;
+use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,

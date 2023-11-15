@@ -1,4 +1,5 @@
-use currency::{dex::Lpns, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currencies::Lpns;
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
     response,
@@ -168,10 +169,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
 #[cfg(test)]
 mod tests {
-    use currency::{
-        dex::test::{PaymentC5, StableC1},
-        Currency,
-    };
+    use currencies::test::{PaymentC5, StableC1};
+    use currency::Currency;
     use finance::{duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_json, testing::mock_env};
     use swap::SwapTarget;

@@ -127,7 +127,8 @@ mod test {
     use std::ops::DerefMut as _;
 
     use access_control::ContractOwnerAccess;
-    use currency::{dex::test::StableC1, Currency};
+    use currencies::test::StableC1;
+    use currency::Currency;
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},

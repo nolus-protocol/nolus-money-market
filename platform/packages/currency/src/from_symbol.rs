@@ -40,13 +40,11 @@ impl<M> CurrencyVisit for M where M: Matcher {}
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{
-            from_symbol::CurrencyVisit,
-            test::{Expect, ExpectUnknownCurrency},
-            Currency,
-        },
         error::Error,
+        from_symbol::CurrencyVisit,
+        test::{Expect, ExpectUnknownCurrency},
         test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency,
     };
     use crate::{BankSymbols, Tickers};
 

@@ -18,9 +18,10 @@ testing = ["currency/testing"]
 
 [dependencies]
 access-control = { workspace = true }
-currency = { workspace = true, features = ["impl"] }
+currencies = { workspace = true }
+currency = { workspace = true }
 finance = { workspace = true }
-lpp-platform = { workspace = true, features = ["impl"] }
+lpp-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }
@@ -33,7 +34,7 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 access-control = { workspace = true }
-currency = { workspace = true, features = ["testing"] }
+currencies = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }

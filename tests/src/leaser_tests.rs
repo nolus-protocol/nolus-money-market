@@ -1,7 +1,5 @@
-use currency::{
-    dex::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, StableC1},
-    Currency,
-};
+use currencies::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, StableC1};
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,

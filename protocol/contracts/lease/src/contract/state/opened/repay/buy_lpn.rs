@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{dex::Lpns, SymbolSlice};
+use currencies::Lpns;
+use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,

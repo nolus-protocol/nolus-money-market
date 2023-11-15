@@ -2,9 +2,9 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
+use currencies::PaymentGroup;
 use currency::{
-    dex::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned,
-    SymbolSlice, Tickers,
+    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use swap::SwapTarget;
@@ -232,7 +232,8 @@ where
 mod tests {
     use std::cmp::Ordering;
 
-    use currency::{dex::test::StableC1, Currency};
+    use currencies::test::StableC1;
+    use currency::Currency;
     use sdk::cosmwasm_std::testing;
     use tree::HumanReadableTree;
 

@@ -106,7 +106,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::{PaymentC7, StableC1};
+    use currencies::test::{PaymentC7, StableC1};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,

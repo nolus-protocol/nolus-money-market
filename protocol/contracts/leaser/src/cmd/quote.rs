@@ -2,10 +2,8 @@ use std::marker::PhantomData;
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{
-    dex::{LeaseGroup, Lpns, PaymentGroup},
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers,
-};
+use currencies::{LeaseGroup, Lpns, PaymentGroup};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
 use lpp::{

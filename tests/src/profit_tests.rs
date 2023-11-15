@@ -1,4 +1,5 @@
-use currency::{dex::test::StableC1, Currency};
+use currencies::test::StableC1;
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

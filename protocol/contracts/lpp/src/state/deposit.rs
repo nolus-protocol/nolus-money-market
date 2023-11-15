@@ -200,7 +200,7 @@ impl Deposit {
 
 #[cfg(test)]
 mod test {
-    use currency::dex::test::StableC1;
+    use currencies::test::StableC1;
     use sdk::cosmwasm_std::testing;
 
     use crate::lpp::NTokenPrice;

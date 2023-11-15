@@ -18,6 +18,7 @@ timealarms = { path = "../platform/contracts/timealarms", features = ["contract"
 treasury = { path = "../platform/contracts/treasury", features = ["contract"] }
 
 access-control = { path = "../platform/packages/access-control" }
+currencies = { path = "../protocol/packages/currencies", features = ["testing"] }
 currency = { path = "../platform/packages/currency", features = ["testing"] }
 finance = { path = "../platform/packages/finance", features = ["testing"] }
 lpp-platform = { path = "../platform/packages/lpp", features = ["testing"]  }

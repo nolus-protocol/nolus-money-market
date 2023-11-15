@@ -5,10 +5,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    dex::{Nls, PaymentGroup},
-    Currency, Group,
-};
+use currencies::{Nls, PaymentGroup};
+use currency::{Currency, Group};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,

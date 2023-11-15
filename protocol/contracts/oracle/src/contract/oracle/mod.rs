@@ -159,10 +159,8 @@ where
 
 #[cfg(test)]
 mod test_normalized_price_not_found {
-    use currency::{
-        dex::test::{NativeC, StableC1},
-        Currency as _,
-    };
+    use currencies::test::{NativeC, StableC1};
+    use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::{config::Config as PriceConfig, SpotPrice};
     use sdk::cosmwasm_std::{

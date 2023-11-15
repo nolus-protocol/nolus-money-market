@@ -1,4 +1,4 @@
-use currency::dex::Nls;
+use currencies::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::BankAccount,

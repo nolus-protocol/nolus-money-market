@@ -1,4 +1,5 @@
-use currency::{dex::LeaseGroup, Currency};
+use currencies::LeaseGroup;
+use currency::Currency;
 use finance::{coin::Coin, price::Price, zero::Zero};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;

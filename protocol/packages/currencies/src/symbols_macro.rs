@@ -10,8 +10,8 @@ macro_rules! define_symbol {
             $([$($net: literal),+ $(,)?]: { $($body:tt)* }),+ $(,)?
         } $(,)?
     ) => {
-        pub const $currency: $crate::dex::symbols_macro::CurrencySymbols = {
-            use $crate::dex::symbols_macro::CurrencySymbols;
+        pub const $currency: $crate::symbols_macro::CurrencySymbols = {
+            use $crate::symbols_macro::CurrencySymbols;
 
             $(
                 #[cfg(any($(net = $net),+))]

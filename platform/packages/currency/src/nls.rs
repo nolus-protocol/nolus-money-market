@@ -2,10 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{
-    currency::{Currency, SymbolStatic},
-    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice,
-};
+use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic};
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,

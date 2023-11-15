@@ -294,6 +294,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "currencies"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "sdk",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "currency"
 version = "0.6.1"
 dependencies = [
@@ -780,6 +790,7 @@ version = "0.8.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
+ "currencies",
  "currency",
  "dex",
  "enum_dispatch",
@@ -805,6 +816,7 @@ version = "0.5.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
+ "currencies",
  "currency",
  "finance",
  "lease",
@@ -830,6 +842,7 @@ version = "0.4.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
+ "currencies",
  "currency",
  "finance",
  "lpp-platform",
@@ -858,6 +871,7 @@ dependencies = [
 name = "marketprice"
 version = "0.3.0"
 dependencies = [
+ "currencies",
  "currency",
  "finance",
  "postcard",
@@ -924,6 +938,7 @@ name = "oracle"
 version = "0.5.10"
 dependencies = [
  "cosmwasm-std",
+ "currencies",
  "currency",
  "finance",
  "marketprice",
@@ -1048,6 +1063,7 @@ version = "0.5.7"
 dependencies = [
  "access-control",
  "cosmwasm-std",
+ "currencies",
  "currency",
  "dex",
  "finance",
@@ -1431,6 +1447,7 @@ name = "swap"
 version = "0.1.0"
 dependencies = [
  "astroport",
+ "currencies",
  "currency",
  "finance",
  "osmosis-std",

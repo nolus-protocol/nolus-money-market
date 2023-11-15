@@ -1,6 +1,4 @@
-use crate::{
-    currency::test::Expect, BankSymbols, Currency, Group, GroupVisit, SymbolSlice, Tickers,
-};
+use currency::{test::Expect, BankSymbols, Currency, Group, GroupVisit, SymbolSlice, Tickers};
 
 #[track_caller]
 pub fn maybe_visit_on_ticker_impl<C, G>()

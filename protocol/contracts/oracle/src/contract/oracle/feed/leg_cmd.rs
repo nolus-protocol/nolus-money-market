@@ -88,7 +88,7 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use currency::dex::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6};
+    use currencies::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6};
 
     use crate::tests::{self, TheCurrency};
 

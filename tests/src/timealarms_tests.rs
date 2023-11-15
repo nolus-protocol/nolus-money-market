@@ -1,9 +1,7 @@
 use std::array::from_fn;
 
-use currency::{
-    dex::test::{NativeC, StableC1},
-    Currency,
-};
+use currencies::test::{NativeC, StableC1};
+use currency::Currency;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
 use sdk::{

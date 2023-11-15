@@ -1,6 +1,5 @@
 use currency::NlsPlatform;
-#[cfg(feature = "impl")]
-use currency::{dex::Lpns, Currency};
+use currency::{Currency, Group};
 use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
@@ -39,10 +38,10 @@ where
     LppStub::new(lpp, querier, env)
 }
 
-#[cfg(feature = "impl")]
-pub fn into_usd<Lpn>(amount: Coin<Lpn>) -> Coin<Usd>
+pub fn into_usd<Lpn, Lpns>(amount: Coin<Lpn>) -> Coin<Usd>
 where
     Lpn: Currency,
+    Lpns: Group,
 {
     use finance::coin::Amount;
 
