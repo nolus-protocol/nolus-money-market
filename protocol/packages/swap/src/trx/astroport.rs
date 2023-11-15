@@ -30,7 +30,17 @@ pub(super) type RequestMsg = MsgExecuteContract;
 
 pub(super) type ResponseMsg = MsgExecuteContractResponse;
 
-const ROUTER_ADDR: &str = "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
+// The router on the main network
+// source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
+// const ROUTER_ADDR: &str = "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
+
+// The router on the "pion-1" network
+// source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+// const ROUTER_ADDR: &str = "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+
+// A router deployed from https://github.com/astroport-fi/astroport-core/pull/386
+// source: https://web.telegram.org/a/#-915059869
+const ROUTER_ADDR: &str = "neutron1xjmp7lxx4xrz3r9tz0xk00vrtuavz7mgrh3378nntd86xafuwe8q8jz2rp";
 
 pub(super) struct Impl;
 impl ExactAmountIn for Impl {
@@ -52,7 +62,6 @@ impl ExactAmountIn for Impl {
         to_operations(&token_in.denom, swap_path)
             .map(|operations| ExecuteMsg::ExecuteSwapOperations {
                 operations,
-                // provide Coin::from(1) as a minimum receive in case Astroport returns SwapResponseData only in that case
                 minimum_receive: None, // disable checks on the received amount
                 to: None,              // means the sender
                 max_spread: Some(MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
