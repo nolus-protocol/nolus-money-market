@@ -1,14 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
-rm -rf "/target/"
+rm -rf "/target/"*
 
-mkdir "/target/"
+rm -rf '/artifacts/'*
 
-rm -rf "/artifacts/"*
+rm -rf '/temp-artifacts/'*
 
-for contract in $(echo "/code/contracts/"* | sed 's/ /\n/g' | sort)
+for contract in $(echo '/code/contracts/'* | sed 's/ /\n/g' | sort)
 do
     cd "${contract}" || return
 
@@ -21,9 +21,11 @@ do
     else
         contract_pkgid="${contract_pkgid_filter_at##*#}"
     fi
-    unset "contract_pkgid_filter_at"
+    unset 'contract_pkgid_filter_at'
 
-    cargo build --release --lib --locked --target wasm32-unknown-unknown --target-dir "/target/"
+    pkg_features="${contract_pkgid}_features"
+
+    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "${features}" --features "${!pkg_features}"
 
     if ! test $? -eq 0
     then
@@ -32,7 +34,7 @@ do
         exit 1
     fi
 
-    wasm-opt -Os --signext-lowering -o "/artifacts/${contract_pkgid}.wasm" "/target/wasm32-unknown-unknown/release/${contract_pkgid}.wasm"
+    wasm-opt -Os --signext-lowering -o "/temp-artifacts/${contract_pkgid}.wasm" "/target/wasm32-unknown-unknown/release/${contract_pkgid}.wasm"
 
     if ! test $? -eq 0
     then
@@ -42,8 +44,10 @@ do
     fi
 done
 
-echo "\nChecksums:"
+mv -t '/artifacts/' '/temp-artifacts/'*'.wasm'
 
-sha256sum -- "/artifacts/"*".wasm" | tee "/artifacts/checksums.txt"
+echo '\nChecksums:'
 
-rm -rf "/target/"
+sha256sum -- '/artifacts/'*'.wasm' | tee '/artifacts/checksums.txt'
+
+rm -rf '/target/'*
