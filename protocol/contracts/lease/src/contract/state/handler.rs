@@ -16,7 +16,7 @@ pub(crate) trait Handler
 where
     Self: Sized,
 {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", deps.api)

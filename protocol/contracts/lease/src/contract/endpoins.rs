@@ -37,10 +37,10 @@ pub fn instantiate(
     currency::validate::<LeaseGroup>(&new_lease.form.currency)?;
     deps.api.addr_validate(new_lease.form.customer.as_str())?;
 
-    platform::contract::validate_addr(&deps.querier, &new_lease.form.time_alarms)?;
-    platform::contract::validate_addr(&deps.querier, &new_lease.form.market_price_oracle)?;
-    platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.lpp)?;
-    platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.profit)?;
+    platform::contract::validate_addr(deps.querier, &new_lease.form.time_alarms)?;
+    platform::contract::validate_addr(deps.querier, &new_lease.form.market_price_oracle)?;
+    platform::contract::validate_addr(deps.querier, &new_lease.form.loan.lpp)?;
+    platform::contract::validate_addr(deps.querier, &new_lease.form.loan.profit)?;
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
@@ -60,7 +60,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
             |storage: &mut _| {
                 state::load_v5(storage)
                     .and_then(|lease_v5| {
-                        FinalizerRef::try_new(_msg.finalizer, &deps.querier).and_then(|finalizer| {
+                        FinalizerRef::try_new(_msg.finalizer, deps.querier).and_then(|finalizer| {
                             lease_v5.into_last_version(_env.block.time, _msg.customer, finalizer)
                         })
                     })
@@ -133,7 +133,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     state::load(deps.storage)
-        .and_then(|state| state.state(env.block.time, &deps.querier))
+        .and_then(|state| state.state(env.block.time, deps.querier))
         .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
         .or_else(|err| platform_error::log(err, deps.api))
 }

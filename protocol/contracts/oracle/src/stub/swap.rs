@@ -10,7 +10,7 @@ pub trait SwapPath {
         &self,
         from: SymbolOwned,
         to: SymbolOwned,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<Vec<SwapTarget>>;
 }
 
@@ -19,7 +19,7 @@ impl SwapPath for OracleRef {
         &self,
         from: SymbolOwned,
         to: SymbolOwned,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<Vec<SwapTarget>> {
         {
             let msg = QueryMsg::SwapPath { from, to };

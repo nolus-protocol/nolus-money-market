@@ -118,7 +118,7 @@ impl SwapTask for BuyBack {
         self,
         _: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         let account = bank::account(&self.profit_contract, querier);
 

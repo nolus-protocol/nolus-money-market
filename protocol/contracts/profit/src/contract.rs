@@ -39,9 +39,9 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
-    platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
-    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
+    platform::contract::validate_addr(deps.querier, &msg.treasury)?;
+    platform::contract::validate_addr(deps.querier, &msg.oracle)?;
+    platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
@@ -56,8 +56,8 @@ pub fn instantiate(
     State::new(Config::new(
         msg.cadence_hours,
         msg.treasury,
-        OracleRef::try_from(msg.oracle, &deps.querier)?,
-        TimeAlarmsRef::new(msg.timealarms, &deps.querier)?,
+        OracleRef::try_from(msg.oracle, deps.querier)?,
+        TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
     ))
     .store(deps.storage)?;
 

@@ -14,14 +14,14 @@ const POLLING_INTERVAL: Duration = Duration::from_secs(5);
 pub(super) fn check_received<G>(
     payment: &CoinDTO<G>,
     account: &Addr,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> Result<bool>
 where
     G: Group,
 {
     struct CheckBalance<'a> {
         account: &'a Addr,
-        querier: &'a QuerierWrapper<'a>,
+        querier: QuerierWrapper<'a>,
     }
     impl<'a> WithCoin for CheckBalance<'a> {
         type Output = bool;

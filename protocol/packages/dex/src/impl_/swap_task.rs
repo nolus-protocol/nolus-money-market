@@ -36,7 +36,7 @@ pub trait SwapTask {
         self,
         amount_out: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result;
 }
 

@@ -78,11 +78,11 @@ where
 
 pub struct BankView<'a> {
     account: &'a Addr,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
 }
 
 impl<'a> BankView<'a> {
-    fn account(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Self {
+    fn account(account: &'a Addr, querier: QuerierWrapper<'a>) -> Self {
         Self { account, querier }
     }
 }
@@ -137,11 +137,11 @@ where
     }
 }
 
-pub fn account<'a>(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> BankStub<BankView<'a>> {
+pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> BankStub<BankView<'a>> {
     BankStub::new(BankView::account(account, querier))
 }
 
-pub fn balance<'a, C>(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Result<Coin<C>>
+pub fn balance<'a, C>(account: &'a Addr, querier: QuerierWrapper<'a>) -> Result<Coin<C>>
 where
     C: Currency,
 {
@@ -549,7 +549,7 @@ mod test {
         });
         let querier: QuerierWrapper<'_> = app.wrap();
 
-        let bank_view: BankView<'_> = BankView::account(&addr, &querier);
+        let bank_view: BankView<'_> = BankView::account(&addr, querier);
 
         let cmd: Cmd<'_> = Cmd::new(expected);
 

@@ -84,7 +84,7 @@ where
         lease: Lease,
         amount: LpnCoin,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         let customer = lease.lease.customer.clone();
 

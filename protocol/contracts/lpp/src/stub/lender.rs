@@ -41,7 +41,7 @@ pub trait WithLppLender {
 pub(super) struct LppLenderStub<'a, Lpn> {
     lpp_ref: LppRef,
     currency: PhantomData<Lpn>,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
     batch: Batch,
 }
 
@@ -51,7 +51,7 @@ where
 {
     const OPEN_LOAN_REQ_ID: ReplyId = 0;
 
-    pub(super) fn new(lpp_ref: LppRef, querier: &'a QuerierWrapper<'a>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef, querier: QuerierWrapper<'a>) -> Self {
         Self {
             lpp_ref,
             currency: PhantomData,
@@ -133,7 +133,7 @@ mod test {
         let borrow_amount = Coin::<StableC1>::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
-        let mut lpp_stub = lpp.into_lender(&wrapper);
+        let mut lpp_stub = lpp.into_lender(wrapper);
         lpp_stub
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");

@@ -82,7 +82,7 @@ where
 
     pub fn deposit_capacity(
         &self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         env: &Env,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Option<Coin<Lpn>>> {
@@ -111,7 +111,7 @@ where
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse> {
-        let balance = self.balance(&env.contract.address, &deps.querier)?;
+        let balance = self.balance(&env.contract.address, deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
 
@@ -139,7 +139,7 @@ where
             Config::initial_derivative_price()
         } else {
             price::total_of(balance_nlpn).is(self.total_lpn(
-                &deps.querier,
+                deps.querier,
                 &env.contract.address,
                 env.block.time,
                 pending_deposit,
@@ -156,12 +156,8 @@ where
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
-        contract::validate_code_id(
-            &deps.querier,
-            lease_addr,
-            self.config.lease_code_id().into(),
-        )
-        .map_err(ContractError::from)
+        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code_id().into())
+            .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(
@@ -173,7 +169,7 @@ where
         let price = self.calculate_price(deps, env, Coin::ZERO)?.get();
         let amount_lpn = price::total(amount_nlpn, price);
 
-        if self.balance(&env.contract.address, &deps.querier)? < amount_lpn {
+        if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
             return Err(ContractError::NoLiquidity {});
         }
 
@@ -184,7 +180,7 @@ where
         &self,
         quote: Coin<Lpn>,
         account: &Addr,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         now: Timestamp,
     ) -> Result<Option<Percent>> {
         let balance = self.balance(account, querier)?;
@@ -218,7 +214,7 @@ where
         let now = env.block.time;
 
         let annual_interest_rate =
-            match self.query_quote(amount, &env.contract.address, &deps.querier, now)? {
+            match self.query_quote(amount, &env.contract.address, deps.querier, now)? {
                 Some(rate) => Ok(rate),
                 None => Err(ContractError::NoLiquidity {}),
             }?;
@@ -263,14 +259,14 @@ where
         Ok(payment.excess)
     }
 
-    fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
+    fn balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
         self.uncommited_balance(account, querier)
     }
 
     fn commited_balance(
         &self,
         account: &Addr,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
         self.uncommited_balance(account, querier)
@@ -283,11 +279,7 @@ where
             })
     }
 
-    fn uncommited_balance(
-        &self,
-        account: &Addr,
-        querier: &QuerierWrapper<'_>,
-    ) -> Result<Coin<Lpn>> {
+    fn uncommited_balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
         bank::balance(account, querier).map_err(Into::into)
     }
 
@@ -297,7 +289,7 @@ where
 
     fn total_lpn(
         &self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         account: &Addr,
         now: Timestamp,
         pending_deposit: Coin<Lpn>,
@@ -380,7 +372,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         let balance = lpp
-            .balance(&env.contract.address, &deps.as_ref().querier)
+            .balance(&env.contract.address, deps.as_ref().querier)
             .expect("can't get balance");
 
         assert_eq!(balance, balance_mock.amount.into());
@@ -425,7 +417,7 @@ mod test {
             .query_quote(
                 Coin::new(7_700_000),
                 &env.contract.address,
-                &deps.as_ref().querier,
+                deps.as_ref().querier,
                 env.block.time,
             )
             .expect("can't query quote")
@@ -445,7 +437,7 @@ mod test {
             .query_quote(
                 Coin::new(1_000_000),
                 &env.contract.address,
-                &deps.as_ref().querier,
+                deps.as_ref().querier,
                 env.block.time,
             )
             .expect("can't query quote")
@@ -807,7 +799,7 @@ mod test {
             .query_quote(
                 Coin::new(5_000_000),
                 &env.contract.address,
-                &deps.as_ref().querier,
+                deps.as_ref().querier,
                 env.block.time,
             )
             .expect("can't query quote")
@@ -825,7 +817,7 @@ mod test {
 
         let total_lpn = lpp
             .total_lpn(
-                &deps.as_ref().querier,
+                deps.as_ref().querier,
                 &env.contract.address,
                 env.block.time,
                 Coin::ZERO,
@@ -861,7 +853,7 @@ mod test {
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
         let total_lpn = lpp
             .total_lpn(
-                &deps.as_ref().querier,
+                deps.as_ref().querier,
                 &env.contract.address,
                 env.block.time,
                 Coin::ZERO,
@@ -950,7 +942,7 @@ mod test {
             let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
 
             assert_eq!(
-                lpp.deposit_capacity(&mock_querier, &mock_env, Coin::ZERO)
+                lpp.deposit_capacity(mock_querier, &mock_env, Coin::ZERO)
                     .unwrap(),
                 expected_limit.map(Into::into)
             );

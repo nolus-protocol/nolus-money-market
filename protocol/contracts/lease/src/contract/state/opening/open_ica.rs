@@ -72,7 +72,7 @@ impl DexConnectable for OpenIcaAccount {
 impl DexContract for OpenIcaAccount {
     type StateResponse = ContractResult<api::StateResponse>;
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

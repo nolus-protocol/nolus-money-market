@@ -885,7 +885,7 @@ fn loan_open_and_repay() {
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
-    let balance = bank::balance(&loan_addr1, &test_case.app.query()).unwrap();
+    let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
     let resp: LppBalanceResponse = test_case
@@ -1254,7 +1254,7 @@ fn compare_lpp_states() {
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
-    let balance = bank::balance(&loan_addr1, &test_case.app.query()).unwrap();
+    let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
     let resp: LppBalanceResponse = test_case
@@ -1460,7 +1460,7 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, Coin::new(0));
 
-    let balance = bank::balance(&lender1, &test_case.app.query()).unwrap();
+    let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<NativeC>::from(tot_rewards1));
 
     () = test_case
@@ -1516,7 +1516,7 @@ fn test_rewards() {
         .ignore_response()
         .unwrap_response();
 
-    let balance = bank::balance(&lender1, &test_case.app.query()).unwrap();
+    let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
     assert_eq!(
         balance,
         Coin::<NativeC>::from(tot_rewards1 + lender_reward1)
@@ -1555,7 +1555,7 @@ fn test_rewards() {
         .unwrap();
 
     assert_eq!(resp.rewards, Coin::new(0));
-    let balance = bank::balance(&recipient, &test_case.app.query()).unwrap();
+    let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<NativeC>::from(lender_reward2));
 }
 

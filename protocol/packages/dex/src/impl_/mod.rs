@@ -96,7 +96,7 @@ where
 {
     type StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse;
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse;
 }
 
 pub struct TransferOutState {}
@@ -111,7 +111,7 @@ pub trait ContractInSwap<State, StateResponse>
 where
     Self: Sized,
 {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> StateResponse;
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> StateResponse;
 }
 
 /// The message that the integrating module should propagate to `Handler::on_inner`

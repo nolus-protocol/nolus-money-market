@@ -447,7 +447,7 @@ mod impl_contract {
     {
         type StateResponse = SwapTask::StateResponse;
 
-        fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+        fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
             match self {
                 State::OpenIca(inner) => Contract::state(inner, now, querier),
                 State::OpenIcaRespDelivery(inner) => Contract::state(inner, now, querier),

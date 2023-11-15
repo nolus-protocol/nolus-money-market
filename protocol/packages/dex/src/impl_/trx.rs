@@ -70,7 +70,7 @@ pub(super) struct SwapTrx<'a> {
     ica_account: &'a HostAccount,
     trx: Transaction,
     oracle: &'a OracleRef,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
 }
 
 impl<'a> SwapTrx<'a> {
@@ -78,7 +78,7 @@ impl<'a> SwapTrx<'a> {
         conn: &'a str,
         ica_account: &'a HostAccount,
         oracle: &'a OracleRef,
-        querier: &'a QuerierWrapper<'a>,
+        querier: QuerierWrapper<'a>,
     ) -> Self {
         let trx = Transaction::default();
         Self {

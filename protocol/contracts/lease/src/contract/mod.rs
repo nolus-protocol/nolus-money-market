@@ -42,7 +42,7 @@ impl Lease {
     fn update<Cmd>(
         self,
         cmd: Cmd,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<(Self, <Cmd::Output as SplitDTOOut>::Other), Cmd::Error>
     where
         Cmd: WithLease,

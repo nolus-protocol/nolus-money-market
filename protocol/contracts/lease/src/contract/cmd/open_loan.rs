@@ -26,7 +26,7 @@ pub struct OpenLoanReq<'a> {
     funds_in: Vec<CwCoin>,
     max_ltd: Option<Percent>,
     oracle: OracleRef,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
 }
 
 impl<'a> OpenLoanReq<'a> {
@@ -35,7 +35,7 @@ impl<'a> OpenLoanReq<'a> {
         funds_in: Vec<CwCoin>,
         max_ltd: Option<Percent>,
         oracle: OracleRef,
-        querier: &'a QuerierWrapper<'a>,
+        querier: QuerierWrapper<'a>,
     ) -> Self {
         Self {
             position_spec,
@@ -84,7 +84,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
 struct DownpaymentHandler<'a, Lpn> {
     oracle: OracleRef,
     _lpn: PhantomData<Lpn>,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
 }
 impl<'a, Lpn> WithCoin for DownpaymentHandler<'a, Lpn>
 where

@@ -12,14 +12,14 @@ use crate::{
 pub(super) fn balance(
     account: &Addr,
     currency: &SymbolSlice,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<LpnCoin> {
     Tickers.visit_any::<Lpns, _>(currency, CheckBalance { account, querier })
 }
 
 struct CheckBalance<'a> {
     account: &'a Addr,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
 }
 impl<'a> AnyVisitor for CheckBalance<'a> {
     type Output = LpnCoin;

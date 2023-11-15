@@ -89,17 +89,17 @@ where
     TransferInInit<SwapTask, SEnum>: Into<SEnum>,
 {
     pub(super) fn try_complete(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        transfer_in::check_received(&self.amount_in, &env.contract.address, &deps.querier)
+        transfer_in::check_received(&self.amount_in, &env.contract.address, deps.querier)
             .map_or_else(Into::into, |received| {
                 if received {
-                    self.complete(&env, &deps.querier)
+                    self.complete(&env, deps.querier)
                 } else {
                     self.try_again(env, deps)
                 }
             })
     }
 
-    fn complete(self, env: &Env, querier: &QuerierWrapper<'_>) -> HandlerResult<Self> {
+    fn complete(self, env: &Env, querier: QuerierWrapper<'_>) -> HandlerResult<Self> {
         response::res_finished(self.spec.finish(self.amount_in, env, querier))
     }
 
@@ -109,7 +109,7 @@ where
         if now >= self.timeout {
             let next_state = TransferInInit::new(self.spec, self.amount_in);
             next_state
-                .enter(now, &deps.querier)
+                .enter(now, deps.querier)
                 .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
                 .into()
@@ -154,7 +154,7 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
     }
 }

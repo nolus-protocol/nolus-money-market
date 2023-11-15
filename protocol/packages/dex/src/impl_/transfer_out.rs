@@ -62,7 +62,7 @@ where
         self.coin_index == self.last_coin_index
     }
 
-    fn enter_state(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter_state(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         struct SendWorker<'a>(TransferOutTrx<'a>, bool);
         impl<'a> CoinVisitor for SendWorker<'a> {
             type Result = ();
@@ -89,7 +89,7 @@ where
         next: NextState,
         label: Label,
         now: Timestamp,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContinueResult<Self>
     where
         NextState: Enterable + Into<SEnum>,
@@ -141,7 +141,7 @@ where
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
-    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
     }
 }
@@ -159,9 +159,9 @@ where
         let label = self.spec.label();
         let now = env.block.time;
         if self.last_coin() {
-            Self::on_response(SwapExactIn::new(self.spec), label, now, &deps.querier)
+            Self::on_response(SwapExactIn::new(self.spec), label, now, deps.querier)
         } else {
-            Self::on_response(self.next(), label, now, &deps.querier)
+            Self::on_response(self.next(), label, now, deps.querier)
         }
         .into()
     }
@@ -178,7 +178,7 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
     }
 }

@@ -51,7 +51,7 @@ impl Idle {
     fn send_nls<B>(
         &self,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         account: B,
         nls: Coin<Nls>,
     ) -> ContractResult<PlatformResponse>
@@ -69,7 +69,7 @@ impl Idle {
 
     fn on_time_alarm(
         self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
@@ -92,7 +92,7 @@ impl Idle {
 
     fn try_enter_buy_back(
         self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         profit_addr: Addr,
         now: Timestamp,
         balances: Vec<CoinDTO<PaymentGroup>>,
@@ -122,7 +122,7 @@ impl Idle {
 }
 
 impl Enterable for Idle {
-    fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
+    fn enter(&self, now: Timestamp, _: QuerierWrapper<'_>) -> Result<Batch, DexError> {
         Self::setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
     }
 }
@@ -156,7 +156,7 @@ impl Handler for Idle {
     type SwapResult = ContractResult<DexResponse<State>>;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        DexResult::Finished(self.on_time_alarm(&deps.querier, env))
+        DexResult::Finished(self.on_time_alarm(deps.querier, env))
     }
 }
 

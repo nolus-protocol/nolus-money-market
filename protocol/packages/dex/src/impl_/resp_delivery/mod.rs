@@ -173,7 +173,7 @@ where
 {
     type StateResponse = H::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.handler.state(now, querier)
     }
 }

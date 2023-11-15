@@ -12,19 +12,19 @@ use crate::{
     Lpp,
 };
 
-pub struct LppStub<'a, 'q> {
+pub struct LppStub<'a> {
     lpp: &'a Addr,
-    querier: &'q QuerierWrapper<'q>,
+    querier: QuerierWrapper<'a>,
     env: &'a Env,
 }
 
-impl<'a, 'q> LppStub<'a, 'q> {
-    pub(crate) fn new(lpp: &'a Addr, querier: &'q QuerierWrapper<'a>, env: &'a Env) -> Self {
+impl<'a> LppStub<'a> {
+    pub(crate) fn new(lpp: &'a Addr, querier: QuerierWrapper<'a>, env: &'a Env) -> Self {
         Self { lpp, querier, env }
     }
 }
 
-impl<'a, 'q> Lpp for LppStub<'a, 'q> {
+impl<'a> Lpp for LppStub<'a> {
     fn balance(&self) -> Result<LppBalanceResponse> {
         self.querier
             .query_wasm_smart(self.lpp, &(QueryMsg::LppBalance {}))
@@ -53,7 +53,7 @@ impl<'a, 'q> Lpp for LppStub<'a, 'q> {
     }
 }
 
-impl<'a, 'q> AsRef<LppStub<'a, 'q>> for LppStub<'a, 'q> {
+impl<'a> AsRef<LppStub<'a>> for LppStub<'a> {
     fn as_ref(&self) -> &Self {
         self
     }
@@ -77,7 +77,7 @@ mod test {
         let env = testing::mock_env();
         let querier = QuerierWrapper::new(&mock_querier);
         let lpp_addr = Addr::unchecked("LPP");
-        let stub = LppStub::new(&lpp_addr, &querier, &env);
+        let stub = LppStub::new(&lpp_addr, querier, &env);
         assert_eq!(
             Ok(MessageResponse::default()),
             stub.ditribute_rewards(0.into())

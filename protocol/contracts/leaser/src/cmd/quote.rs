@@ -37,7 +37,7 @@ impl<'r> WithLppLender for Quote<'r> {
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
             },
-            &self.querier,
+            self.querier,
         )
     }
 }

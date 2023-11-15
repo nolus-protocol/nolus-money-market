@@ -20,7 +20,7 @@ pub struct FinalizerRef {
 }
 
 impl FinalizerRef {
-    pub(super) fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
+    pub(super) fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> ContractResult<Self> {
         use platform::contract;
 
         contract::validate_addr(querier, &addr)

@@ -55,7 +55,7 @@ where
         lease: Lease,
         curr_request_response: MessageResponse,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response>
 where {
         let start_state = dex::start_remote_local(Task::new(lease, self.into()));

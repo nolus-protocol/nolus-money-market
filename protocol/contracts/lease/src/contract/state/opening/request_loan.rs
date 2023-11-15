@@ -36,14 +36,14 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), &deps.querier)?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), deps.querier)?;
 
-        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), &deps.querier)
+        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), deps.querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
-        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &deps.querier)?;
+        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), deps.querier)?;
 
-        let finalizer = FinalizerRef::try_new(spec.finalizer.clone(), &deps.querier)?;
+        let finalizer = FinalizerRef::try_new(spec.finalizer.clone(), deps.querier)?;
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
@@ -51,9 +51,9 @@ impl RequestLoan {
                 info.funds,
                 spec.form.max_ltd,
                 oracle.clone(),
-                &deps.querier,
+                deps.querier,
             ),
-            &deps.querier,
+            deps.querier,
         )?;
         Ok((batch, {
             Self {
@@ -69,7 +69,7 @@ impl RequestLoan {
             .deps
             .0
             .clone()
-            .execute_lender(OpenLoanResp::new(msg), &deps.querier)?;
+            .execute_lender(OpenLoanResp::new(msg), deps.querier)?;
 
         let emitter = self.emit_ok(env.contract.address);
 
@@ -95,7 +95,7 @@ impl Handler for RequestLoan {
     fn state(
         self,
         _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
+        _querier: QuerierWrapper<'_>,
     ) -> ContractResult<crate::api::StateResponse> {
         unreachable!()
     }

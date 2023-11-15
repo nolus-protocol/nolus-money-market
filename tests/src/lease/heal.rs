@@ -29,7 +29,7 @@ fn active_state() {
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
     heal_done(&mut test_case, lease.clone());
     assert!(
-        platform::bank::balance::<LpnCurrency>(&lease, &test_case.app.query())
+        platform::bank::balance::<LpnCurrency>(&lease, test_case.app.query())
             .unwrap()
             .is_zero()
     );

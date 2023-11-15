@@ -182,12 +182,12 @@ fn on_alarm_native_only_transfer() {
 
     let init_balance_nls = bank::balance::<Native>(
         &test_case.address_book.treasury().clone(),
-        &test_case.app.query(),
+        test_case.app.query(),
     )
     .unwrap();
     let init_balance_lpn = bank::balance::<Lpn>(
         &test_case.address_book.treasury().clone(),
-        &test_case.app.query(),
+        test_case.app.query(),
     )
     .unwrap();
     let profit = Coin::<Native>::from(1000);
@@ -200,7 +200,7 @@ fn on_alarm_native_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         Coin::ZERO,
     );
 
@@ -264,17 +264,17 @@ fn on_alarm_native_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Native>(test_case.address_book.treasury(), &test_case.app.query()).unwrap(),
+        bank::balance::<Native>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_balance_nls + sent_profit,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         Coin::ZERO,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.treasury(), &test_case.app.query()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_balance_lpn,
     );
 }
@@ -299,7 +299,7 @@ fn on_alarm_foreign_only_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         profit_lpn,
     );
 
@@ -365,12 +365,12 @@ fn on_alarm_native_and_foreign_transfer() {
     );
 
     assert_eq!(
-        bank::balance::<Native>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
+        bank::balance::<Native>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         profit_nls,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), &test_case.app.query()).unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         profit_lpn,
     );
 

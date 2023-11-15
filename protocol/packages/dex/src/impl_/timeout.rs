@@ -30,7 +30,7 @@ where
         env.contract.address.clone(),
         TimeoutPolicy::Retry,
     );
-    let batch = current_state.enter(env.block.time, &deps.querier)?;
+    let batch = current_state.enter(env.block.time, deps.querier)?;
     Ok(StateMachineResponse::from(
         MessageResponse::messages_with_events(batch, emitter),
         current_state,

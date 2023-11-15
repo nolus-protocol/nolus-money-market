@@ -111,7 +111,7 @@ impl SwapTask for TransferIn {
         self,
         amount_out: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         debug_assert!(&amount_out == self.amount());
         let lease_addr = self.lease.lease.addr.clone();
@@ -135,7 +135,7 @@ impl<DexState> ContractInSwap<DexState, TransferInState> for TransferIn
 where
     DexState: InProgressTrx,
 {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> TransferInState {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> TransferInState {
         self.state(DexState::trx_in_progress())
     }
 }

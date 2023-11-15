@@ -60,7 +60,7 @@ where
 {
     pub fn try_add(
         &mut self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         env: &Env,
         subscriber: Addr,
         time: Timestamp,
@@ -134,19 +134,19 @@ mod tests {
         let msg_sender = Addr::unchecked("some address");
         assert!(TimeAlarms::new(deps.storage.deref_mut())
             .try_add(
-                &deps.querier,
+                deps.querier,
                 &env,
                 msg_sender.clone(),
                 Timestamp::from_nanos(8),
             )
             .is_err());
 
-        let expected_error: ContractError = contract::validate_addr(&deps.querier, &msg_sender)
+        let expected_error: ContractError = contract::validate_addr(deps.querier, &msg_sender)
             .unwrap_err()
             .into();
 
         let result = TimeAlarms::new(deps.storage)
-            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
+            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
             .unwrap_err();
 
         assert_eq!(expected_error, result);
@@ -165,7 +165,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         assert!(TimeAlarms::new(deps.storage)
-            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
+            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
             .is_ok());
     }
 
@@ -183,7 +183,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         TimeAlarms::new(deps.storage)
-            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
+            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
             .unwrap_err();
     }
 }

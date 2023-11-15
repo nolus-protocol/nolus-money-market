@@ -30,7 +30,7 @@ fn state_closed() {
 
     let customer_addr: Addr = Addr::unchecked(USER);
     let user_balance: LeaseCoin =
-        platform::bank::balance(&customer_addr, &test_case.app.query()).unwrap();
+        platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();
 
     close(&mut test_case, lease_addr.clone(), lease_amount);
 
@@ -40,7 +40,7 @@ fn state_closed() {
     assert_eq!(query_result, expected_result);
 
     assert_eq!(
-        platform::bank::balance(&customer_addr, &test_case.app.query()).unwrap(),
+        platform::bank::balance(&customer_addr, test_case.app.query()).unwrap(),
         user_balance + lease_amount
     );
 
