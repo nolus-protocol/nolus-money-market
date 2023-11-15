@@ -58,7 +58,7 @@ impl BuyLpn {
         self,
         in_progress: RepayTrx,
         now: Timestamp,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
         let in_progress = OngoingTrx::Repayment {
             payment: self.payment,
@@ -106,7 +106,7 @@ impl SwapTask for BuyLpn {
         self,
         amount_out: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         repay::repay(self.lease, amount_out, env, querier)
     }
@@ -116,7 +116,7 @@ impl<DexState> ContractInSwap<DexState, BuyLpnStateResponse> for BuyLpn
 where
     DexState: InProgressTrx,
 {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> BuyLpnStateResponse {
         self.query(DexState::trx_in_progress(), now, querier)
     }
 }

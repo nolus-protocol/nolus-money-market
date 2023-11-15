@@ -47,7 +47,7 @@ impl LeaseDTO {
     pub(crate) fn execute<Cmd>(
         self,
         cmd: Cmd,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLease,

@@ -78,6 +78,6 @@ impl Validate for Addr {
     type Error = Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
-        platform::contract::validate_addr(&ctx, self).map_err(Error::Platform)
+        platform::contract::validate_addr(ctx, self).map_err(Error::Platform)
     }
 }

@@ -33,7 +33,7 @@ impl<H> Contract for State<H>
 where
     H: LeaseHandler,
 {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.handler.state(now, querier)
     }
 

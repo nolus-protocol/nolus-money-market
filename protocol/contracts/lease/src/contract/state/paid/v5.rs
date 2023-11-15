@@ -85,7 +85,7 @@ impl SwapTask for TransferIn {
         self,
         _amount_out: CoinDTO<Self::OutG>,
         _env: &Env,
-        _querier: &QuerierWrapper<'_>,
+        _querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         unreachable!()
     }

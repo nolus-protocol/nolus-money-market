@@ -20,7 +20,7 @@ pub enum Error {
 }
 
 impl ProfitRef {
-    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self, Error> {
+    pub fn new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
             .map(|_: ConfigResponse| Self { addr })

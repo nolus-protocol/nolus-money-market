@@ -4,12 +4,12 @@ use crate::error::{Error, Result};
 
 pub type CodeId = u64;
 
-pub fn validate_addr(querier: &QuerierWrapper<'_>, contract_address: &Addr) -> Result<()> {
+pub fn validate_addr(querier: QuerierWrapper<'_>, contract_address: &Addr) -> Result<()> {
     query_info(querier, contract_address).map(|_| ())
 }
 
 pub fn validate_code_id(
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
     contract_address: &Addr,
     expected_code_id: CodeId,
 ) -> Result<()> {
@@ -26,7 +26,7 @@ pub fn validate_code_id(
 }
 
 fn query_info(
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
     contract_address: &Addr,
 ) -> Result<ContractInfoResponse> {
     let raw = WasmQuery::ContractInfo {
@@ -49,7 +49,7 @@ pub mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
         let address = Addr::unchecked("some address");
-        assert!(validate_addr(&querier, &address).is_err());
+        assert!(validate_addr(querier, &address).is_err());
     }
 
     #[test]
@@ -59,7 +59,7 @@ pub mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let address = Addr::unchecked("some address");
-        assert!(validate_addr(&querier, &address).is_ok());
+        assert!(validate_addr(querier, &address).is_ok());
     }
 
     #[test]
@@ -69,7 +69,7 @@ pub mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let address = Addr::unchecked("some address");
-        assert!(super::validate_code_id(&querier, &address, CODE_ID).is_ok());
+        assert!(super::validate_code_id(querier, &address, CODE_ID).is_ok());
     }
 }
 

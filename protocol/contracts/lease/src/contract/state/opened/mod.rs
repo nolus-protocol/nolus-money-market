@@ -20,7 +20,7 @@ fn lease_state(
     lease: Lease,
     in_progress: Option<OngoingTrx>,
     now: Timestamp,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
     lease
         .lease

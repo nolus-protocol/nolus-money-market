@@ -57,11 +57,11 @@ impl Active {
             bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)?
                 .map_err(Into::into)
-                .and_then(|payment_lpn| repay::repay(self.lease, payment_lpn, env, &deps.querier))
+                .and_then(|payment_lpn| repay::repay(self.lease, payment_lpn, env, deps.querier))
         } else {
             let start_buy_lpn = buy_lpn::start(self.lease, payment);
             start_buy_lpn
-                .enter(env.block.time, &deps.querier)
+                .enter(env.block.time, deps.querier)
                 .map(|batch| Response::from(batch, BuyLpnState::from(start_buy_lpn)))
                 .map_err(Into::into)
         }
@@ -69,7 +69,7 @@ impl Active {
 
     fn try_on_price_alarm(
         self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -85,7 +85,7 @@ impl Active {
 
     fn try_on_time_alarm(
         self,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -100,7 +100,7 @@ impl Active {
         self.try_on_alarm(querier, env)
     }
 
-    fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
+    fn try_on_alarm(self, querier: QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         let time_alarms_ref = self.lease.lease.time_alarms.clone();
         let oracle_ref = self.lease.lease.oracle.clone();
         let liquidation_status = self.lease.lease.clone().execute(
@@ -129,7 +129,7 @@ impl Active {
 }
 
 impl Handler for Active {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         super::lease_state(self.lease, None, now, querier)
     }
 
@@ -151,7 +151,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(&self.lease.lease.customer, &info.sender)
             .map_err(Into::into)
-            .and_then(|()| customer_close::start(spec, self.lease, &env, &deps.querier))
+            .and_then(|()| customer_close::start(spec, self.lease, &env, deps.querier))
     }
 
     fn on_time_alarm(
@@ -160,7 +160,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_time_alarm(&deps.querier, &env, info)
+        self.try_on_time_alarm(deps.querier, &env, info)
     }
     fn on_price_alarm(
         self,
@@ -168,21 +168,21 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_price_alarm(&deps.querier, &env, info)
+        self.try_on_price_alarm(deps.querier, &env, info)
     }
     fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
         balance::balance(
             &lease_addr,
             self.lease.lease.loan.lpp().currency(),
-            &deps.querier,
+            deps.querier,
         )
         .and_then(|balance| {
             if balance.is_zero() {
                 Err(ContractError::InconsistencyNotDetected())
             } else {
                 {
-                    repay::repay(self.lease, balance, &env, &deps.querier)
+                    repay::repay(self.lease, balance, &env, deps.querier)
                 }
             }
         })

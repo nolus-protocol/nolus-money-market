@@ -47,7 +47,7 @@ where
         self,
         in_progress: PositionCloseTrx,
         now: Timestamp,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
         let trx = self.repayable.transaction(&self.lease, in_progress);
         opened::lease_state(self.lease, Some(trx), now, querier)
@@ -94,7 +94,7 @@ where
         self,
         amount_out: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         self.repayable
             .try_repay(self.lease, amount_out, env, querier)
@@ -110,7 +110,7 @@ where
     fn state(
         self,
         now: Timestamp,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> SellAssetStateResponse<RepayableT> {
         self.query(DexState::trx_in_progress(), now, querier)
     }

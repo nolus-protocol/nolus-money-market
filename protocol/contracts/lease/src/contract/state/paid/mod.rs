@@ -25,11 +25,7 @@ impl Active {
 }
 
 impl Handler for Active {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::paid_from(self.lease.lease, None))
     }
 
@@ -43,7 +39,7 @@ impl Handler for Active {
 
         let start_transfer_in = transfer_in::start(self.lease);
         start_transfer_in
-            .enter(env.block.time, &deps.querier)
+            .enter(env.block.time, deps.querier)
             .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
             .map_err(Into::into)
     }

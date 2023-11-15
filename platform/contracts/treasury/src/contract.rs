@@ -54,7 +54,7 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::SendRewards { amount } => {
-            let mut bank_account = bank::account(&env.contract.address, &deps.querier);
+            let mut bank_account = bank::account(&env.contract.address, deps.querier);
 
             try_send_rewards(deps.storage, info.sender, amount, &mut bank_account)?;
 
@@ -69,7 +69,7 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
-            platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
+            platform::contract::validate_addr(deps.querier, &rewards_dispatcher)?;
 
             try_configure_reward_dispatcher(deps.storage, &rewards_dispatcher)?;
 

@@ -16,7 +16,7 @@ pub(in crate::contract::state::opened) fn start(
     close: PositionClose,
     lease: Lease,
     env: &Env,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     match close {
         PositionClose::PartialClose(spec) => lease

@@ -19,7 +19,7 @@ pub(super) fn repay(
     lease: Lease,
     amount: LpnCoin,
     env: &Env,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     Repay::from(CustomerRepay {}).try_repay(lease, amount, env, querier)
 }

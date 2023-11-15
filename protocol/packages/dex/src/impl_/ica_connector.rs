@@ -22,7 +22,7 @@ use super::{
 };
 
 pub trait Enterable {
-    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch>;
+    fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch>;
 }
 
 pub const ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = true;
@@ -118,7 +118,7 @@ impl<Connectee, SwapResult> Enterable for IcaConnector<Connectee, SwapResult>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
-    fn enter(&self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.enter())
     }
 }
@@ -141,7 +141,7 @@ where
         let contract = env.contract.address.clone();
         let next_state = self.connectee.connected(ica);
         next_state
-            .enter(env.block.time, &deps.querier)
+            .enter(env.block.time, deps.querier)
             .map(|batch| {
                 message::Response::messages_with_events(batch, Self::emit_ok(contract, ica_host))
             })
@@ -155,7 +155,7 @@ where
 {
     type StateResponse = Connectee::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.connectee.state(now, querier)
     }
 }

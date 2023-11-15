@@ -66,7 +66,7 @@ where
     pub(super) fn enter_state(
         &self,
         _now: Timestamp,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
@@ -143,7 +143,7 @@ impl<SwapTask, SEnum> Enterable for SwapExactIn<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
     }
 }
@@ -175,7 +175,7 @@ where
             .map(|amount_out| TransferInInit::new(self.spec, amount_out))
             .and_then(|next_state| {
                 next_state
-                    .enter(env.block.time, &deps.querier)
+                    .enter(env.block.time, deps.querier)
                     .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
             })
             .into()
@@ -206,7 +206,7 @@ where
             .map_or_else(
                 |err| HandlerResult::Continue(Err(err)),
                 |amount_out| {
-                    response::res_finished(self.spec.finish(amount_out, &env, &deps.querier))
+                    response::res_finished(self.spec.finish(amount_out, &env, deps.querier))
                 },
             )
     }
@@ -224,7 +224,7 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
     }
 }

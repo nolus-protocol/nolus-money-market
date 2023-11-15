@@ -10,11 +10,7 @@ use super::{Handler, Response};
 pub struct Liquidated {}
 
 impl Handler for Liquidated {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::Liquidated())
     }
 

@@ -142,7 +142,7 @@ impl SwapTask for BuyAsset {
         self,
         amount_out: CoinDTO<Self::OutG>,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         let IntoDTOResult { lease, batch } = cmd::open_lease(
             self.form,
@@ -164,14 +164,14 @@ impl SwapTask for BuyAsset {
 }
 
 impl ContractInSwap<TransferOutState, BuyAssetStateResponse> for BuyAsset {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> BuyAssetStateResponse {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> BuyAssetStateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
         self.state(in_progress_fn)
     }
 }
 
 impl ContractInSwap<SwapState, BuyAssetStateResponse> for BuyAsset {
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> BuyAssetStateResponse {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> BuyAssetStateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
         self.state(in_progress_fn)
     }

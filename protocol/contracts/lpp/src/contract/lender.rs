@@ -32,7 +32,7 @@ where
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
     if lpp
-        .deposit_capacity(&deps.querier, &env, pending_deposit)?
+        .deposit_capacity(deps.querier, &env, pending_deposit)?
         .map(|capacity| pending_deposit > capacity)
         .unwrap_or_default()
     {
@@ -55,7 +55,7 @@ where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage)
-        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(&deps.querier, &env, Coin::ZERO))
+        .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(deps.querier, &env, Coin::ZERO))
 }
 
 pub(super) fn try_withdraw<Lpn>(
@@ -81,7 +81,7 @@ where
         .ok_or(ContractError::NoDeposit {})?
         .withdraw(deps.storage, amount_nlpn)?;
 
-    let mut bank = bank::account(&env.contract.address, &deps.querier);
+    let mut bank = bank::account(&env.contract.address, deps.querier);
     bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {

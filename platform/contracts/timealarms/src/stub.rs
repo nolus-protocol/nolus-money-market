@@ -31,7 +31,7 @@ pub struct TimeAlarmsRef {
 }
 
 impl TimeAlarmsRef {
-    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
+    pub fn new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         contract::validate_addr(querier, &addr)?;
 
         Ok(Self { addr })

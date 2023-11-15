@@ -44,9 +44,9 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::try_new(config.lpp_addr, &self.deps.querier)?;
+        let lpp = LppRef::try_new(config.lpp_addr, self.deps.querier)?;
 
-        let oracle = OracleRef::try_from(config.market_price_oracle, &self.deps.querier)?;
+        let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 
         lpp.execute_lender(
             Quote::new(
@@ -58,7 +58,7 @@ impl<'a> Leaser<'a> {
                 config.lease_interest_rate_margin,
                 max_ltd,
             ),
-            &self.deps.querier,
+            self.deps.querier,
         )
     }
 }

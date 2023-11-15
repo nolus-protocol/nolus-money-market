@@ -10,11 +10,7 @@ use super::{Handler, Response};
 pub struct Closed {}
 
 impl Handler for Closed {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::Closed())
     }
 

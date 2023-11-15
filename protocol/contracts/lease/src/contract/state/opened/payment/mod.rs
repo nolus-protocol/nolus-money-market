@@ -20,6 +20,6 @@ pub(super) trait Repayable {
         lease: Lease,
         amount: LpnCoin,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response>;
 }

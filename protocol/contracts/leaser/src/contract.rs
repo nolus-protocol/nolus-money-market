@@ -38,10 +38,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
-    contract::validate_addr(&deps.querier, &msg.time_alarms)?;
-    contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
-    contract::validate_addr(&deps.querier, &msg.profit)?;
+    contract::validate_addr(deps.querier, &msg.lpp_ust_addr)?;
+    contract::validate_addr(deps.querier, &msg.time_alarms)?;
+    contract::validate_addr(deps.querier, &msg.market_price_oracle)?;
+    contract::validate_addr(deps.querier, &msg.profit)?;
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
@@ -101,7 +101,7 @@ pub fn execute(
             max_ltd,
         ),
         ExecuteMsg::FinalizeLease { customer } => {
-            validate_customer(customer, deps.api, &deps.querier)
+            validate_customer(customer, deps.api, deps.querier)
                 .and_then(|customer| {
                     validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
                 })
@@ -133,7 +133,7 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(|()| validate_customer(next_customer, deps.api, &deps.querier))
+            .and_then(|()| validate_customer(next_customer, deps.api, deps.querier))
             .and_then(move |next_customer_validated| {
                 leaser::try_migrate_leases_cont(
                     deps.storage,
@@ -201,7 +201,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
 fn validate_customer(
     customer: Addr,
     api: &dyn Api,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<Addr> {
     api.addr_validate(customer.as_str())
         .map_err(|_| ContractError::InvalidContinuationKey {
@@ -222,7 +222,7 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
         .config()
         .map(|config| config.config.lease_code_id)
         .and_then(|lease_code_id| {
-            contract::validate_code_id(&deps.querier, &lease, lease_code_id).map_err(Into::into)
+            contract::validate_code_id(deps.querier, &lease, lease_code_id).map_err(Into::into)
         })
         .map(|()| lease)
 }

@@ -118,7 +118,7 @@ impl<SwapTask, SEnum> Enterable for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now)
     }
 }
@@ -157,7 +157,7 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
     }
 }

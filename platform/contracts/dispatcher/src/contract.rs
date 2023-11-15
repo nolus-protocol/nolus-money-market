@@ -39,10 +39,10 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    platform::contract::validate_addr(&deps.querier, &msg.dex.lpp)?;
-    platform::contract::validate_addr(&deps.querier, &msg.dex.oracle)?;
-    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
-    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
+    platform::contract::validate_addr(deps.querier, &msg.dex.lpp)?;
+    platform::contract::validate_addr(deps.querier, &msg.dex.oracle)?;
+    platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
+    platform::contract::validate_addr(deps.querier, &msg.treasury)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
@@ -57,7 +57,7 @@ pub fn instantiate(
         msg.timealarms,
         env.block.time,
         Duration::from_hours(msg.cadence_hours),
-        &deps.querier,
+        deps.querier,
     )
     .map(response::response_only_messages)
 }
@@ -132,7 +132,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::CalculateRewards {} => {
-            to_json_binary(&query_reward(deps.storage, &deps.querier, &env)?.units())
+            to_json_binary(&query_reward(deps.storage, deps.querier, &env)?.units())
         }
     }
     .map_err(Into::into)
@@ -144,7 +144,7 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
 
 fn query_reward(
     storage: &dyn Storage,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
     env: &Env,
 ) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
@@ -165,7 +165,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
         timealarm,
         now,
         Duration::from_hours(config.cadence_hours),
-        &deps.querier,
+        deps.querier,
     )?;
 
     let last_dispatch = DispatchLog::last_dispatch(deps.storage);
@@ -174,11 +174,11 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
     let lpps = config
         .dexes
         .iter()
-        .map(|dex| lpp_platform::new_stub(&dex.lpp, &deps.querier, env));
+        .map(|dex| lpp_platform::new_stub(&dex.lpp, deps.querier, env));
     let oracles = config.dexes.iter().map(|dex| {
         oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
             dex.oracle.clone(),
-            &deps.querier,
+            deps.querier,
         )
     });
 
@@ -196,7 +196,7 @@ fn setup_alarm(
     timealarm: Addr,
     now: Timestamp,
     alarm_in: Duration,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<Batch> {
     TimeAlarmsRef::new(timealarm, querier)
         .map_err(Into::into)

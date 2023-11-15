@@ -66,7 +66,7 @@ where
 }
 
 impl<Enterable> EnterableT for EntryDelay<Enterable> {
-    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> DexResult<Batch> {
+    fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> DexResult<Batch> {
         Self::enter(self, now)
     }
 }
@@ -80,7 +80,7 @@ where
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
         self.enterable
-            .enter(env.block.time, &deps.querier)
+            .enter(env.block.time, deps.querier)
             .map(|batch| Response::<Self>::from(batch, self.enterable))
             .into()
     }
@@ -92,7 +92,7 @@ where
 {
     type StateResponse = Connectee::StateResponse;
 
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.enterable.state(now, querier)
     }
 }

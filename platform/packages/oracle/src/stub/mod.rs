@@ -16,12 +16,11 @@ use self::impl_::{CheckedConverter, OracleStub};
 mod impl_;
 
 #[cfg(feature = "unchecked-base-currency")]
-pub fn new_unchecked_base_currency_stub<'a, 'q, OracleBase, OracleBaseG>(
+pub fn new_unchecked_base_currency_stub<'a, OracleBase, OracleBaseG>(
     oracle: Addr,
-    querier: &'q QuerierWrapper<'q>,
+    querier: QuerierWrapper<'a>,
 ) -> impl Oracle<OracleBase> + 'a
 where
-    'q: 'a,
     OracleBase: Currency,
     OracleBaseG: Group + for<'de> Deserialize<'de> + 'a,
 {
@@ -63,7 +62,7 @@ pub struct OracleRef {
 }
 
 impl OracleRef {
-    pub fn try_from(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
+    pub fn try_from(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
             .map_err(Error::StubConfigQuery)
@@ -88,7 +87,7 @@ impl OracleRef {
     pub fn execute_as_oracle<OracleBase, OracleBaseG, V>(
         self,
         cmd: V,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,

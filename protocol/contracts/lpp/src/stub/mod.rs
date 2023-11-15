@@ -31,7 +31,7 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
+    pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
@@ -51,7 +51,7 @@ impl LppRef {
         self,
         cmd: Cmd,
         lease: impl Into<Addr>,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLoan,
@@ -61,7 +61,7 @@ impl LppRef {
             cmd: Cmd,
             lpp_ref: LppRef,
             lease: Lease,
-            querier: &'a QuerierWrapper<'a>,
+            querier: QuerierWrapper<'a>,
         }
 
         impl<'a, Cmd, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lease>
@@ -102,7 +102,7 @@ impl LppRef {
     pub fn execute_lender<Cmd>(
         self,
         cmd: Cmd,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender,
@@ -111,7 +111,7 @@ impl LppRef {
         struct CurrencyVisitor<'a, Cmd> {
             cmd: Cmd,
             lpp_ref: LppRef,
-            querier: &'a QuerierWrapper<'a>,
+            querier: QuerierWrapper<'a>,
         }
 
         impl<'a, Cmd> AnyVisitor for CurrencyVisitor<'a, Cmd>
@@ -146,7 +146,7 @@ impl LppRef {
     fn into_loan<Lpn>(
         self,
         lease: impl Into<Addr>,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> Result<LppLoanImpl<Lpn>>
     where
         Lpn: Currency + DeserializeOwned,
@@ -163,7 +163,7 @@ impl LppRef {
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
-    fn into_lender<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C>
+    fn into_lender<C>(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, C>
     where
         C: Currency,
     {

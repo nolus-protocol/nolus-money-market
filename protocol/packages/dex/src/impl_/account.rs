@@ -61,7 +61,7 @@ impl Account {
     pub(super) fn swap<'a>(
         &'a self,
         oracle: &'a OracleRef,
-        querier: &'a QuerierWrapper<'a>,
+        querier: QuerierWrapper<'a>,
     ) -> SwapTrx<'a> {
         SwapTrx::new(&self.dex.connection_id, &self.host, oracle, querier)
     }

@@ -76,7 +76,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     })
             }
             ExecuteMsg::AddPriceAlarm { alarm } => {
-                contract::validate_addr(&self.deps.querier, &self.sender)?;
+                contract::validate_addr(self.deps.querier, &self.sender)?;
 
                 MarketAlarms::new(self.deps.storage)
                     .try_add_price_alarm::<OracleBase>(self.sender, alarm)

@@ -18,7 +18,7 @@ pub(in crate::contract::state::opened) fn start(
     liquidation: LiquidationDTO,
     curr_request_response: MessageResponse,
     env: &Env,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     match liquidation {
         LiquidationDTO::Partial(spec) => spec.start(lease, curr_request_response, env, querier),

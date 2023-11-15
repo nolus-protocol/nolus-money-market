@@ -53,7 +53,7 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::AddAlarm { time } => time_alarms
-            .try_add(&deps.querier, &env, info.sender, time)
+            .try_add(deps.querier, &env, info.sender, time)
             .map(response::response_only_messages),
         ExecuteMsg::DispatchAlarms { max_count } => time_alarms
             .try_notify(env.block.time, max_count)

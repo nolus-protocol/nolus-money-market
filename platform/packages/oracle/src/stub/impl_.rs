@@ -56,7 +56,7 @@ impl PriceConverter for BaseCUncheckedConverter {
 
 pub struct OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT> {
     oracle_ref: OracleRef,
-    querier: &'a QuerierWrapper<'a>,
+    querier: QuerierWrapper<'a>,
     _quote_currency: PhantomData<OracleBase>,
     _quote_group: PhantomData<OracleBaseG>,
     _converter: PhantomData<PriceConverterT>,
@@ -68,7 +68,7 @@ where
     OracleBase: Currency,
     OracleBaseG: Group,
 {
-    pub fn new(oracle_ref: OracleRef, querier: &'a QuerierWrapper<'a>) -> Self {
+    pub fn new(oracle_ref: OracleRef, querier: QuerierWrapper<'a>) -> Self {
         currency::validate_member::<OracleBase, OracleBaseG>()
             .expect("create OracleStub with an appropriate currency and a group");
 

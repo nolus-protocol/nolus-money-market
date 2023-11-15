@@ -24,7 +24,7 @@ pub(crate) fn open_lease(
     start_at: Timestamp,
     now: Timestamp,
     amount: LeaseCoin,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);

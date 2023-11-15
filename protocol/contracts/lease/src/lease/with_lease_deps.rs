@@ -36,7 +36,7 @@ pub fn execute<Cmd>(
     asset: &SymbolSlice,
     lpp: LppRef,
     oracle: OracleRef,
-    querier: &QuerierWrapper<'_>,
+    querier: QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
@@ -61,7 +61,7 @@ struct FactoryStage1<'r, Cmd> {
     lease_addr: Addr,
     lpp: LppRef,
     oracle: OracleRef,
-    querier: &'r QuerierWrapper<'r>,
+    querier: QuerierWrapper<'r>,
 }
 
 impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
@@ -94,7 +94,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     oracle: OracleRef,
-    querier: &'r QuerierWrapper<'r>,
+    querier: QuerierWrapper<'r>,
 }
 
 impl<'r, Cmd, Asset> WithLppLoan for FactoryStage2<'r, Cmd, Asset>

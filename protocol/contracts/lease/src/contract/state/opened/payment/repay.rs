@@ -74,7 +74,7 @@ where
         lease: Lease,
         amount: LpnCoin,
         env: &Env,
-        querier: &QuerierWrapper<'_>,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         let profit = lease.lease.loan.profit().clone();
         let price_alarms = lease.lease.oracle.clone();
