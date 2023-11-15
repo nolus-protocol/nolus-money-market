@@ -38,4 +38,6 @@ RUN ["chmod", "-R", "a+rx-w", "/build/"]
 
 RUN ["mkdir", "/target/"]
 
-CMD ["sh", "/build/build.sh"]
+RUN ["mkdir", "/temp-artifacts/"]
+
+CMD ["bash", "/build/build.sh"]
