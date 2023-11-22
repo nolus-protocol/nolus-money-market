@@ -119,20 +119,27 @@ each set of contracts, depending on their workspace (indicated by
 `WORKSPACE_DIR_NAME`) and on the DEX (indicated by `DEX`) and just as the development build uses `RUSTFLAGS`
 to indicate desired target network and DEX:
 
-```sh
-export WORKSPACE_DIR_NAME="platform"/"protocol"
-export DEX="osmosis"
-export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $DEX || echo 'platform')"
+* ```sh
+  export WORKSPACE_DIR_NAME='platform'
+  ```
+  OR
+  ```sh
+  export WORKSPACE_DIR_NAME='protocol'
+  ```
+* ```sh
+  export DEX='osmosis'
+  export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $DEX || echo 'platform')"
+  ```
 
-```
-
 ```sh
-docker run --rm -v "$(pwd)/platform/:/platform/" \
+mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
+  docker run --rm -v "$(pwd)/platform/:/platform/" \
   -v "$(pwd)/protocol/:/protocol/" \
   -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
   -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
   --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-  --env "RUSTFLAGS=--cfg net=\"dev\" --cfg dex=\"${DEX}\"" \
+  --env "RUSTFLAGS=--cfg net=\"dev\"" \
+  --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${DEX}"; fi)"
   wasm-optimizer
 ```
 
