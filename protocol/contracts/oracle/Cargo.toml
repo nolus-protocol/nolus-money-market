@@ -11,8 +11,8 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["contract-with-bindings"]
-contract-with-bindings = ["contract"]
+default = ["cosmwasm-bindings"]
+cosmwasm-bindings = ["contract"]
 contract = ["stub"]
 testing = ["stub", "marketprice/testing"]
 stub = [] # TODO strip off any unnecessary dependency

@@ -10,10 +10,10 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = [
-    "contract-with-bindings",
+    "cosmwasm-bindings",
     "osmosis",
 ] # TODO get rid of default features
-contract-with-bindings = [] # TODO rename to cosmwasm-bindings
+cosmwasm-bindings = [] # TODO rename to cosmwasm-bindings
 api = ["dep:dex"]
 skel = ["api"]
 astroport = ["skel", "dex/astroport"]

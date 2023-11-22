@@ -12,10 +12,10 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = [
-    "contract-with-bindings",
+    "cosmwasm-bindings",
     "osmosis",
 ] # TODO get rid of default features
-contract-with-bindings = []
+cosmwasm-bindings = []
 api = []
 astroport = ["api", "dex/astroport"]
 osmosis = ["api", "dex/osmosis"]
