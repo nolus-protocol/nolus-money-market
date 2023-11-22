@@ -23,6 +23,7 @@ pub(super) type RequestMsg = MsgSwapExactAmountIn;
 pub(super) type ResponseMsg = MsgSwapExactAmountInResponse;
 
 pub(super) struct Impl;
+
 impl ExactAmountIn for Impl {
     fn build<G>(
         &self,

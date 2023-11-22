@@ -6,8 +6,7 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
-#[cfg(dex = "osmosis")]
-mod osmosis;
+mod osmosis_tests;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

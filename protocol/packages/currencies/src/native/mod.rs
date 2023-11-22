@@ -1,14 +1,16 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-#[cfg(dex = "astroport")]
+#[cfg(feature = "astroport")]
 pub(crate) mod astroport;
-#[cfg(dex = "astroport")]
-pub type Nls = astroport::Nls;
+#[cfg(feature = "astroport")]
+use self::astroport as impl_mod;
 
-#[cfg(all(not(dex = "astroport"), dex = "osmosis"))]
+#[cfg(any(feature = "osmosis", feature = "testing"))]
 pub(crate) mod osmosis;
-#[cfg(all(not(dex = "astroport"), dex = "osmosis"))]
-pub type Nls = osmosis::Nls;
+#[cfg(any(feature = "osmosis", feature = "testing"))]
+use self::osmosis as impl_mod;
+
+pub type Nls = impl_mod::Nls;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

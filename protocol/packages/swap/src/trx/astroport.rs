@@ -43,6 +43,7 @@ pub(super) type ResponseMsg = MsgExecuteContractResponse;
 const ROUTER_ADDR: &str = "neutron1xjmp7lxx4xrz3r9tz0xk00vrtuavz7mgrh3378nntd86xafuwe8q8jz2rp";
 
 pub(super) struct Impl;
+
 impl ExactAmountIn for Impl {
     fn build<G>(
         &self,

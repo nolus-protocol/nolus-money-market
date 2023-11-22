@@ -11,10 +11,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = [
-    "cosmwasm-bindings",
-    "osmosis",
-] # TODO get rid of default features
+default = []
 cosmwasm-bindings = []
 api = []
 astroport = ["api", "dex/astroport"]
