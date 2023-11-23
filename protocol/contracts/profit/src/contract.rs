@@ -9,7 +9,7 @@ use oracle_platform::OracleRef;
 use platform::{
     message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
 };
-#[cfg(feature = "contract-with-bindings")]
+#[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -32,7 +32,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
     _env: Env,
@@ -64,13 +64,13 @@ pub fn instantiate(
     Ok(response::empty_response())
 }
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
@@ -115,7 +115,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<CwResponse> {
     let state: State = State::load(deps.storage)?;
 
@@ -129,7 +129,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
     Ok(response::response_only_messages(response))
 }
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     try_handle_reply_message(deps, env, msg, State::reply).map(response::response_only_messages)
 }
@@ -217,7 +217,7 @@ where
         .map_err(Into::into)
 }
 
-#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&Profit::query_config(deps.storage)?),
