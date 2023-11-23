@@ -13,7 +13,7 @@ default = [
     "cosmwasm-bindings",
     "osmosis",
 ] # TODO get rid of default features
-cosmwasm-bindings = [] # TODO rename to cosmwasm-bindings
+cosmwasm-bindings = []
 api = ["dep:dex"]
 skel = ["api"]
 astroport = ["skel", "dex/astroport"]
