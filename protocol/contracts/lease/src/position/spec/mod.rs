@@ -80,20 +80,20 @@ where
         asset: Coin<Asset>,
         total_due: Coin<Lpn>,
         overdue: Coin<Lpn>,
-        assets_in_lpn: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Status<Asset>
     where
         Asset: Currency,
     {
         debug_assert!(overdue <= total_due);
 
-        let total_due = price::total(total_due, assets_in_lpn.inv());
-        let overdue = price::total(overdue, assets_in_lpn.inv());
+        let total_due = price::total(total_due, asset_in_lpns.inv());
+        let overdue = price::total(overdue, asset_in_lpns.inv());
         debug_assert!(overdue <= total_due);
 
         let ltv = Percent::from_ratio(total_due, asset);
-        self.may_ask_liquidation_liability(asset, total_due, assets_in_lpn)
-            .max(self.may_ask_liquidation_overdue(asset, overdue, assets_in_lpn))
+        self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
+            .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
             .map(Status::Liquidation)
             .unwrap_or_else(|| {
                 self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
@@ -112,16 +112,16 @@ where
         &self,
         asset: Coin<Asset>,
         close_amount: Coin<Asset>,
-        assets_in_lpn: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> ContractResult<()>
     where
         Asset: Currency,
     {
-        if !self.valid_transaction(close_amount, assets_in_lpn) {
+        if !self.valid_transaction(close_amount, asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooSmall(
                 self.min_transaction.into(),
             ))
-        } else if !self.valid_asset(asset.saturating_sub(close_amount), assets_in_lpn) {
+        } else if !self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooBig(
                 self.min_asset.into(),
             ))
@@ -175,7 +175,7 @@ where
         &self,
         asset: Coin<Asset>,
         total_due: Coin<Asset>,
-        assets_in_lpn: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
@@ -188,7 +188,7 @@ where
                 healthy_ltv: self.liability.healthy_percent(),
             },
             liquidation_amount,
-            assets_in_lpn,
+            asset_in_lpns,
         )
     }
 
@@ -196,12 +196,12 @@ where
         &self,
         asset: Coin<Asset>,
         overdue: Coin<Asset>,
-        assets_in_lpn: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
     {
-        self.may_ask_liquidation(asset, Cause::Overdue(), overdue, assets_in_lpn)
+        self.may_ask_liquidation(asset, Cause::Overdue(), overdue, asset_in_lpns)
     }
 
     fn may_ask_liquidation<Asset>(
@@ -209,12 +209,12 @@ where
         asset: Coin<Asset>,
         cause: Cause,
         liquidation: Coin<Asset>,
-        assets_in_lpn: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
     {
-        match self.validate_close_amount(asset, liquidation, assets_in_lpn) {
+        match self.validate_close_amount(asset, liquidation, asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooSmall(_)) => None,
             Err(ContractError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
             Err(_) => unreachable!(),
