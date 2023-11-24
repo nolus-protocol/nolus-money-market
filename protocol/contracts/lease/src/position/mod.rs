@@ -68,10 +68,10 @@ where
         &self,
         total_due: Coin<Lpn>,
         overdue: Coin<Lpn>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        assets_in_lpn: Price<Asset, Lpn>,
     ) -> Status<Asset> {
         self.spec
-            .check_liability(self.amount, total_due, overdue, lpn_in_assets)
+            .check_liability(self.amount, total_due, overdue, assets_in_lpn)
     }
 
     /// Check if the amount can be used to close the position.
@@ -85,10 +85,10 @@ where
     pub fn validate_close_amount(
         &self,
         close_amount: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        assets_in_lpn: Price<Asset, Lpn>,
     ) -> ContractResult<()> {
         self.spec
-            .validate_close_amount(self.amount, close_amount, lpn_in_assets)
+            .validate_close_amount(self.amount, close_amount, assets_in_lpn)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

@@ -42,10 +42,8 @@ where
     Asset: Currency,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
-        self.price_of_lease_currency().and_then(|lpn_in_assets| {
-            self.position
-                .validate_close_amount(amount, lpn_in_assets.inv())
-        })
+        self.price_of_lease_currency()
+            .and_then(|assets_in_lpn| self.position.validate_close_amount(amount, assets_in_lpn))
     }
 
     pub(crate) fn close_partial<Profit>(

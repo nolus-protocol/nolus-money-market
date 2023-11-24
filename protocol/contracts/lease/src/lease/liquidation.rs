@@ -30,7 +30,7 @@ where
 
         self.price_of_lease_currency().map(|assert_in_lpn| {
             self.position
-                .check_liability(total_due, overdue, assert_in_lpn.inv())
+                .check_liability(total_due, overdue, assert_in_lpn)
         })
     }
 
