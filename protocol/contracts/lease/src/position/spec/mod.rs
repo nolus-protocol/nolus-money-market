@@ -80,20 +80,20 @@ where
         asset: Coin<Asset>,
         total_due: Coin<Lpn>,
         overdue: Coin<Lpn>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Status<Asset>
     where
         Asset: Currency,
     {
         debug_assert!(overdue <= total_due);
 
-        let total_due = price::total(total_due, lpn_in_assets);
-        let overdue = price::total(overdue, lpn_in_assets);
+        let total_due = price::total(total_due, asset_in_lpns.inv());
+        let overdue = price::total(overdue, asset_in_lpns.inv());
         debug_assert!(overdue <= total_due);
 
         let ltv = Percent::from_ratio(total_due, asset);
-        self.may_ask_liquidation_liability(asset, total_due, lpn_in_assets)
-            .max(self.may_ask_liquidation_overdue(asset, overdue, lpn_in_assets))
+        self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
+            .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
             .map(Status::Liquidation)
             .unwrap_or_else(|| {
                 self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
@@ -112,21 +112,16 @@ where
         &self,
         asset: Coin<Asset>,
         close_amount: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> ContractResult<()>
     where
         Asset: Currency,
     {
-        let transaction_currency_in_lpn = lpn_in_assets.inv();
-
-        if !self.valid_transaction(close_amount, transaction_currency_in_lpn) {
+        if !self.valid_transaction(close_amount, asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooSmall(
                 self.min_transaction.into(),
             ))
-        } else if !self.valid_asset(
-            asset.saturating_sub(close_amount),
-            transaction_currency_in_lpn,
-        ) {
+        } else if !self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooBig(
                 self.min_asset.into(),
             ))
@@ -180,7 +175,7 @@ where
         &self,
         asset: Coin<Asset>,
         total_due: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
@@ -193,7 +188,7 @@ where
                 healthy_ltv: self.liability.healthy_percent(),
             },
             liquidation_amount,
-            lpn_in_assets,
+            asset_in_lpns,
         )
     }
 
@@ -201,12 +196,12 @@ where
         &self,
         asset: Coin<Asset>,
         overdue: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
     {
-        self.may_ask_liquidation(asset, Cause::Overdue(), overdue, lpn_in_assets)
+        self.may_ask_liquidation(asset, Cause::Overdue(), overdue, asset_in_lpns)
     }
 
     fn may_ask_liquidation<Asset>(
@@ -214,12 +209,12 @@ where
         asset: Coin<Asset>,
         cause: Cause,
         liquidation: Coin<Asset>,
-        lpn_in_assets: Price<Lpn, Asset>,
+        asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
     {
-        match self.validate_close_amount(asset, liquidation, lpn_in_assets) {
+        match self.validate_close_amount(asset, liquidation, asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooSmall(_)) => None,
             Err(ContractError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
             Err(_) => unreachable!(),
@@ -274,7 +269,7 @@ mod test_validate_close {
             Err(ContractError::PositionCloseAmountTooSmall(_))
         ));
 
-        let result_2 = spec.validate_close_amount(6.into(), price(2, 1));
+        let result_2 = spec.validate_close_amount(6.into(), price(1, 2));
         assert!(matches!(
             result_2,
             Err(ContractError::PositionCloseAmountTooSmall(_))
@@ -287,7 +282,7 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(15.into(), price(1, 1));
         assert!(result_1.is_ok());
 
-        let result_2 = spec.validate_close_amount(5.into(), price(3, 1));
+        let result_2 = spec.validate_close_amount(5.into(), price(1, 3));
         assert!(result_2.is_ok());
     }
 
@@ -300,7 +295,7 @@ mod test_validate_close {
             Err(ContractError::PositionCloseAmountTooBig(_))
         ));
 
-        let result_2 = spec.validate_close_amount(64.into(), price(2, 3));
+        let result_2 = spec.validate_close_amount(64.into(), price(3, 2));
         assert!(matches!(
             result_2,
             Err(ContractError::PositionCloseAmountTooBig(_))
@@ -313,7 +308,7 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(75.into(), price(1, 1));
         assert!(result_1.is_ok());
 
-        let result_2 = spec.validate_close_amount(62.into(), price(2, 3));
+        let result_2 = spec.validate_close_amount(62.into(), price(3, 2));
         assert!(result_2.is_ok());
     }
 
@@ -323,7 +318,7 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(53.into(), price(1, 1));
         assert!(result_1.is_ok());
 
-        let result_2 = spec.validate_close_amount(89.into(), price(4, 1));
+        let result_2 = spec.validate_close_amount(89.into(), price(1, 4));
         assert!(result_2.is_ok());
     }
 
@@ -350,12 +345,12 @@ mod test_validate_close {
         Position::<TestCurrency, TestLpn>::new(amount.into(), spec)
     }
 
-    fn price<Lpn, Asset>(price_lpn: Lpn, price_asset: Asset) -> Price<TestLpn, TestCurrency>
+    fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>
     where
-        Lpn: Into<Coin<TestLpn>>,
         Asset: Into<Coin<TestCurrency>>,
+        Lpn: Into<Coin<TestLpn>>,
     {
-        price::total_of(price_lpn.into()).is(price_asset.into())
+        price::total_of(price_asset.into()).is(price_lpn.into())
     }
 }
 
@@ -489,7 +484,7 @@ mod test_check_liability {
             Status::NoDebt,
         );
         assert_eq!(
-            spec.check_liability(0.into(), 0.into(), price(1, 3)),
+            spec.check_liability(0.into(), 0.into(), price(3, 1)),
             Status::NoDebt,
         );
     }
@@ -503,7 +498,7 @@ mod test_check_liability {
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            position.check_liability(1.into(), 0.into(), price(1, 5)),
+            position.check_liability(1.into(), 0.into(), price(5, 1)),
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
@@ -511,7 +506,7 @@ mod test_check_liability {
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            position.check_liability(25.into(), 0.into(), price(1, 2)),
+            position.check_liability(25.into(), 0.into(), price(2, 1)),
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
@@ -522,7 +517,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(17.into(), 0.into(), price(1, 3)),
+            position.check_liability(17.into(), 0.into(), price(3, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -539,7 +534,7 @@ mod test_check_liability {
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            position.check_liability(25.into(), 4.into(), price(3, 2)),
+            position.check_liability(25.into(), 4.into(), price(2, 3)),
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
@@ -550,7 +545,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(17.into(), 4.into(), price(1, 3)),
+            position.check_liability(17.into(), 4.into(), price(3, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -567,7 +562,7 @@ mod test_check_liability {
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
-            position.check_liability(237.into(), 0.into(), price(1, 3)),
+            position.check_liability(237.into(), 0.into(), price(3, 1)),
             Status::No(Zone::no_warnings(position.spec.liability.first_liq_warn())),
         );
         assert_eq!(
@@ -578,7 +573,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(178.into(), 0.into(), price(1, 4)),
+            position.check_liability(178.into(), 0.into(), price(4, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -589,7 +584,7 @@ mod test_check_liability {
             Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(89.into(), 1.into(), price(1, 8)),
+            position.check_liability(89.into(), 1.into(), price(8, 1)),
             Status::partial(8.into(), Cause::Overdue()),
         );
         assert_eq!(
@@ -600,7 +595,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(103.into(), 0.into(), price(1, 7)),
+            position.check_liability(103.into(), 0.into(), price(7, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -614,7 +609,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(361.into(), 0.into(), price(1, 2)),
+            position.check_liability(361.into(), 0.into(), price(2, 1)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 position.spec.liability.third_liq_warn()
@@ -634,7 +629,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(356.into(), 1.into(), price(1, 2)),
+            position.check_liability(356.into(), 1.into(), price(2, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -652,7 +647,7 @@ mod test_check_liability {
             Status::partial(5.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(240.into(), 3.into(), price(1, 3)),
+            position.check_liability(240.into(), 3.into(), price(3, 1)),
             Status::partial(9.into(), Cause::Overdue()),
         );
     }
@@ -669,7 +664,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(15.into(), 0.into(), price(1, 8)),
+            position.check_liability(15.into(), 0.into(), price(8, 1)),
             Status::No(Zone::first(
                 position.spec.liability.first_liq_warn(),
                 position.spec.liability.second_liq_warn()
@@ -683,7 +678,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(82.into(), 0.into(), price(2, 3)),
+            position.check_liability(82.into(), 0.into(), price(3, 2)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 position.spec.liability.third_liq_warn()
@@ -701,7 +696,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(66.into(), 0.into(), price(1, 2)),
+            position.check_liability(66.into(), 0.into(), price(2, 1)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 position.spec.liability.third_liq_warn()
@@ -728,7 +723,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(32.into(), 1.into(), price(1, 4)),
+            position.check_liability(32.into(), 1.into(), price(4, 1)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 position.spec.liability.third_liq_warn()
@@ -754,7 +749,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(190.into(), 0.into(), price(1, 2)),
+            position.check_liability(190.into(), 0.into(), price(2, 1)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 warn_third_ltv
@@ -769,7 +764,7 @@ mod test_check_liability {
             Status::partial(375.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.check_liability(573.into(), 562.into(), price(3, 2)),
+            position.check_liability(573.into(), 562.into(), price(2, 3)),
             Status::partial(374.into(), Cause::Overdue())
         );
         assert_eq!(
@@ -802,7 +797,7 @@ mod test_check_liability {
             )),
         );
         assert_eq!(
-            position.check_liability(126.into(), 1.into(), price(1, 3)),
+            position.check_liability(126.into(), 1.into(), price(3, 1)),
             Status::No(Zone::second(
                 position.spec.liability.second_liq_warn(),
                 warn_third_ltv
@@ -825,7 +820,7 @@ mod test_check_liability {
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
-            position.check_liability(364.into(), 0.into(), price(1, 2)),
+            position.check_liability(364.into(), 0.into(), price(2, 1)),
             Status::No(Zone::third(warn_third_ltv, max_ltv)),
         );
         assert_eq!(
@@ -839,7 +834,7 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(788.into(), 0.into(), price(2, 1)),
+            position.check_liability(788.into(), 0.into(), price(1, 2)),
             Status::partial(
                 387.into(),
                 Cause::Liability {
@@ -860,7 +855,7 @@ mod test_check_liability {
             Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(139.into(), 1.into(), price(1, 4)),
+            position.check_liability(139.into(), 1.into(), price(4, 1)),
             Status::partial(4.into(), Cause::Overdue()),
         );
         assert_eq!(
@@ -878,11 +873,11 @@ mod test_check_liability {
             Status::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(294.into(), 294.into(), price(3, 1)),
+            position.check_liability(294.into(), 294.into(), price(1, 3)),
             Status::partial(98.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(294.into(), 293.into(), price(1, 3)),
+            position.check_liability(294.into(), 293.into(), price(3, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -917,7 +912,7 @@ mod test_check_liability {
             Status::partial(899.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(233.into(), 233.into(), price(1, 3)),
+            position.check_liability(233.into(), 233.into(), price(3, 1)),
             Status::partial(699.into(), Cause::Overdue()),
         );
         assert_eq!(
@@ -955,7 +950,7 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(1560.into(), 1552.into(), price(2, 1)),
+            position.check_liability(1560.into(), 1552.into(), price(1, 2)),
             Status::partial(
                 777.into(),
                 Cause::Liability {
@@ -969,7 +964,7 @@ mod test_check_liability {
             Status::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1560.into(), 1556.into(), price(2, 1)),
+            position.check_liability(1560.into(), 1556.into(), price(1, 2)),
             Status::partial(778.into(), Cause::Overdue()),
         );
         assert_eq!(
@@ -1004,7 +999,7 @@ mod test_check_liability {
             }),
         );
         assert_eq!(
-            position.check_liability(294.into(), 1.into(), price(1, 3)),
+            position.check_liability(294.into(), 1.into(), price(3, 1)),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -1029,7 +1024,7 @@ mod test_check_liability {
             Status::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1674.into(), 1674.into(), price(2, 1)),
+            position.check_liability(1674.into(), 1674.into(), price(1, 2)),
             Status::partial(837.into(), Cause::Overdue()),
         );
         assert_eq!(
@@ -1037,19 +1032,19 @@ mod test_check_liability {
             Status::full(Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1676.into(), 1676.into(), price(2, 1)),
+            position.check_liability(1676.into(), 1676.into(), price(1, 2)),
             Status::full(Cause::Overdue()),
         );
     }
 
     const STEP: Percent = Percent::from_permille(10);
 
-    fn price<Lpn, Asset>(price_lpn: Lpn, price_asset: Asset) -> Price<TestLpn, TestCurrency>
+    fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>
     where
-        Lpn: Into<Coin<TestLpn>>,
         Asset: Into<Coin<TestCurrency>>,
+        Lpn: Into<Coin<TestLpn>>,
     {
-        price::total_of(price_lpn.into()).is(price_asset.into())
+        price::total_of(price_asset.into()).is(price_lpn.into())
     }
 
     fn position_with_first<Asset, Lpn>(

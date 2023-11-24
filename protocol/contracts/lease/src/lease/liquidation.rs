@@ -28,9 +28,9 @@ where
             Coin::ZERO
         };
 
-        self.price_of_lease_currency().map(|assert_in_lpn| {
+        self.price_of_lease_currency().map(|asset_in_lpns| {
             self.position
-                .check_liability(total_due, overdue, assert_in_lpn.inv())
+                .check_liability(total_due, overdue, asset_in_lpns)
         })
     }
 
