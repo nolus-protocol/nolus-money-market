@@ -27,7 +27,6 @@ versioning = { workspace = true }
 cosmwasm-std = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
-serde-json-wasm = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

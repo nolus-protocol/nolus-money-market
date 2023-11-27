@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::{Addr, ContractInfoResponse, QuerierWrapper, WasmQuery};
 
-use crate::error::{Error, Result};
+use crate::{error::Error, result::Result};
 
 pub type CodeId = u64;
 

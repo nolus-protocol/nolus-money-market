@@ -6,6 +6,7 @@ pub mod contract;
 pub mod dispatcher;
 mod emit;
 pub mod error;
+pub mod result;
 pub mod ica;
 pub mod message;
 pub mod never;

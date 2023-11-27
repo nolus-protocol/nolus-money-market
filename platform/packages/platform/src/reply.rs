@@ -9,8 +9,10 @@ use sdk::{
     cosmos_sdk_proto::cosmwasm::wasm::v1::{
         MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
     },
-    cosmwasm_std::{from_json, Addr, Api, Binary, Reply, StdError, StdResult},
+    cosmwasm_std::{from_json, Addr, Api, Binary, Reply},
 };
+
+use crate::{error::Error, result::Result};
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,
@@ -23,78 +25,85 @@ impl InstantiateResponse<Vec<u8>> {
     }
 }
 
-pub fn from_instantiate_addr_only(api: &dyn Api, reply: Reply) -> StdResult<Addr> {
+pub fn from_instantiate_addr_only(api: &dyn Api, reply: Reply) -> Result<Addr> {
     from_instantiate_inner::<MsgInstantiateContractResponse>(api, reply)
         .map(InstantiateResponse::into_addr)
 }
 
-pub fn from_instantiate2_addr_only(api: &dyn Api, reply: Reply) -> StdResult<Addr> {
+pub fn from_instantiate2_addr_only(api: &dyn Api, reply: Reply) -> Result<Addr> {
     from_instantiate_inner::<MsgInstantiateContract2Response>(api, reply)
         .map(InstantiateResponse::into_addr)
 }
 
-pub fn from_execute<T>(reply: Reply) -> StdResult<Option<T>>
+pub fn from_execute<T>(reply: Reply) -> Result<Option<T>>
 where
     T: DeserializeOwned,
 {
     decode::<MsgExecuteContractResponse>(reply)
         .map(|data| data.data)
-        .map(Binary)
-        .and_then(from_json)
+        .and_then(|data| from_json(Binary(data)).map_err(From::from))
 }
 
-struct UncheckedInstantiateResponse {
-    address: String,
-    data: Vec<u8>,
+trait InstantiationResponse
+where
+    Self: Message + Default + Sized,
+{
+    fn addr(&self) -> &str;
+
+    fn into_data(self) -> Vec<u8>;
 }
 
-impl From<MsgInstantiateContractResponse> for UncheckedInstantiateResponse {
-    fn from(
-        MsgInstantiateContractResponse { address, data }: MsgInstantiateContractResponse,
-    ) -> Self {
-        Self { address, data }
+impl InstantiationResponse for MsgInstantiateContractResponse {
+    fn addr(&self) -> &str {
+        &self.address
+    }
+
+    fn into_data(self) -> Vec<u8> {
+        self.data
     }
 }
 
-impl From<MsgInstantiateContract2Response> for UncheckedInstantiateResponse {
-    fn from(
-        MsgInstantiateContract2Response { address, data }: MsgInstantiateContract2Response,
-    ) -> Self {
-        Self { address, data }
+impl InstantiationResponse for MsgInstantiateContract2Response {
+    fn addr(&self) -> &str {
+        &self.address
+    }
+
+    fn into_data(self) -> Vec<u8> {
+        self.data
     }
 }
 
-fn from_instantiate_inner<R>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<Vec<u8>>>
+fn from_instantiate_inner<R>(api: &dyn Api, reply: Reply) -> Result<InstantiateResponse<Vec<u8>>>
 where
-    R: Message + Default + Into<UncheckedInstantiateResponse>,
+    R: InstantiationResponse,
 {
-    let UncheckedInstantiateResponse { address, data } = decode::<R>(reply)?.into();
+    let response: R = decode(reply)?;
 
-    api.addr_validate(&address)
-        .map(|address: Addr| InstantiateResponse { address, data })
+    api.addr_validate(response.addr())
+        .map(|address: Addr| InstantiateResponse {
+            address,
+            data: response.into_data(),
+        })
+        .map_err(From::from)
 }
 
-fn decode_raw<M>(message: &[u8]) -> StdResult<M>
+fn decode_raw<M>(message: &[u8]) -> Result<M>
 where
     M: Message + Default,
 {
-    M::decode(message).map_err(|error| {
-        StdError::generic_err(format!("[Platform] Data is malformed or doesn't comply with used protobuf format! Cause: [Protobuf] {error}"))
-    })
+    M::decode(message).map_err(From::from)
 }
 
-fn decode<M>(reply: Reply) -> StdResult<M>
+fn decode<M>(reply: Reply) -> Result<M>
 where
     M: Message + Default,
 {
-    decode_raw(
-        reply
-            .result
-            .into_result()
-            .map_err(StdError::generic_err)?
-            .data
-            .ok_or_else(|| StdError::generic_err("Reply doesn't contain data!"))?
-            .0
-            .as_slice(),
-    )
+    reply
+        .result
+        .into_result()
+        .map_err(Error::ReplyResultError)?
+        .data
+        .ok_or(Error::EmptyReply())
+        .map_err(From::from)
+        .and_then(|ref data| decode_raw(data))
 }

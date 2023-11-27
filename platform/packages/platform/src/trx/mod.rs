@@ -5,7 +5,7 @@ use sdk::{
     neutron_sdk::bindings::types::ProtobufAny,
 };
 
-use crate::error::{Error, Result};
+use crate::{error::Error, result::Result};
 
 #[derive(Default)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]

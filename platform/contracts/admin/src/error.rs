@@ -17,7 +17,7 @@ pub enum Error {
     NoMigrationResponseData {},
     #[error("Contract returned wrong release string! \"{reported}\" was returned, but \"{expected}\" was expected!")]
     WrongRelease { reported: String, expected: String },
-    #[error("Contract returned wrong code id! Expected \"{expected}\", but got \"{reported}\"!")]
+    #[error("Contract returned wrong address! Expected \"{expected}\", but got \"{reported}\"!")]
     DifferentInstantiatedAddress { reported: Addr, expected: Addr },
     #[error("Contract returned wrong code id! Expected \"{expected}\", but got \"{reported}\"!")]
     DifferentInstantiatedCodeId { reported: CodeId, expected: CodeId },

@@ -10,7 +10,7 @@ use sdk::{
 };
 
 pub use crate::emit::{Emit, Emitter};
-use crate::{coin_legacy::to_cosmwasm_impl, contract::CodeId, error::Result};
+use crate::{coin_legacy::to_cosmwasm_impl, contract::CodeId, result::Result};
 
 pub type ReplyId = u64;
 

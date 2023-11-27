@@ -9,8 +9,8 @@ use sdk::{
 };
 
 use crate::{
-    coin_legacy::{self},
-    error::Result,
+    coin_legacy,
+    result::Result,
     ica::HostAccount,
     trx::Transaction,
 };

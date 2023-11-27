@@ -8,8 +8,6 @@ use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
 
-pub type Result<T> = core::result::Result<T, Error>;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Platform] Expecting funds of {0} but found none")]
@@ -44,6 +42,12 @@ pub enum Error {
 
     #[error("[Platform] Got message type {1} instead of {0}")]
     ProtobufInvalidType(String, String),
+
+    #[error("[Platform] Error returned in reply! Cause: {0}")]
+    ReplyResultError(String),
+
+    #[error("[Platform] Reply is empty!")]
+    EmptyReply(),
 }
 
 impl Error {

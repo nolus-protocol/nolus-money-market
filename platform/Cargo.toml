@@ -43,8 +43,6 @@ cw-multi-test = "0.16.1"
 cosmos-sdk-proto = { version = "0.18", default-features = false }
 
 # Other
-serde-json-wasm = { version = "1", default-features = false }
-
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
 [patch.'https://github.com/neutron-org/neutron-sdk']
 # satisfies the protobuf version check

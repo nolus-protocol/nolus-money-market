@@ -10,8 +10,8 @@ use sdk::{
 
 use crate::{
     batch::Batch,
-    coin_legacy::{self},
-    error::Result,
+    coin_legacy,
+    result::Result,
     ica::HostAccount,
 };
 
