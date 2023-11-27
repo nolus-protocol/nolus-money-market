@@ -1,5 +1,5 @@
 use access_control::ContractOwnerAccess;
-use platform::{batch::Batch, contract::CodeId, reply::InstantiateResponse, response};
+use platform::{batch::Batch, contract::CodeId, response};
 #[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -200,10 +200,7 @@ fn instantiate_reply(
     expected_code_id: CodeId,
     expected_addr: Addr,
 ) -> ContractResult<CwResponse> {
-    let InstantiateResponse {
-        address: instantiated_addr,
-        data,
-    } = platform::reply::from_instantiate2_raw(api, msg)?;
+    let instantiated_addr = platform::reply::from_instantiate2_addr_only(api, msg)?;
 
     if instantiated_addr != expected_addr {
         return Err(ContractError::DifferentInstantiatedAddress {
@@ -214,36 +211,30 @@ fn instantiate_reply(
 
     let reported_code_id = querier.query_wasm_contract_info(instantiated_addr)?.code_id;
 
-    if reported_code_id != expected_code_id {
-        return Err(ContractError::DifferentInstantiatedCodeId {
+    if reported_code_id == expected_code_id {
+        Ok(response::empty_response())
+    } else {
+        Err(ContractError::DifferentInstantiatedCodeId {
             reported: reported_code_id,
             expected: expected_code_id,
-        });
-    }
-
-    if let Some(data) = data {
-        response::response(data)
-    } else {
-        Ok(response::empty_response())
+        })
     }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::InstantiateAddress { code_id, protocol } => {
-            let CodeInfoResponse {
-                creator, checksum, ..
-            } = deps.querier.query_wasm_code_info(code_id)?;
+            let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
 
-            sdk::cosmwasm_std::to_json_binary(&deps.api.addr_humanize(
-                &sdk::cosmwasm_std::instantiate2_address(
-                    &checksum,
-                    &deps.api.addr_canonicalize(&creator)?,
-                    protocol.as_bytes(),
-                )?,
-            )?)
-            .map_err(From::from)
+            let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+
+            let canonical_addr =
+                sdk::cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
+
+            let addr = deps.api.addr_humanize(&canonical_addr)?;
+
+            sdk::cosmwasm_std::to_json_binary(&addr).map_err(From::from)
         }
     }
 }
