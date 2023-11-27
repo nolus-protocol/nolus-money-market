@@ -1,4 +1,6 @@
 use currencies::LeaseGroup;
+#[cfg(feature = "migration")]
+use platform::message::Response as MessageResponse;
 use platform::{error as platform_error, response};
 #[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -16,8 +18,6 @@ use crate::{
 };
 
 use super::state::{self, Response, State};
-#[cfg(feature = "migration")]
-use super::{finalize::FinalizerRef, state::Migrate};
 
 #[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 5;
@@ -57,22 +57,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
             deps.storage,
             CONTRACT_VERSION,
-            |storage: &mut _| {
-                state::load_v5(storage)
-                    .and_then(|lease_v5| {
-                        FinalizerRef::try_new(_msg.finalizer, deps.querier).and_then(|finalizer| {
-                            lease_v5.into_last_version(_env.block.time, _msg.customer, finalizer)
-                        })
-                    })
-                    .and_then(
-                        |Response {
-                             response,
-                             next_state: lease_current,
-                         }| {
-                            state::save(storage, &lease_current).map(|()| response)
-                        },
-                    )
-            },
+            |_| Ok(MessageResponse::default()),
             Into::into,
         )
         .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp));

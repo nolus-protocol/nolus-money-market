@@ -21,8 +21,6 @@ mod liquidation;
 mod paid;
 mod repay;
 mod state;
-#[cfg(feature = "migration")]
-pub(crate) mod v5;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;

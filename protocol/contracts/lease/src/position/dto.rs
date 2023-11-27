@@ -15,13 +15,6 @@ pub struct PositionDTO {
     spec: PositionSpecDTO,
 }
 
-#[cfg(feature = "migration")]
-impl PositionDTO {
-    pub(crate) fn new(amount: LeaseCoin, spec: PositionSpecDTO) -> Self {
-        Self { amount, spec }
-    }
-}
-
 impl PositionDTO {
     pub fn amount(&self) -> &LeaseCoin {
         &self.amount
