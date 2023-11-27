@@ -56,17 +56,13 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     #[cfg(feature = "migration")]
     let resp =
         versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
             deps.storage,
             CONTRACT_VERSION,
-            |storage: &mut _| {
-                use super::state::v0::Config as ConfigOld;
-                ConfigOld::migrate(storage, msg.min_asset, msg.min_sell_asset)
-                    .and_then(|config_new| config_new.store(storage))
-            },
+            |_| Ok(()),
             Into::into,
         )
         .map(|(release_label, ())| release_label);
@@ -74,7 +70,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
     #[cfg(not(feature = "migration"))]
     let resp = {
         // Statically assert that the message is empty when doing a software-only update.
-        let MigrateMsg {}: MigrateMsg = msg;
+        let MigrateMsg {}: MigrateMsg = _msg;
 
         versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
     };
