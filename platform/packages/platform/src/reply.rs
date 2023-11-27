@@ -3,7 +3,7 @@
 //! Here are defined wrappers for deserializing such structures.
 
 use prost::Message;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::de::DeserializeOwned;
 
 use sdk::{
     cosmos_sdk_proto::cosmwasm::wasm::v1::{
@@ -14,43 +14,23 @@ use sdk::{
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,
-    pub data: Option<T>,
+    pub data: T,
 }
 
-pub fn from_instantiate<T>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<T>>
-where
-    T: DeserializeOwned,
-{
-    let response: MsgInstantiateContractResponse = decode(reply)?;
-
-    Ok(InstantiateResponse {
-        address: api.addr_validate(&response.address)?,
-        data: maybe_from_json(response.data)?,
-    })
+impl InstantiateResponse<Vec<u8>> {
+    fn into_addr(self) -> Addr {
+        self.address
+    }
 }
 
-pub fn from_instantiate2<T>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<T>>
-where
-    T: DeserializeOwned,
-{
-    let response: MsgInstantiateContract2Response = decode(reply)?;
-
-    Ok(InstantiateResponse {
-        address: api.addr_validate(&response.address)?,
-        data: maybe_from_json(response.data)?,
-    })
+pub fn from_instantiate_addr_only(api: &dyn Api, reply: Reply) -> StdResult<Addr> {
+    from_instantiate_inner::<MsgInstantiateContractResponse>(api, reply)
+        .map(InstantiateResponse::into_addr)
 }
 
-pub fn from_instantiate2_raw(
-    api: &dyn Api,
-    reply: Reply,
-) -> StdResult<InstantiateResponse<Vec<u8>>> {
-    let response: MsgInstantiateContract2Response = decode(reply)?;
-
-    Ok(InstantiateResponse {
-        address: api.addr_validate(&response.address)?,
-        data: (!response.data.is_empty()).then_some(response.data),
-    })
+pub fn from_instantiate2_addr_only(api: &dyn Api, reply: Reply) -> StdResult<Addr> {
+    from_instantiate_inner::<MsgInstantiateContract2Response>(api, reply)
+        .map(InstantiateResponse::into_addr)
 }
 
 pub fn from_execute<T>(reply: Reply) -> StdResult<Option<T>>
@@ -59,15 +39,47 @@ where
 {
     decode::<MsgExecuteContractResponse>(reply)
         .map(|data| data.data)
-        .and_then(maybe_from_json)
+        .map(Binary)
+        .and_then(from_json)
+}
+
+struct UncheckedInstantiateResponse {
+    address: String,
+    data: Vec<u8>,
+}
+
+impl From<MsgInstantiateContractResponse> for UncheckedInstantiateResponse {
+    fn from(
+        MsgInstantiateContractResponse { address, data }: MsgInstantiateContractResponse,
+    ) -> Self {
+        Self { address, data }
+    }
+}
+
+impl From<MsgInstantiateContract2Response> for UncheckedInstantiateResponse {
+    fn from(
+        MsgInstantiateContract2Response { address, data }: MsgInstantiateContract2Response,
+    ) -> Self {
+        Self { address, data }
+    }
+}
+
+fn from_instantiate_inner<R>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<Vec<u8>>>
+where
+    R: Message + Default + Into<UncheckedInstantiateResponse>,
+{
+    let UncheckedInstantiateResponse { address, data } = decode::<R>(reply)?.into();
+
+    api.addr_validate(&address)
+        .map(|address: Addr| InstantiateResponse { address, data })
 }
 
 fn decode_raw<M>(message: &[u8]) -> StdResult<M>
 where
     M: Message + Default,
 {
-    M::decode(message).map_err(|_| {
-        StdError::generic_err("Data is malformed or doesn't comply with used protobuf format!")
+    M::decode(message).map_err(|error| {
+        StdError::generic_err(format!("[Platform] Data is malformed or doesn't comply with used protobuf format! Cause: [Protobuf] {error}"))
     })
 }
 
@@ -85,13 +97,4 @@ where
             .0
             .as_slice(),
     )
-}
-
-fn maybe_from_json<T>(data: Vec<u8>) -> StdResult<Option<T>>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    (!data.is_empty())
-        .then(|| from_json(Binary::from(data)))
-        .transpose()
 }
