@@ -12,8 +12,6 @@ use super::{
 };
 
 pub mod buy_lpn;
-#[cfg(feature = "migration")]
-pub(in crate::contract::state) mod v5;
 
 pub(super) fn repay(
     lease: Lease,

@@ -14,8 +14,6 @@ mod endpoins;
 mod finalize;
 pub mod msg;
 mod state;
-#[cfg(feature = "migration")]
-mod v5;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Lease {

@@ -10,8 +10,6 @@ use super::ClosePositionTask;
 
 pub mod full;
 pub mod partial;
-#[cfg(feature = "migration")]
-pub(in crate::contract::state) mod v5;
 
 pub(in crate::contract::state::opened) fn start(
     lease: Lease,

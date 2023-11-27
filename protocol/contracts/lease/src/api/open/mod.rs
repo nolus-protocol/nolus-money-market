@@ -143,13 +143,7 @@ pub struct PositionSpecDTO {
 
 #[cfg(feature = "skel")]
 impl PositionSpecDTO {
-    #[cfg(any(
-        test,
-        feature = "astroport",
-        feature = "osmosis",
-        feature = "migration",
-        feature = "testing"
-    ))]
+    #[cfg(any(test, feature = "astroport", feature = "osmosis", feature = "testing"))]
     pub(crate) fn new_internal(
         liability: Liability,
         min_asset: LpnCoin,
@@ -164,7 +158,7 @@ impl PositionSpecDTO {
         obj
     }
 
-    #[cfg(any(test, feature = "testing", feature = "migration"))]
+    #[cfg(any(test, feature = "testing"))]
     pub fn new(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
         let obj = Self::new_internal(liability, min_asset, min_transaction);
         obj.invariant_held()
