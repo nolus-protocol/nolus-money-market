@@ -1,12 +1,12 @@
 use access_control::ContractOwnerAccess;
-use platform::{batch::Batch, contract::CodeId, response};
+use platform::{batch::Batch, contract::CodeId, reply::InstantiateResponse, response};
 #[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        ensure_eq, Addr, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        Reply, StdError as CwError, Storage, WasmMsg,
+        ensure_eq, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo,
+        QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -167,7 +167,13 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
         ContractState::Instantiate {
             expected_code_id,
             expected_address,
-        } => instantiate_reply(deps.querier, msg, expected_code_id, expected_address),
+        } => instantiate_reply(
+            deps.api,
+            deps.querier,
+            msg,
+            expected_code_id,
+            expected_address,
+        ),
     }
 }
 
@@ -188,42 +194,37 @@ fn migration_reply(msg: Reply, expected_release: String) -> ContractResult<CwRes
 }
 
 fn instantiate_reply(
+    api: &dyn Api,
     querier: QuerierWrapper<'_>,
     msg: Reply,
     expected_code_id: CodeId,
     expected_addr: Addr,
 ) -> ContractResult<CwResponse> {
-    let instantiated_addr = msg
-        .result
-        .into_result()
-        .map_err(CwError::generic_err)?
-        .events
-        .iter()
-        .find_map(|event| {
-            if event.ty == "wasm" {
-                event.attributes.iter().find_map(|attribute| {
-                    if attribute.key == "instantiate" && attribute.value == expected_addr.as_str() {
-                        Some(&attribute.value)
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                None
-            }
-        })
-        .ok_or(ContractError::FindContractAddress {})?
-        .clone();
+    let InstantiateResponse {
+        address: instantiated_addr,
+        data,
+    } = platform::reply::from_instantiate2_raw(api, msg)?;
+
+    if instantiated_addr != expected_addr {
+        return Err(ContractError::DifferentInstantiatedAddress {
+            reported: instantiated_addr,
+            expected: expected_addr,
+        });
+    }
 
     let reported_code_id = querier.query_wasm_contract_info(instantiated_addr)?.code_id;
 
-    if reported_code_id == expected_code_id {
-        Ok(response::empty_response())
-    } else {
-        Err(ContractError::DifferentInstantiatedCodeId {
+    if reported_code_id != expected_code_id {
+        return Err(ContractError::DifferentInstantiatedCodeId {
             reported: reported_code_id,
             expected: expected_code_id,
-        })
+        });
+    }
+
+    if let Some(data) = data {
+        response::response(data)
+    } else {
+        Ok(response::empty_response())
     }
 }
 

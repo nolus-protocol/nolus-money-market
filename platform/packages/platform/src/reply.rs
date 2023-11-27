@@ -5,7 +5,12 @@
 use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize};
 
-use sdk::cosmwasm_std::{from_json, Addr, Api, Binary, Reply, StdError, StdResult};
+use sdk::{
+    cosmos_sdk_proto::cosmwasm::wasm::v1::{
+        MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
+    },
+    cosmwasm_std::{from_json, Addr, Api, Binary, Reply, StdError, StdResult},
+};
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,
@@ -16,22 +21,35 @@ pub fn from_instantiate<T>(api: &dyn Api, reply: Reply) -> StdResult<Instantiate
 where
     T: DeserializeOwned,
 {
-    #[derive(Message)]
-    struct ReplyData {
-        #[prost(bytes, tag = "1")]
-        pub address: Vec<u8>,
-        #[prost(bytes, tag = "2")]
-        pub data: Vec<u8>,
-    }
-
-    let response = decode::<ReplyData>(reply)?;
+    let response: MsgInstantiateContractResponse = decode(reply)?;
 
     Ok(InstantiateResponse {
-        address: api
-            .addr_validate(&String::from_utf8(response.address).map_err(|_| {
-                StdError::generic_err("Address field contains invalid UTF-8 data!")
-            })?)?,
+        address: api.addr_validate(&response.address)?,
         data: maybe_from_json(response.data)?,
+    })
+}
+
+pub fn from_instantiate2<T>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<T>>
+where
+    T: DeserializeOwned,
+{
+    let response: MsgInstantiateContract2Response = decode(reply)?;
+
+    Ok(InstantiateResponse {
+        address: api.addr_validate(&response.address)?,
+        data: maybe_from_json(response.data)?,
+    })
+}
+
+pub fn from_instantiate2_raw(
+    api: &dyn Api,
+    reply: Reply,
+) -> StdResult<InstantiateResponse<Vec<u8>>> {
+    let response: MsgInstantiateContract2Response = decode(reply)?;
+
+    Ok(InstantiateResponse {
+        address: api.addr_validate(&response.address)?,
+        data: (!response.data.is_empty()).then_some(response.data),
     })
 }
 
@@ -39,13 +57,7 @@ pub fn from_execute<T>(reply: Reply) -> StdResult<Option<T>>
 where
     T: DeserializeOwned,
 {
-    #[derive(prost::Message)]
-    struct ReplyData {
-        #[prost(bytes, tag = "1")]
-        pub data: Vec<u8>,
-    }
-
-    decode::<ReplyData>(reply)
+    decode::<MsgExecuteContractResponse>(reply)
         .map(|data| data.data)
         .and_then(maybe_from_json)
 }
