@@ -438,7 +438,7 @@ mod tests {
         use platform::{
             bank::{self, Aggregate, BalancesResult, BankAccountView},
             batch::Batch,
-            error::Result as PlatformResult,
+            result::Result as PlatformResult,
         };
         use sdk::cosmwasm_std::Timestamp;
 

@@ -8,12 +8,7 @@ use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
 };
 
-use crate::{
-    coin_legacy,
-    result::Result,
-    ica::HostAccount,
-    trx::Transaction,
-};
+use crate::{coin_legacy, ica::HostAccount, result::Result, trx::Transaction};
 
 pub struct Sender<'c> {
     ics20_channel_at_dex: &'c str,

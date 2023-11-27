@@ -6,12 +6,12 @@ pub mod contract;
 pub mod dispatcher;
 mod emit;
 pub mod error;
-pub mod result;
 pub mod ica;
 pub mod message;
 pub mod never;
 pub mod reply;
 pub mod response;
+pub mod result;
 pub mod state_machine;
 #[cfg(feature = "testing")]
 pub mod tests;
