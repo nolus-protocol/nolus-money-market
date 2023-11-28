@@ -1,12 +1,12 @@
-use ::lease::{
-    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
-    error::ContractError,
-};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     price,
     zero::Zero,
+};
+use lease::{
+    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
+    error::ContractError,
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{

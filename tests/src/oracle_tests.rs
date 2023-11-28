@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, StableC1};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -40,9 +40,9 @@ use crate::common::{
 };
 
 type Lpn = StableC1;
-type LeaseCurrency = PaymentC3;
+type LeaseCurrency = LeaseC1;
 type TheCoin = Coin<Lpn>;
-type BaseC = PaymentC5;
+type BaseC = LeaseC3;
 
 fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where
@@ -130,7 +130,7 @@ fn feed_price_with_alarm_issue() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(1)),
+                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(1)),
                     None,
                 ),
             },
@@ -162,7 +162,7 @@ fn feed_price_with_alarm() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(10)),
+                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
                 ),
             },
@@ -175,7 +175,7 @@ fn feed_price_with_alarm() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<PaymentC6>::new(1),
+        Coin::<LeaseC4>::new(1),
         Coin::<StableC1>::new(5),
     );
 }
@@ -194,8 +194,8 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(5)),
-                    Some(price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(5))),
+                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(5)),
+                    Some(price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(5))),
                 ),
             },
             &[],
@@ -211,7 +211,7 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<StableC1>::new(10)),
+                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
                 ),
             },
@@ -225,7 +225,7 @@ fn overwrite_alarm_and_dispatch() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<PaymentC6>::new(1),
+        Coin::<LeaseC4>::new(1),
         Coin::<StableC1>::new(5),
     );
 
@@ -399,8 +399,8 @@ fn swap_tree() -> HumanReadableTree<SwapTarget> {
             }}"#,
         usdc = StableC1::TICKER,
         base_c = BaseC::TICKER,
-        weth = PaymentC7::TICKER,
-        wbtc = PaymentC4::TICKER,
+        weth = LeaseC5::TICKER,
+        wbtc = LeaseC2::TICKER,
     ))
     .unwrap()
 }
@@ -429,8 +429,8 @@ fn test_swap_path() {
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
             &OracleQ::SwapPath {
-                from: PaymentC4::TICKER.into(),
-                to: PaymentC7::TICKER.into(),
+                from: LeaseC2::TICKER.into(),
+                to: LeaseC5::TICKER.into(),
             },
         )
         .unwrap();
@@ -442,7 +442,7 @@ fn test_swap_path() {
         },
         SwapTarget {
             pool_id: 2,
-            target: PaymentC7::TICKER.into(),
+            target: LeaseC5::TICKER.into(),
         },
     ];
 

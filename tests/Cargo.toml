@@ -7,12 +7,16 @@ license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+astroport = ["lease/astroport", "profit/astroport"]
+osmosis = ["lease/osmosis", "profit/osmosis"]
+
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-lease = { path = "../protocol/contracts/lease", features = ["osmosis", "testing"] }
+lease = { path = "../protocol/contracts/lease", features = ["testing"] }
 leaser = { path = "../protocol/contracts/leaser", features = ["testing"] }
 lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"] }
 oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"] }
-profit = { path = "../protocol/contracts/profit", features = ["osmosis", "testing"] }
+profit = { path = "../protocol/contracts/profit", features = ["testing"] }
 rewards_dispatcher = { path = "../platform/contracts/dispatcher", features = [] }
 timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
 treasury = { path = "../platform/contracts/treasury", features = ["contract"] }

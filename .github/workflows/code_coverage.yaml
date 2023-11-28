@@ -4,7 +4,10 @@ run-name: "Running code coverage for smart contracts"
 on:
   workflow_call:
     inputs:
-      target_dex:
+      target_net:
+        required: false
+        type: "string"
+      target_protocol:
         required: false
         type: "string"
       working_directory:
@@ -23,8 +26,8 @@ jobs:
     steps:
       - uses: "./.github/actions/env"
         with:
-          target_net: "main"
-          target_dex: "${{ inputs.target_dex }}"
+          target_net: "${{ inputs.target_net }}"
+          target_protocol: "${{ inputs.target_protocol }}"
   code_coverage:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
@@ -33,4 +36,5 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/code_coverage@main"
         with:
+          features: "${{ env.FEATURES }}"
           working_directory: "${{ inputs.working_directory }}"

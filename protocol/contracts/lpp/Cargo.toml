@@ -9,9 +9,10 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["cosmwasm-bindings"]
 cosmwasm-bindings = ["contract"]
 contract = ["stub"]
+astroport = ["currencies/astroport"]
+osmosis = ["currencies/osmosis"]
 stub = []
 migration = []
 testing = ["currency/testing"]

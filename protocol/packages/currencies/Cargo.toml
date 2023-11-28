@@ -5,7 +5,12 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[lib]
+doctest = false
+
 [features]
+astroport = []
+osmosis = []
 testing = []
 
 [dependencies]

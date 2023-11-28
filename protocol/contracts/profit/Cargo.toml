@@ -11,10 +11,6 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = [
-    "cosmwasm-bindings",
-    "osmosis",
-] # TODO get rid of default features
 cosmwasm-bindings = []
 api = []
 astroport = ["api", "dex/astroport"]
@@ -41,6 +37,7 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 dex = { workspace = true, features = ["testing"] }
 finance = { workspace = true }

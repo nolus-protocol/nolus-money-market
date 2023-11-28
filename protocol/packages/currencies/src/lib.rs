@@ -1,4 +1,4 @@
-#[cfg(not(any(dex = "osmosis")))]
+#[cfg(not(any(feature = "astroport", feature = "osmosis")))]
 compile_error!("No dex selected!");
 
 #[cfg(not(any(net = "dev", net = "test", net = "main")))]
@@ -11,6 +11,7 @@ mod native;
 mod payment;
 mod symbols_macro;
 
+#[cfg(feature = "testing")]
 pub mod test;
 
 #[cfg(test)]

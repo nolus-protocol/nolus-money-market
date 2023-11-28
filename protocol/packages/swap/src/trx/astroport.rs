@@ -14,7 +14,6 @@ use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::{abci::v1beta1::MsgData, v1beta1::Coin as ProtoCoin},
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
-        traits::TypeUrl,
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
@@ -24,11 +23,19 @@ use crate::{
     SwapGroup, SwapPath, SwapTarget,
 };
 
-use super::ExactAmountIn;
+use super::{ExactAmountIn, TypeUrl};
 
-pub(super) type RequestMsg = MsgExecuteContract;
+pub type RequestMsg = MsgExecuteContract;
 
-pub(super) type ResponseMsg = MsgExecuteContractResponse;
+impl TypeUrl for RequestMsg {
+    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::TypeUrl>::TYPE_URL;
+}
+
+pub type ResponseMsg = MsgExecuteContractResponse;
+
+impl TypeUrl for ResponseMsg {
+    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::TypeUrl>::TYPE_URL;
+}
 
 // The router on the main network
 // source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
@@ -43,6 +50,7 @@ pub(super) type ResponseMsg = MsgExecuteContractResponse;
 const ROUTER_ADDR: &str = "neutron1xjmp7lxx4xrz3r9tz0xk00vrtuavz7mgrh3378nntd86xafuwe8q8jz2rp";
 
 pub(super) struct Impl;
+
 impl ExactAmountIn for Impl {
     fn build<G>(
         &self,

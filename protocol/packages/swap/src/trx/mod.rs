@@ -1,29 +1,28 @@
+use currency::Group;
+use finance::coin::{Amount, CoinDTO};
+use platform::{ica::HostAccount, trx::Transaction};
+use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
+
+#[cfg(feature = "astroport")]
+use self::astroport as impl_mod;
+#[cfg(feature = "testing")]
+pub use self::impl_mod::{RequestMsg, ResponseMsg};
+#[cfg(feature = "osmosis")]
+use self::osmosis as impl_mod;
+
+use crate::{error::Result, SwapPath};
+
 #[cfg(feature = "astroport")]
 mod astroport;
 #[cfg(feature = "osmosis")]
 mod osmosis;
 
-#[cfg(feature = "testing")]
-pub mod test;
-#[cfg(feature = "testing")]
-pub use test::*;
-
-use currency::{self, Group};
-use finance::coin::{Amount, CoinDTO};
-use platform::{ica::HostAccount, trx::Transaction};
-use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
-
-use crate::{error::Result, SwapPath};
+pub trait TypeUrl {
+    const TYPE_URL: &'static str;
+}
 
 pub fn exact_amount_in() -> impl ExactAmountIn {
-    #[cfg(feature = "astroport")]
-    {
-        astroport::Impl {}
-    }
-    #[cfg(all(not(feature = "astroport"), feature = "osmosis"))]
-    {
-        osmosis::Impl {}
-    }
+    impl_mod::Impl
 }
 
 pub trait ExactAmountIn {

@@ -3,14 +3,26 @@ description: "Action for setting up environment for smart contracts"
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
+  build_wasm:
+    description: "Whether the build is targeting WebAssembly binaries."
+    required: false
   target_net:
     description: 'Whether to build targeting dev-net, test-net or main-net. This parameter takes one of these values: "dev", "test" and "main".'
     required: false
-  target_dex:
-    description: "Indicates which DEX the build targets."
+  target_protocol:
+    description: "Indicates which protocol the build targets."
+    required: false
+  protocols_list:
+    description: "Contains a list of all protocols."
     required: false
 
 outputs:
+  features:
+    description: "Features to be turned on during compilation."
+    value: "${{ steps.env.outputs.features }}"
+  exclude_features:
+    description: "Features to be turned off during compilation with mixed features."
+    value: "${{ steps.env.outputs.exclude_features }}"
   rustflags:
     description: "Value to be passed on as an environment variable to jobs interacting with the Rust build system."
     value: "${{ steps.env.outputs.rustflags }}"
@@ -19,21 +31,40 @@ runs:
   using: composite
   steps:
     - id: "env"
-      shell: "sh"
+      shell: "bash"
       run: |
-        if ! test "${{ inputs.target_net }}" = ""
+        if ! test '${{ inputs.build_wasm }}' = ''
+        then
+          FEATURES='cosmwasm-bindings'
+        else
+          FEATURES=''
+        fi
+
+        if ! test '${{ inputs.target_net }}' = ''
         then
           RUSTFLAGS="--cfg net=\"${{ inputs.target_net }}\" ${RUSTFLAGS}"
 
-          echo "dash_net_name=-${{ inputs.target_net }}" >> "${GITHUB_ENV}"
+          echo 'dash_net_name=-${{ inputs.target_net }}' >> "${GITHUB_ENV}"
         fi
 
-        if ! test "${{ inputs.target_dex }}" = ""
+        if ! test '${{ inputs.target_protocol }}' = ''
         then
-          RUSTFLAGS="--cfg dex=\"${{ inputs.target_dex }}\" ${RUSTFLAGS}"
+          target_protocol='${{ inputs.target_protocol }}'
 
-          echo "dash_dex_name=-${{ inputs.target_dex }}" >> "${GITHUB_ENV}"
+          FEATURES="${{ inputs.target_protocol }},${FEATURES}"
+
+          EXCLUDE_FEATURES='${{ inputs.protocols_list }}'
+
+          EXCLUDE_FEATURES="${EXCLUDE_FEATURES//${target_protocol}/}"
+
+          echo 'dash_protocol_name=-${{ inputs.target_protocol }}' >> "${GITHUB_ENV}"
         fi
+
+        echo "FEATURES=${FEATURES}" >> "${GITHUB_ENV}"
+
+        echo "features=${FEATURES}" >> "${GITHUB_OUTPUT}"
+
+        echo "exclude_features=${EXCLUDE_FEATURES}" >> "${GITHUB_OUTPUT}"
 
         echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
 

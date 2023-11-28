@@ -1,4 +1,4 @@
-use currencies::test::{PaymentC3, PaymentC6, StableC1};
+use currencies::test::{LeaseC1, LeaseC2, StableC1};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -29,10 +29,10 @@ mod repay;
 type LpnCurrency = StableC1;
 type LpnCoin = Coin<LpnCurrency>;
 
-type LeaseCurrency = PaymentC6;
+type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
 
-type PaymentCurrency = PaymentC3;
+type PaymentCurrency = LeaseC1;
 type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);

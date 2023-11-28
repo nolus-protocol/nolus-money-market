@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use ::lease::api::{ExecuteMsg, StateResponse};
-
 use finance::{coin::Amount, duration::Duration, price};
+use lease::api::{ExecuteMsg, StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 

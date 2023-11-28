@@ -5,18 +5,25 @@ on:
   workflow_call:
 
 jobs:
-  perform_checks_platform_osmosis:
+  perform_checks:
     uses: "./.github/workflows/checks.yaml"
+    strategy:
+      fail-fast: false
+      matrix:
+        working_directory: ["protocol"]
+        net: ["dev", "test", "main"]
+        protocol: ["osmosis"] # TODO Add `astroport`
+        include:
+          - working_directory: "platform"
+          - net: "main"
+            protocol: "osmosis"
+            working_directory: "tests"
+          # - net: "main" # TODO Add `astroport`
+          #   protocol: "astroport"
+          #   working_directory: "tests"
+    name: "Checks [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
-      target_dex: "osmosis"
-      working_directory: "platform"
-  perform_checks_protocol_osmosis:
-    uses: "./.github/workflows/checks.yaml"
-    with:
-      target_dex: "osmosis"
-      working_directory: "protocol"
-  perform_checks_tests_osmosis:
-    uses: "./.github/workflows/checks.yaml"
-    with:
-      target_dex: "osmosis"
-      working_directory: "tests"
+      target_net: "${{ matrix.net }}"
+      target_protocol: "${{ matrix.protocol }}"
+      protocols_list: 'astroport,osmosis'
+      working_directory: "${{ matrix.working_directory }}"
