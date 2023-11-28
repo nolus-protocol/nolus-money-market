@@ -6,7 +6,7 @@ add_wasm_messages() {
   local -r genesis_home_dir="$1"
   local -r wasm_code_path="$2"
   local -r treasury_init_tokens="$3"
-  local -r lpp_native="$4"
+  local -r protocol_currency="$4"
   local -r contracts_info_file="$5"
   local -r dex_admin="$6"
   local -r protocol_identifier="$7"
@@ -35,7 +35,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $LEASER_ADDRESS"
 
-  local -r lpp_init_msg='{"lpn_ticker":"'"$lpp_native"'","lease_code_admin":"'"$LEASER_ADDRESS"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":0}'
+  local -r lpp_init_msg='{"lpn_ticker":"'"$protocol_currency"'","lease_code_admin":"'"$LEASER_ADDRESS"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":0}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$lpp_init_msg"
   _export_to_file "lpp" "$LPP_ADDRESS" "$contracts_info_file"
@@ -45,7 +45,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$timealarms_init_msg"
   _export_to_file "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
 
-  local -r oracle_init_msg='{"config":{"base_asset":"'"$lpp_native"'","price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"swap_tree":'"$swap_tree"'}'
+  local -r oracle_init_msg='{"config":{"base_asset":"'"$protocol_currency"'","price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"swap_tree":'"$swap_tree"'}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$oracle_init_msg"
   _export_to_file "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
@@ -55,7 +55,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$profit_init_msg"
   _export_to_file "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"USDC"},"min_transaction":{"amount":"1000","ticker":"USDC"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
+  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"1000","ticker":"'"$protocol_currency"'"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$leaser_init_msg"
   _export_to_file "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
