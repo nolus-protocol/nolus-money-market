@@ -4,14 +4,14 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "astroport")]
-pub(crate) mod astroport;
-#[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
-
-#[cfg(any(feature = "osmosis", feature = "testing"))]
-pub(crate) mod osmosis;
-#[cfg(any(feature = "osmosis", feature = "testing"))]
+#[cfg(feature = "osmosis")]
 use self::osmosis as impl_mod;
+
+#[cfg(feature = "astroport")]
+pub(crate) mod astroport;
+#[cfg(feature = "osmosis")]
+pub(crate) mod osmosis;
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

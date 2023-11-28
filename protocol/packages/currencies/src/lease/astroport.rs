@@ -4,6 +4,9 @@ use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 use crate::{define_currency, define_symbol};
 
+#[cfg(feature = "testing")]
+pub use testing_currencies::*;
+
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
 // 2. Currencies that come from Axelar are documented at https://docs.axelar.dev/resources
@@ -74,6 +77,33 @@ define_symbol! {
 }
 define_currency!(Ntrn, NTRN);
 
+#[cfg(feature = "testing")]
+mod testing_currencies {
+    use sdk::schemars;
+
+    use crate::{define_currency, define_symbol};
+
+    define_symbol! {
+        TEST_C1 {
+            ["dev", "test", "main"]: {
+                bank: "ibc/test_currency_1",
+                dex: "ibc/test_currency_1_dex",
+            },
+        }
+    }
+    define_currency!(TestC1, TEST_C1);
+
+    define_symbol! {
+        TEST_C2 {
+            ["dev", "test", "main"]: {
+                bank: "ibc/test_currency_2",
+                dex: "ibc/test_currency_2_dex",
+            },
+        }
+    }
+    define_currency!(TestC2, TEST_C2);
+}
+
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
     symbol: &SymbolSlice,
@@ -84,9 +114,31 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
+    let result = maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor));
+
+    #[cfg(not(feature = "testing"))]
+    {
+        result
+    }
+    #[cfg(feature = "testing")]
+    result.or_else(|visitor| maybe_visit_test_currencies(matcher, symbol, visitor))
+}
+
+#[cfg(feature = "testing")]
+fn maybe_visit_test_currencies<M, V>(
+    matcher: &M,
+    symbol: &SymbolSlice,
+    visitor: V,
+) -> MaybeAnyVisitResult<V>
+where
+    M: Matcher + ?Sized,
+    V: AnyVisitor,
+{
+    use currency::maybe_visit_any as maybe_visit;
+    maybe_visit::<_, TestC1, _>(matcher, symbol, visitor)
+        .or_else(|visitor| maybe_visit::<_, TestC2, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -98,35 +150,30 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
+        {lease::LeaseGroup, lpn::astroport::UsdcAxelar, native::Nls},
     };
 
-    use super::{Atom, Osmo, StAtom, StOsmo, Tia, Wbtc, Weth};
+    use super::{Atom, Ntrn, StAtom};
 
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Atom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Ntrn, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
+        maybe_visit_on_ticker_err::<UsdcAxelar, LeaseGroup>(UsdcAxelar::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(UsdcAxelar::BANK_SYMBOL);
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<Atom, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StAtom, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Osmo, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<StOsmo, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<UsdcAxelar, LeaseGroup>(UsdcAxelar::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(UsdcAxelar::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
     }

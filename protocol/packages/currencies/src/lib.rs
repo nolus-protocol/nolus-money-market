@@ -1,4 +1,4 @@
-#[cfg(not(any(test, feature = "testing", feature = "astroport", feature = "osmosis")))]
+#[cfg(not(any(feature = "astroport", feature = "osmosis")))]
 compile_error!("No dex selected!");
 
 #[cfg(not(any(net = "dev", net = "test", net = "main")))]

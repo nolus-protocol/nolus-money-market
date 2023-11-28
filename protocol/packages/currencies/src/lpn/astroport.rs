@@ -46,28 +46,30 @@ mod test {
     use currency::Currency;
 
     use crate::{
-        lease::osmosis::Osmo,
-        lpn::{osmosis::Usdc, Lpns},
-        native::osmosis::Nls,
+        lease::astroport::Ntrn,
+        lpn::Lpns,
+        native::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
     };
 
+    use super::UsdcAxelar;
+
     #[test]
     fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<Usdc, Lpns>();
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Usdc::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Osmo::TICKER);
+        maybe_visit_on_ticker_impl::<UsdcAxelar, Lpns>();
+        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(UsdcAxelar::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(Ntrn::TICKER);
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<Usdc, Lpns>();
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Usdc::TICKER);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Osmo::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_impl::<UsdcAxelar, Lpns>();
+        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(UsdcAxelar::TICKER);
+        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(Ntrn::BANK_SYMBOL);
     }
 }
