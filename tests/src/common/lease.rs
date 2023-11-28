@@ -16,7 +16,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use swap::trx as swap_trx
+use swap::trx as swap_trx;
 
 use super::{
     ibc,
