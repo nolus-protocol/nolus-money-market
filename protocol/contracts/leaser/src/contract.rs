@@ -120,7 +120,7 @@ pub fn execute(
                     deps.storage,
                     new_code_id.into(),
                     max_leases,
-                    migrate_msg(env),
+                    migrate_msg(),
                 )
             }),
         ExecuteMsg::MigrateLeasesCont {
@@ -135,7 +135,7 @@ pub fn execute(
                     deps.storage,
                     next_customer_validated,
                     max_leases,
-                    migrate_msg(env),
+                    migrate_msg(),
                 )
             }),
     }
@@ -222,9 +222,8 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
         .map(|()| lease)
 }
 
-fn migrate_msg(env: Env) -> impl Fn(Addr) -> LeaseMigrateMsg {
-    let finalizer = finalizer(env);
-    move |customer| LeaseMigrateMsg::new(customer, finalizer.clone())
+fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {
+    move |_customer| LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {

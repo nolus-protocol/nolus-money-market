@@ -185,6 +185,7 @@ where
     }
 }
 
+// TODO remove this back-door
 pub fn from_amount_ticker<G>(amount: Amount, ticker: SymbolOwned) -> Result<CoinDTO<G>>
 where
     G: Group,

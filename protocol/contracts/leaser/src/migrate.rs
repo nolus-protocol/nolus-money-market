@@ -335,6 +335,6 @@ mod test {
     }
 
     fn migrate_msg() -> impl Fn(Addr) -> MigrateMsg {
-        |customer| MigrateMsg::new(customer, Addr::unchecked("finalizer"))
+        |_customer| MigrateMsg {}
     }
 }

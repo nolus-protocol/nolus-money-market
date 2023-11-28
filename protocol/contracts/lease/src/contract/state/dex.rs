@@ -26,15 +26,15 @@ impl<H> State<H> {
     }
 }
 
-// #[cfg(feature = "migration")]
-// impl<H> State<H> {
-//     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
-//     where
-//         MapFn: FnOnce(H) -> HTo,
-//     {
-//         State::new(map_fn(self.handler))
-//     }
-// }
+#[cfg(all(feature = "migration", dex = "osmosis"))]
+impl<H> State<H> {
+    pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
+    where
+        MapFn: FnOnce(H) -> HTo,
+    {
+        State::new(map_fn(self.handler))
+    }
+}
 
 impl<H> Contract for State<H>
 where

@@ -1,6 +1,6 @@
 [package]
 name = "lease"
-version = "0.8.2"
+version = "0.8.3"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = []
+cosmwasm-bindings = ["migration"]
 api = ["dep:dex"]
 skel = ["api"]
 astroport = ["skel", "dex/astroport"]
