@@ -15,18 +15,19 @@ env:
   NET: "main"
 
 jobs:
-  code_coverage_platform_osmosis:
-      uses: "./.github/workflows/checks.yaml"
-      with:
-        target_dex: "osmosis"
-        working_directory: "platform"
-  code_coverage_protocol_osmosis:
-      uses: "./.github/workflows/checks.yaml"
-      with:
-        target_dex: "osmosis"
-        working_directory: "protocol"
-  code_coverage_tests_osmosis:
-      uses: "./.github/workflows/checks.yaml"
-      with:
-        target_dex: "osmosis"
-        working_directory: "tests"
+  code_coverage:
+    uses: "./.github/workflows/code_coverage.yaml"
+    strategy:
+      fail-fast: false
+      matrix:
+        working_directory: ["protocol"]
+        net: ["dev", "test", "main"]
+        protocol: ["osmosis", "astroport"]
+        include:
+          - working_directory: "platform"
+          - working_directory: "tests"
+    name: "Code Coverage Protocol [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
+    with:
+      target_net: "${{ matrix.net }}"
+      target_protocol: "${{ matrix.protocol }}"
+      working_directory: "${{ matrix.working_directory }}"

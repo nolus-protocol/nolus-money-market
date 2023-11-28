@@ -6,8 +6,8 @@ inputs:
   target_net:
     description: 'Whether to build targeting dev-net, test-net or main-net. This parameter takes one of these values: "dev", "test" and "main".'
     required: false
-  target_dex:
-    description: "Indicates which DEX the build targets."
+  target_protocol:
+    description: "Indicates which protocol the build targets."
     required: false
   release_version:
     description: ""
@@ -22,11 +22,12 @@ runs:
     - id: "env"
       uses: "./.github/actions/env"
       with:
+        build_wasm: "1"
         target_net: "${{ inputs.target_net }}"
-        target_dex: "${{ inputs.target_dex }}"
+        target_protocol: "${{ inputs.target_protocol }}"
     - name: "Build container image"
       shell: "sh"
-      run: 'sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"'
+      run: 'sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.73"'
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
@@ -43,6 +44,7 @@ runs:
         --mount "type=volume,source=cargo_dir_cache,target=/usr/local/cargo/" \
         --mount "type=volume,source=registry_cache,target=/usr/local/cargo/registry/" \
         --env 'RUSTFLAGS=${{ env.RUSTFLAGS }}' \
+        --env 'features=${{ env.FEATURES }}' \
         --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
         wasm-optimizer
     - name: "Check for WASM binaries larger than allowed limit"
@@ -65,5 +67,5 @@ runs:
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
       uses: "actions/upload-artifact@v3"
       with:
-        name: "optimized-binaries-${{ inputs.working_directory }}${{ env.dash_net_name }}${{ env.dash_dex_name }}"
+        name: "optimized-binaries-${{ inputs.working_directory }}${{ env.dash_net_name }}${{ env.dash_protocol_name }}"
         path: "./artifacts/*"

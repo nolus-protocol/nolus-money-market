@@ -4,9 +4,15 @@ run-name: "Running checks on smart contracts"
 on:
   workflow_call:
     inputs:
-      target_dex:
-        required: true
+      target_net:
+        required: false
         type: "string"
+      target_protocol:
+        required: false
+        type: "string"
+      protocols_list:
+        type: string
+        required: false
       working_directory:
         required: true
         type: "string"
@@ -20,20 +26,25 @@ env:
 jobs:
   setup_env:
     runs-on: "ubuntu-latest"
+    name: "setup_env [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     outputs:
+      features: "${{ steps.env.outputs.features }}"
+      exclude_features: "${{ steps.env.outputs.exclude_features }}"
       rustflags: "${{ steps.env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - id: "env"
         uses: "./.github/actions/env"
         with:
-          target_net: "main"
-          target_dex: "${{ inputs.target_dex }}"
+          target_net: "${{ inputs.target_net }}"
+          target_protocol: "${{ inputs.target_protocol }}"
+          protocols_list: "${{ inputs.protocols_list }}"
   check_formatting:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
+    name: "Check formatting [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
@@ -43,19 +54,20 @@ jobs:
   check_codebase:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
+    name: "Check codebase [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_codebase@main"
         with:
           working_directory: "${{ inputs.working_directory }}"
+          features: "${{ needs.setup_env.outputs.features }}"
           rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   audit_dependencies:
     runs-on: "ubuntu-latest"
     if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
+    name: "Audit dependecies [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
@@ -66,6 +78,7 @@ jobs:
   linting:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
+    name: "Run linter [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
@@ -73,53 +86,70 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - name: "Run linter"
         shell: "sh"
-        run: "../lint.sh"
+        run: "../lint.sh '${{ needs.setup_env.outputs.features }}'"
         working-directory: "${{ inputs.working_directory }}"
   check_features:
-    uses: "./.github/workflows/check_features.yaml"
+    runs-on: "ubuntu-latest"
     needs: "setup_env"
-    with:
-      working_directory: "${{ inputs.working_directory }}"
-      rustflags: "${{ needs.setup_env.outputs.rustflags }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ["test"]
+        debug_assertions: [true, false]
+        include:
+          - profile: "dev"
+          - profile: "release"
+    name: "Check features [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}; ${{ matrix.profile }}; ${{ matrix.debug_assertions }}]"
+    steps:
+      - uses: "actions/checkout@v4.1.1"
+      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
+      - uses: "nolus-protocol/rust-ci-actions/check_features@main"
+        with:
+          profile: "${{ matrix.profile }}"
+          debug_assertions: "${{ matrix.debug_assertions }}"
+          working_directory: "${{ inputs.working_directory }}"
+          features: "${{ needs.setup_env.outputs.features }}"
+          exclude_features: "${{ needs.setup_env.outputs.exclude_features }}"
+          rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   check_unused_deps:
     runs-on: "ubuntu-latest"
     if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
+    name: "Check for unused dependecies [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/check_unused_deps@main"
         with:
           working_directory: "${{ inputs.working_directory }}"
+          features: "${{ needs.setup_env.outputs.features }}"
           rustflags: "${{ needs.setup_env.outputs.rustflags }}"
-  test_dev_profile:
+  test:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: 'dev'
+            flags: ''
+          - profile: 'release'
+            flags: '--release'
+    name: "Run tests [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}; ${{ matrix.profile }}]"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
-      - name: "Run tests in dev profile"
+      - name: "Run tests"
         shell: "sh"
-        run: "cargo test --all-targets"
-        working-directory: "${{ inputs.working_directory }}"
-  test_release_profile:
-    runs-on: "ubuntu-latest"
-    needs: "setup_env"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
-    steps:
-      - uses: "actions/checkout@v4.1.1"
-      - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
-      - name: "Run tests in release profile"
-        shell: "sh"
-        run: "cargo test --all-targets --release"
+        run: "cargo test --all-targets ${{ matrix.flags }} --features '${{ needs.setup_env.outputs.features }}'"
         working-directory: "${{ inputs.working_directory }}"
   check_wasm:
     runs-on: "ubuntu-latest"
     if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
+    name: "Check WebAssembly binaries [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     env:
       RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
@@ -129,7 +159,7 @@ jobs:
         run: "cargo install cargo-hack cosmwasm-check"
       - name: "Building WASM binaries"
         shell: "sh"
-        run: "cargo hack build --release --target wasm32-unknown-unknown"
+        run: "cargo hack build --features 'cosmwasm-bindings,${{ needs.setup_env.outputs.features }}' --ignore-unknown-features --release --target wasm32-unknown-unknown"
         working-directory: "${{ inputs.working_directory }}"
       - name: "Checking WASM binaries"
         shell: "sh"
