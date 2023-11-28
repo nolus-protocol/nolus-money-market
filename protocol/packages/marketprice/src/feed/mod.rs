@@ -13,7 +13,12 @@ use self::observation::Observation;
 mod observation;
 mod sample;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
+#[serde(
+    rename_all = "snake_case",
+    deny_unknown_fields,
+    bound(serialize = "", deserialize = "")
+)]
 pub struct PriceFeed<C, QuoteC>
 where
     C: Currency,
@@ -101,6 +106,16 @@ where
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
+    }
+}
+
+impl<C, QuoteC> Default for PriceFeed<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
@@ -33,7 +31,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
 
     fn on<OracleBase>(self) -> AnyVisitorResult<Self>
     where
-        OracleBase: 'static + Currency + DeserializeOwned + Serialize,
+        OracleBase: Currency,
     {
         match self.msg {
             QueryMsg::SupportedCurrencyPairs {} => to_json_binary(

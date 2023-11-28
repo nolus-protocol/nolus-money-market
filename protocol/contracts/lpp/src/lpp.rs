@@ -1,6 +1,4 @@
 use currencies::Lpns;
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -26,14 +24,14 @@ use crate::{
 // Deposit and Loan which in turn may use LiquidityPool.
 pub struct NTokenPrice<Lpn>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     price: Price<NLpn, Lpn>,
 }
 
 impl<Lpn> NTokenPrice<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     pub fn get(&self) -> Price<NLpn, Lpn> {
         self.price
@@ -49,7 +47,7 @@ where
 
 impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     fn from(nprice: NTokenPrice<Lpn>) -> Self {
         PriceResponse(nprice.price)
@@ -66,7 +64,7 @@ where
 
 impl<Lpn> LiquidityPool<Lpn>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
         config

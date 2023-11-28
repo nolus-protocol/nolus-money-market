@@ -1,13 +1,18 @@
 use serde::Deserialize;
 
-use crate::{coin::CoinDTO, error::Error};
 use currency::Group;
+
+use crate::{coin::CoinDTO, error::Error};
 
 use super::PriceDTO as ValidatedDTO;
 
 /// Brings invariant checking as a step in deserializing a PriceDTO
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
 pub(super) struct PriceDTO<G, QuoteG>
 where
     G: Group,

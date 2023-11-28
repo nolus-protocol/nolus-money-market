@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currencies::{LeaseGroup, Lpns, PaymentGroup};
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
@@ -165,7 +163,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         Tickers
             .maybe_visit_any::<LeaseGroup, _>(
@@ -214,7 +212,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: 'static + Currency + DeserializeOwned,
+        Asset: Currency,
     {
         let downpayment_lpn = total(
             self.downpayment,

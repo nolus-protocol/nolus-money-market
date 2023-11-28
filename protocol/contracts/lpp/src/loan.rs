@@ -2,7 +2,7 @@ use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
@@ -15,19 +15,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::error::{ContractError, Result};
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-#[serde(rename_all = "snake_case")]
-pub struct Loan<Lpn>
-where
-    Lpn: Currency,
-{
-    pub principal_due: Coin<Lpn>,
-    pub annual_interest_rate: Percent,
-    pub interest_paid: Timestamp,
-}
-
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct RepayShares<Lpn>
 where
     Lpn: Currency,
@@ -35,6 +23,31 @@ where
     pub interest: Coin<Lpn>,
     pub principal: Coin<Lpn>,
     pub excess: Coin<Lpn>,
+}
+
+impl<Lpn> Default for RepayShares<Lpn>
+where
+    Lpn: Currency,
+{
+    fn default() -> Self {
+        Self {
+            interest: Default::default(),
+            principal: Default::default(),
+            excess: Default::default(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
+#[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
+pub struct Loan<Lpn>
+where
+    Lpn: Currency,
+{
+    pub principal_due: Coin<Lpn>,
+    pub annual_interest_rate: Percent,
+    pub interest_paid: Timestamp,
 }
 
 impl<Lpn> Loan<Lpn>
@@ -75,7 +88,7 @@ where
 
 impl<Lpn> Loan<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     pub fn open(storage: &mut dyn Storage, addr: Addr, loan: &Self) -> Result<()> {
         if Self::STORAGE.has(storage, addr.clone()) {

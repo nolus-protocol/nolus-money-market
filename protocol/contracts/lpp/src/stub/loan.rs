@@ -1,7 +1,5 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::de::DeserializeOwned;
-
 use currency::Currency;
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
@@ -53,7 +51,7 @@ where
 
 impl<Lpn> LppLoanImpl<Lpn>
 where
-    Lpn: Currency + DeserializeOwned,
+    Lpn: Currency,
 {
     pub(super) fn new(lpp_ref: LppRef, loan: Loan<Lpn>) -> Self {
         Self {

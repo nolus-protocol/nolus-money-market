@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{
     self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
@@ -66,8 +64,8 @@ impl<'m> PriceFeeds<'m> {
     ) -> Result<SpotPrice, PriceFeedsError>
     where
         'm: 'a,
-        QuoteC: Currency + DeserializeOwned,
-        Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
+        QuoteC: Currency,
+        Iter: DoubleEndedIterator<Item = &'a SymbolSlice>,
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
@@ -89,8 +87,8 @@ impl<'m> PriceFeeds<'m> {
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
-        C: Currency + DeserializeOwned,
-        QuoteC: Currency + DeserializeOwned,
+        C: Currency,
+        QuoteC: Currency,
     {
         let feed_bin = self
             .storage
@@ -103,8 +101,8 @@ fn load_feed<BaseC, QuoteC>(
     feed_bin: Option<PriceFeedBin>,
 ) -> Result<PriceFeed<BaseC, QuoteC>, PriceFeedsError>
 where
-    BaseC: Currency + DeserializeOwned,
-    QuoteC: Currency + DeserializeOwned,
+    BaseC: Currency,
+    QuoteC: Currency,
 {
     feed_bin.map_or_else(
         || Ok(PriceFeed::<BaseC, QuoteC>::default()),
@@ -127,7 +125,7 @@ where
 impl<'a, Iter, BaseC, QuoteC> PriceCollect<'a, Iter, BaseC, QuoteC>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     QuoteC: Currency,
 {
     fn do_collect(
@@ -156,7 +154,7 @@ where
 impl<'a, Iter, QuoteC, QuoteQuoteC> AnyVisitor for PriceCollect<'a, Iter, QuoteC, QuoteQuoteC>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    QuoteC: Currency + DeserializeOwned,
+    QuoteC: Currency,
     QuoteQuoteC: Currency,
 {
     type Output = SpotPrice;
@@ -164,7 +162,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         let next_price =
             self.feeds
@@ -202,8 +200,8 @@ fn add_observation(
 
         fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
         where
-            C: Currency + Serialize + DeserializeOwned,
-            QuoteC: Currency + Serialize + DeserializeOwned,
+            C: Currency,
+            QuoteC: Currency,
         {
             load_feed(self.feed_bin).and_then(|feed| {
                 let feed =

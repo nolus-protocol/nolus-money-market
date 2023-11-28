@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
@@ -19,6 +19,7 @@ use sdk::{
 use crate::error::ContractError;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn>
 where
     Lpn: Currency,
@@ -31,7 +32,7 @@ where
 
 impl<Lpn> Default for Total<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     fn default() -> Self {
         Self::new()
@@ -40,7 +41,7 @@ where
 
 impl<Lpn> Total<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: Currency,
 {
     const STORAGE: Item<'static, Total<Lpn>> = Item::new("total");
 

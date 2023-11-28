@@ -1,7 +1,5 @@
 use std::ops::DerefMut as _;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use access_control::SingleUserAccess;
 use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
@@ -42,7 +40,7 @@ impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
     fn do_work<Lpn>(mut self) -> Result<()>
     where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: Currency,
     {
         versioning::initialize(self.deps.storage, CONTRACT_VERSION)?;
 
@@ -68,7 +66,7 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
 
     fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: Currency,
     {
         self.do_work::<Lpn>()
     }
@@ -124,7 +122,7 @@ struct ExecuteWithLpn<'a> {
 impl<'a> ExecuteWithLpn<'a> {
     fn do_work<Lpn>(self) -> Result<CwResponse>
     where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: Currency,
     {
         // currency context variants
         match self.msg {
@@ -186,7 +184,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
 
     fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: Currency,
     {
         self.do_work::<Lpn>()
     }
@@ -247,7 +245,7 @@ struct QueryWithLpn<'a> {
 impl<'a> QueryWithLpn<'a> {
     fn do_work<Lpn>(self) -> Result<Binary>
     where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
+        Lpn: Currency,
     {
         // currency context variants
         let res = match self.msg {
@@ -289,7 +287,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 
     fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
+        Lpn: Currency,
     {
         self.do_work::<Lpn>()
     }

@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use currencies::PaymentGroup;
 use currency::{
@@ -94,7 +94,7 @@ where
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency + Serialize + DeserializeOwned + 'static,
+                C: Currency,
             {
                 Ok(())
             }

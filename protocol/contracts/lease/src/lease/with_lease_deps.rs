@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::de::DeserializeOwned;
-
 use currencies::{LeaseGroup, Lpns};
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::{
@@ -73,7 +71,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency + DeserializeOwned,
+        C: Currency,
     {
         self.lpp.execute_loan(
             FactoryStage2 {

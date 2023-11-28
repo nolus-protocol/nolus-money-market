@@ -4,12 +4,13 @@ mod test {
 
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-    use crate::coin::Coin;
     use currency::{
         test::{SuperGroupTestC1, SuperGroupTestC2},
         Currency,
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec};
+
+    use crate::coin::Coin;
 
     #[test]
     fn serialize_deserialize() {
@@ -50,6 +51,7 @@ mod test {
     #[test]
     fn serialize_deserialize_as_field() {
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        #[serde(bound(serialize = "", deserialize = ""))]
         struct CoinContainer<C>
         where
             C: Currency,

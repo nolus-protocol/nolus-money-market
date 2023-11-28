@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
@@ -6,7 +6,7 @@ pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
 pub type SubGroupTestC1 = impl_::TestC3;
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub struct SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
@@ -22,7 +22,7 @@ impl Group for SuperGroup {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub struct SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
@@ -39,13 +39,11 @@ impl Group for SubGroup {
 }
 
 mod impl_ {
-    use serde::{Deserialize, Serialize};
+    use sdk::schemars::{self, JsonSchema};
 
     use crate::{Currency, SymbolStatic};
 
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub struct TestC1;
     impl Currency for TestC1 {
         const TICKER: SymbolStatic = "ticker#1";
@@ -53,9 +51,7 @@ mod impl_ {
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#1";
     }
 
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub struct TestC2;
     impl Currency for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
@@ -63,9 +59,7 @@ mod impl_ {
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#2";
     }
 
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub struct TestC3;
     impl Currency for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";

@@ -7,7 +7,7 @@ use currency::{
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 pub struct Usd;
 impl Currency for Usd {
@@ -19,7 +19,7 @@ impl Currency for Usd {
 
 pub type CoinUsd = Coin<Usd>;
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub struct UsdGroup;
 impl Group for UsdGroup {
     const DESCR: &'static str = "usd group";

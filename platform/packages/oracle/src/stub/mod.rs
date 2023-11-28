@@ -16,13 +16,13 @@ use self::impl_::{CheckedConverter, OracleStub};
 mod impl_;
 
 #[cfg(feature = "unchecked-base-currency")]
-pub fn new_unchecked_base_currency_stub<'a, OracleBase, OracleBaseG>(
+pub fn new_unchecked_base_currency_stub<OracleBase, OracleBaseG>(
     oracle: Addr,
-    querier: QuerierWrapper<'a>,
-) -> impl Oracle<OracleBase> + 'a
+    querier: QuerierWrapper<'_>,
+) -> impl Oracle<OracleBase> + '_
 where
     OracleBase: Currency,
-    OracleBaseG: Group + for<'de> Deserialize<'de> + 'a,
+    OracleBaseG: Group,
 {
     use self::impl_::BaseCUncheckedConverter;
 
@@ -40,7 +40,7 @@ where
     fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency,
-        G: Group + for<'de> Deserialize<'de>;
+        G: Group;
 }
 
 pub trait WithOracle<OracleBase>
@@ -91,7 +91,7 @@ impl OracleRef {
     ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,
-        OracleBaseG: Group + for<'de> Deserialize<'de>,
+        OracleBaseG: Group,
         V: WithOracle<OracleBase>,
         Error: Into<V::Error>,
     {

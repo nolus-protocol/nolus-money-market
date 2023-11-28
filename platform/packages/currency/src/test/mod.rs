@@ -10,7 +10,7 @@ pub struct Expect<C>(PhantomData<C>);
 
 impl<C> Default for Expect<C> {
     fn default() -> Self {
-        Self(Default::default())
+        Self(PhantomData)
     }
 }
 impl<C> AnyVisitor for Expect<C>
@@ -58,16 +58,24 @@ impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
     }
 }
 
-pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
-impl<C1, C2> Default for ExpectPair<C1, C2> {
+pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>)
+where
+    C1: Currency,
+    C2: Currency;
+
+impl<C1, C2> Default for ExpectPair<C1, C2>
+where
+    C1: Currency,
+    C2: Currency,
+{
     fn default() -> Self {
-        Self(Default::default(), Default::default())
+        Self(PhantomData, PhantomData)
     }
 }
 impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
 where
-    C1: 'static,
-    C2: 'static,
+    C1: Currency,
+    C2: Currency,
 {
     type Output = bool;
     type Error = Error;

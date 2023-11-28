@@ -15,7 +15,11 @@ mod spec;
 mod status;
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Position<Asset, Lpn> {
+pub struct Position<Asset, Lpn>
+where
+    Asset: Currency,
+    Lpn: Currency,
+{
     amount: Coin<Asset>,
     spec: Spec<Lpn>,
 }

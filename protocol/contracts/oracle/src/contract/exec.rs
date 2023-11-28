@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use marketprice::SpotPrice;
@@ -51,7 +49,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
 
     fn on<OracleBase>(self) -> AnyVisitorResult<Self>
     where
-        OracleBase: Currency + DeserializeOwned,
+        OracleBase: Currency,
     {
         match self.msg {
             ExecuteMsg::FeedPrices { prices } => {
@@ -94,7 +92,7 @@ fn try_feed_prices<OracleBase>(
     prices: Vec<SpotPrice>,
 ) -> ContractResult<()>
 where
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
 {
     let config = Config::load(storage).map_err(ContractError::LoadConfig)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);

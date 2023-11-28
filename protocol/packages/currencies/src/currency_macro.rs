@@ -18,7 +18,6 @@ macro_rules! define_currency {
             Eq,
             PartialOrd,
             Ord,
-            Default,
             $crate::currency_macro::Serialize,
             $crate::currency_macro::Deserialize,
             $crate::currency_macro::JsonSchema,

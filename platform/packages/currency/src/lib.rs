@@ -1,6 +1,6 @@
 use std::{any::TypeId, fmt::Debug};
 
-use serde::{de::DeserializeOwned, Serialize};
+use sdk::schemars::JsonSchema;
 
 use crate::error::{Error, Result};
 
@@ -31,7 +31,7 @@ pub type SymbolOwned = String;
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
 // satisfy trait bounds with regards of the lifetimes
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
-pub trait Currency: Copy + Ord + Default + Debug + 'static {
+pub trait Currency: Debug + Copy + Ord + JsonSchema + Sized + 'static {
     /// Identifier of the currency
     const TICKER: SymbolStatic;
 
@@ -83,7 +83,7 @@ pub fn maybe_visit_any<M, C, V>(
 ) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
-    C: Currency + Serialize + DeserializeOwned,
+    C: Currency,
     V: AnyVisitor,
 {
     if matcher.match_::<C>(symbol) {

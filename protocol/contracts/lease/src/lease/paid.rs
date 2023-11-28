@@ -9,7 +9,11 @@ use crate::error::ContractResult;
 
 use super::LeaseDTO;
 
-pub struct Lease<Asset, Lpn> {
+pub struct Lease<Asset, Lpn>
+where
+    Asset: Currency,
+    Lpn: Currency,
+{
     customer: Addr,
     amount: Coin<Asset>,
     lpn: PhantomData<Lpn>,

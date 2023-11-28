@@ -1,7 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use serde::de::DeserializeOwned;
-
 use currency::{Currency, SymbolOwned};
 use finance::price::base::BasePrice;
 use marketprice::SpotPrice;
@@ -33,7 +31,7 @@ pub(crate) type CalculateAllPricesIterItem<OracleBase> = AllPricesIterItem<Oracl
 pub(crate) struct Oracle<'storage, S, OracleBase>
 where
     S: Deref<Target = dyn Storage + 'storage>,
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
 {
     storage: S,
     tree: SupportedPairs<OracleBase>,
@@ -44,7 +42,7 @@ where
 impl<'storage, S, OracleBase> Oracle<'storage, S, OracleBase>
 where
     S: Deref<Target = dyn Storage + 'storage>,
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
         let tree = SupportedPairs::load(storage.deref())?;
@@ -112,7 +110,7 @@ where
 impl<'storage, S, OracleBase> Oracle<'storage, S, OracleBase>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
 {
     const REPLY_ID: Id = 0;
     const EVENT_TYPE: &'static str = "pricealarm";

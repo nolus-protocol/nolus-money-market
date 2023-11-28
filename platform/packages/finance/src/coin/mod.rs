@@ -20,9 +20,12 @@ mod serde;
 pub type Amount = u128;
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Coin<C> {
+pub struct Coin<C>
+where
+    C: Currency,
+{
     amount: Amount,
     #[serde(skip)]
     ticker: PhantomData<C>,
@@ -100,6 +103,15 @@ where
             Self::new(self.amount / gcd),
             Coin::<OtherC>::new(other.amount / gcd),
         )
+    }
+}
+
+impl<C> Default for Coin<C>
+where
+    C: Currency,
+{
+    fn default() -> Self {
+        Self::ZERO
     }
 }
 
@@ -234,7 +246,10 @@ where
     }
 }
 
-impl<C> AsRef<Self> for Coin<C> {
+impl<C> AsRef<Self> for Coin<C>
+where
+    C: Currency,
+{
     fn as_ref(&self) -> &Self {
         self
     }

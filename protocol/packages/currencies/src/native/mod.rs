@@ -1,4 +1,5 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
@@ -12,8 +13,7 @@ pub(crate) mod osmosis;
 
 pub type Nls = impl_mod::Nls;
 
-#[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";

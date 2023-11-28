@@ -16,7 +16,10 @@ use crate::{
 mod dto;
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Spec<Lpn> {
+pub struct Spec<Lpn>
+where
+    Lpn: Currency,
+{
     liability: Liability,
     min_asset: Coin<Lpn>,
     min_transaction: Coin<Lpn>,

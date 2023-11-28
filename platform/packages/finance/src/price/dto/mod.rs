@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
@@ -15,8 +15,11 @@ mod unchecked;
 pub mod with_price;
 pub mod with_quote;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "unchecked::PriceDTO<G, QuoteG>")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(
+    try_from = "unchecked::PriceDTO<G, QuoteG>",
+    bound(serialize = "", deserialize = "")
+)]
 pub struct PriceDTO<G, QuoteG>
 where
     G: Group,
@@ -151,8 +154,8 @@ pub trait WithPrice {
 
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + Serialize + DeserializeOwned,
-        QuoteC: Currency + Serialize + DeserializeOwned;
+        C: Currency,
+        QuoteC: Currency;
 }
 
 pub trait WithBase<C>
@@ -244,14 +247,14 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-
-    use serde::Deserialize;
-
     use sdk::cosmwasm_std::{from_json, StdError, StdResult};
 
+    use currency::{
+        test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        Currency, Group,
+    };
+
     use crate::coin::{Coin, CoinDTO};
-    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, Group};
 
     use super::PriceDTO;
 
@@ -366,8 +369,8 @@ mod test_invariant {
 
     fn load_with_groups<G, QuoteG>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
     where
-        G: Group + for<'a> Deserialize<'a>,
-        QuoteG: Group + for<'a> Deserialize<'a>,
+        G: Group,
+        QuoteG: Group,
     {
         from_json::<PriceDTO<G, QuoteG>>(json)
     }

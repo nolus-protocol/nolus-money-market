@@ -50,6 +50,11 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 ///
 /// Not designed to be used in public APIs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(
+    rename_all = "snake_case",
+    deny_unknown_fields,
+    bound(serialize = "", deserialize = "")
+)]
 pub struct Price<C, QuoteC>
 where
     C: Currency,
@@ -280,23 +285,30 @@ where
 mod test {
     use std::ops::{Add, AddAssign, Mul};
 
-    use sdk::cosmwasm_std::{Uint128, Uint256};
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency, SymbolStatic,
+    };
+    use sdk::{
+        cosmwasm_std::{Uint128, Uint256},
+        schemars::{self, JsonSchema},
+    };
 
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
         ratio::Rational,
     };
-    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, SymbolStatic};
 
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-    struct QuoteQuoteCurrency {}
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
+    enum QuoteQuoteCurrency {}
+
     impl Currency for QuoteQuoteCurrency {
         const TICKER: SymbolStatic = "mycutecoin";
         const BANK_SYMBOL: SymbolStatic = "ibc/dcnqweuio2938fh2f";
         const DEX_SYMBOL: SymbolStatic = "ibc/cme72hr2";
     }
+
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;
     type Coin = CoinT<SuperGroupTestC2>;
@@ -620,9 +632,12 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency,
+    };
+
     use crate::{coin::Coin, price::Price};
-    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
-    use currency::Currency;
 
     #[test]
     #[should_panic = "zero"]
@@ -668,9 +683,8 @@ mod test_invariant {
         QuoteC: Currency,
     {
         let _p = Price::new(base, quote);
+
         #[cfg(not(debug_assertions))]
-        {
-            _p.invariant_held().expect("should have returned an error");
-        }
+        _p.invariant_held().expect("should have returned an error");
     }
 }

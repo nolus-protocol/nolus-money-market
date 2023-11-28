@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{Currency, NlsPlatform};
 use finance::{
@@ -66,7 +66,7 @@ impl Deposit {
         price: NTokenPrice<Lpn>,
     ) -> Result<Coin<NLpn>>
     where
-        Lpn: Currency + Serialize + DeserializeOwned,
+        Lpn: Currency,
     {
         if amount_lpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);

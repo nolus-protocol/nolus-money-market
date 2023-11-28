@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
 where
     C: Currency,
@@ -94,6 +94,23 @@ where
         debug_assert_eq!(self.change, Coin::default());
 
         self.change = change;
+    }
+}
+
+impl<C> Default for Receipt<C>
+where
+    C: Currency,
+{
+    fn default() -> Self {
+        Self {
+            previous_margin_paid: Default::default(),
+            current_margin_paid: Default::default(),
+            previous_interest_paid: Default::default(),
+            current_interest_paid: Default::default(),
+            principal_paid: Default::default(),
+            change: Default::default(),
+            close: Default::default(),
+        }
     }
 }
 

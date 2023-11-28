@@ -15,7 +15,7 @@ where
 
 impl<C> Fractionable<Coin<C>> for Duration
 where
-    C: Currency + PartialEq + Default + Copy,
+    C: Currency,
 {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self

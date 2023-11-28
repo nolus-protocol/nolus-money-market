@@ -4,13 +4,13 @@ use std::{
     result::Result as StdResult,
 };
 
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{
     self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
     GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
@@ -28,8 +28,11 @@ mod unchecked;
 /// carries also the currency ticker. The aim is to use it everywhere the cosmwasm
 /// framework does not support type parameterization or where the currency type
 /// is unknown at compile time.
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "unchecked::CoinDTO")]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(
+    try_from = "unchecked::CoinDTO",
+    bound(serialize = "", deserialize = "")
+)]
 pub struct CoinDTO<G>
 where
     G: Group,
@@ -40,7 +43,20 @@ where
     // keep a Coin<C> in a Box<Member<G>> replacing all the struct member variables
     ticker: SymbolOwned,
     #[serde(skip)]
+    #[schemars(skip)]
     _g: PhantomData<G>,
+}
+
+impl<G> Clone for CoinDTO<G>
+where
+    G: Group,
+{
+    fn clone(&self) -> Self {
+        Self {
+            ticker: self.ticker.clone(),
+            ..*self
+        }
+    }
 }
 
 impl<G> CoinDTO<G>
@@ -111,7 +127,7 @@ where
         Self {
             amount,
             ticker,
-            _g: Default::default(),
+            _g: PhantomData,
         }
     }
 
@@ -223,12 +239,13 @@ where
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::{from_json, to_json_vec};
-    use serde::{Deserialize, Serialize};
-
     use currency::{
         test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+    };
+    use sdk::{
+        cosmwasm_std::{from_json, to_json_vec},
+        schemars::{self, JsonSchema},
     };
 
     use crate::{
@@ -236,9 +253,7 @@ mod test {
         error::Error,
     };
 
-    #[derive(
-        Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize,
-    )]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     struct MyTestCurrency;
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
@@ -246,7 +261,7 @@ mod test {
         const DEX_SYMBOL: SymbolStatic = "ibc/2";
     }
 
-    #[derive(PartialEq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
     struct MyTestGroup {}
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";

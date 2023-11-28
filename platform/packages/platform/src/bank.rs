@@ -366,6 +366,7 @@ mod test {
     use sdk::{
         cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, Empty, QuerierWrapper},
         cw_multi_test::BasicApp,
+        schemars::{self, JsonSchema},
     };
 
     use crate::{coin_legacy, error::Error};
@@ -468,7 +469,7 @@ mod test {
         let coin = Coin::<ExtraCurrency>::new(AMOUNT);
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
 
-        #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
         struct MyNiceCurrency {}
         impl Currency for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";

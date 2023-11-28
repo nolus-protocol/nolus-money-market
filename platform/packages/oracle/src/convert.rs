@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::Deserialize;
-
 use currency::{Currency, Group};
 use finance::{coin::Coin, price};
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -18,9 +16,9 @@ pub fn to_base<BaseC, BaseG, InC, InG>(
 ) -> Result<Coin<BaseC>, Error>
 where
     BaseC: Currency,
-    BaseG: Group + for<'de> Deserialize<'de>,
+    BaseG: Group,
     InC: Currency,
-    InG: Group + for<'de> Deserialize<'de>,
+    InG: Group,
 {
     struct PriceConvert<BaseC, InC, InG>
     where
@@ -37,7 +35,7 @@ where
     where
         BaseC: Currency,
         InC: Currency,
-        InG: Group + for<'de> Deserialize<'de>,
+        InG: Group,
     {
         type Output = Coin<BaseC>;
         type Error = Error;
@@ -68,18 +66,16 @@ pub fn from_base<BaseC, BaseG, OracleS, OutC, OutG>(
 ) -> Result<Coin<OutC>, Error>
 where
     BaseC: Currency,
-    BaseG: Group + for<'de> Deserialize<'de>,
+    BaseG: Group,
     OracleS: Oracle<BaseC>,
     OutC: Currency,
-    OutG: Group + for<'de> Deserialize<'de>,
+    OutG: Group,
 {
     from_base::PriceConvert::<_, _, OutG>::new(in_amount).do_convert(oracle)
 }
 
 mod from_base {
     use std::marker::PhantomData;
-
-    use serde::Deserialize;
 
     use currency::{Currency, Group};
     use finance::{coin::Coin, price};
@@ -101,7 +97,7 @@ mod from_base {
     where
         BaseC: Currency,
         OutC: Currency,
-        OutG: Group + for<'a> Deserialize<'a>,
+        OutG: Group,
     {
         pub(super) fn new(in_amount: Coin<BaseC>) -> Self {
             Self {

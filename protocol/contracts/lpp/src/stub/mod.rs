@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currencies::Lpns;
 use currency::{
@@ -76,7 +76,7 @@ impl LppRef {
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency + Serialize + DeserializeOwned,
+                C: Currency,
             {
                 self.lpp_ref
                     .into_loan::<C>(self.lease, self.querier)
@@ -124,7 +124,7 @@ impl LppRef {
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency + Serialize + DeserializeOwned,
+                C: Currency,
             {
                 self.cmd
                     .exec(self.lpp_ref.into_lender::<C>(self.querier))
@@ -150,7 +150,7 @@ impl LppRef {
         querier: QuerierWrapper<'_>,
     ) -> Result<LppLoanImpl<Lpn>>
     where
-        Lpn: Currency + DeserializeOwned,
+        Lpn: Currency,
     {
         querier
             .query_wasm_smart(

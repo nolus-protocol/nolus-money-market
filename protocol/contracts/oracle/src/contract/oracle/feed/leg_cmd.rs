@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use currency::{AnyVisitorPair, Currency};
 use finance::price::{base::BasePrice, Price};
 use swap::SwapGroup;
@@ -32,7 +30,7 @@ where
 
 impl<OracleBase, Querier> AnyVisitorPair for &mut LegCmd<OracleBase, Querier>
 where
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
     Querier: PriceQuerier,
 {
     type Output = Option<BasePrice<SwapGroup, OracleBase>>;
@@ -40,8 +38,8 @@ where
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
     where
-        B: Currency + DeserializeOwned,
-        Q: Currency + DeserializeOwned,
+        B: Currency,
+        Q: Currency,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases

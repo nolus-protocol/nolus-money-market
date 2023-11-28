@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::DepsMut;
@@ -32,7 +30,7 @@ impl<'a> AnyVisitor for SudoWithOracleBase<'a> {
 
     fn on<OracleBase>(self) -> AnyVisitorResult<Self>
     where
-        OracleBase: Currency + DeserializeOwned,
+        OracleBase: Currency,
     {
         match self.msg {
             SudoMsg::SwapTree { tree } => SupportedPairs::<OracleBase>::new(tree.into_tree())?

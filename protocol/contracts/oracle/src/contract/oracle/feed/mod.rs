@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::de::DeserializeOwned;
-
 use currency::{Currency, SymbolOwned};
 use finance::price::base::BasePrice;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
@@ -27,7 +25,7 @@ pub struct Feeds<OracleBase> {
 
 impl<OracleBase> Feeds<OracleBase>
 where
-    OracleBase: Currency + DeserializeOwned,
+    OracleBase: Currency,
 {
     pub(crate) fn with(config: Config) -> Self {
         Self {
@@ -148,8 +146,8 @@ mod test {
     impl PriceQuerier for TestFeeds {
         fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
         where
-            B: Currency + DeserializeOwned,
-            Q: Currency + DeserializeOwned,
+            B: Currency,
+            Q: Currency,
         {
             Ok(self
                 .0

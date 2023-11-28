@@ -1,7 +1,5 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::de::DeserializeOwned;
-
 use currency::Currency;
 use finance::coin::Coin;
 use platform::{
@@ -67,7 +65,7 @@ where
 
 impl<'a, Lpn> LppLender<Lpn> for LppLenderStub<'a, Lpn>
 where
-    Lpn: Currency + DeserializeOwned,
+    Lpn: Currency,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch

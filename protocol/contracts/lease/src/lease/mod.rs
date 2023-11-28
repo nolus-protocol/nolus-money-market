@@ -29,7 +29,11 @@ pub(crate) mod with_lease_paid;
 // the others could be provided on demand when certain operation is being performed
 // then review the methods that take `&mut self` whether could be transformed into `&self`
 // and those that take `self` into `&mut self` or `&self`
-pub struct Lease<Lpn, Asset, Lpp, Oracle> {
+pub struct Lease<Lpn, Asset, Lpp, Oracle>
+where
+    Lpn: Currency,
+    Asset: Currency,
+{
     addr: Addr,
     customer: Addr,
     position: Position<Asset, Lpn>,
@@ -43,7 +47,11 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle> {
+impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
+where
+    Lpn: Currency,
+    Asset: Currency,
+{
     pub(crate) fn addr(&self) -> &Addr {
         &self.addr
     }

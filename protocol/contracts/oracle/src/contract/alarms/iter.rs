@@ -1,7 +1,5 @@
 use std::{iter, ops::Deref};
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
@@ -117,7 +115,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         Price::<C, BaseC>::try_from(self.price)
             .map(|price: Price<C, BaseC>| {

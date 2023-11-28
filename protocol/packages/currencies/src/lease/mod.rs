@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
@@ -13,9 +11,7 @@ pub(crate) mod astroport;
 #[cfg(feature = "osmosis")]
 pub(crate) mod osmosis;
 
-#[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub struct LeaseGroup {}
 
 impl Group for LeaseGroup {

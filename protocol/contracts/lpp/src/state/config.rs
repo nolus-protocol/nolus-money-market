@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
@@ -62,7 +62,7 @@ impl Config {
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
     where
-        Lpn: Currency + Serialize + DeserializeOwned,
+        Lpn: Currency,
     {
         Price::identity()
     }
