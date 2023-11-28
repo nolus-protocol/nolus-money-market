@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, PaymentC3, StableC1};
+use currencies::test::{LeaseC1, NativeC, StableC1};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -37,7 +37,7 @@ use crate::common::{
 };
 
 type Lpn = StableC1;
-type LeaseCurrency = PaymentC3;
+type LeaseCurrency = LeaseC1;
 
 fn general_interest_rate(
     loan: u32,

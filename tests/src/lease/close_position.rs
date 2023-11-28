@@ -1,12 +1,12 @@
-use ::lease::{
-    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
-    error::ContractError,
-};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     price,
     zero::Zero,
+};
+use lease::{
+    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
+    error::ContractError,
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -282,7 +282,7 @@ fn do_close(
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<swap::trx::test::RequestMsg> = crate::common::swap::expect_swap(
         &mut response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

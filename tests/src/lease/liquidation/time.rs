@@ -52,7 +52,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         return;
     };
 
-    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<swap::trx::test::RequestMsg> = crate::common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

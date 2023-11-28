@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, PaymentC3, PaymentC5, PaymentC6, StableC1};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC1};
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -57,9 +57,11 @@ impl Instantiator {
             },
             swap_tree: oracle::swap_tree!(
                 { base: StableC1::TICKER },
-                (1, PaymentC5::TICKER),
-                (3, PaymentC6::TICKER),
-                (13, PaymentC3::TICKER)
+                (1, LeaseC2::TICKER),
+                (3, LeaseC3::TICKER),
+                (7, LeaseC4::TICKER),
+                // (11, NativeC::TICKER), # FIX ME #216
+                (13, LeaseC1::TICKER),
             ),
         };
 

@@ -6,7 +6,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny,
 };
-use swap::trx::{ExactAmountIn, RequestMsg};
+use swap::trx::{test::RequestMsg, ExactAmountIn, TypeUrl};
 
 use super::{
     ibc,
@@ -26,12 +26,12 @@ pub(crate) fn expect_swap(
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(|message: ProtobufAny| {
-            if message.type_url == RequestMsg::TYPE_URL {
+            if message.type_url == <RequestMsg as TypeUrl>::TYPE_URL {
                 Message::decode(message.value.as_slice()).unwrap()
             } else {
                 panic!(
                     "Expected message with type URL equal to \"{expected}\"! Got \"{actual}\" instead!",
-                    expected = RequestMsg::TYPE_URL,
+                    expected = <RequestMsg as TypeUrl>::TYPE_URL,
                     actual = message.type_url
                 );
             }
