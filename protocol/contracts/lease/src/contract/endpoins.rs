@@ -5,7 +5,7 @@ use platform::{error as platform_error, response};
 
 #[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
-#[cfg(all(feature = "migration", dex = "osmosis"))]
+#[cfg(feature = "migration")]
 use sdk::cosmwasm_std::Storage;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -55,7 +55,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    #[cfg(all(feature = "migration", dex = "osmosis"))]
+    #[cfg(feature = "migration")]
     let resp =
         versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
             deps.storage,
@@ -65,7 +65,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         )
         .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp));
 
-    #[cfg(any(not(feature = "migration"), not(dex = "osmosis")))]
+    #[cfg(not(feature = "migration"))]
     let resp = {
         // Statically assert that the message is empty when doing a software-only update.
         let MigrateMsg {}: MigrateMsg = _msg;
@@ -131,7 +131,7 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg(all(feature = "migration", dex = "osmosis"))]
+#[cfg(feature = "migration")]
 fn may_migrate(storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
     use currencies::Lpns;
     use currency::SymbolStatic;

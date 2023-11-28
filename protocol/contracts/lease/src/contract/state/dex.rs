@@ -26,7 +26,7 @@ impl<H> State<H> {
     }
 }
 
-#[cfg(all(feature = "migration", dex = "osmosis"))]
+#[cfg(feature = "migration")]
 impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where
