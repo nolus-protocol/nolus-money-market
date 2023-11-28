@@ -38,6 +38,7 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 dex = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
