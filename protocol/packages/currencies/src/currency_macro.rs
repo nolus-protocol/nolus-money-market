@@ -23,7 +23,7 @@ macro_rules! define_currency {
             $crate::currency_macro::JsonSchema,
         )]
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
-        pub struct $ident {}
+        pub enum $ident {}
 
         impl $crate::currency_macro::Currency for $ident {
             const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);

@@ -470,7 +470,7 @@ mod test {
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
 
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
-        struct MyNiceCurrency {}
+        enum MyNiceCurrency {}
         impl Currency for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";
             const DEX_SYMBOL: SymbolStatic = "dex3rdf";

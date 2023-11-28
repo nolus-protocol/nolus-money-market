@@ -6,7 +6,7 @@ use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 mod osmosis_tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-pub struct PaymentGroup {}
+pub enum PaymentGroup {}
 
 impl Group for PaymentGroup {
     const DESCR: &'static str = "payment";

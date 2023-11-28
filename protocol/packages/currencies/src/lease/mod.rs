@@ -12,7 +12,7 @@ pub(crate) mod astroport;
 pub(crate) mod osmosis;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-pub struct LeaseGroup {}
+pub enum LeaseGroup {}
 
 impl Group for LeaseGroup {
     const DESCR: &'static str = "lease";

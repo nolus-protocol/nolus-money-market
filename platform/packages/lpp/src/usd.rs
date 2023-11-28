@@ -9,7 +9,7 @@ use sdk::schemars::{self, JsonSchema};
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Usd;
+pub enum Usd {}
 impl Currency for Usd {
     // should not be visible
     const TICKER: SymbolStatic = "USD";
@@ -20,7 +20,7 @@ impl Currency for Usd {
 pub type CoinUsd = Coin<Usd>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-pub struct UsdGroup;
+pub enum UsdGroup {}
 impl Group for UsdGroup {
     const DESCR: &'static str = "usd group";
 

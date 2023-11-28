@@ -12,7 +12,7 @@ pub(crate) mod astroport;
 pub(crate) mod osmosis;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-pub struct Lpns {}
+pub enum Lpns {}
 
 impl Group for Lpns {
     const DESCR: &'static str = "lpns";

@@ -2,7 +2,7 @@ use currency::{Currency, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
-pub struct NLpn;
+pub enum NLpn {}
 impl Currency for NLpn {
     // should not be visible
     const TICKER: SymbolStatic = "NLpn";
