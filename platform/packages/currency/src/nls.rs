@@ -9,6 +9,7 @@ use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSli
 /// - Relayers' tips
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, JsonSchema)]
 pub enum NlsPlatform {}
+
 impl Currency for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
     const BANK_SYMBOL: SymbolStatic = "unls";
@@ -19,6 +20,7 @@ impl Currency for NlsPlatform {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum Native {}
+
 impl Group for Native {
     const DESCR: &'static str = "native";
 

@@ -15,6 +15,7 @@ pub type Nls = impl_mod::Nls;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum Native {}
+
 impl Group for Native {
     const DESCR: &'static str = "native";
 

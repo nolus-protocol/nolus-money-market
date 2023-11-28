@@ -13,6 +13,7 @@ impl<C> Default for Expect<C> {
         Self(PhantomData)
     }
 }
+
 impl<C> AnyVisitor for Expect<C>
 where
     C: 'static,
@@ -27,6 +28,7 @@ where
         Ok(crate::equal::<C, Cin>())
     }
 }
+
 impl<C> SingleVisitor<C> for Expect<C> {
     type Output = bool;
     type Error = Error;
@@ -37,6 +39,7 @@ impl<C> SingleVisitor<C> for Expect<C> {
 }
 
 pub struct ExpectUnknownCurrency;
+
 impl AnyVisitor for ExpectUnknownCurrency {
     type Output = bool;
     type Error = Error;
@@ -72,6 +75,7 @@ where
         Self(PhantomData, PhantomData)
     }
 }
+
 impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
 where
     C1: Currency,

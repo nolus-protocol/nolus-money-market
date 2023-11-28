@@ -10,6 +10,7 @@ use sdk::schemars::{self, JsonSchema};
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 pub enum Usd {}
+
 impl Currency for Usd {
     // should not be visible
     const TICKER: SymbolStatic = "USD";
@@ -21,6 +22,7 @@ pub type CoinUsd = Coin<Usd>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum UsdGroup {}
+
 impl Group for UsdGroup {
     const DESCR: &'static str = "usd group";
 

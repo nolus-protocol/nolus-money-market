@@ -8,6 +8,7 @@ pub type SubGroupTestC1 = impl_::TestC3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum SuperGroup {}
+
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
 
@@ -24,6 +25,7 @@ impl Group for SuperGroup {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum SubGroup {}
+
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
 
@@ -45,6 +47,7 @@ mod impl_ {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub enum TestC1 {}
+
     impl Currency for TestC1 {
         const TICKER: SymbolStatic = "ticker#1";
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
@@ -53,6 +56,7 @@ mod impl_ {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub enum TestC2 {}
+
     impl Currency for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
@@ -61,6 +65,7 @@ mod impl_ {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     pub enum TestC3 {}
+
     impl Currency for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";

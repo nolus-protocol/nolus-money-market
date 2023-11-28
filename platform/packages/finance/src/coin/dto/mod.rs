@@ -255,6 +255,7 @@ mod test {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
     enum MyTestCurrency {}
+
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
         const BANK_SYMBOL: SymbolStatic = "ibc/1";
@@ -263,6 +264,7 @@ mod test {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
     enum MyTestGroup {}
+
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 

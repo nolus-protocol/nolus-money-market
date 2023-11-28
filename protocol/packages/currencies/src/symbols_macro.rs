@@ -18,7 +18,7 @@ macro_rules! define_symbol {
                 { CurrencySymbols { $($body)* } }
             )+
             #[cfg(all($($(not(net = $net)),+),+))]
-            { compile_error!(concat!("No symbols defined for network with name \"", env!("NET"), "\"!")) }
+            compile_error!(concat!("No symbols defined for network with name \"", env!("NET"), "\"!"))
         };
     };
 }

@@ -16,6 +16,7 @@ pub trait AnyVisitor {
     where
         C: Currency;
 }
+
 pub trait AnyVisitorPair {
     type Output;
     type Error;
@@ -45,6 +46,7 @@ pub trait GroupVisit: Matcher {
         G::maybe_visit(self, ticker, visitor)
     }
 }
+
 impl<M> GroupVisit for M where M: Matcher {}
 
 pub fn visit_any_on_tickers<G1, G2, V>(
@@ -77,6 +79,7 @@ mod impl_any_tickers {
         group2: PhantomData<G2>,
         visitor: V,
     }
+
     impl<'a, G2, V> FirstTickerVisitor<'a, G2, V>
     where
         G2: Group,
@@ -90,14 +93,15 @@ mod impl_any_tickers {
             }
         }
     }
+
     impl<'a, G2, V> AnyVisitor for FirstTickerVisitor<'a, G2, V>
     where
         G2: Group,
         V: AnyVisitorPair,
         Error: Into<V::Error>,
     {
-        type Output = <V as AnyVisitorPair>::Output;
-        type Error = <V as AnyVisitorPair>::Error;
+        type Output = V::Output;
+        type Error = V::Error;
 
         fn on<C1>(self) -> AnyVisitorResult<Self>
         where
@@ -121,13 +125,14 @@ mod impl_any_tickers {
         currency1: PhantomData<C1>,
         visitor: V,
     }
+
     impl<C1, V> AnyVisitor for SecondTickerVisitor<C1, V>
     where
         C1: Currency,
         V: AnyVisitorPair,
     {
-        type Output = <V as AnyVisitorPair>::Output;
-        type Error = <V as AnyVisitorPair>::Error;
+        type Output = V::Output;
+        type Error = V::Error;
 
         fn on<C2>(self) -> AnyVisitorResult<Self>
         where

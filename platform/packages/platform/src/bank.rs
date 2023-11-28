@@ -471,11 +471,13 @@ mod test {
 
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
         enum MyNiceCurrency {}
+
         impl Currency for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";
             const DEX_SYMBOL: SymbolStatic = "dex3rdf";
             const TICKER: SymbolStatic = "ticedc";
         }
+
         let in_coin_2 = coin_legacy::to_cosmwasm(Coin::<MyNiceCurrency>::new(AMOUNT));
 
         assert_eq!(
