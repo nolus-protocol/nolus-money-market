@@ -3,8 +3,10 @@ use finance::coin::{Amount, CoinDTO};
 use platform::{ica::HostAccount, trx::Transaction};
 use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
 
-#[cfg(feature = "testing")]
-pub use self::test::*;
+#[cfg(feature = "astroport")]
+use self::astroport as impl_mod;
+#[cfg(feature = "osmosis")]
+use self::osmosis as impl_mod;
 
 use crate::{error::Result, SwapPath};
 
@@ -13,12 +15,12 @@ pub mod test;
 
 #[cfg(feature = "astroport")]
 mod astroport;
-#[cfg(feature = "astroport")]
-use self::astroport as impl_mod;
 #[cfg(feature = "osmosis")]
 mod osmosis;
-#[cfg(feature = "osmosis")]
-use self::osmosis as impl_mod;
+
+pub trait TypeUrl {
+    const TYPE_URL: &'static str;
+}
 
 pub fn exact_amount_in() -> impl ExactAmountIn {
     impl_mod::Impl

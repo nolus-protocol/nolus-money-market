@@ -16,11 +16,19 @@ use crate::{
     SwapGroup, SwapPath, SwapTarget,
 };
 
-use super::ExactAmountIn;
+use super::{ExactAmountIn, TypeUrl};
 
-pub(super) type RequestMsg = MsgSwapExactAmountIn;
+pub type RequestMsg = MsgSwapExactAmountIn;
 
-pub(super) type ResponseMsg = MsgSwapExactAmountInResponse;
+impl TypeUrl for RequestMsg {
+    const TYPE_URL: &'static str = Self::TYPE_URL;
+}
+
+pub type ResponseMsg = MsgSwapExactAmountInResponse;
+
+impl TypeUrl for ResponseMsg {
+    const TYPE_URL: &'static str = Self::TYPE_URL;
+}
 
 pub(super) struct Impl;
 
