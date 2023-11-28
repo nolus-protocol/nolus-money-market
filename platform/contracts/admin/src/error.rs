@@ -1,7 +1,7 @@
 use thiserror::Error as ThisError;
 
 use platform::contract::CodeId;
-use sdk::cosmwasm_std::StdError;
+use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -17,11 +17,9 @@ pub enum Error {
     NoMigrationResponseData {},
     #[error("Contract returned wrong release string! \"{reported}\" was returned, but \"{expected}\" was expected!")]
     WrongRelease { reported: String, expected: String },
-    #[error(
-        "Contract might have been instantiated properly but contract address couldn't be found!"
-    )]
-    FindContractAddress {},
-    #[error("Contract address exists but code id is different! \"{reported}\" was returned, but \"{expected}\" was expected!")]
+    #[error("Contract returned wrong address! Expected \"{expected}\", but got \"{reported}\"!")]
+    DifferentInstantiatedAddress { reported: Addr, expected: Addr },
+    #[error("Contract returned wrong code id! Expected \"{expected}\", but got \"{reported}\"!")]
     DifferentInstantiatedCodeId { reported: CodeId, expected: CodeId },
     #[error("Protocol not mentioned under either migration messages, or post-migration execution messages! Protocol's friendly name: {0}")]
     MissingProtocol(String),

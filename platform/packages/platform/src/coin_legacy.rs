@@ -9,7 +9,7 @@ use currency::{
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-use crate::error::{Error, Result};
+use crate::{error::Error, result::Result};
 
 pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where

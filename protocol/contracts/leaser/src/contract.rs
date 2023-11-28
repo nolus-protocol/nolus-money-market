@@ -179,8 +179,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
-    reply::from_instantiate::<()>(deps.api, msg)
-        .map(|r| r.address)
+    reply::from_instantiate_addr_only(deps.api, msg)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
         })

@@ -11,6 +11,7 @@ pub mod message;
 pub mod never;
 pub mod reply;
 pub mod response;
+pub mod result;
 pub mod state_machine;
 #[cfg(feature = "testing")]
 pub mod tests;

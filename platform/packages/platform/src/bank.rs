@@ -9,7 +9,8 @@ use crate::{
     coin_legacy::{
         from_cosmwasm_any, from_cosmwasm_impl, maybe_from_cosmwasm_any, to_cosmwasm_impl,
     },
-    error::{Error, Result},
+    error::Error,
+    result::Result,
 };
 
 pub type BalancesResult<Cmd> = StdResult<Option<WithCoinResult<Cmd>>, Error>;

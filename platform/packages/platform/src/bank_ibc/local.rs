@@ -8,12 +8,7 @@ use sdk::{
     },
 };
 
-use crate::{
-    batch::Batch,
-    coin_legacy::{self},
-    error::Result,
-    ica::HostAccount,
-};
+use crate::{batch::Batch, coin_legacy, ica::HostAccount, result::Result};
 
 pub struct Sender<'c> {
     channel: &'c str,

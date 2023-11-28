@@ -6,12 +6,7 @@ use currency::Currency;
 use finance::{coin::Coin, duration::Duration};
 use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
 
-use crate::{
-    batch::Batch,
-    coin_legacy,
-    error::{Error, Result},
-    trx::Transaction,
-};
+use crate::{batch::Batch, coin_legacy, error::Error, result::Result, trx::Transaction};
 
 #[cfg(not(feature = "testing"))]
 use self::impl_::OpenAckVersion;
