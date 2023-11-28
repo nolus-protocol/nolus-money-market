@@ -32,8 +32,10 @@ where
     C: Currency,
     QuoteC: Currency,
 {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            observations: Vec::new(),
+        }
     }
 
     pub fn add_observation(
