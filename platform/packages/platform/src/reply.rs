@@ -9,7 +9,7 @@ use sdk::{
     cosmos_sdk_proto::cosmwasm::wasm::v1::{
         MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
     },
-    cosmwasm_std::{from_json, Addr, Api, Binary, Reply},
+    cosmwasm_std::{from_json, Addr, Api, Reply},
 };
 
 use crate::{error::Error, result::Result};
@@ -40,8 +40,7 @@ where
     T: DeserializeOwned,
 {
     decode::<MsgExecuteContractResponse>(reply)
-        .map(|data| data.data)
-        .and_then(|data| from_json(Binary(data)).map_err(From::from))
+        .and_then(|data| from_json(data.data).map_err(Into::into))
 }
 
 trait InstantiationResponse
