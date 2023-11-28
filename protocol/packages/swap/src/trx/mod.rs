@@ -5,13 +5,12 @@ use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
 
 #[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
+#[cfg(feature = "testing")]
+pub use self::impl_mod::{RequestMsg, ResponseMsg};
 #[cfg(feature = "osmosis")]
 use self::osmosis as impl_mod;
 
 use crate::{error::Result, SwapPath};
-
-#[cfg(feature = "testing")]
-pub mod test;
 
 #[cfg(feature = "astroport")]
 mod astroport;

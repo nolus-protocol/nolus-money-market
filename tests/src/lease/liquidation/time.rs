@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use ::lease::api::{ExecuteMsg, StateResponse};
-
 use finance::{coin::Amount, duration::Duration, price};
+use lease::api::{ExecuteMsg, StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
@@ -52,7 +51,7 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
         return;
     };
 
-    let requests: Vec<swap::trx::test::RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

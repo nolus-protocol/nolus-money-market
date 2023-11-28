@@ -282,7 +282,7 @@ fn do_close(
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<swap::trx::test::RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
         &mut response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

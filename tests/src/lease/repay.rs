@@ -1,7 +1,7 @@
 use std::slice;
 
 use ::lease::api::{ExecuteMsg, StateResponse};
-use ::swap::trx::test::RequestMsg as SwapRequestMsg;
+use ::swap::trx::RequestMsg as SwapRequestMsg;
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
