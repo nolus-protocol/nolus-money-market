@@ -1,6 +1,6 @@
-use lease::api::{ExecuteMsg, StateResponse};
 use currency::Currency;
 use finance::{coin::Amount, percent::Percent};
+use lease::api::{ExecuteMsg, StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},
@@ -68,7 +68,8 @@ fn liquidation_warning_price_3() {
 
 #[test]
 fn full_liquidation() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = lease_mod::create_test_case::<PaymentCurrency>();
+    let mut test_case: TestCase<_, _, _, _, _, _, _> =
+        lease_mod::create_test_case::<PaymentCurrency>();
 
     let lease_addr: Addr = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
