@@ -11,8 +11,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["migration"]
-cosmwasm-bindings = []
+cosmwasm-bindings = ["migration"]
 migration = []
 
 [dependencies]
