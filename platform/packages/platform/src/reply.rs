@@ -84,14 +84,14 @@ where
             address,
             data: response.into_data(),
         })
-        .map_err(From::from)
+        .map_err(Into::into)
 }
 
 fn decode_raw<M>(message: &[u8]) -> Result<M>
 where
     M: Message + Default,
 {
-    M::decode(message).map_err(From::from)
+    M::decode(message).map_err(Into::into)
 }
 
 fn decode<M>(reply: Reply) -> Result<M>
@@ -104,6 +104,6 @@ where
         .map_err(Error::ReplyResultError)?
         .data
         .ok_or(Error::EmptyReply())
-        .map_err(From::from)
+        .map_err(Into::into)
         .and_then(|ref data| decode_raw(data))
 }
