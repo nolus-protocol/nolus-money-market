@@ -46,13 +46,15 @@ trait RouterAddress {
 #[cfg(any(net = "dev", net = "test"))]
 impl RouterAddress for Impl {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-    const ROUTER_ADDR: &'static str = "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+    const ROUTER_ADDR: &'static str =
+        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
 }
 
 #[cfg(net = "main")]
 impl RouterAddress for Impl {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
-    const ROUTER_ADDR: &'static str = "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
+    const ROUTER_ADDR: &'static str =
+        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
 }
 
 impl ExactAmountIn for Impl {
