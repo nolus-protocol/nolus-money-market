@@ -5,7 +5,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{error::ContractError, msg::Dex, result::ContractResult};
+use crate::{error::ContractError, msg::Protocol, result::ContractResult};
 
 use super::reward_scale::RewardScale;
 
@@ -15,8 +15,8 @@ pub type CadenceHours = u16;
 pub(crate) struct Config {
     // Time duration in hours defining the periods of time this instance is awaken
     pub cadence_hours: CadenceHours,
-    // All DEX-es the protocol works with
-    pub dexes: Vec<Dex>,
+    // All protocols deployed on the platform
+    pub protocols: Vec<Protocol>,
     // address to treasury contract
     pub treasury: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
@@ -28,13 +28,13 @@ impl Config {
 
     pub fn new(
         cadence_hours: CadenceHours,
-        dex: Dex,
+        protocol: Protocol,
         treasury: Addr,
         tvl_to_apr: RewardScale,
     ) -> Self {
         Config {
             cadence_hours,
-            dexes: vec![dex],
+            protocols: vec![protocol],
             tvl_to_apr,
             treasury,
         }
@@ -78,10 +78,10 @@ impl Config {
             .map_err(Into::into)
     }
 
-    pub fn add_dex(storage: &mut dyn Storage, dex: Dex) -> ContractResult<()> {
+    pub fn add_protocol(storage: &mut dyn Storage, protocol: Protocol) -> ContractResult<()> {
         Self::STORAGE
             .update(storage, |mut config| -> Result<Config, ContractError> {
-                config.dexes.push(dex);
+                config.protocols.push(protocol);
                 Ok(config)
             })
             .map(|_| ())
@@ -99,7 +99,7 @@ pub(crate) mod migration {
     };
 
     use crate::{
-        msg::Dex,
+        msg::Protocol,
         result::ContractResult,
         state::{reward_scale::RewardScale, CadenceHours, Config},
     };
@@ -128,7 +128,7 @@ pub(crate) mod migration {
         fn from(value: OldConfig) -> Self {
             Config::new(
                 value.cadence_hours,
-                Dex {
+                Protocol {
                     lpp: value.lpp,
                     oracle: value.oracle,
                 },

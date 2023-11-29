@@ -39,8 +39,8 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    platform::contract::validate_addr(deps.querier, &msg.dex.lpp)?;
-    platform::contract::validate_addr(deps.querier, &msg.dex.oracle)?;
+    platform::contract::validate_addr(deps.querier, &msg.protocol.lpp)?;
+    platform::contract::validate_addr(deps.querier, &msg.protocol.oracle)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(deps.querier, &msg.treasury)?;
 
@@ -50,7 +50,13 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    Config::new(msg.cadence_hours, msg.dex, msg.treasury, msg.tvl_to_apr).store(deps.storage)?;
+    Config::new(
+        msg.cadence_hours,
+        msg.protocol,
+        msg.treasury,
+        msg.tvl_to_apr,
+    )
+    .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     setup_alarm(
@@ -121,8 +127,8 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::Rewards { tvl_to_apr } => {
             Config::update_tvl_to_apr(deps.storage, tvl_to_apr).map(|()| response::empty_response())
         }
-        SudoMsg::AddDex(dex) => {
-            Config::add_dex(deps.storage, dex).map(|()| response::empty_response())
+        SudoMsg::AddProtocol(protocol) => {
+            Config::add_protocol(deps.storage, protocol).map(|()| response::empty_response())
         }
     }
 }
@@ -150,9 +156,9 @@ fn query_reward(
     let config: Config = Config::load(storage)?;
 
     let lpps = config
-        .dexes
+        .protocols
         .iter()
-        .map(|dex| lpp_platform::new_stub(&dex.lpp, querier, env));
+        .map(|protocol| lpp_platform::new_stub(&protocol.lpp, querier, env));
 
     RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
 }
@@ -172,12 +178,12 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let lpps = config
-        .dexes
+        .protocols
         .iter()
-        .map(|dex| lpp_platform::new_stub(&dex.lpp, deps.querier, env));
-    let oracles = config.dexes.iter().map(|dex| {
+        .map(|protocol| lpp_platform::new_stub(&protocol.lpp, deps.querier, env));
+    let oracles = config.protocols.iter().map(|protocol| {
         oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
-            dex.oracle.clone(),
+            protocol.oracle.clone(),
             deps.querier,
         )
     });
@@ -218,7 +224,7 @@ mod tests {
 
     use crate::{
         contract::sudo,
-        msg::{ConfigResponse, Dex, InstantiateMsg, QueryMsg, SudoMsg},
+        msg::{ConfigResponse, InstantiateMsg, Protocol, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
     };
 
@@ -232,7 +238,7 @@ mod tests {
     fn do_instantiate(deps: DepsMut<'_>) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            dex: Dex {
+            protocol: Protocol {
                 lpp: Addr::unchecked(LPP_ADDR),
                 oracle: Addr::unchecked(ORACLE_ADDR),
             },
