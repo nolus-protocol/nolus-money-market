@@ -1,6 +1,6 @@
 use finance::percent::Percent;
 use rewards_dispatcher::{
-    msg::{Dex, InstantiateMsg},
+    msg::{InstantiateMsg, Protocol},
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
 use sdk::cosmwasm_std::Addr;
@@ -30,7 +30,7 @@ impl Instantiator {
 
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            dex: Dex { lpp, oracle },
+            protocol: Protocol { lpp, oracle },
             timealarms,
             treasury,
             tvl_to_apr: RewardScale::try_from(vec![
