@@ -12,8 +12,6 @@ pub use testing_currencies::*;
 // 2. Currencies that come from Axelar are documented at https://docs.axelar.dev/resources
 // 3. IBC routes from https://github.com/Nolus-Protocol/Wiki/blob/main/testnet-rila/currencies.json
 
-// ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9 (ATOM)
-// ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C (stATOM)
 define_symbol! {
     ATOM {
         ["dev"]: {
@@ -29,10 +27,10 @@ define_symbol! {
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/transfer/channel-?/uatom
-            bank: "ibc/NA_ATOM",
-            /// full ibc route: transfer/channel-?/uatom
-            dex: "ibc/NA_ATOM_DEX",
+            /// full ibc route: transfer/channel-3839/transfer/channel-1/uatom
+            bank: "ibc/74329D0B6EAA37AD07FF44EC40D998357D1478C504AB5A9C91C3F42F1078A226",
+            /// full ibc route: transfer/channel-1/uatom
+            dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
     }
 }
@@ -47,10 +45,10 @@ define_symbol! {
             dex: "ibc/NA_ST_ATOM_DEX",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/transfer/channel-?/stuatom
-            bank: "ibc/NA_ST_ATOM",
-            /// full ibc route: transfer/channel-?/stuatom
-            dex: "ibc/NA_ST_ATOM_DEX",
+            /// full ibc route: transfer/channel-3839/transfer/channel-8/stuatom
+            bank: "ibc/FFE21A5F04A89CD5E61A616EEE11A646D5DCF0A8DB60523F79C5ED28DA2642FA",
+            /// full ibc route: transfer/channel-8/stuatom
+            dex: "ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C",
         },
     }
 }
@@ -69,9 +67,9 @@ define_symbol! {
             dex: "untrn",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/untrn
-            bank: "ibc/NA_NTRN",
-            dex: "ibc/NO_NRTN_DEX",
+            /// full ibc route: transfer/channel-3839/untrn
+            bank: "ibc/3D6BC6E049CAEB905AC97031A42800588C58FB471EBDC7A3530FFCD0C3DC9E09",
+            dex: "untrn",
         },
     }
 }
