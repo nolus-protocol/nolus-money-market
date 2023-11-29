@@ -23,9 +23,6 @@ outputs:
   exclude_features:
     description: "Features to be turned off during compilation with mixed features."
     value: "${{ steps.env.outputs.exclude_features }}"
-  rustflags:
-    description: "Value to be passed on as an environment variable to jobs interacting with the Rust build system."
-    value: "${{ steps.env.outputs.rustflags }}"
 
 runs:
   using: composite
@@ -40,9 +37,15 @@ runs:
           FEATURES=''
         fi
 
+        exclude_features=''
+
         if ! test '${{ inputs.target_net }}' = ''
         then
-          RUSTFLAGS="--cfg net=\"${{ inputs.target_net }}\" ${RUSTFLAGS}"
+          FEATURES="${{ inputs.target_net }},${FEATURES}"
+
+          networks='dev,test,main'
+
+          exclude_features="${exclude_features},${networks//${target_net}/}"
 
           echo 'dash_net_name=-${{ inputs.target_net }}' >> "${GITHUB_ENV}"
         fi
@@ -53,9 +56,9 @@ runs:
 
           FEATURES="${{ inputs.target_protocol }},${FEATURES}"
 
-          EXCLUDE_FEATURES='${{ inputs.protocols_list }}'
+          protocols='${{ inputs.protocols_list }}'
 
-          EXCLUDE_FEATURES="${EXCLUDE_FEATURES//${target_protocol}/}"
+          exclude_features="${exclude_features},${protocols//${target_protocol}/}"
 
           echo 'dash_protocol_name=-${{ inputs.target_protocol }}' >> "${GITHUB_ENV}"
         fi
@@ -64,8 +67,4 @@ runs:
 
         echo "features=${FEATURES}" >> "${GITHUB_OUTPUT}"
 
-        echo "exclude_features=${EXCLUDE_FEATURES}" >> "${GITHUB_OUTPUT}"
-
-        echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
-
-        echo "rustflags=${RUSTFLAGS}" >> "${GITHUB_OUTPUT}"
+        echo "exclude_features=${exclude_features}" >> "${GITHUB_OUTPUT}"
