@@ -27,17 +27,9 @@ pub struct InstantiateMsg {
     pub min_utilization: BoundToHundredPercent,
 }
 
-#[cfg(not(feature = "migration"))]
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {}
-
-#[cfg(feature = "migration")]
-#[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub min_utilization: BoundToHundredPercent,
-}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]

@@ -12,7 +12,6 @@ crate-type = ["cdylib", "rlib"]
 cosmwasm-bindings = []
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
-migration = ["lease/migration"]
 testing = ["currency/testing", "lease/testing"]
 
 [dependencies]

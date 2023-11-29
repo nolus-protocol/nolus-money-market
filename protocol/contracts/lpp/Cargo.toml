@@ -14,7 +14,6 @@ contract = ["stub"]
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
 stub = []
-migration = []
 testing = ["currency/testing"]
 
 [dependencies]

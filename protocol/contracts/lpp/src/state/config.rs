@@ -21,7 +21,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    #[cfg(any(feature = "migration", test))]
+    #[cfg(test)]
     pub const fn new(
         lpn_ticker: String,
         lease_code_id: Uint64,

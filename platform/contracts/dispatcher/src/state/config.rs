@@ -89,7 +89,6 @@ impl Config {
     }
 }
 
-#[cfg(feature = "migration")]
 pub(crate) mod migration {
     use serde::{Deserialize, Serialize, Serializer};
 

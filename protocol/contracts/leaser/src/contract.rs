@@ -25,8 +25,6 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-#[cfg(feature = "migration")]
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -56,26 +54,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    #[cfg(feature = "migration")]
-    let resp =
-        versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-            deps.storage,
-            CONTRACT_VERSION,
-            |_| Ok(()),
-            Into::into,
-        )
-        .map(|(release_label, ())| release_label);
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    // Statically assert that the message is empty when doing a software-only update.
+    let MigrateMsg {}: MigrateMsg = msg;
 
-    #[cfg(not(feature = "migration"))]
-    let resp = {
-        // Statically assert that the message is empty when doing a software-only update.
-        let MigrateMsg {}: MigrateMsg = _msg;
-
-        versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-    };
-
-    resp.and_then(response::response)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
         .or_else(|err| platform_error::log(err, deps.api))
 }
 

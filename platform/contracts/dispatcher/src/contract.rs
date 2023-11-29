@@ -23,8 +23,6 @@ use crate::{
     state::{Config, DispatchLog},
 };
 
-// version info for migration info
-#[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
@@ -70,30 +68,14 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    {
-        #[cfg(feature = "migration")]
-        {
-            use crate::state::migration;
-            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-                deps.storage,
-                CONTRACT_VERSION,
-                |storage: &mut dyn Storage| migration::migrate(storage),
-                Into::into,
-            )
-            .map(|(label, ())| label)
-        }
-        #[cfg(not(feature = "migration"))]
-        {
-            // Statically assert that the message is empty when doing a software-only update.
-            let MigrateMsg {}: MigrateMsg = _msg;
-
-            versioning::update_software(
-                deps.storage,
-                version!(CONTRACT_STORAGE_VERSION),
-                Into::into,
-            )
-        }
-    }
+    use crate::state::migration;
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage: &mut dyn Storage| migration::migrate(storage),
+        Into::into,
+    )
+    .map(|(label, ())| label)
     .and_then(response::response)
 }
 

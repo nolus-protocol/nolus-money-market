@@ -23,12 +23,8 @@ use crate::{
 
 mod borrow;
 mod lender;
-mod migrate;
 mod rewards;
 
-// version info for migration info
-#[cfg(feature = "migration")]
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -90,28 +86,11 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwResponse> {
-    {
-        #[cfg(feature = "migration")]
-        {
-            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-                deps.storage,
-                CONTRACT_VERSION,
-                |storage: &mut dyn sdk::cosmwasm_std::Storage| {
-                    self::migrate::migrate(storage, msg.min_utilization)
-                },
-                Into::into,
-            )
-            .map(|(label, ())| label)
-        }
-        #[cfg(not(feature = "migration"))]
-        {
-            // Statically assert that the message is empty when doing a software-only update.
-            let MigrateMsg {}: MigrateMsg = msg;
+    // Statically assert that the message is empty when doing a software-only update.
+    let MigrateMsg {}: MigrateMsg = msg;
 
-            versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        }
-    }
-    .and_then(response::response)
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
 }
 
 struct ExecuteWithLpn<'a> {
