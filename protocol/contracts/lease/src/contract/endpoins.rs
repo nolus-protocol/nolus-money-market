@@ -1,15 +1,11 @@
 use currencies::LeaseGroup;
-#[cfg(feature = "migration")]
-use platform::message::Response as MessageResponse;
-use platform::{error as platform_error, response};
+use platform::{error as platform_error, message::Response as MessageResponse, response};
 
 #[cfg(feature = "cosmwasm-bindings")]
 use sdk::cosmwasm_std::entry_point;
-#[cfg(feature = "migration")]
-use sdk::cosmwasm_std::Storage;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -22,7 +18,6 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-#[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 6;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
 const PACKAGE_VERSION: SemVer = package_version!();
@@ -55,25 +50,14 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    #[cfg(feature = "migration")]
-    let resp =
-        versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-            deps.storage,
-            CONTRACT_VERSION,
-            |storage: &mut _| may_migrate(storage, &_env),
-            Into::into,
-        )
-        .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp));
-
-    #[cfg(not(feature = "migration"))]
-    let resp = {
-        // Statically assert that the message is empty when doing a software-only update.
-        let MigrateMsg {}: MigrateMsg = _msg;
-
-        versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-            .and_then(response::response)
-    };
-    resp.or_else(|err| platform_error::log(err, deps.api))
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage: &mut _| may_migrate(storage, &_env),
+        Into::into,
+    )
+    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -131,7 +115,6 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg(feature = "migration")]
 fn may_migrate(storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
     use currencies::Lpns;
     use currency::SymbolStatic;

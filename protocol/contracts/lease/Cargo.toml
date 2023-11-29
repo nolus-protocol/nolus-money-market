@@ -9,12 +9,11 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = ["migration"]
+cosmwasm-bindings = ["dex/migration"]
 api = ["dep:dex"]
 skel = ["api"]
 astroport = ["skel", "dex/astroport"]
 osmosis = ["skel", "dex/osmosis"]
-migration = ["timealarms/testing", "dex/migration", "lpp/migration"]
 testing = ["currencies/testing", "currency/testing", "finance/testing"]
 
 [dependencies]

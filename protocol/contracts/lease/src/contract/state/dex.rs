@@ -26,7 +26,6 @@ impl<H> State<H> {
     }
 }
 
-#[cfg(feature = "migration")]
 impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where

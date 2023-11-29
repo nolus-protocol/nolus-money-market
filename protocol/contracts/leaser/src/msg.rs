@@ -29,12 +29,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    #[cfg(feature = "migration")]
-    pub min_asset: LpnCoin,
-    #[cfg(feature = "migration")]
-    pub min_sell_asset: LpnCoin,
-}
+pub struct MigrateMsg {}
 
 pub type MaxLeases = u32;
 
