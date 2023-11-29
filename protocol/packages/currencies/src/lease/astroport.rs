@@ -29,10 +29,10 @@ define_symbol! {
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-3839/transfer/channel-?/uatom
-            bank: "ibc/NA_ATOM",
-            /// full ibc route: transfer/channel-?/uatom
-            dex: "ibc/NA_ATOM_DEX",
+            /// full ibc route: transfer/channel-3839/transfer/channel-1/uatom
+            bank: "ibc/74329D0B6EAA37AD07FF44EC40D998357D1478C504AB5A9C91C3F42F1078A226",
+            /// full ibc route: transfer/channel-1/uatom
+            dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
     }
 }
@@ -47,10 +47,10 @@ define_symbol! {
             dex: "ibc/NA_ST_ATOM_DEX",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-3839/transfer/channel-?/stuatom
-            bank: "ibc/NA_ST_ATOM",
-            /// full ibc route: transfer/channel-?/stuatom
-            dex: "ibc/NA_ST_ATOM_DEX",
+            /// full ibc route: transfer/channel-3839/transfer/channel-8/stuatom
+            bank: "ibc/FFE21A5F04A89CD5E61A616EEE11A646D5DCF0A8DB60523F79C5ED28DA2642FA",
+            /// full ibc route: transfer/channel-8/stuatom
+            dex: "ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C",
         },
     }
 }
