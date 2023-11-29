@@ -29,7 +29,7 @@ define_symbol! {
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/transfer/channel-?/uatom
+            /// full ibc route: transfer/channel-3839/transfer/channel-?/uatom
             bank: "ibc/NA_ATOM",
             /// full ibc route: transfer/channel-?/uatom
             dex: "ibc/NA_ATOM_DEX",
@@ -47,7 +47,7 @@ define_symbol! {
             dex: "ibc/NA_ST_ATOM_DEX",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/transfer/channel-?/stuatom
+            /// full ibc route: transfer/channel-3839/transfer/channel-?/stuatom
             bank: "ibc/NA_ST_ATOM",
             /// full ibc route: transfer/channel-?/stuatom
             dex: "ibc/NA_ST_ATOM_DEX",
@@ -69,9 +69,9 @@ define_symbol! {
             dex: "untrn",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/untrn
-            bank: "ibc/NA_NTRN",
-            dex: "ibc/NO_NRTN_DEX",
+            /// full ibc route: transfer/channel-3839/untrn
+            bank: "ibc/3D6BC6E049CAEB905AC97031A42800588C58FB471EBDC7A3530FFCD0C3DC9E09",
+            dex: "untrn",
         },
     }
 }

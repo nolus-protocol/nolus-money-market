@@ -19,7 +19,7 @@ define_symbol! {
             dex: "ibc/F91EA2C0A23697A1048E08C2F787E3A58AC6F706A1CD2257A504925158CFC0F3",
         },
         ["main"]: {
-            /// full ibc route: transfer/channel-?/transfer/channel-?/uusdc
+            /// full ibc route: transfer/channel-3839/transfer/channel-?/uusdc
             bank: "ibc/NA_USDC_AXELAR",
             /// full ibc route: transfer/channel-?/uusdc
             dex: "ibc/NA_USDC_AXELAR_DEX",
