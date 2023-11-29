@@ -11,8 +11,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = ["migration"]
-migration = []
+cosmwasm-bindings = []
 
 [dependencies]
 lpp-platform = { workspace = true }
