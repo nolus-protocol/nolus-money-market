@@ -37,19 +37,23 @@ impl TypeUrl for ResponseMsg {
     const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::TypeUrl>::TYPE_URL;
 }
 
-// The router on the main network
-// source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
-// const ROUTER_ADDR: &str = "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
-
-// The router on the "pion-1" network
-// source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-// const ROUTER_ADDR: &str = "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
-
-// A router deployed from https://github.com/astroport-fi/astroport-core/pull/386
-// source: https://web.telegram.org/a/#-915059869
-const ROUTER_ADDR: &str = "neutron1xjmp7lxx4xrz3r9tz0xk00vrtuavz7mgrh3378nntd86xafuwe8q8jz2rp";
-
 pub(super) struct Impl;
+
+trait RouterAddress {
+    const ROUTER_ADDR: &str;
+}
+
+#[cfg(any(net = "dev", net = "test"))]
+impl RouterAddress for Impl {
+    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+    const ROUTER_ADDR: &str = "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+}
+
+#[cfg(net = "main")]
+impl RouterAddress for Impl {
+    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
+    const ROUTER_ADDR: &str = "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
+}
 
 impl ExactAmountIn for Impl {
     fn build<G>(
@@ -77,7 +81,7 @@ impl ExactAmountIn for Impl {
             .and_then(|swap_msg| cosmwasm_std::to_json_vec(&swap_msg).map_err(Into::into))
             .map(|msg| RequestMsg {
                 sender: sender.into(),
-                contract: ROUTER_ADDR.into(),
+                contract: Self::ROUTER_ADDR.into(),
                 msg,
                 funds: vec![token_in],
             })
