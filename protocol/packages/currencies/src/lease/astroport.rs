@@ -12,8 +12,6 @@ pub use testing_currencies::*;
 // 2. Currencies that come from Axelar are documented at https://docs.axelar.dev/resources
 // 3. IBC routes from https://github.com/Nolus-Protocol/Wiki/blob/main/testnet-rila/currencies.json
 
-// ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9 (ATOM)
-// ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C (stATOM)
 define_symbol! {
     ATOM {
         ["dev"]: {
