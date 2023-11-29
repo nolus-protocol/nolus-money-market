@@ -27,7 +27,7 @@ fn active_state() {
     let unutilized_amount: LpnCoin = 100.into();
 
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
-    heal_done(&mut test_case, lease.clone());
+    heal_ok(&mut test_case, lease.clone());
     assert!(
         platform::bank::balance::<LpnCurrency>(&lease, test_case.app.query())
             .unwrap()
@@ -38,15 +38,6 @@ fn active_state() {
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, unutilized_amount);
     assert_eq!(query_result, expected_result);
-}
-
-pub(super) fn try_heal<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
-    lease: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    test_case
-        .app
-        .execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
 }
 
 pub(super) fn heal_no_inconsistency<
@@ -78,7 +69,16 @@ pub(super) fn heal_unsupported<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle
     );
 }
 
-pub(super) fn heal_done<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+fn try_heal<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    lease: Addr,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    test_case
+        .app
+        .execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
+}
+
+fn heal_ok<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     lease: Addr,
 ) {
