@@ -6,9 +6,14 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-api = ["dep:finance", "dep:platform", "thiserror"]
+net_dev = ["currencies/net_dev"]
+net_test = ["currencies/net_test"]
+net_main = ["currencies/net_main"]
+
 astroport = ["api", "currencies/astroport", "sdk/cosmos_ibc", "dep:astroport"]
 osmosis = ["api", "currencies/osmosis", "sdk/cosmos", "dep:osmosis-std"]
+
+api = ["dep:finance", "dep:platform", "thiserror"]
 testing = []
 
 [dependencies]

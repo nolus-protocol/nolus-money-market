@@ -6,8 +6,13 @@ authors.workspace = true
 license.workspace = true
 
 [features]
+net_dev = ["swap/net_dev"]
+net_test = ["swap/net_test"]
+net_main = ["swap/net_main"]
+
 astroport = ["swap/astroport"]
 osmosis = ["swap/osmosis"]
+
 migration = []
 testing = []
 

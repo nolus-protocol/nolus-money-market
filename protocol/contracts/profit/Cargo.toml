@@ -11,10 +11,15 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = []
-api = []
+net_dev = ["dex/net_dev"]
+net_test = ["dex/net_test"]
+net_main = ["dex/net_main"]
+
 astroport = ["api", "dex/astroport"]
 osmosis = ["api", "dex/osmosis"]
+
+cosmwasm-bindings = []
+api = []
 stub = ["api"]
 testing = []
 
