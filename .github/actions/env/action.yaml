@@ -45,7 +45,7 @@ runs:
 
           networks='net_dev,net_test,net_main'
 
-          exclude_features="${exclude_features},${networks//net_${target_net}/}"
+          exclude_features="${exclude_features},${networks//net_${{ inputs.target_net }}/}"
 
           echo 'dash_net_name=-${{ inputs.target_net }}' >> "${GITHUB_ENV}"
         fi
