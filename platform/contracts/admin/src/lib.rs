@@ -14,7 +14,10 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 use self::{
     contracts::Protocol,
     error::Error as ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{
+        ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, PlatformQueryResponse,
+        ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg, SudoMsg,
+    },
     result::Result as ContractResult,
     state::{contract::Contract as ContractState, contracts as state_contracts},
     validate::Validate as _,
@@ -236,11 +239,19 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
 
             sdk::cosmwasm_std::to_json_binary(&addr).map_err(From::from)
         }
-        QueryMsg::Protocols {} => state_contracts::protocols(deps.storage)
-            .and_then(|ref protocols| to_json_binary(protocols).map_err(Into::into)),
-        QueryMsg::Platform {} => state_contracts::load_platform(deps.storage)
-            .and_then(|ref platform| to_json_binary(platform).map_err(Into::into)),
+        QueryMsg::Protocols {} => {
+            state_contracts::protocols(deps.storage).and_then(|ref protocols| {
+                to_json_binary::<ProtocolsQueryResponse>(protocols).map_err(Into::into)
+            })
+        }
+        QueryMsg::Platform {} => {
+            state_contracts::load_platform(deps.storage).and_then(|ref platform| {
+                to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
+            })
+        }
         QueryMsg::Protocol { protocol } => state_contracts::load_protocol(deps.storage, protocol)
-            .and_then(|ref protocol| to_json_binary(protocol).map_err(Into::into)),
+            .and_then(|ref protocol| {
+                to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
+            }),
     }
 }

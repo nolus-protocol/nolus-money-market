@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::contracts::{
     ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
-    Protocol,
+    Platform, Protocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -71,3 +71,9 @@ pub enum QueryMsg {
     Platform {},
     Protocol { protocol: String },
 }
+
+pub type ProtocolsQueryResponse = Vec<String>;
+
+pub type PlatformQueryResponse = Platform<Addr>;
+
+pub type ProtocolQueryResponse = Protocol<Addr>;
