@@ -227,11 +227,11 @@ Where <`label`> can be a combination of the chosen protocol and the contract nam
 
 If the given expected address matches the real one, the instantiation will be successful.
 
-### Deploy new DEX-specific contracts
+### Deploy new Protocol-specific contracts
 
 #### Deploy new contracts
 
-As mentioned in the sections above, the order in which contracts are deployed is important. So there is a correct way to deploy a new set of DEX-specific contracts.
+As mentioned in the sections above, the order in which contracts are deployed is important. So there is a correct way to deploy a new set of Protocol-specific contracts.
 
 1. store Leaser code
 2. store Lease code
@@ -247,7 +247,7 @@ or by using the `deploy-contracts-live.sh`:
 ./scripts/deploy-contracts-live.sh deploy_contracts "<nolus_node_url>" "<nolus_chain_id>" "<nolus_home_dir>" "<network_DEX_admin_key>" "<store_code_privileged_user_key>" "<admin_contract_address>" "<protocol_wasm_artifacts_dir_path>" "<dex_name>" "<protocol_currency>" "<treasury_contract_address>"  "<timealarms_contract_address>" '<protocol_swap_tree_obj>'
 ```
 
-#### Register the new set of DEX-specific contracts
+#### Register the new set of Protocol-specific contracts
 
 The goal is to make the platform to work with the new contracts as well.
 
