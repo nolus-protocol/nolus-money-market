@@ -43,14 +43,14 @@ trait RouterAddress {
     const ROUTER_ADDR: &'static str;
 }
 
-#[cfg(any(net = "dev", net = "test"))]
+#[cfg(any(feature = "net_dev", feature = "net_test"))]
 impl RouterAddress for Impl {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
     const ROUTER_ADDR: &'static str =
         "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
 }
 
-#[cfg(net = "main")]
+#[cfg(feature = "net_main")]
 impl RouterAddress for Impl {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
     const ROUTER_ADDR: &'static str =

@@ -11,10 +11,15 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = ["contract"]
-contract = ["stub"]
+net_dev = ["currencies/net_dev"]
+net_test = ["currencies/net_test"]
+net_main = ["currencies/net_main"]
+
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
+
+cosmwasm-bindings = ["contract"]
+contract = ["stub"]
 testing = ["stub", "marketprice/testing"]
 stub = [] # TODO strip off any unnecessary dependency
 

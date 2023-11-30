@@ -30,7 +30,6 @@ jobs:
     outputs:
       features: "${{ steps.env.outputs.features }}"
       exclude_features: "${{ steps.env.outputs.exclude_features }}"
-      rustflags: "${{ steps.env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - id: "env"
@@ -42,8 +41,6 @@ jobs:
   check_formatting:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     name: "Check formatting [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
     steps:
       - uses: "actions/checkout@v4.1.1"
@@ -62,7 +59,6 @@ jobs:
         with:
           working_directory: "${{ inputs.working_directory }}"
           features: "${{ needs.setup_env.outputs.features }}"
-          rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   audit_dependencies:
     runs-on: "ubuntu-latest"
     if: "inputs.working_directory != 'tests'"
@@ -74,13 +70,10 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/audit_dependencies@main"
         with:
           working_directory: "${{ inputs.working_directory }}"
-          rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   linting:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
     name: "Run linter [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
@@ -110,7 +103,6 @@ jobs:
           working_directory: "${{ inputs.working_directory }}"
           features: "${{ needs.setup_env.outputs.features }}"
           exclude_features: "${{ needs.setup_env.outputs.exclude_features }}"
-          rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   check_unused_deps:
     runs-on: "ubuntu-latest"
     if: "inputs.working_directory != 'tests'"
@@ -123,7 +115,6 @@ jobs:
         with:
           working_directory: "${{ inputs.working_directory }}"
           features: "${{ needs.setup_env.outputs.features }}"
-          rustflags: "${{ needs.setup_env.outputs.rustflags }}"
   test:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
@@ -136,8 +127,6 @@ jobs:
           - profile: 'release'
             flags: '--release'
     name: "Run tests [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}; ${{ matrix.profile }}]"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
@@ -150,8 +139,6 @@ jobs:
     if: "inputs.working_directory != 'tests'"
     needs: "setup_env"
     name: "Check WebAssembly binaries [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
-    env:
-      RUSTFLAGS: "${{ needs.setup_env.outputs.rustflags }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"

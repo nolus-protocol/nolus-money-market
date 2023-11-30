@@ -1,7 +1,7 @@
 #[cfg(not(any(feature = "astroport", feature = "osmosis")))]
 compile_error!("No dex selected!");
 
-#[cfg(not(any(net = "dev", net = "test", net = "main")))]
+#[cfg(not(any(feature = "net_dev", feature = "net_test", feature = "net_main")))]
 compile_error!("No net selected!");
 
 mod currency_macro;

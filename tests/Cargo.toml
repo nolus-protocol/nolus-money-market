@@ -12,11 +12,11 @@ astroport = ["lease/astroport", "profit/astroport"]
 osmosis = ["lease/osmosis", "profit/osmosis"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-lease = { path = "../protocol/contracts/lease", features = ["testing"] }
-leaser = { path = "../protocol/contracts/leaser", features = ["testing"] }
-lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"] }
-oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"] }
-profit = { path = "../protocol/contracts/profit", features = ["testing"] }
+lease = { path = "../protocol/contracts/lease", features = ["net_main", "testing"] }
+leaser = { path = "../protocol/contracts/leaser", features = ["net_main", "testing"] }
+lpp = { path = "../protocol/contracts/lpp", features = ["net_main", "contract", "testing"] }
+oracle = { path = "../protocol/contracts/oracle", features = ["net_main", "contract", "testing"] }
+profit = { path = "../protocol/contracts/profit", features = ["net_main", "testing"] }
 rewards_dispatcher = { path = "../platform/contracts/dispatcher", features = [] }
 timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
 treasury = { path = "../platform/contracts/treasury", features = ["contract"] }
