@@ -238,11 +238,9 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         }
         QueryMsg::Protocols {} => state_contracts::protocols(deps.storage)
             .and_then(|ref protocols| to_json_binary(protocols).map_err(Into::into)),
-        QueryMsg::PlatformAddresses {} => state_contracts::load_platform(deps.storage)
+        QueryMsg::Platform {} => state_contracts::load_platform(deps.storage)
             .and_then(|ref platform| to_json_binary(platform).map_err(Into::into)),
-        QueryMsg::ProtocolAddresses { protocol } => {
-            state_contracts::load_protocol(deps.storage, protocol)
-                .and_then(|ref protocol| to_json_binary(protocol).map_err(Into::into))
-        }
+        QueryMsg::Protocol { protocol } => state_contracts::load_protocol(deps.storage, protocol)
+            .and_then(|ref protocol| to_json_binary(protocol).map_err(Into::into)),
     }
 }

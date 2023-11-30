@@ -68,6 +68,6 @@ pub struct MigrateContracts {
 pub enum QueryMsg {
     InstantiateAddress { code_id: CodeId, protocol: String },
     Protocols {},
-    PlatformAddresses {},
-    ProtocolAddresses { protocol: String },
+    Platform {},
+    Protocol { protocol: String },
 }
