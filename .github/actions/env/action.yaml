@@ -41,11 +41,11 @@ runs:
 
         if ! test '${{ inputs.target_net }}' = ''
         then
-          FEATURES="${{ inputs.target_net }},${FEATURES}"
+          FEATURES="net_${{ inputs.target_net }},${FEATURES}"
 
-          networks='dev,test,main'
+          networks='net_dev,net_test,net_main'
 
-          exclude_features="${exclude_features},${networks//${target_net}/}"
+          exclude_features="${exclude_features},${networks//net_${target_net}/}"
 
           echo 'dash_net_name=-${{ inputs.target_net }}' >> "${GITHUB_ENV}"
         fi
