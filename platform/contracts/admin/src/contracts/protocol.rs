@@ -1,15 +1,18 @@
+#[cfg(feature = "contract")]
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "contract")]
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_std::Addr,
-    schemars::{self, JsonSchema},
-};
+#[cfg(feature = "contract")]
+use sdk::cosmwasm_std::Addr;
+use sdk::schemars::{self, JsonSchema};
 
+#[cfg(feature = "contract")]
 use crate::{error::Error, result::Result, validate::Validate};
 
+#[cfg(feature = "contract")]
 use super::{maybe_execute_contract, maybe_migrate_contract, MigrationSpec};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -21,6 +24,7 @@ pub struct Protocol<T> {
     pub profit: T,
 }
 
+#[cfg(feature = "contract")]
 impl Protocol<Addr> {
     pub(super) fn migrate(self, batch: &mut Batch, migration_msgs: ProtocolMigrationSpec) {
         maybe_migrate_contract(batch, self.leaser, migration_msgs.leaser);
@@ -47,6 +51,7 @@ impl Protocol<Addr> {
     }
 }
 
+#[cfg(feature = "contract")]
 impl<T> Protocol<BTreeMap<String, T>> {
     pub(super) fn extract_entry(&mut self, protocol: String) -> Result<Protocol<T>> {
         if let Some((leaser, lpp, oracle, profit)) =
@@ -84,6 +89,7 @@ impl<T> Protocol<BTreeMap<String, T>> {
     }
 }
 
+#[cfg(feature = "contract")]
 impl<T> Validate for Protocol<T>
 where
     T: Validate,
@@ -103,6 +109,8 @@ where
     }
 }
 
+#[cfg(feature = "contract")]
 type ProtocolMigrationSpec = Protocol<Option<MigrationSpec>>;
 
+#[cfg(feature = "contract")]
 type ProtocolPostMigrationExecute = Protocol<Option<String>>;

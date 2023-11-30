@@ -1,13 +1,15 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "contract")]
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_std::Addr,
-    schemars::{self, JsonSchema},
-};
+#[cfg(feature = "contract")]
+use sdk::cosmwasm_std::Addr;
+use sdk::schemars::{self, JsonSchema};
 
+#[cfg(feature = "contract")]
 use crate::validate::Validate;
 
+#[cfg(feature = "contract")]
 use super::{maybe_execute_contract, maybe_migrate_contract, MigrationSpec};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -18,6 +20,7 @@ pub struct Platform<T> {
     pub treasury: T,
 }
 
+#[cfg(feature = "contract")]
 impl Platform<Addr> {
     pub(super) fn migrate(self, batch: &mut Batch, migration_msgs: MigrationSpecs) {
         maybe_migrate_contract(batch, self.dispatcher, migration_msgs.dispatcher);
@@ -36,6 +39,7 @@ impl Platform<Addr> {
     }
 }
 
+#[cfg(feature = "contract")]
 impl<T> Validate for Platform<T>
 where
     T: Validate,
@@ -53,6 +57,8 @@ where
     }
 }
 
+#[cfg(feature = "contract")]
 type MigrationSpecs = Platform<Option<MigrationSpec>>;
 
+#[cfg(feature = "contract")]
 type PostMigrationExecutes = Platform<Option<String>>;

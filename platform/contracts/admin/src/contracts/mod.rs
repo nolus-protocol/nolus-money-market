@@ -2,12 +2,17 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use ::platform::{batch::Batch, contract::CodeId, message::Response as MessageResponse};
+use ::platform::contract::CodeId;
+#[cfg(feature = "contract")]
+use ::platform::{batch::Batch, message::Response as MessageResponse};
+#[cfg(feature = "contract")]
+use sdk::cosmwasm_std::{Binary, Storage, WasmMsg};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Storage, WasmMsg},
+    cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
+#[cfg(feature = "contract")]
 use crate::{
     result::Result,
     state::{contract::Contract as ContractState, contracts as state_contracts},
@@ -19,6 +24,7 @@ pub use self::{platform::Platform, protocol::Protocol};
 mod platform;
 mod protocol;
 
+#[cfg(feature = "contract")]
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_addr: Addr,
@@ -57,6 +63,7 @@ pub struct ContractsTemplate<T, U = Protocol<BTreeMap<String, T>>> {
     pub protocol: U,
 }
 
+#[cfg(feature = "contract")]
 impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
     fn migrate(self, mut migration_msgs: ContractsMigration) -> Result<Batch> {
         let mut batch: Batch = Batch::default();
@@ -98,6 +105,7 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
     }
 }
 
+#[cfg(feature = "contract")]
 impl<T> Validate for ContractsTemplate<T, BTreeMap<String, Protocol<T>>>
 where
     T: Validate,
@@ -127,6 +135,7 @@ pub struct MigrationSpec {
     pub migrate_msg: String,
 }
 
+#[cfg(feature = "contract")]
 fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: Option<MigrationSpec>) {
     if let Some(migrate) = migrate {
         batch.schedule_execute_on_success_reply(
@@ -140,6 +149,7 @@ fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: Option<Migrati
     }
 }
 
+#[cfg(feature = "contract")]
 fn maybe_execute_contract(batch: &mut Batch, addr: Addr, execute: Option<String>) {
     if let Some(execute) = execute {
         batch.schedule_execute_no_reply(WasmMsg::Execute {
