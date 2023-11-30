@@ -11,13 +11,13 @@ use crate::{define_currency, define_symbol};
 
 define_symbol! {
     ATOM {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-12/uatom
             bank: "ibc/ECFDE61B64BB920E087E7448C4C3FE356B7BD13A1C2153119E98816C964FE196",
             /// full ibc route: transfer/channel-12/uatom
             dex: "ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-0/uatom
             bank: "ibc/6CDD4663F2F09CD62285E2D45891FC149A3568E316CE3EBBE201A71A78A69388",
             /// full ibc route: transfer/channel-0/uatom
@@ -29,13 +29,13 @@ define_currency!(Atom, ATOM);
 
 define_symbol! {
     ST_ATOM {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
             bank: "ibc/NA_ST_ATOM",
             /// full ibc route: transfer/channel-??/uatom
             dex: "ibc/NA_ST_ATOM_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuatom
             bank: "ibc/FCFF8B19C61677F3B78E2A5AE3B4A34A8D23858D16905F253B8438B3AFD07FF8",
             /// full ibc route: transfer/channel-326/stuatom
@@ -47,7 +47,7 @@ define_currency!(StAtom, ST_ATOM);
 
 define_symbol! {
     OSMO {
-        ["dev", "test", "main"]: {
+        ["net_dev", "net_test", "net_main"]: {
             /// full ibc route: transfer/channel-0/uosmo
             bank: "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518",
             dex: "uosmo",
@@ -58,13 +58,13 @@ define_currency!(Osmo, OSMO);
 
 define_symbol! {
     ST_OSMO {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
             bank: "ibc/NA_ST_OSMO",
             /// full ibc route: transfer/channel-??/uatom
             dex: "ibc/NA_ST_OSMO_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuosmo
             bank: "ibc/AF5559D128329B6C753F15481BEC26E533B847A471074703FA4903E7E6F61BA1",
             /// full ibc route: transfer/channel-326/stuosmo
@@ -76,7 +76,7 @@ define_currency!(StOsmo, ST_OSMO);
 
 define_symbol! {
     WETH {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-3/eth-wei
             bank: "ibc/98CD37B180F06F954AFC71804049BE6EEA2A3B0CCEA1F425D141245BCFFBBD33",
             /// full ibc route: transfer/channel-3/eth-wei
@@ -84,7 +84,7 @@ define_symbol! {
             /// although there is no pool WETH participates in
             dex: "ibc/29320BE25C3BF64A2355344625410899C1EB164038E328531C36095B0AA8BBFC",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-208/weth-wei
             bank: "ibc/A7C4A3FB19E88ABE60416125F9189DA680800F4CDD14E3C10C874E022BEFF04C",
             /// full ibc route: transfer/channel-208/weth-wei
@@ -96,7 +96,7 @@ define_currency!(Weth, WETH);
 
 define_symbol! {
     WBTC {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-3/btc-satoshi
             bank: "ibc/680E95D3CEA378B7302926B8A5892442F1F7DF78E22199AE248DCBADC9A0C1A2",
             /// full ibc route: transfer/channel-3/btc-satoshi
@@ -104,7 +104,7 @@ define_symbol! {
             /// although there is no denomination trace as per `osmosisd q ibc-transfer denom-trace`
             dex: "ibc/CEDA3AFF171E72ACB689B7B64E988C0077DA7D4BF157637FFBDEB688D205A473",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-208/wbtc-satoshi
             bank: "ibc/84E70F4A34FB2DE135FD3A04FDDF53B7DA4206080AA785C8BAB7F8B26299A221",
             /// full ibc route: transfer/channel-208/wbtc-satoshi
@@ -116,13 +116,13 @@ define_currency!(Wbtc, WBTC);
 
 define_symbol! {
     AKT {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-73/uakt
             bank: "ibc/1064EED4A8E99F9C1158680236D0C5C3EA6B8BB65C9F87DAC6BC759DD904D818",
             /// full ibc route: transfer/channel-73/uakt
             dex: "ibc/7153C8C55DB988805FAC69E449B680A8BAAC15944B87CF210ADCD1A3A9542857",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-1/uakt
             bank: "ibc/ADC63C00000CA75F909D2BE3ACB5A9980BED3A73B92746E0FCE6C67414055459",
             /// full ibc route: transfer/channel-1/uakt
@@ -134,7 +134,7 @@ define_currency!(Akt, AKT);
 
 define_symbol! {
     AXL {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-3/uaxl
             /// not in use due to the lack of a pool
             bank: "ibc/NA_AXL",
@@ -142,7 +142,7 @@ define_symbol! {
             /// not in use due to the lack of a pool
             dex: "ibc/NA_AXL_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-208/uaxl
             bank: "ibc/1B03A71B8E6F6EF424411DC9326A8E0D25D096E4D2616425CFAF2AF06F0FE717",
             /// full ibc route: transfer/channel-208/uaxl
@@ -154,13 +154,13 @@ define_currency!(Axl, AXL);
 
 define_symbol! {
     Q_ATOM {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uqatom
             bank: "ibc/NA_Q_ATOM",
             /// full ibc route: transfer/channel-??/uqatom
             dex: "ibc/NA_Q_ATOM_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-522/uqatom
             bank: "ibc/317FCA2D7554F55BBCD0019AB36F7FEA18B6D161F462AF5E565068C719A29F20",
             /// full ibc route: transfer/channel-522/uqatom
@@ -172,13 +172,13 @@ define_currency!(QAtom, Q_ATOM);
 
 define_symbol! {
     STK_ATOM {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/stk/uatom
             bank: "ibc/NA_STK_ATOM",
             /// full ibc route: transfer/channel-??/stk/uatom
             dex: "ibc/NA_STK_ATOM_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-4/stk/uatom
             bank: "ibc/DAAD372DB7DD45BBCFA4DDD40CA9793E9D265D1530083AB41A8A0C53C3EBE865",
             /// full ibc route: transfer/channel-4/stk/uatom
@@ -190,13 +190,13 @@ define_currency!(StkAtom, STK_ATOM);
 
 define_symbol! {
     STRD {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/ustrd
             bank: "ibc/NA_STRD",
             /// full ibc route: transfer/channel-??/ustrd
             dex: "ibc/NA_STRD_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/ustrd
             bank: "ibc/04CA9067228BB51F1C39A506DA00DF07E1496D8308DD21E8EF66AD6169FA722B",
             /// full ibc route: transfer/channel-326/ustrd
@@ -208,13 +208,13 @@ define_currency!(Strd, STRD);
 
 define_symbol! {
     INJ {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/inj
             bank: "ibc/NA_INJ",
             /// full ibc route: transfer/channel-??/inj
             dex: "ibc/NA_INJ_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-122/inj
             bank: "ibc/4DE84C92C714009D07AFEA7350AB3EC383536BB0FAAD7AF9C0F1A0BEA169304E",
             /// full ibc route: transfer/channel-122/inj
@@ -226,13 +226,13 @@ define_currency!(Inj, INJ);
 
 define_symbol! {
     SCRT {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uscrt
             bank: "ibc/NA_SCRT",
             /// full ibc route: transfer/channel-??/uscrt
             dex: "ibc/NA_SCRT_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-88/uscrt
             bank: "ibc/EA00FFF0335B07B5CD1530B7EB3D2C710620AE5B168C71AFF7B50532D690E107",
             /// full ibc route: transfer/channel-88/uscrt
@@ -244,13 +244,13 @@ define_currency!(Secret, SCRT);
 
 define_symbol! {
     STARS {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/ustars
             bank: "ibc/NA_STARS",
             /// full ibc route: transfer/channel-??/ustars
             dex: "ibc/NA_STARS_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-75/ustars
             bank: "ibc/11E3CF372E065ACB1A39C531A3C7E7E03F60B5D0653AD2139D31128ACD2772B5",
             /// full ibc route: transfer/channel-75/ustars
@@ -262,13 +262,13 @@ define_currency!(Stars, STARS);
 
 define_symbol! {
     CRO {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/basecro
             bank: "ibc/NA_CRO",
             /// full ibc route: transfer/channel-??/basecro
             dex: "ibc/NA_CRO_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-5/basecro
             bank: "ibc/E1BCC0F7B932E654B1A930F72B76C0678D55095387E2A4D8F00E941A8F82EE48",
             // full ibc route: transfer/channel-5/basecro
@@ -280,13 +280,13 @@ define_currency!(Cro, CRO);
 
 define_symbol! {
     JUNO {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-1/ujunox
             bank: "ibc/8FB044422997A8A77891DE729EC28638DDE4C81A54398F68149A058AA9B74D9F",
             /// full ibc route: transfer/channel-1/ujunox
             dex: "ibc/8E2FEFCBD754FA3C97411F0126B9EC76191BAA1B3959CB73CECF396A4037BBF0",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-42/ujuno
             bank: "ibc/4F3E83AB35529435E4BFEA001F5D935E7250133347C4E1010A9C77149EF0394C",
             /// full ibc route: transfer/channel-42/ujuno
@@ -298,13 +298,13 @@ define_currency!(Juno, JUNO);
 
 define_symbol! {
     EVMOS {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/aevmos
             bank: "ibc/NA_EVMOS",
             /// full ibc route: transfer/channel-??/aevmos
             dex: "ibc/NA_EVMOS_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-204/aevmos
             bank: "ibc/A59A9C955F1AB8B76671B00C1A0482C64A6590352944BB5880E5122358F7E1CE",
             /// full ibc route: transfer/channel-204/aevmos
@@ -316,13 +316,13 @@ define_currency!(Evmos, EVMOS);
 
 define_symbol! {
     MARS {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-24/umars
             bank: "ibc/1CC042AD599E184C0F77DC5D89443C82F8A16B6E13DEC650A7A50A5D0AA330C3",
             /// full ibc route: transfer/channel-24/umars
             dex: "ibc/2E7368A14AC9AB7870F32CFEA687551C5064FA861868EDF7437BC877358A81F9",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-557/umars
             bank: "ibc/783F5F8F6B41874487C3B09A2306FD5E59B9B740F930A39DD55B08CF7CB8CBF0",
             /// full ibc route: transfer/channel-557/umars
@@ -334,13 +334,13 @@ define_currency!(Mars, MARS);
 
 define_symbol! {
     TIA {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-???/utia
             bank: "ibc/NA_TIA",
             /// full ibc route: transfer/channel-???/utia
             dex: "ibc/NA_TIA_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-6994/utia
             bank: "ibc/6C349F0EB135C5FA99301758F35B87DB88403D690E5E314AB080401FEE4066E5",
             /// full ibc route: transfer/channel-6994/utia

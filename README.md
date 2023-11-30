@@ -36,28 +36,18 @@ Implementation of the core business logic as CosmWasm contracts.
 The build is controlled with a few environment variables:
 
 * `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `RUSTFLAGS` - set of values that is passed down to the Rust compiler;
-  setting targetted network and DEX happens through setting it to:
-
-  ```sh
-  --cfg net="NETWORK" --cfg dex="DEX"
-  ```
-
-  where `NETWORK` and `DEX` should be replaced with the desired ones,
-  while leaving the quotes.
-
-  Example:
-
-  ```sh
-  --cfg net="main" --cfg dex="osmosis"
-  ```
+* `NET_NAME` - sets the targeted network; possible values are:
+  * `dev`
+  * `test`
+  * `main`
+* `PROTOCOL_NAME` - sets the targeted protocol
 
 #### Workspaces
 
 Th project is separated into three workspaces:
 
-* `platform` - DEX-agnostic contracts and packages
-* `protocol` - DEX-specific contracts and packages
+* `platform` - Network- and protocol-agnostic contracts and packages
+* `protocol` - Network- and protocol-specific contracts and packages
 * `tests` - integration tests
 
 In the instructions below this value is stored in *WORKSPACE_DIR_NAME*.
@@ -68,7 +58,7 @@ The command below builds a contract if ran from the contract directory,
 or builds the contracts of the workspace from within which it is ran:
 
 ```sh
-RELEASE_VERSION='dev-release' RUSTFLAGS='--cfg net="dev" --cfg dex="osmosis"' cargo build --target=wasm32-unknown-unknown
+RELEASE_VERSION='dev-release' NET_NAME='dev' PROTOCOL_NAME='osmosis' cargo build --features "net_${$NET_NAME},${PROTOCOL_NAME}" --target=wasm32-unknown-unknown
 ```
 
 One way to avoid having to set those environment variables is to
@@ -79,19 +69,15 @@ An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown
 ```json
 {
   "rust-analyzer.cargo.extraEnv": {
-    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
     "RELEASE_VERSION": "local",
   },
   "terminal.integrated.env.linux": {
-    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
     "RELEASE_VERSION": "local",
   },
   "terminal.integrated.env.osx": {
-    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
     "RELEASE_VERSION": "local",
   },
   "terminal.integrated.env.windows": {
-    "RUSTFLAGS": "--cfg net=\"dev\" --cfg dex=\"osmosis\"",
     "RELEASE_VERSION": "local",
   },
 }
@@ -116,8 +102,8 @@ file, located at the root of the project!
 
 The command shown below builds an optimized and verifiable version of
 each set of contracts, depending on their workspace (indicated by
-`WORKSPACE_DIR_NAME`) and on the DEX (indicated by `DEX`) and just as the development build uses `RUSTFLAGS`
-to indicate desired target network and DEX:
+`WORKSPACE_DIR_NAME`), the targeted protocol (indicated by `PROTOCOL`) and targeted network
+(indicated by `NET`):
 
 * ```sh
   export WORKSPACE_DIR_NAME='platform'
@@ -127,8 +113,9 @@ to indicate desired target network and DEX:
   export WORKSPACE_DIR_NAME='protocol'
   ```
 * ```sh
-  export DEX='osmosis'
-  export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $DEX || echo 'platform')"
+  export NET='dev'
+  export PROTOCOL='osmosis'
+  export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
   ```
 
 ```sh
@@ -138,8 +125,7 @@ mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
   -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
   -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
   --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-  --env "RUSTFLAGS=--cfg net=\"dev\"" \
-  --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${DEX}"; fi)"
+  --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
   wasm-optimizer
 ```
 
@@ -147,7 +133,7 @@ mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
 of their editor/IDE, those environment variables still must be provided
 as arguments to the `docker run` command.
 Exception to this should be the `platform` workspace, as it strives to
-be agnostic to the targetted network and DEX.
+be agnostic to the targeted network and protocol.
 
 **NOTE:** Builds are reproducable *as long as* all environment variables
 passed to the container are the exact same. If it is desired to build
@@ -159,22 +145,22 @@ environment variable to the one used to build the original instead.
 Run the following in a package directory or any workspace.
 
 ```sh
-cargo test --all-targets
+cargo test --features "net_${NET},${PROTOCOL}" --all-targets
 ```
-
-As with the development build, workspaces may require setting `RUSTFLAGS`
-in the same manner as with the development builds.
 
 ### Lint
 
-Run the following in the all workspaces.
+Run the following in the `platform` workspace.
 
 ```sh
 ./lint.sh
 ```
 
-As with the development build, workspaces may require setting `RUSTFLAGS`
-in the same manner as with the development builds.
+Run the following in the `protocol` and `tests` workspaces.
+
+```sh
+./lint.sh "net_${NET},${PROTOCOL}"
+```
 
 ### New contracts
 

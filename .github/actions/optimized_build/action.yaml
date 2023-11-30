@@ -43,7 +43,6 @@ runs:
         --mount "type=volume,source=rustup_dir_cache,target=/usr/local/rustup/" \
         --mount "type=volume,source=cargo_dir_cache,target=/usr/local/cargo/" \
         --mount "type=volume,source=registry_cache,target=/usr/local/cargo/registry/" \
-        --env 'RUSTFLAGS=${{ env.RUSTFLAGS }}' \
         --env 'features=${{ env.FEATURES }}' \
         --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
         wasm-optimizer

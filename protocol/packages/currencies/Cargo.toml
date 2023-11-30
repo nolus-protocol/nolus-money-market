@@ -9,8 +9,13 @@ license.workspace = true
 doctest = false
 
 [features]
+net_dev = []
+net_test = []
+net_main = []
+
 astroport = []
 osmosis = []
+
 testing = []
 
 [dependencies]

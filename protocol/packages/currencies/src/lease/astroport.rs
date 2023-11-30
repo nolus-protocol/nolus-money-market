@@ -14,19 +14,19 @@ pub use testing_currencies::*;
 
 define_symbol! {
     ATOM {
-        ["dev"]: {
+        ["net_dev"]: {
             /// full ibc route: transfer/channel-116/transfer/channel-1/uatom
             bank: "ibc/59BA0C7FDC7C3CDA4C777EDEC5572C762B68DDCC9FD253BC12B6F5676395157E",
             /// full ibc route: transfer/channel-1/uatom
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
-        ["test"]: {
+        ["net_test"]: {
             /// full ibc route: transfer/channel-1990/transfer/channel-1/uatom
             bank: "ibc/FB644CC503C21C67F89C111B25362AA71CEE60E803211AC939DEBF820109660C",
             /// full ibc route: transfer/channel-1/uatom
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-3839/transfer/channel-1/uatom
             bank: "ibc/74329D0B6EAA37AD07FF44EC40D998357D1478C504AB5A9C91C3F42F1078A226",
             /// full ibc route: transfer/channel-1/uatom
@@ -38,13 +38,13 @@ define_currency!(Atom, ATOM);
 
 define_symbol! {
     ST_ATOM {
-        ["dev", "test"]: {
+        ["net_dev", "net_test"]: {
             /// full ibc route: transfer/channel-?/transfer/channel-?/stuatom
             bank: "ibc/NA_ST_ATOM",
             /// full ibc route: transfer/channel-?/stuatom
             dex: "ibc/NA_ST_ATOM_DEX",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-3839/transfer/channel-8/stuatom
             bank: "ibc/FFE21A5F04A89CD5E61A616EEE11A646D5DCF0A8DB60523F79C5ED28DA2642FA",
             /// full ibc route: transfer/channel-8/stuatom
@@ -56,17 +56,17 @@ define_currency!(StAtom, ST_ATOM);
 
 define_symbol! {
     NTRN {
-        ["dev"]: {
+        ["net_dev"]: {
             /// full ibc route: transfer/channel-116/untrn
             bank: "ibc/AED28B54A45FBE585FD81FF8571F729F87EF3CFD5DBBD1CAFED9E1AA20BFD983",
             dex: "untrn",
         },
-        ["test"]: {
+        ["net_test"]: {
             /// full ibc route: transfer/channel-1990/untrn
             bank: "ibc/712F900E327780AAB33B9204DB5257FB1D6FACCF9CD7B70A0EFB31ED4C1255C4",
             dex: "untrn",
         },
-        ["main"]: {
+        ["net_main"]: {
             /// full ibc route: transfer/channel-3839/untrn
             bank: "ibc/3D6BC6E049CAEB905AC97031A42800588C58FB471EBDC7A3530FFCD0C3DC9E09",
             dex: "untrn",
@@ -83,7 +83,7 @@ mod testing_currencies {
 
     define_symbol! {
         TEST_C1 {
-            ["dev", "test", "main"]: {
+            ["net_dev", "net_test", "net_main"]: {
                 bank: "ibc/test_currency_1",
                 dex: "ibc/test_currency_1_dex",
             },
@@ -93,7 +93,7 @@ mod testing_currencies {
 
     define_symbol! {
         TEST_C2 {
-            ["dev", "test", "main"]: {
+            ["net_dev", "net_test", "net_main"]: {
                 bank: "ibc/test_currency_2",
                 dex: "ibc/test_currency_2_dex",
             },

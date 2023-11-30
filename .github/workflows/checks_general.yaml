@@ -15,11 +15,9 @@ jobs:
         protocol: ["osmosis"] # TODO Add `astroport`
         include:
           - working_directory: "platform"
-          - net: "main"
-            protocol: "osmosis"
+          - protocol: "osmosis"
             working_directory: "tests"
-          # - net: "main" # TODO Add `astroport`
-          #   protocol: "astroport"
+          # - protocol: "astroport" # TODO Add `astroport`
           #   working_directory: "tests"
     name: "Checks [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
