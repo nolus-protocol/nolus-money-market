@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 cosmwasm-bindings = ["contract"]
-contract = []
+contract = ["dep:versioning"]
 
 [dependencies]
 access-control = { workspace = true }
@@ -20,7 +20,7 @@ currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract", "cosmos"] }
-versioning = { workspace = true }
+versioning = { workspace = true, optuonal = true }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
