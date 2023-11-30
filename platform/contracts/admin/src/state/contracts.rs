@@ -48,21 +48,34 @@ pub(crate) fn add_protocol_set(
     }
 }
 
-pub(crate) fn load(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
-    PLATFORM
-        .load(storage)
-        .and_then(|platform: Platform<Addr>| {
-            PROTOCOL
-                .range(storage, None, None, Order::Ascending)
-                .collect::<::std::result::Result<_, _>>()
-                .map(
-                    |protocol: BTreeMap<String, Protocol<Addr>>| ContractsTemplate {
-                        platform,
-                        protocol,
-                    },
-                )
-        })
+pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
+    PROTOCOL
+        .keys(storage, None, None, Order::Ascending)
+        .collect::<std::result::Result<_, _>>()
         .map_err(Into::into)
+}
+
+pub(crate) fn load_platform(storage: &dyn Storage) -> Result<Platform<Addr>> {
+    PLATFORM.load(storage).map_err(Into::into)
+}
+
+pub(crate) fn load_protocol(storage: &dyn Storage, protocol: String) -> Result<Protocol<Addr>> {
+    PROTOCOL.load(storage, protocol).map_err(Into::into)
+}
+
+pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
+    load_platform(storage).and_then(|platform: Platform<Addr>| {
+        PROTOCOL
+            .range(storage, None, None, Order::Ascending)
+            .collect::<::std::result::Result<_, _>>()
+            .map(
+                |protocol: BTreeMap<String, Protocol<Addr>>| ContractsTemplate {
+                    platform,
+                    protocol,
+                },
+            )
+            .map_err(Into::into)
+    })
 }
 
 pub(crate) fn migrate(storage: &mut dyn Storage, protocol_name: String) -> Result<()> {

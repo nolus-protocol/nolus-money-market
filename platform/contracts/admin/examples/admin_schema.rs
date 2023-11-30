@@ -1,4 +1,7 @@
-use admin_contract::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg};
+use admin_contract::msg::{
+    ExecuteMsg, InstantiateMsg, MigrateMsg, PlatformQueryResponse, ProtocolQueryResponse,
+    ProtocolsQueryResponse, QueryMsg, SudoMsg,
+};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {
@@ -8,4 +11,8 @@ fn main() {
     export_schema(&schema_for!(MigrateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(SudoMsg), &out_dir);
+    export_schema(&schema_for!(QueryMsg), &out_dir);
+    export_schema(&schema_for!(ProtocolsQueryResponse), &out_dir);
+    export_schema(&schema_for!(PlatformQueryResponse), &out_dir);
+    export_schema(&schema_for!(ProtocolQueryResponse), &out_dir);
 }

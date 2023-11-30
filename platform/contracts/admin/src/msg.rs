@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::contracts::{
     ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
-    Protocol,
+    Platform, Protocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -67,4 +67,13 @@ pub struct MigrateContracts {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum QueryMsg {
     InstantiateAddress { code_id: CodeId, protocol: String },
+    Protocols {},
+    Platform {},
+    Protocol { protocol: String },
 }
+
+pub type ProtocolsQueryResponse = Vec<String>;
+
+pub type PlatformQueryResponse = Platform<Addr>;
+
+pub type ProtocolQueryResponse = Protocol<Addr>;
