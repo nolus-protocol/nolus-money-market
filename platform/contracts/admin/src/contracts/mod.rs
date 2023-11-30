@@ -29,7 +29,7 @@ pub(crate) fn migrate(
 ) -> Result<MessageResponse> {
     ContractState::Migration { release }.store(storage)?;
 
-    let contracts_addrs: ContractsGroupedByProtocol = state_contracts::load(storage)?;
+    let contracts_addrs: ContractsGroupedByProtocol = state_contracts::load_all(storage)?;
 
     let mut batch: Batch = Batch::default();
 

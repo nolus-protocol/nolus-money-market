@@ -67,4 +67,7 @@ pub struct MigrateContracts {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum QueryMsg {
     InstantiateAddress { code_id: CodeId, protocol: String },
+    Protocols {},
+    PlatformAddresses {},
+    ProtocolAddresses { protocol: String },
 }

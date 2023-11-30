@@ -5,8 +5,8 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        ensure_eq, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Reply, Storage, WasmMsg,
+        ensure_eq, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env,
+        MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -235,6 +235,14 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 
             sdk::cosmwasm_std::to_json_binary(&addr).map_err(From::from)
+        }
+        QueryMsg::Protocols {} => state_contracts::protocols(deps.storage)
+            .and_then(|ref protocols| to_json_binary(protocols).map_err(Into::into)),
+        QueryMsg::PlatformAddresses {} => state_contracts::load_platform(deps.storage)
+            .and_then(|ref platform| to_json_binary(platform).map_err(Into::into)),
+        QueryMsg::ProtocolAddresses { protocol } => {
+            state_contracts::load_protocol(deps.storage, protocol)
+                .and_then(|ref protocol| to_json_binary(protocol).map_err(Into::into))
         }
     }
 }
