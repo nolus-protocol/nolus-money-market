@@ -108,26 +108,29 @@ each set of contracts, depending on their workspace (indicated by
 * ```sh
   export WORKSPACE_DIR_NAME='platform'
   ```
+
   OR
+
   ```sh
   export WORKSPACE_DIR_NAME='protocol'
   ```
+
 * ```sh
   export NET='dev'
   export PROTOCOL='osmosis'
   export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
   ```
 
-```sh
-mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
-  docker run --rm -v "$(pwd)/platform/:/platform/" \
-  -v "$(pwd)/protocol/:/protocol/" \
-  -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
-  -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
-  --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-  --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
-  wasm-optimizer
-```
+  ```sh
+  mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
+    docker run --rm -v "$(pwd)/platform/:/platform/" \
+    -v "$(pwd)/protocol/:/protocol/" \
+    -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
+    -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
+    --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
+    --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
+    wasm-optimizer
+  ```
 
 **NOTE:** As one might set those environment variables in the settings
 of their editor/IDE, those environment variables still must be provided
@@ -162,7 +165,7 @@ Run the following in the `protocol` and `tests` workspaces.
 ./lint.sh "net_${NET},${PROTOCOL}"
 ```
 
-### New contracts
+### New contracts - genesis
 
 Contract addresses are dependent on the order in which they are deployed in the script.
 
@@ -183,7 +186,7 @@ When adding a new contract, and it needs to be deployed with the genesis:
       * After you are done with the address shifting, fill out the address of the
         contract in the script file, which you get based on the contract's ID.
 
-### Reordering contracts because one is now a dependency
+#### Reordering contracts because one is now a dependency
 
 As mentioned in the section above, contract addresses are dependent on the order
 in which they are deployed in the script.
@@ -191,6 +194,66 @@ in which they are deployed in the script.
 When changing the order of deployment, reorder the contracts' addresses accordingly,
 so the order of the actual addresses is **not** changed but the contract who owns
 that address is.
+
+### New contracts - live network
+
+The process of deploying a new contract on a live network is presented with the steps below:
+
+#### Upload the contract code
+
+```sh
+nolusd tx wasm store <wasm_file_path> --instantiate-anyof-addresses <addresses_to_instantiate_the_code>  --from <store_code_privileged_user_key>
+```
+
+#### Get the expected contract address
+
+Due to the fact that contract addresses depend on the order in which they are deployed, and because of the dependencies between some of their init messages, the new contract address must be predicted. Тherefor, there is a query provided by the `admin` contract:
+
+```sh
+nolusd q wasm contract-state smart <admin_contract_address> '{"instantiate_address":{"code_id":<code_id_from_the_previous_step>,"protocol":"<protocol>"}}'
+```
+
+Where <`protocol`> is a combination of the chosen DEX name and the protocol currency (eg "osmosis-USDC").
+
+#### Instantiate the contract
+
+On a live network, a new contract can be instantiated through the `admin` contract:
+
+```sh
+nolusd tx wasm execute <admin_contract_address> '{"instantiate":{"code_id":<code_id>,"label":"<label>","message":"<init_msg>","protocol":"<protocol>","expected_address":"<expected_address_received_from_the_previous_step>"}}' --from <network_DEX_admin_key>
+```
+
+Where <`label`> can be a combination of the chosen protocol and the contract name (eg `osmosis-USDC-leaser`)
+
+If the given expected address matches the real one, the instantiation will be successful.
+
+### Deploy new Protocol-specific contracts
+
+#### Deploy new contracts
+
+As mentioned in the sections above, the order in which contracts are deployed is important. So there is a correct way to deploy a new set of Protocol-specific contracts.
+
+1. store Leaser code
+2. store Lease code
+3. store and instantiate LPP
+4. store and instantiate Oracle
+5. store and instantiate Profit
+6. instantiate Leaser
+
+This can be done manually by following the steps in the section [above](#new-contracts---live-network),
+or by using the `deploy-contracts-live.sh`:
+
+```sh
+./scripts/deploy-contracts-live.sh deploy_contracts "<nolus_node_url>" "<nolus_chain_id>" "<nolus_home_dir>" "<network_DEX_admin_key>" "<store_code_privileged_user_key>" "<admin_contract_address>" "<protocol_wasm_artifacts_dir_path>" "<dex_name>" "<protocol_currency>" "<treasury_contract_address>"  "<timealarms_contract_address>" '<protocol_swap_tree_obj>'
+```
+
+#### Register the new set of Protocol-specific contracts
+
+The goal is to make the platform to work with the new contracts as well.
+
+```sh
+nolusd tx wasm execute <admin_contract_address> '{"register_protocol":{"name":"<protocol>","contracts":{"leaser":"<leaser_contract_address>","lpp":"<lpp_contract_address>","oracle":"<oracle_contract_address>","profit":"<profit_contract_address>"}}}' --from <network_DEX_admin_key>
+```
 
 ### Upgrade dependencies
 
