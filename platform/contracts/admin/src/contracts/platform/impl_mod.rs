@@ -9,9 +9,9 @@ use crate::{
     validate::Validate,
 };
 
-use super::Platform;
+use super::PlatformTemplate;
 
-impl Platform<Addr> {
+impl PlatformTemplate<Addr> {
     pub(in crate::contracts) fn migrate(self, batch: &mut Batch, migration_msgs: MigrationSpecs) {
         maybe_migrate_contract(batch, self.dispatcher, migration_msgs.dispatcher);
         maybe_migrate_contract(batch, self.timealarms, migration_msgs.timealarms);
@@ -29,7 +29,7 @@ impl Platform<Addr> {
     }
 }
 
-impl<T> Validate for Platform<T>
+impl<T> Validate for PlatformTemplate<T>
 where
     T: Validate,
 {
@@ -46,6 +46,6 @@ where
     }
 }
 
-type MigrationSpecs = Platform<Option<MigrationSpec>>;
+type MigrationSpecs = PlatformTemplate<Option<MigrationSpec>>;
 
-type PostMigrationExecutes = Platform<Option<String>>;
+type PostMigrationExecutes = PlatformTemplate<Option<String>>;

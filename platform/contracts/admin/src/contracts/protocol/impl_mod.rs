@@ -13,9 +13,9 @@ use crate::{
     validate::Validate,
 };
 
-use super::Protocol;
+use super::{Protocol, ProtocolTemplate};
 
-impl Protocol<Addr> {
+impl ProtocolTemplate<Addr> {
     pub(in crate::contracts) fn migrate(
         self,
         batch: &mut Batch,
@@ -45,8 +45,11 @@ impl Protocol<Addr> {
     }
 }
 
-impl<T> Protocol<BTreeMap<String, T>> {
-    pub(in crate::contracts) fn extract_entry(&mut self, protocol: String) -> Result<Protocol<T>> {
+impl<T> ProtocolTemplate<BTreeMap<String, T>> {
+    pub(in crate::contracts) fn extract_entry(
+        &mut self,
+        protocol: String,
+    ) -> Result<ProtocolTemplate<T>> {
         if let Some((leaser, lpp, oracle, profit)) =
             self.leaser.remove(&protocol).and_then(|leaser: T| {
                 self.lpp.remove(&protocol).and_then(|lpp: T| {
@@ -58,7 +61,7 @@ impl<T> Protocol<BTreeMap<String, T>> {
                 })
             })
         {
-            Ok(Protocol {
+            Ok(ProtocolTemplate {
                 leaser,
                 lpp,
                 oracle,
@@ -82,7 +85,7 @@ impl<T> Protocol<BTreeMap<String, T>> {
     }
 }
 
-impl<T> Validate for Protocol<T>
+impl<T> Validate for ProtocolTemplate<T>
 where
     T: Validate,
 {
@@ -101,6 +104,17 @@ where
     }
 }
 
-type ProtocolMigrationSpec = Protocol<Option<MigrationSpec>>;
+impl Validate for Protocol {
+    type Context<'r> = <Addr as Validate>::Context<'r>;
 
-type ProtocolPostMigrationExecute = Protocol<Option<String>>;
+    type Error = <Addr as Validate>::Error;
+
+    #[inline]
+    fn validate(&self, ctx: Self::Context<'_>) -> ::std::result::Result<(), Self::Error> {
+        self.contracts.validate(ctx)
+    }
+}
+
+type ProtocolMigrationSpec = ProtocolTemplate<Option<MigrationSpec>>;
+
+type ProtocolPostMigrationExecute = ProtocolTemplate<Option<String>>;

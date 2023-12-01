@@ -10,11 +10,11 @@ use crate::{
 };
 
 use super::{
-    protocol::Protocol, ContractsGroupedByProtocol, ContractsMigration,
-    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec,
+    protocol::ProtocolTemplate, ContractsGroupedByProtocol, ContractsMigration,
+    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec, Protocol,
 };
 
-impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
+impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
     fn migrate(self, mut migration_msgs: ContractsMigration) -> Result<Batch> {
         let mut batch: Batch = Batch::default();
 
@@ -22,10 +22,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(protocol, contracts)| {
+            .try_for_each(|(name, Protocol { contracts, .. })| {
                 migration_msgs
                     .protocol
-                    .extract_entry(protocol)
+                    .extract_entry(name)
                     .map(|migration_msgs| contracts.migrate(&mut batch, migration_msgs))
             })
             .and_then(|()| migration_msgs.protocol.ensure_empty())
@@ -43,9 +43,9 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(protocol, contracts)| {
-                execution_msgs.protocol.extract_entry(protocol).map(
-                    |execution_msgs: Protocol<Option<String>>| {
+            .try_for_each(|(name, Protocol { contracts, .. })| {
+                execution_msgs.protocol.extract_entry(name).map(
+                    |execution_msgs: ProtocolTemplate<Option<String>>| {
                         contracts.post_migration_execute(&mut batch, execution_msgs)
                     },
                 )
@@ -55,9 +55,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
     }
 }
 
-impl<T> Validate for ContractsTemplate<T, BTreeMap<String, Protocol<T>>>
+impl<T, U> Validate for ContractsTemplate<T, BTreeMap<String, U>>
 where
     T: Validate,
+    U: for<'r> Validate<Context<'r> = T::Context<'r>, Error = T::Error>,
 {
     type Context<'r> = T::Context<'r>;
 

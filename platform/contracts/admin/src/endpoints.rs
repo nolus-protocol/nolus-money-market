@@ -54,6 +54,7 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {
         protocol_name,
+        network_name,
         ref dex_admin,
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
@@ -64,7 +65,9 @@ pub fn migrate(
             versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
                 deps.storage,
                 CONTRACT_VERSION,
-                |storage: &mut dyn Storage| state_contracts::migrate(storage, protocol_name),
+                |storage: &mut dyn Storage| {
+                    state_contracts::migrate(storage, protocol_name, network_name)
+                },
                 Into::into,
             )
         })
@@ -110,10 +113,9 @@ pub fn execute(
 
             Ok(response::response_only_messages(batch))
         }
-        ExecuteMsg::RegisterProtocol {
-            name,
-            ref contracts,
-        } => register_protocol(deps.storage, deps.querier, name, contracts),
+        ExecuteMsg::RegisterProtocol { name, ref protocol } => {
+            register_protocol(deps.storage, deps.querier, name, protocol)
+        }
     }
 }
 
@@ -124,10 +126,9 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             .grant_to(new_dex_admin)
             .map(|()| response::empty_response())
             .map_err(Into::into),
-        SudoMsg::RegisterProtocol {
-            name,
-            ref contracts,
-        } => register_protocol(deps.storage, deps.querier, name, contracts),
+        SudoMsg::RegisterProtocol { name, ref protocol } => {
+            register_protocol(deps.storage, deps.querier, name, protocol)
+        }
         SudoMsg::MigrateContracts(MigrateContracts {
             release,
             admin_contract,
@@ -149,11 +150,11 @@ fn register_protocol(
     storage: &mut dyn Storage,
     querier: QuerierWrapper<'_>,
     name: String,
-    contracts: &Protocol<Addr>,
+    protocol: &Protocol,
 ) -> ContractResult<CwResponse> {
-    contracts.validate(querier)?;
+    protocol.validate(querier)?;
 
-    state_contracts::add_protocol_set(storage, name, contracts).map(|()| response::empty_response())
+    state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
