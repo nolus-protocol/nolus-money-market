@@ -1,5 +1,5 @@
 #[cfg(not(any(feature = "astroport", feature = "osmosis")))]
-compile_error!("No dex selected!");
+compile_error!("No protocol selected!");
 
 #[cfg(not(any(feature = "net_dev", feature = "net_test", feature = "net_main")))]
 compile_error!("No net selected!");

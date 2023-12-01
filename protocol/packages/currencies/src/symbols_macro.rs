@@ -18,7 +18,7 @@ macro_rules! define_symbol {
                 { CurrencySymbols { $($body)* } }
             )+
             #[cfg(all($($(not(feature = $net)),+),+))]
-            compile_error!(concat!("No symbols defined for \"", stringify!($currency), "\" selected network! Symbols defined for the following networks: ", $($($net, ", "),+),+))
+            compile_error!(concat!(stringify!($currency), " is not supported on the selected (if any) network! The currency is supported on the following networks: ", $($($net, ", "),+),+))
         };
     };
 }
