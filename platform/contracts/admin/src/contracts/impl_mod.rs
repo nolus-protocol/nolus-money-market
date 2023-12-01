@@ -22,11 +22,11 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(name, Protocol { contracts: protocol, .. })| {
+            .try_for_each(|(name, Protocol { contracts, .. })| {
                 migration_msgs
                     .protocol
                     .extract_entry(name)
-                    .map(|migration_msgs| protocol.migrate(&mut batch, migration_msgs))
+                    .map(|migration_msgs| contracts.migrate(&mut batch, migration_msgs))
             })
             .and_then(|()| migration_msgs.protocol.ensure_empty())
             .map(|()| batch)
@@ -43,10 +43,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(name, Protocol { contracts: protocol, .. })| {
+            .try_for_each(|(name, Protocol { contracts, .. })| {
                 execution_msgs.protocol.extract_entry(name).map(
                     |execution_msgs: ProtocolTemplate<Option<String>>| {
-                        protocol.post_migration_execute(&mut batch, execution_msgs)
+                        contracts.post_migration_execute(&mut batch, execution_msgs)
                     },
                 )
             })
