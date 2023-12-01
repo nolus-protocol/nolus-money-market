@@ -134,7 +134,7 @@ impl Active {
         self.lease
             .lease
             .clone()
-            .execute(ValidatePayment::new(cw_amount, now), querier)
+            .execute(ValidatePayment::new(cw_amount), querier)
             .and_then(|payment| {
                 let buy_lpn = buy_lpn::start(self.lease, payment);
                 buy_lpn

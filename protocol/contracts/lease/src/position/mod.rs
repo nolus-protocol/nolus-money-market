@@ -77,14 +77,8 @@ where
     /// Check if the amount can be used to repay the interests.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.
-    /// Return `error::ContractError::RestAmountTooSmall` when after the repayment the rest amount
-    /// is less than the minimum transaction amount.
-    pub fn validate_payment(
-        &self,
-        payment: Coin<Lpn>,
-        total_due: Coin<Lpn>,
-    ) -> ContractResult<Coin<Lpn>> {
-        self.spec.validate_payment(payment, total_due)
+    pub fn validate_payment(&self, payment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {
+        self.spec.validate_payment(payment)
     }
 
     /// Check if the amount can be used to close the position.

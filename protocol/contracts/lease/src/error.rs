@@ -71,9 +71,6 @@ pub enum ContractError {
     #[error("[Lease] The position past this close should worth at least {0}")]
     PositionCloseAmountTooBig(LpnCoin),
 
-    #[error("[Lease] The rest amount should worth at least {0}")]
-    RestAmountTooSmall(LpnCoin),
-
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),
 

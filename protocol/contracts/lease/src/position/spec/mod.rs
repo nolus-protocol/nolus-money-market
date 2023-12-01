@@ -103,23 +103,11 @@ where
     /// Check if the amount can be used to repay the interests.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.
-    /// Return `error::ContractError::RestAmountTooSmall` when after the repayment the rest amount
-    /// is less than the minimum transaction amount.
-    pub fn validate_payment(
-        &self,
-        payment: Coin<Lpn>,
-        total_due: Coin<Lpn>,
-    ) -> ContractResult<Coin<Lpn>> {
+    pub fn validate_payment(&self, payment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {
         let one = Price::identity();
 
         if self.valid_transaction(payment, one) {
-            if self.valid_transaction(total_due.saturating_sub(payment), one) {
-                Ok(payment)
-            } else {
-                Err(ContractError::RestAmountTooSmall(
-                    self.min_transaction.into(),
-                ))
-            }
+            Ok(payment)
         } else {
             Err(ContractError::InsufficientPayment(
                 self.min_transaction.into(),
@@ -1050,26 +1038,13 @@ mod test_validate_payment {
     #[test]
     fn insufficient_payment() {
         let spec = spec(65, 15);
-        let result_1 = spec.validate_payment(14.into(), 78.into());
+        let result_1 = spec.validate_payment(14.into());
         assert!(matches!(
             result_1,
             Err(ContractError::InsufficientPayment(_))
         ));
-        let result_2 = spec.validate_payment(15.into(), 78.into());
+        let result_2 = spec.validate_payment(15.into());
         assert_eq!(coin_lpn(15), result_2.unwrap());
-    }
-
-    #[test]
-    fn amount_too_small() {
-        let spec = spec(65, 25);
-        let result_1 = spec.validate_payment(25.into(), 49.into());
-        assert!(matches!(
-            result_1,
-            Err(ContractError::RestAmountTooSmall(_))
-        ));
-
-        let result_2 = spec.validate_payment(25.into(), 50.into());
-        assert_eq!(coin_lpn(25), result_2.unwrap());
     }
 
     fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec<TestLpn>

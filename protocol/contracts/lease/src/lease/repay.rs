@@ -7,11 +7,7 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
 
-use crate::{
-    error::ContractResult,
-    lease::Lease,
-    loan::{LiabilityStatus, RepayReceipt},
-};
+use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
@@ -23,23 +19,17 @@ where
     pub(crate) fn validate_repay<PaymentC>(
         &self,
         payment: Coin<PaymentC>,
-        now: Timestamp,
     ) -> ContractResult<Coin<PaymentC>>
     where
         PaymentC: Currency,
     {
-        let LiabilityStatus {
-            total: total_due,
-            previous_interest: _,
-        } = self.loan.liability_status(now);
-
         self.oracle
             .price_of::<PaymentC, PaymentGroup>()
             .map_err(Into::into)
             .and_then(|price| {
                 let payment_lpn = price::total(payment, price);
                 self.position
-                    .validate_payment(payment_lpn, total_due)
+                    .validate_payment(payment_lpn)
                     .map(|validated| price::total(validated, price.inv()))
             })
     }
