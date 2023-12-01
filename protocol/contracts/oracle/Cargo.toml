@@ -18,7 +18,6 @@ net_main = ["currencies/net_main"]
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
 
-cosmwasm-bindings = ["contract"]
 contract = ["stub"]
 testing = ["stub", "marketprice/testing"]
 stub = [] # TODO strip off any unnecessary dependency

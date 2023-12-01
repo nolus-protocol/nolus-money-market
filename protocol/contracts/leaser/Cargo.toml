@@ -16,7 +16,7 @@ net_main = ["currencies/net_main"]
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
 
-cosmwasm-bindings = []
+contract = []
 testing = ["currency/testing", "lease/testing"]
 
 [dependencies]

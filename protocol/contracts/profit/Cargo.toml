@@ -18,7 +18,7 @@ net_main = ["dex/net_main"]
 astroport = ["api", "dex/astroport"]
 osmosis = ["api", "dex/osmosis"]
 
-cosmwasm-bindings = []
+contract = []
 api = []
 stub = ["api"]
 testing = []

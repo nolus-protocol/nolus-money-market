@@ -32,7 +32,7 @@ runs:
       run: |
         if ! test '${{ inputs.build_wasm }}' = ''
         then
-          FEATURES='cosmwasm-bindings'
+          FEATURES='contract'
         else
           FEATURES=''
         fi

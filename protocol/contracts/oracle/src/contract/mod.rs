@@ -4,7 +4,7 @@ use platform::{
     batch::{Emit, Emitter},
     response,
 };
-#[cfg(feature = "cosmwasm-bindings")]
+#[cfg(feature = "contract")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -74,7 +74,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
@@ -89,7 +89,7 @@ pub fn instantiate(
     Ok(response::empty_response())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(
         deps.storage,
@@ -99,7 +99,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     .and_then(response::response)
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => {
@@ -120,7 +120,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
@@ -130,7 +130,7 @@ pub fn execute(
     ExecWithOracleBase::cmd(deps, env, msg, info.sender)
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
@@ -142,7 +142,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 }
 
 // TODO: compare gas usage of this solution vs reply on error
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
     const EVENT_TYPE: &str = "market-alarm";
     const KEY_DELIVERED: &str = "delivered";

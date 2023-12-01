@@ -6,7 +6,7 @@ use platform::{
     batch::Batch, contract, error as platform_error, message::Response as MessageResponse, reply,
     response,
 };
-#[cfg(feature = "cosmwasm-bindings")]
+#[cfg(feature = "contract")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
@@ -29,7 +29,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
     _env: Env,
@@ -53,7 +53,7 @@ pub fn instantiate(
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     // Statically assert that the message is empty when doing a software-only update.
     let MigrateMsg {}: MigrateMsg = msg;
@@ -63,7 +63,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
@@ -127,7 +127,7 @@ pub fn execute(
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::SetupDex(params) => leaser::try_setup_dex(deps.storage, params),
@@ -146,7 +146,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
@@ -161,7 +161,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     reply::from_instantiate_addr_only(deps.api, msg)
         .map_err(|err| ContractError::ParseError {
