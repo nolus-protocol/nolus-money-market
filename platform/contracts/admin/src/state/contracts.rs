@@ -9,14 +9,14 @@ use sdk::{
 
 use crate::{
     contracts::{
-        ContractsGroupedByProtocol, ContractsTemplate, Platform, Protocol, ProtocolWithNetworkName,
+        ContractsGroupedByProtocol, ContractsTemplate, PlatformTemplate, ProtocolTemplate, Protocol,
     },
     error::Error,
     result::Result,
 };
 
-const PLATFORM: Item<'_, Platform<Addr>> = Item::new("platform_contracts");
-const PROTOCOL: Map<'_, String, ProtocolWithNetworkName> = Map::new("protocol_contracts");
+const PLATFORM: Item<'_, PlatformTemplate<Addr>> = Item::new("platform_contracts");
+const PROTOCOL: Map<'_, String, Protocol> = Map::new("protocol_contracts");
 
 pub(crate) fn store(
     storage: &mut dyn Storage,
@@ -27,7 +27,7 @@ pub(crate) fn store(
         .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
-                |(protocol, ref contracts): (String, ProtocolWithNetworkName)| {
+                |(protocol, ref contracts): (String, Protocol)| {
                     PROTOCOL
                         .save(storage, protocol, contracts)
                         .map_err(Into::into)
@@ -36,10 +36,10 @@ pub(crate) fn store(
         })
 }
 
-pub(crate) fn add_protocol_set(
+pub(crate) fn add_protocol(
     storage: &mut dyn Storage,
     name: String,
-    protocol: &ProtocolWithNetworkName,
+    protocol: &Protocol,
 ) -> Result<()> {
     if PROTOCOL.has(storage, name.clone()) {
         Err(Error::ProtocolSetAlreadyExists(name))
@@ -55,24 +55,24 @@ pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
         .map_err(Into::into)
 }
 
-pub(crate) fn load_platform(storage: &dyn Storage) -> Result<Platform<Addr>> {
+pub(crate) fn load_platform(storage: &dyn Storage) -> Result<PlatformTemplate<Addr>> {
     PLATFORM.load(storage).map_err(Into::into)
 }
 
 pub(crate) fn load_protocol(
     storage: &dyn Storage,
     name: String,
-) -> Result<ProtocolWithNetworkName> {
+) -> Result<Protocol> {
     PROTOCOL.load(storage, name).map_err(Into::into)
 }
 
 pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
-    load_platform(storage).and_then(|platform: Platform<Addr>| {
+    load_platform(storage).and_then(|platform: PlatformTemplate<Addr>| {
         PROTOCOL
             .range(storage, None, None, Order::Ascending)
             .collect::<::std::result::Result<_, _>>()
             .map(
-                |protocol: BTreeMap<String, ProtocolWithNetworkName>| ContractsTemplate {
+                |protocol: BTreeMap<String, Protocol>| ContractsTemplate {
                     platform,
                     protocol,
                 },
@@ -117,7 +117,7 @@ pub(crate) fn migrate(
                 PLATFORM
                     .save(
                         storage,
-                        &Platform {
+                        &PlatformTemplate {
                             dispatcher,
                             timealarms,
                             treasury,
@@ -127,9 +127,9 @@ pub(crate) fn migrate(
                         PROTOCOL.save(
                             storage,
                             protocol_name,
-                            &ProtocolWithNetworkName {
+                            &Protocol {
                                 network: network_name,
-                                protocol: Protocol {
+                                contracts: ProtocolTemplate {
                                     leaser,
                                     lpp,
                                     oracle,

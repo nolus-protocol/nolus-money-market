@@ -12,7 +12,7 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    contracts::ProtocolWithNetworkName,
+    contracts::Protocol,
     error::Error as ContractError,
     msg::{
         ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, PlatformQueryResponse,
@@ -150,11 +150,11 @@ fn register_protocol(
     storage: &mut dyn Storage,
     querier: QuerierWrapper<'_>,
     name: String,
-    protocol: &ProtocolWithNetworkName,
+    protocol: &Protocol,
 ) -> ContractResult<CwResponse> {
     protocol.validate(querier)?;
 
-    state_contracts::add_protocol_set(storage, name, protocol).map(|()| response::empty_response())
+    state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

@@ -9,8 +9,8 @@ use sdk::{
 };
 
 pub use self::{
-    platform::Platform,
-    protocol::{Protocol, ProtocolWithNetworkName},
+    platform::PlatformTemplate,
+    protocol::{ProtocolTemplate, Protocol},
 };
 
 #[cfg(feature = "contract")]
@@ -23,8 +23,8 @@ mod protocol;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ContractsTemplate<T, U = Protocol<BTreeMap<String, T>>> {
-    pub platform: Platform<T>,
+pub struct ContractsTemplate<T, U = ProtocolTemplate<BTreeMap<String, T>>> {
+    pub platform: PlatformTemplate<T>,
     pub protocol: U,
 }
 
@@ -33,7 +33,7 @@ pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
 
 pub(crate) type ContractsGroupedByProtocol =
-    ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>>;
+    ContractsTemplate<Addr, BTreeMap<String, Protocol>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]

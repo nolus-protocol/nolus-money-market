@@ -10,7 +10,7 @@ mod impl_mod;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct Protocol<T> {
+pub struct ProtocolTemplate<T> {
     pub leaser: T,
     pub lpp: T,
     pub oracle: T,
@@ -19,7 +19,7 @@ pub struct Protocol<T> {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ProtocolWithNetworkName {
+pub struct Protocol {
     pub network: String,
-    pub protocol: Protocol<Addr>,
+    pub contracts: ProtocolTemplate<Addr>,
 }

@@ -10,11 +10,11 @@ use crate::{
 };
 
 use super::{
-    protocol::Protocol, ContractsGroupedByProtocol, ContractsMigration,
-    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec, ProtocolWithNetworkName,
+    protocol::ProtocolTemplate, ContractsGroupedByProtocol, ContractsMigration,
+    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec, Protocol,
 };
 
-impl ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>> {
+impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
     fn migrate(self, mut migration_msgs: ContractsMigration) -> Result<Batch> {
         let mut batch: Batch = Batch::default();
 
@@ -22,7 +22,7 @@ impl ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(name, ProtocolWithNetworkName { protocol, .. })| {
+            .try_for_each(|(name, Protocol { contracts: protocol, .. })| {
                 migration_msgs
                     .protocol
                     .extract_entry(name)
@@ -43,9 +43,9 @@ impl ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(name, ProtocolWithNetworkName { protocol, .. })| {
+            .try_for_each(|(name, Protocol { contracts: protocol, .. })| {
                 execution_msgs.protocol.extract_entry(name).map(
-                    |execution_msgs: Protocol<Option<String>>| {
+                    |execution_msgs: ProtocolTemplate<Option<String>>| {
                         protocol.post_migration_execute(&mut batch, execution_msgs)
                     },
                 )

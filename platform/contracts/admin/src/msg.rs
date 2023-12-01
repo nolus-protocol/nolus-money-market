@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::contracts::{
     ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
-    Platform, ProtocolWithNetworkName,
+    PlatformTemplate, Protocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -38,7 +38,7 @@ pub enum ExecuteMsg {
     },
     RegisterProtocol {
         name: String,
-        protocol: ProtocolWithNetworkName,
+        protocol: Protocol,
     },
 }
 
@@ -50,7 +50,7 @@ pub enum SudoMsg {
     },
     RegisterProtocol {
         name: String,
-        protocol: ProtocolWithNetworkName,
+        protocol: Protocol,
     },
     MigrateContracts(MigrateContracts),
 }
@@ -75,6 +75,6 @@ pub enum QueryMsg {
 
 pub type ProtocolsQueryResponse = Vec<String>;
 
-pub type PlatformQueryResponse = Platform<Addr>;
+pub type PlatformQueryResponse = PlatformTemplate<Addr>;
 
-pub type ProtocolQueryResponse = ProtocolWithNetworkName;
+pub type ProtocolQueryResponse = Protocol;
