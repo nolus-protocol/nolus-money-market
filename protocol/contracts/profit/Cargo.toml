@@ -18,7 +18,7 @@ net_main = ["dex/net_main"]
 astroport = ["api", "dex/astroport"]
 osmosis = ["api", "dex/osmosis"]
 
-contract = []
+contract = ["dep:cosmwasm-std", "dep:versioning"]
 api = []
 stub = ["api"]
 testing = []
@@ -33,10 +33,10 @@ oracle-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 timealarms = { workspace = true, features = ["stub"] }
-versioning = { workspace = true }
+versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

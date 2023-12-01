@@ -4,7 +4,7 @@ pub mod error;
 pub mod msg;
 pub mod result;
 
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "contract")]
 mod access_control;
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "contract")]
 pub mod contract;

@@ -7,7 +7,7 @@ pub mod result;
 #[cfg(any(feature = "stub", test))]
 pub mod stub;
 
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "contract")]
 mod alarms;
-#[cfg(any(feature = "contract", test))]
+#[cfg(feature = "contract")]
 pub mod contract;

@@ -1575,13 +1575,11 @@ dependencies = [
 name = "timealarms"
 version = "0.4.2"
 dependencies = [
- "cosmwasm-std",
  "platform",
  "sdk",
  "serde",
  "thiserror",
  "time-oracle",
- "versioning",
 ]
 
 [[package]]

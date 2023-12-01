@@ -16,7 +16,7 @@ net_main = ["currencies/net_main"]
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
 
-contract = ["stub"]
+contract = ["stub", "dep:cosmwasm-std", "dep:versioning"]
 stub = []
 testing = ["currency/testing"]
 
@@ -28,10 +28,10 @@ finance = { workspace = true }
 lpp-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
-versioning = { workspace = true }
+versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
