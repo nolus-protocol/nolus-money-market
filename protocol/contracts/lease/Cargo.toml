@@ -16,7 +16,6 @@ net_main = ["dex/net_main"]
 astroport = ["skel", "dex/astroport", "dex/migration"]
 osmosis = ["skel", "dex/osmosis", "dex/migration"]
 
-contract = []
 api = ["dep:dex"]
 skel = ["api"]
 testing = ["currencies/testing", "currency/testing", "finance/testing"]
