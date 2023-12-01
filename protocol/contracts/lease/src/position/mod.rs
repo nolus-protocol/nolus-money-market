@@ -74,7 +74,7 @@ where
             .check_liability(self.amount, total_due, overdue, asset_in_lpns)
     }
 
-    /// Check if the amount can be used to repay the interests.
+    /// Check if the amount can be used for repayment.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.
     pub fn validate_payment(&self, payment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {

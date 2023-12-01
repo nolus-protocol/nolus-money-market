@@ -5,22 +5,22 @@ pub(crate) use liquidation_status::{
     Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatus, FullLiquidationDTO,
     LiquidationDTO, PartialLiquidationDTO,
 };
+pub(crate) use obtain_payment::ObtainPayment;
 pub(crate) use open::open_lease;
 pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
 pub(crate) use repay::RepayLeaseFn;
 pub(crate) use repayable::{Emitter as RepayEmitter, Repay, RepayFn, RepayResult};
 pub(crate) use state::LeaseState;
 pub(super) use validate_close_position::Cmd as ValidateClosePosition;
-pub(crate) use validate_payment::ValidatePayment;
 
 mod close_full;
 mod close_paid;
 mod close_partial;
 mod liquidation_status;
+mod obtain_payment;
 mod open;
 mod open_loan;
 mod repay;
 mod repayable;
 mod state;
 mod validate_close_position;
-mod validate_payment;

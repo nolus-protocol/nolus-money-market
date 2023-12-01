@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{
 use crate::{
     api::{DownpaymentCoin, PositionClose, StateResponse},
     contract::{
-        cmd::{LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult, ValidatePayment},
+        cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
         Lease,
     },
@@ -54,14 +54,16 @@ impl Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         // TODO: avoid clone
-        let response = bank::may_received::<Lpns, _>(info.funds.clone(), IntoDTO::<Lpns>::new());
-        match response {
+        let obtain_payment =
+            bank::may_received::<Lpns, _>(info.funds.clone(), IntoDTO::<Lpns>::new());
+        match obtain_payment {
             Some(may_payment) => {
-                let payment = may_payment.unwrap();
-                debug_assert!(payment.ticker() == self.lease.lease.loan.lpp().currency());
+                // TODO use Never and safe_unwrap instead
+                let payment = may_payment.expect("Expected IntoDTO to pass");
+                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().currency());
                 repay::repay(self.lease, payment, env, querier)
             }
-            None => self.validate_and_buy(info.funds, env.block.time, querier),
+            None => self.start_swap(info.funds, env.block.time, querier),
         }
     }
 
@@ -125,7 +127,7 @@ impl Active {
         }
     }
 
-    fn validate_and_buy(
+    fn start_swap(
         self,
         cw_amount: Vec<CwCoin>,
         now: Timestamp,
@@ -134,7 +136,7 @@ impl Active {
         self.lease
             .lease
             .clone()
-            .execute(ValidatePayment::new(cw_amount), querier)
+            .execute(ObtainPayment::new(cw_amount), querier)
             .and_then(|payment| {
                 let buy_lpn = buy_lpn::start(self.lease, payment);
                 buy_lpn
