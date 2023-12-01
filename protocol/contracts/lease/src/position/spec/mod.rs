@@ -100,9 +100,36 @@ where
             })
     }
 
+    /// Check if the amount can be used to repay the interests.
+    /// Return `error::ContractError::InsufficientPayment` when the payment amount
+    /// is less than the minimum transaction amount.
+    /// Return `error::ContractError::RestAmountTooSmall` when after the repayment the rest amount
+    /// is less than the minimum transaction amount.
+    pub fn validate_payment(
+        &self,
+        payment: Coin<Lpn>,
+        total_due: Coin<Lpn>,
+    ) -> ContractResult<Coin<Lpn>> {
+        let one = Price::identity();
+
+        if self.valid_transaction(payment, one) {
+            if self.valid_transaction(total_due.saturating_sub(payment), one) {
+                Ok(payment)
+            } else {
+                Err(ContractError::RestAmountTooSmall(
+                    self.min_transaction.into(),
+                ))
+            }
+        } else {
+            Err(ContractError::InsufficientPayment(
+                self.min_transaction.into(),
+            ))
+        }
+    }
+
     /// Check if the amount can be used to close the position.
     /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
-    /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
+    /// with amount less than the minimum transaction position parameter sent on lease open. Refer to
     /// `NewLeaseForm::position_spec`.
     ///
     /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
@@ -117,16 +144,18 @@ where
     where
         Asset: Currency,
     {
-        if !self.valid_transaction(close_amount, asset_in_lpns) {
+        if self.valid_transaction(close_amount, asset_in_lpns) {
+            if self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
+                Ok(())
+            } else {
+                Err(ContractError::PositionCloseAmountTooBig(
+                    self.min_asset.into(),
+                ))
+            }
+        } else {
             Err(ContractError::PositionCloseAmountTooSmall(
                 self.min_transaction.into(),
             ))
-        } else if !self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
-            Err(ContractError::PositionCloseAmountTooBig(
-                self.min_asset.into(),
-            ))
-        } else {
-            Ok(())
         }
     }
 
@@ -238,119 +267,6 @@ where
         } else {
             Status::No(self.liability.zone_of(ltv))
         }
-    }
-}
-
-#[cfg(test)]
-mod test_validate_close {
-    use currencies::test::{PaymentC3, StableC1};
-    use finance::{
-        coin::Coin,
-        duration::Duration,
-        liability::Liability,
-        percent::Percent,
-        price::{self, Price},
-    };
-
-    use crate::{
-        error::ContractError,
-        position::{Position, Spec},
-    };
-
-    type TestCurrency = PaymentC3;
-    type TestLpn = StableC1;
-
-    #[test]
-    fn too_small_amount() {
-        let spec = position(100, 75, 15);
-        let result_1 = spec.validate_close_amount(14.into(), price(1, 1));
-        assert!(matches!(
-            result_1,
-            Err(ContractError::PositionCloseAmountTooSmall(_))
-        ));
-
-        let result_2 = spec.validate_close_amount(6.into(), price(1, 2));
-        assert!(matches!(
-            result_2,
-            Err(ContractError::PositionCloseAmountTooSmall(_))
-        ));
-    }
-
-    #[test]
-    fn amount_as_min_transaction() {
-        let spec = position(100, 85, 15);
-        let result_1 = spec.validate_close_amount(15.into(), price(1, 1));
-        assert!(result_1.is_ok());
-
-        let result_2 = spec.validate_close_amount(5.into(), price(1, 3));
-        assert!(result_2.is_ok());
-    }
-
-    #[test]
-    fn too_big_amount() {
-        let spec = position(100, 25, 1);
-        let result_1 = spec.validate_close_amount(76.into(), price(1, 1));
-        assert!(matches!(
-            result_1,
-            Err(ContractError::PositionCloseAmountTooBig(_))
-        ));
-
-        let result_2 = spec.validate_close_amount(64.into(), price(3, 2));
-        assert!(matches!(
-            result_2,
-            Err(ContractError::PositionCloseAmountTooBig(_))
-        ));
-    }
-
-    #[test]
-    fn amount_as_min_asset() {
-        let spec = position(100, 25, 1);
-        let result_1 = spec.validate_close_amount(75.into(), price(1, 1));
-        assert!(result_1.is_ok());
-
-        let result_2 = spec.validate_close_amount(62.into(), price(3, 2));
-        assert!(result_2.is_ok());
-    }
-
-    #[test]
-    fn valid_amount() {
-        let spec = position(100, 40, 10);
-        let result_1 = spec.validate_close_amount(53.into(), price(1, 1));
-        assert!(result_1.is_ok());
-
-        let result_2 = spec.validate_close_amount(89.into(), price(1, 4));
-        assert!(result_2.is_ok());
-    }
-
-    fn position<Asset, Lpn>(
-        amount: Asset,
-        min_asset: Lpn,
-        min_transaction: Lpn,
-    ) -> Position<TestCurrency, TestLpn>
-    where
-        Asset: Into<Coin<TestCurrency>>,
-        Lpn: Into<Coin<TestLpn>>,
-    {
-        let liability = Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
-            Duration::from_hours(1),
-        );
-        let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into());
-
-        Position::<TestCurrency, TestLpn>::new(amount.into(), spec)
-    }
-
-    fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>
-    where
-        Asset: Into<Coin<TestCurrency>>,
-        Lpn: Into<Coin<TestLpn>>,
-    {
-        price::total_of(price_asset.into()).is(price_lpn.into())
     }
 }
 
@@ -1112,5 +1028,180 @@ mod test_check_liability {
         let spec = Spec::new(liability, min_asset.into(), min_transaction.into());
 
         Position::new(asset.into(), spec)
+    }
+}
+
+#[cfg(test)]
+mod test_validate_payment {
+    use currencies::test::StableC1;
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        liability::Liability,
+        percent::Percent,
+    };
+
+    use crate::error::ContractError;
+
+    use super::Spec;
+
+    type TestLpn = StableC1;
+
+    #[test]
+    fn insufficient_payment() {
+        let spec = spec(65, 15);
+        let result_1 = spec.validate_payment(14.into(), 78.into());
+        assert!(matches!(
+            result_1,
+            Err(ContractError::InsufficientPayment(_))
+        ));
+        let result_2 = spec.validate_payment(15.into(), 78.into());
+        assert_eq!(coin_lpn(15), result_2.unwrap());
+    }
+
+    #[test]
+    fn amount_too_small() {
+        let spec = spec(65, 25);
+        let result_1 = spec.validate_payment(25.into(), 49.into());
+        assert!(matches!(
+            result_1,
+            Err(ContractError::RestAmountTooSmall(_))
+        ));
+
+        let result_2 = spec.validate_payment(25.into(), 50.into());
+        assert_eq!(coin_lpn(25), result_2.unwrap());
+    }
+
+    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec<TestLpn>
+    where
+        LpnAmount: Into<Coin<TestLpn>>,
+    {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        Spec::new(liability, min_asset.into(), min_transaction.into())
+    }
+
+    fn coin_lpn(amount: Amount) -> Coin<TestLpn> {
+        Coin::<TestLpn>::new(amount)
+    }
+}
+
+#[cfg(test)]
+mod test_validate_close {
+    use currencies::test::{PaymentC3, StableC1};
+    use finance::{
+        coin::Coin,
+        duration::Duration,
+        liability::Liability,
+        percent::Percent,
+        price::{self, Price},
+    };
+
+    use crate::{
+        error::ContractError,
+        position::{Position, Spec},
+    };
+
+    type TestCurrency = PaymentC3;
+    type TestLpn = StableC1;
+
+    #[test]
+    fn too_small_amount() {
+        let spec = position(100, 75, 15);
+        let result_1 = spec.validate_close_amount(14.into(), price(1, 1));
+        assert!(matches!(
+            result_1,
+            Err(ContractError::PositionCloseAmountTooSmall(_))
+        ));
+
+        let result_2 = spec.validate_close_amount(6.into(), price(1, 2));
+        assert!(matches!(
+            result_2,
+            Err(ContractError::PositionCloseAmountTooSmall(_))
+        ));
+    }
+
+    #[test]
+    fn amount_as_min_transaction() {
+        let spec = position(100, 85, 15);
+        let result_1 = spec.validate_close_amount(15.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(5.into(), price(1, 3));
+        assert!(result_2.is_ok());
+    }
+
+    #[test]
+    fn too_big_amount() {
+        let spec = position(100, 25, 1);
+        let result_1 = spec.validate_close_amount(76.into(), price(1, 1));
+        assert!(matches!(
+            result_1,
+            Err(ContractError::PositionCloseAmountTooBig(_))
+        ));
+
+        let result_2 = spec.validate_close_amount(64.into(), price(3, 2));
+        assert!(matches!(
+            result_2,
+            Err(ContractError::PositionCloseAmountTooBig(_))
+        ));
+    }
+
+    #[test]
+    fn amount_as_min_asset() {
+        let spec = position(100, 25, 1);
+        let result_1 = spec.validate_close_amount(75.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(62.into(), price(3, 2));
+        assert!(result_2.is_ok());
+    }
+
+    #[test]
+    fn valid_amount() {
+        let spec = position(100, 40, 10);
+        let result_1 = spec.validate_close_amount(53.into(), price(1, 1));
+        assert!(result_1.is_ok());
+
+        let result_2 = spec.validate_close_amount(89.into(), price(1, 4));
+        assert!(result_2.is_ok());
+    }
+
+    fn position<Asset, Lpn>(
+        amount: Asset,
+        min_asset: Lpn,
+        min_transaction: Lpn,
+    ) -> Position<TestCurrency, TestLpn>
+    where
+        Asset: Into<Coin<TestCurrency>>,
+        Lpn: Into<Coin<TestLpn>>,
+    {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            Duration::from_hours(1),
+        );
+        let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into());
+
+        Position::<TestCurrency, TestLpn>::new(amount.into(), spec)
+    }
+
+    fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>
+    where
+        Asset: Into<Coin<TestCurrency>>,
+        Lpn: Into<Coin<TestLpn>>,
+    {
+        price::total_of(price_asset.into()).is(price_lpn.into())
     }
 }

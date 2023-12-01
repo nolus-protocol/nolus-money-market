@@ -11,6 +11,7 @@ pub(crate) use repay::RepayLeaseFn;
 pub(crate) use repayable::{Emitter as RepayEmitter, Repay, RepayFn, RepayResult};
 pub(crate) use state::LeaseState;
 pub(super) use validate_close_position::Cmd as ValidateClosePosition;
+pub(crate) use validate_payment::ValidatePayment;
 
 mod close_full;
 mod close_paid;
@@ -22,3 +23,4 @@ mod repay;
 mod repayable;
 mod state;
 mod validate_close_position;
+mod validate_payment;

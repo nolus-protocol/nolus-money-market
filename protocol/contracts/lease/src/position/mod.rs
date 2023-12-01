@@ -74,9 +74,22 @@ where
             .check_liability(self.amount, total_due, overdue, asset_in_lpns)
     }
 
+    /// Check if the amount can be used to repay the interests.
+    /// Return `error::ContractError::InsufficientPayment` when the payment amount
+    /// is less than the minimum transaction amount.
+    /// Return `error::ContractError::RestAmountTooSmall` when after the repayment the rest amount
+    /// is less than the minimum transaction amount.
+    pub fn validate_payment(
+        &self,
+        payment: Coin<Lpn>,
+        total_due: Coin<Lpn>,
+    ) -> ContractResult<Coin<Lpn>> {
+        self.spec.validate_payment(payment, total_due)
+    }
+
     /// Check if the amount can be used to close the position.
     /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
-    /// with amount less than the minimum sell asset position parameter sent on lease open. Refer to
+    /// with amount less than the minimum transaction position parameter sent on lease open. Refer to
     /// `NewLeaseForm::position_spec`.
     ///
     /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
