@@ -56,6 +56,6 @@ impl SetupDexHandler for OpenTransferChannel {
 
 impl Display for OpenTransferChannel {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_fmt(format_args!("OpenTransferChannel"))
+        f.write_str("OpenTransferChannel")
     }
 }

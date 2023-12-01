@@ -46,6 +46,7 @@ pub enum ContractError {
     EmptyBalance {},
 }
 
+#[cfg(feature = "contract")]
 impl ContractError {
     pub(crate) fn unsupported_operation(msg: &'static str) -> Self {
         Self::UnsupportedOperation(String::from(msg))
