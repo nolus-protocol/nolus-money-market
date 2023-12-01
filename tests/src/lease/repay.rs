@@ -118,6 +118,18 @@ fn partial_repay_after_time() {
 }
 
 #[test]
+#[should_panic = "[Lease] Insufficient payment amount"]
+fn insufficient_payment() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let downpayment = DOWNPAYMENT;
+
+    let lease_address = super::open_lease(&mut test_case, downpayment, None);
+
+    let payment: PaymentCoin = super::create_payment_coin(49);
+    repay(&mut test_case, lease_address.clone(), payment);
+}
+
+#[test]
 fn full_repay() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
