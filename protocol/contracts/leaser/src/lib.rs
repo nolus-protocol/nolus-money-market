@@ -1,6 +1,6 @@
-pub use self::error::ContractError;
 #[cfg(feature = "contract")]
 pub use self::contract::{execute, instantiate, migrate, query, reply, sudo};
+pub use self::error::ContractError;
 
 mod cmd;
 #[cfg(feature = "contract")]
