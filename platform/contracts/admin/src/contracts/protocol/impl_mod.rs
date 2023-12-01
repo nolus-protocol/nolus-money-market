@@ -13,7 +13,7 @@ use crate::{
     validate::Validate,
 };
 
-use super::{ProtocolTemplate, Protocol};
+use super::{Protocol, ProtocolTemplate};
 
 impl ProtocolTemplate<Addr> {
     pub(in crate::contracts) fn migrate(
@@ -46,7 +46,10 @@ impl ProtocolTemplate<Addr> {
 }
 
 impl<T> ProtocolTemplate<BTreeMap<String, T>> {
-    pub(in crate::contracts) fn extract_entry(&mut self, protocol: String) -> Result<ProtocolTemplate<T>> {
+    pub(in crate::contracts) fn extract_entry(
+        &mut self,
+        protocol: String,
+    ) -> Result<ProtocolTemplate<T>> {
         if let Some((leaser, lpp, oracle, profit)) =
             self.leaser.remove(&protocol).and_then(|leaser: T| {
                 self.lpp.remove(&protocol).and_then(|lpp: T| {

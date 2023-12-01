@@ -9,7 +9,7 @@ use sdk::{
 
 use crate::{
     contracts::{
-        ContractsGroupedByProtocol, ContractsTemplate, PlatformTemplate, ProtocolTemplate, Protocol,
+        ContractsGroupedByProtocol, ContractsTemplate, PlatformTemplate, Protocol, ProtocolTemplate,
     },
     error::Error,
     result::Result,
@@ -59,10 +59,7 @@ pub(crate) fn load_platform(storage: &dyn Storage) -> Result<PlatformTemplate<Ad
     PLATFORM.load(storage).map_err(Into::into)
 }
 
-pub(crate) fn load_protocol(
-    storage: &dyn Storage,
-    name: String,
-) -> Result<Protocol> {
+pub(crate) fn load_protocol(storage: &dyn Storage, name: String) -> Result<Protocol> {
     PROTOCOL.load(storage, name).map_err(Into::into)
 }
 
@@ -71,12 +68,7 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtoc
         PROTOCOL
             .range(storage, None, None, Order::Ascending)
             .collect::<::std::result::Result<_, _>>()
-            .map(
-                |protocol: BTreeMap<String, Protocol>| ContractsTemplate {
-                    platform,
-                    protocol,
-                },
-            )
+            .map(|protocol: BTreeMap<String, Protocol>| ContractsTemplate { platform, protocol })
             .map_err(Into::into)
     })
 }

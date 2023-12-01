@@ -10,7 +10,7 @@ use sdk::{
 
 pub use self::{
     platform::PlatformTemplate,
-    protocol::{ProtocolTemplate, Protocol},
+    protocol::{Protocol, ProtocolTemplate},
 };
 
 #[cfg(feature = "contract")]
@@ -32,8 +32,7 @@ pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
 
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
 
-pub(crate) type ContractsGroupedByProtocol =
-    ContractsTemplate<Addr, BTreeMap<String, Protocol>>;
+pub(crate) type ContractsGroupedByProtocol = ContractsTemplate<Addr, BTreeMap<String, Protocol>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]

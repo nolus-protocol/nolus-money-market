@@ -45,13 +45,8 @@ pub enum ExecuteMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum SudoMsg {
-    ChangeDexAdmin {
-        new_dex_admin: Addr,
-    },
-    RegisterProtocol {
-        name: String,
-        protocol: Protocol,
-    },
+    ChangeDexAdmin { new_dex_admin: Addr },
+    RegisterProtocol { name: String, protocol: Protocol },
     MigrateContracts(MigrateContracts),
 }
 
