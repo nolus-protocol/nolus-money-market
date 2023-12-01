@@ -8,13 +8,15 @@ use sdk::{
 };
 
 use crate::{
-    contracts::{ContractsGroupedByProtocol, ContractsTemplate, Platform, Protocol},
+    contracts::{
+        ContractsGroupedByProtocol, ContractsTemplate, Platform, Protocol, ProtocolWithNetworkName,
+    },
     error::Error,
     result::Result,
 };
 
 const PLATFORM: Item<'_, Platform<Addr>> = Item::new("platform_contracts");
-const PROTOCOL: Map<'_, String, Protocol<Addr>> = Map::new("protocol_contracts");
+const PROTOCOL: Map<'_, String, ProtocolWithNetworkName> = Map::new("protocol_contracts");
 
 pub(crate) fn store(
     storage: &mut dyn Storage,
@@ -25,7 +27,7 @@ pub(crate) fn store(
         .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
-                |(protocol, ref contracts): (String, Protocol<Addr>)| {
+                |(protocol, ref contracts): (String, ProtocolWithNetworkName)| {
                     PROTOCOL
                         .save(storage, protocol, contracts)
                         .map_err(Into::into)
@@ -36,15 +38,13 @@ pub(crate) fn store(
 
 pub(crate) fn add_protocol_set(
     storage: &mut dyn Storage,
-    protocol: String,
-    contracts: &Protocol<Addr>,
+    name: String,
+    protocol: &ProtocolWithNetworkName,
 ) -> Result<()> {
-    if PROTOCOL.has(storage, protocol.clone()) {
-        Err(Error::ProtocolSetAlreadyExists(protocol))
+    if PROTOCOL.has(storage, name.clone()) {
+        Err(Error::ProtocolSetAlreadyExists(name))
     } else {
-        PROTOCOL
-            .save(storage, protocol, contracts)
-            .map_err(Into::into)
+        PROTOCOL.save(storage, name, protocol).map_err(Into::into)
     }
 }
 
@@ -59,8 +59,11 @@ pub(crate) fn load_platform(storage: &dyn Storage) -> Result<Platform<Addr>> {
     PLATFORM.load(storage).map_err(Into::into)
 }
 
-pub(crate) fn load_protocol(storage: &dyn Storage, protocol: String) -> Result<Protocol<Addr>> {
-    PROTOCOL.load(storage, protocol).map_err(Into::into)
+pub(crate) fn load_protocol(
+    storage: &dyn Storage,
+    name: String,
+) -> Result<ProtocolWithNetworkName> {
+    PROTOCOL.load(storage, name).map_err(Into::into)
 }
 
 pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
@@ -69,7 +72,7 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtoc
             .range(storage, None, None, Order::Ascending)
             .collect::<::std::result::Result<_, _>>()
             .map(
-                |protocol: BTreeMap<String, Protocol<Addr>>| ContractsTemplate {
+                |protocol: BTreeMap<String, ProtocolWithNetworkName>| ContractsTemplate {
                     platform,
                     protocol,
                 },
@@ -78,7 +81,11 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtoc
     })
 }
 
-pub(crate) fn migrate(storage: &mut dyn Storage, protocol_name: String) -> Result<()> {
+pub(crate) fn migrate(
+    storage: &mut dyn Storage,
+    protocol_name: String,
+    network_name: String,
+) -> Result<()> {
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "snake_case", deny_unknown_fields)]
     struct OldContracts {
@@ -120,11 +127,14 @@ pub(crate) fn migrate(storage: &mut dyn Storage, protocol_name: String) -> Resul
                         PROTOCOL.save(
                             storage,
                             protocol_name,
-                            &Protocol {
-                                leaser,
-                                lpp,
-                                oracle,
-                                profit,
+                            &ProtocolWithNetworkName {
+                                network: network_name,
+                                protocol: Protocol {
+                                    leaser,
+                                    lpp,
+                                    oracle,
+                                    profit,
+                                },
                             },
                         )
                     })

@@ -8,7 +8,10 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-pub use self::{platform::Platform, protocol::Protocol};
+pub use self::{
+    platform::Platform,
+    protocol::{Protocol, ProtocolWithNetworkName},
+};
 
 #[cfg(feature = "contract")]
 pub(crate) use self::impl_mod::migrate;
@@ -30,7 +33,7 @@ pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
 pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
 
 pub(crate) type ContractsGroupedByProtocol =
-    ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>>;
+    ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]

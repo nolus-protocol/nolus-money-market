@@ -11,10 +11,10 @@ use crate::{
 
 use super::{
     protocol::Protocol, ContractsGroupedByProtocol, ContractsMigration,
-    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec,
+    ContractsPostMigrationExecute, ContractsTemplate, MigrationSpec, ProtocolWithNetworkName,
 };
 
-impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
+impl ContractsTemplate<Addr, BTreeMap<String, ProtocolWithNetworkName>> {
     fn migrate(self, mut migration_msgs: ContractsMigration) -> Result<Batch> {
         let mut batch: Batch = Batch::default();
 
@@ -22,11 +22,11 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(protocol, contracts)| {
+            .try_for_each(|(name, ProtocolWithNetworkName { protocol, .. })| {
                 migration_msgs
                     .protocol
-                    .extract_entry(protocol)
-                    .map(|migration_msgs| contracts.migrate(&mut batch, migration_msgs))
+                    .extract_entry(name)
+                    .map(|migration_msgs| protocol.migrate(&mut batch, migration_msgs))
             })
             .and_then(|()| migration_msgs.protocol.ensure_empty())
             .map(|()| batch)
@@ -43,10 +43,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
 
         self.protocol
             .into_iter()
-            .try_for_each(|(protocol, contracts)| {
-                execution_msgs.protocol.extract_entry(protocol).map(
+            .try_for_each(|(name, ProtocolWithNetworkName { protocol, .. })| {
+                execution_msgs.protocol.extract_entry(name).map(
                     |execution_msgs: Protocol<Option<String>>| {
-                        contracts.post_migration_execute(&mut batch, execution_msgs)
+                        protocol.post_migration_execute(&mut batch, execution_msgs)
                     },
                 )
             })
@@ -55,9 +55,10 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol<Addr>>> {
     }
 }
 
-impl<T> Validate for ContractsTemplate<T, BTreeMap<String, Protocol<T>>>
+impl<T, U> Validate for ContractsTemplate<T, BTreeMap<String, U>>
 where
     T: Validate,
+    U: for<'r> Validate<Context<'r> = T::Context<'r>, Error = T::Error>,
 {
     type Context<'r> = T::Context<'r>;
 

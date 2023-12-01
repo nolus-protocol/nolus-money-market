@@ -13,7 +13,7 @@ use crate::{
     validate::Validate,
 };
 
-use super::Protocol;
+use super::{Protocol, ProtocolWithNetworkName};
 
 impl Protocol<Addr> {
     pub(in crate::contracts) fn migrate(
@@ -98,6 +98,17 @@ where
         self.oracle.validate(ctx)?;
 
         self.profit.validate(ctx)
+    }
+}
+
+impl Validate for ProtocolWithNetworkName {
+    type Context<'r> = <Addr as Validate>::Context<'r>;
+
+    type Error = <Addr as Validate>::Error;
+
+    #[inline]
+    fn validate(&self, ctx: Self::Context<'_>) -> ::std::result::Result<(), Self::Error> {
+        self.protocol.validate(ctx)
     }
 }
 
