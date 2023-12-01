@@ -5,11 +5,13 @@ use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::lease::{with_lease::WithLease, LeaseDTO};
 
+#[cfg(feature = "contract")]
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::FinalizerRef;
 
 mod api;
 mod cmd;
+#[cfg(feature = "contract")]
 mod endpoins;
 mod finalize;
 pub mod msg;

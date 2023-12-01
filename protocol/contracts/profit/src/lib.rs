@@ -9,7 +9,7 @@ pub mod stub;
 #[cfg(any(feature = "astroport", feature = "osmosis"))]
 mod access_control;
 
-#[cfg(any(feature = "astroport", feature = "osmosis"))]
+#[cfg(all(feature = "contract", any(feature = "astroport", feature = "osmosis")))]
 pub mod contract;
 
 #[cfg(any(feature = "astroport", feature = "osmosis"))]
