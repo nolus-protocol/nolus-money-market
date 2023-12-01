@@ -4,8 +4,9 @@ use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{InterestPaymentSpec, LpnCoin, PositionSpecDTO};
 use leaser::{
-    contract::{execute, instantiate, query, reply, sudo},
+    execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
+    query, reply, sudo,
 };
 use platform::contract::CodeId;
 use sdk::cosmwasm_std::{Addr, Uint64};
