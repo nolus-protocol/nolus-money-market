@@ -4,7 +4,7 @@ pub mod alarms;
 #[cfg(feature = "contract")]
 pub mod contract;
 pub mod error;
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 mod macros;
 pub mod msg;
 pub mod result;
