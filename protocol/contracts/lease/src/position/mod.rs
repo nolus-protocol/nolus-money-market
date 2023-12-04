@@ -77,8 +77,16 @@ where
     /// Check if the amount can be used for repayment.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.
-    pub fn validate_payment(&self, payment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {
-        self.spec.validate_payment(payment)
+    pub fn validate_payment<PaymentC>(
+        &self,
+        payment: Coin<PaymentC>,
+        payment_currency_in_lpns: Price<PaymentC, Lpn>,
+    ) -> ContractResult<()>
+    where
+        PaymentC: Currency,
+    {
+        self.spec
+            .validate_payment(payment, payment_currency_in_lpns)
     }
 
     /// Check if the amount can be used to close the position.

@@ -13,7 +13,7 @@ use profit::stub::Error as ProfitError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::api::LpnCoin;
+use crate::api::{LpnCoin, PaymentCoin};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -54,7 +54,7 @@ pub enum ContractError {
     NoPaymentError(),
 
     #[error("[Lease] Insufficient payment amount {0}")]
-    InsufficientPayment(LpnCoin),
+    InsufficientPayment(PaymentCoin),
 
     #[error("[Lease] Insufficient liquidation amount")]
     InsufficientLiquidation(),

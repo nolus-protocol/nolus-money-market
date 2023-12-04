@@ -2,7 +2,7 @@ use currencies::PaymentGroup;
 use sdk::cosmwasm_std::Timestamp;
 
 use currency::Currency;
-use finance::{coin::Coin, price};
+use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
@@ -27,10 +27,9 @@ where
             .price_of::<PaymentC, PaymentGroup>()
             .map_err(Into::into)
             .and_then(|price| {
-                let payment_lpn = price::total(payment, price);
                 self.position
-                    .validate_payment(payment_lpn)
-                    .map(|validated| price::total(validated, price.inv()))
+                    .validate_payment(payment, price)
+                    .map(|()| payment)
             })
     }
 

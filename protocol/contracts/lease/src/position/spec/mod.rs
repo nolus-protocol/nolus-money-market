@@ -103,14 +103,19 @@ where
     /// Check if the amount can be used for repayment.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.
-    pub fn validate_payment(&self, payment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {
-        let one = Price::identity();
-
-        if self.valid_transaction(payment, one) {
-            Ok(payment)
+    pub fn validate_payment<PaymentC>(
+        &self,
+        payment: Coin<PaymentC>,
+        payment_currency_in_lpns: Price<PaymentC, Lpn>,
+    ) -> ContractResult<()>
+    where
+        PaymentC: Currency,
+    {
+        if self.valid_transaction(payment, payment_currency_in_lpns) {
+            Ok(())
         } else {
             Err(ContractError::InsufficientPayment(
-                self.min_transaction.into(),
+                price::total(self.min_transaction, payment_currency_in_lpns.inv()).into(),
             ))
         }
     }
@@ -1021,12 +1026,13 @@ mod test_check_liability {
 
 #[cfg(test)]
 mod test_validate_payment {
-    use currencies::test::StableC1;
+    use currencies::test::{LeaseC1, StableC1};
     use finance::{
-        coin::{Amount, Coin},
+        coin::Coin,
         duration::Duration,
         liability::Liability,
         percent::Percent,
+        price::{self, Price},
     };
 
     use crate::error::ContractError;
@@ -1034,17 +1040,26 @@ mod test_validate_payment {
     use super::Spec;
 
     type TestLpn = StableC1;
+    type TestPaymentC = LeaseC1;
 
     #[test]
     fn insufficient_payment() {
-        let spec = spec(65, 15);
-        let result_1 = spec.validate_payment(14.into());
+        let spec = spec(65, 16);
+        let result_1 = spec.validate_payment(15.into(), price(1, 1));
         assert!(matches!(
             result_1,
             Err(ContractError::InsufficientPayment(_))
         ));
-        let result_2 = spec.validate_payment(15.into());
-        assert_eq!(coin_lpn(15), result_2.unwrap());
+        let result_2 = spec.validate_payment(16.into(), price(1, 1));
+        assert!(result_2.is_ok());
+
+        let result_3 = spec.validate_payment(45.into(), price(3, 1));
+        assert!(matches!(
+            result_3,
+            Err(ContractError::InsufficientPayment(_))
+        ));
+        let result_4 = spec.validate_payment(8.into(), price(1, 2));
+        assert!(result_4.is_ok());
     }
 
     fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec<TestLpn>
@@ -1063,8 +1078,15 @@ mod test_validate_payment {
         Spec::new(liability, min_asset.into(), min_transaction.into())
     }
 
-    fn coin_lpn(amount: Amount) -> Coin<TestLpn> {
-        Coin::<TestLpn>::new(amount)
+    fn price<PaymentC, Lpn>(
+        price_payment_currency: PaymentC,
+        price_lpn: Lpn,
+    ) -> Price<TestPaymentC, TestLpn>
+    where
+        PaymentC: Into<Coin<TestPaymentC>>,
+        Lpn: Into<Coin<TestLpn>>,
+    {
+        price::total_of(price_payment_currency.into()).is(price_lpn.into())
     }
 }
 

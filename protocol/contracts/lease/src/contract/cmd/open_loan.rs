@@ -66,7 +66,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         .ok_or_else(Self::Error::NoPaymentError)??;
 
         if downpayment_lpn.is_zero() {
-            return Err(Self::Error::InsufficientPayment(downpayment_lpn.into()));
+            return Err(Self::Error::InsufficientPayment(downpayment));
         }
 
         PositionSpec::try_from(self.position_spec)
