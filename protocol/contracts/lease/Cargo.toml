@@ -19,6 +19,7 @@ osmosis = ["contract", "dex/osmosis", "dex/migration"]
 contract = [
     "skel",
     "sdk/contract",
+    "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "dep:marketprice",
     "dep:versioning",
