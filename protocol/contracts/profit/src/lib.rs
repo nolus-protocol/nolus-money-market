@@ -1,20 +1,18 @@
-#[cfg(feature = "api")]
 pub mod msg;
-#[cfg(feature = "api")]
 pub mod typedefs;
 
 #[cfg(feature = "stub")]
 pub mod stub;
 
-#[cfg(all(feature = "contract", any(feature = "astroport", feature = "osmosis")))]
+#[cfg(feature = "contract")]
 mod access_control;
-#[cfg(all(feature = "contract", any(feature = "astroport", feature = "osmosis")))]
+#[cfg(feature = "contract")]
 pub mod contract;
-#[cfg(any(feature = "astroport", feature = "osmosis"))]
+#[cfg(feature = "contract")]
 pub mod error;
-#[cfg(all(feature = "contract", any(feature = "astroport", feature = "osmosis")))]
+#[cfg(feature = "contract")]
 pub mod profit;
-#[cfg(any(feature = "astroport", feature = "osmosis"))]
+#[cfg(feature = "contract")]
 pub mod result;
-#[cfg(all(feature = "contract", any(feature = "astroport", feature = "osmosis")))]
+#[cfg(feature = "contract")]
 pub mod state;

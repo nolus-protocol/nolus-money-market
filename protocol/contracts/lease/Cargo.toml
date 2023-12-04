@@ -9,40 +9,56 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["dex/net_dev"]
-net_test = ["dex/net_test"]
-net_main = ["dex/net_main"]
+net_dev = ["contract", "dex/net_dev"]
+net_test = ["contract", "dex/net_test"]
+net_main = ["contract", "dex/net_main"]
 
-astroport = ["skel", "dex/astroport", "dex/migration"]
-osmosis = ["skel", "dex/osmosis", "dex/migration"]
+astroport = ["contract", "dex/astroport", "dex/migration"]
+osmosis = ["contract", "dex/osmosis", "dex/migration"]
 
-api = ["dep:dex"]
-skel = ["api"]
+contract = [
+    "skel",
+    "sdk/contract",
+    "dep:enum_dispatch",
+    "dep:marketprice",
+    "dep:versioning",
+]
+skel = [
+    "dep:access-control",
+    "dep:dex",
+    "dep:lpp",
+    "dep:oracle",
+    "dep:oracle-platform",
+    "dep:platform",
+    "dep:profit",
+    "dep:timealarms",
+    "dep:thiserror",
+]
 testing = ["currencies/testing", "currency/testing", "finance/testing"]
 
 [dependencies]
-access-control = { workspace = true }
-profit = { workspace = true, features = ["stub"] }
-timealarms = { workspace = true, features = ["stub"] }
+access-control = { workspace = true, optional = true }
+profit = { workspace = true, optional = true, features = ["stub"] }
+timealarms = { workspace = true, optional = true, features = ["stub"] }
 
 currencies = { workspace = true }
 currency = { workspace = true }
 dex = { workspace = true, optional = true }
 finance = { workspace = true }
-lpp = { workspace = true, features = ["stub"] }
-lpp-platform = { workspace = true }
-marketprice = { workspace = true }
-oracle = { workspace = true, features = ["stub"] }
-oracle-platform = { workspace = true }
-platform = { workspace = true }
-sdk = { workspace = true, features = ["contract"] }
-versioning = { workspace = true }
+lpp = { workspace = true, optional = true, features = ["stub"] }
+lpp-platform = { workspace = true, optional = true }
+marketprice = { workspace = true, optional = true }
+oracle = { workspace = true, optional = true, features = ["stub"] }
+oracle-platform = { workspace = true, optional = true }
+platform = { workspace = true, optional = true }
+sdk = { workspace = true }
+versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
-enum_dispatch = { workspace = true }
-thiserror = { workspace = true }
+enum_dispatch = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
