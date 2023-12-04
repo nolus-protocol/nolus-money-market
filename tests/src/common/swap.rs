@@ -1,4 +1,5 @@
-use currency::SymbolSlice;
+use std::ops::Deref;
+
 use finance::coin::Amount;
 use sdk::{
     cosmos_sdk_proto::traits::Message,
@@ -16,6 +17,28 @@ use super::{
     },
     ADMIN,
 };
+
+#[repr(transparent)]
+#[derive(Debug, Eq)]
+pub struct DexDenom<'r>(&'r str);
+
+impl<'r, 't> PartialEq<DexDenom<'t>> for DexDenom<'r> {
+    #[inline]
+    fn eq(&self, other: &DexDenom<'t>) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'r, Rhs> PartialEq<Rhs> for DexDenom<'r>
+where
+    str: PartialEq<Rhs::Target>,
+    Rhs: Deref + ?Sized,
+{
+    #[inline]
+    fn eq(&self, other: &Rhs) -> bool {
+        *self.0 == **other
+    }
+}
 
 pub(crate) fn expect_swap(
     response: &mut ResponseWithInterChainMsgs<'_, ()>,
@@ -52,7 +75,7 @@ pub(crate) fn do_swap<I, F>(
 ) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
     I: Iterator<Item = RequestMsg>,
-    F: FnMut(Amount, &SymbolSlice, &SymbolSlice) -> Amount,
+    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     let amounts: Vec<Amount> = requests
         .map(|request: RequestMsg| do_swap_internal(app, ica_addr.clone(), request, &mut price_f))
@@ -63,7 +86,7 @@ where
 
 fn do_swap_internal<F>(app: &mut App, ica_addr: Addr, request: RequestMsg, price_f: F) -> Amount
 where
-    F: FnOnce(Amount, &SymbolSlice, &SymbolSlice) -> Amount,
+    F: for<'r, 't> FnOnce(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     let token_in = request.token_in.unwrap();
     let amount_in: u128 = token_in.amount.parse().unwrap();
@@ -76,7 +99,7 @@ where
     .unwrap();
 
     let denom_out: &String = &request.routes.last().unwrap().token_out_denom;
-    let amount_out: Amount = price_f(amount_in, &token_in.denom, denom_out);
+    let amount_out: Amount = price_f(amount_in, DexDenom(&token_in.denom), DexDenom(denom_out));
 
     app.send_tokens(
         Addr::unchecked(ADMIN),

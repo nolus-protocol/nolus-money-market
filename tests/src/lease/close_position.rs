@@ -293,7 +293,7 @@ fn do_close(
         lease_addr.clone(),
         TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID),
         requests.into_iter(),
-        |amount: Amount, _: &str, _: &str| {
+        |amount: Amount, _, _| {
             assert_eq!(amount, close_amount.into());
 
             close_amount_in_lpn.into()
