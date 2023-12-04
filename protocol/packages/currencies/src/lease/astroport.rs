@@ -75,6 +75,24 @@ define_symbol! {
 }
 define_currency!(Ntrn, NTRN);
 
+define_symbol! {
+    DYDX {
+        ["net_dev", "net_test"]: {
+            /// full ibc route: transfer/channel-?/transfer/channel-?/adydx
+            bank: "ibc/NA_DYDX",
+            /// full ibc route: transfer/channel-?/adydx
+            dex: "ibc/NA_DYDX_DEX",
+        },
+        ["net_main"]: {
+            /// full ibc route: transfer/channel-3839/transfer/channel-48/adydx
+            bank: "ibc/6DF8CF5C976851D152E2C7270B0AB25C4F9D64C0A46513A68D6CBB2662A98DF4",
+            /// full ibc route: transfer/channel-48/adydx
+            dex: "ibc/2CB87BCE0937B1D1DFCEE79BE4501AAF3C265E923509AEAC410AD85D27F35130",
+        },
+    }
+}
+define_currency!(Dydx, DYDX);
+
 #[cfg(feature = "testing")]
 mod testing_currencies {
     use sdk::schemars;
@@ -90,16 +108,6 @@ mod testing_currencies {
         }
     }
     define_currency!(TestC1, TEST_C1);
-
-    define_symbol! {
-        TEST_C2 {
-            ["net_dev", "net_test", "net_main"]: {
-                bank: "ibc/test_currency_2",
-                dex: "ibc/test_currency_2_dex",
-            },
-        }
-    }
-    define_currency!(TestC2, TEST_C2);
 }
 
 pub(super) fn maybe_visit<M, V>(
@@ -114,7 +122,8 @@ where
     use currency::maybe_visit_any as maybe_visit;
     let result = maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor));
+        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Dydx, _>(matcher, symbol, visitor));
 
     #[cfg(not(feature = "testing"))]
     {
@@ -136,7 +145,6 @@ where
 {
     use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, TestC1, _>(matcher, symbol, visitor)
-        .or_else(|visitor| maybe_visit::<_, TestC2, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -151,28 +159,32 @@ mod test {
         {lease::LeaseGroup, lpn::astroport::UsdcAxelar, native::Nls},
     };
 
-    use super::{Atom, Ntrn, StAtom};
+    use super::{Atom, Dydx, Ntrn, StAtom};
 
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Atom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Ntrn, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Dydx, LeaseGroup>();
         maybe_visit_on_ticker_err::<UsdcAxelar, LeaseGroup>(UsdcAxelar::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(UsdcAxelar::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Dydx, LeaseGroup>(Dydx::BANK_SYMBOL);
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<Atom, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StAtom, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Dydx, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<UsdcAxelar, LeaseGroup>(UsdcAxelar::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(UsdcAxelar::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_bank_symbol_err::<Dydx, LeaseGroup>(Dydx::TICKER);
     }
 }

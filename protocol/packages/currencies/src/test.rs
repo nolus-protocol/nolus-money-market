@@ -1,7 +1,7 @@
 use crate::native::Nls;
 #[cfg(feature = "astroport")]
 use crate::{
-    lease::astroport::{Atom as LC1, Ntrn as LC2, StAtom as LC3, TestC1 as LC4, TestC2 as LC5},
+    lease::astroport::{Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, TestC1 as LC5},
     lpn::astroport::UsdcAxelar as SC1,
 };
 #[cfg(feature = "osmosis")]

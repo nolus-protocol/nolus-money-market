@@ -254,6 +254,7 @@ mod test_invariant {
 #[cfg(all(test, feature = "skel"))]
 mod test_position_spec {
     use currencies::test::StableC1;
+    use currency::Currency;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_json, StdError};
 
@@ -263,33 +264,57 @@ mod test_position_spec {
 
     #[test]
     fn new_valid() {
-        assert_load_ok(spec_dto(), br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_transaction":{"amount":"5000","ticker":"USDC"}}"#);
+        assert_load_ok(
+            spec_dto(),
+            format!(
+                r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
+                lpn = StableC1::TICKER
+            ),
+        );
     }
 
     #[test]
     fn deserialize_an_alternative_name() {
-        assert_load_ok(spec_dto(), br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_sell_asset":{"amount":"5000","ticker":"USDC"}}"#);
+        assert_load_ok(
+            spec_dto(),
+            format!(
+                r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_sell_asset":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
+                lpn = StableC1::TICKER
+            ),
+        );
     }
 
     #[test]
     fn zero_min_asset() {
-        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"0","ticker":"USDC"},"min_transaction":{"amount":"5000","ticker":"USDC"}}"#);
+        let r = from_json(format!(
+            r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"0","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
+            lpn = StableC1::TICKER
+        ));
         assert_err(r, "should be positive");
     }
 
     #[test]
     fn zero_min_transaction() {
-        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_transaction":{"amount":"0","ticker":"USDC"}}"#);
+        let r = from_json(format!(
+            r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"0","ticker":"{lpn}"}}}}"#,
+            lpn = StableC1::TICKER
+        ));
         assert_err(r, "should be positive");
     }
 
     #[test]
     fn invalid_ticker() {
-        let r = from_json(br#"{"liability":{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000},"min_asset":{"amount":"9000000","ticker":"USDC"},"min_transaction":{"amount":"5000","ticker":"ATOM"}}"#);
+        let r = from_json(format!(
+            r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"ATOM"}}}}"#,
+            lpn = StableC1::TICKER
+        ));
         assert_err(r, "'ATOM' pretending to be");
     }
 
-    fn assert_load_ok(exp: PositionSpecDTO, json: &[u8]) {
+    fn assert_load_ok<Json>(exp: PositionSpecDTO, json: Json)
+    where
+        Json: AsRef<[u8]>,
+    {
         assert_eq!(Ok(exp), from_json::<PositionSpecDTO>(json));
     }
 
