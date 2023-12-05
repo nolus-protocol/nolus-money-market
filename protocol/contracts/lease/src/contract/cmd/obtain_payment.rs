@@ -61,8 +61,6 @@ where
     where
         C: Currency,
     {
-        self.lease
-            .validate_repay(coin)
-            .map(|validated| validated.into())
+        self.lease.validate_repay(coin).map(|()| coin.into())
     }
 }

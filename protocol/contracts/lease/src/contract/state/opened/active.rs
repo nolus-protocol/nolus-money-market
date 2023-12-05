@@ -54,12 +54,12 @@ impl Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         // TODO: avoid clone
-        let obtain_payment =
+        let may_lpn_payment =
             bank::may_received::<Lpns, _>(info.funds.clone(), IntoDTO::<Lpns>::new());
-        match obtain_payment {
-            Some(may_payment) => {
+        match may_lpn_payment {
+            Some(lpn_payment) => {
                 // TODO use Never and safe_unwrap instead
-                let payment = may_payment.expect("Expected IntoDTO to pass");
+                let payment = lpn_payment.expect("Expected IntoDTO to pass");
                 debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().currency());
                 repay::repay(self.lease, payment, env, querier)
             }

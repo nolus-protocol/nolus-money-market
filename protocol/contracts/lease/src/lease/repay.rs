@@ -16,21 +16,14 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    pub(crate) fn validate_repay<PaymentC>(
-        &self,
-        payment: Coin<PaymentC>,
-    ) -> ContractResult<Coin<PaymentC>>
+    pub(crate) fn validate_repay<PaymentC>(&self, payment: Coin<PaymentC>) -> ContractResult<()>
     where
         PaymentC: Currency,
     {
         self.oracle
             .price_of::<PaymentC, PaymentGroup>()
             .map_err(Into::into)
-            .and_then(|price| {
-                self.position
-                    .validate_payment(payment, price)
-                    .map(|()| payment)
-            })
+            .and_then(|price| self.position.validate_payment(payment, price))
     }
 
     pub(crate) fn repay<Profit>(
