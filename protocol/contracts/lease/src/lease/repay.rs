@@ -1,3 +1,4 @@
+use currencies::PaymentGroup;
 use sdk::cosmwasm_std::Timestamp;
 
 use currency::Currency;
@@ -15,6 +16,16 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
+    pub(crate) fn validate_repay<PaymentC>(&self, payment: Coin<PaymentC>) -> ContractResult<()>
+    where
+        PaymentC: Currency,
+    {
+        self.oracle
+            .price_of::<PaymentC, PaymentGroup>()
+            .map_err(Into::into)
+            .and_then(|price| self.position.validate_payment(payment, price))
+    }
+
     pub(crate) fn repay<Profit>(
         &mut self,
         payment: Coin<Lpn>,

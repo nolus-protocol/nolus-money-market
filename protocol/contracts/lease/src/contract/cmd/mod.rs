@@ -5,6 +5,7 @@ pub(crate) use liquidation_status::{
     Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatus, FullLiquidationDTO,
     LiquidationDTO, PartialLiquidationDTO,
 };
+pub(crate) use obtain_payment::ObtainPayment;
 pub(crate) use open::open_lease;
 pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
 pub(crate) use repay::RepayLeaseFn;
@@ -16,6 +17,7 @@ mod close_full;
 mod close_paid;
 mod close_partial;
 mod liquidation_status;
+mod obtain_payment;
 mod open;
 mod open_loan;
 mod repay;

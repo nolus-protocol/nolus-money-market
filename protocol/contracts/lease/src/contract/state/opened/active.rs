@@ -1,15 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::{Lpns, PaymentGroup};
+use currencies::Lpns;
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{
+    Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp,
+};
 
 use crate::{
     api::{DownpaymentCoin, PositionClose, StateResponse},
     contract::{
-        cmd::{LiquidationStatus, LiquidationStatusCmd, OpenLoanRespResult},
+        cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
         Lease,
     },
@@ -45,25 +47,23 @@ impl Active {
         event::emit_lease_opened(env, &self.lease.lease, loan, downpayment)
     }
 
-    fn try_repay(self, deps: Deps<'_>, env: &Env, info: MessageInfo) -> ContractResult<Response> {
-        let payment = bank::may_received::<PaymentGroup, _>(
-            info.funds.clone(),
-            IntoDTO::<PaymentGroup>::new(),
-        )
-        .ok_or_else(ContractError::NoPaymentError)??;
-
-        if payment.ticker() == self.lease.lease.loan.lpp().currency() {
-            // TODO once refacture CoinDTO and Group convert to LpnCoin instead
-            bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
-                .ok_or_else(ContractError::NoPaymentError)?
-                .map_err(Into::into)
-                .and_then(|payment_lpn| repay::repay(self.lease, payment_lpn, env, deps.querier))
-        } else {
-            let start_buy_lpn = buy_lpn::start(self.lease, payment);
-            start_buy_lpn
-                .enter(env.block.time, deps.querier)
-                .map(|batch| Response::from(batch, BuyLpnState::from(start_buy_lpn)))
-                .map_err(Into::into)
+    fn try_repay(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        // TODO: avoid clone
+        let may_lpn_payment =
+            bank::may_received::<Lpns, _>(info.funds.clone(), IntoDTO::<Lpns>::new());
+        match may_lpn_payment {
+            Some(lpn_payment) => {
+                // TODO use Never and safe_unwrap instead
+                let payment = lpn_payment.expect("Expected IntoDTO to pass");
+                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().currency());
+                repay::repay(self.lease, payment, env, querier)
+            }
+            None => self.start_swap(info.funds, env.block.time, querier),
         }
     }
 
@@ -126,6 +126,25 @@ impl Active {
             ),
         }
     }
+
+    fn start_swap(
+        self,
+        cw_amount: Vec<CwCoin>,
+        now: Timestamp,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<Response> {
+        self.lease
+            .lease
+            .clone()
+            .execute(ObtainPayment::new(cw_amount), querier)
+            .and_then(|payment| {
+                let buy_lpn = buy_lpn::start(self.lease, payment);
+                buy_lpn
+                    .enter(now, querier)
+                    .map(|batch| Response::from(batch, BuyLpnState::from(buy_lpn)))
+                    .map_err(Into::into)
+            })
+    }
 }
 
 impl Handler for Active {
@@ -139,7 +158,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_repay(deps.as_ref(), &env, info)
+        self.try_repay(deps.querier, &env, info)
     }
 
     fn close_position(
