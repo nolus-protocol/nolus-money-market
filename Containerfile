@@ -10,6 +10,10 @@ VOLUME ["/artifacts"]
 
 VOLUME ["/code"]
 
+VOLUME ["/platform"]
+
+VOLUME ["/protocol"]
+
 WORKDIR "/"
 
 ADD "./tools/cargo-features/" "/cargo-features/"
