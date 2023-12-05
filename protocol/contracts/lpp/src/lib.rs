@@ -1,17 +1,15 @@
+#[cfg(feature = "contract")]
+pub mod access_control;
 pub mod borrow;
+#[cfg(feature = "contract")]
+pub mod contract;
 pub mod error;
+#[cfg(feature = "contract")]
+pub mod event;
 pub mod loan;
+#[cfg(feature = "contract")]
+mod lpp;
 pub mod msg;
 pub mod state;
-
-#[cfg(any(feature = "stub", test))]
+#[cfg(feature = "stub")]
 pub mod stub;
-
-#[cfg(any(feature = "contract", test))]
-pub mod access_control;
-#[cfg(any(feature = "contract", test))]
-pub mod contract;
-#[cfg(any(feature = "contract", test))]
-pub mod event;
-#[cfg(any(feature = "contract", test))]
-mod lpp;

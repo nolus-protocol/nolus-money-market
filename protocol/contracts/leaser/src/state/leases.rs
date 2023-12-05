@@ -10,7 +10,7 @@ use crate::{
     result::ContractResult,
 };
 
-pub struct Leases {}
+pub(crate) struct Leases {}
 
 impl Leases {
     const PENDING_CUSTOMER: Item<'static, Addr> = Item::new("pending_customer");

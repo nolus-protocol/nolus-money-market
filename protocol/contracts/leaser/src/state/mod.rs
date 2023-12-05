@@ -1,2 +1,2 @@
-pub mod config;
-pub mod leases;
+pub(crate) mod config;
+pub(crate) mod leases;

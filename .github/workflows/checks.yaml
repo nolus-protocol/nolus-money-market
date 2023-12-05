@@ -146,7 +146,7 @@ jobs:
         run: "cargo install cargo-hack cosmwasm-check"
       - name: "Building WASM binaries"
         shell: "sh"
-        run: "cargo hack build --features 'cosmwasm-bindings,${{ needs.setup_env.outputs.features }}' --ignore-unknown-features --release --target wasm32-unknown-unknown"
+        run: "cargo hack build --features 'contract,${{ needs.setup_env.outputs.features }}' --ignore-unknown-features --release --target wasm32-unknown-unknown"
         working-directory: "${{ inputs.working_directory }}"
       - name: "Checking WASM binaries"
         shell: "sh"

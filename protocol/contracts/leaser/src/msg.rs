@@ -11,7 +11,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::config::Config;
+pub use crate::state::config::Config;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

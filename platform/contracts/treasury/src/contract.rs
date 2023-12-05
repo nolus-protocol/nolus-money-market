@@ -6,11 +6,9 @@ use platform::{
     message::Response as PlatformResponse,
     response,
 };
-#[cfg(feature = "cosmwasm-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo, Storage},
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
@@ -25,7 +23,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
@@ -39,13 +37,13 @@ pub fn instantiate(
     Ok(response::empty_response())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
@@ -65,7 +63,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {

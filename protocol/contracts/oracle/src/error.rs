@@ -2,7 +2,9 @@ use std::{num::TryFromIntError, result::Result as StdResult};
 
 use thiserror::Error;
 
-use currency::{Currency, SymbolOwned, SymbolSlice};
+use currency::SymbolOwned;
+#[cfg(feature = "contract")]
+use currency::{Currency, SymbolSlice};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -98,7 +100,8 @@ pub enum ContractError {
     Conversion(#[from] TryFromIntError),
 }
 
-pub fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError
+#[cfg(feature = "contract")]
+pub(crate) fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError
 where
     C: Currency,
 {

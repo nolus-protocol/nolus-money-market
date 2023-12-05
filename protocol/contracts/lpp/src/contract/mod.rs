@@ -6,11 +6,9 @@ use access_control::SingleUserAccess;
 use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{message::Response as PlatformResponse, response};
-#[cfg(feature = "cosmwasm-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
@@ -70,7 +68,7 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
@@ -84,7 +82,7 @@ pub fn instantiate(
     InstantiateWithLpn::cmd(deps, msg).map(|()| response::empty_response())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<CwResponse> {
     // Statically assert that the message is empty when doing a software-only update.
     let MigrateMsg {}: MigrateMsg = msg;
@@ -171,7 +169,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn execute(
     mut deps: DepsMut<'_>,
     env: Env,
@@ -202,7 +200,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     // no currency context variants
     match msg {
@@ -274,7 +272,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),

@@ -1,12 +1,10 @@
 use access_control::ContractOwnerAccess;
 use platform::{batch::Batch, contract::CodeId, response};
-#[cfg(feature = "cosmwasm-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        ensure_eq, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env,
-        MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
+        ensure_eq, entry_point, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut,
+        Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -29,7 +27,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
     _env: Env,
@@ -48,7 +46,7 @@ pub fn instantiate(
     state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn migrate(
     mut deps: DepsMut<'_>,
     _env: Env,
@@ -74,7 +72,7 @@ pub fn migrate(
         .and_then(|(label, ())| response::response(label))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn execute(
     mut deps: DepsMut<'_>,
     env: Env,
@@ -119,7 +117,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::ChangeDexAdmin { ref new_dex_admin } => ContractOwnerAccess::new(deps.storage)
@@ -157,7 +155,7 @@ fn register_protocol(
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
     match ContractState::load(deps.storage)? {
         ContractState::Migration { release } => migration_reply(msg, release),
@@ -218,7 +216,7 @@ fn instantiate_reply(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::InstantiateAddress { code_id, protocol } => {

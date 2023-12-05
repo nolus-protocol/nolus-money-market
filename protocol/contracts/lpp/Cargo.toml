@@ -9,15 +9,14 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["currencies/net_dev"]
-net_test = ["currencies/net_test"]
-net_main = ["currencies/net_main"]
+net_dev = ["contract", "currencies/net_dev"]
+net_test = ["contract", "currencies/net_test"]
+net_main = ["contract", "currencies/net_main"]
 
-astroport = ["currencies/astroport"]
-osmosis = ["currencies/osmosis"]
+astroport = ["contract", "currencies/astroport"]
+osmosis = ["contract", "currencies/osmosis"]
 
-cosmwasm-bindings = ["contract"]
-contract = ["stub"]
+contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning"]
 stub = []
 testing = ["currency/testing"]
 
@@ -28,11 +27,11 @@ currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
 platform = { workspace = true }
-sdk = { workspace = true, features = ["contract"] }
-versioning = { workspace = true }
+sdk = { workspace = true }
+versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

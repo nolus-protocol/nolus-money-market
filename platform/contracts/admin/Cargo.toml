@@ -11,8 +11,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-cosmwasm-bindings = ["contract"]
-contract = ["dep:versioning"]
+contract = ["dep:cosmwasm-std", "dep:versioning"]
 
 [dependencies]
 access-control = { workspace = true }
@@ -23,7 +22,7 @@ sdk = { workspace = true, features = ["contract", "cosmos"] }
 versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }

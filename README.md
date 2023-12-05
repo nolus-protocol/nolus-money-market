@@ -128,7 +128,7 @@ each set of contracts, depending on their workspace (indicated by
     -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
     -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
     --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-    --env "features=cosmwasm-bindings$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
+    --env "features=contract$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
     wasm-optimizer
   ```
 

@@ -1,11 +1,10 @@
 use currencies::LeaseGroup;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
-
-#[cfg(feature = "cosmwasm-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
+    cosmwasm_std::{
+        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
+    },
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -23,7 +22,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
     _env: Env,
@@ -48,7 +47,7 @@ pub fn instantiate(
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
@@ -60,7 +59,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     state::load(deps.storage)
         .and_then(|state| state.reply(&mut deps, env, msg))
@@ -74,7 +73,7 @@ pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRe
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn execute(
     mut deps: DepsMut<'_>,
     env: Env,
@@ -93,7 +92,7 @@ pub fn execute(
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     state::load(deps.storage)
         .and_then(|state| process_sudo(msg, state, deps.as_ref(), env))
@@ -107,7 +106,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     state::load(deps.storage)
         .and_then(|state| state.state(env.block.time, deps.querier))

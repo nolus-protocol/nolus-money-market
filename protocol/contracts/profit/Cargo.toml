@@ -11,34 +11,46 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["dex/net_dev"]
-net_test = ["dex/net_test"]
-net_main = ["dex/net_main"]
+net_dev = ["contract", "dex/net_dev"]
+net_test = ["contract", "dex/net_test"]
+net_main = ["contract", "dex/net_main"]
 
-astroport = ["api", "dex/astroport"]
-osmosis = ["api", "dex/osmosis"]
+astroport = ["contract", "dex/astroport"]
+osmosis = ["contract", "dex/osmosis"]
 
-cosmwasm-bindings = []
-api = []
-stub = ["api"]
+contract = [
+    "sdk/contract",
+    "dep:access-control",
+    "dep:cosmwasm-std",
+    "dep:currencies",
+    "dep:currency",
+    "dep:dex",
+    "dep:finance",
+    "dep:oracle-platform",
+    "dep:platform",
+    "dep:timealarms",
+    "dep:thiserror",
+    "dep:versioning",
+]
+stub = ["dep:platform", "dep:thiserror"]
 testing = []
 
 [dependencies]
-access-control = { workspace = true }
-currencies = { workspace = true }
-currency = { workspace = true }
+access-control = { workspace = true, optional = true }
+currencies = { workspace = true, optional = true }
+currency = { workspace = true, optional = true }
 dex = { workspace = true, optional = true }
-finance = { workspace = true }
-oracle-platform = { workspace = true }
-platform = { workspace = true }
-sdk = { workspace = true, features = ["contract"] }
-timealarms = { workspace = true, features = ["stub"] }
-versioning = { workspace = true }
+finance = { workspace = true, optional = true }
+oracle-platform = { workspace = true, optional = true }
+platform = { workspace = true, optional = true }
+sdk = { workspace = true }
+timealarms = { workspace = true, optional = true, features = ["stub"] }
+versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, optional = true }
 
-thiserror = { workspace = true }
+thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]

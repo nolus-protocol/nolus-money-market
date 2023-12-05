@@ -10,9 +10,6 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-cosmwasm-bindings = []
-
 [dependencies]
 lpp-platform = { workspace = true }
 oracle-platform = { workspace = true, features = ["unchecked-base-currency"]  }
