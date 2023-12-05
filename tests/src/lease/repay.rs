@@ -126,7 +126,7 @@ fn insufficient_payment() {
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
 
     let payment: PaymentCoin = super::create_payment_coin(49);
-    repay(&mut test_case, lease_address.clone(), payment);
+    repay(&mut test_case, lease_address, payment);
 }
 
 #[test]
