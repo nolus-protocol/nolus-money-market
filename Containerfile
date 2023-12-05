@@ -12,6 +12,12 @@ VOLUME ["/code"]
 
 WORKDIR "/"
 
+ADD "./tools/cargo-features/" "/cargo-features/"
+
+RUN ["cargo", "install", "--path", "/cargo-features/"]
+
+RUN ["rm", "-rf", "/cargo-features/"]
+
 RUN ["mkdir", "/binaryen/"]
 
 WORKDIR "/binaryen/"

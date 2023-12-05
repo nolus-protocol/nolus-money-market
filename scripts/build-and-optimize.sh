@@ -25,7 +25,7 @@ do
 
     pkg_features="${contract_pkgid}_features"
 
-    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "${features}" --features "${!pkg_features}"
+    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "$(cargo features intersection "${features},${!pkg_features}")"
 
     if ! test $? -eq 0
     then
