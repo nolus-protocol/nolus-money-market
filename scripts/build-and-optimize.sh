@@ -57,7 +57,9 @@ done
 
 mv -t '/artifacts/' '/temp-artifacts/'*'.wasm'
 
-echo '\nChecksums:'
+echo
+
+echo 'Checksums:'
 
 sha256sum -- '/artifacts/'*'.wasm' | tee '/artifacts/checksums.txt'
 
