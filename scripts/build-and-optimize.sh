@@ -2,6 +2,17 @@
 
 RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
+cd '/code/'
+
+cargo update --locked
+
+if ! test $? -eq 0
+then
+    echo '[ERROR] `Cargo.lock` file is either missing or is out-of-date!'
+
+    exit 1
+fi
+
 rm -rf "/target/"*
 
 rm -rf '/artifacts/'*
