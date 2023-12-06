@@ -21,7 +21,7 @@ rm -rf '/temp-artifacts/'*
 
 for contract in $(echo '/code/contracts/'* | sed 's/ /\n/g' | sort)
 do
-    cd "${contract}" || return
+    cd "${contract}" || exit 1
 
     contract_pkgid="$(cargo pkgid)"
     contract_pkgid="${contract_pkgid##*/}"
