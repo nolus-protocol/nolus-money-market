@@ -1,8 +1,8 @@
 use currency::Currency;
 use sdk::cosmwasm_std::Addr;
-use treasury::{contract::sudo, msg::InstantiateMsg};
+use treasury::msg::InstantiateMsg;
 
-use super::{cwcoin, mock_query, native_cwcoin, test_case::app::App, CwContractWrapper, ADMIN};
+use super::{cwcoin, dummy_query, native_cwcoin, test_case::app::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator {
     rewards_dispatcher: Addr,
@@ -26,9 +26,9 @@ impl Instantiator {
         let endpoints = CwContractWrapper::new(
             treasury::contract::execute,
             treasury::contract::instantiate,
-            mock_query,
+            dummy_query,
         )
-        .with_sudo(sudo);
+        .with_sudo(treasury::contract::sudo);
 
         let code_id = app.store_code(Box::new(endpoints));
 

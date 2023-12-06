@@ -94,8 +94,25 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
     }
 }
 
-pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn add_feeder<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    TimeAlarms,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
     addr: impl Into<String>,
 ) {
     let oracle = test_case.address_book.oracle().clone();
@@ -119,8 +136,27 @@ pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     );
 }
 
-pub(crate) fn feed_price_pair<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn feed_price_pair<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    TimeAlarms,
+    C1,
+    C2,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
     addr: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
@@ -147,8 +183,27 @@ where
         .unwrap_response()
 }
 
-pub(crate) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(crate) fn feed_price<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    TimeAlarms,
+    C1,
+    C2,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
     addr: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,

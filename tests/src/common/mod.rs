@@ -58,6 +58,7 @@ pub mod leaser;
 pub mod lpp;
 pub mod oracle;
 pub mod profit;
+pub mod protocols;
 pub mod swap;
 pub mod test_case;
 pub mod timealarms;
@@ -111,7 +112,7 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
-fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
+fn dummy_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_json_binary(&MockResponse {})
 }
 

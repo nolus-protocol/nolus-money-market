@@ -41,6 +41,7 @@ fn active_state() {
 }
 
 pub(super) fn heal_no_inconsistency<
+    ProtocolsRegistry,
     Dispatcher,
     Treasury,
     Profit,
@@ -49,7 +50,16 @@ pub(super) fn heal_no_inconsistency<
     Oracle,
     TimeAlarms,
 >(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     lease: Addr,
 ) {
     let err = try_heal(test_case, lease).unwrap_err();
@@ -57,8 +67,26 @@ pub(super) fn heal_no_inconsistency<
     assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
 }
 
-pub(super) fn heal_unsupported<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn heal_unsupported<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     lease: Addr,
 ) {
     let err = try_heal(test_case, lease).unwrap_err();
@@ -69,8 +97,17 @@ pub(super) fn heal_unsupported<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle
     );
 }
 
-fn try_heal<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn try_heal<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     lease: Addr,
 ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
     test_case
@@ -78,8 +115,17 @@ fn try_heal<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
         .execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
 }
 
-fn heal_ok<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn heal_ok<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     lease: Addr,
 ) {
     let mut response = try_heal(test_case, lease).unwrap();

@@ -1,6 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
+use admin_contract::msg::{
+    ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
+};
 use finance::{duration::Duration, percent::Percent, period::Period};
 use lpp_platform::UsdGroup;
 use platform::{batch::Batch, message::Response as MessageResponse, response};
@@ -35,8 +38,7 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    platform::contract::validate_addr(deps.querier, &msg.protocol.lpp)?;
-    platform::contract::validate_addr(deps.querier, &msg.protocol.oracle)?;
+    platform::contract::validate_addr(deps.querier, &msg.protocols_registry)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(deps.querier, &msg.treasury)?;
 
@@ -48,7 +50,7 @@ pub fn instantiate(
 
     Config::new(
         msg.cadence_hours,
-        msg.protocol,
+        msg.protocols_registry,
         msg.treasury,
         msg.tvl_to_apr,
     )
@@ -65,12 +67,12 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
     use crate::state::migration;
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage: &mut dyn Storage| migration::migrate(storage),
+        |storage: &mut dyn Storage| migration::migrate(storage, msg.protocols_registry),
         Into::into,
     )
     .map(|(label, ())| label)
@@ -107,9 +109,6 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::Rewards { tvl_to_apr } => {
             Config::update_tvl_to_apr(deps.storage, tvl_to_apr).map(|()| response::empty_response())
         }
-        SudoMsg::AddProtocol(protocol) => {
-            Config::add_protocol(deps.storage, protocol).map(|()| response::empty_response())
-        }
     }
 }
 
@@ -135,12 +134,13 @@ fn query_reward(
 ) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
 
-    let lpps = config
-        .protocols
-        .iter()
-        .map(|protocol| lpp_platform::new_stub(&protocol.lpp, querier, env));
+    protocols(config.protocols_registry, querier).and_then(|protocols| {
+        let lpps = protocols
+            .iter()
+            .map(|protocol| lpp_platform::new_stub(&protocol.contracts.lpp, querier, env));
 
-    RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
+        RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
+    })
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult<MessageResponse> {
@@ -157,25 +157,47 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
     let last_dispatch = DispatchLog::last_dispatch(deps.storage);
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let lpps = config
-        .protocols
-        .iter()
-        .map(|protocol| lpp_platform::new_stub(&protocol.lpp, deps.querier, env));
-    let oracles = config.protocols.iter().map(|protocol| {
-        oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
-            protocol.oracle.clone(),
-            deps.querier,
-        )
-    });
+    protocols(config.protocols_registry, deps.querier).and_then(|protocols| {
+        let lpps = protocols
+            .iter()
+            .map(|protocol| lpp_platform::new_stub(&protocol.contracts.lpp, deps.querier, env));
 
-    cmd::dispatch(
-        Period::from_till(last_dispatch, now),
-        &config.tvl_to_apr,
-        lpps,
-        oracles,
-        &config.treasury,
-    )
-    .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
+        let oracles = protocols.iter().map(|protocol| {
+            oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
+                protocol.contracts.oracle.clone(),
+                deps.querier,
+            )
+        });
+
+        cmd::dispatch(
+            Period::from_till(last_dispatch, now),
+            &config.tvl_to_apr,
+            lpps,
+            oracles,
+            &config.treasury,
+        )
+        .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
+    })
+}
+
+fn protocols(
+    protocols_registry: Addr,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<Vec<ProtocolQueryResponse>> {
+    querier
+        .query_wasm_smart(protocols_registry.clone(), &ProtocolsRegistry::Protocols {})
+        .and_then(|protocols: ProtocolsQueryResponse| {
+            protocols
+                .into_iter()
+                .map(|protocol| {
+                    querier.query_wasm_smart(
+                        protocols_registry.clone(),
+                        &ProtocolsRegistry::Protocol { protocol },
+                    )
+                })
+                .collect()
+        })
+        .map_err(Into::into)
 }
 
 fn setup_alarm(
@@ -204,24 +226,20 @@ mod tests {
 
     use crate::{
         contract::sudo,
-        msg::{ConfigResponse, InstantiateMsg, Protocol, QueryMsg, SudoMsg},
+        msg::{ConfigResponse, InstantiateMsg, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
     };
 
     use super::{instantiate, query};
 
-    const LPP_ADDR: &str = "lpp";
-    const ORACLE_ADDR: &str = "oracle";
+    const PROTOCOLS_REGISTRY_ADDR: &str = "admin";
     const TIMEALARMS_ADDR: &str = "timealarms";
     const TREASURY_ADDR: &str = "treasury";
 
     fn do_instantiate(deps: DepsMut<'_>) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            protocol: Protocol {
-                lpp: Addr::unchecked(LPP_ADDR),
-                oracle: Addr::unchecked(ORACLE_ADDR),
-            },
+            protocols_registry: Addr::unchecked(PROTOCOLS_REGISTRY_ADDR),
             timealarms: Addr::unchecked(TIMEALARMS_ADDR),
             treasury: Addr::unchecked(TREASURY_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![
@@ -246,7 +264,7 @@ mod tests {
     fn proper_initialization() {
         let mut deps = customized_mock_deps_with_contracts(
             mock_dependencies_with_balance(&coins(2, "token")),
-            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+            [PROTOCOLS_REGISTRY_ADDR, TIMEALARMS_ADDR, TREASURY_ADDR],
         );
         do_instantiate(deps.as_mut());
 
@@ -259,7 +277,7 @@ mod tests {
     fn configure() {
         let mut deps = customized_mock_deps_with_contracts(
             mock_dependencies_with_balance(&coins(2, "token")),
-            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+            [PROTOCOLS_REGISTRY_ADDR, TIMEALARMS_ADDR, TREASURY_ADDR],
         );
 
         do_instantiate(deps.as_mut());

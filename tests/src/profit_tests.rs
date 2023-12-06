@@ -28,7 +28,7 @@ fn update_config() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -79,7 +79,7 @@ fn update_config_unauthorized() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -107,7 +107,7 @@ fn on_alarm_from_unknown() {
     type Lpn = StableC1;
     let user_addr: Addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -148,7 +148,7 @@ fn on_alarm_zero_balance() {
     type Lpn = StableC1;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -174,7 +174,7 @@ fn on_alarm_zero_balance() {
 fn on_alarm_native_only_transfer() {
     type Lpn = StableC1;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -284,7 +284,7 @@ fn on_alarm_native_only_transfer() {
 fn on_alarm_foreign_only_transfer() {
     type Lpn = StableC1;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -346,7 +346,7 @@ fn on_alarm_foreign_only_transfer() {
 fn on_alarm_native_and_foreign_transfer() {
     type Lpn = StableC1;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
@@ -418,7 +418,7 @@ fn integration_with_time_alarms() {
     type Lpn = StableC1;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)

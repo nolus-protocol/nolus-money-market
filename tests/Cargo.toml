@@ -12,6 +12,7 @@ astroport = ["lease/astroport", "profit/astroport"]
 osmosis = ["lease/osmosis", "profit/osmosis"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+admin_contract = { path = "../platform/contracts/admin", features = ["contract"] }
 lease = { path = "../protocol/contracts/lease", features = ["net_main", "testing"] }
 leaser = { path = "../protocol/contracts/leaser", features = ["net_main", "testing"] }
 lpp = { path = "../protocol/contracts/lpp", features = ["net_main", "contract", "testing"] }

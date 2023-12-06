@@ -254,8 +254,17 @@ fn full_repay_with_excess() {
     );
 }
 
-pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+pub(crate) fn repay<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
     lease_addr: Addr,
     payment: PaymentCoin,
 ) -> AppResponse {
@@ -309,8 +318,26 @@ pub(crate) fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     .unwrap_response()
 }
 
-fn send_payment_and_transfer<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, PaymentC>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn send_payment_and_transfer<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    PaymentC,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
     lease_addr: Addr,
     payment: Coin<PaymentC>,
 ) -> ResponseWithInterChainMsgs<'_, ()>

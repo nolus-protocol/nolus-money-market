@@ -1,6 +1,6 @@
 use finance::percent::Percent;
 use rewards_dispatcher::{
-    msg::{InstantiateMsg, Protocol},
+    msg::InstantiateMsg,
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
 use sdk::cosmwasm_std::Addr;
@@ -13,8 +13,7 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(
         app: &mut App,
-        lpp: Addr,
-        oracle: Addr,
+        protocols_registry: Addr,
         timealarms: Addr,
         treasury: Addr,
     ) -> Addr {
@@ -30,7 +29,7 @@ impl Instantiator {
 
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            protocol: Protocol { lpp, oracle },
+            protocols_registry,
             timealarms,
             treasury,
             tvl_to_apr: RewardScale::try_from(vec![

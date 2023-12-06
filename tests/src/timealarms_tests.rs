@@ -204,14 +204,13 @@ fn test_lease_serde() {
         cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn>::with_reserve(&[coin(
-            10_000_000_000_000_000_000_000_000_000,
-            Lpn::BANK_SYMBOL,
-        )])
-        .init_time_alarms()
-        .into_generic();
+fn test_case() -> TestCase<(), (), (), (), (), (), (), Addr> {
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
+        10_000_000_000_000_000_000_000_000_000,
+        Lpn::BANK_SYMBOL,
+    )])
+    .init_time_alarms()
+    .into_generic();
 
     test_case
         .app
@@ -220,8 +219,17 @@ fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {
     test_case
 }
 
-fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
     recv: &Addr,
     time_secs: u64,
 ) {
@@ -241,8 +249,17 @@ fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
         .unwrap_response();
 }
 
-fn dispatch<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+fn dispatch<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
     max_count: u32,
 ) -> AppResponse {
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
@@ -529,7 +546,7 @@ fn test_time_notify() {
 
 #[test]
 fn test_profit_alarms() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin(Coin::<Lpn>::new(1_000_000)),
         cwcoin(Coin::<NativeC>::new(1_000_000)),
     ])

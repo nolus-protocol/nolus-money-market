@@ -62,7 +62,7 @@ fn open_lease_not_in_lease_currency() {
 
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -115,7 +115,7 @@ fn open_multiple_loans() {
     let user_addr = Addr::unchecked(USER);
     let other_user_addr = Addr::unchecked("other_user");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -201,7 +201,7 @@ fn test_quote() {
     type Downpayment = Lpn;
     type LeaseCurrency = LeaseC3;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -285,7 +285,7 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
 
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&{
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&{
         let mut reserve = vec![cwcoin::<Lpn, _>(1_000_000_000)];
 
         reserve.extend_from_slice(&lpp_reserve);
@@ -378,7 +378,7 @@ fn test_quote_fixed_rate() {
     type Downpayment = Lpn;
     type LeaseCurrency = LeaseC3;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -432,8 +432,17 @@ fn test_quote_fixed_rate() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
 }
 
-fn setup_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+fn setup_feeder<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
 ) -> Addr {
     let feeder = Addr::unchecked("feeder_main");
     oracle_mod::add_feeder(test_case, &feeder);
@@ -463,7 +472,7 @@ fn open_loans_lpp_fails() {
         }
     }
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -522,7 +531,7 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin::<Lpn, _>(1_000_000_000),
         cwcoin_dex::<Lpn, _>(1_000_000_000),
         cwcoin::<LeaseC, _>(1_000_000_000),
@@ -633,7 +642,7 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
     let incoming_funds = cwcoin::<Lpn, _>(200);
     let downpayment_amount = cwcoin::<Lpn, _>(downpayment);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,

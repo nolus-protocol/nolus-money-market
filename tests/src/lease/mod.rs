@@ -37,7 +37,7 @@ type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);
 
-pub(super) type LeaseTestCase = TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>;
+pub(super) type LeaseTestCase = TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr>;
 
 pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
@@ -50,8 +50,25 @@ where
     Price::identity()
 }
 
-pub(super) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+pub(super) fn feed_price<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    TimeAlarms,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
 ) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
     common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), lease_price);
@@ -64,7 +81,7 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
@@ -117,8 +134,26 @@ pub(super) fn calculate_interest(
         .interest(principal)
 }
 
-pub(super) fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn open_lease<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
 ) -> Addr
@@ -130,8 +165,26 @@ where
     lease
 }
 
-pub(super) fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn try_init_lease<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    D,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
 ) -> Addr
@@ -164,6 +217,7 @@ where
 }
 
 pub(super) fn complete_init_lease<
+    ProtocolsRegistry,
     Dispatcher,
     Treasury,
     Profit,
@@ -172,7 +226,16 @@ pub(super) fn complete_init_lease<
     TimeAlarms,
     DownpaymentC,
 >(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
     lease: &Addr,
@@ -196,15 +259,50 @@ pub(super) fn complete_init_lease<
     );
 }
 
-pub(super) fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn quote_borrow<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: PaymentCoin,
 ) -> LpnCoin {
     LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
-pub(super) fn quote_query<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+pub(super) fn quote_query<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
 where
@@ -218,8 +316,26 @@ where
     )
 }
 
-pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn state_query<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     contract_addr: &str,
 ) -> StateResponse {
     test_case
@@ -230,6 +346,7 @@ pub(super) fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Tim
 }
 
 pub(super) fn expected_open_state<
+    ProtocolsRegistry,
     Dispatcher,
     Treasury,
     Profit,
@@ -240,7 +357,16 @@ pub(super) fn expected_open_state<
     PaymentC,
     AssetC,
 >(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
     closed: Coin<AssetC>,
@@ -300,6 +426,7 @@ where
 }
 
 pub(super) fn expected_newly_opened_state<
+    ProtocolsRegistry,
     Dispatcher,
     Treasury,
     Profit,
@@ -309,7 +436,16 @@ pub(super) fn expected_newly_opened_state<
     DownpaymentC,
     PaymentC,
 >(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
 ) -> StateResponse
@@ -328,8 +464,26 @@ where
     )
 }
 
-pub(super) fn block_time<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+pub(super) fn block_time<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
 ) -> Timestamp {
     test_case.app.block_info().time
 }

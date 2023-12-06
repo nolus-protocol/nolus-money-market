@@ -912,6 +912,7 @@ name = "rewards_dispatcher"
 version = "0.5.3"
 dependencies = [
  "access-control",
+ "admin_contract",
  "cosmwasm-std",
  "currency",
  "finance",

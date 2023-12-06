@@ -14,8 +14,9 @@ crate-type = ["cdylib", "rlib"]
 contract = [] # TODO remove me and filter out unknown features in CI
 
 [dependencies]
+admin_contract = { workspace = true }
 lpp-platform = { workspace = true }
-oracle-platform = { workspace = true, features = ["unchecked-base-currency"]  }
+oracle-platform = { workspace = true, features = ["unchecked-base-currency"] }
 timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }
 

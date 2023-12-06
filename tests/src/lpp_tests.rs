@@ -72,7 +72,7 @@ fn config_update_parameters() {
     assert_ne!(utilization_optimal, UTILIZATION_OPTIMAL);
     assert_ne!(min_utilization, TestCase::DEFAULT_LPP_MIN_UTILIZATION);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
         cwcoin::<NativeC, _>(app_balance),
     ])
@@ -143,7 +143,7 @@ fn config_update_parameters() {
 #[test]
 #[should_panic(expected = "Expecting code id 1 for the contract contract0")]
 fn open_loan_unauthorized_contract_id() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -175,7 +175,7 @@ fn open_loan_unauthorized_contract_id() {
 #[test]
 #[should_panic(expected = "No liquidity")]
 fn open_loan_no_liquidity() {
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -227,22 +227,21 @@ fn deposit_and_withdraw() {
     let lender2 = Addr::unchecked("lender2");
     let lender3 = Addr::unchecked("lender3");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
-            .init_lpp_with_funds(
-                None,
-                &[],
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-            )
-            .init_time_alarms()
-            .init_oracle(None)
-            .init_treasury_without_dispatcher()
-            .init_profit(24)
-            .init_leaser()
-            .into_generic();
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
 
     test_case
         .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(init_deposit)])
@@ -514,16 +513,15 @@ fn loan_open_wrong_id() {
     let init_deposit = 20_000_000u128;
     let loan = 10_000u128;
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> =
-        TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
-            .init_lpp(
-                None,
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-                TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-            )
-            .into_generic();
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .into_generic();
 
     test_case
         .send_funds_from_admin(lender, &[lpn_cwcoin(init_deposit)])
@@ -579,7 +577,7 @@ fn loan_open_and_repay() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
         cwcoin::<NativeC, _>(app_balance),
     ])
@@ -944,7 +942,7 @@ fn compare_lpp_states() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
         coin_legacy::to_cosmwasm::<NativeC>(app_balance.into()),
     ])
@@ -1301,7 +1299,7 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
-    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
         cwcoin::<NativeC, _>(app_balance),
     ])

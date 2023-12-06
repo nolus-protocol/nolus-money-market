@@ -52,8 +52,17 @@ fn state_closed() {
     heal::heal_unsupported(&mut test_case, lease_addr);
 }
 
-fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn close<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     lease_addr: Addr,
     expected_funds: LeaseCoin,
 ) -> AppResponse {
@@ -82,8 +91,17 @@ fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     .unwrap_response()
 }
 
-fn send_close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+fn send_close<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     contract_addr: Addr,
 ) -> ResponseWithInterChainMsgs<'_, ()> {
     test_case

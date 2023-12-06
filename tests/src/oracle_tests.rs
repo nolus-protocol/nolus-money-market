@@ -51,7 +51,7 @@ where
     coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr> {
+fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr> {
     TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
         .init_lpp_with_funds(
             None,
@@ -256,8 +256,17 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+fn open_lease<ProtocolsRegistry, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     downpayment: TheCoin,
 ) -> Addr {
     let customer = Addr::unchecked(ADMIN);

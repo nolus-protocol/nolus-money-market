@@ -4,7 +4,7 @@ use timealarms::{
     msg::InstantiateMsg,
 };
 
-use super::{mock_query, test_case::app::App, CwContractWrapper, ADMIN};
+use super::{dummy_query, test_case::app::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 
@@ -12,7 +12,7 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(app: &mut App) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints = CwContractWrapper::new(execute, instantiate, mock_query).with_reply(reply);
+        let endpoints = CwContractWrapper::new(execute, instantiate, dummy_query).with_reply(reply);
 
         let code_id = app.store_code(Box::new(endpoints));
 

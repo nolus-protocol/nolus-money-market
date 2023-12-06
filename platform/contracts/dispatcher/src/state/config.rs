@@ -5,7 +5,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{error::ContractError, msg::Protocol, result::ContractResult};
+use crate::{error::ContractError, result::ContractResult};
 
 use super::reward_scale::RewardScale;
 
@@ -15,8 +15,8 @@ pub type CadenceHours = u16;
 pub(crate) struct Config {
     // Time duration in hours defining the periods of time this instance is awaken
     pub cadence_hours: CadenceHours,
-    // All protocols deployed on the platform
-    pub protocols: Vec<Protocol>,
+    // Protocols registry
+    pub protocols_registry: Addr,
     // address to treasury contract
     pub treasury: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
@@ -28,13 +28,13 @@ impl Config {
 
     pub fn new(
         cadence_hours: CadenceHours,
-        protocol: Protocol,
+        protocols_registry: Addr,
         treasury: Addr,
         tvl_to_apr: RewardScale,
     ) -> Self {
         Config {
             cadence_hours,
-            protocols: vec![protocol],
+            protocols_registry,
             tvl_to_apr,
             treasury,
         }
@@ -77,16 +77,6 @@ impl Config {
             .map(|_| ())
             .map_err(Into::into)
     }
-
-    pub fn add_protocol(storage: &mut dyn Storage, protocol: Protocol) -> ContractResult<()> {
-        Self::STORAGE
-            .update(storage, |mut config| -> Result<Config, ContractError> {
-                config.protocols.push(protocol);
-                Ok(config)
-            })
-            .map(|_| ())
-            .map_err(Into::into)
-    }
 }
 
 pub(crate) mod migration {
@@ -98,7 +88,6 @@ pub(crate) mod migration {
     };
 
     use crate::{
-        msg::Protocol,
         result::ContractResult,
         state::{reward_scale::RewardScale, CadenceHours, Config},
     };
@@ -108,9 +97,7 @@ pub(crate) mod migration {
     #[derive(Deserialize)]
     struct OldConfig {
         cadence_hours: CadenceHours,
-        lpp: Addr,
         treasury: Addr,
-        oracle: Addr,
         tvl_to_apr: RewardScale,
     }
 
@@ -123,24 +110,21 @@ pub(crate) mod migration {
         }
     }
 
-    impl From<OldConfig> for Config {
-        fn from(value: OldConfig) -> Self {
+    impl OldConfig {
+        fn migrate(self, protocols_registry: Addr) -> Config {
             Config::new(
-                value.cadence_hours,
-                Protocol {
-                    lpp: value.lpp,
-                    oracle: value.oracle,
-                },
-                value.treasury,
-                value.tvl_to_apr,
+                self.cadence_hours,
+                protocols_registry,
+                self.treasury,
+                self.tvl_to_apr,
             )
         }
     }
 
-    pub fn migrate(storage: &mut dyn Storage) -> ContractResult<()> {
+    pub fn migrate(storage: &mut dyn Storage, protocols_registry: Addr) -> ContractResult<()> {
         STORAGE
             .load(storage)
-            .map(Into::into)
+            .map(|old| old.migrate(protocols_registry))
             .and_then(|config: Config| config.store(storage))
             .map_err(Into::into)
     }
