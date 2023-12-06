@@ -16,11 +16,17 @@ VOLUME ["/protocol"]
 
 WORKDIR "/"
 
-ADD "./tools/cargo-features/" "/cargo-features/"
+ADD "./tools/" "/tools/"
 
-RUN ["cargo", "install", "--path", "/cargo-features/"]
+WORKDIR "/tools/"
 
-RUN ["rm", "-rf", "/cargo-features/"]
+RUN ["cargo", "update", "--locked"]
+
+RUN ["cargo", "install", "--path", "/tools/cargo-features/"]
+
+WORKDIR "/"
+
+RUN ["rm", "-rf", "/tools/"]
 
 RUN ["mkdir", "/binaryen/"]
 
