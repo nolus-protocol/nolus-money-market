@@ -34,7 +34,9 @@ thiserror = { version = "1", default-features = false }
 anyhow = "1"
 
 # CosmWasm
-cosmwasm-std = { version = "1.2", default-features = false, features = ["cosmwasm_1_2"] }
+cosmwasm-std = { version = "1.2", default-features = false, features = [
+    "cosmwasm_1_2",
+] }
 cosmwasm-storage = "1.2"
 cosmwasm-schema = "1.2"
 cw-storage-plus = "1.1"
@@ -44,7 +46,11 @@ cw-multi-test = "0.16.1"
 cosmos-sdk-proto = { version = "0.18", default-features = false }
 
 # Other
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
+prost = { version = "0.11", default-features = false }
+
+neutron-sdk = { version = "0.6", default-features = false }
+# neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.7.0" }
+# neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
 [patch.'https://github.com/neutron-org/neutron-sdk']
 # satisfies the protobuf version check
 protobuf = { version = "~3.2" }
