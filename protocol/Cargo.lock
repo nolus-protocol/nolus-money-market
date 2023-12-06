@@ -30,7 +30,8 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 [[package]]
 name = "astroport"
 version = "2.9.4"
-source = "git+https://github.com/astroport-fi/astroport-core.git?branch=feat/router_response_data#c1c968a4a1451a996bededd6ce961d424565115a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b9b98ae3d9507397462b8150017ee51957f88b5e5a5dddfedf87a1d311207ce"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

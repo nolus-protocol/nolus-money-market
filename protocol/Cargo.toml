@@ -49,8 +49,8 @@ enum_dispatch = { version = "0.3", default-features = false }
 cosmwasm-std = { version = "1.2", default-features = false }
 
 # Other
-# astroport = { version = "3.6", default-features = false }
-astroport = { git = "https://github.com/astroport-fi/astroport-core.git", branch = "feat/router_response_data", default-features = false }
+# We specify the first version where SwapResponseData is available
+astroport = { version = "2.9.4", default-features = false }
 osmosis-std = { version = "0.20", default-features = false }
 
 [patch.'https://github.com/neutron-org/neutron-sdk']
