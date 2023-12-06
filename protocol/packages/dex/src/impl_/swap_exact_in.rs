@@ -12,7 +12,7 @@ use finance::{
 };
 use platform::{batch::Batch, trx};
 use sdk::{
-    cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData,
+    cosmos_sdk_proto::Any,
     cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp},
 };
 use swap::trx::{self as swap_trx, ExactAmountIn};
@@ -98,7 +98,7 @@ where
         struct ExactInResponse<I>(I, Amount);
         impl<I> CoinVisitor for ExactInResponse<I>
         where
-            I: Iterator<Item = MsgData>,
+            I: Iterator<Item = Any>,
         {
             type Result = IterNext;
             type Error = Error;

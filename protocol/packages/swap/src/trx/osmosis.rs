@@ -9,7 +9,7 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData, cosmwasm_std::Coin as CwCoin};
+use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 
 use crate::{
     error::{Error, Result},
@@ -66,7 +66,7 @@ impl ExactAmountIn for Impl {
 
     fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = MsgData>,
+        I: Iterator<Item = Any>,
     {
         use std::str::FromStr;
 
@@ -81,15 +81,15 @@ impl ExactAmountIn for Impl {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(&self, amount_out: Amount) -> MsgData {
+    fn build_resp(&self, amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
         let resp = ResponseMsg {
             token_out_amount: amount_out.to_string(),
         };
-        MsgData {
-            msg_type: RequestMsg::TYPE_URL.into(),
-            data: resp.encode_to_vec(),
+        Any {
+            type_url: RequestMsg::TYPE_URL.into(),
+            value: resp.encode_to_vec(),
         }
     }
 }

@@ -1,7 +1,7 @@
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
 use platform::{ica::HostAccount, trx::Transaction};
-use sdk::cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData;
+use sdk::cosmos_sdk_proto::Any;
 
 #[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
@@ -39,8 +39,8 @@ pub trait ExactAmountIn {
 
     fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = MsgData>;
+        I: Iterator<Item = Any>;
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(&self, amount_out: Amount) -> MsgData;
+    fn build_resp(&self, amount_out: Amount) -> Any;
 }

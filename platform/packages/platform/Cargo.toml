@@ -21,3 +21,5 @@ serde = { workspace = true }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 sdk = { workspace = true, features = ["testing"] }
+
+base64 = { workspace = true }

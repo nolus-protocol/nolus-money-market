@@ -32,6 +32,7 @@ versioning = { path = "packages/versioning", default-features = false }
 serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 anyhow = "1"
+base64 = { version = "0.21", default-features = false }
 
 # CosmWasm
 cosmwasm-std = { version = "1.2", default-features = false, features = [
@@ -43,17 +44,13 @@ cw-storage-plus = "1.1"
 cw-multi-test = "0.16.1"
 
 # Cosmos-sdk
-cosmos-sdk-proto = { version = "0.18", default-features = false }
+# cannot bump to 0.20 because it brings prost 0.12 that is in conflict with osmosis-sdk 0.20
+cosmos-sdk-proto = { version = "0.19", default-features = false }
 
 # Other
+# version 0.12 is in conflict with osmosis-sdk 0.20 so have to wait for its next version before bump
 prost = { version = "0.11", default-features = false }
-
-neutron-sdk = { version = "0.6", default-features = false }
-# neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.7.0" }
-# neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", tag = "v0.6.1" }
-[patch.'https://github.com/neutron-org/neutron-sdk']
-# satisfies the protobuf version check
-protobuf = { version = "~3.2" }
+neutron-sdk = { version = "0.7", default-features = false }
 
 [profile.release]
 opt-level = "s"
