@@ -8,7 +8,10 @@ use finance::{
     zero::Zero,
 };
 use platform::bank;
-use profit::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
+use profit::{
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
+    typedefs::CadenceHours,
+};
 use sdk::{
     cosmwasm_std::{from_json, Addr, Event},
     cw_multi_test::AppResponse,
@@ -24,6 +27,32 @@ use crate::common::{
     CwCoin, Native, ADMIN, USER,
 };
 
+fn test_case_with<Lpn>(
+    cadence_hours: CadenceHours,
+    custom_reserve: Option<&[CwCoin]>,
+) -> TestCase<(), (), Addr, Addr, (), (), Addr, Addr>
+where
+    Lpn: Currency,
+{
+    custom_reserve
+        .map_or_else(
+            TestCaseBuilder::<Lpn>::new,
+            TestCaseBuilder::<Lpn>::with_reserve,
+        )
+        .init_treasury_without_dispatcher()
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_profit(cadence_hours)
+        .into_generic()
+}
+
+fn test_case<Lpn>() -> TestCase<(), (), Addr, Addr, (), (), Addr, Addr>
+where
+    Lpn: Currency,
+{
+    test_case_with::<Lpn>(2, None)
+}
+
 #[test]
 fn update_config() {
     type Lpn = StableC1;
@@ -31,12 +60,7 @@ fn update_config() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(INITIAL_CACDENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
     let ConfigResponse { cadence_hours } = test_case
         .app
@@ -82,12 +106,7 @@ fn update_config_unauthorized() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(INITIAL_CACDENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
     assert!(test_case
         .app
@@ -110,12 +129,7 @@ fn on_alarm_from_unknown() {
     type Lpn = StableC1;
     let user_addr: Addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case = test_case::<Lpn>();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
 
@@ -151,12 +165,7 @@ fn on_alarm_zero_balance() {
     type Lpn = StableC1;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case = test_case::<Lpn>();
 
     test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
 
@@ -171,6 +180,41 @@ fn on_alarm_zero_balance() {
         .unwrap()
         .ignore_response()
         .unwrap_response();
+}
+
+struct InitTreasuryBalancesResult<Lpn> {
+    native: Coin<Native>,
+    lpn: Coin<Lpn>,
+}
+
+fn init_treasury_balances<
+    Lpn,
+    ProtocolsRegistry,
+    Dispatcher,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Addr,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
+) -> InitTreasuryBalancesResult<Lpn>
+where
+    Lpn: Currency,
+{
+    InitTreasuryBalancesResult {
+        native: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        lpn: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+    }
 }
 
 struct SendAlarmAndMaybeSwapResult {
@@ -278,74 +322,23 @@ where
     }
 }
 
-fn on_time_alarm_do_transfers<Lpn>(
+fn total_native_profit(
     native_profit: Coin<Native>,
-    lpn_profit: Option<(Coin<Lpn>, Coin<Native>)>,
-) where
-    Lpn: Currency,
-{
-    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin::<Lpn, _>(1_000_000_000),
-        cwcoin_dex::<Lpn, _>(1_000_000_000),
-        cwcoin::<Native, _>(1_000_000_000),
-        cwcoin_dex::<Native, _>(1_000_000_000),
-    ])
-    .init_treasury_without_dispatcher()
-    .init_time_alarms()
-    .init_oracle(None)
-    .init_profit(2)
-    .into_generic();
+    lpn_profit_swap_out: Coin<Native>,
+) -> Coin<Native> {
+    (native_profit + lpn_profit_swap_out).saturating_sub(::profit::profit::Profit::IBC_FEE_RESERVE)
+}
 
-    let init_treasury_native_balance: Coin<Native> = bank::balance(
-        &test_case.address_book.treasury().clone(),
-        test_case.app.query(),
-    )
-    .unwrap();
-
-    let init_treasury_lpn_balance: Coin<Lpn> = bank::balance(
-        &test_case.address_book.treasury().clone(),
-        test_case.app.query(),
-    )
-    .unwrap();
-
-    if !native_profit.is_zero() {
-        //send native tokens to the profit contract
-        test_case.send_funds_from_admin(
-            test_case.address_book.profit().clone(),
-            &[cwcoin(native_profit)],
-        );
-    }
-
-    let lpn_profit = if let Some((lpn_profit_swap_in, lpn_profit_swap_out)) = lpn_profit {
-        let lpn_profit_swap_in_cw = cwcoin::<Lpn, _>(lpn_profit_swap_in);
-
-        //send LPN tokens to the profit contract
-        test_case.send_funds_from_admin(
-            test_case.address_book.profit().clone(),
-            slice::from_ref(&lpn_profit_swap_in_cw),
-        );
-
-        assert_eq!(
-            bank::balance(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-            lpn_profit_swap_in,
-        );
-
-        Some((
-            lpn_profit_swap_in,
-            lpn_profit_swap_in_cw,
-            lpn_profit_swap_out,
-        ))
-    } else {
-        assert!(!native_profit.is_zero());
-
-        None
-    };
-
+fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
+    test_case: &TestCase<ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Oracle, Addr>,
+    alarm_result: SendAlarmAndMaybeSwapResult,
+    total_native_profit: Coin<Native>,
+) {
     let SendAlarmAndMaybeSwapResult {
         mut response,
-        lpn_profit_swap_out,
         has_swap,
-    } = send_alarm_and_maybe_swap(&mut test_case, lpn_profit);
+        ..
+    } = alarm_result;
 
     if has_swap {
         let sudo = response.events.remove(0);
@@ -355,9 +348,6 @@ fn on_time_alarm_do_transfers<Lpn>(
             [("_contract_addr", test_case.address_book.profit().as_str())]
         );
     }
-
-    let total_native_profit =
-        native_profit + lpn_profit_swap_out - ::profit::profit::Profit::IBC_FEE_RESERVE;
 
     assert_eq!(response.events.len(), 4, "{:?}", response.events);
 
@@ -417,7 +407,16 @@ fn on_time_alarm_do_transfers<Lpn>(
         time_alarms_exec.attributes,
         [("_contract_addr", test_case.address_book.time_alarms())]
     );
+}
 
+fn expect_balances<Lpn, ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: TestCase<ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Oracle, TimeAlarms>,
+    init_treasury_native_balance: Coin<Native>,
+    total_native_profit: Coin<Native>,
+    init_treasury_lpn_balance: Coin<Lpn>,
+) where
+    Lpn: Currency,
+{
     assert_eq!(
         bank::balance::<Native>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_native_balance + total_native_profit,
@@ -430,6 +429,74 @@ fn on_time_alarm_do_transfers<Lpn>(
 
     assert_eq!(
         bank::balance::<Lpn>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        init_treasury_lpn_balance,
+    );
+}
+
+fn on_time_alarm_do_transfers<Lpn>(
+    native_profit: Coin<Native>,
+    lpn_profit: Option<(Coin<Lpn>, Coin<Native>)>,
+) where
+    Lpn: Currency,
+{
+    let mut test_case = test_case_with::<Lpn>(
+        2,
+        Some(&[
+            cwcoin::<Lpn, _>(1_000_000_000),
+            cwcoin_dex::<Lpn, _>(1_000_000_000),
+            cwcoin::<Native, _>(1_000_000_000),
+            cwcoin_dex::<Native, _>(1_000_000_000),
+        ]),
+    );
+
+    let InitTreasuryBalancesResult {
+        native: init_treasury_native_balance,
+        lpn: init_treasury_lpn_balance,
+    }: InitTreasuryBalancesResult<Lpn> = init_treasury_balances(&test_case);
+
+    if !native_profit.is_zero() {
+        //send native tokens to the profit contract
+        test_case.send_funds_from_admin(
+            test_case.address_book.profit().clone(),
+            &[cwcoin(native_profit)],
+        );
+    }
+
+    let lpn_profit = if let Some((lpn_profit_swap_in, lpn_profit_swap_out)) = lpn_profit {
+        let lpn_profit_swap_in_cw = cwcoin::<Lpn, _>(lpn_profit_swap_in);
+
+        //send LPN tokens to the profit contract
+        test_case.send_funds_from_admin(
+            test_case.address_book.profit().clone(),
+            slice::from_ref(&lpn_profit_swap_in_cw),
+        );
+
+        assert_eq!(
+            bank::balance(test_case.address_book.profit(), test_case.app.query()).unwrap(),
+            lpn_profit_swap_in,
+        );
+
+        Some((
+            lpn_profit_swap_in,
+            lpn_profit_swap_in_cw,
+            lpn_profit_swap_out,
+        ))
+    } else {
+        assert!(!native_profit.is_zero());
+
+        None
+    };
+
+    let alarm_result = send_alarm_and_maybe_swap(&mut test_case, lpn_profit);
+
+    let total_native_profit = total_native_profit(native_profit, alarm_result.lpn_profit_swap_out);
+
+    expect_transfer_events(&test_case, alarm_result, total_native_profit);
+
+    expect_balances(
+        test_case,
+        init_treasury_native_balance,
+        total_native_profit,
         init_treasury_lpn_balance,
     );
 }
@@ -469,12 +536,7 @@ fn integration_with_time_alarms() {
     type Lpn = StableC1;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(CADENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(CADENCE_HOURS, None);
 
     test_case
         .app
