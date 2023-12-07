@@ -137,7 +137,6 @@ pub struct PositionSpecDTO {
     pub min_asset: LpnCoin,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
-    #[serde(alias = "min_sell_asset")]
     pub min_transaction: LpnCoin,
 }
 
@@ -268,17 +267,6 @@ mod test_position_spec {
             spec_dto(),
             format!(
                 r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
-                lpn = StableC1::TICKER
-            ),
-        );
-    }
-
-    #[test]
-    fn deserialize_an_alternative_name() {
-        assert_load_ok(
-            spec_dto(),
-            format!(
-                r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_sell_asset":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
                 lpn = StableC1::TICKER
             ),
         );
