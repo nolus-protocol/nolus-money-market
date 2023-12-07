@@ -86,6 +86,111 @@ where
 
 fn do_swap_internal<F>(app: &mut App, ica_addr: Addr, request: RequestMsg, price_f: F) -> Amount
 where
+    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
+{
+    {
+        #[cfg(feature = "astroport")]
+        do_swap_internal_astroport(app, ica_addr, request, price_f)
+    }
+    #[cfg(feature = "osmosis")]
+    do_swap_internal_osmosis(app, ica_addr, request, price_f)
+}
+
+#[cfg(feature = "astroport")]
+fn do_swap_internal_astroport<F>(
+    app: &mut App,
+    ica_addr: Addr,
+    mut request: RequestMsg,
+    mut price_f: F,
+) -> Amount
+where
+    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
+{
+    use sdk::{
+        cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::from_json,
+    };
+
+    #[derive(Debug, serde::Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    enum AstroportMsg {
+        ExecuteSwapOperations { operations: Vec<SwapOperation> },
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    #[serde(rename_all = "snake_case", deny_unknown_fields)]
+    enum SwapOperation {
+        AstroSwap {
+            offer_asset_info: AssetInfo,
+            ask_asset_info: AssetInfo,
+        },
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    #[serde(rename_all = "snake_case", deny_unknown_fields)]
+    enum AssetInfo {
+        NativeToken { denom: String },
+    }
+
+    let AstroportMsg::ExecuteSwapOperations { operations } = from_json(request.msg).unwrap();
+
+    let sent_token = {
+        let ProtoCoin { denom, amount } = request.funds.pop().unwrap();
+
+        assert!({ request.funds }.is_empty(), "More than one token sent!");
+
+        CwCoin {
+            denom,
+            amount: amount.parse::<Amount>().unwrap().into(),
+        }
+    };
+
+    app.send_tokens(
+        ica_addr.clone(),
+        Addr::unchecked(ADMIN),
+        std::slice::from_ref(&sent_token),
+    )
+    .unwrap();
+
+    let (amount_out, denom_out) = operations.into_iter().fold(
+        (sent_token.amount.u128(), sent_token.denom),
+        |(amount_in, denom_in),
+         SwapOperation::AstroSwap {
+             offer_asset_info:
+                 AssetInfo::NativeToken {
+                     denom: swap_denom_in,
+                 },
+             ask_asset_info:
+                 AssetInfo::NativeToken {
+                     denom: swap_denom_out,
+                 },
+         }| {
+            assert_eq!(denom_in, swap_denom_in);
+
+            (
+                price_f(amount_in, &swap_denom_in, &swap_denom_out),
+                swap_denom_out,
+            )
+        },
+    );
+
+    app.send_tokens(
+        Addr::unchecked(ADMIN),
+        ica_addr,
+        &[CwCoin::new(amount_out, denom_out)],
+    )
+    .unwrap();
+
+    amount_out
+}
+
+#[cfg(feature = "osmosis")]
+fn do_swap_internal_osmosis<F>(
+    app: &mut App,
+    ica_addr: Addr,
+    request: RequestMsg,
+    price_f: F,
+) -> Amount
+where
     F: for<'r, 't> FnOnce(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     let token_in = request.token_in.unwrap();

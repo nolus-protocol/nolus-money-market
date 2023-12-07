@@ -118,9 +118,10 @@ impl ExactAmountIn for Impl {
             return_amount: amount_out.into(),
         })
         .expect("test result serialization works");
+
         Any {
             type_url: ResponseMsg::TYPE_URL.into(),
-            value: (ResponseMsg { data: swap_resp }).encode_to_vec(),
+            value: ResponseMsg { data: swap_resp }.encode_to_vec(),
         }
     }
 }
