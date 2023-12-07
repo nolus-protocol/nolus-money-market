@@ -59,7 +59,7 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<G, V>(cw_amount: Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
+pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
 where
     V: WithCoin,
     G: Group,
@@ -459,7 +459,7 @@ mod test {
     fn may_received_no_input() {
         assert_eq!(
             None,
-            may_received::<SuperGroup, _>(vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+            may_received::<SuperGroup, _>(&vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
         );
     }
 
@@ -479,7 +479,7 @@ mod test {
 
         assert_eq!(
             None,
-            may_received::<SuperGroup, _>(vec![in_coin_1, in_coin_2], Expect(coin))
+            may_received::<SuperGroup, _>(&vec![in_coin_1, in_coin_2], Expect(coin))
         );
     }
 
@@ -489,7 +489,7 @@ mod test {
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
         assert_eq!(
             Some(Ok(true)),
-            may_received::<SuperGroup, _>(vec![in_coin_1], Expect(coin))
+            may_received::<SuperGroup, _>(&vec![in_coin_1], Expect(coin))
         );
     }
 
@@ -505,13 +505,13 @@ mod test {
         assert_eq!(
             Some(Ok(true)),
             may_received::<SuperGroup, _>(
-                vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
+                &vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
                 Expect(coin_2)
             )
         );
         assert_eq!(
             Some(Ok(true)),
-            may_received::<SuperGroup, _>(vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
+            may_received::<SuperGroup, _>(&vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
         );
     }
 

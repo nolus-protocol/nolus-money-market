@@ -53,9 +53,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO: avoid clone
-        let may_lpn_payment =
-            bank::may_received::<Lpns, _>(info.funds.clone(), IntoDTO::<Lpns>::new());
+        let may_lpn_payment = bank::may_received::<Lpns, _>(&info.funds, IntoDTO::<Lpns>::new());
         match may_lpn_payment {
             Some(lpn_payment) => {
                 // TODO use Never and safe_unwrap instead
