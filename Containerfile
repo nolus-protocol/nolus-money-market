@@ -12,8 +12,6 @@ VOLUME ["/code"]
 
 VOLUME ["/platform"]
 
-VOLUME ["/protocol"]
-
 WORKDIR "/"
 
 ADD "./tools/" "/tools/"
