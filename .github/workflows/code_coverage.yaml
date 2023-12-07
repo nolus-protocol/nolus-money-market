@@ -24,6 +24,7 @@ jobs:
   setup_env:
     runs-on: "ubuntu-latest"
     steps:
+      - uses: "actions/checkout@v4.1.1"
       - uses: "./.github/actions/env"
         with:
           target_net: "${{ inputs.target_net }}"
