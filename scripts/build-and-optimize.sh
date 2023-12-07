@@ -2,6 +2,17 @@
 
 RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
+cd '/code/'
+
+cargo update --locked
+
+if ! test $? -eq 0
+then
+    echo '[ERROR] `Cargo.lock` file is either missing or is out-of-date!'
+
+    exit 1
+fi
+
 rm -rf "/target/"*
 
 rm -rf '/artifacts/'*
@@ -10,7 +21,7 @@ rm -rf '/temp-artifacts/'*
 
 for contract in $(echo '/code/contracts/'* | sed 's/ /\n/g' | sort)
 do
-    cd "${contract}" || return
+    cd "${contract}" || exit 1
 
     contract_pkgid="$(cargo pkgid)"
     contract_pkgid="${contract_pkgid##*/}"
@@ -25,7 +36,7 @@ do
 
     pkg_features="${contract_pkgid}_features"
 
-    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "${features}" --features "${!pkg_features}"
+    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "$(cargo features intersection "${features},${!pkg_features}")"
 
     if ! test $? -eq 0
     then
@@ -46,7 +57,9 @@ done
 
 mv -t '/artifacts/' '/temp-artifacts/'*'.wasm'
 
-echo '\nChecksums:'
+echo
+
+echo 'Checksums:'
 
 sha256sum -- '/artifacts/'*'.wasm' | tee '/artifacts/checksums.txt'
 

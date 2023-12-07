@@ -1,0 +1,9 @@
+[workspace]
+members = ["**/src/.."]
+
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0.75"
+cargo_metadata = "0.18.1"
+clap = { version = "4.4.11", features = ["derive", "unicode"] }

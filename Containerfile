@@ -10,7 +10,21 @@ VOLUME ["/artifacts"]
 
 VOLUME ["/code"]
 
+VOLUME ["/platform"]
+
 WORKDIR "/"
+
+ADD "./tools/" "/tools/"
+
+WORKDIR "/tools/"
+
+RUN ["cargo", "update", "--locked"]
+
+RUN ["cargo", "install", "--path", "/tools/cargo-features/"]
+
+WORKDIR "/"
+
+RUN ["rm", "-rf", "/tools/"]
 
 RUN ["mkdir", "/binaryen/"]
 

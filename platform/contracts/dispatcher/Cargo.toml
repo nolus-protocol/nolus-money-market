@@ -10,9 +10,6 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-contract = [] # TODO remove me and filter out unknown features in CI
-
 [dependencies]
 admin_contract = { workspace = true }
 lpp-platform = { workspace = true }
