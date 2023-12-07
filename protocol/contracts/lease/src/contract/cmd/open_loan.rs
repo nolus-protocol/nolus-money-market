@@ -56,7 +56,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         LppLender: LppLenderTrait<Lpn>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
-            self.funds_in,
+            &self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
                 _lpn: PhantomData::<Lpn> {},

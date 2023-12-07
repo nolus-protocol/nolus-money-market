@@ -37,7 +37,7 @@ impl WithLease for ObtainPayment {
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
     {
-        bank::may_received::<PaymentGroup, _>(self.cw_amount, RepaymentHandler { lease })
+        bank::may_received::<PaymentGroup, _>(&self.cw_amount, RepaymentHandler { lease })
             .ok_or_else(ContractError::NoPaymentError)?
     }
 }
