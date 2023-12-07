@@ -1,8 +1,8 @@
-use std::ops::Deref;
+use std::{ops::Deref, slice};
 
 use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::traits::Message,
+    cosmos_sdk_proto::{cosmos::base::v1beta1::Coin as CosmosProtoCoin, traits::Message},
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny,
@@ -101,86 +101,48 @@ fn do_swap_internal_astroport<F>(
     app: &mut App,
     ica_addr: Addr,
     mut request: RequestMsg,
-    mut price_f: F,
+    price_f: F,
 ) -> Amount
 where
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
-    use sdk::{
-        cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::from_json,
+    use astroport::{
+        asset::AssetInfo,
+        router::{ExecuteMsg as AstroportMsg, SwapOperation},
+    };
+    use sdk::cosmwasm_std::from_json;
+
+    let AstroportMsg::ExecuteSwapOperations { operations, .. } = from_json(request.msg).unwrap() else {
+        unimplemented!()
     };
 
-    #[derive(Debug, serde::Deserialize)]
-    #[serde(rename_all = "snake_case")]
-    enum AstroportMsg {
-        ExecuteSwapOperations { operations: Vec<SwapOperation> },
-    }
+    let swap_in = request.funds.pop().unwrap();
 
-    #[derive(Debug, serde::Deserialize)]
-    #[serde(rename_all = "snake_case", deny_unknown_fields)]
-    enum SwapOperation {
-        AstroSwap {
-            offer_asset_info: AssetInfo,
-            ask_asset_info: AssetInfo,
-        },
-    }
+    assert!({ request.funds }.is_empty(), "More than one token sent!");
 
-    #[derive(Debug, serde::Deserialize)]
-    #[serde(rename_all = "snake_case", deny_unknown_fields)]
-    enum AssetInfo {
-        NativeToken { denom: String },
-    }
-
-    let AstroportMsg::ExecuteSwapOperations { operations } = from_json(request.msg).unwrap();
-
-    let sent_token = {
-        let ProtoCoin { denom, amount } = request.funds.pop().unwrap();
-
-        assert!({ request.funds }.is_empty(), "More than one token sent!");
-
-        CwCoin {
-            denom,
-            amount: amount.parse::<Amount>().unwrap().into(),
-        }
-    };
-
-    app.send_tokens(
-        ica_addr.clone(),
-        Addr::unchecked(ADMIN),
-        std::slice::from_ref(&sent_token),
-    )
-    .unwrap();
-
-    let (amount_out, denom_out) = operations.into_iter().fold(
-        (sent_token.amount.u128(), sent_token.denom),
-        |(amount_in, denom_in),
-         SwapOperation::AstroSwap {
-             offer_asset_info:
-                 AssetInfo::NativeToken {
-                     denom: swap_denom_in,
-                 },
-             ask_asset_info:
-                 AssetInfo::NativeToken {
-                     denom: swap_denom_out,
-                 },
-         }| {
-            assert_eq!(denom_in, swap_denom_in);
-
-            (
-                price_f(amount_in, &swap_denom_in, &swap_denom_out),
-                swap_denom_out,
-            )
-        },
-    );
-
-    app.send_tokens(
-        Addr::unchecked(ADMIN),
+    do_swap_internal_agnostic(
+        app,
         ica_addr,
-        &[CwCoin::new(amount_out, denom_out)],
+        swap_in,
+        operations.into_iter().map(|operation| {
+            if let SwapOperation::AstroSwap {
+                offer_asset_info:
+                    AssetInfo::NativeToken {
+                        denom: swap_denom_in,
+                    },
+                ask_asset_info:
+                    AssetInfo::NativeToken {
+                        denom: swap_denom_out,
+                    },
+            } = operation
+            {
+                (Some(swap_denom_in), swap_denom_out)
+            } else {
+                unimplemented!()
+            }
+        }),
+        price_f,
     )
-    .unwrap();
-
-    amount_out
 }
 
 #[cfg(feature = "osmosis")]
@@ -191,25 +153,71 @@ fn do_swap_internal_osmosis<F>(
     price_f: F,
 ) -> Amount
 where
-    F: for<'r, 't> FnOnce(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
+    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
-    let token_in = request.token_in.unwrap();
-    let amount_in: u128 = token_in.amount.parse().unwrap();
+    do_swap_internal_agnostic(
+        app,
+        ica_addr,
+        {
+            let token = request.token_in.unwrap();
+
+            CosmosProtoCoin {
+                denom: token.denom,
+                amount: token.amount,
+            }
+        },
+        request
+            .routes
+            .into_iter()
+            .map(|route| (None, route.token_out_denom)),
+        price_f,
+    )
+}
+
+fn do_swap_internal_agnostic<I, F>(
+    app: &mut App,
+    ica_addr: Addr,
+    swap_in: CosmosProtoCoin,
+    swaps: I,
+    mut price_f: F,
+) -> Amount
+where
+    I: Iterator<Item = (Option<String>, String)>,
+    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
+{
+    let swap_in = CwCoin {
+        denom: swap_in.denom,
+        amount: swap_in.amount.parse::<Amount>().unwrap().into(),
+    };
 
     app.send_tokens(
         ica_addr.clone(),
         Addr::unchecked(ADMIN),
-        &[CwCoin::new(amount_in, token_in.denom.clone())],
+        slice::from_ref(&swap_in),
     )
     .unwrap();
 
-    let denom_out: &String = &request.routes.last().unwrap().token_out_denom;
-    let amount_out: Amount = price_f(amount_in, DexDenom(&token_in.denom), DexDenom(denom_out));
+    let (amount_out, denom_out) = swaps.fold(
+        (swap_in.amount.u128(), swap_in.denom),
+        |(amount_in, denom_in), (swap_denom_in, swap_denom_out)| {
+            if let Some(swap_denom_in) = swap_denom_in {
+                assert_eq!(denom_in, swap_denom_in);
+            }
+
+            (
+                price_f(amount_in, DexDenom(&denom_in), DexDenom(&swap_denom_out)),
+                swap_denom_out,
+            )
+        },
+    );
 
     app.send_tokens(
         Addr::unchecked(ADMIN),
         ica_addr,
-        &[CwCoin::new(amount_out, denom_out)],
+        &[CwCoin {
+            denom: denom_out,
+            amount: amount_out.into(),
+        }],
     )
     .unwrap();
 

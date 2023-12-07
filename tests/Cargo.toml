@@ -8,10 +8,10 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-astroport = ["lease/astroport", "profit/astroport"]
+astroport = ["lease/astroport", "profit/astroport", "dep:astroport"]
 osmosis = ["lease/osmosis", "profit/osmosis"]
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"] }
 lease = { path = "../protocol/contracts/lease", features = ["net_main", "testing"] }
 leaser = { path = "../protocol/contracts/leaser", features = ["net_main", "testing"] }
@@ -36,6 +36,8 @@ swap = { path = "../protocol/packages/swap", features = ["testing"] }
 anyhow = "1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
+
+astroport = { version = "2.9.4", optional = true, default-features = false }
 
 [profile.release]
 opt-level = "s"
