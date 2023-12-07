@@ -123,10 +123,9 @@ each set of contracts, depending on their workspace (indicated by
 
   ```sh
   mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
-    docker run --rm -v "$(pwd)/platform/:/platform/" \
-    -v "$(pwd)/protocol/:/protocol/" \
-    -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/" \
-    -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/" \
+    docker run --rm -v "$(pwd)/platform/:/platform/:ro" \
+    -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/:ro" \
+    -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/:rw" \
     --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
     --env "features=contract$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)"
     wasm-optimizer
