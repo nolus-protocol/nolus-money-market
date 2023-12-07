@@ -12,8 +12,9 @@ use platform::{
 };
 use sdk::{
     cosmos_sdk_proto::{
-        cosmos::base::{abci::v1beta1::MsgData, v1beta1::Coin as ProtoCoin},
+        cosmos::base::v1beta1::Coin as ProtoCoin,
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
+        Any,
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
@@ -94,7 +95,7 @@ impl ExactAmountIn for Impl {
 
     fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = MsgData>,
+        I: Iterator<Item = Any>,
     {
         trx_resps
             .next()
@@ -110,16 +111,16 @@ impl ExactAmountIn for Impl {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(&self, amount_out: Amount) -> MsgData {
+    fn build_resp(&self, amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
         let swap_resp = cosmwasm_std::to_json_vec(&SwapResponseData {
             return_amount: amount_out.into(),
         })
         .expect("test result serialization works");
-        MsgData {
-            msg_type: RequestMsg::TYPE_URL.into(),
-            data: (ResponseMsg { data: swap_resp }).encode_to_vec(),
+        Any {
+            type_url: RequestMsg::TYPE_URL.into(),
+            value: (ResponseMsg { data: swap_resp }).encode_to_vec(),
         }
     }
 }
