@@ -1344,7 +1344,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "cosmwasm-std",
  "platform",
@@ -1358,7 +1358,7 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",

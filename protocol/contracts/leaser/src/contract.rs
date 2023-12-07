@@ -55,7 +55,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     // Statically assert that the message is empty when doing a software-only update.
-    let MigrateMsg {}: MigrateMsg = msg;
+    let MigrateMsg {} = msg;
 
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
@@ -206,7 +206,7 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
 }
 
 fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {
-    move |_customer| LeaseMigrateMsg {}
+    |_customer| LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {
