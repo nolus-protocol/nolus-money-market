@@ -1,12 +1,17 @@
+use std::slice;
+
 use currencies::test::StableC1;
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    zero::Zero as _,
+    zero::Zero,
 };
-use platform::{bank, coin_legacy::to_cosmwasm};
-use profit::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
+use platform::bank;
+use profit::{
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
+    typedefs::CadenceHours,
+};
 use sdk::{
     cosmwasm_std::{from_json, Addr, Event},
     cw_multi_test::AppResponse,
@@ -14,12 +19,39 @@ use sdk::{
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
-    cwcoin, ibc,
+    self, cwcoin, cwcoin_dex, ibc,
+    swap::DexDenom,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs, TestCase,
     },
     CwCoin, Native, ADMIN, USER,
 };
+
+fn test_case_with<Lpn>(
+    cadence_hours: CadenceHours,
+    custom_reserve: Option<&[CwCoin]>,
+) -> TestCase<(), (), Addr, Addr, (), (), Addr, Addr>
+where
+    Lpn: Currency,
+{
+    custom_reserve
+        .map_or_else(
+            TestCaseBuilder::<Lpn>::new,
+            TestCaseBuilder::<Lpn>::with_reserve,
+        )
+        .init_treasury_without_dispatcher()
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_profit(cadence_hours)
+        .into_generic()
+}
+
+fn test_case<Lpn>() -> TestCase<(), (), Addr, Addr, (), (), Addr, Addr>
+where
+    Lpn: Currency,
+{
+    test_case_with::<Lpn>(2, None)
+}
 
 #[test]
 fn update_config() {
@@ -28,12 +60,7 @@ fn update_config() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(INITIAL_CACDENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
     let ConfigResponse { cadence_hours } = test_case
         .app
@@ -79,12 +106,7 @@ fn update_config_unauthorized() {
     const INITIAL_CACDENCE_HOURS: u16 = 2;
     const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(INITIAL_CACDENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
     assert!(test_case
         .app
@@ -107,12 +129,7 @@ fn on_alarm_from_unknown() {
     type Lpn = StableC1;
     let user_addr: Addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case = test_case::<Lpn>();
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
 
@@ -148,12 +165,7 @@ fn on_alarm_zero_balance() {
     type Lpn = StableC1;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let mut test_case = test_case::<Lpn>();
 
     test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
 
@@ -170,42 +182,55 @@ fn on_alarm_zero_balance() {
         .unwrap_response();
 }
 
-#[test]
-fn on_alarm_native_only_transfer() {
-    type Lpn = StableC1;
+struct InitTreasuryBalancesResult<Lpn> {
+    native: Coin<Native>,
+    lpn: Coin<Lpn>,
+}
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+fn init_treasury_balances<
+    Lpn,
+    ProtocolsRegistry,
+    Dispatcher,
+    Profit,
+    Leaser,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+>(
+    test_case: &TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Addr,
+        Profit,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
+) -> InitTreasuryBalancesResult<Lpn>
+where
+    Lpn: Currency,
+{
+    InitTreasuryBalancesResult {
+        native: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        lpn: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+    }
+}
 
-    let init_balance_nls = bank::balance::<Native>(
-        &test_case.address_book.treasury().clone(),
-        test_case.app.query(),
-    )
-    .unwrap();
-    let init_balance_lpn = bank::balance::<Lpn>(
-        &test_case.address_book.treasury().clone(),
-        test_case.app.query(),
-    )
-    .unwrap();
-    let profit = Coin::<Native>::from(1000);
-    let sent_profit = profit - ::profit::profit::Profit::IBC_FEE_RESERVE;
+struct SendAlarmAndMaybeSwapResult {
+    response: AppResponse,
+    lpn_profit_swap_out: Coin<Native>,
+    has_swap: bool,
+}
 
-    //send tokens to the profit contract
-    test_case.send_funds_from_admin(
-        test_case.address_book.profit().clone(),
-        &[cwcoin::<Native, _>(profit)],
-    );
-
-    assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-        Coin::ZERO,
-    );
-
-    let response = test_case
+fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Oracle, Addr>,
+    lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Native>)>,
+) -> SendAlarmAndMaybeSwapResult
+where
+    Lpn: Currency,
+{
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -213,10 +238,117 @@ fn on_alarm_native_only_transfer() {
             &profit::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap()
+        .unwrap();
+
+    if let Some((lpn_profit_swap_in, lpn_profit_swap_in_cw, lpn_profit_swap_out)) = lpn_profit {
+        let transfer_amount: CwCoin = ibc::expect_transfer(
+            &mut response,
+            TestCase::PROFIT_IBC_CHANNEL,
+            test_case.address_book.profit().as_str(),
+            test_case.address_book.profit_ica().as_str(),
+        );
+
+        assert_eq!(transfer_amount, lpn_profit_swap_in_cw);
+
+        let response: AppResponse = response.unwrap_response();
+
+        // ensure the attributes were relayed from the sub-message
+        assert_eq!(
+            response.events.as_slice(),
+            &[Event::new("execute")
+                .add_attribute("_contract_addr", test_case.address_book.profit())]
+        );
+
+        let mut response: ResponseWithInterChainMsgs<'_, ()> = ibc::do_transfer(
+            &mut test_case.app,
+            test_case.address_book.profit().clone(),
+            test_case.address_book.profit_ica().clone(),
+            false,
+            &transfer_amount,
+        )
+        .ignore_response();
+
+        let requests = common::swap::expect_swap(
+            &mut response,
+            TestCase::DEX_CONNECTION_ID,
+            TestCase::PROFIT_ICA_ID,
+        );
+
+        () = response.unwrap_response();
+
+        let mut response: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
+            &mut test_case.app,
+            test_case.address_book.profit().clone(),
+            test_case.address_book.profit_ica().clone(),
+            requests.into_iter(),
+            |amount: Amount, from_denom: DexDenom<'_>, to_denom: DexDenom<'_>| {
+                assert_eq!(amount, lpn_profit_swap_in.into());
+                assert_eq!(from_denom, Lpn::DEX_SYMBOL);
+                assert_eq!(to_denom, Native::DEX_SYMBOL);
+
+                lpn_profit_swap_out.into()
+            },
+        )
+        .ignore_response();
+
+        let transfer_amount: CwCoin = ibc::expect_remote_transfer(
+            &mut response,
+            TestCase::DEX_CONNECTION_ID,
+            TestCase::PROFIT_ICA_ID,
+        );
+
+        assert_eq!(transfer_amount.amount.u128(), lpn_profit_swap_out.into());
+
+        let response = ibc::do_transfer(
+            &mut test_case.app,
+            test_case.address_book.profit_ica().clone(),
+            test_case.address_book.profit().clone(),
+            true,
+            &transfer_amount,
+        )
         .unwrap_response();
 
-    // ensure the attributes were relayed from the sub-message
+        SendAlarmAndMaybeSwapResult {
+            response,
+            lpn_profit_swap_out,
+            has_swap: true,
+        }
+    } else {
+        SendAlarmAndMaybeSwapResult {
+            response: response.unwrap_response(),
+            lpn_profit_swap_out: Zero::ZERO,
+            has_swap: false,
+        }
+    }
+}
+
+fn total_native_profit(
+    native_profit: Coin<Native>,
+    lpn_profit_swap_out: Coin<Native>,
+) -> Coin<Native> {
+    (native_profit + lpn_profit_swap_out).saturating_sub(::profit::profit::Profit::IBC_FEE_RESERVE)
+}
+
+fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
+    test_case: &TestCase<ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Oracle, Addr>,
+    alarm_result: SendAlarmAndMaybeSwapResult,
+    total_native_profit: Coin<Native>,
+) {
+    let SendAlarmAndMaybeSwapResult {
+        mut response,
+        has_swap,
+        ..
+    } = alarm_result;
+
+    if has_swap {
+        let sudo = response.events.remove(0);
+        assert_eq!(sudo.ty.as_str(), "sudo");
+        assert_eq!(
+            sudo.attributes,
+            [("_contract_addr", test_case.address_book.profit().as_str())]
+        );
+    }
+
     assert_eq!(response.events.len(), 4, "{:?}", response.events);
 
     let profit_exec = &response.events[0];
@@ -226,10 +358,10 @@ fn on_alarm_native_only_transfer() {
         [("_contract_addr", test_case.address_book.profit().as_str())]
     );
 
-    let profit_exec = &response.events[1];
-    assert_eq!(profit_exec.ty.as_str(), "wasm-tr-profit");
+    let tr_profit = &response.events[1];
+    assert_eq!(tr_profit.ty.as_str(), "wasm-tr-profit");
     assert_eq!(
-        profit_exec.attributes,
+        tr_profit.attributes,
         [
             ("_contract_addr", test_case.address_book.profit().as_str()),
             ("height", &test_case.app.block_info().height.to_string()),
@@ -237,180 +369,166 @@ fn on_alarm_native_only_transfer() {
             ("idx", "0"),
             (
                 "profit-amount-amount",
-                &Amount::from(sent_profit).to_string()
+                &Amount::from(total_native_profit).to_string()
             ),
             ("profit-amount-symbol", Native::TICKER)
         ]
     );
 
-    let profit_exec = &response.events[2];
-    assert_eq!(profit_exec.ty.as_str(), "transfer");
+    let [transfer, time_alarms_exec] = if has_swap {
+        [&response.events[3], &response.events[2]]
+    } else {
+        [&response.events[2], &response.events[3]]
+    };
+
+    assert_eq!(transfer.ty.as_str(), "transfer", "{transfer:?}");
     assert_eq!(
-        profit_exec.attributes,
+        transfer.attributes,
         [
             ("recipient", test_case.address_book.treasury().as_str()),
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!("{}{}", Amount::from(sent_profit), Native::BANK_SYMBOL)
+                &format!(
+                    "{}{}",
+                    Amount::from(total_native_profit),
+                    Native::BANK_SYMBOL
+                )
             )
         ]
     );
 
-    let profit_exec = &response.events[3];
-    assert_eq!(profit_exec.ty.as_str(), "execute");
     assert_eq!(
-        profit_exec.attributes,
+        time_alarms_exec.ty.as_str(),
+        "execute",
+        "{time_alarms_exec:?}"
+    );
+    assert_eq!(
+        time_alarms_exec.attributes,
         [("_contract_addr", test_case.address_book.time_alarms())]
     );
+}
 
+fn expect_balances<Lpn, ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: TestCase<ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Oracle, TimeAlarms>,
+    init_treasury_native_balance: Coin<Native>,
+    total_native_profit: Coin<Native>,
+    init_treasury_lpn_balance: Coin<Lpn>,
+) where
+    Lpn: Currency,
+{
     assert_eq!(
         bank::balance::<Native>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
-        init_balance_nls + sent_profit,
+        init_treasury_native_balance + total_native_profit,
     );
 
     assert_eq!(
         bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-        Coin::ZERO,
+        Zero::ZERO,
     );
 
     assert_eq!(
         bank::balance::<Lpn>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
-        init_balance_lpn,
+        init_treasury_lpn_balance,
     );
+}
+
+fn on_time_alarm_do_transfers<Lpn>(
+    native_profit: Coin<Native>,
+    lpn_profit: Option<(Coin<Lpn>, Coin<Native>)>,
+) where
+    Lpn: Currency,
+{
+    let mut test_case = test_case_with::<Lpn>(
+        2,
+        Some(&[
+            cwcoin::<Lpn, _>(1_000_000_000),
+            cwcoin_dex::<Lpn, _>(1_000_000_000),
+            cwcoin::<Native, _>(1_000_000_000),
+            cwcoin_dex::<Native, _>(1_000_000_000),
+        ]),
+    );
+
+    let InitTreasuryBalancesResult {
+        native: init_treasury_native_balance,
+        lpn: init_treasury_lpn_balance,
+    }: InitTreasuryBalancesResult<Lpn> = init_treasury_balances(&test_case);
+
+    if !native_profit.is_zero() {
+        //send native tokens to the profit contract
+        test_case.send_funds_from_admin(
+            test_case.address_book.profit().clone(),
+            &[cwcoin(native_profit)],
+        );
+    }
+
+    let lpn_profit = if let Some((lpn_profit_swap_in, lpn_profit_swap_out)) = lpn_profit {
+        let lpn_profit_swap_in_cw = cwcoin::<Lpn, _>(lpn_profit_swap_in);
+
+        //send LPN tokens to the profit contract
+        test_case.send_funds_from_admin(
+            test_case.address_book.profit().clone(),
+            slice::from_ref(&lpn_profit_swap_in_cw),
+        );
+
+        assert_eq!(
+            bank::balance(test_case.address_book.profit(), test_case.app.query()).unwrap(),
+            lpn_profit_swap_in,
+        );
+
+        Some((
+            lpn_profit_swap_in,
+            lpn_profit_swap_in_cw,
+            lpn_profit_swap_out,
+        ))
+    } else {
+        assert!(!native_profit.is_zero());
+
+        None
+    };
+
+    let alarm_result = send_alarm_and_maybe_swap(&mut test_case, lpn_profit);
+
+    let total_native_profit = total_native_profit(native_profit, alarm_result.lpn_profit_swap_out);
+
+    expect_transfer_events(&test_case, alarm_result, total_native_profit);
+
+    expect_balances(
+        test_case,
+        init_treasury_native_balance,
+        total_native_profit,
+        init_treasury_lpn_balance,
+    );
+}
+
+#[test]
+fn on_alarm_native_only_transfer() {
+    type Lpn = StableC1;
+
+    let native_profit = 1000.into();
+
+    on_time_alarm_do_transfers::<Lpn>(native_profit, None);
 }
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
     type Lpn = StableC1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let lpn_profit = 500.into();
+    let swapped_lpn_profit = 250.into();
 
-    let profit_lpn = Coin::<Lpn>::from(100);
-
-    //send tokens to the profit contract
-    test_case.send_funds_from_admin(
-        test_case.address_book.profit().clone(),
-        &[cwcoin::<Lpn, _>(profit_lpn)],
-    );
-
-    assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-        profit_lpn,
-    );
-
-    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
-        .app
-        .execute(
-            test_case.address_book.time_alarms().clone(),
-            test_case.address_book.profit().clone(),
-            &profit::msg::ExecuteMsg::TimeAlarm {},
-            &[],
-        )
-        .unwrap();
-
-    let transfer_amount: CwCoin = ibc::expect_transfer(
-        &mut response,
-        TestCase::PROFIT_IBC_CHANNEL,
-        test_case.address_book.profit().as_str(),
-        test_case.address_book.profit_ica().as_str(),
-    );
-
-    assert_eq!(transfer_amount, to_cosmwasm(profit_lpn));
-
-    let response: AppResponse = response.unwrap_response();
-
-    () = ibc::do_transfer(
-        &mut test_case.app,
-        test_case.address_book.profit().clone(),
-        test_case.address_book.profit_ica().clone(),
-        false,
-        &transfer_amount,
-    )
-    .ignore_response()
-    .unwrap_response();
-
-    // ensure the attributes were relayed from the sub-message
-    assert_eq!(
-        response.events.as_slice(),
-        &[Event::new("execute").add_attribute("_contract_addr", test_case.address_book.profit())]
-    );
+    on_time_alarm_do_transfers::<Lpn>(Zero::ZERO, Some((lpn_profit, swapped_lpn_profit)));
 }
 
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
     type Lpn = StableC1;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(2)
-        .into_generic();
+    let native_profit = 1000.into();
+    let lpn_profit = 500.into();
+    let swapped_lpn_profit = 250.into();
 
-    let profit_nls = Coin::<Native>::from(100);
-    let profit_lpn = Coin::<Lpn>::from(100);
-
-    //send tokens to the profit contract
-    test_case.send_funds_from_admin(
-        test_case.address_book.profit().clone(),
-        &[
-            cwcoin::<Native, Coin<Native>>(profit_nls),
-            cwcoin::<Lpn, Coin<Lpn>>(profit_lpn),
-        ],
-    );
-
-    assert_eq!(
-        bank::balance::<Native>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-        profit_nls,
-    );
-
-    assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
-        profit_lpn,
-    );
-
-    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
-        .app
-        .execute(
-            test_case.address_book.time_alarms().clone(),
-            test_case.address_book.profit().clone(),
-            &profit::msg::ExecuteMsg::TimeAlarm {},
-            &[],
-        )
-        .unwrap();
-
-    let transfer_amount: CwCoin = ibc::expect_transfer(
-        &mut response,
-        TestCase::PROFIT_IBC_CHANNEL,
-        test_case.address_book.profit().as_str(),
-        test_case.address_book.profit_ica().as_str(),
-    );
-
-    assert_eq!(transfer_amount, to_cosmwasm(profit_lpn));
-
-    let response: AppResponse = response.unwrap_response();
-
-    () = ibc::do_transfer(
-        &mut test_case.app,
-        test_case.address_book.profit().clone(),
-        test_case.address_book.profit_ica().clone(),
-        false,
-        &transfer_amount,
-    )
-    .ignore_response()
-    .unwrap_response();
-
-    // ensure the attributes were relayed from the sub-message
-    assert_eq!(
-        response.events.as_slice(),
-        &[Event::new("execute").add_attribute("_contract_addr", test_case.address_book.profit())]
-    );
+    on_time_alarm_do_transfers::<Lpn>(native_profit, Some((lpn_profit, swapped_lpn_profit)));
 }
 
 #[test]
@@ -418,12 +536,7 @@ fn integration_with_time_alarms() {
     type Lpn = StableC1;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_treasury_without_dispatcher()
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_profit(CADENCE_HOURS)
-        .into_generic();
+    let mut test_case = test_case_with::<Lpn>(CADENCE_HOURS, None);
 
     test_case
         .app

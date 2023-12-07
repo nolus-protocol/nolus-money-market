@@ -60,7 +60,7 @@ impl Instantiator {
                 (1, LeaseC2::TICKER),
                 (3, LeaseC3::TICKER),
                 (7, LeaseC4::TICKER),
-                // (11, NativeC::TICKER), # FIX ME #216
+                (11, NativeC::TICKER),
                 (13, LeaseC1::TICKER),
             ),
         };

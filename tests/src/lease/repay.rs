@@ -21,7 +21,7 @@ use sdk::{
 use crate::common::{
     self, cwcoin, ibc,
     leaser::Instantiator as LeaserInstantiator,
-    swap,
+    swap::{self, DexDenom},
     test_case::{response::ResponseWithInterChainMsgs, TestCase},
     CwCoin, USER,
 };
@@ -288,7 +288,7 @@ pub(crate) fn repay<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
-        |amount: u128, in_denom: &str, out_denom: &str| {
+        |amount: u128, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
             assert_eq!(amount, payment.into());
             assert_eq!(in_denom, PaymentCurrency::DEX_SYMBOL);
             assert_eq!(out_denom, LpnCurrency::DEX_SYMBOL);
