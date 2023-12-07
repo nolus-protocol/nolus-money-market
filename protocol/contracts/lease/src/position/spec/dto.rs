@@ -26,10 +26,13 @@ where
     type Error = ContractError;
 
     fn try_from(dto: PositionSpecDTO) -> ContractResult<Self> {
-        Ok(Self::new(
-            dto.liability,
-            dto.min_asset.try_into()?,
-            dto.min_transaction.try_into()?,
-        ))
+        dto.min_asset
+            .try_into()
+            .and_then(|min_asset| {
+                dto.min_transaction
+                    .try_into()
+                    .map(|min_transaction| Self::new(dto.liability, min_asset, min_transaction))
+            })
+            .map_err(Into::into)
     }
 }
