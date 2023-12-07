@@ -6,49 +6,7 @@ use std::{
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
-const CARGO_SUBCOMMAND_NAME: &str = {
-    const PACKAGE_NAME: &[u8] = env!("CARGO_PKG_NAME").as_bytes();
-
-    const CARGO_SUBCOMMAND_PREFIX: &[u8] = b"cargo-";
-
-    const SUBCOMMAND_NAME_LENGTH: usize = PACKAGE_NAME.len() - CARGO_SUBCOMMAND_PREFIX.len();
-
-    const SUBCOMMAND_NAME_ARRAY: [u8; SUBCOMMAND_NAME_LENGTH] = {
-        let mut array = [0; SUBCOMMAND_NAME_LENGTH];
-
-        let mut index = 0;
-
-        while index < SUBCOMMAND_NAME_LENGTH {
-            array[index] = PACKAGE_NAME[CARGO_SUBCOMMAND_PREFIX.len() + index];
-
-            index += 1;
-        }
-
-        array
-    };
-
-    if PACKAGE_NAME.len() <= CARGO_SUBCOMMAND_PREFIX.len() {
-        unimplemented!()
-    }
-
-    {
-        let mut index = 0;
-
-        while index < CARGO_SUBCOMMAND_PREFIX.len() {
-            if PACKAGE_NAME[index] != CARGO_SUBCOMMAND_PREFIX[index] {
-                unimplemented!()
-            }
-
-            index += 1;
-        }
-    }
-
-    if let Ok(s) = std::str::from_utf8(&SUBCOMMAND_NAME_ARRAY) {
-        s
-    } else {
-        unreachable!()
-    }
-};
+mod consts;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -58,7 +16,7 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum FeaturesCommand {
-    #[command(subcommand, name = CARGO_SUBCOMMAND_NAME)]
+    #[command(subcommand, name = consts::CARGO_SUBCOMMAND_NAME)]
     CargoCall(Command),
     #[command(flatten)]
     DirectCall(Command),
