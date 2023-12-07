@@ -12,13 +12,13 @@ jobs:
       matrix:
         working_directory: ["protocol"]
         net: ["dev", "test", "main"]
-        protocol: ["osmosis"] # TODO Add `astroport`
+        protocol: ["astroport", "osmosis"]
         include:
           - working_directory: "platform"
+          - protocol: "astroport"
+            working_directory: "tests"
           - protocol: "osmosis"
             working_directory: "tests"
-          # - protocol: "astroport" # TODO Add `astroport`
-          #   working_directory: "tests"
     name: "Checks [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
       target_net: "${{ matrix.net }}"
