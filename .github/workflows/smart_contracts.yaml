@@ -36,7 +36,7 @@ jobs:
       - name: "Create ZIP files with binaries"
         shell: "sh"
         run: |
-          for dir in optimized-binaries-protocol-*-*/
+          for dir in 'optimized-binaries-protocol-'*'-'*'/'
           do
             dir="${dir%/*}"
 
@@ -49,14 +49,18 @@ jobs:
 
             mkdir -p "${target_dir}"
 
-            cp -t "${target_dir}" "${dir}"/*
+            cp -t "${target_dir}" "${dir}/"*
           done
 
-          zip -j -r "optimized-binaries-common.zip" "optimized-binaries-platform"/*
+          zip -j -r 'optimized-binaries-common.zip' 'optimized-binaries-platform/'*
 
-          for dir in optimized-binaries-*-net/
+          for dir in 'optimized-binaries-'*'-net/'
           do
-            zip -j -r "${dir%/*}".zip "${dir%/*}"/*
+            (
+              cd "${dir}"
+
+              zip -r "../${dir%/*}.zip" "${dir%/*}/"*
+            )
           done
       # temporary using commit as version until it is merged. Updates node version v12 -> v16
       - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
