@@ -64,6 +64,8 @@ pub fn migrate(
                 deps.storage,
                 CONTRACT_VERSION,
                 |storage: &mut dyn Storage| {
+                    ContractState::migrate(storage)?;
+
                     state_contracts::migrate(storage, protocol_name, network_name)
                 },
                 Into::into,
