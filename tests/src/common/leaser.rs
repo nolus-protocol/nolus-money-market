@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{InterestPaymentSpec, LpnCoin, PositionSpecDTO};
+use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpecDTO};
 use leaser::{
     execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
@@ -11,7 +11,10 @@ use leaser::{
 use platform::contract::CodeId;
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::{app::App, TestCase},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
@@ -80,6 +83,13 @@ impl Instantiator {
             time_alarms,
             market_price_oracle,
             profit,
+            dex: ConnectionParams {
+                connection_id: TestCase::DEX_CONNECTION_ID.into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: TestCase::LEASER_IBC_CHANNEL.into(),
+                    remote_endpoint: "channel-422".into(),
+                },
+            },
         };
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)

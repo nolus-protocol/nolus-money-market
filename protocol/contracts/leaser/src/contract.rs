@@ -129,7 +129,6 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
-        SudoMsg::SetupDex(params) => leaser::try_setup_dex(deps.storage, params),
         SudoMsg::Config {
             lease_interest_rate_margin,
             lease_position_spec,

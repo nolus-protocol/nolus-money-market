@@ -5,8 +5,11 @@ set -euxo pipefail
 #
 # ./scripts/deploy-contracts-live.sh deploy_contracts "http://localhost:26612/" "nolus-local-v0.4.1-21-1700055474" \
 # "$HOME/.nolus" "wasmAdmin" "storeCodePrivilegedUser" "nolus1gurgpv8savnfw66lckwzn4zk7fp394lpe667dhu7aw48u40lj6jsqxf8nd" \
-# "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "OSMOSIS" "OSMOSIS" "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
-#  "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl" '{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}'
+# "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "OSMOSIS" "OSMOSIS" \
+# "connection-0" "channel-0" "channel-2048" \
+# "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
+# "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl"  \
+# '{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}'
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR"/common/cmd.sh
@@ -95,10 +98,13 @@ deploy_contracts() {
   local -r wasm_path="$7"
   local -r network="$8"
   local -r dex="$9"
-  local -r protocol_currency="${10}"
-  local -r treasury_contract_address="${11}"
-  local -r timealarms_contract_address="${12}"
-  local swap_tree="${13}"
+  local -r dex_connection="${10}"
+  local -r dex_channel_local="${11}"
+  local -r dex_channel_remote="${12}"
+  local -r protocol_currency="${13}"
+  local -r treasury_contract_address="${14}"
+  local -r timealarms_contract_address="${15}"
+  local swap_tree="${16}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
   local -r protocol="$dex-$protocol_currency"
@@ -125,7 +131,7 @@ deploy_contracts() {
   local -r profit_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/profit.wasm" "$profit_init_msg" "$protocol-profit" "$protocol")
 
   # instantiate Leaser
-  local -r leaser_init_msg='{"lease_code_id":"'"$lease_code_id"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"'"$protocol_currency"'"},"min_sell_asset":{"amount":"1000","ticker":"'"$protocol_currency"'"}},"lpp_ust_addr":"'"$lpp_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
+  local -r leaser_init_msg='{"lease_code_id":"'"$lease_code_id"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"'"$protocol_currency"'"},"min_sell_asset":{"amount":"1000","ticker":"'"$protocol_currency"'"}},"lpp_ust_addr":"'"$lpp_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000},"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
   local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address" )
 
   # register the protocol
@@ -136,7 +142,7 @@ deploy_contracts() {
 if [ "$#" -ne 0 ]; then
   case "$1" in
     deploy_contracts)
-      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}"
+      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}"
       ;;
     *)
       echo "Unknown function: $1"

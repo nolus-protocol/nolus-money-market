@@ -6,7 +6,6 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Coin, Storage};
 
 use crate::{
-    result::ContractResult,
     state::{config::Config, leases::Leases},
     ContractError,
 };
@@ -30,7 +29,7 @@ impl Borrow {
                 batch
                     .schedule_instantiate_wasm_on_success_reply(
                         config.lease_code_id,
-                        Self::open_lease_msg(customer, config, currency, max_ltd, finalizer)?,
+                        Self::open_lease_msg(customer, config, currency, max_ltd, finalizer),
                         Some(amount),
                         "lease",
                         Some(admin), // allows lease migrations from this contract
@@ -48,27 +47,24 @@ impl Borrow {
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
         finalizer: Addr,
-    ) -> ContractResult<NewLeaseContract> {
-        config
-            .dex
-            .map(|dex| NewLeaseContract {
-                form: NewLeaseForm {
-                    customer,
-                    currency,
-                    max_ltd,
-                    position_spec: config.lease_position_spec,
-                    loan: LoanForm {
-                        annual_margin_interest: config.lease_interest_rate_margin,
-                        lpp: config.lpp_addr,
-                        interest_payment: config.lease_interest_payment,
-                        profit: config.profit,
-                    },
-                    time_alarms: config.time_alarms,
-                    market_price_oracle: config.market_price_oracle,
+    ) -> NewLeaseContract {
+        NewLeaseContract {
+            form: NewLeaseForm {
+                customer,
+                currency,
+                max_ltd,
+                position_spec: config.lease_position_spec,
+                loan: LoanForm {
+                    annual_margin_interest: config.lease_interest_rate_margin,
+                    lpp: config.lpp_addr,
+                    interest_payment: config.lease_interest_payment,
+                    profit: config.profit,
                 },
-                dex,
-                finalizer,
-            })
-            .ok_or(ContractError::NoDEXConnectivitySetup {})
+                time_alarms: config.time_alarms,
+                market_price_oracle: config.market_price_oracle,
+            },
+            dex: config.dex,
+            finalizer,
+        }
     }
 }
