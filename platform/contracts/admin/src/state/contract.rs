@@ -24,7 +24,17 @@ impl Contract {
         STORE.save(storage, self)
     }
 
-    pub(crate) fn load(storage: &mut dyn Storage) -> StdResult<Self> {
+    pub(crate) fn migrate(storage: &mut dyn Storage) -> StdResult<()> {
+        const OLD_STORE: Item<'_, String> = Item::new("migration_release");
+
+        let release = OLD_STORE.load(storage)?;
+
+        OLD_STORE.remove(storage);
+
+        STORE.save(storage, &Self::Migration { release })
+    }
+
+    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         STORE.load(storage)
     }
 }
