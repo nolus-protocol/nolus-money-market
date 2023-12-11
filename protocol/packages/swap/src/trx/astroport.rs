@@ -101,7 +101,7 @@ impl ExactAmountIn for Impl {
             .next()
             .ok_or_else(|| Error::MissingResponse("router swap".into()))
             .and_then(|resp| {
-                trx::decode_msg_response::<_, ResponseMsg>(resp, RequestMsg::TYPE_URL)
+                trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)
                     .map_err(Into::into)
             })
             .and_then(|cosmwasm_resp| {
