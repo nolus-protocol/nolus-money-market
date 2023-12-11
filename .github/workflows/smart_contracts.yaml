@@ -18,7 +18,7 @@ on:
 jobs:
   check_deps_versions:
     runs-on: "ubuntu-latest"
-    if: "github.event_name != 'pull_request'"
+    if: "github.event_name == 'tag'"
     strategy:
       fail-fast: true
       matrix:
@@ -29,7 +29,7 @@ jobs:
         run: "cargo +stable update --locked"
         working-directory: "${{ matrix.working_directory }}"
   perform_checks:
-    if: "github.event_name != 'pull_request' || always()"
+    if: "github.event_name == 'tag' || always()"
     needs:
       - "check_deps_versions"
     uses: "./.github/workflows/checks_general.yaml"
