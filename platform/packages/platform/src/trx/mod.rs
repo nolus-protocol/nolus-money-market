@@ -3,7 +3,7 @@ use sdk::{
     neutron_sdk::bindings::types::ProtobufAny,
 };
 
-use crate::{error::Error, result::Result};
+use crate::result::Result;
 
 #[derive(Default)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
@@ -59,16 +59,16 @@ where
     tx.encode_to_vec()
 }
 
-pub fn decode_msg_response<T, M>(resp: Any, msg_type: T) -> Result<M>
+pub fn decode_msg_response<T, M>(resp: Any, _msg_type: T) -> Result<M>
 where
     T: Into<String>,
     M: Message + Default,
 {
-    let msg_type = msg_type.into();
+    // let msg_type = msg_type.into();
 
-    if resp.type_url != msg_type {
-        return Err(Error::ProtobufInvalidType(msg_type, resp.type_url));
-    }
+    // if resp.type_url != msg_type {
+    //     return Err(Error::ProtobufInvalidType(msg_type, resp.type_url));
+    // }
     M::decode(resp.value.as_slice()).map_err(Into::into)
 }
 
