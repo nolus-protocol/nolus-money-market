@@ -88,7 +88,7 @@ impl ExactAmountIn for Impl {
             token_out_amount: amount_out.to_string(),
         };
         Any {
-            type_url: RequestMsg::TYPE_URL.into(),
+            type_url: ResponseMsg::TYPE_URL.into(),
             value: resp.encode_to_vec(),
         }
     }
