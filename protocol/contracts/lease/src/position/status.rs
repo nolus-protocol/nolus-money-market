@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
-use finance::{coin::Coin, liability::Zone, percent::Percent};
+use finance::{coin::Coin, duration::Duration, liability::Zone, percent::Percent};
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
@@ -27,7 +27,7 @@ where
     Asset: Currency,
 {
     NoDebt,
-    No(Zone),
+    No { zone: Zone, recalc_in: Duration },
     Liquidation(Liquidation<Asset>),
 }
 
@@ -50,51 +50,55 @@ where
 #[cfg(test)]
 mod test_status {
     use currencies::test::StableC1;
-    use finance::percent::Percent;
+    use finance::{duration::Duration, percent::Percent};
 
     use super::{Cause, Liquidation, Status, Zone};
 
     #[test]
     fn ord() {
+        let recalc_in = Duration::HOUR;
+
         assert!(
-            Status::<StableC1>::No(Zone::no_warnings(Percent::from_permille(1)))
-                < Status::No(Zone::first(
-                    Percent::from_permille(1),
-                    Percent::from_permille(2)
-                ))
+            Status::<StableC1>::No {
+                zone: Zone::no_warnings(Percent::from_permille(1)),
+                recalc_in
+            } < Status::No {
+                zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
+                recalc_in
+            }
         );
         assert!(
-            Status::<StableC1>::No(Zone::first(
-                Percent::from_permille(1),
-                Percent::from_permille(2)
-            )) < Status::No(Zone::second(
-                Percent::from_permille(1),
-                Percent::from_permille(2)
-            ))
+            Status::<StableC1>::No {
+                zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
+                recalc_in
+            } < Status::No {
+                zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
+                recalc_in
+            }
         );
         assert!(
-            Status::<StableC1>::No(Zone::first(
-                Percent::from_permille(1),
-                Percent::from_permille(2)
-            )) < Status::No(Zone::first(
-                Percent::from_permille(1),
-                Percent::from_permille(3)
-            ))
+            Status::<StableC1>::No {
+                zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
+                recalc_in
+            } < Status::No {
+                zone: Zone::first(Percent::from_permille(1), Percent::from_permille(3)),
+                recalc_in
+            }
         );
         assert!(
-            Status::No(Zone::first(
-                Percent::from_permille(2),
-                Percent::from_permille(3)
-            )) < Status::<StableC1>::No(Zone::second(
-                Percent::from_permille(1),
-                Percent::from_permille(2)
-            ))
+            Status::No {
+                zone: Zone::first(Percent::from_permille(2), Percent::from_permille(3)),
+                recalc_in
+            } < Status::<StableC1>::No {
+                zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
+                recalc_in
+            }
         );
         assert!(
-            Status::No(Zone::third(
-                Percent::from_permille(991),
-                Percent::from_permille(1000)
-            )) < Status::<StableC1>::Liquidation(Liquidation::Partial {
+            Status::No {
+                zone: Zone::third(Percent::from_permille(991), Percent::from_permille(1000)),
+                recalc_in
+            } < Status::<StableC1>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
             })
