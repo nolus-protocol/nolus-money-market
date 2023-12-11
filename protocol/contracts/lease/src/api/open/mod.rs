@@ -331,11 +331,11 @@ mod test_position_spec {
     fn spec_dto() -> PositionSpecDTO {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         PositionSpecDTO::new(

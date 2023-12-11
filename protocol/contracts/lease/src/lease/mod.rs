@@ -304,11 +304,11 @@ mod tests {
         let loan = Loan::new(LEASE_START, loan, MARGIN_INTEREST_RATE, interest_spec);
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             RECALC_TIME,
         );
         let position_spec = PositionSpec::<TestLpn>::new(

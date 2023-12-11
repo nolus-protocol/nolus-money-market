@@ -350,11 +350,11 @@ mod test_calc_borrow {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         Spec::new(liability, min_asset.into(), min_transaction.into())
@@ -1127,13 +1127,19 @@ mod test_check_liability {
         let initial = STEP;
         assert!(initial < max - STEP - STEP - STEP);
 
+        let healthy = initial + Percent::ZERO;
+        let max = healthy + max - initial;
+        let third_liquidity_warning = max - STEP;
+        let second_liquidity_warning = third_liquidity_warning - STEP;
+        let first_liquidity_warning = second_liquidity_warning - STEP;
+
         let liability = Liability::new(
             initial,
-            Percent::ZERO,
-            max - initial,
-            STEP,
-            STEP,
-            STEP,
+            healthy,
+            first_liquidity_warning,
+            second_liquidity_warning,
+            third_liquidity_warning,
+            max,
             RECALC_IN,
         );
         let spec = Spec::new(liability, min_asset.into(), min_transaction.into());
@@ -1186,11 +1192,11 @@ mod test_validate_payment {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         Spec::new(liability, min_asset.into(), min_transaction.into())
@@ -1300,11 +1306,11 @@ mod test_validate_close {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into());
