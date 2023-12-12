@@ -1,5 +1,5 @@
 use currency::Currency;
-use finance::{coin::Coin, liability::Liability, price::Price};
+use finance::{coin::Coin, price::Price};
 
 use crate::{
     api::LeaseCoin,
@@ -45,10 +45,6 @@ where
 
     pub fn amount(&self) -> Coin<Asset> {
         self.amount
-    }
-
-    pub fn liability(&self) -> Liability {
-        self.spec.liability()
     }
 
     pub fn close(&mut self, asset: Coin<Asset>) {
