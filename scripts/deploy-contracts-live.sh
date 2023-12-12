@@ -129,7 +129,7 @@ deploy_contracts() {
   local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address" )
 
   # register the protocol
-  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$protocol"'","protocol":{"network":"'"$network-$dex-$protocol_currency"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
+  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$network-$dex-$protocol_currency"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
   run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$add_protocol_set_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes
 }
 
