@@ -64,6 +64,7 @@ where
     T: Into<String>,
     M: Message + Default,
 {
+    // TODO uncomment once bump the cosmos-sdk-proto to 0.20
     // let msg_type = msg_type.into();
 
     // if resp.type_url != msg_type {
