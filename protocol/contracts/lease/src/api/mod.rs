@@ -8,16 +8,16 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+pub(crate) use self::query::{opened, opening, paid};
 pub use self::{
     open::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
         NewLeaseForm, PositionSpecDTO,
     },
     position::{FullClose, PartialClose, PositionClose},
-    query::{opened, opening, paid, StateQuery, StateResponse},
+    query::{StateQuery, StateResponse},
 };
 
-// TODO consider defining the modules public instead of just selected items
 mod open;
 mod position;
 mod query;
