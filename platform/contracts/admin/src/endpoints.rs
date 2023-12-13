@@ -22,7 +22,7 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -48,30 +48,34 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(
-    mut deps: DepsMut<'_>,
-    _env: Env,
+    deps: DepsMut<'_>,
+    env: Env,
     MigrateMsg {
-        protocol_name,
-        network_name,
-        ref dex_admin,
+        migrate_contracts:
+            MigrateContracts {
+                release,
+                migration_spec,
+                post_migration_execute,
+            },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(deps.branch().storage)
-        .grant_to(dex_admin)
-        .map_err(From::from)
-        .and_then(|()| {
-            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(|label| {
+        if label == release {
+            crate::contracts::migrate(
                 deps.storage,
-                CONTRACT_VERSION,
-                |storage: &mut dyn Storage| {
-                    ContractState::migrate(storage)?;
-
-                    state_contracts::migrate(storage, protocol_name, network_name)
-                },
-                Into::into,
+                env.contract.address,
+                release,
+                migration_spec,
+                post_migration_execute,
             )
-        })
-        .and_then(|(label, ())| response::response(label))
+            .and_then(|messages| response::response_with_messages(label, messages))
+        } else {
+            Err(ContractError::WrongRelease {
+                reported: label.to_string(),
+                expected: release,
+            })
+        }
+    })
 }
 
 #[entry_point]
@@ -131,18 +135,21 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         }
         SudoMsg::MigrateContracts(MigrateContracts {
             release,
-            admin_contract,
             migration_spec,
             post_migration_execute,
         }) => crate::contracts::migrate(
             deps.storage,
             env.contract.address,
             release,
-            admin_contract,
             migration_spec,
             post_migration_execute,
         )
         .map(response::response_only_messages),
+        SudoMsg::ClearStorage {} => {
+            ContractState::clear(deps.storage);
+
+            Ok(response::empty_response())
+        }
     }
 }
 
@@ -160,17 +167,21 @@ fn register_protocol(
 #[entry_point]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
     match ContractState::load(deps.storage)? {
-        ContractState::Migration { release } => migration_reply(msg, release),
+        ContractState::AwaitContractsMigrationReply { release } => migration_reply(msg, release),
         ContractState::Instantiate {
             expected_code_id,
             expected_address,
-        } => instantiate_reply(
-            deps.api,
-            deps.querier,
-            msg,
-            expected_code_id,
-            expected_address,
-        ),
+        } => {
+            ContractState::clear(deps.storage);
+
+            instantiate_reply(
+                deps.api,
+                deps.querier,
+                msg,
+                expected_code_id,
+                expected_address,
+            )
+        }
     }
 }
 

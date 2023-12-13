@@ -1,16 +1,12 @@
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
-
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{Item, Map},
 };
 
 use crate::{
-    contracts::{
-        ContractsGroupedByProtocol, ContractsTemplate, PlatformTemplate, Protocol, ProtocolTemplate,
-    },
+    contracts::{ContractsGroupedByProtocol, ContractsTemplate, PlatformTemplate, Protocol},
     error::Error,
     result::Result,
 };
@@ -71,66 +67,4 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtoc
             .map(|protocol: BTreeMap<String, Protocol>| ContractsTemplate { platform, protocol })
             .map_err(Into::into)
     })
-}
-
-pub(crate) fn migrate(
-    storage: &mut dyn Storage,
-    protocol_name: String,
-    network_name: String,
-) -> Result<()> {
-    #[derive(Serialize, Deserialize)]
-    #[serde(rename_all = "snake_case", deny_unknown_fields)]
-    struct OldContracts {
-        pub dispatcher: Addr,
-        pub leaser: Addr,
-        pub lpp: Addr,
-        pub oracle: Addr,
-        pub profit: Addr,
-        pub timealarms: Addr,
-        pub treasury: Addr,
-    }
-
-    const CONTRACTS: Item<'_, OldContracts> = Item::new("contracts");
-
-    CONTRACTS
-        .load(storage)
-        .and_then(
-            |OldContracts {
-                 dispatcher,
-                 leaser,
-                 lpp,
-                 oracle,
-                 profit,
-                 timealarms,
-                 treasury,
-             }: OldContracts| {
-                CONTRACTS.remove(storage);
-
-                PLATFORM
-                    .save(
-                        storage,
-                        &PlatformTemplate {
-                            dispatcher,
-                            timealarms,
-                            treasury,
-                        },
-                    )
-                    .and_then(|()| {
-                        PROTOCOL.save(
-                            storage,
-                            protocol_name,
-                            &Protocol {
-                                network: network_name,
-                                contracts: ProtocolTemplate {
-                                    leaser,
-                                    lpp,
-                                    oracle,
-                                    profit,
-                                },
-                            },
-                        )
-                    })
-            },
-        )
-        .map_err(Into::into)
 }

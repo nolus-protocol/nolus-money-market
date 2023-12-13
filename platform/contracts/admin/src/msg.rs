@@ -7,7 +7,7 @@ use sdk::{
 };
 
 use crate::contracts::{
-    ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, MigrationSpec,
+    ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute,
     PlatformTemplate, Protocol, ProtocolTemplate,
 };
 
@@ -21,9 +21,7 @@ pub struct InstantiateMsg {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateMsg {
-    pub protocol_name: String,
-    pub network_name: String,
-    pub dex_admin: Addr,
+    pub migrate_contracts: MigrateContracts,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -48,13 +46,13 @@ pub enum SudoMsg {
     ChangeDexAdmin { new_dex_admin: Addr },
     RegisterProtocol { name: String, protocol: Protocol },
     MigrateContracts(MigrateContracts),
+    ClearStorage {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateContracts {
     pub release: String,
-    pub admin_contract: Option<MigrationSpec>,
     pub migration_spec: ContractsMigration,
     pub post_migration_execute: ContractsPostMigrationExecute,
 }

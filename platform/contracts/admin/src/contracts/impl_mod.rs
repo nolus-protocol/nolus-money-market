@@ -4,6 +4,7 @@ use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
 
 use crate::{
+    msg::SudoMsg,
     result::Result,
     state::{contract::Contract as ContractState, contracts as state_contracts},
     validate::{Validate, ValidateValues},
@@ -75,17 +76,12 @@ pub(crate) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_addr: Addr,
     release: String,
-    admin_contract: Option<MigrationSpec>,
     migration_spec: ContractsMigration,
     post_migration_execute: ContractsPostMigrationExecute,
 ) -> Result<MessageResponse> {
-    ContractState::Migration { release }.store(storage)?;
+    ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
 
     let contracts_addrs: ContractsGroupedByProtocol = state_contracts::load_all(storage)?;
-
-    let mut batch: Batch = Batch::default();
-
-    maybe_migrate_contract(&mut batch, admin_contract_addr, admin_contract);
 
     contracts_addrs
         .clone()
@@ -93,11 +89,21 @@ pub(crate) fn migrate(
         .and_then(|migrate_batch: Batch| {
             contracts_addrs
                 .post_migration_execute(post_migration_execute)
-                .map(|post_migration_execute_batch: Batch| {
-                    batch
-                        .merge(migrate_batch)
-                        .merge(post_migration_execute_batch)
-                        .into()
+                .and_then(|post_migration_execute_batch: Batch| {
+                    let mut clear_storage = Batch::default();
+
+                    clear_storage
+                        .schedule_execute_wasm_no_reply_no_funds(
+                            admin_contract_addr,
+                            &SudoMsg::ClearStorage {},
+                        )
+                        .map(|()| {
+                            migrate_batch
+                                .merge(clear_storage)
+                                .merge(post_migration_execute_batch)
+                                .into()
+                        })
+                        .map_err(Into::into)
                 })
         })
 }
