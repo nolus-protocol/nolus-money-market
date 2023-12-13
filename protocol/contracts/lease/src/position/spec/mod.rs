@@ -84,11 +84,12 @@ where
         let overdue = price::total(overdue, asset_in_lpns.inv());
         debug_assert!(overdue <= total_due);
 
-        let ltv = Percent::from_ratio(total_due, asset);
         self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
             .map(Status::Liquidation)
             .unwrap_or_else(|| {
+                let ltv = Percent::from_ratio(total_due, asset);
+                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
                 self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
             })
     }
