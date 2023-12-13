@@ -23,5 +23,5 @@ jobs:
     with:
       target_net: "${{ matrix.net }}"
       target_protocol: "${{ matrix.protocol }}"
-      protocols_list: 'astroport,osmosis'
+      protocols_list: "astroport,osmosis"
       working_directory: "${{ matrix.working_directory }}"
