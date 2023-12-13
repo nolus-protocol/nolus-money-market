@@ -96,7 +96,7 @@ impl<'r, T> NodeRef<'r, T> {
 
 impl<'r, T> Clone for NodeRef<'r, T> {
     fn clone(&self) -> Self {
-        Self { ..*self }
+        *self
     }
 }
 
