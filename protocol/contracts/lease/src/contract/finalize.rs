@@ -30,8 +30,8 @@ impl FinalizerRef {
     pub(super) fn notify(&self, customer: Addr) -> ContractResult<Batch> {
         let mut msgs = Batch::default();
         msgs.schedule_execute_wasm_no_reply_no_funds(
-            &self.addr,
-            FinalizerExecuteMsg::FinalizeLease { customer },
+            self.addr.clone(),
+            &FinalizerExecuteMsg::FinalizeLease { customer },
         )
         .map(|()| msgs)
         .map_err(Into::into)
