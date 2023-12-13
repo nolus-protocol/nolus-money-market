@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use serde::Serialize;
 
 use sdk::cosmwasm_std::StdError;
@@ -8,6 +10,21 @@ use super::{Version, VersionSegment};
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct ReleaseLabel(&'static str);
+
+impl Display for ReleaseLabel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_str(self.0)
+    }
+}
+
+impl<S> PartialEq<S> for ReleaseLabel
+where
+    S: AsRef<str> + ?Sized,
+{
+    fn eq(&self, other: &S) -> bool {
+        *self.0 == *other.as_ref()
+    }
+}
 
 const RELEASE_LABEL: ReleaseLabel = ReleaseLabel(env!(
     "RELEASE_VERSION",
