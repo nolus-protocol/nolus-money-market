@@ -78,7 +78,9 @@ fn test_lease_serde() {
     use oracle::msg::ExecuteAlarmMsg::PriceAlarm;
     use sdk::cosmwasm_std;
 
-    let LeasePriceAlarm {} = cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap() else {
+    let LeasePriceAlarm {} =
+        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap()
+    else {
         unreachable!()
     };
 

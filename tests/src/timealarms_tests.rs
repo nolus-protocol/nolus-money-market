@@ -196,7 +196,9 @@ fn test_lease_serde() {
     use sdk::cosmwasm_std;
     use timealarms::msg::ExecuteAlarmMsg::TimeAlarm;
 
-    let LeaseTimeAlarm {} = cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&TimeAlarm {}).unwrap()).unwrap() else {
+    let LeaseTimeAlarm {} =
+        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&TimeAlarm {}).unwrap()).unwrap()
+    else {
         unreachable!()
     };
 
