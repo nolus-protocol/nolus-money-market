@@ -31,128 +31,121 @@ impl Batch {
         self.schedule_no_reply(msg)
     }
 
-    pub fn schedule_execute_on_success_reply<M>(&mut self, msg: M, reply_id: ReplyId)
+    pub fn schedule_execute_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
     where
         M: Into<CosmosMsg>,
     {
-        let msg_cw = SubMsg::reply_on_success(msg, reply_id);
-
-        self.msgs.push(msg_cw);
+        self.schedule_reply_on_success(msg, reply_id)
     }
 
-    pub fn schedule_execute_wasm_no_reply_no_funds<M>(&mut self, addr: &Addr, msg: M) -> Result<()>
+    pub fn schedule_execute_wasm_no_reply_no_funds<M>(&mut self, addr: Addr, msg: &M) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
-        self.schedule_no_reply(wasm_msg);
-        Ok(())
+        Self::wasm_exec_msg_no_funds(addr, msg).map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
 
-    // TODO get the Addr by value to move up the stack the decision to copy
     // TODO get self by value
     pub fn schedule_execute_wasm_no_reply<M, C>(
         &mut self,
-        addr: &Addr,
-        msg: M,
+        addr: Addr,
+        msg: &M,
         funds: Option<Coin<C>>,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
         C: Currency,
     {
-        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
-        self.schedule_no_reply(wasm_msg);
-        Ok(())
+        Self::wasm_exec_msg(addr, msg, funds).map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
 
-    pub fn schedule_execute_wasm_on_success_reply<M, C>(
+    pub fn schedule_execute_wasm_reply_on_success_no_funds<M>(
         &mut self,
-        addr: &Addr,
-        msg: M,
+        addr: Addr,
+        msg: &M,
+        reply_id: ReplyId,
+    ) -> Result<()>
+    where
+        M: Serialize + ?Sized,
+    {
+        Self::wasm_exec_msg_no_funds(addr, msg)
+            .map(|wasm_msg| self.schedule_reply_on_success(wasm_msg, reply_id))
+    }
+
+    pub fn schedule_execute_wasm_reply_on_success<M, C>(
+        &mut self,
+        addr: Addr,
+        msg: &M,
         funds: Option<Coin<C>>,
         reply_id: ReplyId,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
         C: Currency,
     {
-        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
-        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
-
-        self.msgs.push(msg_cw);
-        Ok(())
+        Self::wasm_exec_msg(addr, msg, funds)
+            .map(|wasm_msg| self.schedule_reply_on_success(wasm_msg, reply_id))
     }
 
     pub fn schedule_execute_wasm_reply_always_no_funds<M>(
         &mut self,
-        addr: &Addr,
-        msg: M,
+        addr: Addr,
+        msg: &M,
         reply_id: ReplyId,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
-        let msg_cw = SubMsg::reply_always(wasm_msg, reply_id);
-
-        self.msgs.push(msg_cw);
-        Ok(())
+        Self::wasm_exec_msg_no_funds(addr, msg)
+            .map(|wasm_msg| self.schedule_reply_always(wasm_msg, reply_id))
     }
 
-    pub fn schedule_execute_wasm_reply_error_no_funds<M>(
+    pub fn schedule_execute_wasm_reply_on_error_no_funds<M>(
         &mut self,
-        addr: &Addr,
-        msg: M,
+        addr: Addr,
+        msg: &M,
         reply_id: ReplyId,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
-        let msg_cw = SubMsg::reply_on_error(wasm_msg, reply_id);
-
-        self.msgs.push(msg_cw);
-        Ok(())
+        Self::wasm_exec_msg_no_funds(addr, msg)
+            .map(|wasm_msg| self.schedule_reply_on_error(wasm_msg, reply_id))
     }
 
-    pub fn schedule_instantiate_wasm_on_success_reply<M>(
+    pub fn schedule_instantiate_wasm_reply_on_success<M>(
         &mut self,
         code_id: CodeId,
-        msg: M,
+        msg: &M,
         funds: Option<Vec<CoinCw>>,
-        label: &str,
+        label: String,
         admin: Option<Addr>,
         reply_id: ReplyId,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let wasm_msg = Self::wasm_init_msg(code_id, msg, funds, label, admin)?;
-        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
-
-        self.msgs.push(msg_cw);
-        Ok(())
+        Self::wasm_init_msg(code_id, msg, funds, label, admin)
+            .map(|wasm_msg| self.schedule_reply_on_success(wasm_msg, reply_id))
     }
 
     pub fn schedule_migrate_wasm_no_reply<M>(
         &mut self,
-        addr: &Addr,
-        msg: M,
+        addr: Addr,
+        msg: &M,
         new_code_id: CodeId,
     ) -> Result<()>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let wasm_msg = Self::wasm_migrate_msg(addr, msg, new_code_id)?;
-        self.schedule_no_reply(wasm_msg);
-        Ok(())
+        Self::wasm_migrate_msg(addr, msg, new_code_id)
+            .map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
 
-    pub fn merge(self, mut other: Batch) -> Self {
-        let mut res = self;
-        res.msgs.append(&mut other.msgs);
-        res
+    pub fn merge(mut self, mut other: Batch) -> Self {
+        self.msgs.append(&mut other.msgs);
+
+        self
     }
 
     pub fn len(&self) -> usize {
@@ -163,73 +156,100 @@ impl Batch {
         self.msgs.is_empty()
     }
 
-    fn wasm_exec_msg_no_funds<M>(addr: &Addr, msg: M) -> Result<WasmMsg>
+    fn wasm_exec_msg_no_funds<M>(addr: Addr, msg: &M) -> Result<WasmMsg>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
         Ok(WasmMsg::Execute {
-            contract_addr: addr.into(),
+            contract_addr: addr.into_string(),
             funds: vec![],
-            msg: to_json_binary(&msg)?,
+            msg: to_json_binary(msg)?,
         })
     }
 
-    fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
+    fn wasm_exec_msg<M, C>(addr: Addr, msg: &M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
         C: Currency,
     {
-        Ok(WasmMsg::Execute {
-            contract_addr: addr.into(),
-            funds: funds.into_iter().map(to_cosmwasm_impl).collect(),
-            msg: to_json_binary(&msg)?,
-        })
+        to_json_binary(msg)
+            .map(|msg| WasmMsg::Execute {
+                contract_addr: addr.into_string(),
+                funds: if let Some(funds) = funds {
+                    vec![to_cosmwasm_impl(funds)]
+                } else {
+                    vec![]
+                },
+                msg,
+            })
+            .map_err(Into::into)
     }
 
     fn wasm_init_msg<M>(
         code_id: CodeId,
-        msg: M,
+        msg: &M,
         funds: Option<Vec<CoinCw>>,
-        label: &str,
+        label: String,
         admin: Option<Addr>,
     ) -> Result<WasmMsg>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let admin_str = admin.map(Into::into);
-        let msg_bin = to_json_binary(&msg)?;
-        let mut funds_cw = vec![];
-        if let Some(coin) = funds {
-            funds_cw = coin;
-        }
-
-        Ok(WasmMsg::Instantiate {
-            admin: admin_str,
-            code_id,
-            funds: funds_cw,
-            label: label.to_string(),
-            msg: msg_bin,
-        })
+        to_json_binary(msg)
+            .map(|msg| WasmMsg::Instantiate {
+                admin: admin.map(Addr::into_string),
+                code_id,
+                funds: funds.unwrap_or_default(),
+                label,
+                msg,
+            })
+            .map_err(Into::into)
     }
 
-    fn wasm_migrate_msg<M>(addr: &Addr, msg: M, new_code_id: CodeId) -> Result<WasmMsg>
+    fn wasm_migrate_msg<M>(addr: Addr, msg: &M, new_code_id: CodeId) -> Result<WasmMsg>
     where
-        M: Serialize,
+        M: Serialize + ?Sized,
     {
-        let msg_bin = to_json_binary(&msg)?;
-
-        Ok(WasmMsg::Migrate {
-            contract_addr: addr.into(),
-            new_code_id,
-            msg: msg_bin,
-        })
+        to_json_binary(msg)
+            .map(|msg| WasmMsg::Migrate {
+                contract_addr: addr.into_string(),
+                new_code_id,
+                msg,
+            })
+            .map_err(Into::into)
     }
 
     fn schedule_no_reply<M>(&mut self, msg: M)
     where
         M: Into<CosmosMsg>,
     {
-        self.msgs.push(SubMsg::new(msg));
+        self.schedule_msg(SubMsg::new(msg));
+    }
+
+    fn schedule_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
+    where
+        M: Into<CosmosMsg>,
+    {
+        self.schedule_msg(SubMsg::reply_on_success(msg, reply_id));
+    }
+
+    fn schedule_reply_on_error<M>(&mut self, msg: M, reply_id: ReplyId)
+    where
+        M: Into<CosmosMsg>,
+    {
+        self.schedule_msg(SubMsg::reply_on_error(msg, reply_id));
+    }
+
+    fn schedule_reply_always<M>(&mut self, msg: M, reply_id: ReplyId)
+    where
+        M: Into<CosmosMsg>,
+    {
+        self.schedule_msg(SubMsg::reply_always(msg, reply_id));
+    }
+
+    #[inline]
+    fn schedule_msg(&mut self, msg: SubMsg) {
+        self.msgs.push(msg);
     }
 }
 
