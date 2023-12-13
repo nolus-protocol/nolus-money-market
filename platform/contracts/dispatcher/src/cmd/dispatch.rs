@@ -18,7 +18,7 @@ pub fn dispatch<Lpps, Oracle, Oracles>(
     scale: &RewardScale,
     lpps: Lpps,
     oracles: Oracles,
-    treasury: &Addr,
+    treasury: Addr,
 ) -> ContractResult<MessageResponse>
 where
     Lpps: IntoIterator,
@@ -43,12 +43,12 @@ where
         })
 }
 
-fn create_total(reward: Coin<NlsPlatform>, treasury: &Addr) -> ContractResult<MessageResponse> {
+fn create_total(reward: Coin<NlsPlatform>, treasury: Addr) -> ContractResult<MessageResponse> {
     let mut batch = Batch::default();
     batch
         .schedule_execute_wasm_no_reply_no_funds(
             treasury,
-            treasury::msg::ExecuteMsg::SendRewards { amount: reward },
+            &treasury::msg::ExecuteMsg::SendRewards { amount: reward },
         )
         .map(|()| batch.into())
         .map_err(Into::into)
@@ -122,7 +122,7 @@ mod test {
         let treasury = Addr::unchecked("Treasury");
 
         let resp = response::response_only_messages(
-            super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury).unwrap(),
+            super::dispatch(year(), &scale, lpps, oracles.iter(), treasury.clone()).unwrap(),
         );
         assert_eq!(resp.messages.len(), 3 + 1);
         let reward1 = reward(&apr, lpp0_tvl, &oracles[0]);
@@ -131,8 +131,8 @@ mod test {
         let total_rewards = reward1 + reward2 + reward3;
         let mut msgs = Batch::default();
         msgs.schedule_execute_wasm_no_reply_no_funds(
-            &treasury,
-            treasury::msg::ExecuteMsg::SendRewards {
+            treasury,
+            &treasury::msg::ExecuteMsg::SendRewards {
                 amount: total_rewards,
             },
         )
@@ -163,7 +163,7 @@ mod test {
         ];
         let treasury = Addr::unchecked("Treasury");
 
-        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury);
+        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), treasury);
         assert!(matches!(resp, Err(ContractError::LppPlatformError(_))));
     }
 
@@ -186,7 +186,7 @@ mod test {
         ];
         let treasury = Addr::unchecked("Treasury");
 
-        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), &treasury);
+        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), treasury);
         assert!(matches!(resp, Err(ContractError::Oracle(_))));
     }
 
