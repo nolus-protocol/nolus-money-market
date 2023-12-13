@@ -47,9 +47,6 @@ where
         self.amount
     }
 
-    // `self.liability` is semi-hidden, semi-public - it's exposed just for computing the recalculation period
-    // let's return `recalc_liability_at` as a data of `Status`
-    // for more insights refer to the TODO next to `Spec::check_liability`
     pub fn liability(&self) -> Liability {
         self.spec.liability()
     }

@@ -1,6 +1,7 @@
 use currency::Currency;
 use finance::{
     coin::Coin,
+    duration::Duration,
     fraction::Fraction,
     liability::{Level, Zone},
     price::{total_of, Price},
@@ -28,14 +29,17 @@ where
     pub(crate) fn reschedule(
         &self,
         now: &Timestamp,
+        recalc_in: Duration,
         liquidation_zone: &Zone,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
-        self.reschedule_time_alarm(now, time_alarms)
+        let next_recalc = *now + recalc_in;
+
+        self.reschedule_time_alarm(now, next_recalc, time_alarms)
             .and_then(|schedule_time_alarm| {
                 let mut price_alarms = price_alarms.as_alarms::<Lpn>();
-                self.reschedule_price_alarm(now, liquidation_zone, &mut price_alarms)
+                self.reschedule_price_alarm(next_recalc, liquidation_zone, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
     }
@@ -43,6 +47,7 @@ where
     fn reschedule_time_alarm(
         &self,
         now: &Timestamp,
+        next_recalc: Timestamp,
         time_alarms: &TimeAlarmsRef,
     ) -> ContractResult<Batch> {
         let grace_period_end = self.loan.next_grace_period_end(now);
@@ -50,15 +55,14 @@ where
             now < &grace_period_end,
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
         );
-        let recalculation_time = self.recalc_time(now);
         time_alarms
-            .setup_alarm(grace_period_end.min(recalculation_time))
+            .setup_alarm(grace_period_end.min(next_recalc))
             .map_err(Into::into)
     }
 
     fn reschedule_price_alarm<PriceAlarms>(
         &self,
-        now: &Timestamp,
+        next_recalc: Timestamp,
         liquidation_zone: &Zone,
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
@@ -66,8 +70,7 @@ where
         PriceAlarms: PriceAlarmsTrait,
     {
         debug_assert!(!currency::equal::<Lpn, Asset>());
-        let recalculation_time = self.recalc_time(now);
-        let total_liability = self.loan.liability_status(recalculation_time).total;
+        let total_liability = self.loan.liability_status(next_recalc).total;
         debug_assert!(!total_liability.is_zero());
 
         let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
@@ -98,10 +101,6 @@ where
         debug_assert!(!alarm_at.ltv().is_zero());
 
         Ok(total_of(alarm_at.ltv().of(self.position.amount())).is(liability))
-    }
-
-    fn recalc_time(&self, now: &Timestamp) -> Timestamp {
-        *now + self.position.liability().recalculation_time()
     }
 }
 
@@ -137,12 +136,13 @@ mod tests {
     fn initial_alarm_schedule() {
         let asset = Coin::from(10);
         let lease = lease::tests::open_lease(asset, loan());
-        let recalc_time = LEASE_START + lease.position.liability().recalculation_time();
+        let recalc_time = LEASE_START + RECALC_TIME;
         let liability_alarm_on = lease.position.liability().first_liq_warn();
         let projected_liability = projected_liability(&lease, recalc_time);
         let alarm_msgs = lease
             .reschedule(
                 &LEASE_START,
+                RECALC_TIME,
                 &Zone::no_warnings(liability_alarm_on),
                 &timealarms(),
                 &pricealarms(),
@@ -178,14 +178,18 @@ mod tests {
     fn reschedule_time_alarm_recalc() {
         let lease_amount = 20.into();
         let lease = open_lease(lease_amount, loan());
-        let now = lease.loan.grace_period_end()
-            - lease.position.liability().recalculation_time()
-            - lease.position.liability().recalculation_time();
-        let recalc_time = now + lease.position.liability().recalculation_time();
+        let now = lease.loan.grace_period_end() - RECALC_TIME - RECALC_TIME;
+        let recalc_time = now + RECALC_TIME;
         let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
+            .reschedule(
+                &now,
+                RECALC_TIME,
+                &no_warnings,
+                &timealarms(),
+                &pricealarms(),
+            )
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
@@ -234,12 +238,18 @@ mod tests {
         let lease = open_lease_with_payment_spec(lease_amount, loan(), interest_spec);
 
         let now = lease.loan.grace_period_end() + due_period + due_period + Duration::from_nanos(1);
-        let recalc_time = now + lease.position.liability().recalculation_time();
+        let recalc_time = now + RECALC_TIME;
         let exp_alarm_at = lease.loan.grace_period_end() + due_period + due_period + due_period;
         let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
+            .reschedule(
+                &now,
+                RECALC_TIME,
+                &no_warnings,
+                &timealarms(),
+                &pricealarms(),
+            )
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
@@ -282,7 +292,7 @@ mod tests {
         let lease = open_lease(lease_amount, loan);
 
         let reschedule_at = LEASE_START + Duration::from_days(50);
-        let recalc_at = reschedule_at + lease.position.liability().recalculation_time();
+        let recalc_at = reschedule_at + RECALC_TIME;
         let projected_liability = projected_liability(&lease, recalc_at);
 
         let zone = Zone::second(
@@ -290,7 +300,13 @@ mod tests {
             lease.position.liability().third_liq_warn(),
         );
         let alarm_msgs = lease
-            .reschedule(&reschedule_at, &zone, &timealarms(), &pricealarms())
+            .reschedule(
+                &reschedule_at,
+                RECALC_TIME,
+                &zone,
+                &timealarms(),
+                &pricealarms(),
+            )
             .unwrap();
 
         let exp_below: SpotPrice = total_of(zone.high().ltv().of(lease_amount))
@@ -347,12 +363,18 @@ mod tests {
         let lease = open_lease(lease_amount, loan());
 
         let now = lease.loan.grace_period_end() - offset_from_this;
-        let recalc_time = now + lease.position.liability().recalculation_time();
+        let recalc_time = now + RECALC_TIME;
         let exp_alarm_at = lease.loan.grace_period_end() + exp_alarm_past_this;
         let up_to = lease.position.liability().first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
+            .reschedule(
+                &now,
+                RECALC_TIME,
+                &no_warnings,
+                &timealarms(),
+                &pricealarms(),
+            )
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
