@@ -31,7 +31,7 @@ where
     fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse>;
 }
 
-pub fn new_stub<'a, 'q>(lpp: &'a Addr, querier: QuerierWrapper<'q>, env: &'a Env) -> impl Lpp + 'a
+pub fn new_stub<'a, 'q>(lpp: Addr, querier: QuerierWrapper<'q>, env: &'a Env) -> impl Lpp + 'a
 where
     'q: 'a,
 {
