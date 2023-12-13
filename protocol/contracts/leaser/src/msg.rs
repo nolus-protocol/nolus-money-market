@@ -25,6 +25,7 @@ pub struct InstantiateMsg {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
+    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,7 +72,6 @@ pub enum ExecuteMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    SetupDex(ConnectionParams),
     Config {
         lease_interest_rate_margin: Percent,
         lease_position_spec: PositionSpecDTO,

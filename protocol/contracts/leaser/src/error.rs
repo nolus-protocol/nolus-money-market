@@ -39,12 +39,6 @@ pub enum ContractError {
     #[error("[Leaser] No Liquidity")]
     NoLiquidity {},
 
-    #[error("[Leaser] No DEX connectivity setup")]
-    NoDEXConnectivitySetup {},
-
-    #[error("[Leaser] DEX connectivity already setup")]
-    DEXConnectivityAlreadySetup {},
-
     #[error("[Leaser] Invalid continuation key, cause: {err} ")]
     InvalidContinuationKey { err: String },
 }

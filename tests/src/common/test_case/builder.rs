@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use currency::Currency;
 use finance::percent::{bound::BoundToHundredPercent, Percent};
-use lease::api::{ConnectionParams, Ics20Channel};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
@@ -330,22 +329,6 @@ where
             test_case.address_book.oracle().clone(),
             test_case.address_book.profit().clone(),
         );
-
-        () = test_case
-            .app
-            .sudo(
-                leaser_addr.clone(),
-                &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
-                    connection_id: TestCase::DEX_CONNECTION_ID.into(),
-                    transfer_channel: Ics20Channel {
-                        local_endpoint: TestCase::LEASER_IBC_CHANNEL.into(),
-                        remote_endpoint: "channel-422".into(),
-                    },
-                }),
-            )
-            .unwrap()
-            .ignore_response()
-            .unwrap_response();
 
         test_case.app.update_block(next_block);
 
