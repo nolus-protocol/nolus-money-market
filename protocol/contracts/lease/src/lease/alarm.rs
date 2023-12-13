@@ -47,7 +47,7 @@ where
     fn reschedule_time_alarm(
         &self,
         now: &Timestamp,
-        recalc_in: Timestamp,
+        next_recalc: Timestamp,
         time_alarms: &TimeAlarmsRef,
     ) -> ContractResult<Batch> {
         let grace_period_end = self.loan.next_grace_period_end(now);
@@ -56,7 +56,7 @@ where
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
         );
         time_alarms
-            .setup_alarm(grace_period_end.min(recalc_in))
+            .setup_alarm(grace_period_end.min(next_recalc))
             .map_err(Into::into)
     }
 
