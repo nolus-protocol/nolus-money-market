@@ -27,11 +27,11 @@ impl Borrow {
             .and_then(|config| {
                 let mut batch = Batch::default();
                 batch
-                    .schedule_instantiate_wasm_on_success_reply(
+                    .schedule_instantiate_wasm_reply_on_success(
                         config.lease_code_id,
-                        Self::open_lease_msg(customer, config, currency, max_ltd, finalizer),
+                        &Self::open_lease_msg(customer, config, currency, max_ltd, finalizer),
                         Some(amount),
-                        "lease",
+                        "lease".into(),
                         Some(admin), // allows lease migrations from this contract
                         Default::default(),
                     )

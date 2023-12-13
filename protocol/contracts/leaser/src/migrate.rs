@@ -96,8 +96,8 @@ impl MigrateBatch {
                     customer.leases.find_map(|lease| {
                         self.msgs
                             .schedule_migrate_wasm_no_reply(
-                                &lease,
-                                migrate_msg(customer.customer.clone()),
+                                lease,
+                                &migrate_msg(customer.customer.clone()),
                                 self.new_code_id,
                             )
                             .map(|()| None)
@@ -214,7 +214,12 @@ mod test {
             );
         }
         {
-            let mut exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let mut exp = add_expected(
+                MigrationResult::default(),
+                lease1.clone(),
+                customer1(),
+                new_code,
+            );
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
@@ -222,7 +227,12 @@ mod test {
             );
         }
         {
-            let mut exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
+            let mut exp = add_expected(
+                MigrationResult::default(),
+                lease1.clone(),
+                customer1(),
+                new_code,
+            );
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
@@ -230,9 +240,14 @@ mod test {
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
-            let exp = add_expected(exp, &lease21, customer2(), new_code);
-            let mut exp = add_expected(exp, &lease22, customer2(), new_code);
+            let exp = add_expected(
+                MigrationResult::default(),
+                lease1.clone(),
+                customer1(),
+                new_code,
+            );
+            let exp = add_expected(exp, lease21.clone(), customer2(), new_code);
+            let mut exp = add_expected(exp, lease22.clone(), customer2(), new_code);
             exp.next_customer = Some(customer3());
             assert_eq!(
                 Ok(exp),
@@ -240,10 +255,15 @@ mod test {
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
-            let exp = add_expected(exp, &lease21, customer2(), new_code);
-            let exp = add_expected(exp, &lease22, customer2(), new_code);
-            let mut exp = add_expected(exp, &lease3, customer3(), new_code);
+            let exp = add_expected(
+                MigrationResult::default(),
+                lease1.clone(),
+                customer1(),
+                new_code,
+            );
+            let exp = add_expected(exp, lease21.clone(), customer2(), new_code);
+            let exp = add_expected(exp, lease22.clone(), customer2(), new_code);
+            let mut exp = add_expected(exp, lease3.clone(), customer3(), new_code);
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
@@ -251,10 +271,15 @@ mod test {
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
-            let exp = add_expected(exp, &lease21, customer2(), new_code);
-            let exp = add_expected(exp, &lease22, customer2(), new_code);
-            let mut exp = add_expected(exp, &lease3, customer3(), new_code);
+            let exp = add_expected(
+                MigrationResult::default(),
+                lease1.clone(),
+                customer1(),
+                new_code,
+            );
+            let exp = add_expected(exp, lease21.clone(), customer2(), new_code);
+            let exp = add_expected(exp, lease22.clone(), customer2(), new_code);
+            let mut exp = add_expected(exp, lease3.clone(), customer3(), new_code);
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
@@ -262,13 +287,13 @@ mod test {
             );
         }
         {
-            let exp = add_expected(MigrationResult::default(), &lease1, customer1(), new_code);
-            let exp = add_expected(exp, &lease21, customer2(), new_code);
-            let exp = add_expected(exp, &lease22, customer2(), new_code);
-            let exp = add_expected(exp, &lease3, customer3(), new_code);
-            let exp = add_expected(exp, &lease41, customer4(), new_code);
-            let exp = add_expected(exp, &lease42, customer4(), new_code);
-            let mut exp = add_expected(exp, &lease43, customer4(), new_code);
+            let exp = add_expected(MigrationResult::default(), lease1, customer1(), new_code);
+            let exp = add_expected(exp, lease21, customer2(), new_code);
+            let exp = add_expected(exp, lease22, customer2(), new_code);
+            let exp = add_expected(exp, lease3, customer3(), new_code);
+            let exp = add_expected(exp, lease41, customer4(), new_code);
+            let exp = add_expected(exp, lease42, customer4(), new_code);
+            let mut exp = add_expected(exp, lease43, customer4(), new_code);
             exp.next_customer = None;
             assert_eq!(
                 Ok(exp),
@@ -301,12 +326,12 @@ mod test {
 
     fn add_expected(
         mut exp: MigrationResult,
-        lease_addr: &Addr,
+        lease_addr: Addr,
         customer: Addr,
         new_code: CodeId,
     ) -> MigrationResult {
         exp.msgs
-            .schedule_migrate_wasm_no_reply(lease_addr, migrate_msg()(customer), new_code)
+            .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg()(customer), new_code)
             .unwrap();
         exp
     }
