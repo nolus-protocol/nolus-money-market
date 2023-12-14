@@ -99,7 +99,7 @@ pub fn execute(
 
             let mut batch: Batch = Batch::default();
 
-            batch.schedule_execute_on_success_reply(
+            batch.schedule_execute_reply_on_success(
                 WasmMsg::Instantiate2 {
                     admin: Some(env.contract.address.into_string()),
                     code_id,
