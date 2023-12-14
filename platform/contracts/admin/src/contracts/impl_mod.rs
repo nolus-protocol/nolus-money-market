@@ -108,7 +108,7 @@ pub(super) fn maybe_migrate_contract(
     migrate: Option<MigrationSpec>,
 ) {
     if let Some(migrate) = migrate {
-        batch.schedule_execute_on_success_reply(
+        batch.schedule_execute_reply_on_success(
             WasmMsg::Migrate {
                 contract_addr: addr.into_string(),
                 new_code_id: migrate.code_id,

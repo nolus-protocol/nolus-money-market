@@ -131,7 +131,7 @@ fn update_lpp_impl(
         lease_code_id: new_code_id.into(),
     };
     batch
-        .schedule_execute_wasm_no_reply_no_funds(&lpp, lpp_update_code)
+        .schedule_execute_wasm_no_reply_no_funds(lpp, &lpp_update_code)
         .map_err(Into::into)
 }
 

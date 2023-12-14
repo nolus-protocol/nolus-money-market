@@ -88,14 +88,18 @@ where
             .into_iter()
             .try_fold(
                 AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, EVENT_TYPE),
-                |mut dispatcher: AlarmsDispatcher<ExecuteAlarmMsg>,
+                |dispatcher: AlarmsDispatcher<ExecuteAlarmMsg>,
                  subscriber: Addr|
                  -> ContractResult<_> {
-                    dispatcher = dispatcher.send_to(&subscriber, REPLY_ID)?;
-
-                    self.time_alarms.out_for_delivery(subscriber)?;
-
-                    Ok(dispatcher)
+                    dispatcher
+                        .send_to(subscriber.clone(), REPLY_ID)
+                        .map_err(Into::into)
+                        .and_then(|dispatcher| {
+                            self.time_alarms
+                                .out_for_delivery(subscriber)
+                                .map(|()| dispatcher)
+                                .map_err(Into::into)
+                        })
                 },
             )
             .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))

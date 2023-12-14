@@ -138,10 +138,13 @@ where
             .into_iter()
             .try_fold(
                 AlarmsDispatcher::new(ExecuteAlarmMsg::PriceAlarm(), Self::EVENT_TYPE),
-                move |mut dispatcher: AlarmsDispatcher<ExecuteAlarmMsg>, subscriber: Addr| {
-                    dispatcher = dispatcher.send_to(&subscriber, Self::REPLY_ID)?;
-
-                    alarms.out_for_delivery(subscriber).map(|()| dispatcher)
+                move |dispatcher: AlarmsDispatcher<ExecuteAlarmMsg>, subscriber: Addr| {
+                    dispatcher
+                        .send_to(subscriber.clone(), Self::REPLY_ID)
+                        .map_err(Into::into)
+                        .and_then(|dispatcher| {
+                            alarms.out_for_delivery(subscriber).map(|()| dispatcher)
+                        })
                 },
             )
             .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))

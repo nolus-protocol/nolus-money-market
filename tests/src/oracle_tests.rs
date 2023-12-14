@@ -554,8 +554,8 @@ fn schedule_alarm(
             let mut batch: Batch = Batch::default();
 
             batch.schedule_execute_wasm_no_reply::<_, BaseC>(
-                &ORACLE_ADDR.load(storage).unwrap(),
-                oracle::msg::ExecuteMsg::AddPriceAlarm {
+                ORACLE_ADDR.load(storage).unwrap(),
+                &oracle::msg::ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
                         price::total_of::<BaseC>(base.into()).is::<StableC1>(quote.into()),
                         None,

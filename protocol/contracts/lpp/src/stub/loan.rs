@@ -96,8 +96,8 @@ where
         let mut batch = Batch::default();
         if !stub.repayment.is_zero() {
             batch.schedule_execute_wasm_no_reply(
-                &stub.lpp_ref.addr,
-                ExecuteMsg::RepayLoan(),
+                stub.lpp_ref.addr().clone(),
+                &ExecuteMsg::RepayLoan(),
                 Some(stub.repayment),
             )?;
         }
@@ -162,8 +162,8 @@ mod test {
         {
             let mut exp = Batch::default();
             exp.schedule_execute_wasm_no_reply(
-                lpp_ref.addr(),
-                ExecuteMsg::RepayLoan(),
+                lpp_ref.addr().clone(),
+                &ExecuteMsg::RepayLoan(),
                 Some(payment1 + payment2),
             )
             .unwrap();
