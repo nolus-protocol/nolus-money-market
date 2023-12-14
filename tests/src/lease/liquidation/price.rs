@@ -37,7 +37,7 @@ fn liquidation_warning_price_1() {
         2085713.into(),
         // ref: 1857159
         1827159.into(),
-        LeaserInstantiator::liability().first_liq_warn(),
+        LeaserInstantiator::FIRST_LIQ_WARN,
         "1",
     );
 }
@@ -49,7 +49,7 @@ fn liquidation_warning_price_2() {
         2085713.into(),
         // ref: 1857159
         1757159.into(),
-        LeaserInstantiator::liability().second_liq_warn(),
+        LeaserInstantiator::SECOND_LIQ_WARN,
         "2",
     );
 }
@@ -61,7 +61,7 @@ fn liquidation_warning_price_3() {
         2085713.into(),
         // ref: 1857159
         1707159.into(),
-        LeaserInstantiator::liability().third_liq_warn(),
+        LeaserInstantiator::THIRD_LIQ_WARN,
         "3",
     );
 }

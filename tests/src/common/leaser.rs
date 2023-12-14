@@ -22,16 +22,19 @@ impl Instantiator {
 
     pub const GRACE_PERIOD: Duration = Duration::from_days(10);
 
+    pub const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
+    pub const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
+    pub const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
     pub const RECALC_TIME: Duration = Duration::from_hours(1);
 
     pub fn liability() -> Liability {
         Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Self::FIRST_LIQ_WARN,
+            Self::SECOND_LIQ_WARN,
+            Self::THIRD_LIQ_WARN,
+            Percent::from_percent(80),
             Self::RECALC_TIME,
         )
     }
