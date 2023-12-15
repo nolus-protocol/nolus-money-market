@@ -10,7 +10,7 @@ license.workspace = true
 schema = ["sdk/schema"]
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "storage"] }
+sdk = { workspace = true, features = ["cosmos", "schema", "storage"] }
 
 serde = { workspace = true, features = ["derive"] }
 
