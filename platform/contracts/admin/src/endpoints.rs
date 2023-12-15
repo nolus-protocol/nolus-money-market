@@ -61,16 +61,17 @@ pub fn migrate(
 ) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
         |reported_label| {
-            check_release_label(reported_label.clone(), release.clone())?;
-
-            crate::contracts::migrate(
-                deps.storage,
-                env.contract.address,
-                release,
-                migration_spec,
-                post_migration_execute,
-            )
-            .and_then(|messages| response::response_with_messages(reported_label, messages))
+            check_release_label(reported_label.clone(), release.clone())
+                .and_then(|()| {
+                    crate::contracts::migrate(
+                        deps.storage,
+                        env.contract.address,
+                        release,
+                        migration_spec,
+                        post_migration_execute,
+                    )
+                })
+                .and_then(|messages| response::response_with_messages(reported_label, messages))
         },
     )
 }
@@ -243,10 +244,10 @@ fn register_protocol(
 }
 
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
-    let reported_release: ReleaseLabel =
-        platform::reply::from_execute(msg)?.ok_or(ContractError::NoMigrationResponseData {})?;
-
-    check_release_label(reported_release, expected_release).map(|()| response::empty_response())
+    platform::reply::from_execute(msg)?
+        .ok_or(ContractError::NoMigrationResponseData {})
+        .and_then(|reported_release| check_release_label(reported_release, expected_release))
+        .map(|()| response::empty_response())
 }
 
 fn check_release_label(
