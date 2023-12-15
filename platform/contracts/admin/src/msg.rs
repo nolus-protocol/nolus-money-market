@@ -43,9 +43,23 @@ pub enum ExecuteMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum SudoMsg {
-    ChangeDexAdmin { new_dex_admin: Addr },
-    RegisterProtocol { name: String, protocol: Protocol },
+    ChangeDexAdmin {
+        new_dex_admin: Addr,
+    },
+    RegisterProtocol {
+        name: String,
+        protocol: Protocol,
+    },
     MigrateContracts(MigrateContracts),
+    /// A message for **internal purposes only**.
+    ///
+    /// It is meant to clean-up any temporary storage changes.
+    ///
+    /// Whether manual execution by an outside sender is or
+    /// is not allowed is left as undefined behavior.
+    ///
+    /// Whether it shall fail or succeed when manually executed
+    /// by an outside sender is left as undefined behaviour.
     ClearStorage {},
 }
 
