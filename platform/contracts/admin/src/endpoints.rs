@@ -59,25 +59,20 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(|label| {
-        ensure_eq!(
-            label,
-            release,
-            ContractError::WrongRelease {
-                reported: label.into(),
-                expected: release.into(),
-            }
-        );
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
+        |reported_label| {
+            check_release_label(reported_label.clone(), release.clone())?;
 
-        crate::contracts::migrate(
-            deps.storage,
-            env.contract.address,
-            release,
-            migration_spec,
-            post_migration_execute,
-        )
-        .and_then(|messages| response::response_with_messages(label, messages))
-    })
+            crate::contracts::migrate(
+                deps.storage,
+                env.contract.address,
+                release,
+                migration_spec,
+                post_migration_execute,
+            )
+            .and_then(|messages| response::response_with_messages(reported_label, messages))
+        },
+    )
 }
 
 #[entry_point]
@@ -251,6 +246,13 @@ fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult
     let reported_release: ReleaseLabel =
         platform::reply::from_execute(msg)?.ok_or(ContractError::NoMigrationResponseData {})?;
 
+    check_release_label(reported_release, expected_release).map(|()| response::empty_response())
+}
+
+fn check_release_label(
+    reported_release: ReleaseLabel,
+    expected_release: ReleaseLabel,
+) -> Result<(), ContractError> {
     ensure_eq!(
         reported_release,
         expected_release,
@@ -260,5 +262,5 @@ fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult
         }
     );
 
-    Ok(response::empty_response())
+    Ok(())
 }
