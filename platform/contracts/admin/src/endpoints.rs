@@ -60,7 +60,15 @@ pub fn migrate(
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(|label| {
-        if label == release {
+        ensure_eq!(
+            label,
+            release,
+            ContractError::WrongRelease {
+                reported: label.to_string(),
+                expected: release,
+            }
+        );
+
             crate::contracts::migrate(
                 deps.storage,
                 env.contract.address,
@@ -69,12 +77,6 @@ pub fn migrate(
                 post_migration_execute,
             )
             .and_then(|messages| response::response_with_messages(label, messages))
-        } else {
-            Err(ContractError::WrongRelease {
-                reported: label.to_string(),
-                expected: release,
-            })
-        }
     })
 }
 
