@@ -7,7 +7,7 @@ use sdk::{
         Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use crate::{
     contracts::Protocol,
@@ -64,8 +64,8 @@ pub fn migrate(
             label,
             release,
             ContractError::WrongRelease {
-                reported: label.to_string(),
-                expected: release,
+                reported: label.into(),
+                expected: release.into(),
             }
         );
 
@@ -247,16 +247,16 @@ fn register_protocol(
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
-fn migration_reply(msg: Reply, expected_release: String) -> ContractResult<CwResponse> {
-    let reported_release: String =
+fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
+    let reported_release: ReleaseLabel =
         platform::reply::from_execute(msg)?.ok_or(ContractError::NoMigrationResponseData {})?;
 
     ensure_eq!(
         reported_release,
         expected_release,
         ContractError::WrongRelease {
-            reported: reported_release,
-            expected: expected_release
+            reported: reported_release.into(),
+            expected: expected_release.into()
         }
     );
 

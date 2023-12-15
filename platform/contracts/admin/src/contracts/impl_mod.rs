@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
+use versioning::ReleaseLabel;
 
 use crate::{
     msg::SudoMsg,
@@ -75,7 +76,7 @@ where
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_addr: Addr,
-    release: String,
+    release: ReleaseLabel,
     migration_spec: ContractsMigration,
     post_migration_execute: ContractsPostMigrationExecute,
 ) -> Result<MessageResponse> {
