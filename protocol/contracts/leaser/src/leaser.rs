@@ -2,9 +2,7 @@ use std::collections::HashSet;
 
 use currency::SymbolOwned;
 use finance::percent::Percent;
-use lease::api::{
-    ConnectionParams, DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpecDTO,
-};
+use lease::api::{DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpecDTO};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
@@ -61,15 +59,6 @@ impl<'a> Leaser<'a> {
             self.deps.querier,
         )
     }
-}
-
-pub(super) fn try_setup_dex(
-    storage: &mut dyn Storage,
-    params: ConnectionParams,
-) -> ContractResult<MessageResponse> {
-    Config::setup_dex(storage, params)?;
-
-    Ok(Default::default())
 }
 
 pub(super) fn try_configure(
@@ -142,7 +131,7 @@ fn update_lpp_impl(
         lease_code_id: new_code_id.into(),
     };
     batch
-        .schedule_execute_wasm_no_reply_no_funds(&lpp, lpp_update_code)
+        .schedule_execute_wasm_no_reply_no_funds(lpp, &lpp_update_code)
         .map_err(Into::into)
 }
 

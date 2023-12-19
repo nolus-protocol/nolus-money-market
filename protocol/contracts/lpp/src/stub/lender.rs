@@ -71,12 +71,11 @@ where
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_on_success_reply::<_, Lpn>(
-                &self.id(),
-                ExecuteMsg::OpenLoan {
+            .schedule_execute_wasm_reply_on_success_no_funds(
+                self.id().clone(),
+                &ExecuteMsg::OpenLoan {
                     amount: amount.into(),
                 },
-                None,
                 Self::OPEN_LOAN_REQ_ID,
             )
             .map_err(ContractError::from)

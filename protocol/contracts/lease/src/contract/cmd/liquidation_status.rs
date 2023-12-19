@@ -30,8 +30,8 @@ where
     let status = lease.liquidation_status(when)?;
     Ok(match status {
         Status::NoDebt => CmdResult::NoDebt,
-        Status::No(zone) => CmdResult::NewAlarms {
-            alarms: lease.reschedule(&when, &zone, time_alarms, price_alarms)?,
+        Status::No { zone, recalc_in } => CmdResult::NewAlarms {
+            alarms: lease.reschedule(&when, recalc_in, &zone, time_alarms, price_alarms)?,
             current_liability: zone,
         },
         Status::Liquidation(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),

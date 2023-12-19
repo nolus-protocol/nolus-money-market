@@ -22,7 +22,7 @@ pub struct Config {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
-    pub dex: Option<ConnectionParams>,
+    pub dex: ConnectionParams,
 }
 
 impl Config {
@@ -38,7 +38,7 @@ impl Config {
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
             profit: msg.profit,
-            dex: None,
+            dex: msg.dex,
         }
     }
 
@@ -48,19 +48,6 @@ impl Config {
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         Self::STORAGE.load(storage).map_err(Into::into)
-    }
-
-    pub fn setup_dex(storage: &mut dyn Storage, params: ConnectionParams) -> ContractResult<()> {
-        Self::STORAGE
-            .update(storage, |mut c| {
-                if c.dex.is_none() {
-                    c.dex = Some(params);
-                    Ok(c)
-                } else {
-                    Err(ContractError::DEXConnectivityAlreadySetup {})
-                }
-            })
-            .map(|_| ())
     }
 
     pub fn update(

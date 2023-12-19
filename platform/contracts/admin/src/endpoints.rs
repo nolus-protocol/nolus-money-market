@@ -7,7 +7,7 @@ use sdk::{
         Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use crate::{
     contracts::Protocol,
@@ -22,7 +22,7 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -48,28 +48,32 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(
-    mut deps: DepsMut<'_>,
-    _env: Env,
+    deps: DepsMut<'_>,
+    env: Env,
     MigrateMsg {
-        protocol_name,
-        network_name,
-        ref dex_admin,
+        migrate_contracts:
+            MigrateContracts {
+                release,
+                migration_spec,
+                post_migration_execute,
+            },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(deps.branch().storage)
-        .grant_to(dex_admin)
-        .map_err(From::from)
-        .and_then(|()| {
-            versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-                deps.storage,
-                CONTRACT_VERSION,
-                |storage: &mut dyn Storage| {
-                    state_contracts::migrate(storage, protocol_name, network_name)
-                },
-                Into::into,
-            )
-        })
-        .and_then(|(label, ())| response::response(label))
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
+        |reported_label| {
+            check_release_label(reported_label.clone(), release.clone())
+                .and_then(|()| {
+                    crate::contracts::migrate(
+                        deps.storage,
+                        env.contract.address,
+                        release,
+                        migration_spec,
+                        post_migration_execute,
+                    )
+                })
+                .and_then(|messages| response::response_with_messages(reported_label, messages))
+        },
+    )
 }
 
 #[entry_point]
@@ -97,7 +101,7 @@ pub fn execute(
 
             let mut batch: Batch = Batch::default();
 
-            batch.schedule_execute_on_success_reply(
+            batch.schedule_execute_reply_on_success(
                 WasmMsg::Instantiate2 {
                     admin: Some(env.contract.address.into_string()),
                     code_id,
@@ -129,90 +133,42 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         }
         SudoMsg::MigrateContracts(MigrateContracts {
             release,
-            admin_contract,
             migration_spec,
             post_migration_execute,
         }) => crate::contracts::migrate(
             deps.storage,
             env.contract.address,
             release,
-            admin_contract,
             migration_spec,
             post_migration_execute,
         )
         .map(response::response_only_messages),
+        SudoMsg::ClearStorage {} => {
+            ContractState::clear(deps.storage);
+
+            Ok(response::empty_response())
+        }
     }
-}
-
-fn register_protocol(
-    storage: &mut dyn Storage,
-    querier: QuerierWrapper<'_>,
-    name: String,
-    protocol: &Protocol,
-) -> ContractResult<CwResponse> {
-    protocol.validate(querier)?;
-
-    state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
 #[entry_point]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
     match ContractState::load(deps.storage)? {
-        ContractState::Migration { release } => migration_reply(msg, release),
+        ContractState::AwaitContractsMigrationReply { release } => migration_reply(msg, release),
         ContractState::Instantiate {
             expected_code_id,
             expected_address,
-        } => instantiate_reply(
-            deps.api,
-            deps.querier,
-            msg,
-            expected_code_id,
-            expected_address,
-        ),
-    }
-}
+        } => {
+            ContractState::clear(deps.storage);
 
-fn migration_reply(msg: Reply, expected_release: String) -> ContractResult<CwResponse> {
-    let reported_release: String =
-        platform::reply::from_execute(msg)?.ok_or(ContractError::NoMigrationResponseData {})?;
-
-    ensure_eq!(
-        reported_release,
-        expected_release,
-        ContractError::WrongRelease {
-            reported: reported_release,
-            expected: expected_release
+            instantiate_reply(
+                deps.api,
+                deps.querier,
+                msg,
+                expected_code_id,
+                expected_address,
+            )
         }
-    );
-
-    Ok(response::empty_response())
-}
-
-fn instantiate_reply(
-    api: &dyn Api,
-    querier: QuerierWrapper<'_>,
-    msg: Reply,
-    expected_code_id: CodeId,
-    expected_addr: Addr,
-) -> ContractResult<CwResponse> {
-    let instantiated_addr = platform::reply::from_instantiate2_addr_only(api, msg)?;
-
-    if instantiated_addr != expected_addr {
-        return Err(ContractError::DifferentInstantiatedAddress {
-            reported: instantiated_addr,
-            expected: expected_addr,
-        });
-    }
-
-    let reported_code_id = querier.query_wasm_contract_info(instantiated_addr)?.code_id;
-
-    if reported_code_id == expected_code_id {
-        Ok(response::empty_response())
-    } else {
-        Err(ContractError::DifferentInstantiatedCodeId {
-            reported: reported_code_id,
-            expected: expected_code_id,
-        })
     }
 }
 
@@ -246,4 +202,66 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                 to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
             }),
     }
+}
+
+fn instantiate_reply(
+    api: &dyn Api,
+    querier: QuerierWrapper<'_>,
+    msg: Reply,
+    expected_code_id: CodeId,
+    expected_addr: Addr,
+) -> ContractResult<CwResponse> {
+    let instantiated_addr = platform::reply::from_instantiate2_addr_only(api, msg)?;
+
+    if instantiated_addr != expected_addr {
+        return Err(ContractError::DifferentInstantiatedAddress {
+            reported: instantiated_addr,
+            expected: expected_addr,
+        });
+    }
+
+    let reported_code_id = querier.query_wasm_contract_info(instantiated_addr)?.code_id;
+
+    if reported_code_id == expected_code_id {
+        Ok(response::empty_response())
+    } else {
+        Err(ContractError::DifferentInstantiatedCodeId {
+            reported: reported_code_id,
+            expected: expected_code_id,
+        })
+    }
+}
+
+fn register_protocol(
+    storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
+    name: String,
+    protocol: &Protocol,
+) -> ContractResult<CwResponse> {
+    protocol.validate(querier)?;
+
+    state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
+}
+
+fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
+    platform::reply::from_execute(msg)?
+        .ok_or(ContractError::NoMigrationResponseData {})
+        .and_then(|reported_release| check_release_label(reported_release, expected_release))
+        .map(|()| response::empty_response())
+}
+
+fn check_release_label(
+    reported_release: ReleaseLabel,
+    expected_release: ReleaseLabel,
+) -> Result<(), ContractError> {
+    ensure_eq!(
+        reported_release,
+        expected_release,
+        ContractError::WrongRelease {
+            reported: reported_release.into(),
+            expected: expected_release.into()
+        }
+    );
+
+    Ok(())
 }

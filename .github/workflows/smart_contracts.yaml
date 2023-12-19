@@ -16,12 +16,28 @@ on:
       - "README.md"
 
 jobs:
+  check_deps_versions:
+    runs-on: "ubuntu-latest"
+    if: "github.event_name == 'tag'"
+    strategy:
+      fail-fast: true
+      matrix:
+        working_directory: ["platform", "protocol", "tests", "tools"]
+    steps:
+      - uses: "actions/checkout@v4.1.1"
+      - shell: "sh"
+        run: "cargo +stable update --locked"
+        working-directory: "${{ matrix.working_directory }}"
   perform_checks:
+    if: "github.event_name == 'tag' || always()"
+    needs:
+      - "check_deps_versions"
     uses: "./.github/workflows/checks_general.yaml"
   build_optimized:
     uses: "./.github/workflows/build_optimized.yaml"
     if: "github.ref_type == 'tag'"
     needs:
+      - "check_deps_versions"
       - "perform_checks"
   draft_release:
     runs-on: ubuntu-latest

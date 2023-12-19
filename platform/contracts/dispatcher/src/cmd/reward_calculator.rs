@@ -61,11 +61,7 @@ impl RewardCalculator {
         Oracles::Item: AsRef<Oracle>,
         Oracles::IntoIter: 'o,
     {
-        rewards::calculate(
-            self.apr(),
-            period,
-            self.tvls.into_iter().zip(oracles.into_iter()),
-        )
+        rewards::calculate(self.apr(), period, self.tvls.into_iter().zip(oracles))
     }
 }
 

@@ -1,22 +1,31 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::StdError;
+use sdk::{
+    cosmwasm_std::StdError,
+    schemars::{self, JsonSchema},
+};
 
 use super::{Version, VersionSegment};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct ReleaseLabel(&'static str);
+pub struct ReleaseLabel(String);
 
-const RELEASE_LABEL: ReleaseLabel = ReleaseLabel(env!(
+impl From<ReleaseLabel> for String {
+    fn from(value: ReleaseLabel) -> Self {
+        value.0
+    }
+}
+
+const RELEASE_LABEL: &str = env!(
     "RELEASE_VERSION",
     "No release label provided as an environment variable! Please set \"RELEASE_VERSION\" environment variable!",
-));
-const RELEASE_LABEL_DEV: ReleaseLabel = ReleaseLabel("dev-release");
+);
+const RELEASE_LABEL_DEV: &str = "dev-release";
 
 pub fn label() -> ReleaseLabel {
-    self::RELEASE_LABEL
+    ReleaseLabel(self::RELEASE_LABEL.into())
 }
 
 pub fn allow_software_update(current: &Version, new: &Version) -> Result<(), StdError> {

@@ -89,11 +89,11 @@ impl Instantiator {
                 position_spec: PositionSpecDTO::new(
                     Liability::new(
                         config.liability_init_percent,
-                        config.liability_delta_to_healthy_percent,
-                        config.liability_delta_to_max_percent,
-                        config.liability_minus_delta_to_first_liq_warn,
-                        config.liability_minus_delta_to_second_liq_warn,
-                        config.liability_minus_delta_to_third_liq_warn,
+                        config.liability_healthy_percent,
+                        config.liability_first_liq_warn,
+                        config.liability_second_liq_warn,
+                        config.liability_third_liq_warn,
+                        config.liability_max_percent,
                         config.liability_recalc_time,
                     ),
                     super::lpn_coin(1478),
@@ -141,11 +141,11 @@ pub(crate) struct InstantiatorConfig {
     pub customer: Addr,
     // Liability
     pub liability_init_percent: Percent,
-    pub liability_delta_to_healthy_percent: Percent,
-    pub liability_delta_to_max_percent: Percent,
-    pub liability_minus_delta_to_first_liq_warn: Percent,
-    pub liability_minus_delta_to_second_liq_warn: Percent,
-    pub liability_minus_delta_to_third_liq_warn: Percent,
+    pub liability_healthy_percent: Percent,
+    pub liability_first_liq_warn: Percent,
+    pub liability_second_liq_warn: Percent,
+    pub liability_third_liq_warn: Percent,
+    pub liability_max_percent: Percent,
     pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
@@ -159,11 +159,11 @@ impl Default for InstantiatorConfig {
         Self {
             customer: Addr::unchecked(USER),
             liability_init_percent: Percent::from_percent(65),
-            liability_delta_to_healthy_percent: Percent::from_percent(5),
-            liability_delta_to_max_percent: Percent::from_percent(10),
-            liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
-            liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
-            liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
+            liability_healthy_percent: Percent::from_percent(70),
+            liability_first_liq_warn: Percent::from_percent(73),
+            liability_second_liq_warn: Percent::from_percent(75),
+            liability_third_liq_warn: Percent::from_percent(78),
+            liability_max_percent: Percent::from_percent(80),
             liability_recalc_time: Duration::from_days(20),
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%

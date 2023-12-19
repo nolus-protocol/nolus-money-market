@@ -40,7 +40,7 @@ impl Lpp for DummyLpp {
 
     fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
         let mut msgs = Batch::default();
-        msgs.schedule_execute_wasm_no_reply(&Addr::unchecked("Dummy_Lpp"), "message", Some(reward))
+        msgs.schedule_execute_wasm_no_reply(Addr::unchecked("Dummy_Lpp"), "message", Some(reward))
             .unwrap();
         let events = Emitter::of_type("eventX").emit_coin("reward", reward);
         Ok(MessageResponse::messages_with_events(msgs, events))

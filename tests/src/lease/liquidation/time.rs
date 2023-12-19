@@ -25,7 +25,8 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    }: StateResponse = state_query(&test_case, lease_addr.as_ref()) else {
+    }: StateResponse = state_query(&test_case, lease_addr.as_ref())
+    else {
         unreachable!()
     };
     let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();

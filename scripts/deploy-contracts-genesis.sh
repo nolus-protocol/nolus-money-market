@@ -6,11 +6,15 @@ add_wasm_messages() {
   local -r genesis_home_dir="$1"
   local -r wasm_code_path="$2"
   local -r treasury_init_tokens="$3"
-  local -r protocol_currency="$4"
-  local -r contracts_info_file="$5"
-  local -r dex_admin="$6"
-  local -r protocol_identifier="$7"
-  local -r swap_tree="$8"
+  local -r contracts_info_file="$4"
+  local -r dex_admin="$5"
+  local -r network="$6"
+  local -r protocol="$7"
+  local -r dex_connection="$8"
+  local -r dex_channel_local="$9"
+  local -r dex_channel_remote="${10}"
+  local -r protocol_currency="${11}"
+  local -r swap_tree="${12}"
 
   local -r LEASE_CODE_ID=2
   local -r TREASURY_ADDRESS=$(treasury_instance_addr)
@@ -55,19 +59,19 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$profit_init_msg"
   _export_to_file "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"1000","ticker":"'"$protocol_currency"'"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000}}'
+  local -r leaser_init_msg='{"lease_code_id":"'"$LEASE_CODE_ID"'","lease_interest_rate_margin":30,"lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"15000","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"1000","ticker":"'"$protocol_currency"'"}},"lpp_ust_addr":"'"$LPP_ADDRESS"'","time_alarms":"'"$TIMEALARMS_ADDRESS"'","market_price_oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'","lease_interest_payment":{"due_period":5184000000000000,"grace_period":864000000000000},"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$leaser_init_msg"
   _export_to_file "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
-  local -r dispatcher_init_msg='{"cadence_hours":12,"dex":{"lpp":"'"$LPP_ADDRESS"'","oracle":"'"$ORACLE_ADDRESS"'"},"treasury":"'"$TREASURY_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","tvl_to_apr":{"bars":[{"tvl":0,"apr":150},{"tvl":500,"apr":140},{"tvl":1000,"apr":130},{"tvl":2000,"apr":120},{"tvl":3000,"apr":110},{"tvl":4000,"apr":100},{"tvl":5000,"apr":90},{"tvl":7500,"apr":80},{"tvl":10000,"apr":70},{"tvl":15000,"apr":60},{"tvl":20000,"apr":50},{"tvl":25000,"apr":40},{"tvl":30000,"apr":30},{"tvl":40000,"apr":20}]}}'
+  local -r dispatcher_init_msg='{"cadence_hours":12,"protocols_registry":"'"$ADMIN_CONTRACT_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","treasury":"'"$TREASURY_ADDRESS"'","tvl_to_apr":{"bars":[{"tvl":0,"apr":150},{"tvl":500,"apr":140},{"tvl":1000,"apr":130},{"tvl":2000,"apr":120},{"tvl":3000,"apr":110},{"tvl":4000,"apr":100},{"tvl":5000,"apr":90},{"tvl":7500,"apr":80},{"tvl":10000,"apr":70},{"tvl":15000,"apr":60},{"tvl":20000,"apr":50},{"tvl":25000,"apr":40},{"tvl":30000,"apr":30},{"tvl":40000,"apr":20}]}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" \
     "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$dispatcher_init_msg"
   _export_to_file "rewards_dispatcher" "$REWARDS_DISPATCHER_ADDRESS" \
     "$contracts_info_file"
 
-  local -r admin_contract_init_msg='{"dex_admin":"'"$dex_admin"'","contracts":{"platform":{"dispatcher":"'"$REWARDS_DISPATCHER_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","treasury":"'"$TREASURY_ADDRESS"'"},"protocol":{"'"$protocol_identifier"'":{"leaser":"'"$LEASER_ADDRESS"'","lpp":"'"$LPP_ADDRESS"'","oracle":"'"$ORACLE_ADDRESS"'","profit":"'"$PROFIT_ADDRESS"'"}}}}'
+  local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"dispatcher":"'"${REWARDS_DISPATCHER_ADDRESS}"'","timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{"'"${protocol}"'":{"network":"'"${network}"'","contracts":{"leaser":"'"${LEASER_ADDRESS}"'","lpp":"'"${LPP_ADDRESS}"'","oracle":"'"${ORACLE_ADDRESS}"'","profit":"'"${PROFIT_ADDRESS}"'"}}}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
     "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$admin_contract_init_msg"

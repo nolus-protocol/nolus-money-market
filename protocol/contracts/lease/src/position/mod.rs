@@ -1,5 +1,5 @@
 use currency::Currency;
-use finance::{coin::Coin, liability::Liability, price::Price};
+use finance::{coin::Coin, price::Price};
 
 use crate::{
     api::LeaseCoin,
@@ -45,13 +45,6 @@ where
 
     pub fn amount(&self) -> Coin<Asset> {
         self.amount
-    }
-
-    // `self.liability` is semi-hidden, semi-public - it's exposed just for computing the recalculation period
-    // let's return `recalc_liability_at` as a data of `Status`
-    // for more insights refer to the TODO next to `Spec::check_liability`
-    pub fn liability(&self) -> Liability {
-        self.spec.liability()
     }
 
     pub fn close(&mut self, asset: Coin<Asset>) {

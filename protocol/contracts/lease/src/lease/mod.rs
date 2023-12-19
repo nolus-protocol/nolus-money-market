@@ -170,6 +170,9 @@ mod tests {
     const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     const DUE_PERIOD: Duration = Duration::from_days(100);
     const GRACE_PERIOD: Duration = Duration::from_days(10);
+    pub(super) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
+    pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
+    pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
     pub(super) const RECALC_TIME: Duration = Duration::from_hours(24);
     pub(super) type TestLpn = StableC1;
     pub(super) type TestCurrency = PaymentC7;
@@ -304,11 +307,11 @@ mod tests {
         let loan = Loan::new(LEASE_START, loan, MARGIN_INTEREST_RATE, interest_spec);
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            FIRST_LIQ_WARN,
+            SECOND_LIQ_WARN,
+            THIRD_LIQ_WARN,
+            Percent::from_percent(80),
             RECALC_TIME,
         );
         let position_spec = PositionSpec::<TestLpn>::new(

@@ -51,25 +51,20 @@ impl Liability {
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
         initial: Percent,
-        delta_to_healthy: Percent,
-        delta_to_max: Percent,
-        minus_delta_of_first_liq_warn: Percent,
-        minus_delta_of_second_liq_warn: Percent,
-        minus_delta_of_third_liq_warn: Percent,
+        healthy: Percent,
+        first_liq_warn: Percent,
+        second_liq_warn: Percent,
+        third_liq_warn: Percent,
+        max: Percent,
         recalc_time: Duration,
     ) -> Self {
-        let healthy = initial + delta_to_healthy;
-        let max = healthy + delta_to_max;
-        let third_liquidity_warning = max - minus_delta_of_third_liq_warn;
-        let second_liquidity_warning = third_liquidity_warning - minus_delta_of_second_liq_warn;
-        let first_liquidity_warning = second_liquidity_warning - minus_delta_of_first_liq_warn;
         let obj = Self {
             initial,
             healthy,
+            first_liq_warn,
+            second_liq_warn,
+            third_liq_warn,
             max,
-            first_liq_warn: first_liquidity_warning,
-            second_liq_warn: second_liquidity_warning,
-            third_liq_warn: third_liquidity_warning,
             recalc_time,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
@@ -78,14 +73,6 @@ impl Liability {
 
     pub const fn healthy_percent(&self) -> Percent {
         self.healthy
-    }
-
-    pub const fn first_liq_warn(&self) -> Percent {
-        self.first_liq_warn
-    }
-
-    pub const fn second_liq_warn(&self) -> Percent {
-        self.second_liq_warn
     }
 
     pub const fn third_liq_warn(&self) -> Percent {
@@ -144,9 +131,8 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy_percent());
-        let extra_liability_lpn =
-            total_due - total_due.min(self.healthy_percent().of(lease_amount));
+        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
+        let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         Fraction::<Units>::of(&multiplier, extra_liability_lpn)
     }
 
@@ -288,36 +274,40 @@ mod test {
 
     #[test]
     fn test_zone_of() {
+        let first_liquidation_warn = Percent::from_permille(792);
+        let second_liquidation_warn = Percent::from_permille(815);
+        let third_liquidation_warn = Percent::from_permille(826);
+        let max = Percent::from_percent(85);
         let l = Liability {
             initial: Percent::from_percent(60),
             healthy: Percent::from_percent(65),
-            max: Percent::from_percent(85),
-            first_liq_warn: Percent::from_permille(792),
-            second_liq_warn: Percent::from_permille(815),
-            third_liq_warn: Percent::from_permille(826),
+            first_liq_warn: first_liquidation_warn,
+            second_liq_warn: second_liquidation_warn,
+            third_liq_warn: third_liquidation_warn,
+            max,
             recalc_time: Duration::from_secs(20000),
         };
-        assert_eq!(zone_of(&l, 0), Zone::no_warnings(l.first_liq_warn()));
-        assert_eq!(zone_of(&l, 660), Zone::no_warnings(l.first_liq_warn()));
-        assert_eq!(zone_of(&l, 791), Zone::no_warnings(l.first_liq_warn()));
+        assert_eq!(zone_of(&l, 0), Zone::no_warnings(first_liquidation_warn));
+        assert_eq!(zone_of(&l, 660), Zone::no_warnings(first_liquidation_warn));
+        assert_eq!(zone_of(&l, 791), Zone::no_warnings(first_liquidation_warn));
         assert_eq!(
             zone_of(&l, 792),
-            Zone::first(l.first_liq_warn(), l.second_liq_warn())
+            Zone::first(first_liquidation_warn, second_liquidation_warn)
         );
         assert_eq!(
             zone_of(&l, 814),
-            Zone::first(l.first_liq_warn(), l.second_liq_warn())
+            Zone::first(first_liquidation_warn, second_liquidation_warn)
         );
         assert_eq!(
             zone_of(&l, 815),
-            Zone::second(l.second_liq_warn(), l.third_liq_warn())
+            Zone::second(second_liquidation_warn, third_liquidation_warn)
         );
         assert_eq!(
             zone_of(&l, 825),
-            Zone::second(l.second_liq_warn(), l.third_liq_warn())
+            Zone::second(second_liquidation_warn, third_liquidation_warn)
         );
-        assert_eq!(zone_of(&l, 826), Zone::third(l.third_liq_warn(), l.max()));
-        assert_eq!(zone_of(&l, 849), Zone::third(l.third_liq_warn(), l.max()));
+        assert_eq!(zone_of(&l, 826), Zone::third(third_liquidation_warn, max));
+        assert_eq!(zone_of(&l, 849), Zone::third(third_liquidation_warn, max));
     }
 
     #[test]
@@ -385,11 +375,7 @@ mod test {
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
-                liability
-                    .healthy_percent()
-                    .of(lease - exp)
-                    .abs_diff(due - exp)
-                    <= 1,
+                liability.healthy.of(lease - exp).abs_diff(due - exp) <= 1,
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }

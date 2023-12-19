@@ -38,7 +38,9 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    platform::contract::validate_addr(deps.querier, &msg.protocols_registry)?;
+    // cannot validate the address since the Admin plays the role of the registry
+    // and it is not yet instantiated
+    deps.api.addr_validate(msg.protocols_registry.as_str())?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(deps.querier, &msg.treasury)?;
 
@@ -136,8 +138,8 @@ fn query_reward(
 
     protocols(config.protocols_registry, querier).and_then(|protocols| {
         let lpps = protocols
-            .iter()
-            .map(|protocol| lpp_platform::new_stub(&protocol.contracts.lpp, querier, env));
+            .into_iter()
+            .map(|protocol| lpp_platform::new_stub(protocol.contracts.lpp, querier, env));
 
         RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
     })
@@ -158,9 +160,9 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
     DispatchLog::update(deps.storage, env.block.time)?;
 
     protocols(config.protocols_registry, deps.querier).and_then(|protocols| {
-        let lpps = protocols
-            .iter()
-            .map(|protocol| lpp_platform::new_stub(&protocol.contracts.lpp, deps.querier, env));
+        let lpps = protocols.iter().map(|protocol| {
+            lpp_platform::new_stub(protocol.contracts.lpp.clone(), deps.querier, env)
+        });
 
         let oracles = protocols.iter().map(|protocol| {
             oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
@@ -174,7 +176,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
             &config.tvl_to_apr,
             lpps,
             oracles,
-            &config.treasury,
+            config.treasury,
         )
         .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
     })

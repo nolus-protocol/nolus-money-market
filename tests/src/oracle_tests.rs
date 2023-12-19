@@ -78,7 +78,9 @@ fn test_lease_serde() {
     use oracle::msg::ExecuteAlarmMsg::PriceAlarm;
     use sdk::cosmwasm_std;
 
-    let LeasePriceAlarm {} = cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap() else {
+    let LeasePriceAlarm {} =
+        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap()
+    else {
         unreachable!()
     };
 
@@ -552,8 +554,8 @@ fn schedule_alarm(
             let mut batch: Batch = Batch::default();
 
             batch.schedule_execute_wasm_no_reply::<_, BaseC>(
-                &ORACLE_ADDR.load(storage).unwrap(),
-                oracle::msg::ExecuteMsg::AddPriceAlarm {
+                ORACLE_ADDR.load(storage).unwrap(),
+                &oracle::msg::ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
                         price::total_of::<BaseC>(base.into()).is::<StableC1>(quote.into()),
                         None,

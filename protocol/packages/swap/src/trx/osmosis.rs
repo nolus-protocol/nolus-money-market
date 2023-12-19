@@ -74,7 +74,7 @@ impl ExactAmountIn for Impl {
             .next()
             .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
 
-        let amount = trx::decode_msg_response::<_, ResponseMsg>(resp, RequestMsg::TYPE_URL)?
+        let amount = trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)?
             .token_out_amount;
 
         Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
@@ -88,7 +88,7 @@ impl ExactAmountIn for Impl {
             token_out_amount: amount_out.to_string(),
         };
         Any {
-            type_url: RequestMsg::TYPE_URL.into(),
+            type_url: ResponseMsg::TYPE_URL.into(),
             value: resp.encode_to_vec(),
         }
     }

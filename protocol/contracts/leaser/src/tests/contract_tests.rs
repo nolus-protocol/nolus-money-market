@@ -12,7 +12,6 @@ use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, P
 use platform::contract::CodeId;
 
 use sdk::{
-    cosmwasm_ext::Response,
     cosmwasm_std::{
         coins, from_json,
         testing::{mock_env, mock_info},
@@ -25,9 +24,7 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query, sudo},
-    error::ContractError,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg, SudoMsg},
-    result::ContractResult,
     state::config::Config,
 };
 
@@ -50,11 +47,11 @@ fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),
-                Percent::from_percent(5),
-                Percent::from_percent(10),
-                Percent::from_percent(2),
-                Percent::from_percent(3),
-                Percent::from_percent(2),
+                Percent::from_percent(70),
+                Percent::from_percent(73),
+                Percent::from_percent(75),
+                Percent::from_percent(78),
+                Percent::from_percent(80),
                 Duration::from_hours(1),
             ),
             lpn_coin(1000),
@@ -67,6 +64,7 @@ fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::
         time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
         market_price_oracle: Addr::unchecked(ORACLE_ADDR),
         profit: Addr::unchecked(PROFIT_ADDR),
+        dex: dex_params(),
     }
 }
 
@@ -102,15 +100,6 @@ fn dex_params() -> ConnectionParams {
     }
 }
 
-fn setup_dex_ok(deps: DepsMut<'_>) {
-    let resp = setup_dex(deps).expect("dex update passed");
-    assert!(resp.messages.is_empty());
-}
-
-fn setup_dex(deps: DepsMut<'_>) -> ContractResult<Response> {
-    sudo(deps, mock_env(), SudoMsg::SetupDex(dex_params()))
-}
-
 #[test]
 fn proper_initialization() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
@@ -135,11 +124,11 @@ fn test_update_config() {
 
     let expected_liability = Liability::new(
         Percent::from_percent(55),
-        Percent::from_percent(5),
-        Percent::from_percent(5),
-        Percent::from_percent(1),
-        Percent::from_percent(2),
-        Percent::from_percent(1),
+        Percent::from_percent(60),
+        Percent::from_percent(61),
+        Percent::from_percent(62),
+        Percent::from_percent(64),
+        Percent::from_percent(65),
         Duration::from_hours(12),
     );
     let expected_position_spec = PositionSpecDTO::new(
@@ -182,11 +171,11 @@ fn test_update_config_invalid_liability() {
 
     let liability = Liability::new(
         Percent::from_percent(55),
+        Percent::from_percent(110),
+        Percent::ZERO,
         Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
+        Percent::from_percent(110),
+        Percent::from_percent(165),
         Duration::from_secs(100),
     );
 
@@ -206,41 +195,10 @@ fn test_update_config_invalid_liability() {
     sudo(deps.as_mut(), mock_env(), msg).unwrap();
 }
 
-#[test]
-fn test_no_dex_setup() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
-
-    setup_test_case(deps.as_mut());
-
-    let config = query_config(deps.as_ref());
-    assert!(config.dex.is_none());
-
-    let msg = ExecuteMsg::OpenLease {
-        currency: DENOM.to_string(),
-        max_ltd: None,
-    };
-
-    let res = execute(deps.as_mut(), mock_env(), customer(), msg);
-    assert_eq!(res, Err(ContractError::NoDEXConnectivitySetup {}));
-}
-
-#[test]
-fn test_setup_dex_again() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
-
-    setup_test_case(deps.as_mut());
-
-    setup_dex_ok(deps.as_mut());
-
-    let res = setup_dex(deps.as_mut());
-    assert_eq!(res, Err(ContractError::DEXConnectivityAlreadySetup {}));
-}
-
 fn open_lease_with(max_ltd: Option<Percent>) {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     setup_test_case(deps.as_mut());
-    setup_dex_ok(deps.as_mut());
 
     let config = query_config(deps.as_ref());
 
@@ -254,8 +212,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
     let finalizer = admin.clone();
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let msg =
-        Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd, finalizer).unwrap();
+    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd, finalizer);
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(

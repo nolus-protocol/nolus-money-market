@@ -71,7 +71,8 @@ fn partial_repay_after_time() {
         previous_interest_due,
         current_margin_due,
         ..
-    } = query_result else {
+    } = query_result
+    else {
         unreachable!()
     };
 

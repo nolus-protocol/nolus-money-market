@@ -5,8 +5,11 @@ set -euxo pipefail
 #
 # ./scripts/deploy-contracts-live.sh deploy_contracts "http://localhost:26612/" "nolus-local-v0.4.1-21-1700055474" \
 # "$HOME/.nolus" "wasmAdmin" "storeCodePrivilegedUser" "nolus1gurgpv8savnfw66lckwzn4zk7fp394lpe667dhu7aw48u40lj6jsqxf8nd" \
-# "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "osmosis" "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
-#  "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl" '{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}'
+# "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "OSMOSIS" "OSMOSIS" \
+# "connection-0" "channel-0" "channel-2048" \
+# "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
+# "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl"  \
+# '{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}'
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR"/common/cmd.sh
@@ -93,11 +96,15 @@ deploy_contracts() {
   local -r store_code_privileged_wallet_key="$5"
   local -r admin_contract_address="$6"
   local -r wasm_path="$7"
-  local -r dex="$8"
-  local -r protocol_currency="$9"
-  local -r treasury_contract_address="${10}"
-  local -r timealarms_contract_address="${11}"
-  local swap_tree="${12}"
+  local -r network="$8"
+  local -r dex="$9"
+  local -r dex_connection="${10}"
+  local -r dex_channel_local="${11}"
+  local -r dex_channel_remote="${12}"
+  local -r protocol_currency="${13}"
+  local -r treasury_contract_address="${14}"
+  local -r timealarms_contract_address="${15}"
+  local swap_tree="${16}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
   local -r protocol="$dex-$protocol_currency"
@@ -128,14 +135,14 @@ deploy_contracts() {
   local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address" )
 
   # register the protocol
-  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$protocol"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}'
+  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$network-$dex-$protocol_currency"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
   run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$add_protocol_set_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes
 }
 
 if [ "$#" -ne 0 ]; then
   case "$1" in
     deploy_contracts)
-      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}"
+      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}"
       ;;
     *)
       echo "Unknown function: $1"

@@ -101,7 +101,7 @@ impl ExactAmountIn for Impl {
             .next()
             .ok_or_else(|| Error::MissingResponse("router swap".into()))
             .and_then(|resp| {
-                trx::decode_msg_response::<_, ResponseMsg>(resp, RequestMsg::TYPE_URL)
+                trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)
                     .map_err(Into::into)
             })
             .and_then(|cosmwasm_resp| {
@@ -119,7 +119,7 @@ impl ExactAmountIn for Impl {
         })
         .expect("test result serialization works");
         Any {
-            type_url: RequestMsg::TYPE_URL.into(),
+            type_url: ResponseMsg::TYPE_URL.into(),
             value: (ResponseMsg { data: swap_resp }).encode_to_vec(),
         }
     }
@@ -140,7 +140,7 @@ fn to_operations<'a>(
     swap_path
         .iter()
         .map(|swap_target| &swap_target.target)
-        .map(|currency_denom| to_dex_symbol(currency_denom))
+        .map(to_dex_symbol)
         .scan(scanner, |scanner, may_next_denom| {
             Some(may_next_denom.map(|next_denom| {
                 let op = SwapOperation::AstroSwap {
@@ -170,9 +170,12 @@ where
         })
 }
 
-fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
+fn to_dex_symbol<Symbol>(ticker: &Symbol) -> Result<&SymbolSlice>
+where
+    Symbol: AsRef<SymbolSlice> + ?Sized,
+{
     Tickers
-        .visit_any::<SwapGroup, _>(ticker, DexSymbols {})
+        .visit_any::<SwapGroup, _>(ticker.as_ref(), DexSymbols {})
         .map_err(Error::from)
 }
 

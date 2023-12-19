@@ -5,13 +5,14 @@ use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::Item,
 };
+use versioning::ReleaseLabel;
 
 const STORE: Item<'_, Contract> = Item::new("contract_state_machine");
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Contract {
-    Migration {
-        release: String,
+    AwaitContractsMigrationReply {
+        release: ReleaseLabel,
     },
     Instantiate {
         expected_code_id: CodeId,
@@ -24,7 +25,11 @@ impl Contract {
         STORE.save(storage, self)
     }
 
-    pub(crate) fn load(storage: &mut dyn Storage) -> StdResult<Self> {
+    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         STORE.load(storage)
+    }
+
+    pub(crate) fn clear(storage: &mut dyn Storage) {
+        STORE.remove(storage)
     }
 }
