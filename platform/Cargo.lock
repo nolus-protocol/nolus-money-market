@@ -948,7 +948,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "access-control",
  "admin_contract",
