@@ -33,7 +33,6 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
 pub(super) struct PositionSpecDTO {
     liability: Liability,
     min_asset: LpnCoin,
-    #[serde(alias = "min_sell_asset")]
     min_transaction: LpnCoin,
 }
 
