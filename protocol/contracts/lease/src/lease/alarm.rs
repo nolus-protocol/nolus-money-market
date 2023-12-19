@@ -123,8 +123,8 @@ mod tests {
         lease::{
             self,
             tests::{
-                loan, open_lease, open_lease_with_payment_spec, TestLease, TestLpn, LEASE_START,
-                RECALC_TIME,
+                loan, open_lease, open_lease_with_payment_spec, TestLease, TestLpn, FIRST_LIQ_WARN,
+                LEASE_START, RECALC_TIME, SECOND_LIQ_WARN, THIRD_LIQ_WARN,
             },
         },
     };
@@ -137,7 +137,7 @@ mod tests {
         let asset = Coin::from(10);
         let lease = lease::tests::open_lease(asset, loan());
         let recalc_time = LEASE_START + RECALC_TIME;
-        let liability_alarm_on = lease.position.liability().first_liq_warn();
+        let liability_alarm_on = FIRST_LIQ_WARN;
         let projected_liability = projected_liability(&lease, recalc_time);
         let alarm_msgs = lease
             .reschedule(
@@ -180,7 +180,7 @@ mod tests {
         let lease = open_lease(lease_amount, loan());
         let now = lease.loan.grace_period_end() - RECALC_TIME - RECALC_TIME;
         let recalc_time = now + RECALC_TIME;
-        let up_to = lease.position.liability().first_liq_warn();
+        let up_to = FIRST_LIQ_WARN;
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(
@@ -240,7 +240,7 @@ mod tests {
         let now = lease.loan.grace_period_end() + due_period + due_period + Duration::from_nanos(1);
         let recalc_time = now + RECALC_TIME;
         let exp_alarm_at = lease.loan.grace_period_end() + due_period + due_period + due_period;
-        let up_to = lease.position.liability().first_liq_warn();
+        let up_to = FIRST_LIQ_WARN;
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(
@@ -295,10 +295,7 @@ mod tests {
         let recalc_at = reschedule_at + RECALC_TIME;
         let projected_liability = projected_liability(&lease, recalc_at);
 
-        let zone = Zone::second(
-            lease.position.liability().second_liq_warn(),
-            lease.position.liability().third_liq_warn(),
-        );
+        let zone = Zone::second(SECOND_LIQ_WARN, THIRD_LIQ_WARN);
         let alarm_msgs = lease
             .reschedule(
                 &reschedule_at,
@@ -365,7 +362,7 @@ mod tests {
         let now = lease.loan.grace_period_end() - offset_from_this;
         let recalc_time = now + RECALC_TIME;
         let exp_alarm_at = lease.loan.grace_period_end() + exp_alarm_past_this;
-        let up_to = lease.position.liability().first_liq_warn();
+        let up_to = FIRST_LIQ_WARN;
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
             .reschedule(

@@ -36,10 +36,6 @@ where
         obj
     }
 
-    pub fn liability(&self) -> Liability {
-        self.liability
-    }
-
     /// Calculate the borrow amount.
     /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
     /// or the borrow amount is less than the minimum transaction amount.
@@ -88,11 +84,12 @@ where
         let overdue = price::total(overdue, asset_in_lpns.inv());
         debug_assert!(overdue <= total_due);
 
-        let ltv = Percent::from_ratio(total_due, asset);
         self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
             .map(Status::Liquidation)
             .unwrap_or_else(|| {
+                let ltv = Percent::from_ratio(total_due, asset);
+                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
                 self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
             })
     }
@@ -350,11 +347,11 @@ mod test_calc_borrow {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         Spec::new(liability, min_asset.into(), min_transaction.into())
@@ -408,48 +405,42 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(1.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(1.into(), 0.into(), price(5, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(50.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(25.into(), 0.into(), price(2, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(51.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(17.into(), 0.into(), price(3, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -463,34 +454,28 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(50.into(), 14.into(), price(1, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(25.into(), 4.into(), price(2, 3)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(51.into(), 14.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(17.into(), 4.into(), price(3, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -498,39 +483,34 @@ mod test_check_liability {
 
     #[test]
     fn warnings_first() {
-        let position = position_with_first(Percent::from_permille(712), 1000, 10, 1);
+        let warn_ltv = Percent::from_permille(712);
+        let position = position_with_first(warn_ltv, 1000, 10, 1);
 
         assert_eq!(
             position.check_liability(711.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(237.into(), 0.into(), price(3, 1)),
             Status::No {
-                zone: Zone::no_warnings(position.spec.liability.first_liq_warn()),
+                zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(712.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(178.into(), 0.into(), price(4, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -545,40 +525,28 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(721.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(103.into(), 0.into(), price(7, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(722.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(361.into(), 0.into(), price(2, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -586,35 +554,27 @@ mod test_check_liability {
 
     #[test]
     fn warnings_first_min_transaction() {
-        let position = position_with_first(Percent::from_permille(712), 1000, 10, 3);
+        let warn_ltv = Percent::from_permille(712);
+        let position = position_with_first(warn_ltv, 1000, 10, 3);
 
         assert_eq!(
             position.check_liability(712.into(), 2.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(356.into(), 1.into(), price(2, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(721.into(), 2.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -630,45 +590,34 @@ mod test_check_liability {
 
     #[test]
     fn warnings_second() {
-        let position = position_with_second(Percent::from_permille(123), 1000, 10, 1);
+        let warn_ltv = Percent::from_permille(123);
+        let position = position_with_second(warn_ltv, 1000, 10, 1);
 
         assert_eq!(
             position.check_liability(122.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(15.into(), 0.into(), price(8, 1)),
             Status::No {
-                zone: Zone::first(
-                    position.spec.liability.first_liq_warn(),
-                    position.spec.liability.second_liq_warn()
-                ),
+                zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(123.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(82.into(), 0.into(), price(3, 2)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -679,30 +628,21 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(132.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(66.into(), 0.into(), price(2, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(133.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::third(
-                    position.spec.liability.third_liq_warn(),
-                    position.spec.liability.max()
-                ),
+                zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -710,25 +650,20 @@ mod test_check_liability {
 
     #[test]
     fn warnings_second_min_transaction() {
-        let position = position_with_second(Percent::from_permille(123), 1000, 10, 5);
+        let warn_ltv = Percent::from_permille(123);
+        let position = position_with_second(warn_ltv, 1000, 10, 5);
 
         assert_eq!(
             position.check_liability(128.into(), 4.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(32.into(), 1.into(), price(4, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
@@ -747,20 +682,14 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(380.into(), 0.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(190.into(), 0.into(), price(2, 1)),
             Status::No {
-                zone: Zone::second(
-                    position.spec.liability.second_liq_warn(),
-                    position.spec.liability.third_liq_warn()
-                ),
+                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
@@ -807,14 +736,14 @@ mod test_check_liability {
         assert_eq!(
             position.check_liability(380.into(), 1.into(), price(1, 1)),
             Status::No {
-                zone: Zone::second(position.spec.liability.second_liq_warn(), warn_third_ltv),
+                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
             position.check_liability(126.into(), 1.into(), price(3, 1)),
             Status::No {
-                zone: Zone::second(position.spec.liability.second_liq_warn(), warn_third_ltv),
+                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
@@ -1127,13 +1056,19 @@ mod test_check_liability {
         let initial = STEP;
         assert!(initial < max - STEP - STEP - STEP);
 
+        let healthy = initial + Percent::ZERO;
+        let max = healthy + max - initial;
+        let third_liquidity_warning = max - STEP;
+        let second_liquidity_warning = third_liquidity_warning - STEP;
+        let first_liquidity_warning = second_liquidity_warning - STEP;
+
         let liability = Liability::new(
             initial,
-            Percent::ZERO,
-            max - initial,
-            STEP,
-            STEP,
-            STEP,
+            healthy,
+            first_liquidity_warning,
+            second_liquidity_warning,
+            third_liquidity_warning,
+            max,
             RECALC_IN,
         );
         let spec = Spec::new(liability, min_asset.into(), min_transaction.into());
@@ -1186,11 +1121,11 @@ mod test_validate_payment {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         Spec::new(liability, min_asset.into(), min_transaction.into())
@@ -1300,11 +1235,11 @@ mod test_validate_close {
     {
         let liability = Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(5),
-            Percent::from_percent(10),
-            Percent::from_percent(2),
-            Percent::from_percent(3),
-            Percent::from_percent(2),
+            Percent::from_percent(70),
+            Percent::from_percent(73),
+            Percent::from_percent(75),
+            Percent::from_percent(78),
+            Percent::from_percent(80),
             Duration::from_hours(1),
         );
         let spec = Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into());

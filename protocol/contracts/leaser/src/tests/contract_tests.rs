@@ -47,11 +47,11 @@ fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),
-                Percent::from_percent(5),
-                Percent::from_percent(10),
-                Percent::from_percent(2),
-                Percent::from_percent(3),
-                Percent::from_percent(2),
+                Percent::from_percent(70),
+                Percent::from_percent(73),
+                Percent::from_percent(75),
+                Percent::from_percent(78),
+                Percent::from_percent(80),
                 Duration::from_hours(1),
             ),
             lpn_coin(1000),
@@ -124,11 +124,11 @@ fn test_update_config() {
 
     let expected_liability = Liability::new(
         Percent::from_percent(55),
-        Percent::from_percent(5),
-        Percent::from_percent(5),
-        Percent::from_percent(1),
-        Percent::from_percent(2),
-        Percent::from_percent(1),
+        Percent::from_percent(60),
+        Percent::from_percent(61),
+        Percent::from_percent(62),
+        Percent::from_percent(64),
+        Percent::from_percent(65),
         Duration::from_hours(12),
     );
     let expected_position_spec = PositionSpecDTO::new(
@@ -171,11 +171,11 @@ fn test_update_config_invalid_liability() {
 
     let liability = Liability::new(
         Percent::from_percent(55),
+        Percent::from_percent(110),
+        Percent::ZERO,
         Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
-        Percent::from_percent(55),
+        Percent::from_percent(110),
+        Percent::from_percent(165),
         Duration::from_secs(100),
     );
 
