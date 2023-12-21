@@ -14,7 +14,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         self,
-        opened::{OngoingTrx, RepayTrx},
+        query::opened::{OngoingTrx, RepayTrx},
         PaymentCoin, StateResponse,
     },
     contract::{

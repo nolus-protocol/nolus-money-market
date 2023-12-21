@@ -8,7 +8,6 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-pub(crate) use self::query::{opened, opening, paid};
 pub use self::{
     open::{
         ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
@@ -20,7 +19,7 @@ pub use self::{
 
 mod open;
 mod position;
-mod query;
+pub(crate) mod query;
 
 pub type PaymentCoin = CoinDTO<PaymentGroup>;
 pub type DownpaymentCoin = PaymentCoin;

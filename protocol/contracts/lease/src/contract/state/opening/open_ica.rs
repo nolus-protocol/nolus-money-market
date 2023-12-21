@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateResponse},
+    api::{self, query::opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateResponse},
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef},
     error::ContractResult,
 };

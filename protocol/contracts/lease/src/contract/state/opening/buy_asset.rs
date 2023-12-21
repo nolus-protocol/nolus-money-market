@@ -18,7 +18,8 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, NewLeaseForm, StateResponse,
+        self, query::opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, NewLeaseForm,
+        StateResponse,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},

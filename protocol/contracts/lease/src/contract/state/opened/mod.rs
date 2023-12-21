@@ -1,7 +1,7 @@
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{opened::OngoingTrx, StateResponse},
+    api::{query::opened::OngoingTrx, StateResponse},
     contract::{cmd::LeaseState, Lease},
     error::ContractResult,
 };

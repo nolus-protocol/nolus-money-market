@@ -18,7 +18,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, paid::ClosingTrx, StateResponse},
+    api::{self, query::paid::ClosingTrx, StateResponse},
     contract::{
         cmd::Close,
         state::{
