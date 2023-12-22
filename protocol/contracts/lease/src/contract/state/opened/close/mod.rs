@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::{
         query::opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin,
+        LeaseCoin, LeasePaymentCurrencies,
     },
     contract::{
         state::{
@@ -33,8 +33,12 @@ pub(crate) trait Closable {
 }
 
 type Task<RepayableT> = SellAsset<RepayableT>;
-type DexState<Repayable> =
-    dex::StateLocalOut<Task<Repayable>, ForwardToDexEntry, ForwardToDexEntryContinue>;
+type DexState<Repayable> = dex::StateLocalOut<
+    Task<Repayable>,
+    LeasePaymentCurrencies,
+    ForwardToDexEntry,
+    ForwardToDexEntryContinue,
+>;
 
 trait IntoRepayable
 where

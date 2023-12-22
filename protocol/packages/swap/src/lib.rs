@@ -1,6 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::PaymentGroup;
 use currency::SymbolOwned;
 use sdk::schemars::{self, JsonSchema};
 
@@ -10,7 +9,6 @@ pub mod error;
 pub mod trx;
 
 pub type PoolId = u64;
-pub type SwapGroup = PaymentGroup; //TODO revisit its necessity
 
 // TODO move SwapTarget to oracle/stub_swap
 #[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]

@@ -41,13 +41,15 @@ use crate::{InspectSpec, MigrateSpec};
 use super::{Contract, SwapState};
 
 #[derive(Serialize, Deserialize)]
-pub struct SwapExactIn<SwapTask, SEnum> {
+pub struct SwapExactIn<SwapTask, SEnum, SwapGroup> {
     spec: SwapTask,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
+    #[serde(skip)]
+    _swap_group: PhantomData<SwapGroup>,
 }
 
-impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     Self: Into<SEnum>,
 {
@@ -55,13 +57,15 @@ where
         Self {
             spec,
             _state_enum: PhantomData,
+            _swap_group: PhantomData,
         }
     }
 }
 
-impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
+    SwapGroup: Group,
 {
     pub(super) fn enter_state(
         &self,
@@ -70,8 +74,11 @@ where
     ) -> Result<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'a>(SwapTrx<'a>, &'a SymbolSlice);
-        impl<'a> CoinVisitor for SwapWorker<'a> {
+        struct SwapWorker<'a, SwapGroup>(SwapTrx<'a>, &'a SymbolSlice, PhantomData<SwapGroup>);
+        impl<'a, SwapGroup> CoinVisitor for SwapWorker<'a, SwapGroup>
+        where
+            SwapGroup: Group,
+        {
             type Result = IterNext;
             type Error = Error;
 
@@ -79,12 +86,12 @@ where
             where
                 G: Group,
             {
-                self.0.swap_exact_in(coin, self.1)?;
+                self.0.swap_exact_in::<_, SwapGroup>(coin, self.1)?;
                 Ok(IterNext::Continue)
             }
         }
 
-        let mut swapper = SwapWorker(swap_trx, self.spec.out_currency());
+        let mut swapper = SwapWorker(swap_trx, self.spec.out_currency(), PhantomData::<SwapGroup>);
         let mut filtered_swapper = CurrencyFilter::new(&mut swapper, self.spec.out_currency());
         let _res = self.spec.on_coins(&mut filtered_swapper)?;
 
@@ -139,16 +146,17 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Enterable for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> Enterable for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
+    SwapGroup: Group,
 {
     fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
     }
 }
 
-impl<SwapTask, SEnum> DexConnectable for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> DexConnectable for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
 {
@@ -157,16 +165,19 @@ where
     }
 }
 
-impl<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
+impl<SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_local::State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
+        super::out_local::State<SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
+        SwapGroup,
     >
 where
     SwapTask: SwapTaskT,
+    SwapGroup: Group,
     ForwardToInnerMsg: ForwardToInner,
 {
-    type Response = super::out_local::State<SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
+    type Response =
+        super::out_local::State<SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -188,16 +199,29 @@ where
     }
 }
 
-impl<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
+impl<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg, SwapGroup> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_remote::State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>,
+        super::out_remote::State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >,
+        SwapGroup,
     >
 where
     SwapTask: SwapTaskT,
+    SwapGroup: Group,
 {
-    type Response =
-        super::out_remote::State<OpenIca, SwapTask, ForwardToInnerMsg, ForwardToInnerContinueMsg>;
+    type Response = super::out_remote::State<
+        OpenIca,
+        SwapTask,
+        SwapGroup,
+        ForwardToInnerMsg,
+        ForwardToInnerContinueMsg,
+    >;
     type SwapResult = SwapTask::Result;
 
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
@@ -218,7 +242,7 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Contract for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> Contract for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: ContractInSwap<SwapState, <SwapTask as SwapTaskT>::StateResponse> + SwapTaskT,
 {
@@ -229,7 +253,7 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Display for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> Display for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
 {
@@ -238,7 +262,7 @@ where
     }
 }
 
-impl<SwapTask, SEnum> TimeAlarm for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> TimeAlarm for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
 {
@@ -248,7 +272,7 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SEnum, SwapGroup> SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     SwapTask: SwapTaskT,
 {
@@ -258,13 +282,13 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for SwapExactIn<SwapTask, SEnum>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapGroup> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for SwapExactIn<SwapTask, SEnum, SwapGroup>
 where
     Self: Sized,
-    SwapExactIn<SwapTaskNew, SEnumNew>: Into<SEnumNew>,
+    SwapExactIn<SwapTaskNew, SEnumNew, SwapGroup>: Into<SEnumNew>,
 {
-    type Out = SwapExactIn<SwapTaskNew, SEnumNew>;
+    type Out = SwapExactIn<SwapTaskNew, SEnumNew, SwapGroup>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
@@ -275,7 +299,9 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for SwapExactIn<SwapTask, SEnum> {
+impl<SwapTask, R, SEnum, SwapGroup> InspectSpec<SwapTask, R>
+    for SwapExactIn<SwapTask, SEnum, SwapGroup>
+{
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
     where
         InspectFn: FnOnce(&SwapTask) -> R,

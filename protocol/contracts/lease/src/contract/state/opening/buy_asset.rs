@@ -20,7 +20,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin,
+        DownpaymentCoin, LeasePaymentCurrencies,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -41,8 +41,13 @@ use super::open_ica::OpenIcaAccount;
 
 type AssetGroup = LeaseGroup;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
-pub(in crate::contract::state) type DexState =
-    dex::StateRemoteOut<OpenIcaAccount, BuyAsset, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
+    OpenIcaAccount,
+    BuyAsset,
+    LeasePaymentCurrencies,
+    ForwardToDexEntry,
+    ForwardToDexEntryContinue,
+>;
 
 pub(in crate::contract::state::opening) fn start(
     new_lease: NewLeaseContract,

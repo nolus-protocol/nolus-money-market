@@ -1,17 +1,17 @@
 use std::{iter, ops::Deref};
 
+use currencies::PaymentGroup;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
-use swap::SwapGroup;
 
 use crate::{contract::alarms::PriceResult, error::ContractError, result::ContractResult};
 
 type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
-type AlarmIter<'alarms> = iter::Map<AlarmsIterator<'alarms>, AlarmIterMapFn>;
+type AlarmIter<'alarms> = iter::Map<AlarmsIterator<'alarms, PaymentGroup>, AlarmIterMapFn>;
 
 pub struct Iter<'storage, 'alarms, S, I, BaseC>
 where
@@ -19,7 +19,7 @@ where
     I: Iterator<Item = PriceResult<BaseC>>,
     BaseC: Currency,
 {
-    alarms: &'alarms PriceAlarms<'storage, S>,
+    alarms: &'alarms PriceAlarms<'storage, PaymentGroup, S>,
     price_iter: I,
     alarm_iter: Option<AlarmIter<'alarms>>,
 }
@@ -30,7 +30,10 @@ where
     I: Iterator<Item = PriceResult<BaseC>>,
     BaseC: Currency,
 {
-    pub fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> ContractResult<Self> {
+    pub fn new(
+        alarms: &'alarms PriceAlarms<'storage, PaymentGroup, S>,
+        price_iter: I,
+    ) -> ContractResult<Self> {
         let mut iter = Self {
             alarms,
             price_iter,
@@ -52,7 +55,7 @@ where
             .next()
             .map(|price_result: PriceResult<BaseC>| {
                 price_result.and_then(|ref price| {
-                    Tickers.visit_any::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
+                    Tickers.visit_any::<PaymentGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
                         price.base_ticker(),
                         Cmd {
                             alarms: self.alarms,
@@ -103,8 +106,8 @@ where
     S: Deref<Target = (dyn Storage + 'storage)>,
     BaseC: Currency,
 {
-    alarms: &'alarms PriceAlarms<'storage, S>,
-    price: &'price BasePrice<SwapGroup, BaseC>,
+    alarms: &'alarms PriceAlarms<'storage, PaymentGroup, S>,
+    price: &'price BasePrice<PaymentGroup, BaseC>,
 }
 
 impl<'storage, 'alarms, 'price, S, BaseC> AnyVisitor for Cmd<'storage, 'alarms, 'price, S, BaseC>

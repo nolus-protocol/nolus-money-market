@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
+use currencies::PaymentGroup;
 use serde::de::DeserializeOwned;
 
 use currency::{Currency, SymbolOwned};
 use finance::price::base::BasePrice;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
-use swap::{SwapGroup, SwapTarget};
+use swap::SwapTarget;
 
 use crate::{api::SwapLeg, error::ContractError, state::supported_pairs::SupportedPairs};
 
@@ -15,7 +16,7 @@ use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 mod leg_cmd;
 mod price_querier;
 
-pub type AllPricesIterItem<OracleBase> = Result<BasePrice<SwapGroup, OracleBase>, ContractError>;
+pub type AllPricesIterItem<OracleBase> = Result<BasePrice<PaymentGroup, OracleBase>, ContractError>;
 
 pub struct Feeds<OracleBase> {
     feeds: PriceFeeds<'static>,
@@ -81,7 +82,7 @@ where
                 cmd,
                 |cmd: &mut LegCmd<OracleBase, FedPrices<'_>>, leg: SwapLeg| {
                     Some(
-                        currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
+                        currency::visit_any_on_tickers::<PaymentGroup, PaymentGroup, _>(
                             &leg.from,
                             &leg.to.target,
                             cmd,
@@ -242,7 +243,7 @@ mod test {
                 .flatten()
                 .collect();
 
-            let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
+            let expected: Vec<BasePrice<PaymentGroup, TheCurrency>> = vec![
                 tests::base_price::<PaymentC3>(1, 1),
                 tests::base_price::<PaymentC7>(1, 1),
                 tests::base_price::<PaymentC1>(2, 1),
@@ -287,7 +288,7 @@ mod test {
                 )
                 .unwrap();
 
-            let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
+            let expected: Vec<BasePrice<PaymentGroup, TheCurrency>> = vec![
                 tests::base_price::<PaymentC1>(2, 1),
                 tests::base_price::<PaymentC5>(2, 1),
                 tests::base_price::<PaymentC4>(2, 1),

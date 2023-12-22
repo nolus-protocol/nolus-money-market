@@ -32,7 +32,7 @@ use crate::{
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -95,13 +95,17 @@ impl Idle {
         now: Timestamp,
         balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<DexResponse<Self>> {
-        let state: StartLocalLocalState<BuyBack, ForwardToDexEntry, ForwardToDexEntryContinue> =
-            dex::start_local_local(BuyBack::new(
-                profit_addr,
-                self.config,
-                self.account,
-                balances,
-            ));
+        let state: StartLocalLocalState<
+            BuyBack,
+            ProfitCurrencies,
+            ForwardToDexEntry,
+            ForwardToDexEntryContinue,
+        > = dex::start_local_local(BuyBack::new(
+            profit_addr,
+            self.config,
+            self.account,
+            balances,
+        ));
 
         state
             .enter(now, querier)

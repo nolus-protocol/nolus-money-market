@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
+use currencies::{test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1}, PaymentGroup};
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},
@@ -15,7 +15,7 @@ use sdk::{
         MemoryStorage, MessageInfo, OwnedDeps,
     },
 };
-use swap::{SwapGroup, SwapTarget};
+use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::{
@@ -42,7 +42,7 @@ where
         .into()
 }
 
-pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<SwapGroup, TheCurrency>
+pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<PaymentGroup, TheCurrency>
 where
     C: Currency,
 {

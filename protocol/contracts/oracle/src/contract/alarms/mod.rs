@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use currencies::PaymentGroup;
 use currency::{Currency, Group};
 use finance::price::{
     base::BasePrice,
@@ -31,7 +32,7 @@ pub(super) struct MarketAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
 {
-    alarms: PriceAlarms<'storage, S>,
+    alarms: PriceAlarms<'storage, PaymentGroup, S>,
 }
 
 impl<'storage, S> MarketAlarms<'storage, S>
@@ -133,7 +134,7 @@ where
 {
     receiver: Addr,
     above_or_equal: Option<PriceDTO<G, BaseG>>,
-    price_alarms: &'alarms mut PriceAlarms<'storage, S>,
+    price_alarms: &'alarms mut PriceAlarms<'storage, PaymentGroup, S>,
 }
 
 impl<'storage, 'alarms, S, G, BaseC, BaseG> WithQuote<BaseC>

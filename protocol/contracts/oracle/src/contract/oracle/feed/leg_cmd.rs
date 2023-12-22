@@ -1,8 +1,8 @@
+use currencies::PaymentGroup;
 use serde::de::DeserializeOwned;
 
 use currency::{AnyVisitorPair, Currency};
 use finance::price::{base::BasePrice, Price};
-use swap::SwapGroup;
 
 use crate::ContractError;
 
@@ -14,7 +14,7 @@ where
     Querier: PriceQuerier,
 {
     price_querier: Querier,
-    stack: Vec<BasePrice<SwapGroup, OracleBase>>,
+    stack: Vec<BasePrice<PaymentGroup, OracleBase>>,
 }
 
 impl<OracleBase, Querier> LegCmd<OracleBase, Querier>
@@ -22,7 +22,7 @@ where
     OracleBase: Currency,
     Querier: PriceQuerier,
 {
-    pub fn new(price_querier: Querier, stack: Vec<BasePrice<SwapGroup, OracleBase>>) -> Self {
+    pub fn new(price_querier: Querier, stack: Vec<BasePrice<PaymentGroup, OracleBase>>) -> Self {
         Self {
             price_querier,
             stack,
@@ -35,7 +35,7 @@ where
     OracleBase: Currency + DeserializeOwned,
     Querier: PriceQuerier,
 {
-    type Output = Option<BasePrice<SwapGroup, OracleBase>>;
+    type Output = Option<BasePrice<PaymentGroup, OracleBase>>;
     type Error = ContractError;
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>

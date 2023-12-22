@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use currencies::PaymentGroup;
 use serde::de::DeserializeOwned;
 
 use currency::{Currency, SymbolOwned};
@@ -10,7 +11,6 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
-use swap::SwapGroup;
 
 use crate::{
     api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
@@ -77,7 +77,7 @@ where
         self.calc_all_prices(block_time).try_fold(
             vec![],
             |mut v: Vec<SpotPrice>,
-             price: Result<BasePrice<SwapGroup, OracleBase>, ContractError>| {
+             price: Result<BasePrice<PaymentGroup, OracleBase>, ContractError>| {
                 price.map(|price| {
                     v.push(price.into());
 

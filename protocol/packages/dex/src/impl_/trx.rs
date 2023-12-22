@@ -90,20 +90,26 @@ impl<'a> SwapTrx<'a> {
         }
     }
 
-    pub fn swap_exact_in<G>(
+    pub fn swap_exact_in<GIn, GSwap>(
         &mut self,
-        amount: &CoinDTO<G>,
+        amount: &CoinDTO<GIn>,
         currency_out: &SymbolSlice,
     ) -> Result<()>
     where
-        G: Group,
+        GIn: Group,
+        GSwap: Group,
     {
         self.oracle
             .swap_path(amount.ticker().into(), currency_out.into(), self.querier)
             .map_err(Into::into)
             .and_then(|swap_path| {
                 trx::exact_amount_in()
-                    .build(&mut self.trx, self.ica_account.clone(), amount, &swap_path)
+                    .build::<GIn, GSwap>(
+                        &mut self.trx,
+                        self.ica_account.clone(),
+                        amount,
+                        &swap_path,
+                    )
                     .map_err(Into::into)
             })
     }

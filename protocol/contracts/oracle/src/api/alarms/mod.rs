@@ -78,14 +78,13 @@ mod test {
     use serde::Serialize;
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-    use currencies::test::{PaymentC5, PaymentC6, PaymentC7, StableC1};
+    use currencies::{test::{PaymentC5, PaymentC6, PaymentC7, StableC1}, PaymentGroup};
     use currency::{Currency, Group};
     use finance::{
         coin::{Coin, CoinDTO},
         price::{self, dto::PriceDTO, Price},
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
-    use swap::SwapGroup;
 
     use crate::api::{AlarmCurrencies, StableCurrency};
 
@@ -298,7 +297,7 @@ mod test {
         C: Currency,
         Q: Currency,
     {
-        let price_dto = PriceDTO::<SwapGroup, SwapGroup>::from(price);
+        let price_dto = PriceDTO::<PaymentGroup, PaymentGroup>::from(price);
         alarm_half_to_json_str(price_type, &as_json(&price_dto))
     }
 
@@ -313,8 +312,8 @@ mod test {
     {
         let price = format!(
             r#"{{"amount": {},"amount_quote": {}}}"#,
-            as_json(&CoinDTO::<SwapGroup>::from(amount)),
-            as_json(&CoinDTO::<SwapGroup>::from(amount_quote))
+            as_json(&CoinDTO::<PaymentGroup>::from(amount)),
+            as_json(&CoinDTO::<PaymentGroup>::from(amount_quote))
         );
         alarm_half_to_json_str(price_type, &price)
     }
