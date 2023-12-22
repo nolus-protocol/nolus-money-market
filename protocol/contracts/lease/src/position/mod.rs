@@ -1,5 +1,5 @@
 use currency::Currency;
-use finance::{coin::Coin, price::Price};
+use finance::{coin::Coin, liability::Level, price::Price};
 
 use crate::{
     api::LeaseCoin,
@@ -43,7 +43,7 @@ where
         Self::new_internal(amount, spec)
     }
 
-    pub fn amount(&self) -> Coin<Asset> {
+    pub(crate) fn amount(&self) -> Coin<Asset> {
         self.amount
     }
 
@@ -97,6 +97,14 @@ where
     ) -> ContractResult<()> {
         self.spec
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
+    }
+
+    pub(crate) fn price_at(
+        &self,
+        level: Level,
+        total_due: Coin<Lpn>,
+    ) -> ContractResult<Price<Asset, Lpn>> {
+        self.spec.price_at(level, total_due, self.amount)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
