@@ -47,10 +47,7 @@ pub struct SwapExactIn<SwapTask, SEnum> {
     _state_enum: PhantomData<SEnum>,
 }
 
-impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum>
-where
-    Self: Into<SEnum>,
-{
+impl<SwapTask, SEnum> SwapExactIn<SwapTask, SEnum> {
     pub(super) fn new(spec: SwapTask) -> Self {
         Self {
             spec,

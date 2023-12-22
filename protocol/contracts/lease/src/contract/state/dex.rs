@@ -26,15 +26,6 @@ impl<H> State<H> {
     }
 }
 
-impl<H> State<H> {
-    pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
-    where
-        MapFn: FnOnce(H) -> HTo,
-    {
-        State::new(map_fn(self.handler))
-    }
-}
-
 impl<H> Contract for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,

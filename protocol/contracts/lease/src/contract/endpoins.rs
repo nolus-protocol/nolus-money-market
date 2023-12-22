@@ -1,10 +1,8 @@
 use currencies::LeaseGroup;
-use platform::{error as platform_error, message::Response as MessageResponse, response};
+use platform::{error as platform_error, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-    },
+    cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -17,7 +15,6 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 6;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -48,15 +45,13 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage: &mut _| may_migrate(storage, &_env),
-        Into::into,
-    )
-    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
-    .or_else(|err| platform_error::log(err, deps.api))
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
+    // Statically assert that the message is empty when doing a software-only update.
+    let MigrateMsg {} = msg;
+
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
+        .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]
@@ -112,45 +107,6 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .and_then(|state| state.state(env.block.time, deps.querier))
         .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
         .or_else(|err| platform_error::log(err, deps.api))
-}
-
-fn may_migrate(storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
-    use currencies::Lpns;
-    use currency::SymbolStatic;
-    use dex::TransferInInit;
-    use finance::coin::Amount;
-
-    const LEASE1: &str = "nolus1sszfhvtrj5m92t6uv9q7zh9hvz93nlttsz2reutjtj73tzqydzustzrw3w";
-    const LEASE2: &str = "nolus1q2ekwjj87jglqsszwy6ah5t08h0k8kq67ed0l899sku2qt0dztpsnwt6sw";
-    const COIN_AMOUNT: Amount = 15;
-    const COIN_CURRENCY: SymbolStatic = "USDC";
-
-    let this_lease = &env.contract.address;
-    if this_lease == &LEASE1 || this_lease == &LEASE2 {
-        state::load(storage)
-            .map(|lease| match lease {
-                State::BuyLpn(state) => state
-                    .map(|dex_state| match dex_state {
-                        dex::StateLocalOut::SwapExactIn(swap_exact_in) => {
-                            let coin_in = finance::coin::from_amount_ticker::<Lpns>(
-                                COIN_AMOUNT,
-                                COIN_CURRENCY.into(),
-                            )
-                            .expect("USDC is a member of Lpns");
-                            <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _>>>::into(
-                                swap_exact_in.into_next(coin_in),
-                            )
-                        }
-                        _ => {
-                            unreachable!("Found a dex sub-state != SwapExactIn for {}", this_lease)
-                        }
-                    })
-                    .into(),
-                _ => unreachable!("Found a state != BuyLpn for {}", this_lease),
-            })
-            .and_then(|next_state: State| state::save(storage, &next_state))?;
-    }
-    Ok(MessageResponse::default())
 }
 
 fn process_execute(
