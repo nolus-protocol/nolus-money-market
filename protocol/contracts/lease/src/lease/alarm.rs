@@ -119,7 +119,7 @@ mod tests {
     use timealarms::{msg::ExecuteMsg::AddAlarm, stub::TimeAlarmsRef};
 
     use crate::{
-        api::InterestPaymentSpec,
+        api::open::InterestPaymentSpec,
         lease::{
             self,
             tests::{

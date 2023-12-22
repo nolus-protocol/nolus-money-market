@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use dex::Enterable;
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
-use crate::{api::StateResponse, contract::Lease, error::ContractResult};
+use crate::{api::query::StateResponse, contract::Lease, error::ContractResult};
 
 use super::{Handler, Response};
 

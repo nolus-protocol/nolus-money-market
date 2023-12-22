@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
-    api::{PositionClose, StateResponse},
+    api::{position::PositionClose, query::StateResponse},
     error::ContractResult,
 };
 

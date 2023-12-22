@@ -1,7 +1,7 @@
 use currency::Currency;
 
 use crate::{
-    api::PositionSpecDTO,
+    api::open::PositionSpecDTO,
     error::{ContractError, ContractResult},
     position::Spec,
 };

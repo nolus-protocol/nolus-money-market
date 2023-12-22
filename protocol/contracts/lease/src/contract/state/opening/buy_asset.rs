@@ -18,7 +18,10 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, NewLeaseForm, StateResponse,
+        self,
+        open::{NewLeaseContract, NewLeaseForm},
+        query::{opening::OngoingTrx, StateResponse},
+        DownpaymentCoin,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -109,7 +112,7 @@ impl BuyAsset {
 impl SwapTask for BuyAsset {
     type OutG = AssetGroup;
     type Label = Type;
-    type StateResponse = ContractResult<api::StateResponse>;
+    type StateResponse = ContractResult<api::query::StateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

@@ -3,8 +3,9 @@ use sdk::cosmwasm_std::Env;
 
 use crate::{
     api::{
-        opened::{OngoingTrx, PositionCloseTrx},
-        FullClose, LeaseCoin,
+        position::FullClose,
+        query::opened::{OngoingTrx, PositionCloseTrx},
+        LeaseCoin,
     },
     contract::{
         state::{

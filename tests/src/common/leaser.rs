@@ -2,7 +2,10 @@ use std::collections::HashSet;
 
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpecDTO};
+use lease::api::{
+    open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
+    LpnCoin,
+};
 use leaser::{
     execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},

@@ -2,8 +2,9 @@ use sdk::cosmwasm_std::Env;
 
 use crate::{
     api::{
-        opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin, PartialClose,
+        position::PartialClose,
+        query::opened::{OngoingTrx, PositionCloseTrx},
+        LeaseCoin,
     },
     contract::{
         cmd::PartialCloseFn,

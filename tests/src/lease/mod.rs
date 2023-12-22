@@ -8,7 +8,7 @@ use finance::{
     period::Period,
     price::{self, Price},
 };
-use lease::api::{StateQuery, StateResponse};
+use lease::api::query::{StateQuery, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::cosmwasm_std::{coin, Addr, Timestamp};
 

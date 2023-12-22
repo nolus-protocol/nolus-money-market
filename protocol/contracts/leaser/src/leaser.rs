@@ -2,7 +2,10 @@ use std::collections::HashSet;
 
 use currency::SymbolOwned;
 use finance::percent::Percent;
-use lease::api::{DownpaymentCoin, InterestPaymentSpec, MigrateMsg, PositionSpecDTO};
+use lease::api::{
+    open::{InterestPaymentSpec, PositionSpecDTO},
+    DownpaymentCoin, MigrateMsg,
+};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};

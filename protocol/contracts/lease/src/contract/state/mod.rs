@@ -12,7 +12,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{NewLeaseContract, PositionClose, StateResponse},
+    api::{open::NewLeaseContract, position::PositionClose, query::StateResponse},
     contract::api::Contract,
     error::ContractResult,
 };

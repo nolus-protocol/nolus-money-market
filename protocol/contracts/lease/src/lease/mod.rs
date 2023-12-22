@@ -155,7 +155,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        api::InterestPaymentSpec,
+        api::open::InterestPaymentSpec,
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };

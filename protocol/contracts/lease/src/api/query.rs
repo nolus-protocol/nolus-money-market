@@ -46,7 +46,7 @@ pub enum StateResponse {
     Liquidated(),
 }
 
-pub mod opening {
+pub(crate) mod opening {
     #[cfg(any(test, feature = "testing"))]
     use serde::Deserialize;
     use serde::Serialize;
@@ -64,7 +64,7 @@ pub mod opening {
     }
 }
 
-pub mod opened {
+pub(crate) mod opened {
     #[cfg(any(test, feature = "testing"))]
     use serde::Deserialize;
     use serde::Serialize;
@@ -118,7 +118,7 @@ pub mod opened {
     }
 }
 
-pub mod paid {
+pub(crate) mod paid {
     #[cfg(any(test, feature = "testing"))]
     use serde::Deserialize;
     use serde::Serialize;

@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use currency::SymbolOwned;
 use finance::percent::Percent;
 use lease::api::{
-    ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin, PositionSpecDTO,
+    open::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO},
+    DownpaymentCoin, LeaseCoin,
 };
 use lpp::msg::LpnCoin;
 use sdk::{

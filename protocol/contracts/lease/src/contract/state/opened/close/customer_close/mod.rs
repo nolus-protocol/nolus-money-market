@@ -2,7 +2,7 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::PositionClose,
+    api::position::PositionClose,
     contract::{cmd::ValidateClosePosition, state::Response, Lease},
     error::ContractResult,
 };

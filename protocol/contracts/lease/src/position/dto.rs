@@ -2,7 +2,7 @@ use currency::Currency;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{LeaseCoin, PositionSpecDTO},
+    api::{open::PositionSpecDTO, LeaseCoin},
     error::{ContractError, ContractResult},
 };
 

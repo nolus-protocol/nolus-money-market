@@ -14,8 +14,11 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         self,
-        opened::{OngoingTrx, RepayTrx},
-        PaymentCoin, StateResponse,
+        query::{
+            opened::{OngoingTrx, RepayTrx},
+            StateResponse,
+        },
+        PaymentCoin,
     },
     contract::{
         state::{
@@ -68,7 +71,7 @@ impl BuyLpn {
 impl SwapTask for BuyLpn {
     type OutG = Lpns;
     type Label = Type;
-    type StateResponse = ContractResult<api::StateResponse>;
+    type StateResponse = ContractResult<api::query::StateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

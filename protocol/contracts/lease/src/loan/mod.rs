@@ -19,7 +19,7 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::InterestPaymentSpec,
+    api::open::InterestPaymentSpec,
     error::{ContractError, ContractResult},
 };
 
@@ -413,7 +413,7 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::api::InterestPaymentSpec;
+    use crate::api::open::InterestPaymentSpec;
 
     use super::Loan;
 
@@ -1146,7 +1146,7 @@ mod tests {
         use finance::duration::Duration;
         use lpp::msg::LoanResponse;
 
-        use crate::api::InterestPaymentSpec;
+        use crate::api::open::InterestPaymentSpec;
 
         use super::{create_loan_with_interest_spec, LEASE_START, LOAN_INTEREST_RATE};
 

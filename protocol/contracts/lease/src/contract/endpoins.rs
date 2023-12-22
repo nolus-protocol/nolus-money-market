@@ -10,7 +10,7 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
     contract::api::Contract,
     error::ContractResult,
 };

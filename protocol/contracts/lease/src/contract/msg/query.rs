@@ -1,7 +1,7 @@
 use currency::Currency;
 
 use crate::{
-    api::{opened, paid, StateResponse},
+    api::query::{opened, paid, StateResponse},
     lease::{LeaseDTO, State},
 };
 

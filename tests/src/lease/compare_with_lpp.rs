@@ -1,4 +1,4 @@
-use ::lease::api::StateResponse;
+use ::lease::api::query::StateResponse;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

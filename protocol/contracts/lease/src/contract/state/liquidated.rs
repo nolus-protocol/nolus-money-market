@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
-use crate::{api::StateResponse, error::ContractResult};
+use crate::{api::query::StateResponse, error::ContractResult};
 
 use super::{Handler, Response};
 
