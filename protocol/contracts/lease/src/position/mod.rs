@@ -1,5 +1,10 @@
 use currency::Currency;
-use finance::{coin::Coin, liability::Level, price::Price};
+use finance::{
+    coin::Coin,
+    fraction::Fraction,
+    liability::Level,
+    price::{total_of, Price},
+};
 
 use crate::{
     api::LeaseCoin,
@@ -99,12 +104,19 @@ where
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
     }
 
+    /// Calculate the price regarding level ltv percent and the total due.
     pub(crate) fn price_at(
         &self,
         level: Level,
         total_due: Coin<Lpn>,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        self.spec.price_at(level, total_due, self.amount)
+        debug_assert!(
+            !total_due.is_zero(),
+            "Loan already paid, no need of next alarms!"
+        );
+        debug_assert!(!level.ltv().is_zero());
+
+        Ok(total_of(level.ltv().of(self.amount)).is(total_due))
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

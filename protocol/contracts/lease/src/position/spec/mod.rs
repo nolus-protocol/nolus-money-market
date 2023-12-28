@@ -3,10 +3,9 @@ use std::ops::Add;
 use currency::Currency;
 use finance::{
     coin::Coin,
-    fraction::Fraction,
-    liability::{Level, Liability},
+    liability::Liability,
     percent::Percent,
-    price::{self, total_of, Price},
+    price::{self, Price},
 };
 
 use crate::{
@@ -145,24 +144,6 @@ where
                 self.min_transaction.into(),
             ))
         }
-    }
-
-    pub(crate) fn price_at<Asset>(
-        &self,
-        level: Level,
-        total_due: Coin<Lpn>,
-        position: Coin<Asset>,
-    ) -> ContractResult<Price<Asset, Lpn>>
-    where
-        Asset: Currency,
-    {
-        debug_assert!(
-            !total_due.is_zero(),
-            "Loan already paid, no need of next alarms!"
-        );
-        debug_assert!(!level.ltv().is_zero());
-
-        Ok(total_of(level.ltv().of(position)).is(total_due))
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
