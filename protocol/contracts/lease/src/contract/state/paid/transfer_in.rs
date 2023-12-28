@@ -18,10 +18,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{
-        self,
-        query::{paid::ClosingTrx, StateResponse},
-    },
+    api::query::{paid::ClosingTrx, StateResponse as QueryStateResponse},
     contract::{
         cmd::Close,
         state::{
@@ -61,7 +58,7 @@ impl TransferIn {
     }
 
     fn state(self, in_progress: ClosingTrx) -> <Self as SwapTask>::StateResponse {
-        Ok(StateResponse::paid_from(
+        Ok(QueryStateResponse::paid_from(
             self.lease.lease,
             Some(in_progress),
         ))
@@ -81,7 +78,7 @@ impl TransferIn {
 impl SwapTask for TransferIn {
     type OutG = AssetGroup;
     type Label = Type;
-    type StateResponse = ContractResult<api::query::StateResponse>;
+    type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

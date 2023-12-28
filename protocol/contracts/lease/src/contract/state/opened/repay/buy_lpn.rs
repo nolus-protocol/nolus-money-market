@@ -13,10 +13,9 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        self,
         query::{
             opened::{OngoingTrx, RepayTrx},
-            StateResponse,
+            StateResponse as QueryStateResponse,
         },
         PaymentCoin,
     },
@@ -24,7 +23,7 @@ use crate::{
         state::{
             opened::{self, repay},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapResult,
+            StateResponse as ContractStateResponse, SwapResult,
         },
         Lease,
     },
@@ -58,7 +57,7 @@ impl BuyLpn {
         in_progress: RepayTrx,
         now: Timestamp,
         querier: QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+    ) -> ContractResult<ContractStateResponse> {
         let in_progress = OngoingTrx::Repayment {
             payment: self.payment,
             in_progress,
@@ -71,7 +70,7 @@ impl BuyLpn {
 impl SwapTask for BuyLpn {
     type OutG = Lpns;
     type Label = Type;
-    type StateResponse = ContractResult<api::query::StateResponse>;
+    type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

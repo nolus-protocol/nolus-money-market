@@ -8,6 +8,8 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+use self::position::PositionClose;
+
 pub mod open;
 pub mod position;
 pub mod query;
@@ -42,7 +44,7 @@ pub enum ExecuteMsg {
     ///
     /// Note that these checks would not be performed on the total position amount if
     /// a `PositionClose::FullClose` is requested. It is executed irrespective of the amount.
-    ClosePosition(self::position::PositionClose),
+    ClosePosition(PositionClose),
 
     /// Close of a fully paid lease
     Close(),

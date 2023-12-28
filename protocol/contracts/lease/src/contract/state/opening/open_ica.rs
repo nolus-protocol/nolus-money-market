@@ -14,9 +14,8 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        self,
         open::NewLeaseContract,
-        query::{opening::OngoingTrx, StateResponse},
+        query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
         DownpaymentCoin,
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef},
@@ -75,10 +74,10 @@ impl DexConnectable for OpenIcaAccount {
 }
 
 impl DexContract for OpenIcaAccount {
-    type StateResponse = ContractResult<api::query::StateResponse>;
+    type StateResponse = ContractResult<QueryStateResponse>;
 
     fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        Ok(StateResponse::Opening {
+        Ok(QueryStateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
