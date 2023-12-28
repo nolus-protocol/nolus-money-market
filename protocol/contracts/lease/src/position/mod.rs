@@ -1,5 +1,10 @@
 use currency::Currency;
-use finance::{coin::Coin, price::Price};
+use finance::{
+    coin::Coin,
+    fraction::Fraction,
+    liability::Level,
+    price::{total_of, Price},
+};
 
 use crate::{
     api::LeaseCoin,
@@ -43,7 +48,7 @@ where
         Self::new_internal(amount, spec)
     }
 
-    pub fn amount(&self) -> Coin<Asset> {
+    pub(crate) fn amount(&self) -> Coin<Asset> {
         self.amount
     }
 
@@ -97,6 +102,18 @@ where
     ) -> ContractResult<()> {
         self.spec
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
+    }
+
+    /// Calculate the price at which the lease reaches given ltv.
+    pub(crate) fn price_at(
+        &self,
+        level: Level,
+        total_due: Coin<Lpn>,
+    ) -> ContractResult<Price<Asset, Lpn>> {
+        debug_assert!(!total_due.is_zero());
+        debug_assert!(!level.ltv().is_zero());
+
+        Ok(total_of(level.ltv().of(self.amount)).is(total_due))
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
