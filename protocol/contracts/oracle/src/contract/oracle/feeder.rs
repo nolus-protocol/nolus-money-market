@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use marketprice::feeders::PriceFeeders;
 use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
 
-use crate::{msg::Config, result::ContractResult, ContractError};
+use crate::{api::Config, result::ContractResult, ContractError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Feeders {
@@ -60,8 +60,8 @@ mod tests {
     };
 
     use crate::{
+        api::{QueryMsg, SudoMsg},
         contract::{query, sudo},
-        msg::{QueryMsg, SudoMsg},
         result::ContractResult,
         tests::{dummy_default_instantiate_msg, setup_test},
     };

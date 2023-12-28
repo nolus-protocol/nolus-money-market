@@ -19,8 +19,8 @@ use swap::{SwapGroup, SwapTarget};
 use tree::HumanReadableTree;
 
 use crate::{
+    api::{Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
-    msg::{Config, ExecuteMsg, InstantiateMsg, SudoMsg},
 };
 
 #[cfg(test)]

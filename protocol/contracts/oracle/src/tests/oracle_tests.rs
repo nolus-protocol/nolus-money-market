@@ -13,9 +13,8 @@ use sdk::{
 };
 
 use crate::{
-    alarms::Alarm,
+    api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract::{execute, query},
-    msg::{AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };

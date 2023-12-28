@@ -1,4 +1,4 @@
-use oracle::msg::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use oracle::api::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 use versioning::SemVer;
 

@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::Storage;
 
-use crate::{msg::Config, ContractError};
+use crate::{api::Config, ContractError};
 
 pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractError> {
     Config::load(storage).map_err(ContractError::LoadConfig)
@@ -18,8 +18,8 @@ mod tests {
     use swap::SwapTarget;
 
     use crate::{
+        api::{Config, QueryMsg, SudoMsg, SwapLeg},
         contract::{query, sudo},
-        msg::{Config, QueryMsg, SudoMsg, SwapLeg},
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };

@@ -9,7 +9,7 @@ use finance::{
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use marketprice::SpotPrice;
 use oracle::{
-    alarms::Alarm,
+    api::Alarm,
     stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
 };
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
@@ -112,7 +112,7 @@ mod tests {
     };
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
-    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
+    use oracle::{api::Alarm, api::ExecuteMsg::AddPriceAlarm};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_json_binary, Timestamp, WasmMsg};

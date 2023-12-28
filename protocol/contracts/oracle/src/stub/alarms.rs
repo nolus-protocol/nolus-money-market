@@ -5,7 +5,11 @@ use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
-use crate::{alarms::Alarm, error::Result, msg::ExecuteMsg, ContractError};
+use crate::{
+    api::{Alarm, ExecuteMsg},
+    error::Result,
+    ContractError,
+};
 
 pub trait PriceAlarms
 where

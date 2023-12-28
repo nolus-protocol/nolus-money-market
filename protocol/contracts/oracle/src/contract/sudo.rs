@@ -5,8 +5,8 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::DepsMut;
 
 use crate::{
+    api::{Config, SudoMsg},
     error::ContractError,
-    msg::{Config, SudoMsg},
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };

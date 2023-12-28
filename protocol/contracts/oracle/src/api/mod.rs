@@ -9,7 +9,9 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use crate::alarms::Alarm;
+pub use self::alarms::Alarm;
+
+mod alarms;
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 

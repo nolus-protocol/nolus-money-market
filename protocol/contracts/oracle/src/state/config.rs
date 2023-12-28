@@ -5,7 +5,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{msg::Config, ContractError};
+use crate::{api::Config, ContractError};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");

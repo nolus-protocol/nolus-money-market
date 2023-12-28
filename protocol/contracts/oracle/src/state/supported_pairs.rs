@@ -11,8 +11,8 @@ use swap::SwapTarget;
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
+    api::SwapLeg,
     error::{self, ContractError},
-    msg::SwapLeg,
     result::ContractResult,
 };
 

@@ -13,12 +13,12 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use swap::SwapGroup;
 
 use crate::{
+    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     contract::{
         alarms::MarketAlarms,
         oracle::feed::{AllPricesIterItem, Feeds},
     },
     error::ContractError,
-    msg::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
@@ -172,8 +172,10 @@ mod test_normalized_price_not_found {
     };
 
     use crate::{
-        alarms::Alarm, contract::alarms::MarketAlarms, msg::Config,
-        state::supported_pairs::SupportedPairs, swap_tree,
+        api::{Alarm, Config},
+        contract::alarms::MarketAlarms,
+        state::supported_pairs::SupportedPairs,
+        swap_tree,
     };
 
     use super::{feed::Feeds, feeder::Feeders, Oracle};

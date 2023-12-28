@@ -1,12 +1,11 @@
 pub use crate::error::ContractError;
 
-pub mod alarms;
+pub mod api;
 #[cfg(feature = "contract")]
 pub mod contract;
 pub mod error;
 #[cfg(any(feature = "testing", test))]
 mod macros;
-pub mod msg;
 pub mod result;
 #[cfg(feature = "contract")]
 pub mod state;

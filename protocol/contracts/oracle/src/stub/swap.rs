@@ -3,7 +3,7 @@ use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
 use swap::SwapTarget;
 
-use crate::{error::Result, msg::QueryMsg, ContractError};
+use crate::{api::QueryMsg, error::Result, ContractError};
 
 pub trait SwapPath {
     fn swap_path(

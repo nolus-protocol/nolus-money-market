@@ -10,7 +10,7 @@ use marketprice::{alarms::PriceAlarms, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage};
 use swap::SwapGroup;
 
-use crate::{alarms::Alarm as AlarmDTO, error::ContractError, result::ContractResult};
+use crate::{api::Alarm as AlarmDTO, error::ContractError, result::ContractResult};
 
 use self::iter::Iter as AlarmsIter;
 

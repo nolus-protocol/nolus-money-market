@@ -14,9 +14,9 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
+    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     contract::alarms::MarketAlarms,
     error::ContractError,
-    msg::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
@@ -173,8 +173,8 @@ mod tests {
     use swap::SwapTarget;
 
     use crate::{
+        api::{Config, QueryMsg, SwapLeg},
         contract::query,
-        msg::{Config, QueryMsg, SwapLeg},
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };

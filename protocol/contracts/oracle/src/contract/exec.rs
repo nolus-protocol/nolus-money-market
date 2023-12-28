@@ -10,9 +10,9 @@ use sdk::{
 };
 
 use crate::{
+    api::{Config, DispatchAlarmsResponse, ExecuteMsg},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
-    msg::{Config, DispatchAlarmsResponse, ExecuteMsg},
     result::ContractResult,
 };
 
