@@ -37,13 +37,13 @@ type OptionalLppEndpoints = Option<
 
 type OptionalOracleWrapper = Option<
     CwContractWrapper<
-        oracle::msg::ExecuteMsg,
+        oracle::api::ExecuteMsg,
         oracle::ContractError,
-        oracle::msg::InstantiateMsg,
+        oracle::api::InstantiateMsg,
         oracle::ContractError,
-        oracle::msg::QueryMsg,
+        oracle::api::QueryMsg,
         oracle::ContractError,
-        oracle::msg::SudoMsg,
+        oracle::api::SudoMsg,
         oracle::ContractError,
         oracle::ContractError,
     >,

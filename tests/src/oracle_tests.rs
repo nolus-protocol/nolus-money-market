@@ -10,8 +10,7 @@ use finance::{
 };
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
-    alarms::Alarm,
-    msg::{AlarmsCount, QueryMsg as OracleQ},
+    api::{Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse},
     result::ContractResult,
 };
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
@@ -75,7 +74,7 @@ fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr> {
 #[test]
 fn test_lease_serde() {
     use lease::api::ExecuteMsg::PriceAlarm as LeasePriceAlarm;
-    use oracle::msg::ExecuteAlarmMsg::PriceAlarm;
+    use oracle::api::ExecuteAlarmMsg::PriceAlarm;
     use sdk::cosmwasm_std;
 
     let LeasePriceAlarm {} =
@@ -130,7 +129,7 @@ fn feed_price_with_alarm_issue() {
         .execute(
             lease,
             test_case.address_book.oracle().clone(),
-            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+            &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(1)),
                     None,
@@ -162,7 +161,7 @@ fn feed_price_with_alarm() {
         .execute(
             lease,
             test_case.address_book.oracle().clone(),
-            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+            &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
@@ -194,7 +193,7 @@ fn overwrite_alarm_and_dispatch() {
         .execute(
             lease.clone(),
             test_case.address_book.oracle().clone(),
-            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+            &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(5)),
                     Some(price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(5))),
@@ -211,7 +210,7 @@ fn overwrite_alarm_and_dispatch() {
         .execute(
             lease.clone(),
             test_case.address_book.oracle().clone(),
-            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+            &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<StableC1>::new(10)),
                     None,
@@ -236,7 +235,7 @@ fn overwrite_alarm_and_dispatch() {
         .execute(
             lease,
             test_case.address_book.oracle().clone(),
-            &oracle::msg::ExecuteMsg::DispatchAlarms { max_count: 5 },
+            &ExecuteMsg::DispatchAlarms { max_count: 5 },
             &[],
         )
         .unwrap()
@@ -369,7 +368,7 @@ fn test_config_update() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &oracle::msg::SudoMsg::UpdateConfig(PriceConfig::new(
+            &SudoMsg::UpdateConfig(PriceConfig::new(
                 Percent::from_percent(100),
                 Duration::from_secs(5),
                 12,
@@ -424,7 +423,7 @@ fn test_swap_path() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &oracle::msg::SudoMsg::SwapTree { tree: swap_tree() },
+            &SudoMsg::SwapTree { tree: swap_tree() },
         )
         .unwrap()
         .unwrap_response();
@@ -470,7 +469,7 @@ fn test_query_swap_tree() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &oracle::msg::SudoMsg::SwapTree { tree: tree.clone() },
+            &SudoMsg::SwapTree { tree: tree.clone() },
         )
         .unwrap()
         .unwrap_response();
@@ -480,7 +479,7 @@ fn test_query_swap_tree() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
-    let resp: oracle::msg::SwapTreeResponse = test_case
+    let resp: SwapTreeResponse = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -513,7 +512,7 @@ fn test_zero_price_dto() {
             feeder1,
             wasm_execute(
                 test_case.address_book.oracle().clone(),
-                &oracle::msg::ExecuteMsg::FeedPrices {
+                &ExecuteMsg::FeedPrices {
                     prices: vec![price],
                 },
                 vec![],
@@ -555,7 +554,7 @@ fn schedule_alarm(
 
             batch.schedule_execute_wasm_no_reply::<_, BaseC>(
                 ORACLE_ADDR.load(storage).unwrap(),
-                &oracle::msg::ExecuteMsg::AddPriceAlarm {
+                &ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
                         price::total_of::<BaseC>(base.into()).is::<StableC1>(quote.into()),
                         None,
@@ -660,7 +659,7 @@ fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppRe
     app.execute(
         Addr::unchecked("unlisted_client"),
         oracle,
-        &oracle::msg::ExecuteMsg::DispatchAlarms { max_count },
+        &ExecuteMsg::DispatchAlarms { max_count },
         &[],
     )
     .unwrap()

@@ -8,8 +8,8 @@ use finance::{
 };
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
+    api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
-    msg::{Config, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     ContractError,
 };
 use sdk::{
@@ -83,7 +83,7 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
         price::total_of(Coin::<NativeC>::new(123456789)).is(Coin::<StableC1>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => to_json_binary(&oracle::msg::PricesResponse {
+        QueryMsg::Prices {} => to_json_binary(&PricesResponse {
             prices: vec![price.into()],
         })
         .map_err(ContractError::ConvertToBinary),
