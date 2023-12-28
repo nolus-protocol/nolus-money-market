@@ -110,10 +110,7 @@ where
         level: Level,
         total_due: Coin<Lpn>,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        debug_assert!(
-            !total_due.is_zero(),
-            "Loan already paid, no need of next alarms!"
-        );
+        debug_assert!(!total_due.is_zero());
         debug_assert!(!level.ltv().is_zero());
 
         Ok(total_of(level.ltv().of(self.amount)).is(total_due))
