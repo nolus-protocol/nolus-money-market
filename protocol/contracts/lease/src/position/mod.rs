@@ -104,7 +104,7 @@ where
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
     }
 
-    /// Calculate the price regarding level ltv percent and the total due.
+    /// Calculate the price at which the lease reaches given ltv.
     pub(crate) fn price_at(
         &self,
         level: Level,
