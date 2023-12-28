@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::SymbolOwned;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
@@ -9,7 +9,7 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use crate::{alarms::Alarm, state::supported_pairs::SwapLeg};
+use crate::alarms::Alarm;
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
@@ -127,4 +127,28 @@ pub struct DispatchAlarmsResponse(pub AlarmsCount);
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct AlarmsStatusResponse {
     pub remaining_alarms: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SwapLeg {
+    pub from: SymbolOwned,
+    pub to: SwapTarget,
+}
+
+impl Serialize for SwapLeg {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        (&self.from, &self.to).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for SwapLeg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(|(from, to)| Self { from, to })
+    }
 }

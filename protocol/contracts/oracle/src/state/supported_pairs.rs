@@ -12,10 +12,9 @@ use tree::{FindBy as _, NodeRef};
 
 use crate::{
     error::{self, ContractError},
+    msg::SwapLeg,
     result::ContractResult,
 };
-
-use super::SwapLeg;
 
 type Tree = tree::Tree<SwapTarget>;
 

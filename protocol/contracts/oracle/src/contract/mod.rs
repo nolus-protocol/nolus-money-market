@@ -174,8 +174,7 @@ mod tests {
 
     use crate::{
         contract::query,
-        msg::{Config, QueryMsg},
-        state::supported_pairs::SwapLeg,
+        msg::{Config, QueryMsg, SwapLeg},
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };

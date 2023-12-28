@@ -8,10 +8,7 @@ use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use swap::{SwapGroup, SwapTarget};
 
-use crate::{
-    error::ContractError,
-    state::supported_pairs::{SupportedPairs, SwapLeg},
-};
+use crate::{error::ContractError, msg::SwapLeg, state::supported_pairs::SupportedPairs};
 
 use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 

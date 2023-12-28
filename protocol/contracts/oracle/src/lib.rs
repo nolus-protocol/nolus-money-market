@@ -8,6 +8,7 @@ pub mod error;
 mod macros;
 pub mod msg;
 pub mod result;
+#[cfg(feature = "contract")]
 pub mod state;
 #[cfg(feature = "stub")]
 pub mod stub;

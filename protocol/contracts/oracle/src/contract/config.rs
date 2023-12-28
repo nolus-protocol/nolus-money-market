@@ -19,8 +19,7 @@ mod tests {
 
     use crate::{
         contract::{query, sudo},
-        msg::{Config, QueryMsg, SudoMsg},
-        state::supported_pairs::SwapLeg,
+        msg::{Config, QueryMsg, SudoMsg, SwapLeg},
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };
