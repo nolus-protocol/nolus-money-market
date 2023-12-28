@@ -99,11 +99,11 @@ impl InterestPaymentSpec {
         res
     }
 
-    pub fn grace_period(&self) -> Duration {
+    pub(crate) fn grace_period(&self) -> Duration {
         self.grace_period
     }
 
-    pub fn due_period(&self) -> Duration {
+    pub(crate) fn due_period(&self) -> Duration {
         self.due_period
     }
 
