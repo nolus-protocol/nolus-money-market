@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, PositionClose, StateResponse},
+    api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
     contract::{
         cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},

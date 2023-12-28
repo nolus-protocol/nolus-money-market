@@ -12,7 +12,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opened::PositionCloseTrx, StateResponse},
+    api::query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
     contract::{
         state::{
             opened::{self, payment::Repayable},
@@ -49,7 +49,7 @@ where
         in_progress: PositionCloseTrx,
         now: Timestamp,
         querier: QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+    ) -> ContractResult<QueryStateResponse> {
         let trx = self.repayable.transaction(&self.lease, in_progress);
         opened::lease_state(self.lease, Some(trx), now, querier)
     }
@@ -61,7 +61,7 @@ where
 {
     type OutG = Lpns;
     type Label = Type;
-    type StateResponse = ContractResult<api::StateResponse>;
+    type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, NewLeaseForm},
+    api::{open::NewLeaseForm, LeaseCoin},
     error::{ContractError, ContractResult},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},

@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{
 };
 
 use crate::{
-    api::{PositionClose, StateResponse},
+    api::{position::PositionClose, query::StateResponse},
     error::{ContractError, ContractResult},
 };
 

@@ -8,7 +8,10 @@ use finance::{
     liability::Liability,
     percent::Percent,
 };
-use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec, LpnCoin, PositionSpecDTO};
+use lease::api::{
+    open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
+    LpnCoin,
+};
 use platform::contract::CodeId;
 
 use sdk::{

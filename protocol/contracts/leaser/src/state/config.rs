@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent;
-use lease::api::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO};
+use lease::api::open::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO};
 use platform::contract::CodeId;
 use sdk::{
     cosmwasm_std::{Addr, Storage},

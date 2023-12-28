@@ -7,8 +7,8 @@ use sdk::cosmwasm_std::{
 };
 
 use crate::{
-    api::{self, StateResponse},
-    contract::api::Contract,
+    api::query::StateResponse as QueryStateResponse,
+    contract::{api::Contract, state::StateResponse as ContractStateResponse},
     error::ContractResult,
 };
 
@@ -38,7 +38,7 @@ impl<H> State<H> {
 impl<H> Contract for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
-    H: DexContract<StateResponse = ContractResult<api::StateResponse>>,
+    H: DexContract<StateResponse = ContractResult<QueryStateResponse>>,
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
@@ -87,7 +87,11 @@ where
         self.handler.heal(deps, env).into()
     }
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        now: Timestamp,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<ContractStateResponse> {
         self.handler.state(now, querier)
     }
 

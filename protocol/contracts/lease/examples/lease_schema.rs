@@ -1,4 +1,4 @@
-use lease::api::{ExecuteMsg, NewLeaseForm, StateQuery};
+use lease::api::{open::NewLeaseForm, query::StateQuery, ExecuteMsg};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {

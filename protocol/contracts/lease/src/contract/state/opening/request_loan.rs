@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, R
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseContract},
+    api::{open::NewLeaseContract, query::StateResponse as QueryStateResponse, DownpaymentCoin},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         finalize::FinalizerRef,
@@ -96,7 +96,7 @@ impl Handler for RequestLoan {
         self,
         _now: Timestamp,
         _querier: QuerierWrapper<'_>,
-    ) -> ContractResult<crate::api::StateResponse> {
+    ) -> ContractResult<QueryStateResponse> {
         unreachable!()
     }
 

@@ -5,7 +5,11 @@ use finance::{
     zero::Zero,
 };
 use lease::{
-    api::{ExecuteMsg, FullClose, PartialClose, PositionClose, StateResponse},
+    api::{
+        position::{FullClose, PartialClose, PositionClose},
+        query::StateResponse,
+        ExecuteMsg,
+    },
     error::ContractError,
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;

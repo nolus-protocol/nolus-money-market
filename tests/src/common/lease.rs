@@ -2,8 +2,11 @@ use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     api::{
-        ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, PositionSpecDTO, StateQuery, StateResponse,
+        open::{
+            ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
+            NewLeaseForm, PositionSpecDTO,
+        },
+        query::{StateQuery, StateResponse},
     },
     contract::{execute, instantiate, query, reply, sudo},
 };

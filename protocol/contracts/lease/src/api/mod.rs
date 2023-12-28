@@ -8,19 +8,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-pub use self::{
-    open::{
-        ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-        NewLeaseForm, PositionSpecDTO,
-    },
-    position::{FullClose, PartialClose, PositionClose},
-    query::{opened, opening, paid, StateQuery, StateResponse},
-};
+use self::position::PositionClose;
 
-// TODO consider defining the modules public instead of just selected items
-mod open;
-mod position;
-mod query;
+pub mod open;
+pub mod position;
+pub mod query;
 
 pub type PaymentCoin = CoinDTO<PaymentGroup>;
 pub type DownpaymentCoin = PaymentCoin;
@@ -93,7 +85,10 @@ mod test {
         schemars::_serde_json::to_string,
     };
 
-    use crate::api::{ExecuteMsg, FullClose, PositionClose};
+    use crate::api::{
+        position::{FullClose, PositionClose},
+        ExecuteMsg,
+    };
 
     #[test]
     fn test_repay_representation() {

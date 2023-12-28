@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        opened::{OngoingTrx, PositionCloseTrx},
+        query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin, LpnCoin,
     },
     contract::{

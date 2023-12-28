@@ -4,7 +4,7 @@ use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Api, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
-    api::{PositionClose, StateResponse},
+    api::{position::PositionClose, query::StateResponse},
     error::{ContractError, ContractResult},
 };
 

@@ -18,7 +18,9 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, NewLeaseForm, StateResponse,
+        open::{NewLeaseContract, NewLeaseForm},
+        query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
+        DownpaymentCoin,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -93,7 +95,7 @@ impl BuyAsset {
     where
         InP: FnOnce(String) -> OngoingTrx,
     {
-        Ok(StateResponse::Opening {
+        Ok(QueryStateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
@@ -109,7 +111,7 @@ impl BuyAsset {
 impl SwapTask for BuyAsset {
     type OutG = AssetGroup;
     type Label = Type;
-    type StateResponse = ContractResult<api::StateResponse>;
+    type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
 
     fn label(&self) -> Self::Label {

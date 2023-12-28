@@ -1,6 +1,6 @@
 use currency::Currency;
 use finance::{coin::Amount, percent::Percent};
-use lease::api::{ExecuteMsg, StateResponse};
+use lease::api::{query::StateResponse, ExecuteMsg};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},

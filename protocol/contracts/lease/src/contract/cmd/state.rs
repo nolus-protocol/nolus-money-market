@@ -4,7 +4,7 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{opened::OngoingTrx, StateResponse},
+    api::query::{opened::OngoingTrx, StateResponse},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };

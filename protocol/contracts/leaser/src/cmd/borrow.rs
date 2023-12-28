@@ -1,6 +1,6 @@
 use currency::SymbolOwned;
 use finance::percent::Percent;
-use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
+use lease::api::open::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Coin, Storage};
