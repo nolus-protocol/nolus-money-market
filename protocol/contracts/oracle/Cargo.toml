@@ -28,7 +28,12 @@ contract = [
 ]
 stub_alarms = ["dep:currencies"]
 stub_swap = ["dep:oracle-platform"]
-testing = ["stub_alarms", "stub_swap", "marketprice/testing"]
+testing = [
+    "stub_alarms",
+    "stub_swap",
+    "currencies/testing",
+    "marketprice/testing",
+]
 
 [dependencies]
 currencies = { workspace = true, optional = true }
