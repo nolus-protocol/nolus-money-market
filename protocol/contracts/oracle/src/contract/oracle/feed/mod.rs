@@ -124,7 +124,7 @@ mod test {
     use tree::HumanReadableTree;
 
     use crate::{
-        api::{PriceCurrencies, StableCurrency},
+        api::PriceCurrencies,
         tests::{self, TheCurrency},
     };
 
@@ -132,7 +132,7 @@ mod test {
 
     #[derive(Clone)]
     pub struct TestFeeds(
-        pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, StableCurrency>>,
+        pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, PriceCurrencies>>,
     );
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
