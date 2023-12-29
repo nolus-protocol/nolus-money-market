@@ -9,13 +9,13 @@ use currency::{
 
 use super::{PriceDTO, WithQuote};
 
-struct BaseCVisitor<'a, G, C, Cmd>
+struct BaseCVisitor<'a, G, QuoteC, Cmd>
 where
     G: Group,
-    C: Currency,
+    QuoteC: Currency,
 {
     base_dto: &'a CoinDTO<G>,
-    quote: Coin<C>,
+    quote: Coin<QuoteC>,
     cmd: Cmd,
 }
 
@@ -41,15 +41,15 @@ where
 }
 
 #[track_caller]
-pub fn execute<G, QuoteG, Cmd, C>(
+pub fn execute<G, QuoteC, QuoteG, Cmd>(
     price: &PriceDTO<G, QuoteG>,
     cmd: Cmd,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     G: Group,
+    QuoteC: Currency,
     QuoteG: Group,
-    Cmd: WithQuote<C>,
-    C: Currency,
+    Cmd: WithQuote<QuoteC>,
     Error: Into<Cmd::Error>,
 {
     //TODO use CoinDTO::with_coin instead
@@ -58,7 +58,7 @@ where
             &price.amount.ticker().clone(),
             BaseCVisitor {
                 base_dto: &price.amount,
-                quote: Coin::<C>::try_from(&price.amount_quote)
+                quote: Coin::<QuoteC>::try_from(&price.amount_quote)
                     .expect("Got different currency in visitor!"),
                 cmd,
             },

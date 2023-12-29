@@ -1,7 +1,6 @@
 use currency::Currency;
 use finance::{duration::Duration, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use marketprice::SpotPrice;
 use oracle::{
     api::Alarm,
     stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
@@ -77,10 +76,7 @@ where
             .transpose()?;
 
         price_alarms
-            .add_alarm(Alarm::new(
-                below.into(),
-                above_or_equal.map(Into::<SpotPrice>::into),
-            ))
+            .add_alarm(Alarm::new(below, above_or_equal))
             .map_err(Into::into)
     }
 }
@@ -92,7 +88,6 @@ mod tests {
         price::total_of,
     };
     use lpp::msg::LoanResponse;
-    use marketprice::SpotPrice;
     use oracle::{api::Alarm, api::ExecuteMsg::AddPriceAlarm};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
@@ -139,9 +134,7 @@ mod tests {
                 funds: vec![],
             });
 
-            let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
-                .is(projected_liability)
-                .into();
+            let below_alarm = total_of(liability_alarm_on.of(asset)).is(projected_liability);
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
                 msg: to_json_binary(&AddPriceAlarm {
@@ -172,9 +165,8 @@ mod tests {
                 &pricealarms(),
             )
             .unwrap();
-        let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
-            .is(projected_liability(&lease, recalc_time))
-            .into();
+        let exp_below = total_of(no_warnings.high().ltv().of(lease_amount))
+            .is(projected_liability(&lease, recalc_time));
 
         assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
@@ -232,9 +224,8 @@ mod tests {
                 &pricealarms(),
             )
             .unwrap();
-        let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
-            .is(projected_liability(&lease, recalc_time))
-            .into();
+        let exp_below = total_of(no_warnings.high().ltv().of(lease_amount))
+            .is(projected_liability(&lease, recalc_time));
 
         assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
@@ -287,12 +278,9 @@ mod tests {
             )
             .unwrap();
 
-        let exp_below: SpotPrice = total_of(zone.high().ltv().of(lease_amount))
-            .is(projected_liability)
-            .into();
-        let exp_above: SpotPrice = total_of(zone.low().unwrap().ltv().of(lease_amount))
-            .is(projected_liability)
-            .into();
+        let exp_below = total_of(zone.high().ltv().of(lease_amount)).is(projected_liability);
+        let exp_above =
+            total_of(zone.low().unwrap().ltv().of(lease_amount)).is(projected_liability);
 
         assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
@@ -354,9 +342,8 @@ mod tests {
                 &pricealarms(),
             )
             .unwrap();
-        let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
-            .is(projected_liability(&lease, recalc_time))
-            .into();
+        let exp_below = total_of(no_warnings.high().ltv().of(lease_amount))
+            .is(projected_liability(&lease, recalc_time));
 
         assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();

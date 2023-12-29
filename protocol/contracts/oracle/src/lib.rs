@@ -9,7 +9,6 @@ mod macros;
 pub mod result;
 #[cfg(feature = "contract")]
 pub mod state;
-#[cfg(feature = "stub")]
 pub mod stub;
 #[cfg(test)]
 mod tests;

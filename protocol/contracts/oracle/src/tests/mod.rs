@@ -1,5 +1,5 @@
 use currencies::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
-use currency::{Currency, SymbolOwned};
+use currency::{Currency, Group, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -30,12 +30,14 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type TheCurrency = StableC1;
 
-pub(crate) fn dto_price<B, Q>(total_of: Amount, is: Amount) -> PriceDTO<SwapGroup, SwapGroup>
+pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
-    B: Currency,
+    C: Currency,
+    G: Group,
     Q: Currency,
+    LpnG: Group,
 {
-    price::total_of(Coin::<B>::new(total_of))
+    price::total_of(Coin::<C>::new(total_of))
         .is(Coin::<Q>::new(is))
         .into()
 }

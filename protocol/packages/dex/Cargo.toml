@@ -19,7 +19,7 @@ testing = []
 [dependencies]
 currency = { workspace = true }
 finance = { workspace = true }
-oracle = { workspace = true, features = ["stub"] }
+oracle = { workspace = true, features = ["stub_swap"] }
 oracle-platform = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }
 platform = { workspace = true }

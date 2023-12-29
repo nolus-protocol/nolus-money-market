@@ -19,14 +19,16 @@ astroport = ["contract", "currencies/astroport"]
 osmosis = ["contract", "currencies/osmosis"]
 
 contract = [
-    "stub",
+    "stub_alarms",
+    "stub_swap",
     "sdk/contract",
     "dep:cosmwasm-std",
     "dep:currencies",
     "dep:versioning",
 ]
-testing = ["stub", "marketprice/testing"]
-stub = ["dep:oracle-platform"]
+stub_alarms = ["dep:currencies"]
+stub_swap = ["dep:oracle-platform"]
+testing = ["stub_alarms", "stub_swap", "marketprice/testing"]
 
 [dependencies]
 currencies = { workspace = true, optional = true }

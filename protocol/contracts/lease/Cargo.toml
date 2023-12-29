@@ -49,7 +49,7 @@ finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 lpp-platform = { workspace = true, optional = true }
 marketprice = { workspace = true, optional = true }
-oracle = { workspace = true, optional = true, features = ["stub"] }
+oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }

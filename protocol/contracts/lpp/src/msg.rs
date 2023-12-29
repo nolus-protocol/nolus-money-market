@@ -15,8 +15,6 @@ use sdk::{
 
 use crate::{borrow::InterestRate, loan::Loan};
 
-pub type LpnCoin = CoinDTO<Lpns>;
-
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -40,7 +38,7 @@ pub enum ExecuteMsg {
     },
 
     OpenLoan {
-        amount: LpnCoin,
+        amount: CoinDTO<Lpns>,
     },
     RepayLoan(),
 
@@ -75,7 +73,7 @@ pub enum SudoMsg {
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: LpnCoin,
+        amount: CoinDTO<Lpns>,
     },
     Loan {
         lease_addr: Addr,

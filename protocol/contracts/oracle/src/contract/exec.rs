@@ -1,6 +1,5 @@
 use serde::de::DeserializeOwned;
 
-use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use marketprice::SpotPrice;
 use platform::{contract, response};
@@ -10,7 +9,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{Config, DispatchAlarmsResponse, ExecuteMsg},
+    api::{Config, DispatchAlarmsResponse, ExecuteMsg, StableCurrency},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,
@@ -41,7 +40,9 @@ impl<'a> ExecWithOracleBase<'a> {
 
         Config::load(visitor.deps.storage)
             .map_err(ContractError::LoadConfig)
-            .and_then(|config: Config| Tickers.visit_any::<Lpns, _>(&config.base_asset, visitor))
+            .and_then(|config: Config| {
+                Tickers.visit_any::<StableCurrency, _>(&config.base_asset, visitor)
+            })
     }
 }
 
@@ -80,7 +81,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 contract::validate_addr(self.deps.querier, &self.sender)?;
 
                 MarketAlarms::new(self.deps.storage)
-                    .try_add_price_alarm::<OracleBase>(self.sender, alarm)
+                    .try_add_price_alarm::<_, OracleBase, _>(self.sender, alarm)
                     .map(|()| Default::default())
             }
         }

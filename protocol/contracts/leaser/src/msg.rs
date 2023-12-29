@@ -4,9 +4,8 @@ use currency::SymbolOwned;
 use finance::percent::Percent;
 use lease::api::{
     open::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO},
-    DownpaymentCoin, LeaseCoin,
+    DownpaymentCoin, LeaseCoin, LpnCoin,
 };
-use lpp::msg::LpnCoin;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
@@ -88,6 +87,7 @@ pub enum QueryMsg {
     Quote {
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
+        // TODO get rid of the default-ness
         #[serde(default)]
         max_ltd: Option<Percent>,
     },

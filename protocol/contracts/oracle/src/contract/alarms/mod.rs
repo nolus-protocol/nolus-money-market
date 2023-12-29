@@ -1,22 +1,25 @@
 use std::ops::{Deref, DerefMut};
 
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::price::{
     base::BasePrice,
-    dto::{with_quote, WithQuote},
+    dto::{with_quote, PriceDTO, WithQuote},
     Price,
 };
-use marketprice::{alarms::PriceAlarms, SpotPrice};
+use marketprice::alarms::PriceAlarms;
 use sdk::cosmwasm_std::{Addr, Storage};
-use swap::SwapGroup;
 
-use crate::{api::Alarm as AlarmDTO, error::ContractError, result::ContractResult};
+use crate::{
+    api::{Alarm as AlarmDTO, PriceCurrencies},
+    error::ContractError,
+    result::ContractResult,
+};
 
 use self::iter::Iter as AlarmsIter;
 
 mod iter;
 
-pub type PriceResult<BaseC> = ContractResult<BasePrice<SwapGroup, BaseC>>;
+pub type PriceResult<BaseC> = ContractResult<BasePrice<PriceCurrencies, BaseC>>;
 
 const NAMESPACE_ALARMS_BELOW: &str = "alarms_below";
 const NAMESPACE_INDEX_BELOW: &str = "index_below";
@@ -82,17 +85,19 @@ impl<'storage, S> MarketAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn try_add_price_alarm<BaseC>(
+    pub fn try_add_price_alarm<G, BaseC, BaseG>(
         &mut self,
         receiver: Addr,
-        alarm: AlarmDTO,
+        alarm: AlarmDTO<G, BaseG>,
     ) -> Result<(), ContractError>
     where
+        G: Group,
         BaseC: Currency,
+        BaseG: Group,
     {
         let (below, above_or_equal) = alarm.into();
 
-        with_quote::execute::<_, _, _, BaseC>(
+        with_quote::execute::<_, BaseC, _, _>(
             &below,
             AddAlarmsCmd {
                 receiver,
@@ -120,19 +125,24 @@ where
     }
 }
 
-struct AddAlarmsCmd<'storage, 'alarms, S>
+struct AddAlarmsCmd<'storage, 'alarms, S, G, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    G: Group,
+    BaseG: Group,
 {
     receiver: Addr,
-    above_or_equal: Option<SpotPrice>,
+    above_or_equal: Option<PriceDTO<G, BaseG>>,
     price_alarms: &'alarms mut PriceAlarms<'storage, S>,
 }
 
-impl<'storage, 'alarms, S, BaseC> WithQuote<BaseC> for AddAlarmsCmd<'storage, 'alarms, S>
+impl<'storage, 'alarms, S, G, BaseC, BaseG> WithQuote<BaseC>
+    for AddAlarmsCmd<'storage, 'alarms, S, G, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    G: Group,
     BaseC: Currency,
+    BaseG: Group,
 {
     type Output = ();
     type Error = ContractError;
@@ -158,27 +168,33 @@ mod test {
     use currencies::test::{PaymentC5, PaymentC6, PaymentC7};
     use sdk::cosmwasm_std::testing::MockStorage;
 
-    use crate::tests::{self, TheCurrency as Base};
+    use crate::{
+        api::{PriceCurrencies, StableCurrency},
+        tests::{self, TheCurrency as Base},
+    };
 
     use super::*;
 
-    fn alarm_dto<C>(below: (u128, u128), above: Option<(u128, u128)>) -> AlarmDTO
+    fn alarm_dto<C>(
+        below: (u128, u128),
+        above: Option<(u128, u128)>,
+    ) -> AlarmDTO<PriceCurrencies, StableCurrency>
     where
         C: Currency,
     {
         AlarmDTO::new(
-            tests::dto_price::<C, Base>(below.0, below.1),
-            above.map(|above| tests::dto_price::<C, Base>(above.0, above.1)),
+            tests::dto_price::<C, _, Base, _>(below.0, below.1),
+            above.map(|above| tests::dto_price::<C, _, Base, _>(above.0, above.1)),
         )
     }
 
     fn add_alarms<'a>(
         mut storage: &mut dyn Storage,
-        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO)>,
+        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, StableCurrency>)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
             MarketAlarms::new(storage.deref_mut())
-                .try_add_price_alarm::<Base>(Addr::unchecked(receiver), alarm)
+                .try_add_price_alarm::<_, Base, _>(Addr::unchecked(receiver), alarm)
         })
     }
 
@@ -204,10 +220,14 @@ mod test {
 
         let receiver = Addr::unchecked("receiver");
 
-        let _ = MarketAlarms::new(&mut storage as &mut dyn Storage).try_add_price_alarm::<Base>(
-            receiver,
-            AlarmDTO::new(tests::dto_price::<Base, PaymentC5>(1, 20), None),
-        );
+        let _ = MarketAlarms::new(&mut storage as &mut dyn Storage)
+            .try_add_price_alarm::<_, Base, _>(
+                receiver,
+                AlarmDTO::new(
+                    tests::dto_price::<Base, StableCurrency, PaymentC5, PriceCurrencies>(1, 20),
+                    None,
+                ),
+            );
     }
 
     #[test]
@@ -219,11 +239,11 @@ mod test {
         let receiver2 = Addr::unchecked("receiver2");
 
         alarms
-            .try_add_price_alarm::<Base>(receiver1, alarm_dto::<PaymentC5>((1, 20), None))
+            .try_add_price_alarm::<_, Base, _>(receiver1, alarm_dto::<PaymentC5>((1, 20), None))
             .unwrap();
 
         alarms
-            .try_add_price_alarm::<Base>(
+            .try_add_price_alarm::<_, Base, _>(
                 receiver2.clone(),
                 alarm_dto::<PaymentC6>((1, 20), Some((1, 30))),
             )

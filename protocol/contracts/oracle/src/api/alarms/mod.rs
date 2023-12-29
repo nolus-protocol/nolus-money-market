@@ -1,23 +1,33 @@
+use currency::Group;
+use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use marketprice::SpotPrice;
 use sdk::schemars::{self, JsonSchema};
 
 mod unchecked;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm")]
-pub struct Alarm {
-    below: SpotPrice,
-    above: Option<SpotPrice>,
+#[serde(try_from = "unchecked::Alarm<G, LpnG>")]
+pub struct Alarm<G, LpnG>
+where
+    G: Group,
+    LpnG: Group,
+{
+    below: PriceDTO<G, LpnG>,
+    above: Option<PriceDTO<G, LpnG>>,
 }
 
-impl Alarm {
-    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm
+impl<G, LpnG> Alarm<G, LpnG>
+where
+    G: Group,
+    LpnG: Group,
+{
+    // TODO take Price<C, Q>-es instead
+    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, LpnG>
     where
-        P: Into<SpotPrice>,
+        P: Into<PriceDTO<G, LpnG>>,
     {
         let below = below.into();
         let above_or_equal = above_or_equal.map(Into::into);
@@ -48,8 +58,12 @@ impl Alarm {
     }
 }
 
-impl From<Alarm> for (SpotPrice, Option<SpotPrice>) {
-    fn from(value: Alarm) -> Self {
+impl<G, LpnG> From<Alarm<G, LpnG>> for (PriceDTO<G, LpnG>, Option<PriceDTO<G, LpnG>>)
+where
+    G: Group,
+    LpnG: Group,
+{
+    fn from(value: Alarm<G, LpnG>) -> Self {
         (value.below, value.above)
     }
 }
@@ -60,10 +74,11 @@ pub struct AlarmError(&'static str);
 
 #[cfg(test)]
 mod test {
-    use std::fmt::{Display, Formatter, Result as FmtResult};
+    use serde::Serialize;
+    use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
     use currencies::test::{PaymentC5, PaymentC6, PaymentC7};
-    use currency::Currency;
+    use currency::{Currency, Group};
     use finance::{
         coin::{Coin, CoinDTO},
         price::{self, dto::PriceDTO, Price},
@@ -71,7 +86,12 @@ mod test {
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
     use swap::SwapGroup;
 
-    use super::*;
+    use crate::api::{PriceCurrencies, StableCurrency};
+
+    use super::Alarm;
+
+    type AssetG = PriceCurrencies;
+    type LpnG = StableCurrency;
 
     #[test]
     fn below_price_ok() {
@@ -204,7 +224,11 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err(r: Result<Alarm, StdError>, msg: &str) {
+    fn assert_err<G, LpnG>(r: Result<Alarm<G, LpnG>, StdError>, msg: &str)
+    where
+        G: Group + Debug,
+        LpnG: Group + Debug,
+    {
         assert!(r.is_err());
         assert!(matches!(
             dbg!(r),
@@ -215,43 +239,46 @@ mod test {
         ));
     }
 
-    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm, StdError>
+    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, LpnG>, StdError>
     where
         C1: Currency + Serialize,
         Q1: Currency + Serialize,
     {
-        from_both_impl::<_, _, C1, Q1>(below, None)
+        from_both_impl::<_, C1, _, Q1>(below, None)
     }
 
-    fn from_both<C1, Q1, C2, Q2>(
+    fn from_both<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Price<C2, Q2>,
-    ) -> Result<Alarm, StdError>
+    ) -> Result<Alarm<AssetG, LpnG>, StdError>
     where
-        C1: Currency + Serialize,
-        C2: Currency + Serialize,
-        Q1: Currency + Serialize,
-        Q2: Currency + Serialize,
+        C1: Currency,
+        C2: Currency,
+        Q1: Currency,
+        Q2: Currency,
     {
         from_both_impl(below, Some(above))
     }
 
-    fn from_both_impl<C1, Q1, C2, Q2>(
+    fn from_both_impl<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Option<Price<C2, Q2>>,
-    ) -> Result<Alarm, StdError>
+    ) -> Result<Alarm<AssetG, LpnG>, StdError>
     where
-        C1: Currency + Serialize,
-        C2: Currency + Serialize,
-        Q1: Currency + Serialize,
-        Q2: Currency + Serialize,
+        C1: Currency,
+        C2: Currency,
+        Q1: Currency,
+        Q2: Currency,
     {
         let above_str = above.map(|above| alarm_half_to_json(AlarmPrice::Above, above));
         let below_str = alarm_half_to_json(AlarmPrice::Below, below);
         from_both_str_impl(below_str, above_str)
     }
 
-    fn from_both_str_impl<Str1, Str2>(below: Str1, above: Option<Str2>) -> Result<Alarm, StdError>
+    fn from_both_str_impl<Str1, Str2>(
+        below: Str1,
+        above: Option<Str2>,
+    ) -> Result<Alarm<AssetG, LpnG>, StdError>
     where
         Str1: AsRef<str>,
         Str2: AsRef<str>,
@@ -278,8 +305,8 @@ mod test {
 
     fn alarm_half_to_json<C, Q>(price_type: AlarmPrice, price: Price<C, Q>) -> String
     where
-        C: Currency + Serialize,
-        Q: Currency + Serialize,
+        C: Currency,
+        Q: Currency,
     {
         let price_dto = PriceDTO::<SwapGroup, SwapGroup>::from(price);
         alarm_half_to_json_str(price_type, &as_json(&price_dto))

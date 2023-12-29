@@ -242,7 +242,7 @@ mod test_normalized_price_not_found {
         let mut alarms: MarketAlarms<'_, &mut dyn Storage> = MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency>(
+            .try_add_price_alarm::<_, BaseCurrency, _>(
                 Addr::unchecked("1"),
                 Alarm::new(
                     SpotPrice::new(PRICE_BASE.into(), PRICE_QUOTE.into()),

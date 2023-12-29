@@ -87,6 +87,7 @@ impl LppRef {
             }
         }
 
+        // TODO push the group
         Tickers
             .visit_any::<Lpns, _>(
                 &self.currency.clone(),
@@ -132,6 +133,7 @@ impl LppRef {
             }
         }
 
+        // TODO push the group
         Tickers
             .visit_any::<Lpns, _>(
                 &self.currency.clone(),

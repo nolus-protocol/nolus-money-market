@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::{LeaseGroup, PaymentGroup};
+use currencies::{LeaseGroup, Lpns, PaymentGroup};
 use finance::coin::CoinDTO;
-use lpp::msg::LpnCoin as LppLpnCoin;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -16,8 +15,12 @@ pub mod query;
 
 pub type PaymentCoin = CoinDTO<PaymentGroup>;
 pub type DownpaymentCoin = PaymentCoin;
-pub type LeaseCoin = CoinDTO<LeaseGroup>;
-pub type LpnCoin = LppLpnCoin;
+
+pub(crate) type LeaseAssetCurrencies = LeaseGroup;
+pub type LeaseCoin = CoinDTO<LeaseAssetCurrencies>;
+
+pub(crate) type LpnCurrencies = Lpns;
+pub type LpnCoin = CoinDTO<LpnCurrencies>;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

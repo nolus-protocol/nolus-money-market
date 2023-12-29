@@ -12,6 +12,7 @@ pub mod trx;
 pub type PoolId = u64;
 pub type SwapGroup = PaymentGroup; //TODO revisit its necessity
 
+// TODO move SwapTarget to oracle/stub_swap
 #[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
 #[schemars(with = "(PoolId, SymbolOwned)")]
 pub struct SwapTarget {

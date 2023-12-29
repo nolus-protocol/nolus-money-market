@@ -123,12 +123,17 @@ mod test {
     use sdk::cosmwasm_std::testing::{self, MockStorage};
     use tree::HumanReadableTree;
 
-    use crate::tests::{self, TheCurrency};
+    use crate::{
+        api::{PriceCurrencies, StableCurrency},
+        tests::{self, TheCurrency},
+    };
 
     use super::*;
 
     #[derive(Clone)]
-    pub struct TestFeeds(pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<SwapGroup, SwapGroup>>);
+    pub struct TestFeeds(
+        pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, StableCurrency>>,
+    );
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
@@ -137,7 +142,7 @@ mod test {
         {
             self.0.insert(
                 (B::TICKER, Q::TICKER),
-                tests::dto_price::<B, Q>(total_of, is),
+                tests::dto_price::<B, _, Q, _>(total_of, is),
             );
         }
     }
@@ -222,12 +227,12 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        tests::dto_price::<PaymentC3, TheCurrency>(1, 1),
-                        tests::dto_price::<PaymentC1, TheCurrency>(2, 1),
-                        tests::dto_price::<PaymentC7, PaymentC3>(1, 1),
-                        tests::dto_price::<PaymentC5, PaymentC1>(1, 1),
-                        tests::dto_price::<PaymentC6, PaymentC5>(3, 1),
-                        tests::dto_price::<PaymentC4, PaymentC5>(1, 1),
+                        tests::dto_price::<PaymentC3, _, TheCurrency, _>(1, 1),
+                        tests::dto_price::<PaymentC1, _, TheCurrency, _>(2, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
+                        tests::dto_price::<PaymentC4, _, PaymentC5, _>(1, 1),
                     ],
                 )
                 .unwrap();
@@ -273,11 +278,11 @@ mod test {
                     &Addr::unchecked("feeder"),
                     &[
                         // tests::dto_price::<PaymentC3, TheCurrency>(1, 1),
-                        tests::dto_price::<PaymentC1, TheCurrency>(2, 1),
-                        tests::dto_price::<PaymentC7, PaymentC3>(1, 1),
-                        tests::dto_price::<PaymentC5, PaymentC1>(1, 1),
-                        tests::dto_price::<PaymentC6, PaymentC5>(3, 1),
-                        tests::dto_price::<PaymentC4, PaymentC5>(1, 1),
+                        tests::dto_price::<PaymentC1, _, TheCurrency, _>(2, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
+                        tests::dto_price::<PaymentC4, _, PaymentC5, _>(1, 1),
                     ],
                 )
                 .unwrap();
