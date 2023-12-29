@@ -78,7 +78,10 @@ mod test {
     use serde::Serialize;
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-    use currencies::{test::{PaymentC5, PaymentC6, PaymentC7, StableC1}, PaymentGroup};
+    use currencies::{
+        test::{PaymentC5, PaymentC6, PaymentC7, StableC1},
+        PaymentGroup,
+    };
     use currency::{Currency, Group};
     use finance::{
         coin::{Coin, CoinDTO},

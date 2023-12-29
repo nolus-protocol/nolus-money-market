@@ -1,4 +1,7 @@
-use currencies::{test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1}, PaymentGroup};
+use currencies::{
+    test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+    PaymentGroup,
+};
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},
