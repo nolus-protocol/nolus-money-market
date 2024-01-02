@@ -1,7 +1,6 @@
 use currencies::test::{PaymentC3, PaymentC4, PaymentC5, PaymentC7, StableC1};
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
-use marketprice::SpotPrice;
 use platform::{contract, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -15,7 +14,7 @@ use sdk::{
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract::{execute, query},
-    tests::{dummy_default_instantiate_msg, setup_test},
+    tests::{dummy_default_instantiate_msg, setup_test, PriceGroup, TheStableGroup},
     ContractError,
 };
 
@@ -34,16 +33,20 @@ fn feed_prices_unknown_feeder() {
 
 #[test]
 fn feed_direct_price() {
+    fn generate_price<BaseG>() -> PriceDTO<PriceGroup, BaseG>
+    where
+        BaseG: Group,
+    {
+        PriceDTO::try_from(
+            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
+        )
+        .unwrap()
+    }
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
-
-    let expected_price = PriceDTO::try_from(
-        price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
-    )
-    .unwrap();
 
     // Feed direct price PaymentC4/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
-        prices: vec![expected_price.clone()],
+        prices: vec![generate_price()],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -56,8 +59,8 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: SpotPrice = from_json(res).unwrap();
-    assert_eq!(expected_price, value);
+    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
+    assert_eq!(generate_price(), value);
 }
 
 #[test]
@@ -95,11 +98,10 @@ fn feed_indirect_price() {
     )
     .unwrap();
 
-    let expected_price = SpotPrice::try_from(
-        price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)),
-    )
-    .unwrap();
-    let value: SpotPrice = from_json(res).unwrap();
+    let expected_price =
+        PriceDTO::try_from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)))
+            .unwrap();
+    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 

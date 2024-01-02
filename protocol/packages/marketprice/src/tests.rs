@@ -1,9 +1,10 @@
 use std::time::SystemTime;
 
-use currencies::test::{
-    PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
+use currencies::{
+    test::{PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+    Lpns, PaymentGroup,
 };
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -14,7 +15,6 @@ use sdk::cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
 
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
-    SpotPrice,
 };
 
 const TOTAL_FEEDERS: usize = 1;
@@ -56,14 +56,14 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, PaymentGroup> = PriceFeeds::new("foo", config());
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<PaymentC3, _>(
+        .price::<PaymentC3, Lpns, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
@@ -84,7 +84,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<SpotPrice> = Vec::new();
+    let prices: Vec<PriceDTO<PaymentGroup, PaymentGroup>> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
@@ -93,7 +93,7 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let mut deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, PaymentGroup> = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let price1 = price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(5));
@@ -113,7 +113,7 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
     let err = market
-        .price::<PaymentC3, _>(
+        .price::<PaymentC3, PaymentGroup, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
@@ -124,7 +124,7 @@ fn marketprice_add_feed() {
 
     {
         let price_resp = market
-            .price::<PaymentC3, _>(
+            .price::<PaymentC3, PaymentGroup, _>(
                 &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
@@ -139,7 +139,7 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, PaymentGroup> = PriceFeeds::new("foo", config());
 
     feed_price(
         deps.as_mut(),
@@ -210,7 +210,7 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     let price_resp = market
-        .price::<PaymentC2, _>(
+        .price::<PaymentC2, Lpns, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
@@ -230,7 +230,7 @@ fn marketprice_follow_the_path() {
 
     // first and second part of denom pair are the same
     let price_resp = market
-        .price::<PaymentC2, _>(
+        .price::<PaymentC2, Lpns, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
@@ -242,7 +242,7 @@ fn marketprice_follow_the_path() {
     // second part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<PaymentC2, _>(
+            .price::<PaymentC2, Lpns, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
@@ -255,7 +255,7 @@ fn marketprice_follow_the_path() {
     // first part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<PaymentC5, _>(
+            .price::<PaymentC5, Lpns, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
@@ -266,14 +266,15 @@ fn marketprice_follow_the_path() {
     );
 }
 
-fn feed_price<C1, C2>(
+fn feed_price<C1, C2, G>(
     deps: DepsMut<'_>,
-    market: &PriceFeeds<'_>,
+    market: &PriceFeeds<'_, G>,
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
     C1: Currency,
     C2: Currency,
+    G: Group,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
@@ -282,7 +283,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = SpotPrice::try_from(price).unwrap();
+    let price = PriceDTO::<G, G>::try_from(price).unwrap();
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)

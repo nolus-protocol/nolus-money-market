@@ -12,8 +12,6 @@ osmosis = ["currencies/osmosis"]
 testing = []
 
 [dependencies]
-# TODO get rid of this dependency
-currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["storage", "schema"] }

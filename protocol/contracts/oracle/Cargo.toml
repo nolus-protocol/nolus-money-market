@@ -24,6 +24,7 @@ contract = [
     "sdk/contract",
     "dep:cosmwasm-std",
     "dep:currencies",
+    "dep:marketprice",
     "dep:versioning",
 ]
 stub_alarms = ["dep:currencies"]
@@ -39,7 +40,7 @@ testing = [
 currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
-marketprice = { workspace = true }
+marketprice = { workspace = true, optional = true  }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
 sdk = { workspace = true }

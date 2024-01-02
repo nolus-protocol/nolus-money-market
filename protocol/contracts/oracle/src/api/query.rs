@@ -1,13 +1,15 @@
+use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::SymbolOwned;
-use marketprice::SpotPrice;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 use swap::SwapTarget;
 use tree::HumanReadableTree;
+
+use super::{PriceCurrencies, StableCurrency};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -56,7 +58,7 @@ pub struct SwapTreeResponse {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PricesResponse {
-    pub prices: Vec<SpotPrice>,
+    pub prices: Vec<PriceDTO<PriceCurrencies, StableCurrency>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

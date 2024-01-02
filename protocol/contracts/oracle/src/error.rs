@@ -8,6 +8,7 @@ use currency::{Currency, SymbolSlice};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
+//TODO migrate to the same type defined at oracle::result
 pub type Result<T> = StdResult<T, ContractError>;
 
 #[derive(Error, Debug, PartialEq)]

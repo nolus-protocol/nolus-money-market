@@ -62,6 +62,9 @@ pub struct OracleRef {
 }
 
 impl OracleRef {
+    // TODO [all stub-s] add a currency group as a type parameter of the struct-s
+    // in order to move the responsability to the caller. Then review if some of
+    // the dependencies to 'currencies' get obsolete.
     pub fn try_from(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::Config {})

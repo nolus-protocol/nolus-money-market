@@ -1,11 +1,10 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
 use crate::{
-    api::{Config, PricesResponse, QueryMsg, SwapTreeResponse},
+    api::{Config, PriceCurrencies, PricesResponse, QueryMsg, StableCurrency, SwapTreeResponse},
     contract::oracle::Oracle,
     state::supported_pairs::SupportedPairs,
     ContractError,
@@ -23,7 +22,9 @@ impl<'a> QueryWithOracleBase<'a> {
 
         Config::load(visitor.deps.storage)
             .map_err(ContractError::LoadConfig)
-            .and_then(|config: Config| Tickers.visit_any::<Lpns, _>(&config.base_asset, visitor))
+            .and_then(|config: Config| {
+                Tickers.visit_any::<StableCurrency, _>(&config.base_asset, visitor)
+            })
     }
 }
 
@@ -35,6 +36,9 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
+        type QueryOracle<'storage, S, BaseC> =
+            Oracle<'storage, S, PriceCurrencies, BaseC, StableCurrency>;
+
         match self.msg {
             QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
@@ -42,11 +46,11 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .collect::<Vec<_>>(),
             ),
             QueryMsg::Price { currency } => to_json_binary(
-                &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,
             ),
             QueryMsg::Prices {} => {
-                let prices = Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                let prices = QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_prices(self.env.block.time)?;
 
                 to_json_binary(&PricesResponse { prices })
@@ -61,7 +65,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .into_human_readable(),
             }),
             QueryMsg::AlarmsStatus {} => to_json_binary(
-                &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_alarms(self.env.block.time)?,
             ),
             _ => {

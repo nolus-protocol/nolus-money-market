@@ -22,7 +22,7 @@ use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{Config, ExecuteMsg, InstantiateMsg, StableCurrency, SudoMsg},
     contract::{instantiate, sudo},
 };
 
@@ -31,7 +31,9 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
+pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC1;
+pub(crate) type TheStableGroup = StableCurrency;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where

@@ -1,8 +1,9 @@
 use currencies::{LeaseGroup, Lpns, PaymentGroup};
+use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
-use marketprice::{config::Config as PriceConfig, SpotPrice};
+use marketprice::config::Config as PriceConfig;
 use sdk::schemars::{self, JsonSchema};
 use swap::SwapTarget;
 use tree::HumanReadableTree;
@@ -31,15 +32,13 @@ pub struct MigrateMsg {}
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     FeedPrices {
-        prices: Vec<SpotPrice>,
+        prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
         alarm: Alarm<AlarmCurrencies, StableCurrency>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
-    DispatchAlarms {
-        max_count: AlarmsCount,
-    },
+    DispatchAlarms { max_count: AlarmsCount },
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

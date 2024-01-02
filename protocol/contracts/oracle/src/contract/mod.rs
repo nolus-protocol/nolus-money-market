@@ -14,7 +14,7 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
     contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
@@ -147,7 +147,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
-    let mut alarms: MarketAlarms<'_, &mut (dyn Storage + '_)> = MarketAlarms::new(deps.storage);
+    let mut alarms: MarketAlarms<'_, &mut (dyn Storage + '_), PriceCurrencies> =
+        MarketAlarms::new(deps.storage);
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
