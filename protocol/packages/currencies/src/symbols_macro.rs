@@ -1,6 +1,12 @@
-pub struct CurrencySymbols {
-    pub bank: &'static str,
-    pub dex: &'static str,
+#[repr(transparent)]
+pub(crate) struct BankSymbol(pub &'static str);
+
+#[repr(transparent)]
+pub(crate) struct DexSymbol(pub &'static str);
+
+pub(crate) struct CurrencySymbols {
+    pub bank: BankSymbol,
+    pub dex: DexSymbol,
 }
 
 macro_rules! define_symbol {

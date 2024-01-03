@@ -28,9 +28,9 @@ macro_rules! define_currency {
         impl $crate::currency_macro::Currency for $ident {
             const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
 
-            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
+            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank.0;
 
-            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
+            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex.0;
         }
     };
 }
