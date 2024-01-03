@@ -4,7 +4,6 @@ pub use sdk::schemars::{self, JsonSchema};
 
 pub use currency::{Currency, SymbolStatic};
 
-#[macro_export]
 macro_rules! define_currency {
     (
         $ident:ident,
@@ -35,3 +34,5 @@ macro_rules! define_currency {
         }
     };
 }
+
+pub(crate) use define_currency;
