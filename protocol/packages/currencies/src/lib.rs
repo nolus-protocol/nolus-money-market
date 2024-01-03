@@ -1,3 +1,10 @@
+pub use lease::LeaseGroup;
+pub use lpn::Lpns;
+pub use native::{Native, Nls};
+pub use payment::PaymentGroup;
+
+use self::{currency_macro::define_currency, symbols_macro::define_symbol};
+
 #[cfg(not(any(feature = "astroport", feature = "osmosis")))]
 compile_error!("No protocol selected!");
 
@@ -16,10 +23,3 @@ pub mod test;
 
 #[cfg(test)]
 mod test_impl;
-
-pub use lease::LeaseGroup;
-pub use lpn::Lpns;
-pub use native::{Native, Nls};
-pub use payment::PaymentGroup;
-
-use self::{currency_macro::define_currency, symbols_macro::define_symbol};
