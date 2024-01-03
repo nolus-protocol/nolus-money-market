@@ -9,7 +9,7 @@ use self::{currency_macro::define_currency, symbols_macro::define_symbol};
 compile_error!("No protocol selected!");
 
 #[cfg(not(any(feature = "net_dev", feature = "net_test", feature = "net_main")))]
-compile_error!("No net selected!");
+compile_error!("No network selected!");
 
 mod currency_macro;
 mod lease;
