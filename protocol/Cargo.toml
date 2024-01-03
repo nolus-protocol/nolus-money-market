@@ -53,6 +53,8 @@ cosmwasm-std = { version = "1.2", default-features = false }
 astroport = { version = "2.9.4", default-features = false }
 osmosis-std = { version = "0.20", default-features = false }
 
+compile_time_sha2 = { git = "https://github.com/nolus-protocol/compile_time_sha2.git" }
+
 [profile.release]
 opt-level = "s"
 debug = false

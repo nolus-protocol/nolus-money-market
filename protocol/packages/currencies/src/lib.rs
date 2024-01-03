@@ -12,6 +12,7 @@ compile_error!("No protocol selected!");
 compile_error!("No network selected!");
 
 mod currency_macro;
+mod ibc;
 mod lease;
 mod lpn;
 mod native;
