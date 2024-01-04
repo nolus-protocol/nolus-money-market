@@ -1,3 +1,4 @@
+use oracle::api::swap::{SwapPath, SwapTarget};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
@@ -11,10 +12,7 @@ use platform::{
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 
-use crate::{
-    error::{Error, Result},
-    SwapPath, SwapTarget,
-};
+use crate::error::{Error, Result};
 
 use super::{ExactAmountIn, TypeUrl};
 

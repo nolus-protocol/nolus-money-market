@@ -1,5 +1,6 @@
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
+use oracle::api::swap::SwapPath;
 use platform::{ica::HostAccount, trx::Transaction};
 use sdk::cosmos_sdk_proto::Any;
 
@@ -10,7 +11,7 @@ pub use self::impl_mod::{RequestMsg, ResponseMsg};
 #[cfg(feature = "osmosis")]
 use self::osmosis as impl_mod;
 
-use crate::{error::Result, SwapPath};
+use crate::error::Result;
 
 #[cfg(feature = "astroport")]
 mod astroport;

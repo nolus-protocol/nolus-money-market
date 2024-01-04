@@ -18,11 +18,10 @@ use sdk::{
         MemoryStorage, MessageInfo, OwnedDeps,
     },
 };
-use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, StableCurrency, SudoMsg},
+    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, StableCurrency, SudoMsg},
     contract::{instantiate, sudo},
 };
 

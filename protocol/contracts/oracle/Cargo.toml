@@ -44,7 +44,6 @@ marketprice = { workspace = true, optional = true  }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
 sdk = { workspace = true }
-swap = { workspace = true }
 tree = { workspace = true, features = ["schema"] }
 versioning = { workspace = true, optional = true, features = ["schema"] }
 

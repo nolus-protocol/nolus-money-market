@@ -6,10 +6,9 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
-use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use super::{PriceCurrencies, StableCurrency};
+use super::{swap::SwapTarget, PriceCurrencies, StableCurrency};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -37,6 +36,10 @@ pub enum QueryMsg {
     },
     // returns a list of supported denom pairs
     SupportedCurrencyPairs {},
+    /// Provides a path in the swap tree between two arbitrary currencies
+    ///
+    /// Returns `SwapPathResponse`
+    /// Implementation of oracle::api::swap::QueryMsg::SwapPath
     SwapPath {
         from: SymbolOwned,
         to: SymbolOwned,

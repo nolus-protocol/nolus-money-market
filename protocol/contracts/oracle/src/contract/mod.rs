@@ -171,10 +171,9 @@ mod tests {
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_json, testing::mock_env};
-    use swap::SwapTarget;
 
     use crate::{
-        api::{Config, QueryMsg, SwapLeg},
+        api::{swap::SwapTarget, Config, QueryMsg, SwapLeg},
         contract::query,
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},

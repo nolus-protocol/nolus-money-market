@@ -6,9 +6,12 @@ use currency::{Currency, Group, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
-use swap::SwapTarget;
 
-use crate::{api::SwapLeg, error::ContractError, state::supported_pairs::SupportedPairs};
+use crate::{
+    api::{swap::SwapTarget, SwapLeg},
+    error::ContractError,
+    state::supported_pairs::SupportedPairs,
+};
 
 use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 

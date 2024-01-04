@@ -13,9 +13,6 @@ pub type Result<T> = StdResult<T, ContractError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
-
     #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
     StubAddAlarm(StdError),
 

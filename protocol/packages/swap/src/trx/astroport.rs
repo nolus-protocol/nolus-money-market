@@ -5,6 +5,7 @@ use astroport::{
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use finance::coin::{Amount, CoinDTO};
+use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
     coin_legacy,
     ica::HostAccount,
@@ -19,10 +20,7 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-use crate::{
-    error::{Error, Result},
-    SwapGroup, SwapPath, SwapTarget,
-};
+use crate::error::{Error, Result};
 
 use super::{ExactAmountIn, TypeUrl};
 
@@ -44,14 +42,17 @@ trait RouterAddress {
     const ROUTER_ADDR: &'static str;
 }
 
-#[cfg(any(feature = "net_dev", feature = "net_test"))]
-impl RouterAddress for Impl {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-    const ROUTER_ADDR: &'static str =
-        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
-}
+// TODO pass the ExactAmountIn impl as a type parameter of the dex package
+// #[cfg(any(feature = "net_dev", feature = "net_test"))]
+// impl RouterAddress for Impl {
+//     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+//     const ROUTER_ADDR: &'static str =
+//         "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+// }
 
-#[cfg(feature = "net_main")]
+// TODO pass the ExactAmountIn impl as a type parameter of the dex package
+// temporarily use the main net address
+// #[cfg(feature = "net_main")]
 impl RouterAddress for Impl {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
     const ROUTER_ADDR: &'static str =
@@ -59,22 +60,23 @@ impl RouterAddress for Impl {
 }
 
 impl ExactAmountIn for Impl {
-    fn build<G>(
+    fn build<GIn, GSwap>(
         &self,
         trx: &mut Transaction,
         sender: HostAccount,
-        token_in: &CoinDTO<G>,
+        token_in: &CoinDTO<GIn>,
         swap_path: &SwapPath,
     ) -> Result<()>
     where
-        G: Group,
+        GIn: Group,
+        GSwap: Group,
     {
         const MAX_IMPACT: Decimal = Decimal::percent(50); // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
 
         debug_assert!(!swap_path.is_empty());
         let token_in = to_proto_coin(token_in)?;
 
-        to_operations(&token_in.denom, swap_path)
+        to_operations::<GSwap>(&token_in.denom, swap_path)
             .map(|operations| ExecuteMsg::ExecuteSwapOperations {
                 operations,
                 minimum_receive: None, // disable checks on the received amount
@@ -125,10 +127,13 @@ impl ExactAmountIn for Impl {
     }
 }
 
-fn to_operations<'a>(
+fn to_operations<'a, G>(
     token_in_denom: &'a SymbolSlice,
     swap_path: &'a [SwapTarget],
-) -> Result<Vec<SwapOperation>> {
+) -> Result<Vec<SwapOperation>>
+where
+    G: Group,
+{
     struct OperationScan<'a> {
         last_denom: &'a SymbolSlice,
     }
@@ -140,7 +145,7 @@ fn to_operations<'a>(
     swap_path
         .iter()
         .map(|swap_target| &swap_target.target)
-        .map(to_dex_symbol)
+        .map(to_dex_symbol::<_, G>)
         .scan(scanner, |scanner, may_next_denom| {
             Some(may_next_denom.map(|next_denom| {
                 let op = SwapOperation::AstroSwap {
@@ -170,12 +175,13 @@ where
         })
 }
 
-fn to_dex_symbol<Symbol>(ticker: &Symbol) -> Result<&SymbolSlice>
+fn to_dex_symbol<Symbol, G>(ticker: &Symbol) -> Result<&SymbolSlice>
 where
     Symbol: AsRef<SymbolSlice> + ?Sized,
+    G: Group,
 {
     Tickers
-        .visit_any::<SwapGroup, _>(ticker.as_ref(), DexSymbols {})
+        .visit_any::<G, _>(ticker.as_ref(), DexSymbols {})
         .map_err(Error::from)
 }
 

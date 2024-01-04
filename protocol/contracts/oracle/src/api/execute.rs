@@ -1,14 +1,14 @@
-use currencies::{LeaseGroup, Lpns, PaymentGroup};
-use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
 
+use currencies::{LeaseGroup, Lpns, PaymentGroup};
 use currency::SymbolOwned;
+use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
 use sdk::schemars::{self, JsonSchema};
-use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
+use super::swap::SwapTarget;
 
 pub type StableCurrency = Lpns;
 pub type AlarmCurrencies = LeaseGroup;

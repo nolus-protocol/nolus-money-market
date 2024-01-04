@@ -1,9 +1,8 @@
 use currency::SymbolOwned;
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
-use swap::SwapTarget;
 
-use crate::{api::QueryMsg, error::Result, ContractError};
+use crate::api::swap::{Error, QueryMsg, Result, SwapTarget};
 
 pub trait SwapPath {
     fn swap_path(
@@ -26,7 +25,7 @@ impl SwapPath for OracleRef {
 
             querier
                 .query_wasm_smart(self.addr().clone(), &msg)
-                .map_err(ContractError::StubSwapPathQuery)
+                .map_err(Error::StubSwapPathQuery)
         }
     }
 }
