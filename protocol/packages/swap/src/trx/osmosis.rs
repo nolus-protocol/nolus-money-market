@@ -126,7 +126,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::{test::PaymentC1, PaymentGroup};
+    use currency::test::{SuperGroup, SuperGroupTestC1};
     use currency::{Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
@@ -139,27 +139,27 @@ mod test {
 
     #[test]
     fn to_dex_symbol() {
-        type Currency = PaymentC1;
+        type Currency = SuperGroupTestC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
-            super::to_dex_symbol::<PaymentGroup>(Currency::TICKER)
+            super::to_dex_symbol::<SuperGroup>(Currency::TICKER)
         );
     }
 
     #[test]
     fn to_dex_symbol_err() {
         assert!(matches!(
-            super::to_dex_symbol::<PaymentGroup>(INVALID_TICKER),
+            super::to_dex_symbol::<SuperGroup>(INVALID_TICKER),
             Err(Error::Currency(_))
         ));
     }
 
     #[test]
     fn to_cwcoin() {
-        let coin: Coin<PaymentC1> = 3541415.into();
+        let coin: Coin<SuperGroupTestC1> = 3541415.into();
         assert_eq!(
-            CwCoin::new(coin.into(), PaymentC1::DEX_SYMBOL),
-            super::to_cwcoin::<PaymentGroup>(&coin.into()).unwrap()
+            CwCoin::new(coin.into(), SuperGroupTestC1::DEX_SYMBOL),
+            super::to_cwcoin::<SuperGroup>(&coin.into()).unwrap()
         );
     }
 
@@ -167,13 +167,13 @@ mod test {
     fn into_route() {
         let path = vec![SwapTarget {
             pool_id: 2,
-            target: PaymentC1::TICKER.into(),
+            target: SuperGroupTestC1::TICKER.into(),
         }];
         let expected = vec![SwapAmountInRoute {
             pool_id: 2,
-            token_out_denom: PaymentC1::DEX_SYMBOL.into(),
+            token_out_denom: SuperGroupTestC1::DEX_SYMBOL.into(),
         }];
-        assert_eq!(Ok(expected), super::to_route::<PaymentGroup>(&path));
+        assert_eq!(Ok(expected), super::to_route::<SuperGroup>(&path));
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod test {
             target: INVALID_TICKER.into(),
         }];
         assert!(matches!(
-            super::to_route::<PaymentGroup>(&path),
+            super::to_route::<SuperGroup>(&path),
             Err(Error::Currency(_))
         ));
     }

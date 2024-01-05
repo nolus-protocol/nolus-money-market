@@ -1491,7 +1491,6 @@ name = "swap"
 version = "0.1.1"
 dependencies = [
  "astroport",
- "currencies",
  "currency",
  "finance",
  "oracle",
