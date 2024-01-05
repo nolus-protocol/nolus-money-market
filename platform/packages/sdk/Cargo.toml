@@ -10,7 +10,7 @@ edition.workspace = true
 [features]
 contract = ["cosmos", "schema", "storage"]
 schema = ["dep:cosmwasm-schema"]
-storage = ["dep:cosmwasm-storage", "dep:cw-storage-plus"]
+storage = ["dep:cw-storage-plus"]
 testing = [
     "dep:cw-multi-test",
     "dep:cosmwasm-schema",
@@ -24,7 +24,6 @@ neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 
 [dependencies]
 cosmwasm-std = { workspace = true }
-cosmwasm-storage = { workspace = true, optional = true }
 cosmwasm-schema = { workspace = true, optional = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }

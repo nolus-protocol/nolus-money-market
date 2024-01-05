@@ -4,8 +4,6 @@ pub use cosmos_sdk_proto;
 pub use cosmwasm_schema::{self, schemars};
 #[cfg(feature = "cosmos")]
 pub use cosmwasm_std;
-#[cfg(feature = "storage")]
-pub use cosmwasm_storage;
 #[cfg(all(not(target_arch = "wasm32"), feature = "testing"))]
 pub use cw_multi_test;
 #[cfg(feature = "storage")]
