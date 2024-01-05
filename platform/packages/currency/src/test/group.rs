@@ -37,9 +37,7 @@ impl Group for SuperGroup {
             .or_else(|visitor| {
                 crate::maybe_visit_any::<_, SuperGroupTestC6, _>(matcher, symbol, visitor)
             })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
-            })
+            .or_else(|visitor| SubGroup::maybe_visit(matcher, symbol, visitor))
     }
 }
 
@@ -53,9 +51,7 @@ impl Group for SubGroup {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        SuperGroup::maybe_visit(matcher, symbol, visitor).or_else(|visitor| {
-            crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
-        })
+        crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
     }
 }
 

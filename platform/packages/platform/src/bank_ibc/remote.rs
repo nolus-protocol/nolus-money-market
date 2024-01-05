@@ -96,7 +96,7 @@ impl<'c> From<Sender<'c>> for Transaction {
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency,
     };
     use finance::coin::{Amount, Coin};
@@ -124,8 +124,8 @@ mod test {
 
         let coin1: Coin<SuperGroupTestC2> = 63.into();
         let coin2: Coin<SuperGroupTestC1> = 2.into();
-        funds_sender.send::<SubGroup>(&coin1.into()).unwrap();
-        funds_sender.send::<SubGroup>(&coin2.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
 
         assert_eq!(Transaction::try_from(funds_sender), {
             let mut trx = Transaction::default();

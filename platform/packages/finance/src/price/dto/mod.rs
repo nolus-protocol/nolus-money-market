@@ -228,7 +228,7 @@ mod test {
     #[test]
     #[should_panic = "The currencies of both prices should match"]
     fn test_cmp_currencies_mismatch() {
-        let p1: PriceDTO<SuperGroup, SubGroup> = Price::new(
+        let p1: PriceDTO<SuperGroup, SuperGroup> = Price::new(
             Coin::<SuperGroupTestC1>::new(20),
             Coin::<SuperGroupTestC2>::new(5000),
         )
@@ -255,7 +255,7 @@ mod test_invariant {
 
     use super::PriceDTO;
 
-    type TC = SubGroup;
+    type TC = SuperGroup;
 
     #[test]
     #[should_panic = "zero"]
@@ -344,7 +344,11 @@ mod test_invariant {
 
     #[test]
     fn group_mismatch_json() {
-        let r = load_with_groups::<TC, SuperGroup>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        let r = load_with_groups::<TC, SubGroup>(&format!(
+            r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
+            SuperGroupTestC1::TICKER,
+            SuperGroupTestC2::TICKER
+        ).into_bytes());
         assert_err(r, "pretending to be ticker of a currency pertaining to");
     }
 
