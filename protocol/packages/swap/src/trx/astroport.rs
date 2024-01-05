@@ -207,14 +207,14 @@ mod test {
         type Currency = PaymentC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
-            super::to_dex_symbol(Currency::TICKER)
+            super::to_dex_symbol::<_, PaymentGroup>(Currency::TICKER)
         );
     }
 
     #[test]
     fn to_dex_symbol_err() {
         assert!(matches!(
-            super::to_dex_symbol(INVALID_TICKER),
+            super::to_dex_symbol::<_, PaymentGroup>(INVALID_TICKER),
             Err(Error::Currency(_))
         ));
     }
@@ -265,15 +265,15 @@ mod test {
         ];
         assert_eq!(
             Ok(vec![]),
-            super::to_operations(StartSwapCurrency::DEX_SYMBOL, &path[0..0])
+            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0])
         );
         assert_eq!(
             Ok(expected[0..1].to_vec()),
-            super::to_operations(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
+            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
         );
         assert_eq!(
             Ok(expected),
-            super::to_operations(StartSwapCurrency::DEX_SYMBOL, &path)
+            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path)
         );
     }
 
@@ -284,7 +284,7 @@ mod test {
             target: INVALID_TICKER.into(),
         }];
         assert!(matches!(
-            super::to_operations(PaymentC1::DEX_SYMBOL, &path),
+            super::to_operations::<PaymentGroup>(PaymentC1::DEX_SYMBOL, &path),
             Err(Error::Currency(_))
         ));
     }

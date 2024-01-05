@@ -4,7 +4,9 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
 use crate::{
-    api::{Config, PriceCurrencies, PricesResponse, QueryMsg, StableCurrency, SwapTreeResponse},
+    api::{
+        alarms::StableCurrency, Config, PriceCurrencies, PricesResponse, QueryMsg, SwapTreeResponse,
+    },
     contract::oracle::Oracle,
     state::supported_pairs::SupportedPairs,
     ContractError,

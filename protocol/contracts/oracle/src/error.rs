@@ -13,9 +13,6 @@ pub type Result<T> = StdResult<T, ContractError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
-    StubAddAlarm(StdError),
-
     #[error("[Oracle] Failed to initialize versioning module! Cause: {0}")]
     InitializeVersioning(StdError),
 

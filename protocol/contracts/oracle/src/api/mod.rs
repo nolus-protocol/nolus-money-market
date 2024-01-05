@@ -1,15 +1,9 @@
-#[cfg(feature = "stub_alarms")]
-pub use alarms::*;
-#[cfg(feature = "stub_alarms")]
-pub use execute::*;
-#[cfg(feature = "stub_alarms")]
-pub use query::*;
+#[cfg(feature = "contract")]
+pub use contract::*;
 
 #[cfg(feature = "stub_alarms")]
-mod alarms;
-#[cfg(feature = "stub_alarms")]
-mod execute;
-#[cfg(feature = "stub_alarms")]
-mod query;
+pub mod alarms;
+#[cfg(feature = "contract")]
+mod contract;
 #[cfg(feature = "stub_swap")]
 pub mod swap;

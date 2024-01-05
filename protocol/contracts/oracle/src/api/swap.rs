@@ -10,7 +10,6 @@ use sdk::{
 };
 
 pub type PoolId = u64;
-pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -23,6 +22,8 @@ pub enum QueryMsg {
 }
 
 pub type SwapPath = Vec<SwapTarget>;
+
+pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

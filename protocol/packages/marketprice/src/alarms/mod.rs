@@ -382,16 +382,13 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use currencies::{
-        test::{PaymentC4, PaymentC6, PaymentC7},
-        PaymentGroup,
-    };
+    use currency::test::{SuperGroup, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4};
     use finance::{coin::Coin, price};
     use sdk::cosmwasm_std::{testing::MockStorage, Addr};
 
     use super::*;
 
-    type BaseCurrency = PaymentC6;
+    type BaseCurrency = SuperGroupTestC3;
 
     #[test]
     fn test_below_exclusive() {
@@ -400,7 +397,8 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20));
+        let price =
+            price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm(addr1, price, None).unwrap();
 
         assert_eq!(None, alarms.alarms(price).next());
@@ -413,7 +411,8 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20));
+        let price =
+            price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms
             .add_alarm(
                 addr1.clone(),
@@ -434,7 +433,8 @@ pub mod tests {
 
         let addr1 = Addr::unchecked("addr1");
 
-        let price = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20));
+        let price =
+            price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm(addr1.clone(), price, None).unwrap();
         alarms
             .add_alarm(
@@ -451,7 +451,7 @@ pub mod tests {
 
     #[test]
     fn test_out_for_delivery_removes_above() {
-        type QuoteCurrency = PaymentC7;
+        type QuoteCurrency = SuperGroupTestC4;
         type PriceBaseQuote = Price<BaseCurrency, QuoteCurrency>;
 
         const PRICE_BASE: Coin<BaseCurrency> = Coin::new(1);
@@ -461,7 +461,7 @@ pub mod tests {
             || price::total_of(PRICE_BASE).is(PRICE_QUOTE - Coin::new(1));
 
         fn expect_no_alarms<'storage>(
-            alarms: &PriceAlarms<'storage, PaymentGroup, &mut (dyn Storage + 'storage)>,
+            alarms: &PriceAlarms<'storage, SuperGroup, &mut (dyn Storage + 'storage)>,
         ) {
             // Catch below
             assert_eq!(alarms.alarms(LOWER_PRICE()).count(), 0);
@@ -473,7 +473,7 @@ pub mod tests {
         /* TEST START */
 
         let mut storage: MockStorage = MockStorage::new();
-        let mut alarms: PriceAlarms<'_, PaymentGroup, &mut dyn Storage> = alarms(&mut storage);
+        let mut alarms: PriceAlarms<'_, SuperGroup, &mut dyn Storage> = alarms(&mut storage);
 
         let subscriber: Addr = Addr::unchecked("addr1");
 
@@ -514,7 +514,7 @@ pub mod tests {
         alarms
             .add_alarm(
                 addr1.clone(),
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20)),
                 None,
             )
             .unwrap();
@@ -522,14 +522,17 @@ pub mod tests {
         alarms
             .add_alarm(
                 addr2.clone(),
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(5)),
-                Some(price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(10))),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(5)),
+                Some(
+                    price::total_of(Coin::<SuperGroupTestC4>::new(1))
+                        .is(Coin::<BaseCurrency>::new(10)),
+                ),
             )
             .unwrap();
         alarms
             .add_alarm(
                 addr3.clone(),
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20)),
                 None,
             )
             .unwrap();
@@ -538,7 +541,9 @@ pub mod tests {
         alarms.remove_all(addr2).unwrap();
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(15)))
+            .alarms(
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(15)),
+            )
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3)]);
@@ -558,47 +563,57 @@ pub mod tests {
         alarms
             .add_alarm(
                 addr1,
-                price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<BaseCurrency>::new(10)),
+                price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<BaseCurrency>::new(10)),
                 None,
             )
             .unwrap();
         alarms
             .add_alarm(
                 addr2.clone(),
-                price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<BaseCurrency>::new(20)),
                 None,
             )
             .unwrap();
         alarms
             .add_alarm(
                 addr3.clone(),
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(30)),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(30)),
                 None,
             )
             .unwrap();
         alarms
             .add_alarm(
                 addr4.clone(),
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20)),
-                Some(price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(25))),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                Some(
+                    price::total_of(Coin::<SuperGroupTestC4>::new(1))
+                        .is(Coin::<BaseCurrency>::new(25)),
+                ),
             )
             .unwrap();
         alarms
             .add_alarm(
                 addr5,
-                price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(20)),
-                Some(price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(35))),
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20)),
+                Some(
+                    price::total_of(Coin::<SuperGroupTestC4>::new(1))
+                        .is(Coin::<BaseCurrency>::new(35)),
+                ),
             )
             .unwrap();
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<BaseCurrency>::new(15)))
+            .alarms(
+                price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<BaseCurrency>::new(15)),
+            )
             .collect();
 
         assert_eq!(resp, vec![Ok(addr2)]);
 
         let resp: Vec<_> = alarms
-            .alarms(price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<BaseCurrency>::new(26)))
+            .alarms(
+                price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(26)),
+            )
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
@@ -617,14 +632,14 @@ pub mod tests {
         alarms
             .add_alarm(
                 subscriber1.clone(),
-                Price::<PaymentC7, BaseCurrency>::identity(),
+                Price::<SuperGroupTestC4, BaseCurrency>::identity(),
                 None,
             )
             .unwrap();
         alarms
             .add_alarm(
                 subscriber1.clone(),
-                price::total_of::<PaymentC7>(1.into()).is::<BaseCurrency>(2.into()),
+                price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into()),
                 None,
             )
             .unwrap();
@@ -634,14 +649,14 @@ pub mod tests {
         alarms
             .add_alarm(
                 subscriber2.clone(),
-                Price::<PaymentC7, BaseCurrency>::identity(),
+                Price::<SuperGroupTestC4, BaseCurrency>::identity(),
                 None,
             )
             .unwrap();
         alarms
             .add_alarm(
                 subscriber2.clone(),
-                price::total_of::<PaymentC7>(1.into()).is::<BaseCurrency>(2.into()),
+                price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into()),
                 None,
             )
             .unwrap();
@@ -676,16 +691,16 @@ pub mod tests {
         let subscriber1 = Addr::unchecked("subscriber1");
         let subscriber2 = Addr::unchecked("subscriber2");
 
-        let subscriber2_below_price = Price::<PaymentC7, BaseCurrency>::identity();
-        let subscriber2_above_or_equal_price = Price::<PaymentC7, BaseCurrency>::identity();
+        let subscriber2_below_price = Price::<SuperGroupTestC4, BaseCurrency>::identity();
+        let subscriber2_above_or_equal_price = Price::<SuperGroupTestC4, BaseCurrency>::identity();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
             .add_alarm(
                 subscriber1.clone(),
-                Price::<PaymentC7, BaseCurrency>::identity(),
-                Some(price::total_of::<PaymentC7>(1.into()).is::<BaseCurrency>(2.into())),
+                Price::<SuperGroupTestC4, BaseCurrency>::identity(),
+                Some(price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into())),
             )
             .unwrap();
 
@@ -738,7 +753,7 @@ pub mod tests {
 
     fn alarms<'storage, 'storage_ref>(
         storage: &'storage_ref mut (dyn Storage + 'storage),
-    ) -> PriceAlarms<'storage, PaymentGroup, &'storage_ref mut (dyn Storage + 'storage)> {
+    ) -> PriceAlarms<'storage, SuperGroup, &'storage_ref mut (dyn Storage + 'storage)> {
         PriceAlarms::new(
             storage,
             "alarms_below",

@@ -6,9 +6,6 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-astroport = ["currencies/astroport"]
-osmosis = ["currencies/osmosis"]
-
 testing = []
 
 [dependencies]
@@ -21,7 +18,7 @@ serde = { workspace = true, features = ["derive"] }
 postcard = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
-currencies = { workspace = true, features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

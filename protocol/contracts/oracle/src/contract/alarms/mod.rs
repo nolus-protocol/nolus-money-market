@@ -166,7 +166,7 @@ mod test {
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
-        api::{PriceCurrencies, StableCurrency},
+        api::{alarms::StableCurrency, PriceCurrencies},
         tests::{self, TheCurrency as Base},
     };
 

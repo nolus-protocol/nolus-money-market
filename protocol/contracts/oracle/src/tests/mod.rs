@@ -21,7 +21,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, StableCurrency, SudoMsg},
+    api::{alarms::StableCurrency, swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
 };
 

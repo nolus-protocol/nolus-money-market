@@ -5,11 +5,7 @@ use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
-use crate::{
-    api::{Alarm, AlarmCurrencies, ExecuteMsg, StableCurrency},
-    error::Result,
-    ContractError,
-};
+use crate::api::alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result, StableCurrency};
 
 pub trait PriceAlarms
 where
@@ -69,7 +65,7 @@ where
                 &ExecuteMsg::AddPriceAlarm { alarm },
                 vec![],
             )
-            .map_err(ContractError::StubAddAlarm)?,
+            .map_err(Error::StubAddAlarm)?,
         );
 
         Ok(())

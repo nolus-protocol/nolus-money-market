@@ -808,7 +808,6 @@ dependencies = [
  "finance",
  "lpp",
  "lpp-platform",
- "marketprice",
  "oracle",
  "oracle-platform",
  "platform",
@@ -882,7 +881,6 @@ dependencies = [
 name = "marketprice"
 version = "0.3.0"
 dependencies = [
- "currencies",
  "currency",
  "finance",
  "postcard",

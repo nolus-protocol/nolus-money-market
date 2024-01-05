@@ -167,13 +167,16 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
 #[cfg(test)]
 mod tests {
-    use currencies::test::{PaymentC5, StableC1};
+    use currencies::{
+        test::{LeaseC1, PaymentC1, PaymentC5, StableC1},
+        LeaseGroup, Lpns,
+    };
     use currency::Currency;
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{from_json, testing::mock_env};
 
     use crate::{
-        api::{swap::SwapTarget, Config, QueryMsg, SwapLeg},
+        api::{swap::SwapTarget, Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg},
         contract::query,
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
@@ -222,5 +225,42 @@ mod tests {
         }];
 
         assert_eq!(expected, value);
+    }
+
+    #[test]
+    fn impl_swap_path() {
+        use crate::api::swap::QueryMsg as QueryMsgApi;
+
+        let from = PaymentC1::TICKER;
+        let to = StableC1::TICKER;
+        let query_impl = QueryMsg::SwapPath {
+            from: from.into(),
+            to: to.into(),
+        };
+        let query_api =
+            from_json::<QueryMsgApi>(&cosmwasm_std::to_json_vec(&query_impl).unwrap()).unwrap();
+        assert_eq!(
+            QueryMsgApi::SwapPath {
+                from: from.into(),
+                to: to.into()
+            },
+            query_api
+        );
+    }
+
+    #[test]
+    fn impl_add_price_alarm() {
+        use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
+
+        let alarm = Alarm::<LeaseGroup, Lpns>::new(
+            price::total_of::<LeaseC1>(10.into()).is::<StableC1>(1.into()),
+            Some(price::total_of(7.into()).is(1.into())),
+        );
+        let query_impl = ExecuteMsg::AddPriceAlarm {
+            alarm: alarm.clone(),
+        };
+        let query_api =
+            from_json::<ExecuteMsgApi>(&cosmwasm_std::to_json_vec(&query_impl).unwrap()).unwrap();
+        assert_eq!(ExecuteMsgApi::AddPriceAlarm { alarm }, query_api);
     }
 }

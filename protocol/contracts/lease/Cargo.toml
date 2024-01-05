@@ -26,7 +26,6 @@ contract = [
     "sdk/contract",
     "dep:cosmwasm-std",
     "dep:enum_dispatch",
-    "dep:marketprice",
     "dep:versioning",
 ]
 skel = [
@@ -53,7 +52,6 @@ dex = { workspace = true, optional = true }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 lpp-platform = { workspace = true, optional = true }
-marketprice = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
@@ -76,7 +74,6 @@ oracle-platform = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
-marketprice = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 

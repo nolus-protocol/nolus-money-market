@@ -248,9 +248,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::{
-        test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
-        Lpns, PaymentGroup,
+    use currency::test::{
+        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
+        SuperGroupTestC4, SuperGroupTestC5,
     };
     use currency::{Currency, Group};
     use finance::{
@@ -277,38 +277,38 @@ mod test {
 
     #[test]
     fn no_feed() {
-        let feeds = PriceFeeds::<PaymentGroup>::new(FEEDS_NAMESPACE, config());
+        let feeds = PriceFeeds::<SuperGroup>::new(FEEDS_NAMESPACE, config());
         let storage = MemoryStorage::new();
 
         assert_eq!(
-            Ok(Price::<PaymentC3, PaymentC3>::identity().into()),
-            feeds.price::<PaymentC3, PaymentGroup, _>(
+            Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
+            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC3::TICKER].into_iter()
+                [SuperGroupTestC1::TICKER].into_iter()
             )
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<PaymentC3, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC3::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
             )
         );
     }
 
     #[test]
     fn feed_pair() {
-        fn build_price<QuoteG>() -> PriceDTO<PaymentGroup, QuoteG>
+        fn build_price<QuoteG>() -> PriceDTO<SuperGroup, QuoteG>
         where
             QuoteG: Group,
         {
-            price::total_of(Coin::<PaymentC7>::new(1))
-                .is(Coin::<StableC1>::new(18500))
+            price::total_of(Coin::<SuperGroupTestC5>::new(1))
+                .is(Coin::<SubGroupTestC1>::new(18500))
                 .into()
         }
 
@@ -326,31 +326,34 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<PaymentC3, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC3::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(build_price()),
-            feeds.price::<StableC1, Lpns, _>(
+            feeds.price::<SubGroupTestC1, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, StableC1::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SubGroupTestC1::TICKER].into_iter()
             )
         );
     }
 
     #[test]
     fn feed_pairs() {
-        let feeds = PriceFeeds::<PaymentGroup>::new(FEEDS_NAMESPACE, config());
+        let feeds = PriceFeeds::<SuperGroup>::new(FEEDS_NAMESPACE, config());
         let mut storage = MemoryStorage::new();
-        let new_price75 = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<PaymentC5>::new(2));
-        let new_price56 = price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<PaymentC6>::new(3));
-        let new_price51 = price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(4));
+        let new_price75 =
+            price::total_of(Coin::<SuperGroupTestC5>::new(1)).is(Coin::<SuperGroupTestC3>::new(2));
+        let new_price56 =
+            price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC4>::new(3));
+        let new_price51 =
+            price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SubGroupTestC1>::new(4));
 
         feeds
             .feed(
@@ -363,56 +366,66 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<PaymentC4, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC2, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC4::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC2::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price75.into()),
-            feeds.price::<PaymentC5, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC3, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC5::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price56.into()),
-            feeds.price::<PaymentC6, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC5::TICKER, PaymentC6::TICKER].into_iter()
+                [SuperGroupTestC3::TICKER, SuperGroupTestC4::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok(new_price51.into()),
-            feeds.price::<StableC1, Lpns, _>(
+            feeds.price::<SubGroupTestC1, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC5::TICKER, StableC1::TICKER].into_iter()
+                [SuperGroupTestC3::TICKER, SubGroupTestC1::TICKER].into_iter()
             )
         );
         assert_eq!(
             Ok((new_price75 * new_price56).into()),
-            feeds.price::<PaymentC6, PaymentGroup, _>(
+            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC5::TICKER, PaymentC6::TICKER].into_iter()
+                [
+                    SuperGroupTestC5::TICKER,
+                    SuperGroupTestC3::TICKER,
+                    SuperGroupTestC4::TICKER
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
             Ok((new_price75 * new_price51).into()),
-            feeds.price::<StableC1, Lpns, _>(
+            feeds.price::<SubGroupTestC1, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC5::TICKER, StableC1::TICKER].into_iter()
+                [
+                    SuperGroupTestC5::TICKER,
+                    SuperGroupTestC3::TICKER,
+                    SubGroupTestC1::TICKER
+                ]
+                .into_iter()
             )
         );
     }

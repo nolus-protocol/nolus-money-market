@@ -2,7 +2,7 @@ use currency::Currency;
 use finance::{duration::Duration, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::{
-    api::Alarm,
+    api::alarms::Alarm,
     stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
 };
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
@@ -88,7 +88,7 @@ mod tests {
         price::total_of,
     };
     use lpp::msg::LoanResponse;
-    use oracle::{api::Alarm, api::ExecuteMsg::AddPriceAlarm};
+    use oracle::{api::alarms::Alarm, api::alarms::ExecuteMsg::AddPriceAlarm};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_json_binary, Timestamp, WasmMsg};
