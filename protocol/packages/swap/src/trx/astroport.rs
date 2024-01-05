@@ -27,13 +27,13 @@ use super::{ExactAmountIn, TypeUrl};
 pub type RequestMsg = MsgExecuteContract;
 
 impl TypeUrl for RequestMsg {
-    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::TypeUrl>::TYPE_URL;
+    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
 }
 
 pub type ResponseMsg = MsgExecuteContractResponse;
 
 impl TypeUrl for ResponseMsg {
-    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::TypeUrl>::TYPE_URL;
+    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
 }
 
 pub(super) struct Impl;
@@ -188,11 +188,10 @@ where
 #[cfg(test)]
 mod test {
     use astroport::{asset::AssetInfo, router::SwapOperation};
-    use currencies::{
-        test::{PaymentC1, PaymentC7, StableC1},
-        PaymentGroup,
+    use currency::{
+        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC6},
+        Currency as _, SymbolStatic,
     };
-    use currency::{Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 
@@ -204,17 +203,17 @@ mod test {
 
     #[test]
     fn to_dex_symbol() {
-        type Currency = PaymentC1;
+        type Currency = SuperGroupTestC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
-            super::to_dex_symbol::<_, PaymentGroup>(Currency::TICKER)
+            super::to_dex_symbol::<_, SuperGroup>(Currency::TICKER)
         );
     }
 
     #[test]
     fn to_dex_symbol_err() {
         assert!(matches!(
-            super::to_dex_symbol::<_, PaymentGroup>(INVALID_TICKER),
+            super::to_dex_symbol::<_, SuperGroup>(INVALID_TICKER),
             Err(Error::Currency(_))
         ));
     }
@@ -222,27 +221,27 @@ mod test {
     #[test]
     fn to_cwcoin() {
         let coin_amount = 3541415;
-        let coin: Coin<PaymentC1> = coin_amount.into();
+        let coin: Coin<SuperGroupTestC1> = coin_amount.into();
         assert_eq!(
             ProtoCoin {
-                denom: PaymentC1::DEX_SYMBOL.into(),
+                denom: SuperGroupTestC1::DEX_SYMBOL.into(),
                 amount: coin_amount.to_string()
             },
-            super::to_proto_coin::<PaymentGroup>(&coin.into()).unwrap()
+            super::to_proto_coin::<SuperGroup>(&coin.into()).unwrap()
         );
     }
 
     #[test]
     fn to_operations() {
-        type StartSwapCurrency = StableC1;
+        type StartSwapCurrency = SubGroupTestC1;
         let path = vec![
             SwapTarget {
                 pool_id: 2,
-                target: PaymentC1::TICKER.into(),
+                target: SuperGroupTestC1::TICKER.into(),
             },
             SwapTarget {
                 pool_id: 12,
-                target: PaymentC7::TICKER.into(),
+                target: SuperGroupTestC6::TICKER.into(),
             },
         ];
         let expected = vec![
@@ -251,29 +250,29 @@ mod test {
                     denom: StartSwapCurrency::DEX_SYMBOL.into(),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
-                    denom: PaymentC1::DEX_SYMBOL.into(),
+                    denom: SuperGroupTestC1::DEX_SYMBOL.into(),
                 },
             },
             SwapOperation::AstroSwap {
                 offer_asset_info: AssetInfo::NativeToken {
-                    denom: PaymentC1::DEX_SYMBOL.into(),
+                    denom: SuperGroupTestC1::DEX_SYMBOL.into(),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
-                    denom: PaymentC7::DEX_SYMBOL.into(),
+                    denom: SuperGroupTestC6::DEX_SYMBOL.into(),
                 },
             },
         ];
         assert_eq!(
             Ok(vec![]),
-            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0])
+            super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0])
         );
         assert_eq!(
             Ok(expected[0..1].to_vec()),
-            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
+            super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
         );
         assert_eq!(
             Ok(expected),
-            super::to_operations::<PaymentGroup>(StartSwapCurrency::DEX_SYMBOL, &path)
+            super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path)
         );
     }
 
@@ -284,7 +283,7 @@ mod test {
             target: INVALID_TICKER.into(),
         }];
         assert!(matches!(
-            super::to_operations::<PaymentGroup>(PaymentC1::DEX_SYMBOL, &path),
+            super::to_operations::<SuperGroup>(SuperGroupTestC1::DEX_SYMBOL, &path),
             Err(Error::Currency(_))
         ));
     }
