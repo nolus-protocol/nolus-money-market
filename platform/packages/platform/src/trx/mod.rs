@@ -3,7 +3,7 @@ use sdk::{
     neutron_sdk::bindings::types::ProtobufAny,
 };
 
-use crate::result::Result;
+use crate::{error::Error, result::Result};
 
 #[derive(Default)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
@@ -30,21 +30,9 @@ impl Transaction {
 }
 
 pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any>> {
-    let tx_msg_data = TxMsgData::decode(data)?;
-    let responses: Vec<Any> = if !tx_msg_data.msg_responses.is_empty() {
-        tx_msg_data.msg_responses
-    } else {
-        #[allow(deprecated)]
-        tx_msg_data
-            .data
-            .into_iter()
-            .map(|msg| Any {
-                type_url: msg.msg_type,
-                value: msg.data,
-            })
-            .collect()
-    };
-    Ok(responses.into_iter())
+    TxMsgData::decode(data)
+        .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter())
+        .map_err(Into::into)
 }
 
 #[cfg(feature = "testing")]
@@ -59,43 +47,44 @@ where
     tx.encode_to_vec()
 }
 
-pub fn decode_msg_response<T, M>(resp: Any, _msg_type: T) -> Result<M>
+pub fn decode_msg_response<T, M>(resp: Any, msg_type: T) -> Result<M>
 where
     T: Into<String>,
     M: Message + Default,
 {
-    // TODO uncomment once bump the cosmos-sdk-proto to 0.20
-    // let msg_type = msg_type.into();
+    let msg_type = msg_type.into();
 
-    // if resp.type_url != msg_type {
-    //     return Err(Error::ProtobufInvalidType(msg_type, resp.type_url));
-    // }
+    if resp.type_url != msg_type {
+        return Err(Error::ProtobufInvalidType(msg_type, resp.type_url));
+    }
     M::decode(resp.value.as_slice()).map_err(Into::into)
 }
 
 #[cfg(test)]
 mod test {
     use base64::{engine::general_purpose, Engine};
+    use sdk::cosmos_sdk_proto::Any;
 
     #[test]
     fn decode_post_0_47_response() {
         // https://testnet.mintscan.io/osmosis-testnet/txs/544AF6D53D1E2C3414A56DA1B2FFD84C7CB35ECF0E6EAD414701D87F8E1DF59C
         const RESP: &str = "EkgKOS9vc21vc2lzLnBvb2xtYW5hZ2VyLnYxYmV0YTEuTXNnU3dhcEV4YWN0QW1vdW50SW5SZXNwb25zZRILCgkxODkwNDgzOTISSAo5L29zbW9zaXMucG9vbG1hbmFnZXIudjFiZXRhMS5Nc2dTd2FwRXhhY3RBbW91bnRJblJlc3BvbnNlEgsKCTE4ODkwNTYzMA==";
-        decode_msg_responses(RESP);
+        let mut responses = decode_msg_responses(RESP);
+        assert!(dbg!(responses.next()).is_some());
+        assert!(dbg!(responses.next()).is_some());
+        assert!(responses.next().is_none());
     }
 
     #[test]
     fn decode_pre_0_47_response() {
         // https://www.mintscan.io/osmosis/tx/45E31BF8834AEF6512722D2D54F1910F017F829F340A05AE7490962D3F0F80DD?height=12626552
         const RESP: &str = "Cj8KMS9vc21vc2lzLnBvb2xtYW5hZ2VyLnYxYmV0YTEuTXNnU3dhcEV4YWN0QW1vdW50SW4SCgoINTMyNzU5MDcKPwoxL29zbW9zaXMucG9vbG1hbmFnZXIudjFiZXRhMS5Nc2dTd2FwRXhhY3RBbW91bnRJbhIKCggxMzMxODg4OA==";
-        decode_msg_responses(RESP);
+        let mut responses = decode_msg_responses(RESP);
+        assert!(responses.next().is_none());
     }
 
-    fn decode_msg_responses(resp_base64: &str) {
+    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> {
         let resp = general_purpose::STANDARD.decode(resp_base64).unwrap();
-        let mut responses = super::decode_msg_responses(&resp).unwrap();
-        assert!(dbg!(responses.next()).is_some());
-        assert!(dbg!(responses.next()).is_some());
-        assert!(responses.next().is_none());
+        super::decode_msg_responses(&resp).unwrap()
     }
 }

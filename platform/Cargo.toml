@@ -44,12 +44,10 @@ cw-storage-plus = "1.1"
 cw-multi-test = "0.16.1"
 
 # Cosmos-sdk
-# cannot bump to 0.20 because it brings prost 0.12 that is in conflict with osmosis-sdk 0.20
-cosmos-sdk-proto = { version = "0.19", default-features = false }
+cosmos-sdk-proto = { version = "0.20", default-features = false }
 
 # Other
-# version 0.12 is in conflict with osmosis-sdk 0.20 so have to wait for its next version before bump
-prost = { version = "0.11", default-features = false }
+prost = { version = "0.12", default-features = false }
 neutron-sdk = { version = "0.7", default-features = false }
 
 [profile.release]

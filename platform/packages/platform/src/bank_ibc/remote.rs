@@ -1,9 +1,9 @@
 use currency::{DexSymbols, Group};
 use finance::coin::CoinDTO;
+use prost::Name;
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as CosmosSdkCoin, ibc::applications::transfer::v1::MsgTransfer,
-        traits::TypeUrl,
     },
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
 };
@@ -88,7 +88,7 @@ impl<'c> From<Sender<'c>> for Transaction {
         let mut trx = Self::default();
         sender
             .into_ibc_msgs()
-            .for_each(|msg| trx.add_message(MsgTransfer::TYPE_URL, msg));
+            .for_each(|msg| trx.add_message(MsgTransfer::NAME, msg));
         trx
     }
 }
@@ -100,10 +100,11 @@ mod test {
         Currency,
     };
     use finance::coin::{Amount, Coin};
+    use prost::Name;
     use sdk::{
         cosmos_sdk_proto::{
             cosmos::base::v1beta1::Coin as CosmosSdkCoin,
-            ibc::applications::transfer::v1::MsgTransfer, traits::TypeUrl,
+            ibc::applications::transfer::v1::MsgTransfer,
         },
         cosmwasm_std::{Addr, Timestamp},
     };
@@ -130,7 +131,7 @@ mod test {
         assert_eq!(Transaction::try_from(funds_sender), {
             let mut trx = Transaction::default();
             trx.add_message(
-                MsgTransfer::TYPE_URL,
+                MsgTransfer::NAME,
                 new_msg(
                     channel,
                     sender.clone(),
@@ -140,7 +141,7 @@ mod test {
                 ),
             );
             trx.add_message(
-                MsgTransfer::TYPE_URL,
+                MsgTransfer::NAME,
                 new_msg(
                     channel,
                     sender,
