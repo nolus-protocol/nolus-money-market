@@ -254,6 +254,20 @@ The goal is to make the platform to work with the new contracts as well.
 nolusd tx wasm execute <admin_contract_address> '{"register_protocol":{"name":"<protocol>","protocol":{"network":"<network>","contracts":{"leaser":"<leaser_contract_address>","lpp":"<lpp_contract_address>","oracle":"<oracle_contract_address>","profit":"<profit_contract_address>"}}}}' --from <network_DEX_admin_key>
 ```
 
+#### Get protocol-specific contract addresses
+
+Get all protocols:
+
+```sh
+nolusd q wasm cs smart <admin_contract_address> '{"protocols":{}}'
+```
+
+Get protocol:
+
+```sh
+nolusd q wasm cs smart <admin_contract_address> '{"protocol":{"protocol":"<protocol_name>"}}'
+```
+
 ### Upgrade dependencies
 
 Using the previously installed cargo-edit one can easily upgrade the dependencies.
