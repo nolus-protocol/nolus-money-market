@@ -104,7 +104,7 @@ fn config_update_parameters() {
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract0"),]
     );
 
     let response: AppResponse = test_case
@@ -119,7 +119,7 @@ fn config_update_parameters() {
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract0"),]
     );
 
     let quote: Config = test_case

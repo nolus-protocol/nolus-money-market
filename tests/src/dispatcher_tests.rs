@@ -71,7 +71,7 @@ fn test_config() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract5"),]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract5"),]
     );
 
     let resp = query_config(&test_case);
@@ -244,7 +244,7 @@ fn check_events(
         assert_eq!(dispatcher_exec.ty, "execute");
         assert_eq!(
             dispatcher_exec.attributes,
-            [("_contract_addr", test_case.address_book.dispatcher())]
+            [("_contract_address", test_case.address_book.dispatcher())]
         );
     }
 
@@ -256,7 +256,7 @@ fn check_events(
             dispatcher_exec.attributes,
             [
                 (
-                    "_contract_addr",
+                    "_contract_address",
                     test_case.address_book.dispatcher().as_str()
                 ),
                 ("height", &test_case.app.block_info().height.to_string()),
@@ -278,7 +278,7 @@ fn check_events(
         assert_eq!(treasury_exec.ty.as_str(), "execute");
         assert_eq!(
             treasury_exec.attributes,
-            [("_contract_addr", test_case.address_book.treasury())]
+            [("_contract_address", test_case.address_book.treasury())]
         );
     }
 
@@ -306,7 +306,7 @@ fn check_events(
             assert_eq!(lpp_exec.ty.as_str(), "execute");
             assert_eq!(
                 lpp_exec.attributes,
-                [("_contract_addr", &test_case.address_book.lpp())]
+                [("_contract_address", &test_case.address_book.lpp())]
             );
         });
     }
@@ -315,7 +315,7 @@ fn check_events(
     assert_eq!(time_alarms_exec.ty.as_str(), "execute");
     assert_eq!(
         time_alarms_exec.attributes,
-        [("_contract_addr", &test_case.address_book.time_alarms())]
+        [("_contract_address", &test_case.address_book.time_alarms())]
     );
 }
 

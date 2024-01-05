@@ -116,7 +116,7 @@ fn internal_test_integration_setup_test() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("execute").add_attribute("_contract_addr", "contract2")]
+        &[Event::new("execute").add_attribute("_contract_address", "contract2")]
     );
 }
 
@@ -385,7 +385,7 @@ fn test_config_update() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
     let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
@@ -435,7 +435,7 @@ fn test_swap_path() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
     let resp: SwapPath = test_case
@@ -481,7 +481,7 @@ fn test_query_swap_tree() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
     let resp: SwapTreeResponse = test_case

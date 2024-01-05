@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
-    StakeKeeper, WasmKeeper,
+    StakeKeeper, StargateFailing, WasmKeeper,
 };
 pub use cw_multi_test::{ContractWrapper as CwContractWrapper, Executor as CwExecutor};
 
@@ -26,6 +26,7 @@ pub type CwAppBuilder<Exec = InterChainMsg, Query = Empty> = cw_multi_test::AppB
     DistributionKeeper,
     FailingModule<IbcMsg, IbcQuery, Empty>,
     FailingModule<GovMsg, Empty, Empty>,
+    StargateFailing,
 >;
 
 pub type CwContract = dyn cw_multi_test::Contract<InterChainMsg>;
@@ -75,7 +76,7 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
 pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
     BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
         .with_custom(CustomMsgModule::new(message_sender))
-        .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
+        .with_wasm(WasmKeeper::new())
 }
 
 mod custom_msg {

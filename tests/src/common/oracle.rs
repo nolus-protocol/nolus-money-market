@@ -136,7 +136,7 @@ pub(crate) fn add_feeder<
 
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")],
+        &[Event::new("sudo").add_attribute("_contract_address", "contract2")],
     );
 }
 

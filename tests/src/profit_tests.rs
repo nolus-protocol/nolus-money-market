@@ -256,7 +256,7 @@ where
         assert_eq!(
             response.events.as_slice(),
             &[Event::new("execute")
-                .add_attribute("_contract_addr", test_case.address_book.profit())]
+                .add_attribute("_contract_address", test_case.address_book.profit())]
         );
 
         let mut response: ResponseWithInterChainMsgs<'_, ()> = ibc::do_transfer(
@@ -345,7 +345,10 @@ fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
         assert_eq!(sudo.ty.as_str(), "sudo");
         assert_eq!(
             sudo.attributes,
-            [("_contract_addr", test_case.address_book.profit().as_str())]
+            [(
+                "_contract_address",
+                test_case.address_book.profit().as_str()
+            )]
         );
     }
 
@@ -355,7 +358,10 @@ fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
     assert_eq!(profit_exec.ty.as_str(), "execute");
     assert_eq!(
         profit_exec.attributes,
-        [("_contract_addr", test_case.address_book.profit().as_str())]
+        [(
+            "_contract_address",
+            test_case.address_book.profit().as_str()
+        )]
     );
 
     let tr_profit = &response.events[1];
@@ -363,7 +369,10 @@ fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
     assert_eq!(
         tr_profit.attributes,
         [
-            ("_contract_addr", test_case.address_book.profit().as_str()),
+            (
+                "_contract_address",
+                test_case.address_book.profit().as_str()
+            ),
             ("height", &test_case.app.block_info().height.to_string()),
             ("at", &test_case.app.block_info().time.nanos().to_string()),
             ("idx", "0"),
@@ -405,7 +414,7 @@ fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Leaser, Lpp, Oracle>(
     );
     assert_eq!(
         time_alarms_exec.attributes,
-        [("_contract_addr", test_case.address_book.time_alarms())]
+        [("_contract_address", test_case.address_book.time_alarms())]
     );
 }
 
