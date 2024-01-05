@@ -83,7 +83,7 @@ pub enum QueryMsg {
     SupportedCurrencyPairs {},
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
-    /// Returns `SwapPathResponse`
+    /// Returns `oracle::api::swap::SwapPath`
     /// Implementation of oracle::api::swap::QueryMsg::SwapPath
     SwapPath {
         from: SymbolOwned,

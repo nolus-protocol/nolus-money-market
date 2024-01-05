@@ -13,7 +13,10 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse},
+    api::{
+        swap::{SwapPath, SwapTarget},
+        Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
+    },
     result::ContractResult,
 };
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
@@ -27,7 +30,6 @@ use sdk::{
     cw_storage_plus::Item,
     testing::CwContractWrapper,
 };
-use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
@@ -436,7 +438,7 @@ fn test_swap_path() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
-    let resp: swap::SwapPath = test_case
+    let resp: SwapPath = test_case
         .app
         .query()
         .query_wasm_smart(
