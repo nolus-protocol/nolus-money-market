@@ -243,7 +243,7 @@ This can be done manually by following the steps in the section [above](#new-con
 or by using the `deploy-contracts-live.sh`:
 
 ```sh
-./scripts/deploy-contracts-live.sh deploy_contracts "<nolus_node_url>" "<nolus_chain_id>" "<nolus_home_dir>" "<network_DEX_admin_key>" "<store_code_privileged_user_key>" "<admin_contract_address>" "<protocol_wasm_artifacts_dir_path>" "<dex_name>" "<protocol_currency>" "<treasury_contract_address>"  "<timealarms_contract_address>" '<protocol_swap_tree_obj>'
+./scripts/deploy-contracts-live.sh deploy_contracts "<nolus_node_url>" "<nolus_chain_id>" "<nolus_home_dir>" "<network_DEX_admin_key>" "<store_code_privileged_user_key>" "<admin_contract_address>" "<protocol_wasm_artifacts_dir_path>" "<dex_network>" "<dex_name>" "<dex_connection>" "<dex_channel_local>" "<dex_channel_remote>" "<protocol_currency>" "<treasury_contract_address>"  "<timealarms_contract_address>" '<protocol_swap_tree_obj>'
 ```
 
 #### Register the new set of Protocol-specific contracts
@@ -251,7 +251,7 @@ or by using the `deploy-contracts-live.sh`:
 The goal is to make the platform to work with the new contracts as well.
 
 ```sh
-nolusd tx wasm execute <admin_contract_address> '{"register_protocol":{"name":"<protocol>","contracts":{"leaser":"<leaser_contract_address>","lpp":"<lpp_contract_address>","oracle":"<oracle_contract_address>","profit":"<profit_contract_address>"}}}' --from <network_DEX_admin_key>
+nolusd tx wasm execute <admin_contract_address> '{"register_protocol":{"name":"<protocol>","protocol":{"network":"<network>","contracts":{"leaser":"<leaser_contract_address>","lpp":"<lpp_contract_address>","oracle":"<oracle_contract_address>","profit":"<profit_contract_address>"}}}}' --from <network_DEX_admin_key>
 ```
 
 ### Upgrade dependencies
