@@ -15,10 +15,9 @@ mod tests {
         cosmwasm_ext::Response,
         cosmwasm_std::{from_json, testing::mock_env},
     };
-    use swap::SwapTarget;
 
     use crate::{
-        api::{Config, QueryMsg, SudoMsg, SwapLeg},
+        api::{swap::SwapTarget, Config, QueryMsg, SudoMsg, SwapLeg},
         contract::{query, sudo},
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},

@@ -2,35 +2,39 @@ use std::{iter, ops::Deref};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
-use swap::SwapGroup;
 
 use crate::{contract::alarms::PriceResult, error::ContractError, result::ContractResult};
 
 type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
-type AlarmIter<'alarms> = iter::Map<AlarmsIterator<'alarms>, AlarmIterMapFn>;
+type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
 
-pub struct Iter<'storage, 'alarms, S, I, BaseC>
+pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    PriceG: Group + Clone,
     BaseC: Currency,
 {
-    alarms: &'alarms PriceAlarms<'storage, S>,
+    alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
     price_iter: I,
-    alarm_iter: Option<AlarmIter<'alarms>>,
+    alarm_iter: Option<AlarmIter<'alarms, PriceG>>,
 }
 
-impl<'storage, 'alarms, S, I, BaseC> Iter<'storage, 'alarms, S, I, BaseC>
+impl<'storage, 'alarms, S, I, PriceG, BaseC> Iter<'storage, 'alarms, S, I, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    PriceG: Group + Clone,
     BaseC: Currency,
 {
-    pub fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> ContractResult<Self> {
+    pub fn new(
+        alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
+        price_iter: I,
+    ) -> ContractResult<Self> {
         let mut iter = Self {
             alarms,
             price_iter,
@@ -47,12 +51,12 @@ where
         Ok(())
     }
 
-    fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms>>> {
+    fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms, PriceG>>> {
         self.price_iter
             .next()
-            .map(|price_result: PriceResult<BaseC>| {
+            .map(|price_result: PriceResult<PriceG, BaseC>| {
                 price_result.and_then(|ref price| {
-                    Tickers.visit_any::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
+                    Tickers.visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC>>(
                         price.base_ticker(),
                         Cmd {
                             alarms: self.alarms,
@@ -73,10 +77,12 @@ where
     }
 }
 
-impl<'storage, 'alarms, S, I, BaseC> Iterator for Iter<'storage, 'alarms, S, I, BaseC>
+impl<'storage, 'alarms, S, I, PriceG, BaseC> Iterator
+    for Iter<'storage, 'alarms, S, I, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    PriceG: Group + Clone,
     BaseC: Currency,
 {
     type Item = ContractResult<Addr>;
@@ -98,21 +104,24 @@ where
     }
 }
 
-struct Cmd<'storage, 'alarms, 'price, S, BaseC>
+struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
+    PriceG: Group + Clone,
     BaseC: Currency,
 {
-    alarms: &'alarms PriceAlarms<'storage, S>,
-    price: &'price BasePrice<SwapGroup, BaseC>,
+    alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
+    price: &'price BasePrice<PriceG, BaseC>,
 }
 
-impl<'storage, 'alarms, 'price, S, BaseC> AnyVisitor for Cmd<'storage, 'alarms, 'price, S, BaseC>
+impl<'storage, 'alarms, 'price, S, PriceG, BaseC> AnyVisitor
+    for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
+    PriceG: Group + Clone,
     BaseC: Currency,
 {
-    type Output = AlarmIter<'alarms>;
+    type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;
 
     fn on<C>(self) -> AnyVisitorResult<Self>

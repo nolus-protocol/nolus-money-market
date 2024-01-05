@@ -4,9 +4,14 @@ use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
-pub type SubGroupTestC1 = impl_::TestC3;
+pub type SuperGroupTestC3 = impl_::TestC3;
+pub type SuperGroupTestC4 = impl_::TestC4;
+pub type SuperGroupTestC5 = impl_::TestC5;
+pub type SuperGroupTestC6 = impl_::TestC6;
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+pub type SubGroupTestC1 = impl_::TestC10;
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
@@ -16,9 +21,23 @@ impl Group for SuperGroup {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, symbol, visitor).or_else(
-            |visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, symbol, visitor),
-        )
+        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, symbol, visitor)
+            .or_else(|visitor| {
+                crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, symbol, visitor)
+            })
+            .or_else(|visitor| {
+                crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, symbol, visitor)
+            })
+            .or_else(|visitor| {
+                crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, symbol, visitor)
+            })
+            .or_else(|visitor| {
+                crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, symbol, visitor)
+            })
+            .or_else(|visitor| {
+                crate::maybe_visit_any::<_, SuperGroupTestC6, _>(matcher, symbol, visitor)
+            })
+            .or_else(|visitor| SubGroup::maybe_visit(matcher, symbol, visitor))
     }
 }
 
@@ -32,9 +51,7 @@ impl Group for SubGroup {
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        SuperGroup::maybe_visit(matcher, symbol, visitor).or_else(|visitor| {
-            crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
-        })
+        crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
     }
 }
 
@@ -71,5 +88,45 @@ mod impl_ {
         const TICKER: SymbolStatic = "ticker#3";
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#3";
+    }
+
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC4;
+    impl Currency for TestC4 {
+        const TICKER: SymbolStatic = "ticker#4";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#4";
+    }
+
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC5;
+    impl Currency for TestC5 {
+        const TICKER: SymbolStatic = "ticker#5";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#5";
+    }
+
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC6;
+    impl Currency for TestC6 {
+        const TICKER: SymbolStatic = "ticker#6";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#6";
+    }
+
+    #[derive(
+        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
+    )]
+    pub struct TestC10;
+    impl Currency for TestC10 {
+        const TICKER: SymbolStatic = "ticker#10";
+        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#10";
     }
 }

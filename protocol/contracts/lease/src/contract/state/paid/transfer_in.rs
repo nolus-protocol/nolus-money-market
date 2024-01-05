@@ -18,7 +18,10 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::query::{paid::ClosingTrx, StateResponse as QueryStateResponse},
+    api::{
+        query::{paid::ClosingTrx, StateResponse as QueryStateResponse},
+        LeasePaymentCurrencies,
+    },
     contract::{
         cmd::Close,
         state::{
@@ -34,10 +37,18 @@ use crate::{
 };
 
 type AssetGroup = LeaseGroup;
-pub(super) type StartState =
-    StartTransferInState<TransferIn, ForwardToDexEntry, ForwardToDexEntryContinue>;
-pub(in crate::contract::state) type DexState =
-    dex::StateLocalOut<TransferIn, ForwardToDexEntry, ForwardToDexEntryContinue>;
+pub(super) type StartState = StartTransferInState<
+    TransferIn,
+    LeasePaymentCurrencies,
+    ForwardToDexEntry,
+    ForwardToDexEntryContinue,
+>;
+pub(in crate::contract::state) type DexState = dex::StateLocalOut<
+    TransferIn,
+    LeasePaymentCurrencies,
+    ForwardToDexEntry,
+    ForwardToDexEntryContinue,
+>;
 
 pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);

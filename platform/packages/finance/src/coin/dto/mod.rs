@@ -227,7 +227,7 @@ mod test {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
     };
 
@@ -313,7 +313,7 @@ mod test {
     #[test]
     fn from_amount_ticker_not_in_the_group() {
         assert!(matches!(
-            super::from_amount_ticker::<SuperGroup>(20, SubGroupTestC1::TICKER.into()),
+            super::from_amount_ticker::<SubGroup>(20, SuperGroupTestC1::TICKER.into()),
             Err(Error::CurrencyError { .. })
         ));
     }

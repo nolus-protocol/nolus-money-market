@@ -41,9 +41,9 @@ mod test {
 
     #[test]
     fn deser_parent_group() {
-        type CoinCurrency = SuperGroupTestC1;
-        type DirectGroup = SuperGroup;
-        type ParentGroup = SubGroup;
+        type CoinCurrency = SubGroupTestC1;
+        type DirectGroup = SubGroup;
+        type ParentGroup = SuperGroup;
 
         let coin: CoinDTO<DirectGroup> = Coin::<CoinCurrency>::new(4215).into();
         let coin_deser: CoinDTO<ParentGroup> = cosmwasm_std::to_json_vec(&coin)
@@ -55,9 +55,9 @@ mod test {
 
     #[test]
     fn deser_wrong_group() {
-        let coin: CoinDTO<SubGroup> = Coin::<SubGroupTestC1>::new(4215).into();
+        let coin: CoinDTO<SuperGroup> = Coin::<SuperGroupTestC1>::new(4215).into();
         let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
-        assert!(cosmwasm_std::from_json::<CoinDTO<SuperGroup>>(&coin_raw).is_err());
+        assert!(cosmwasm_std::from_json::<CoinDTO<SubGroup>>(&coin_raw).is_err());
     }
 }

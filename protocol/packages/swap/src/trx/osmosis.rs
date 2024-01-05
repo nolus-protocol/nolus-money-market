@@ -1,3 +1,4 @@
+use oracle::api::swap::{SwapPath, SwapTarget};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
@@ -11,10 +12,7 @@ use platform::{
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 
-use crate::{
-    error::{Error, Result},
-    SwapGroup, SwapPath, SwapTarget,
-};
+use crate::error::{Error, Result};
 
 use super::{ExactAmountIn, TypeUrl};
 
@@ -33,15 +31,16 @@ impl TypeUrl for ResponseMsg {
 pub(super) struct Impl;
 
 impl ExactAmountIn for Impl {
-    fn build<G>(
+    fn build<GIn, GSwap>(
         &self,
         trx: &mut Transaction,
         sender: HostAccount,
-        token_in: &CoinDTO<G>,
+        token_in: &CoinDTO<GIn>,
         swap_path: &SwapPath,
     ) -> Result<()>
     where
-        G: Group,
+        GIn: Group,
+        GSwap: Group,
     {
         // TODO bring the token balances, weights and swapFee-s from the DEX pools
         // into the oracle in order to calculate the tokenOut as per the formula at
@@ -49,7 +48,7 @@ impl ExactAmountIn for Impl {
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
         const MIN_OUT_AMOUNT: &str = "1";
-        let routes = to_route(swap_path)?;
+        let routes = to_route::<GSwap>(swap_path)?;
         let token_in = Some(to_cwcoin(token_in)?);
         let token_out_min_amount = MIN_OUT_AMOUNT.into();
         let msg = RequestMsg {
@@ -94,11 +93,14 @@ impl ExactAmountIn for Impl {
     }
 }
 
-fn to_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
+fn to_route<G>(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>>
+where
+    G: Group,
+{
     swap_path
         .iter()
         .map(|swap_target| {
-            to_dex_symbol(&swap_target.target).map(|dex_symbol| SwapAmountInRoute {
+            to_dex_symbol::<G>(&swap_target.target).map(|dex_symbol| SwapAmountInRoute {
                 pool_id: swap_target.pool_id,
                 token_out_denom: dex_symbol.into(),
             })
@@ -113,15 +115,18 @@ where
     coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(token).map_err(Error::from)
 }
 
-fn to_dex_symbol(ticker: &SymbolSlice) -> Result<&SymbolSlice> {
+fn to_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
+where
+    G: Group,
+{
     Tickers
-        .visit_any::<SwapGroup, _>(ticker, DexSymbols {})
+        .visit_any::<G, _>(ticker, DexSymbols {})
         .map_err(Error::from)
 }
 
 #[cfg(test)]
 mod test {
-    use currencies::{test::PaymentC1, PaymentGroup};
+    use currency::test::{SuperGroup, SuperGroupTestC1};
     use currency::{Currency as _, SymbolStatic};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
@@ -134,27 +139,27 @@ mod test {
 
     #[test]
     fn to_dex_symbol() {
-        type Currency = PaymentC1;
+        type Currency = SuperGroupTestC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
-            super::to_dex_symbol(Currency::TICKER)
+            super::to_dex_symbol::<SuperGroup>(Currency::TICKER)
         );
     }
 
     #[test]
     fn to_dex_symbol_err() {
         assert!(matches!(
-            super::to_dex_symbol(INVALID_TICKER),
+            super::to_dex_symbol::<SuperGroup>(INVALID_TICKER),
             Err(Error::Currency(_))
         ));
     }
 
     #[test]
     fn to_cwcoin() {
-        let coin: Coin<PaymentC1> = 3541415.into();
+        let coin: Coin<SuperGroupTestC1> = 3541415.into();
         assert_eq!(
-            CwCoin::new(coin.into(), PaymentC1::DEX_SYMBOL),
-            super::to_cwcoin::<PaymentGroup>(&coin.into()).unwrap()
+            CwCoin::new(coin.into(), SuperGroupTestC1::DEX_SYMBOL),
+            super::to_cwcoin::<SuperGroup>(&coin.into()).unwrap()
         );
     }
 
@@ -162,13 +167,13 @@ mod test {
     fn into_route() {
         let path = vec![SwapTarget {
             pool_id: 2,
-            target: PaymentC1::TICKER.into(),
+            target: SuperGroupTestC1::TICKER.into(),
         }];
         let expected = vec![SwapAmountInRoute {
             pool_id: 2,
-            token_out_denom: PaymentC1::DEX_SYMBOL.into(),
+            token_out_denom: SuperGroupTestC1::DEX_SYMBOL.into(),
         }];
-        assert_eq!(Ok(expected), super::to_route(&path));
+        assert_eq!(Ok(expected), super::to_route::<SuperGroup>(&path));
     }
 
     #[test]
@@ -177,7 +182,10 @@ mod test {
             pool_id: 2,
             target: INVALID_TICKER.into(),
         }];
-        assert!(matches!(super::to_route(&path), Err(Error::Currency(_))));
+        assert!(matches!(
+            super::to_route::<SuperGroup>(&path),
+            Err(Error::Currency(_))
+        ));
     }
 
     #[test]

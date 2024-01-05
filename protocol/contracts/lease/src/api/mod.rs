@@ -13,7 +13,8 @@ pub mod open;
 pub mod position;
 pub mod query;
 
-pub type PaymentCoin = CoinDTO<PaymentGroup>;
+pub(crate) type LeasePaymentCurrencies = PaymentGroup;
+pub type PaymentCoin = CoinDTO<LeasePaymentCurrencies>;
 pub type DownpaymentCoin = PaymentCoin;
 
 pub(crate) type LeaseAssetCurrencies = LeaseGroup;

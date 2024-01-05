@@ -15,7 +15,7 @@ pub enum Error {
     UnsupportedOperation(String, String),
 
     #[error("[Dex] {0}")]
-    OracleError(#[from] oracle::error::ContractError),
+    OracleSwapError(#[from] oracle::api::swap::Error),
 
     #[error("[Dex] {0}")]
     OraclePlatformError(#[from] oracle_platform::error::Error),

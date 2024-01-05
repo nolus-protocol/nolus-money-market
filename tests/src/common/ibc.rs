@@ -67,7 +67,10 @@ pub(crate) fn do_transfer<'r>(
 
     do_transfer_no_response(app, sender, recipient, on_remote_chain, cw_coin);
 
-    send_blank_response(app, contract_addr)
+    dbg!("111111888888888");
+    let r = send_blank_response(app, contract_addr);
+    dbg!("1111118888888889999");
+    r
 }
 
 fn do_transfer_no_response(
@@ -85,6 +88,8 @@ fn do_transfer_no_response(
     .unwrap()
     .unwrap();
 
+    dbg!(new_symbol);
+
     app.send_tokens(
         sender.clone(),
         Addr::unchecked(ADMIN),
@@ -92,6 +97,7 @@ fn do_transfer_no_response(
     )
     .unwrap();
 
+    dbg!("111111777777777");
     app.send_tokens(
         Addr::unchecked(ADMIN),
         recipient.clone(),

@@ -1,11 +1,37 @@
+use std::result::Result as StdResult;
+
+use currencies::{LeaseGroup, Lpns};
 use currency::Group;
 use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use sdk::schemars::{self, JsonSchema};
+use sdk::{
+    cosmwasm_std::StdError as CosmWasmError,
+    schemars::{self, JsonSchema},
+};
 
 mod unchecked;
+
+pub type StableCurrency = Lpns;
+pub type AlarmCurrencies = LeaseGroup;
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum ExecuteMsg {
+    AddPriceAlarm {
+        alarm: Alarm<AlarmCurrencies, StableCurrency>,
+    },
+}
+
+pub type Result<T> = StdResult<T, Error>;
+
+#[derive(Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
+    StubAddAlarm(CosmWasmError),
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
@@ -40,7 +66,7 @@ where
         res
     }
 
-    fn invariant_held(&self) -> Result<(), AlarmError> {
+    fn invariant_held(&self) -> StdResult<(), AlarmError> {
         if let Some(above_or_equal) = &self.above {
             if self.below.base().ticker() != above_or_equal.base().ticker()
                 || self.below.quote().ticker() != above_or_equal.quote().ticker()
@@ -78,18 +104,18 @@ mod test {
     use serde::Serialize;
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-    use currencies::test::{PaymentC5, PaymentC6, PaymentC7, StableC1};
+    use currencies::{
+        test::{PaymentC5, PaymentC6, PaymentC7, StableC1},
+        PaymentGroup,
+    };
     use currency::{Currency, Group};
     use finance::{
         coin::{Coin, CoinDTO},
         price::{self, dto::PriceDTO, Price},
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
-    use swap::SwapGroup;
 
-    use crate::api::{AlarmCurrencies, StableCurrency};
-
-    use super::Alarm;
+    use super::{Alarm, AlarmCurrencies, StableCurrency};
 
     type AssetG = AlarmCurrencies;
     type LpnG = StableCurrency;
@@ -298,7 +324,7 @@ mod test {
         C: Currency,
         Q: Currency,
     {
-        let price_dto = PriceDTO::<SwapGroup, SwapGroup>::from(price);
+        let price_dto = PriceDTO::<PaymentGroup, PaymentGroup>::from(price);
         alarm_half_to_json_str(price_type, &as_json(&price_dto))
     }
 
@@ -313,8 +339,8 @@ mod test {
     {
         let price = format!(
             r#"{{"amount": {},"amount_quote": {}}}"#,
-            as_json(&CoinDTO::<SwapGroup>::from(amount)),
-            as_json(&CoinDTO::<SwapGroup>::from(amount_quote))
+            as_json(&CoinDTO::<PaymentGroup>::from(amount)),
+            as_json(&CoinDTO::<PaymentGroup>::from(amount_quote))
         );
         alarm_half_to_json_str(price_type, &price)
     }

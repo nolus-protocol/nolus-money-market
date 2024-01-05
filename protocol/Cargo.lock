@@ -808,7 +808,6 @@ dependencies = [
  "finance",
  "lpp",
  "lpp-platform",
- "marketprice",
  "oracle",
  "oracle-platform",
  "platform",
@@ -882,13 +881,11 @@ dependencies = [
 name = "marketprice"
 version = "0.3.0"
 dependencies = [
- "currencies",
  "currency",
  "finance",
  "postcard",
  "sdk",
  "serde",
- "swap",
  "thiserror",
 ]
 
@@ -955,7 +952,6 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
- "swap",
  "thiserror",
  "tree",
  "versioning",
@@ -1495,9 +1491,9 @@ name = "swap"
 version = "0.1.1"
 dependencies = [
  "astroport",
- "currencies",
  "currency",
  "finance",
+ "oracle",
  "osmosis-std",
  "platform",
  "sdk",

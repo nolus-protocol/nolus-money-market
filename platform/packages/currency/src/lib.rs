@@ -112,10 +112,10 @@ mod tests {
             super::validate::<SuperGroup>(SuperGroupTestC2::TICKER)
         );
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
-                SubGroupTestC1::TICKER
+            Err(Error::not_in_currency_group::<_, Tickers, SubGroup>(
+                SuperGroupTestC1::TICKER
             )),
-            super::validate::<SuperGroup>(SubGroupTestC1::TICKER)
+            super::validate::<SubGroup>(SuperGroupTestC1::TICKER)
         );
         assert_eq!(Ok(()), super::validate::<SubGroup>(SubGroupTestC1::TICKER));
     }

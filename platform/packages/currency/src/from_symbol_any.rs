@@ -192,10 +192,13 @@ mod test {
     #[test]
     fn visit_any_tickers() {
         visit_any_tickers_ok::<SuperGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
-        visit_any_tickers_ok::<SubGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC1>();
         visit_any_tickers_ok::<SuperGroup, SuperGroup, SuperGroupTestC2, SuperGroupTestC2>();
+        visit_any_tickers_ok::<SubGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC1>();
+        visit_any_tickers_ok::<SuperGroup, SubGroup, SuperGroupTestC2, SubGroupTestC1>();
 
-        visit_any_tickers_fail::<SuperGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC2>();
+        visit_any_tickers_ok::<SuperGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC2>();
+        visit_any_tickers_ok::<SuperGroup, SuperGroup, SubGroupTestC1, SubGroupTestC1>();
+        visit_any_tickers_fail::<SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
     }
 
     fn visit_any_tickers_ok<G1, G2, C1, C2>()

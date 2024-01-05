@@ -1,5 +1,6 @@
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
+use oracle::api::swap::SwapPath;
 use platform::{ica::HostAccount, trx::Transaction};
 use sdk::cosmos_sdk_proto::Any;
 
@@ -10,7 +11,7 @@ pub use self::impl_mod::{RequestMsg, ResponseMsg};
 #[cfg(feature = "osmosis")]
 use self::osmosis as impl_mod;
 
-use crate::{error::Result, SwapPath};
+use crate::error::Result;
 
 #[cfg(feature = "astroport")]
 mod astroport;
@@ -27,15 +28,19 @@ pub fn exact_amount_in() -> impl ExactAmountIn {
 
 pub trait ExactAmountIn {
     /// `swap_path` should be a non-empty list
-    fn build<G>(
+    ///
+    /// `GIn` - the group of the input token
+    /// `GSwap` - the group common for all tokens in the swap path
+    fn build<GIn, GSwap>(
         &self,
         trx: &mut Transaction,
         sender: HostAccount,
-        token_in: &CoinDTO<G>,
+        token_in: &CoinDTO<GIn>,
         swap_path: &SwapPath,
     ) -> Result<()>
     where
-        G: Group;
+        GIn: Group,
+        GSwap: Group;
 
     fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
     where

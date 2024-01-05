@@ -8,16 +8,11 @@ use currency::{Currency, SymbolSlice};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
+//TODO migrate to the same type defined at oracle::result
 pub type Result<T> = StdResult<T, ContractError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
-
-    #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
-    StubAddAlarm(StdError),
-
     #[error("[Oracle] Failed to initialize versioning module! Cause: {0}")]
     InitializeVersioning(StdError),
 

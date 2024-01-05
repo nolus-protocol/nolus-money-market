@@ -6,20 +6,16 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-net_dev = ["currencies/net_dev"]
-net_test = ["currencies/net_test"]
-net_main = ["currencies/net_main"]
-
-astroport = ["api", "currencies/astroport", "sdk/cosmos_ibc", "dep:astroport"]
-osmosis = ["api", "currencies/osmosis", "sdk/cosmos", "dep:osmosis-std"]
+astroport = ["api", "sdk/cosmos_ibc", "dep:astroport"]
+osmosis = ["api", "sdk/cosmos", "dep:osmosis-std"]
 
 api = ["dep:finance", "dep:platform", "thiserror"]
 testing = []
 
 [dependencies]
-currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true, optional = true }
+oracle = { workspace = true, features = ["stub_swap"] }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true, features = ["schema"] }
 
@@ -29,5 +25,4 @@ thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }

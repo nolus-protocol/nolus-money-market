@@ -106,7 +106,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC7, StableC1};
+    use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -306,7 +306,7 @@ mod test {
         );
     }
 
-    fn price(c: Amount, q: Amount) -> Price<PaymentC7, StableC1> {
+    fn price(c: Amount, q: Amount) -> Price<SuperGroupTestC4, SuperGroupTestC5> {
         price::total_of(Coin::from(c)).is(Coin::from(q))
     }
 }

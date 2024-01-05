@@ -1,12 +1,15 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC1};
+use currencies::{
+    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC1},
+    Lpns, PaymentGroup,
+};
 use currency::Currency;
 use finance::{
     coin::Coin,
     duration::Duration,
     percent::Percent,
-    price::{self, Price},
+    price::{self, dto::PriceDTO, Price},
 };
-use marketprice::{config::Config as PriceConfig, SpotPrice};
+use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
@@ -88,7 +91,8 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
         })
         .map_err(ContractError::ConvertToBinary),
         QueryMsg::Price { currency: _ } => {
-            to_json_binary(&SpotPrice::from(price)).map_err(ContractError::ConvertToBinary)
+            to_json_binary(&PriceDTO::<PaymentGroup, Lpns>::from(price))
+                .map_err(ContractError::ConvertToBinary)
         }
         _ => query(deps, env, msg),
     }

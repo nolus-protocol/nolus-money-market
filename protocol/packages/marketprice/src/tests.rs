@@ -1,9 +1,10 @@
 use std::time::SystemTime;
 
-use currencies::test::{
-    PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
+use currency::test::{
+    SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
+    SuperGroupTestC4, SuperGroupTestC5, SuperGroupTestC6,
 };
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -14,7 +15,6 @@ use sdk::cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
 
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
-    SpotPrice,
 };
 
 const TOTAL_FEEDERS: usize = 1;
@@ -56,18 +56,18 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<PaymentC3, _>(
+        .price::<SuperGroupTestC3, SuperGroup, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
-            [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
+            [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -84,7 +84,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<SpotPrice> = Vec::new();
+    let prices: Vec<PriceDTO<SuperGroup, SuperGroup>> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
@@ -93,14 +93,17 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let mut deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let price1 = price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(5));
+    let price1 =
+        price::total_of(Coin::<SuperGroupTestC5>::new(10)).is(Coin::<SuperGroupTestC3>::new(5));
     let price2 =
-        price::total_of(Coin::<PaymentC5>::new(10000000000)).is(Coin::<PaymentC7>::new(1000000009));
-    let price3 = price::total_of(Coin::<PaymentC5>::new(10000000000000))
-        .is(Coin::<PaymentC4>::new(100000000000002));
+        price::total_of(Coin::<SuperGroupTestC5>::new(10000000000))
+            .is(Coin::<SubGroupTestC1>::new(1000000009));
+    let price3 =
+        price::total_of(Coin::<SuperGroupTestC5>::new(10000000000000))
+            .is(Coin::<SuperGroupTestC4>::new(100000000000002));
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
@@ -113,22 +116,22 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
     let err = market
-        .price::<PaymentC3, _>(
+        .price::<SuperGroupTestC3, SuperGroup, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
-            [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
+            [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     {
         let price_resp = market
-            .price::<PaymentC3, _>(
+            .price::<SuperGroupTestC3, SuperGroup, _>(
                 &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
-                [PaymentC5::TICKER, PaymentC3::TICKER].into_iter(),
+                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
             )
             .unwrap();
 
@@ -139,102 +142,103 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(1)),
+        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SubGroupTestC1>::new(1)),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC2>::new(3)),
-    )
-    .unwrap();
-
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC7>::new(3)),
+        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC5>::new(1)),
+        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SubGroupTestC1>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC2>::new(3)),
-    )
-    .unwrap();
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<PaymentC1>::new(2)),
+        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC5>::new(1)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC1>::new(1)).is(Coin::<PaymentC5>::new(3)),
+        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
+    )
+    .unwrap();
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<SuperGroupTestC5>::new(1)).is(Coin::<SuperGroupTestC1>::new(2)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<PaymentC7>::new(3)),
+        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC5>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC2>::new(1)).is(Coin::<PaymentC3>::new(3)),
+        price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<SubGroupTestC1>::new(3)),
+    )
+    .unwrap();
+
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<SuperGroupTestC3>::new(3)),
     )
     .unwrap();
 
     let last_feed_time = feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<PaymentC6>::new(1)).is(Coin::<PaymentC2>::new(3)),
+        price::total_of(Coin::<SuperGroupTestC6>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
     )
     .unwrap();
 
     let price_resp = market
-        .price::<PaymentC2, _>(
+        .price::<SuperGroupTestC2, SuperGroup, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                PaymentC3::TICKER,
-                PaymentC5::TICKER,
-                PaymentC1::TICKER,
-                PaymentC2::TICKER,
+                SuperGroupTestC3::TICKER,
+                SuperGroupTestC5::TICKER,
+                SuperGroupTestC1::TICKER,
+                SuperGroupTestC2::TICKER,
             ]
             .into_iter(),
         )
         .unwrap();
-    let expected = price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC2>::new(6));
+    let expected =
+        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC2>::new(6));
     let expected_dto = PriceDTO::from(expected);
 
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
     let price_resp = market
-        .price::<PaymentC2, _>(
+        .price::<SuperGroupTestC2, SuperGroup, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
-            [PaymentC3::TICKER, PaymentC2::TICKER].into_iter(),
+            [SuperGroupTestC3::TICKER, SuperGroupTestC2::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -242,11 +246,11 @@ fn marketprice_follow_the_path() {
     // second part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<PaymentC2, _>(
+            .price::<SuperGroupTestC2, SuperGroup, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC2::TICKER].into_iter(),
+                [SubGroupTestC1::TICKER, SuperGroupTestC2::TICKER].into_iter(),
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -255,25 +259,26 @@ fn marketprice_follow_the_path() {
     // first part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<PaymentC5, _>(
+            .price::<SuperGroupTestC5, SuperGroup, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [PaymentC7::TICKER, PaymentC5::TICKER].into_iter()
+                [SubGroupTestC1::TICKER, SuperGroupTestC5::TICKER].into_iter()
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 }
 
-fn feed_price<C1, C2>(
+fn feed_price<C1, C2, G>(
     deps: DepsMut<'_>,
-    market: &PriceFeeds<'_>,
+    market: &PriceFeeds<'_, G>,
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
     C1: Currency,
     C2: Currency,
+    G: Group,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
@@ -282,7 +287,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = SpotPrice::try_from(price).unwrap();
+    let price = PriceDTO::<G, G>::try_from(price).unwrap();
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)

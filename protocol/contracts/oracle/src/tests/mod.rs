@@ -1,4 +1,7 @@
-use currencies::test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1};
+use currencies::{
+    test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+    PaymentGroup,
+};
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},
@@ -15,11 +18,10 @@ use sdk::{
         MemoryStorage, MessageInfo, OwnedDeps,
     },
 };
-use swap::{SwapGroup, SwapTarget};
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{alarms::StableCurrency, swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
 };
 
@@ -28,7 +30,9 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
+pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC1;
+pub(crate) type TheStableGroup = StableCurrency;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
@@ -42,7 +46,7 @@ where
         .into()
 }
 
-pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<SwapGroup, TheCurrency>
+pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<PaymentGroup, TheCurrency>
 where
     C: Currency,
 {

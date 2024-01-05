@@ -6,28 +6,19 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-net_dev = ["currencies/net_dev"]
-net_test = ["currencies/net_test"]
-net_main = ["currencies/net_main"]
-
-astroport = ["currencies/astroport"]
-osmosis = ["currencies/osmosis"]
-
 testing = []
 
 [dependencies]
-currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["storage", "schema"] }
-swap = { workspace = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 postcard = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
-currencies = { workspace = true, features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

@@ -58,12 +58,8 @@ impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
     }
 }
 
+#[derive(Default)]
 pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
-impl<C1, C2> Default for ExpectPair<C1, C2> {
-    fn default() -> Self {
-        Self(Default::default(), Default::default())
-    }
-}
 impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
 where
     C1: 'static,

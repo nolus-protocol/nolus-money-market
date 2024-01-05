@@ -124,7 +124,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC7, StableC1};
+    use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
     use finance::{coin::Amount, duration::Duration, price};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -133,8 +133,8 @@ mod test {
         sample::{self, Sample},
     };
 
-    type TheCurrency = PaymentC7;
-    type TheQuote = StableC1;
+    type TheCurrency = SuperGroupTestC4;
+    type TheQuote = SuperGroupTestC5;
 
     #[test]
     fn one_observation() {

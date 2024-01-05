@@ -55,22 +55,25 @@ mod transfer_in_init;
 mod transfer_out;
 mod trx;
 
-pub type TransferOutRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
-    ResponseDelivery<TransferOut<SwapTask, SEnum>, ForwardToInnerMsg>;
+pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
+    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
 
-pub type SwapExactInRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
-    ResponseDelivery<SwapExactIn<SwapTask, SEnum>, ForwardToInnerMsg>;
+pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
+    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
 
-pub type SwapExactInPreRecoverIca<SwapTask, SEnum> =
-    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
+pub type SwapExactInPreRecoverIca<SwapTask, SEnum, SwapGroup> =
+    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup>>;
 
-pub type SwapExactInRecoverIca<SwapTask, SEnum> =
-    IcaConnector<InRecovery<SwapExactIn<SwapTask, SEnum>, SEnum>, <SwapTask as SwapTaskT>::Result>;
+pub type SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup> = IcaConnector<
+    InRecovery<SwapExactIn<SwapTask, SEnum, SwapGroup>, SEnum>,
+    <SwapTask as SwapTaskT>::Result,
+>;
 
-pub type SwapExactInRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
-    ICAOpenResponseDelivery<SwapExactInRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
+pub type SwapExactInRecoverIcaRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
+    ICAOpenResponseDelivery<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
 
-pub type SwapExactInPostRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactIn<SwapTask, SEnum>>;
+pub type SwapExactInPostRecoverIca<SwapTask, SEnum, SwapGroup> =
+    EntryDelay<SwapExactIn<SwapTask, SEnum, SwapGroup>>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;

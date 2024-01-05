@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, StableC1};
+use currencies::{
+    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, StableC1},
+    LeaseGroup, Lpns, PaymentGroup,
+};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -8,9 +11,12 @@ use finance::{
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
-use marketprice::{config::Config as PriceConfig, SpotPrice};
+use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse},
+    api::{
+        swap::{SwapPath, SwapTarget},
+        Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
+    },
     result::ContractResult,
 };
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
@@ -24,7 +30,6 @@ use sdk::{
     cw_storage_plus::Item,
     testing::CwContractWrapper,
 };
-use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
@@ -345,7 +350,7 @@ fn test_config_update() {
         Coin::<StableC1>::new(quote),
     );
 
-    let price: SpotPrice = test_case
+    let price: PriceDTO<PaymentGroup, Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -383,7 +388,7 @@ fn test_config_update() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
-    let price: Result<SpotPrice, _> = test_case.app.query().query_wasm_smart(
+    let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
         test_case.address_book.oracle().clone(),
         &OracleQ::Price {
             currency: BaseC::TICKER.into(),
@@ -433,7 +438,7 @@ fn test_swap_path() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
-    let resp: swap::SwapPath = test_case
+    let resp: SwapPath = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -501,7 +506,7 @@ fn test_zero_price_dto() {
     oracle_mod::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
-    let price: SpotPrice = cosmwasm_std::from_json(
+    let price: PriceDTO<PaymentGroup, PaymentGroup> = cosmwasm_std::from_json(
         r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
     )
     .unwrap();

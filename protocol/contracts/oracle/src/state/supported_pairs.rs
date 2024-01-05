@@ -7,11 +7,10 @@ use currency::{
     AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
-use swap::SwapTarget;
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
-    api::SwapLeg,
+    api::{swap::SwapTarget, SwapLeg},
     error::{self, ContractError},
     result::ContractResult,
 };
