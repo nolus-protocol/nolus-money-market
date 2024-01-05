@@ -6,7 +6,7 @@ use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin,
         ibc::applications::transfer::v1::MsgTransfer,
-        traits::{Message, TypeUrl},
+        traits::{Message, Name},
     },
     cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
@@ -45,7 +45,7 @@ pub(crate) fn expect_remote_transfer<T>(
     let messages: Vec<ProtobufAny> = response.expect_submit_tx(connection_id, ica_id);
 
     let message: MsgTransfer = match messages.as_slice() {
-        [message] if message.type_url == MsgTransfer::TYPE_URL => {
+        [message] if message.type_url == MsgTransfer::NAME => {
             Message::decode(message.value.as_slice()).unwrap()
         }
         _ => unimplemented!(),
