@@ -54,6 +54,7 @@ where
     batch.schedule_execute_no_reply(NeutronMsg::register_interchain_account(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
+        None,
     ));
     batch
 }

@@ -48,7 +48,7 @@ cosmos-sdk-proto = { version = "0.20", default-features = false }
 
 # Other
 prost = { version = "0.12", default-features = false }
-neutron-sdk = { version = "0.7", default-features = false }
+neutron-sdk = { version = "0.8", default-features = false }
 
 [profile.release]
 opt-level = "s"
