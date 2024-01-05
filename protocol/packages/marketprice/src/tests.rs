@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use currency::test::{
-    SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
+    SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
     SuperGroupTestC4, SuperGroupTestC5, SuperGroupTestC6,
 };
 use currency::{Currency, Group};
@@ -63,7 +63,7 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<SuperGroupTestC3, SubGroup, _>(
+        .price::<SuperGroupTestC3, SuperGroup, _>(
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
@@ -213,7 +213,7 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     let price_resp = market
-        .price::<SuperGroupTestC2, SubGroup, _>(
+        .price::<SuperGroupTestC2, SuperGroup, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
@@ -234,7 +234,7 @@ fn marketprice_follow_the_path() {
 
     // first and second part of denom pair are the same
     let price_resp = market
-        .price::<SuperGroupTestC2, SubGroup, _>(
+        .price::<SuperGroupTestC2, SuperGroup, _>(
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
@@ -246,7 +246,7 @@ fn marketprice_follow_the_path() {
     // second part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<SuperGroupTestC2, SubGroup, _>(
+            .price::<SuperGroupTestC2, SuperGroup, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
@@ -259,7 +259,7 @@ fn marketprice_follow_the_path() {
     // first part of denome pair doesn't exists in the storage
     assert_eq!(
         market
-            .price::<SuperGroupTestC5, SubGroup, _>(
+            .price::<SuperGroupTestC5, SuperGroup, _>(
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,

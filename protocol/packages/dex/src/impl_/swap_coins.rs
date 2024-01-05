@@ -36,7 +36,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1},
         Group,
     };
 
@@ -50,7 +50,7 @@ mod test {
     }
 
     fn coin2() -> CoinDTO<SubGroup> {
-        Coin::<SuperGroupTestC2>::new(28).into()
+        Coin::<SubGroupTestC1>::new(28).into()
     }
 
     pub struct TestVisitor<R>(Option<Amount>, R, Option<Amount>, R);
