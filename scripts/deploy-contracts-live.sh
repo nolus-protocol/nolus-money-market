@@ -14,6 +14,22 @@ set -euxo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR"/common/cmd.sh
 
+_wait_tx_included_in_block() {
+  local -r nolus_home_dir="$1"
+  local -r nolus_net="$2"
+  local -r tx_hash="$3"
+
+  local tx_state="NOT_INCLUDED"
+
+  while [ "$tx_state" == "NOT_INCLUDED"  ]
+  do
+    sleep 1
+    tx_state=$(run_cmd "$nolus_home_dir" q tx "$tx_hash" --node "$nolus_net" --output json) || tx_state="NOT_INCLUDED"
+  done
+
+  echo "$tx_state"
+}
+
 _get_predictable_contract_address() {
   local -r nolus_net="$1"
   local -r nolus_home_dir="$2"
@@ -38,8 +54,10 @@ _store_code() {
   local store_result
   store_result=$(run_cmd "$nolus_home_dir" tx wasm store "$wasm_code_path" --instantiate-anyof-addresses "$instantiate_only_address" --from "$store_code_privileged_wallet_key" $FLAGS --yes --output json)
   store_result=$(echo "$store_result" | sed -n '/{/{p; q}')
-  local -r code_id=$(echo "$store_result" | jq -r '.logs[].events[] | select(.type == "store_code") | .attributes[] | select(.key == "code_id") | .value')
+  local -r store_tx_hash=$(echo "$store_result" | jq -r '.txhash')
 
+  local -r store_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$store_tx_hash")
+  local -r code_id=$(echo "$store_tx" | jq -r '.logs[].events[] | select(.type == "store_code") | .attributes[] | select(.key == "code_id") | .value')
   echo "$code_id"
 }
 
@@ -61,7 +79,10 @@ _instantiate() {
   local instantiate_result
   instantiate_result=$(run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$instantiate_new_contract_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes --output json)
   instantiate_result=$(echo "$instantiate_result" | sed -n '/{/{p; q}')
-  local -r contract_address=$(echo "$instantiate_result" | jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
+  local -r instantiate_tx_hash=$(echo "$instantiate_result" | jq -r '.txhash')
+
+  local -r instantiate_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$instantiate_tx_hash")
+  local -r contract_address=$(echo "$instantiate_tx" |  jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
 
   echo "$contract_address"
 }
@@ -107,9 +128,10 @@ deploy_contracts() {
   local swap_tree="${16}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
-  local -r protocol="$dex-$protocol_currency"
+  local protocol="${network}-${dex}-${protocol_currency}"
+  protocol="${protocol^^}"
 
-  FLAGS="--broadcast-mode block --fees 200000unls --gas auto --gas-adjustment 1.2 --node $nolus_net --chain-id $chain_id"
+  FLAGS="--broadcast-mode sync --fees 200000unls --gas auto --gas-adjustment 1.2 --node $nolus_net --chain-id $chain_id"
 
   # upload Leaser code
   local -r leaser_code_id=$(_store_code "$nolus_net" "$chain_id" "$nolus_home_dir" "$store_code_privileged_wallet_key" "$wasm_path/leaser.wasm"  "$admin_contract_address")
@@ -135,7 +157,7 @@ deploy_contracts() {
   local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address" )
 
   # register the protocol
-  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$network-$dex-$protocol_currency"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
+  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$protocol"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
   run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$add_protocol_set_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes
 }
 
