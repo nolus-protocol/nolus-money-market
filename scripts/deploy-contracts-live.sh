@@ -129,10 +129,10 @@ deploy_contracts() {
   local swap_tree="${16}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
-  local protocol="${network}-${dex}-${protocol_currency}-333"
+  local protocol="${network}-${dex}-${protocol_currency}"
   protocol="${protocol^^}"
 
-  FLAGS="--fees 200000unls --gas auto --gas-adjustment 1.2 --node $nolus_net --chain-id $chain_id"
+  FLAGS="--broadcast-mode sync --fees 200000unls --gas auto --gas-adjustment 1.2 --node $nolus_net --chain-id $chain_id"
 
   # upload Leaser code
   local -r leaser_code_id=$(_store_code "$nolus_net" "$chain_id" "$nolus_home_dir" "$store_code_privileged_wallet_key" "$wasm_path/leaser.wasm"  "$admin_contract_address")
