@@ -19,13 +19,15 @@ _wait_tx_included_in_block() {
   local -r nolus_net="$2"
   local -r tx_hash="$3"
 
-  local tx_check="NOT_INCLUDED"
+  local tx_state="NOT_INCLUDED"
 
-  while [ "$tx_check" == "NOT_INCLUDED"  ]
+  while [ "$tx_state" == "NOT_INCLUDED"  ]
   do
     sleep 1
-    tx_check=$(run_cmd "$nolus_home_dir" q tx "$tx_hash" --node "$nolus_net") || tx_check="NOT_INCLUDED"
+    tx_state=$(run_cmd "$nolus_home_dir" q tx "$tx_hash" --node "$nolus_net" --output json) || tx_state="NOT_INCLUDED"
   done
+
+  echo "$tx_state"
 }
 
 _get_predictable_contract_address() {
@@ -54,9 +56,7 @@ _store_code() {
   store_result=$(echo "$store_result" | sed -n '/{/{p; q}')
   local -r store_tx_hash=$(echo "$store_result" | jq -r '.txhash')
 
-  _wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$store_tx_hash"
-
-  local -r store_tx=$(run_cmd "$nolus_home_dir" q tx "$store_tx_hash" --node "$nolus_net" --output json)
+  local -r store_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$store_tx_hash")
   local -r code_id=$(echo "$store_tx" | jq -r '.logs[].events[] | select(.type == "store_code") | .attributes[] | select(.key == "code_id") | .value')
   echo "$code_id"
 }
@@ -81,9 +81,8 @@ _instantiate() {
   instantiate_result=$(echo "$instantiate_result" | sed -n '/{/{p; q}')
   local -r instantiate_tx_hash=$(echo "$instantiate_result" | jq -r '.txhash')
 
-  _wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$instantiate_tx_hash"
-
-  local -r contract_address=$(run_cmd "$nolus_home_dir" q tx "$instantiate_tx_hash" --node "$nolus_net" --output json | jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
+  local -r instantiate_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$instantiate_tx_hash")
+  local -r contract_address=$(echo "$instantiate_tx" |  jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
 
   echo "$contract_address"
 }
