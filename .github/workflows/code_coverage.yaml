@@ -10,6 +10,9 @@ on:
       target_protocol:
         required: false
         type: "string"
+      protocols_list:
+        type: string
+        required: false
       working_directory:
         required: true
         type: "string"
@@ -23,12 +26,18 @@ env:
 jobs:
   setup_env:
     runs-on: "ubuntu-latest"
+    name: "setup_env [${{ inputs.working_directory }}; ${{ inputs.target_net }}; ${{ inputs.target_protocol }}]"
+    outputs:
+      features: "${{ steps.env.outputs.features }}"
+      exclude_features: "${{ steps.env.outputs.exclude_features }}"
     steps:
       - uses: "actions/checkout@v4.1.1"
-      - uses: "./.github/actions/env"
+      - id: "env"
+        uses: "./.github/actions/env"
         with:
           target_net: "${{ inputs.target_net }}"
           target_protocol: "${{ inputs.target_protocol }}"
+          protocols_list: "${{ inputs.protocols_list }}"
   code_coverage:
     runs-on: "ubuntu-latest"
     needs: "setup_env"
@@ -37,5 +46,5 @@ jobs:
       - uses: "nolus-protocol/rust-ci-actions/rust_cache@main"
       - uses: "nolus-protocol/rust-ci-actions/code_coverage@main"
         with:
-          features: "${{ env.FEATURES }}"
+          features: "${{ needs.setup_env.outputs.features }}"
           working_directory: "${{ inputs.working_directory }}"
