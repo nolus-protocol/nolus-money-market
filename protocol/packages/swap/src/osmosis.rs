@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
 };
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, Result, ExactAmountIn};
+use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{

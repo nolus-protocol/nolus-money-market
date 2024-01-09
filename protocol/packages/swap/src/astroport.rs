@@ -4,7 +4,7 @@ use astroport::{
 };
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, Result, ExactAmountIn};
+use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
