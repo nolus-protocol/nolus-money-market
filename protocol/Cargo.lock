@@ -441,7 +441,6 @@ dependencies = [
  "platform",
  "sdk",
  "serde",
- "swap",
  "thiserror",
  "timealarms",
 ]
@@ -717,6 +716,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "swap",
  "thiserror",
  "timealarms",
  "versioning",
@@ -972,6 +972,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "swap",
  "thiserror",
  "timealarms",
  "versioning",
@@ -1357,6 +1358,7 @@ version = "0.1.1"
 dependencies = [
  "astroport",
  "currency",
+ "dex",
  "finance",
  "oracle",
  "osmosis-std",

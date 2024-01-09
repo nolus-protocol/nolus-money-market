@@ -27,7 +27,7 @@ use crate::{
         state::{
             closed::Closed,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapResult,
+            SwapClient, SwapResult,
         },
         Lease,
     },
@@ -40,12 +40,14 @@ type AssetGroup = LeaseGroup;
 pub(super) type StartState = StartTransferInState<
     TransferIn,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;
 pub(in crate::contract::state) type DexState = dex::StateLocalOut<
     TransferIn,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;

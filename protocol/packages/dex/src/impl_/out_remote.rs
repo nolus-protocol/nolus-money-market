@@ -13,22 +13,38 @@ pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
     ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
 
 #[derive(Serialize, Deserialize)]
-pub enum State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-where
+pub enum State<
+    OpenIca,
+    SwapTask,
+    SwapGroup,
+    SwapClient,
+    ForwardToInnerMsg,
+    ForwardToInnerContinueMsg,
+> where
     SwapTask: SwapTaskT,
 {
     OpenIca(IcaConnector<OpenIca, SwapTask::Result>),
     OpenIcaRespDelivery(OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>),
-    TransferOut(TransferOut<SwapTask, Self, SwapGroup>),
-    TransferOutRespDelivery(TransferOutRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>),
-    SwapExactIn(SwapExactIn<SwapTask, Self, SwapGroup>),
-    SwapExactInRespDelivery(SwapExactInRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>),
-    SwapExactInPreRecoverIca(SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup>),
-    SwapExactInRecoverIca(SwapExactInRecoverIca<SwapTask, Self, SwapGroup>),
-    SwapExactInRecoverIcaRespDelivery(
-        SwapExactInRecoverIcaRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerContinueMsg>,
+    TransferOut(TransferOut<SwapTask, Self, SwapGroup, SwapClient>),
+    TransferOutRespDelivery(
+        TransferOutRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>,
     ),
-    SwapExactInPostRecoverIca(SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup>),
+    SwapExactIn(SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>),
+    SwapExactInRespDelivery(
+        SwapExactInRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>,
+    ),
+    SwapExactInPreRecoverIca(SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup, SwapClient>),
+    SwapExactInRecoverIca(SwapExactInRecoverIca<SwapTask, Self, SwapGroup, SwapClient>),
+    SwapExactInRecoverIcaRespDelivery(
+        SwapExactInRecoverIcaRespDelivery<
+            SwapTask,
+            Self,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerContinueMsg,
+        >,
+    ),
+    SwapExactInPostRecoverIca(SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup, SwapClient>),
 }
 
 pub type StartLocalRemoteState<OpenIca, SwapTask> =
@@ -51,9 +67,22 @@ mod impl_into {
 
     use super::{OpenIcaRespDelivery, State};
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<IcaConnector<OpenIca, SwapTask::Result>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<IcaConnector<OpenIca, SwapTask::Result>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
@@ -62,9 +91,22 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
@@ -75,80 +117,193 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOut<SwapTask, Self, SwapGroup>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<TransferOut<SwapTask, Self, SwapGroup, SwapClient>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: TransferOut<SwapTask, Self, SwapGroup>) -> Self {
+        fn from(value: TransferOut<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
             Self::TransferOut(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOutRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
+        From<TransferOutRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
         fn from(
-            value: TransferOutRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>,
+            value: TransferOutRespDelivery<
+                SwapTask,
+                Self,
+                SwapGroup,
+                SwapClient,
+                ForwardToInnerMsg,
+            >,
         ) -> Self {
             Self::TransferOutRespDelivery(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactIn<SwapTask, Self, SwapGroup>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactIn<SwapTask, Self, SwapGroup>) -> Self {
+        fn from(value: SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
             Self::SwapExactIn(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactInRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
+        From<SwapExactInRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
         fn from(
-            value: SwapExactInRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerMsg>,
+            value: SwapExactInRespDelivery<
+                SwapTask,
+                Self,
+                SwapGroup,
+                SwapClient,
+                ForwardToInnerMsg,
+            >,
         ) -> Self {
             Self::SwapExactInRespDelivery(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup, SwapClient>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup>) -> Self {
+        fn from(value: SwapExactInPreRecoverIca<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
             Self::SwapExactInPreRecoverIca(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactInRecoverIca<SwapTask, Self, SwapGroup>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<SwapExactInRecoverIca<SwapTask, Self, SwapGroup, SwapClient>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactInRecoverIca<SwapTask, Self, SwapGroup>) -> Self {
+        fn from(value: SwapExactInRecoverIca<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
             Self::SwapExactInRecoverIca(value)
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
         From<
-            SwapExactInRecoverIcaRespDelivery<SwapTask, Self, SwapGroup, ForwardToInnerContinueMsg>,
-        > for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+            SwapExactInRecoverIcaRespDelivery<
+                SwapTask,
+                Self,
+                SwapGroup,
+                SwapClient,
+                ForwardToInnerContinueMsg,
+            >,
+        >
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
@@ -157,6 +312,7 @@ mod impl_into {
                 SwapTask,
                 Self,
                 SwapGroup,
+                SwapClient,
                 ForwardToInnerContinueMsg,
             >,
         ) -> Self {
@@ -164,13 +320,26 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup>>
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > From<SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup, SwapClient>>
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup>) -> Self {
+        fn from(value: SwapExactInPostRecoverIca<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
             Self::SwapExactInPostRecoverIca(value)
         }
     }
@@ -182,21 +351,39 @@ mod impl_handler {
     use currency::Group;
     use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply};
 
-    use crate::impl_::{
-        response::{ContinueResult, Result},
-        swap_task::SwapTask as SwapTaskT,
-        DexConnectable, ForwardToInner, Handler, IcaConnectee, TimeAlarm,
+    use crate::{
+        impl_::{
+            response::{ContinueResult, Result},
+            swap_task::SwapTask as SwapTaskT,
+            DexConnectable, ForwardToInner, Handler, IcaConnectee, TimeAlarm,
+        },
+        swap::ExactAmountIn,
     };
 
     use super::State;
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > Handler
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         OpenIca: DexConnectable + IcaConnectee<State = Self> + TimeAlarm + Display,
         SwapTask: SwapTaskT,
         SwapTask::OutG: Clone,
         SwapGroup: Group,
+        SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
         ForwardToInnerContinueMsg: ForwardToInner,
     {
@@ -449,8 +636,22 @@ mod impl_contract {
 
     use super::State;
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg> Contract
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > Contract
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         OpenIca: Contract<StateResponse = SwapTask::StateResponse>,
         SwapTask: SwapTaskT
@@ -484,8 +685,22 @@ mod impl_display {
     use super::State;
     use crate::impl_::swap_task::SwapTask as SwapTaskT;
 
-    impl<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg> Display
-        for State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        > Display
+        for State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         OpenIca: Display,
         SwapTask: SwapTaskT,
@@ -513,24 +728,49 @@ mod impl_migration {
     use currency::Group;
 
     use super::{OpenIcaRespDelivery, State};
-    use crate::impl_::{
-        migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, DexConnectable, ForwardToInner,
-        IcaConnectee, IcaConnector,
+    use crate::{
+        impl_::{
+            migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, DexConnectable,
+            ForwardToInner, IcaConnectee, IcaConnector,
+        },
+        swap::ExactAmountIn,
     };
 
     //cannot impl MigrateSpec due to the need to migrate OpenIca as well
-    impl<SwapTask, OpenIca, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        State<OpenIca, SwapTask, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<
+            SwapTask,
+            OpenIca,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
+        State<
+            OpenIca,
+            SwapTask,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
     where
         SwapTask: SwapTaskT,
         SwapGroup: Group,
+        SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
     {
         pub fn migrate<MigrateOpenIcaFn, MigrateSpecFn, OpenIcaNew, SwapTaskNew>(
             self,
             migrate_open_ica: MigrateOpenIcaFn,
             migrate_spec: MigrateSpecFn,
-        ) -> State<OpenIcaNew, SwapTaskNew, SwapGroup, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        ) -> State<
+            OpenIcaNew,
+            SwapTaskNew,
+            SwapGroup,
+            SwapClient,
+            ForwardToInnerMsg,
+            ForwardToInnerContinueMsg,
+        >
         where
             OpenIca: MigrateSpec<
                 OpenIca,
@@ -539,6 +779,7 @@ mod impl_migration {
                     OpenIcaNew,
                     SwapTaskNew,
                     SwapGroup,
+                    SwapClient,
                     ForwardToInnerMsg,
                     ForwardToInnerContinueMsg,
                 >,
@@ -549,6 +790,7 @@ mod impl_migration {
                     OpenIcaNew,
                     SwapTaskNew,
                     SwapGroup,
+                    SwapClient,
                     ForwardToInnerMsg,
                     ForwardToInnerContinueMsg,
                 >,
@@ -558,6 +800,7 @@ mod impl_migration {
                     OpenIcaNew,
                     SwapTaskNew,
                     SwapGroup,
+                    SwapClient,
                     ForwardToInnerMsg,
                     ForwardToInnerContinueMsg,
                 >,

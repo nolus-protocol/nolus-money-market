@@ -18,7 +18,7 @@ use crate::{
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
         DownpaymentCoin, LeasePaymentCurrencies,
     },
-    contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef},
+    contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,
 };
 
@@ -53,7 +53,7 @@ impl OpenIcaAccount {
 
 impl IcaConnectee for OpenIcaAccount {
     type State = DexState;
-    type NextState = TransferOut<BuyAsset, Self::State, LeasePaymentCurrencies>;
+    type NextState = TransferOut<BuyAsset, Self::State, LeasePaymentCurrencies, SwapClient>;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
         TransferOut::new(BuyAsset::new(

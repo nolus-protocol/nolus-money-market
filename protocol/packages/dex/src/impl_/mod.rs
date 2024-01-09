@@ -55,25 +55,33 @@ mod transfer_in_init;
 mod transfer_out;
 mod trx;
 
-pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
-    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
+pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
+    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
 
-pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
-    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
+pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
+    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
 
-pub type SwapExactInPreRecoverIca<SwapTask, SEnum, SwapGroup> =
-    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup>>;
+pub type SwapExactInPreRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> =
+    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient>>;
 
-pub type SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup> = IcaConnector<
-    InRecovery<SwapExactIn<SwapTask, SEnum, SwapGroup>, SEnum>,
+pub type SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> = IcaConnector<
+    InRecovery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, SEnum>,
     <SwapTask as SwapTaskT>::Result,
 >;
 
-pub type SwapExactInRecoverIcaRespDelivery<SwapTask, SEnum, SwapGroup, ForwardToInnerMsg> =
-    ICAOpenResponseDelivery<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup>, ForwardToInnerMsg>;
+pub type SwapExactInRecoverIcaRespDelivery<
+    SwapTask,
+    SEnum,
+    SwapGroup,
+    SwapClient,
+    ForwardToInnerMsg,
+> = ICAOpenResponseDelivery<
+    SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient>,
+    ForwardToInnerMsg,
+>;
 
-pub type SwapExactInPostRecoverIca<SwapTask, SEnum, SwapGroup> =
-    EntryDelay<SwapExactIn<SwapTask, SEnum, SwapGroup>>;
+pub type SwapExactInPostRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> =
+    EntryDelay<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;

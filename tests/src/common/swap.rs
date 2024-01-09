@@ -7,7 +7,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny,
 };
-use swap::trx::{ExactAmountIn, RequestMsg, TypeUrl};
+use swap::{Impl, RequestMsg};
 
 use super::{
     ibc,
@@ -49,12 +49,12 @@ pub(crate) fn expect_swap(
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(|message: ProtobufAny| {
-            if message.type_url == <RequestMsg as TypeUrl>::TYPE_URL {
+            if message.type_url == RequestMsg::TYPE_URL {
                 Message::decode(message.value.as_slice()).unwrap()
             } else {
                 panic!(
                     "Expected message with type URL equal to \"{expected}\"! Got \"{actual}\" instead!",
-                    expected = <RequestMsg as TypeUrl>::TYPE_URL,
+                    expected = RequestMsg::TYPE_URL,
                     actual = message.type_url
                 );
             }
@@ -116,14 +116,13 @@ fn send_response<'r>(
     inituator_contract_addr: Addr,
     amounts: &[Amount],
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
+    use dex::swap::ExactAmountIn;
+
     ibc::send_response(
         app,
         inituator_contract_addr.clone(),
         Binary(platform::trx::encode_msg_responses(
-            amounts
-                .iter()
-                .copied()
-                .map(|amount| swap::trx::exact_amount_in().build_resp(amount)),
+            amounts.iter().copied().map(Impl::build_resp),
         )),
     )
 }

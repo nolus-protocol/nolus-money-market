@@ -28,7 +28,7 @@ use crate::{
         state::{
             opened::active::Active,
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapResult,
+            SwapClient, SwapResult,
         },
         Lease,
     },
@@ -45,6 +45,7 @@ pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
     BuyAsset,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;

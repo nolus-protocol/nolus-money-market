@@ -16,10 +16,10 @@ net_main = ["contract", "currencies/net_main"]
 astroport = [
     "contract",
     "currencies/astroport",
-    "dex/astroport",
     "dex/migration",
+    "swap/astroport",
 ]
-osmosis = ["contract", "currencies/osmosis", "dex/osmosis", "dex/migration"]
+osmosis = ["contract", "currencies/osmosis", "dex/migration", "swap/osmosis"]
 
 contract = [
     "skel",
@@ -48,7 +48,7 @@ timealarms = { workspace = true, optional = true, features = ["stub"] }
 
 currencies = { workspace = true }
 currency = { workspace = true }
-dex = { workspace = true, optional = true }
+dex = { workspace = true, optional = true, features = ["impl"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 lpp-platform = { workspace = true, optional = true }
@@ -56,6 +56,7 @@ oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }
+swap = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true }
 
 # Required as a dependency by `entry_point` attribute macro

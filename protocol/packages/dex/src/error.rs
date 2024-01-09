@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::swap;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Dex] {0}")]
@@ -9,7 +11,7 @@ pub enum Error {
     Platform(#[from] platform::error::Error),
 
     #[error("[Dex] {0}")]
-    Swap(#[from] swap::error::Error),
+    Swap(#[from] swap::Error),
 
     #[error("[Dex] The operation '{0}' is not supported in the current state '{1}'")]
     UnsupportedOperation(String, String),
@@ -24,10 +26,8 @@ pub enum Error {
     TimeAlarmError(#[from] timealarms::error::ContractError),
 }
 
-#[cfg(any(feature = "astroport", feature = "osmosis"))]
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[cfg(any(feature = "astroport", feature = "osmosis"))]
 impl Error {
     pub(crate) fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
     where

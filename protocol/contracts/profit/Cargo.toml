@@ -15,8 +15,8 @@ net_dev = ["contract", "currencies/net_dev"]
 net_test = ["contract", "currencies/net_test"]
 net_main = ["contract", "currencies/net_main"]
 
-astroport = ["contract", "currencies/astroport", "dex/astroport"]
-osmosis = ["contract", "currencies/osmosis", "dex/osmosis"]
+astroport = ["contract", "currencies/astroport", "swap/astroport"]
+osmosis = ["contract", "currencies/osmosis", "swap/osmosis"]
 
 contract = [
     "sdk/contract",
@@ -39,11 +39,12 @@ testing = []
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
-dex = { workspace = true, optional = true }
+dex = { workspace = true, optional = true, features = ["impl"] }
 finance = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }
+swap = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 versioning = { workspace = true, optional = true }
 
@@ -61,6 +62,7 @@ finance = { workspace = true }
 oracle-platform = { workspace = true, features = ["testing"] }
 timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
+swap = { workspace = true, features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { workspace = true, features = ["testing"] }

@@ -23,7 +23,7 @@ use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::C
 use super::{
     idle::Idle,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum,
+    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum, SwapClient,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -138,7 +138,13 @@ impl SwapTask for BuyBack {
 }
 
 impl ConfigManagement
-    for StateLocalOut<BuyBack, ProfitCurrencies, ForwardToDexEntry, ForwardToDexEntryContinue>
+    for StateLocalOut<
+        BuyBack,
+        ProfitCurrencies,
+        SwapClient,
+        ForwardToDexEntry,
+        ForwardToDexEntryContinue,
+    >
 {
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
         Err(ContractError::unsupported_operation(BuyBack::QUERY_ERROR))
@@ -146,7 +152,13 @@ impl ConfigManagement
 }
 
 impl SetupDexHandler
-    for StateLocalOut<BuyBack, ProfitCurrencies, ForwardToDexEntry, ForwardToDexEntryContinue>
+    for StateLocalOut<
+        BuyBack,
+        ProfitCurrencies,
+        SwapClient,
+        ForwardToDexEntry,
+        ForwardToDexEntryContinue,
+    >
 {
     type State = Self;
 }

@@ -12,9 +12,8 @@ use platform::{
     trx::Transaction,
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use swap::trx::{self, ExactAmountIn};
 
-use crate::error::Result;
+use crate::{error::Result, swap::ExactAmountIn};
 
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -90,7 +89,7 @@ impl<'a> SwapTrx<'a> {
         }
     }
 
-    pub fn swap_exact_in<GIn, GSwap>(
+    pub fn swap_exact_in<GIn, GSwap, SwapClient>(
         &mut self,
         amount: &CoinDTO<GIn>,
         currency_out: &SymbolSlice,
@@ -98,19 +97,19 @@ impl<'a> SwapTrx<'a> {
     where
         GIn: Group,
         GSwap: Group,
+        SwapClient: ExactAmountIn,
     {
         self.oracle
             .swap_path(amount.ticker().into(), currency_out.into(), self.querier)
             .map_err(Into::into)
             .and_then(|swap_path| {
-                trx::exact_amount_in()
-                    .build::<GIn, GSwap>(
-                        &mut self.trx,
-                        self.ica_account.clone(),
-                        amount,
-                        &swap_path,
-                    )
-                    .map_err(Into::into)
+                SwapClient::build::<GIn, GSwap>(
+                    &mut self.trx,
+                    self.ica_account.clone(),
+                    amount,
+                    &swap_path,
+                )
+                .map_err(Into::into)
             })
     }
 }

@@ -23,7 +23,7 @@ use crate::{
         state::{
             opened::{self, repay},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            StateResponse as ContractStateResponse, SwapResult,
+            StateResponse as ContractStateResponse, SwapClient, SwapResult,
         },
         Lease,
     },
@@ -34,12 +34,14 @@ use crate::{
 pub(super) type StartState = StartLocalLocalState<
     BuyLpn,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;
 pub(crate) type DexState = dex::StateLocalOut<
     BuyLpn,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;

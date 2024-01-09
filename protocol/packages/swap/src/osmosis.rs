@@ -1,20 +1,22 @@
-use oracle::api::swap::{SwapPath, SwapTarget};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+use dex::swap::{Error, Result};
 use finance::coin::{Amount, CoinDTO};
+use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
     coin_legacy,
     ica::HostAccount,
     trx::{self, Transaction},
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
+use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
+use super::ExactAmountIn;
 
-use super::{ExactAmountIn, TypeUrl};
+use crate::type_url::TypeUrl;
 
 pub type RequestMsg = MsgSwapExactAmountIn;
 
@@ -28,11 +30,11 @@ impl TypeUrl for ResponseMsg {
     const TYPE_URL: &'static str = Self::TYPE_URL;
 }
 
-pub(super) struct Impl;
+#[derive(Serialize, Deserialize)]
+pub struct Impl;
 
 impl ExactAmountIn for Impl {
     fn build<GIn, GSwap>(
-        &self,
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
@@ -63,7 +65,7 @@ impl ExactAmountIn for Impl {
         Ok(())
     }
 
-    fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
+    fn parse<I>(trx_resps: &mut I) -> Result<Amount>
     where
         I: Iterator<Item = Any>,
     {
@@ -80,7 +82,7 @@ impl ExactAmountIn for Impl {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(&self, amount_out: Amount) -> Any {
+    fn build_resp(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
         let resp = ResponseMsg {
@@ -128,10 +130,9 @@ where
 mod test {
     use currency::test::{SuperGroup, SuperGroupTestC1};
     use currency::{Currency as _, SymbolStatic};
+    use dex::swap::Error;
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
-
-    use crate::error::Error;
 
     use super::{SwapAmountInRoute, SwapTarget};
 
@@ -192,10 +193,12 @@ mod test {
     fn resp() {
         use super::ExactAmountIn;
 
+        type SwapClient = super::Impl;
+
         let amount = 20;
-        let instance = super::Impl {};
-        let mut resp = vec![instance.build_resp(amount)].into_iter();
-        let parsed = instance.parse(&mut resp).unwrap();
+
+        let mut resp = vec![SwapClient::build_resp(amount)].into_iter();
+        let parsed = SwapClient::parse(&mut resp).unwrap();
         assert_eq!(amount, parsed);
         assert_eq!(None, resp.next());
     }

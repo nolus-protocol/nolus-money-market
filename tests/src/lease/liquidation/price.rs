@@ -6,6 +6,7 @@ use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
+use swap::RequestMsg;
 
 use crate::{
     common::{
@@ -86,7 +87,7 @@ fn full_liquidation() {
     )
     .ignore_response();
 
-    let requests: Vec<swap::trx::RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<RequestMsg> = crate::common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

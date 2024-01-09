@@ -19,7 +19,7 @@ use sdk::{
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use swap::trx as swap_trx;
+use swap::RequestMsg;
 
 use super::{
     ibc,
@@ -221,7 +221,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     );
 
     dbg!("222222222");
-    let requests: Vec<swap_trx::RequestMsg> = super::swap::expect_swap(
+    let requests: Vec<RequestMsg> = super::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

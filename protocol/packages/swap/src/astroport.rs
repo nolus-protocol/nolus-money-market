@@ -4,6 +4,7 @@ use astroport::{
 };
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+use dex::swap::{Error, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -19,10 +20,11 @@ use sdk::{
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
+use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
+use crate::type_url::TypeUrl;
 
-use super::{ExactAmountIn, TypeUrl};
+use super::ExactAmountIn;
 
 pub type RequestMsg = MsgExecuteContract;
 
@@ -36,7 +38,8 @@ impl TypeUrl for ResponseMsg {
     const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
 }
 
-pub(super) struct Impl;
+#[derive(Serialize, Deserialize)]
+pub struct Impl;
 
 trait RouterAddress {
     const ROUTER_ADDR: &'static str;
@@ -61,7 +64,6 @@ impl RouterAddress for Impl {
 
 impl ExactAmountIn for Impl {
     fn build<GIn, GSwap>(
-        &self,
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
@@ -95,7 +97,7 @@ impl ExactAmountIn for Impl {
             })
     }
 
-    fn parse<I>(&self, trx_resps: &mut I) -> Result<Amount>
+    fn parse<I>(trx_resps: &mut I) -> Result<Amount>
     where
         I: Iterator<Item = Any>,
     {
@@ -113,7 +115,7 @@ impl ExactAmountIn for Impl {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(&self, amount_out: Amount) -> Any {
+    fn build_resp(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
         let swap_resp = cosmwasm_std::to_json_vec(&SwapResponseData {
@@ -188,14 +190,14 @@ where
 #[cfg(test)]
 mod test {
     use astroport::{asset::AssetInfo, router::SwapOperation};
+
     use currency::{
         test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC6},
         Currency as _, SymbolStatic,
     };
+    use dex::swap::Error;
     use finance::coin::Coin;
     use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
-
-    use crate::error::Error;
 
     use super::SwapTarget;
 
@@ -290,12 +292,13 @@ mod test {
 
     #[test]
     fn resp() {
-        use crate::trx::ExactAmountIn;
+        use dex::swap::ExactAmountIn;
+
+        type SwapClient = super::Impl;
 
         let amount = 20;
-        let instance = super::Impl {};
-        let mut resp = vec![instance.build_resp(amount)].into_iter();
-        let parsed = instance.parse(&mut resp).unwrap();
+        let mut resp = vec![SwapClient::build_resp(amount)].into_iter();
+        let parsed = SwapClient::parse(&mut resp).unwrap();
         assert_eq!(amount, parsed);
         assert_eq!(None, resp.next());
     }

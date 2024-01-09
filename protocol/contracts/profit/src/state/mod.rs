@@ -12,6 +12,7 @@ use sdk::{
     cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
+use swap::Impl;
 
 use crate::{
     error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
@@ -37,6 +38,7 @@ const STATE: Item<'static, State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
 type ProfitCurrencies = PaymentGroup;
+type SwapClient = Impl;
 
 pub(crate) trait ConfigManagement
 where
@@ -78,7 +80,15 @@ enum StateEnum {
     OpenTransferChannel(OpenTransferChannel),
     OpenIca(IcaConnector),
     Idle(Idle),
-    BuyBack(StateLocalOut<BuyBack, PaymentGroup, ForwardToDexEntry, ForwardToDexEntryContinue>),
+    BuyBack(
+        StateLocalOut<
+            BuyBack,
+            PaymentGroup,
+            SwapClient,
+            ForwardToDexEntry,
+            ForwardToDexEntryContinue,
+        >,
+    ),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -152,13 +162,22 @@ impl From<Idle> for State {
     }
 }
 
-impl From<StateLocalOut<BuyBack, ProfitCurrencies, ForwardToDexEntry, ForwardToDexEntryContinue>>
-    for State
+impl
+    From<
+        StateLocalOut<
+            BuyBack,
+            ProfitCurrencies,
+            SwapClient,
+            ForwardToDexEntry,
+            ForwardToDexEntryContinue,
+        >,
+    > for State
 {
     fn from(
         value: StateLocalOut<
             BuyBack,
             ProfitCurrencies,
+            SwapClient,
             ForwardToDexEntry,
             ForwardToDexEntryContinue,
         >,

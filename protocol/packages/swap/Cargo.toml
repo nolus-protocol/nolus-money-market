@@ -6,18 +6,34 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-astroport = ["api", "sdk/cosmos_ibc", "dep:astroport"]
-osmosis = ["api", "sdk/cosmos", "dep:osmosis-std"]
+astroport = [
+    "sdk/cosmos_ibc",
+    "dep:astroport",
+    "dep:currency",
+    "dep:dex",
+    "dep:finance",
+    "dep:oracle",
+    "dep:platform",
+]
+osmosis = [
+    "sdk/cosmos",
+    "dep:osmosis-std",
+    "dep:currency",
+    "dep:dex",
+    "dep:finance",
+    "dep:oracle",
+    "dep:platform",
+]
 
-api = ["dep:finance", "dep:platform", "thiserror"]
-testing = []
+testing = ["dex/testing"]
 
 [dependencies]
-currency = { workspace = true }
+currency = { workspace = true, optional = true }
+dex = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }
-oracle = { workspace = true, features = ["stub_swap"] }
+oracle = { workspace = true, features = ["stub_swap"], optional = true }
 platform = { workspace = true, optional = true }
-sdk = { workspace = true, features = ["schema"] }
+sdk = { workspace = true, features = ["schema"], optional = true }
 
 astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
@@ -26,3 +42,4 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+dex = { workspace = true, features = ["testing"] }

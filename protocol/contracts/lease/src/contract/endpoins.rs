@@ -137,7 +137,7 @@ fn may_migrate(storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageRe
                                 COIN_CURRENCY.into(),
                             )
                             .expect("USDC is a member of Lpns");
-                            <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _>>>::into(
+                            <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _, _>>>::into(
                                 swap_exact_in.into_next(coin_in),
                             )
                         }

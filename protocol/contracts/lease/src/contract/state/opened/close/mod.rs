@@ -10,7 +10,7 @@ use crate::{
     contract::{
         state::{
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            Response, State,
+            Response, State, SwapClient,
         },
         Lease,
     },
@@ -36,6 +36,7 @@ type Task<RepayableT> = SellAsset<RepayableT>;
 type DexState<Repayable> = dex::StateLocalOut<
     Task<Repayable>,
     LeasePaymentCurrencies,
+    SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;

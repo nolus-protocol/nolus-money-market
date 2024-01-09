@@ -32,7 +32,7 @@ use crate::{
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum,
+    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum, SwapClient,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -98,6 +98,7 @@ impl Idle {
         let state: StartLocalLocalState<
             BuyBack,
             ProfitCurrencies,
+            SwapClient,
             ForwardToDexEntry,
             ForwardToDexEntryContinue,
         > = dex::start_local_local(BuyBack::new(
