@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
 };
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, Result};
+use dex::swap::{Error, Result, ExactAmountIn};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -13,8 +13,6 @@ use platform::{
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 use serde::{Deserialize, Serialize};
-
-use super::ExactAmountIn;
 
 use crate::type_url::TypeUrl;
 

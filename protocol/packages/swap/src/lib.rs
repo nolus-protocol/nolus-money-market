@@ -1,5 +1,3 @@
-use dex::swap::ExactAmountIn;
-
 #[cfg(feature = "astroport")]
 pub use self::astroport::*;
 #[cfg(feature = "osmosis")]

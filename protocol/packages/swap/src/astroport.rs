@@ -4,7 +4,7 @@ use astroport::{
 };
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, Result};
+use dex::swap::{Error, Result, ExactAmountIn};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -23,8 +23,6 @@ use sdk::{
 use serde::{Deserialize, Serialize};
 
 use crate::type_url::TypeUrl;
-
-use super::ExactAmountIn;
 
 pub type RequestMsg = MsgExecuteContract;
 
