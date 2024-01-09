@@ -25,7 +25,7 @@ pub trait ExactAmountIn {
     where
         I: Iterator<Item = Any>;
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "testing")]
     fn build_resp(amount_out: Amount) -> Any;
 }
 
