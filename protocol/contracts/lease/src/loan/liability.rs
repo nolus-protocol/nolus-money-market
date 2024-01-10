@@ -13,18 +13,13 @@ where
     pub(crate) fn liability_status(&self, now: Timestamp) -> LiabilityStatus<Lpn> {
         let state = self.state(now);
 
-        let previous_interest = state.overdue_margin_interest + state.overdue_interest;
+        let overdue = state.overdue_margin_interest + state.overdue_interest;
 
-        let total = state.principal_due
-            + previous_interest
-            + state.due_margin_interest
-            + state.due_interest;
+        let total_due =
+            state.principal_due + overdue + state.due_margin_interest + state.due_interest;
 
-        debug_assert!(previous_interest <= total);
-        LiabilityStatus {
-            total,
-            previous_interest,
-        }
+        debug_assert!(overdue <= total_due);
+        LiabilityStatus { total_due, overdue }
     }
 }
 
@@ -33,6 +28,6 @@ pub(crate) struct LiabilityStatus<Lpn>
 where
     Lpn: Currency,
 {
-    pub total: Coin<Lpn>,
-    pub previous_interest: Coin<Lpn>,
+    pub total_due: Coin<Lpn>,
+    pub overdue: Coin<Lpn>,
 }

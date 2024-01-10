@@ -63,7 +63,7 @@ where
         PriceAlarms: PriceAlarmsTrait,
     {
         debug_assert!(!currency::equal::<Lpn, Asset>());
-        let total_liability = self.loan.liability_status(next_recalc).total;
+        let total_liability = self.loan.liability_status(next_recalc).total_due;
         debug_assert!(!total_liability.is_zero());
 
         let below = self

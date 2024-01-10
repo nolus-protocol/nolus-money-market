@@ -93,10 +93,10 @@ where
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
-            previous_margin_due: loan.overdue_margin_interest,
-            previous_interest_due: loan.overdue_interest,
-            current_margin_due: loan.due_margin_interest,
-            current_interest_due: loan.due_interest,
+            overdue_margin: loan.overdue_margin_interest,
+            overdue_interest: loan.overdue_interest,
+            due_margin: loan.due_margin_interest,
+            due_interest: loan.due_interest,
             validity: now,
         }
     }
@@ -362,10 +362,10 @@ mod tests {
             interest_rate,
             interest_rate_margin: MARGIN_INTEREST_RATE,
             principal_due: loan.principal_due,
-            previous_margin_due: lpn_coin(0),
-            previous_interest_due: lpn_coin(0),
-            current_margin_due: lpn_coin(0),
-            current_interest_due: lpn_coin(0),
+            overdue_margin: lpn_coin(0),
+            overdue_interest: lpn_coin(0),
+            due_margin: lpn_coin(0),
+            due_interest: lpn_coin(0),
             validity: LEASE_STATE_AT,
         };
 

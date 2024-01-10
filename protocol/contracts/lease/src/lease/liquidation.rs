@@ -17,13 +17,10 @@ where
     Asset: Currency,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        let LiabilityStatus {
-            total: total_due,
-            previous_interest,
-        } = self.loan.liability_status(now);
+        let LiabilityStatus { total_due, overdue } = self.loan.liability_status(now);
 
         let overdue = if self.loan.grace_period_end() <= now {
-            previous_interest
+            overdue
         } else {
             Coin::ZERO
         };

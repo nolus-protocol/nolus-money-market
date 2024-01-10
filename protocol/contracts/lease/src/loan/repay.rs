@@ -56,25 +56,25 @@ where
             + self.change
     }
 
-    pub(super) fn pay_previous_margin(&mut self, payment: Coin<C>) {
+    pub(super) fn pay_overdue_margin(&mut self, payment: Coin<C>) {
         debug_assert_eq!(self.overdue_margin_paid, Coin::default());
 
         self.overdue_margin_paid = payment;
     }
 
-    pub(super) fn pay_previous_interest(&mut self, payment: Coin<C>) {
+    pub(super) fn pay_overdue_interest(&mut self, payment: Coin<C>) {
         debug_assert_eq!(self.overdue_interest_paid, Coin::default());
 
         self.overdue_interest_paid = payment;
     }
 
-    pub(super) fn pay_current_margin(&mut self, payment: Coin<C>) {
+    pub(super) fn pay_due_margin(&mut self, payment: Coin<C>) {
         debug_assert_eq!(self.due_margin_paid, Coin::default());
 
         self.due_margin_paid = payment;
     }
 
-    pub(super) fn pay_current_interest(&mut self, payment: Coin<C>) {
+    pub(super) fn pay_due_interest(&mut self, payment: Coin<C>) {
         debug_assert_eq!(self.due_interest_paid, Coin::default());
 
         self.due_interest_paid = payment;

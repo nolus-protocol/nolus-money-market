@@ -167,15 +167,15 @@ where
         let change = prev_period_receipt.change;
 
         let mut receipt = RepayReceipt::default();
-        receipt.pay_previous_margin(prev_period_receipt.margin_paid);
-        receipt.pay_previous_interest(prev_period_receipt.interest_paid);
+        receipt.pay_overdue_margin(prev_period_receipt.margin_paid);
+        receipt.pay_overdue_interest(prev_period_receipt.interest_paid);
         debug_assert_eq!(payment, change + receipt.total());
 
         let change = if !self.overdue_at(by) {
             let period_receipt = self.repay_due_period(change, by);
             profit.send(period_receipt.margin_paid);
-            receipt.pay_current_margin(period_receipt.margin_paid);
-            receipt.pay_current_interest(period_receipt.interest_paid);
+            receipt.pay_due_margin(period_receipt.margin_paid);
+            receipt.pay_due_interest(period_receipt.interest_paid);
 
             let principal_due = self.lpp_loan.principal_due();
             let (principal_paid, change) = self.repay_principal(period_receipt.change, by);
@@ -201,30 +201,30 @@ where
         while overdue_at(&current_period, now) {
             current_period = next_due_period(current_period, &self.interest_payment_spec);
         }
-        let current_due_period = self.due_period.and_period(Period::from_till(
+        let due_period = self.due_period.and_period(Period::from_till(
             current_period.start().max(self.due_period.start()),
             now,
         ));
 
-        let prev_due_periods = self.due_period.and_period(Period::from_till(
+        let overdue_periods = self.due_period.and_period(Period::from_till(
             current_period.start().min(self.due_period.start()),
             current_period.start(),
         ));
 
-        let previous_margin_interest_due = prev_due_periods.interest(principal_due);
-        let current_margin_interest_due = current_due_period.interest(principal_due);
+        let overdue_margin_interest = overdue_periods.interest(principal_due);
+        let due_margin_interest = due_period.interest(principal_due);
 
-        let previous_interest_due = self.lpp_loan.interest_due(prev_due_periods.till());
-        let current_interest_due = self.lpp_loan.interest_due(now) - previous_interest_due;
+        let overdue_interest = self.lpp_loan.interest_due(overdue_periods.till());
+        let due_interest = self.lpp_loan.interest_due(now) - overdue_interest;
 
         State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.due_period.interest_rate(),
             principal_due,
-            overdue_interest: previous_interest_due,
-            due_interest: current_interest_due,
-            overdue_margin_interest: previous_margin_interest_due,
-            due_margin_interest: current_margin_interest_due,
+            overdue_interest,
+            due_interest,
+            overdue_margin_interest,
+            due_margin_interest,
         }
     }
 
@@ -1005,10 +1005,10 @@ mod tests {
 
         fn state<P>(
             principal: P,
-            previous_margin_interest_due: P,
-            previous_interest_due: P,
-            current_margin_interest_due: P,
-            current_interest_due: P,
+            overdue_margin_interest: P,
+            overdue_interest: P,
+            due_margin_interest: P,
+            due_interest: P,
         ) -> State<Lpn>
         where
             P: Into<Coin<Lpn>>,
@@ -1017,20 +1017,20 @@ mod tests {
                 annual_interest: LOAN_INTEREST_RATE,
                 annual_interest_margin: MARGIN_INTEREST_RATE,
                 principal_due: principal.into(),
-                overdue_margin_interest: previous_margin_interest_due.into(),
-                overdue_interest: previous_interest_due.into(),
-                due_margin_interest: current_margin_interest_due.into(),
-                due_interest: current_interest_due.into(),
+                overdue_margin_interest: overdue_margin_interest.into(),
+                overdue_interest: overdue_interest.into(),
+                due_margin_interest: due_margin_interest.into(),
+                due_interest: due_interest.into(),
             }
         }
 
         fn receipt<P>(
             principal: P,
             paid_principal: P,
-            paid_previous_margin_interest_due: P,
-            paid_previous_interest_due: P,
-            paid_current_margin_interest_due: P,
-            paid_current_interest_due: P,
+            paid_overdue_margin: P,
+            paid_overdue_interest: P,
+            paid_due_margin: P,
+            paid_due_interest: P,
             change: P,
         ) -> RepayReceipt<Lpn>
         where
@@ -1038,10 +1038,10 @@ mod tests {
         {
             let mut receipt = RepayReceipt::default();
             receipt.pay_principal(principal.into(), paid_principal.into());
-            receipt.pay_previous_margin(paid_previous_margin_interest_due.into());
-            receipt.pay_previous_interest(paid_previous_interest_due.into());
-            receipt.pay_current_margin(paid_current_margin_interest_due.into());
-            receipt.pay_current_interest(paid_current_interest_due.into());
+            receipt.pay_overdue_margin(paid_overdue_margin.into());
+            receipt.pay_overdue_interest(paid_overdue_interest.into());
+            receipt.pay_due_margin(paid_due_margin.into());
+            receipt.pay_due_interest(paid_due_interest.into());
             receipt.keep_change(change.into());
             receipt
         }
