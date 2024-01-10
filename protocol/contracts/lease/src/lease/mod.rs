@@ -93,10 +93,10 @@ where
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
-            previous_margin_due: loan.previous_margin_interest_due,
-            previous_interest_due: loan.previous_interest_due,
-            current_margin_due: loan.current_margin_interest_due,
-            current_interest_due: loan.current_interest_due,
+            previous_margin_due: loan.overdue_margin_interest,
+            previous_interest_due: loan.overdue_interest,
+            current_margin_due: loan.due_margin_interest,
+            current_interest_due: loan.due_interest,
             validity: now,
         }
     }

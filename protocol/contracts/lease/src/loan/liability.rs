@@ -13,12 +13,12 @@ where
     pub(crate) fn liability_status(&self, now: Timestamp) -> LiabilityStatus<Lpn> {
         let state = self.state(now);
 
-        let previous_interest = state.previous_margin_interest_due + state.previous_interest_due;
+        let previous_interest = state.overdue_margin_interest + state.overdue_interest;
 
         let total = state.principal_due
             + previous_interest
-            + state.current_margin_interest_due
-            + state.current_interest_due;
+            + state.due_margin_interest
+            + state.due_interest;
 
         debug_assert!(previous_interest <= total);
         LiabilityStatus {

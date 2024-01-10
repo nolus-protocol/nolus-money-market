@@ -109,7 +109,7 @@ where
         Lpn: Currency,
         LppLoan: LppLoanTrait<Lpn>,
     {
-        self.oracle.execute_as_oracle::<_, Lpns, _>(
+        self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
             FactoryStage4 {
                 cmd: self.cmd,
                 asset: self.asset,

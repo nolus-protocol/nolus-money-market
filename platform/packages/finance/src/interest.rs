@@ -212,6 +212,24 @@ mod tests {
     }
 
     #[test]
+    fn pay_zero_due_does_not_touch_the_period() {
+        let p = Percent::from_percent(10);
+        let principal = MyCoin::new(9); // 10% of 9 = 0
+        let payment = MyCoin::new(100);
+        let by = PERIOD_START + PERIOD_LENGTH;
+        let exp_change = payment - p.of(principal);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            by,
+            PERIOD_START,
+            PERIOD_LENGTH,
+            exp_change,
+        );
+    }
+
+    #[test]
     fn interest() {
         let whole = MyCoin::new(1001);
         let part = MyCoin::new(125);

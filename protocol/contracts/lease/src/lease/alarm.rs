@@ -315,10 +315,10 @@ mod tests {
     fn projected_liability(lease: &TestLease, at: Timestamp) -> Coin<TestLpn> {
         let l = lease.loan.state(at);
         l.principal_due
-            + l.previous_interest_due
-            + l.previous_margin_interest_due
-            + l.current_interest_due
-            + l.current_margin_interest_due
+            + l.overdue_interest
+            + l.overdue_margin_interest
+            + l.due_interest
+            + l.due_margin_interest
     }
 
     fn test_setup_alarm_grace_period_end(

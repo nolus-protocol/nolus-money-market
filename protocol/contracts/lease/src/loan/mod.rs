@@ -221,10 +221,10 @@ where
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.due_period.interest_rate(),
             principal_due,
-            previous_interest_due,
-            current_interest_due,
-            previous_margin_interest_due,
-            current_margin_interest_due,
+            overdue_interest: previous_interest_due,
+            due_interest: current_interest_due,
+            overdue_margin_interest: previous_margin_interest_due,
+            due_margin_interest: current_margin_interest_due,
         }
     }
 
@@ -433,6 +433,7 @@ mod tests {
             coin::{Amount, Coin, WithCoin},
             duration::Duration,
             fraction::Fraction,
+            zero::Zero,
         };
         use lpp::msg::LoanResponse;
         use platform::{
@@ -442,10 +443,13 @@ mod tests {
         };
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::loan::{
-            repay::Receipt as RepayReceipt,
-            tests::{profit_stub, PROFIT_ADDR},
-            Loan, State,
+        use crate::{
+            api::open::InterestPaymentSpec,
+            loan::{
+                repay::Receipt as RepayReceipt,
+                tests::{create_loan_with_interest_spec, profit_stub, PROFIT_ADDR},
+                Loan, State,
+            },
         };
 
         use super::{
@@ -913,6 +917,47 @@ mod tests {
             }
         }
 
+        #[ignore = "until #267 got fixed"]
+        #[test]
+        fn repay_zero() {
+            let payment = 15;
+            let principal = 13;
+            let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
+            let one_year_interest = LOAN_INTEREST_RATE.of(principal);
+            let due_period = Duration::HOUR;
+            let margin_due = due_period.annualized_slice_of(one_year_margin);
+            assert_eq!(Amount::ZERO, margin_due);
+            let interest_due = due_period.annualized_slice_of(one_year_interest);
+            assert_eq!(Amount::ZERO, interest_due);
+            let principal_paid = 0;
+
+            let repay_at = LEASE_START + Duration::YEAR;
+            let mut loan = create_loan_with_interest_spec(
+                LoanResponse {
+                    principal_due: principal.into(),
+                    annual_interest_rate: LOAN_INTEREST_RATE,
+                    interest_paid: LEASE_START,
+                },
+                InterestPaymentSpec::new(due_period, Duration::from_secs(0)),
+            );
+
+            repay(
+                &mut loan,
+                payment,
+                state(principal, 0, 5, margin_due, 1),
+                receipt(
+                    principal,
+                    principal_paid,
+                    0,
+                    0,
+                    margin_due,
+                    interest_due,
+                    payment - principal_paid - margin_due - interest_due,
+                ),
+                repay_at,
+            );
+        }
+
         fn repay<P>(
             loan: &mut Loan<Lpn, LppLoanLocal>,
             payment: P,
@@ -932,21 +977,21 @@ mod tests {
             assert_eq!(
                 state(
                     before_state.principal_due - exp_receipt.principal_paid(),
-                    before_state.previous_margin_interest_due - exp_receipt.previous_margin_paid(),
-                    before_state.previous_interest_due - exp_receipt.previous_interest_paid(),
-                    before_state.current_margin_interest_due - exp_receipt.current_margin_paid(),
-                    before_state.current_interest_due - exp_receipt.current_interest_paid()
+                    before_state.overdue_margin_interest - exp_receipt.overdue_margin_paid(),
+                    before_state.overdue_interest - exp_receipt.overdue_interest_paid(),
+                    before_state.due_margin_interest - exp_receipt.due_margin_paid(),
+                    before_state.due_interest - exp_receipt.due_interest_paid()
                 ),
                 loan.state(now)
             );
             assert_eq!(
                 {
                     let mut profit_amounts = vec![];
-                    if exp_receipt.previous_margin_paid() != Coin::default() {
-                        profit_amounts.push(exp_receipt.previous_margin_paid());
+                    if exp_receipt.overdue_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.overdue_margin_paid());
                     }
-                    if exp_receipt.current_margin_paid() != Coin::default() {
-                        profit_amounts.push(exp_receipt.current_margin_paid());
+                    if exp_receipt.due_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.due_margin_paid());
                     }
                     if !profit_amounts.is_empty() {
                         bank::bank_send_multiple(Batch::default(), PROFIT_ADDR, &profit_amounts)
@@ -972,10 +1017,10 @@ mod tests {
                 annual_interest: LOAN_INTEREST_RATE,
                 annual_interest_margin: MARGIN_INTEREST_RATE,
                 principal_due: principal.into(),
-                previous_margin_interest_due: previous_margin_interest_due.into(),
-                previous_interest_due: previous_interest_due.into(),
-                current_margin_interest_due: current_margin_interest_due.into(),
-                current_interest_due: current_interest_due.into(),
+                overdue_margin_interest: previous_margin_interest_due.into(),
+                overdue_interest: previous_interest_due.into(),
+                due_margin_interest: current_margin_interest_due.into(),
+                due_interest: current_interest_due.into(),
             }
         }
 
@@ -1096,22 +1141,22 @@ mod tests {
             let res = loan.state(now);
 
             assert_eq!(
-                expected_margin_overdue, res.previous_margin_interest_due,
+                expected_margin_overdue, res.overdue_margin_interest,
                 "Got different margin overdue than expected!",
             );
 
             assert_eq!(
-                expected_margin_due, res.current_margin_interest_due,
+                expected_margin_due, res.due_margin_interest,
                 "Got different margin due than expected!",
             );
 
             assert_eq!(
-                expected_interest_overdue, res.previous_interest_due,
+                expected_interest_overdue, res.overdue_interest,
                 "Got different interest overdue than expected!",
             );
 
             assert_eq!(
-                expected_interest_due, res.current_interest_due,
+                expected_interest_due, res.due_interest,
                 "Got different interest due than expected!",
             );
         }

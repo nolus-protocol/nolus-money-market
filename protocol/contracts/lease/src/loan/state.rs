@@ -9,8 +9,8 @@ where
     pub annual_interest: Percent,
     pub annual_interest_margin: Percent,
     pub principal_due: Coin<Lpn>,
-    pub previous_interest_due: Coin<Lpn>,
-    pub current_interest_due: Coin<Lpn>,
-    pub previous_margin_interest_due: Coin<Lpn>,
-    pub current_margin_interest_due: Coin<Lpn>,
+    pub overdue_interest: Coin<Lpn>,
+    pub overdue_margin_interest: Coin<Lpn>,
+    pub due_interest: Coin<Lpn>,
+    pub due_margin_interest: Coin<Lpn>,
 }
