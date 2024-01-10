@@ -37,7 +37,7 @@ dex = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true, features = ["stub_swap"] }
 platform = { workspace = true, optional = true }
-sdk = { workspace = true, optional = true}
+sdk = { workspace = true, optional = true }
 
 astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
@@ -45,4 +45,4 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-dex = { workspace = true, features = ["testing"] }
+# dex = { workspace = true, features = ["testing"] } uncomment TODO report a cargo bug that 'test' cfg is not applied

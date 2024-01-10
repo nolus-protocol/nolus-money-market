@@ -79,7 +79,8 @@ impl ExactAmountIn for Impl {
         Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
     fn build_resp(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
@@ -187,6 +188,7 @@ mod test {
         ));
     }
 
+    #[cfg(feature = "testing")] // remove TODO report a cargo bug that 'test' cfg is not applied
     #[test]
     fn resp() {
         use super::ExactAmountIn;
