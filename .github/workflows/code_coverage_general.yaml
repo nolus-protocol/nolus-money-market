@@ -20,9 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        working_directory: ["protocol"]
-        net: ["dev", "test", "main"]
-        protocol: ["osmosis", "astroport"]
+        working_directory: [ "protocol" ]
+        net: [ "dev", "test", "main" ]
+        protocol: [ "osmosis", "astroport" ]
         include:
           - working_directory: "platform"
           - working_directory: "tests"
