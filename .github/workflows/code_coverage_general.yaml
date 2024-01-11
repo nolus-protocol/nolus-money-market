@@ -2,6 +2,7 @@ name: "Code coverage"
 run-name: "Running code coverage for smart contracts"
 
 on:
+  workflow_call:
   schedule:
     - cron: "0 0 * * *"
 
@@ -22,12 +23,16 @@ jobs:
       matrix:
         working_directory: [ "protocol" ]
         net: [ "dev", "test", "main" ]
-        protocol: [ "osmosis", "astroport" ]
+        protocol: [ "astroport", "osmosis" ]
         include:
           - working_directory: "platform"
-          - working_directory: "tests"
+          - protocol: "osmosis"
+            working_directory: "tests"
+          # - protocol: "astroport" # TODO Add `astroport`
+          #   working_directory: "tests"
     name: "Code Coverage Protocol [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
       target_net: "${{ matrix.net }}"
       target_protocol: "${{ matrix.protocol }}"
+      protocols_list: "astroport,osmosis"
       working_directory: "${{ matrix.working_directory }}"
