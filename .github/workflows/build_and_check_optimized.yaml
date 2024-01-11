@@ -1,8 +1,13 @@
-name: "Build optimized"
-run-name: "Building optimized version of smart contracts"
+name: "Build and check optimized"
+run-name: "Building and checking optimized version of smart contracts"
 
 on:
   workflow_call:
+    inputs:
+      upload_artifacts:
+        description: "Indicates whether to upload the built contracts as artifacts of the workflow."
+        type: boolean
+        required: true
 
 jobs:
   generate_release_version:
@@ -15,18 +20,21 @@ jobs:
         run: |
           release_version="${{ github.ref_name }}-$(date -Iminute)"
 
-          echo "release_version=${release_version}" >> "$GITHUB_OUTPUT"
+          echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
 
-          echo "Release version: ${release_version}" >> "${GITHUB_STEP_SUMMARY}"
-  build_optimized_contracts:
+          if test '${{ inputs.upload_artifacts }}' = 'true'
+          then
+            echo "Release version: ${release_version}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+  build_and_check_optimized_contracts:
     runs-on: "ubuntu-latest"
     needs: "generate_release_version"
     strategy:
       fail-fast: false
       matrix:
-        working_directory: ["protocol"]
-        net: ["dev", "test", "main"]
-        protocol: ["osmosis", "astroport"]
+        working_directory: [ "protocol" ]
+        net: [ "dev", "test", "main" ]
+        protocol: [ "osmosis", "astroport" ]
         include:
           - working_directory: "platform"
     name: "Building contracts [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
@@ -38,4 +46,5 @@ jobs:
           target_net: ${{ matrix.net }}
           target_protocol: "${{ matrix.protocol }}"
           release_version: "${{ needs.generate_release_version.outputs.release_version }}"
+          upload_artifacts: "${{ inputs.upload_artifacts }}"
           working_directory: "${{ matrix.working_directory }}"

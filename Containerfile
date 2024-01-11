@@ -2,6 +2,10 @@ ARG rust_ver
 
 FROM docker.io/library/rust:${rust_ver}
 
+ENV features=""
+
+ENV CHECK_DEPENDENCIES_UPDATED="true"
+
 ARG binaryen_ver="version_116"
 
 RUN ["rustup", "target", "add", "wasm32-unknown-unknown"]

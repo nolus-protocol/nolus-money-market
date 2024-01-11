@@ -9,16 +9,18 @@ on:
         type: "boolean"
         required: true
         default: true
-      build_optimized:
-        description: "Build optimized binaries."
+      build_and_check_optimized:
+        description: "Build and check optimized binaries."
         type: "boolean"
         required: true
-        default: false
+        default: true
 
 jobs:
   perform_checks:
     uses: "./.github/workflows/checks_general.yaml"
     if: "fromJSON(inputs.perform_checks)"
-  build_optimized:
-    uses: "./.github/workflows/build_optimized.yaml"
-    if: "fromJSON(inputs.build_optimized)"
+  build_and_check_optimized:
+    uses: "./.github/workflows/build_and_check_optimized.yaml"
+    if: "fromJSON(inputs.build_and_check_optimized)"
+    with:
+      upload_artifacts: false

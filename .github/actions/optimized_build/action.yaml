@@ -10,10 +10,13 @@ inputs:
     description: "Indicates which protocol the build targets."
     required: false
   release_version:
-    description: ""
+    description: "Sets the version label of the contracts."
+    required: true
+  upload_artifacts:
+    description: "Indicates whether to upload the built contracts as artifacts of the workflow."
     required: true
   working_directory:
-    description: ""
+    description: "Indicates which directory, containing the respective workspace, should be used."
     required: true
 
 runs:
@@ -35,6 +38,13 @@ runs:
 
         echo "${{ inputs.release_version }}" >> "./artifacts/release_version"
 
+        CHECK_DEPENDENCIES_UPDATED='true'
+
+        if test '${{ inputs.upload_artifacts }}' = 'false'
+        then
+          CHECK_DEPENDENCIES_UPDATED='false'
+        fi
+
         sudo docker run --rm -v "$(pwd)/platform/:/platform/" \
         -v "$(pwd)/protocol/:/protocol/" \
         -v "$(pwd)/${{ inputs.working_directory }}/:/code/" \
@@ -45,6 +55,7 @@ runs:
         --mount "type=volume,source=registry_cache,target=/usr/local/cargo/registry/" \
         --env 'features=${{ env.FEATURES }}' \
         --env 'RELEASE_VERSION=${{ inputs.release_version }}' \
+        --env "CHECK_DEPENDENCIES_UPDATED=${CHECK_DEPENDENCIES_UPDATED}" \
         wasm-optimizer
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
@@ -60,10 +71,19 @@ runs:
 
           exit 1
         fi
-    - name: "Copy deployment script to artifacts directory"
+    - shell: "sh"
+      run: "cargo install cosmwasm-check"
+    - name: "Checking WASM binaries"
       shell: "sh"
-      run: 'sudo cp "./scripts/deploy-contracts-genesis.sh" "./artifacts/"'
+      run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,cosmwasm_1_2,iterator,neutron ./artifacts/*.wasm"
+    - name: "Copy deployment script to artifacts directory"
+      if: "fromJSON(inputs.upload_artifacts)"
+      shell: "sh"
+      run: |
+        sudo cp "./scripts/deploy-platform.sh" "./artifacts/"
+        sudo cp "./scripts/deploy-contracts-live.sh" "./artifacts/"
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
+      if: "fromJSON(inputs.upload_artifacts)"
       uses: "actions/upload-artifact@v3"
       with:
         name: "optimized-binaries-${{ inputs.working_directory }}${{ env.dash_net_name }}${{ env.dash_protocol_name }}"
