@@ -87,8 +87,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: ["test"]
-        debug_assertions: [true, false]
+        profile: [ "test" ]
+        debug_assertions: [ true, false ]
         include:
           - profile: "dev"
           - profile: "release"
