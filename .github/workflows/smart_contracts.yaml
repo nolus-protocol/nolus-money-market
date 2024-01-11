@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        working_directory: ["platform", "protocol", "tests", "tools"]
+        working_directory: [ "platform", "protocol", "tests", "tools" ]
     steps:
       - uses: "actions/checkout@v4.1.1"
       - shell: "sh"
@@ -33,16 +33,19 @@ jobs:
     needs:
       - "check_deps_versions"
     uses: "./.github/workflows/checks_general.yaml"
-  build_optimized:
-    uses: "./.github/workflows/build_optimized.yaml"
-    if: "github.ref_type == 'tag'"
+  build_and_check_optimized:
+    if: "github.event_name == 'tag' || always()"
     needs:
       - "check_deps_versions"
-      - "perform_checks"
+    uses: "./.github/workflows/build_and_check_optimized.yaml"
+    with:
+      upload_artifacts: "${{ github.event_name == 'tag' }}"
   draft_release:
     runs-on: ubuntu-latest
+    if: "github.ref_type == 'tag'"
     needs:
-      - "build_optimized"
+      - "perform_checks"
+      - "build_and_check_optimized"
     permissions: "write-all"
     steps:
       - name: "Download artifacts"

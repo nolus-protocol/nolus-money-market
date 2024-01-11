@@ -2,15 +2,18 @@
 
 RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
-cd '/code/'
+cd '/code/' || exit
 
-cargo update --locked
-
-if ! test $? -eq 0
+if ! test "${CHECK_DEPENDENCIES_UPDATED}" = 'false'
 then
-    echo '[ERROR] `Cargo.lock` file is either missing or is out-of-date!'
+  cargo update --locked
 
-    exit 1
+  if ! test $? -eq 0
+  then
+      echo '[ERROR] `Cargo.lock` file is either missing or is out-of-date!'
+
+      exit 1
+  fi
 fi
 
 rm -rf "/target/"*
