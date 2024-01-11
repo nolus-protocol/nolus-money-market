@@ -6,10 +6,8 @@ pub(crate) struct Receipt<C>
 where
     C: Currency,
 {
-    overdue_margin_paid: Coin<C>,
-    overdue_interest_paid: Coin<C>,
-    due_margin_paid: Coin<C>,
-    due_interest_paid: Coin<C>,
+    margin_paid: Coin<C>,
+    interest_paid: Coin<C>,
     principal_paid: Coin<C>,
     change: Coin<C>,
     close: bool,
@@ -19,20 +17,12 @@ impl<C> Receipt<C>
 where
     C: Currency,
 {
-    pub fn overdue_margin_paid(&self) -> Coin<C> {
-        self.overdue_margin_paid
+    pub fn margin_paid(&self) -> Coin<C> {
+        self.margin_paid
     }
 
-    pub fn overdue_interest_paid(&self) -> Coin<C> {
-        self.overdue_interest_paid
-    }
-
-    pub fn due_margin_paid(&self) -> Coin<C> {
-        self.due_margin_paid
-    }
-
-    pub fn due_interest_paid(&self) -> Coin<C> {
-        self.due_interest_paid
+    pub fn interest_paid(&self) -> Coin<C> {
+        self.interest_paid
     }
 
     pub fn principal_paid(&self) -> Coin<C> {
@@ -48,36 +38,19 @@ where
     }
 
     pub fn total(&self) -> Coin<C> {
-        self.overdue_margin_paid
-            + self.overdue_interest_paid
-            + self.due_margin_paid
-            + self.due_interest_paid
-            + self.principal_paid
-            + self.change
+        self.margin_paid + self.interest_paid + self.principal_paid + self.change
     }
 
-    pub(super) fn pay_overdue_margin(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.overdue_margin_paid, Coin::default());
+    pub(super) fn pay_margin(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.margin_paid, Coin::default());
 
-        self.overdue_margin_paid = payment;
+        self.margin_paid = payment;
     }
 
-    pub(super) fn pay_overdue_interest(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.overdue_interest_paid, Coin::default());
+    pub(super) fn pay_interest(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.interest_paid, Coin::default());
 
-        self.overdue_interest_paid = payment;
-    }
-
-    pub(super) fn pay_due_margin(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.due_margin_paid, Coin::default());
-
-        self.due_margin_paid = payment;
-    }
-
-    pub(super) fn pay_due_interest(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.due_interest_paid, Coin::default());
-
-        self.due_interest_paid = payment;
+        self.interest_paid = payment;
     }
 
     pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
