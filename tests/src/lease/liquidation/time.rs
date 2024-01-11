@@ -125,8 +125,8 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
 
     if let StateResponse::Opened {
         amount,
-        previous_margin_due,
-        previous_interest_due,
+        overdue_margin,
+        overdue_interest,
         ..
     } = query_result
     {
@@ -135,9 +135,9 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
             lease_amount - liquidated_amount
         );
 
-        assert!(previous_margin_due.is_zero());
+        assert!(overdue_margin.is_zero());
 
-        assert!(previous_interest_due.is_zero());
+        assert!(overdue_interest.is_zero());
     }
 }
 

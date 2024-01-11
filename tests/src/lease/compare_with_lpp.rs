@@ -35,10 +35,10 @@ fn manual_calculation() {
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<LpnCurrency>::new(1_857_142_857_142).into(),
-        previous_margin_due: LpnCoin::new(13_737_769_080).into(),
-        previous_interest_due: LpnCoin::new(32_054_794_520).into(),
-        current_margin_due: LpnCoin::new(13_737_769_080).into(),
-        current_interest_due: LpnCoin::new(32_054_794_520).into(),
+        overdue_margin: LpnCoin::new(13_737_769_080).into(),
+        overdue_interest: LpnCoin::new(32_054_794_520).into(),
+        due_margin: LpnCoin::new(13_737_769_080).into(),
+        due_interest: LpnCoin::new(32_054_794_520).into(),
         validity: super::block_time(&test_case),
         in_progress: None,
     };
@@ -76,15 +76,14 @@ fn lpp_state_implicit_time() {
 
     let query_result = if let StateResponse::Opened {
         principal_due,
-        previous_interest_due,
-        current_interest_due,
+        overdue_interest,
+        due_interest,
         ..
     } = super::state_query(&test_case, &lease_address.into_string())
     {
         (
             LpnCoin::try_from(principal_due).unwrap(),
-            LpnCoin::try_from(previous_interest_due).unwrap()
-                + LpnCoin::try_from(current_interest_due).unwrap(),
+            LpnCoin::try_from(overdue_interest).unwrap() + LpnCoin::try_from(due_interest).unwrap(),
         )
     } else {
         unreachable!();
@@ -128,13 +127,12 @@ fn lpp_state_explicit_time() {
         .unwrap();
 
     let query_result = if let StateResponse::Opened {
-        previous_interest_due,
-        current_interest_due,
+        overdue_interest,
+        due_interest,
         ..
     } = super::state_query(&test_case, &lease_address.into_string())
     {
-        LpnCoin::try_from(previous_interest_due).unwrap()
-            + LpnCoin::try_from(current_interest_due).unwrap()
+        LpnCoin::try_from(overdue_interest).unwrap() + LpnCoin::try_from(due_interest).unwrap()
     } else {
         unreachable!();
     };

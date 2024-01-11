@@ -67,9 +67,9 @@ fn partial_repay_after_time() {
     let query_result = super::state_query(&test_case, lease_address.as_ref());
 
     let StateResponse::Opened {
-        previous_margin_due,
-        previous_interest_due,
-        current_margin_due,
+        overdue_margin,
+        overdue_interest,
+        due_margin,
         ..
     } = query_result
     else {
@@ -78,7 +78,7 @@ fn partial_repay_after_time() {
 
     super::feed_price(&mut test_case);
 
-    let current_margin_to_pay: LpnCoin = LpnCoin::try_from(current_margin_due)
+    let due_margin_to_pay: LpnCoin = LpnCoin::try_from(due_margin)
         .unwrap()
         .checked_div(2)
         .unwrap();
@@ -87,9 +87,9 @@ fn partial_repay_after_time() {
         &mut test_case,
         lease_address.clone(),
         price::total(
-            LpnCoin::try_from(previous_margin_due).unwrap()
-                + LpnCoin::try_from(previous_interest_due).unwrap()
-                + current_margin_to_pay,
+            LpnCoin::try_from(overdue_margin).unwrap()
+                + LpnCoin::try_from(overdue_interest).unwrap()
+                + due_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
         ),
     );
@@ -97,21 +97,21 @@ fn partial_repay_after_time() {
     let query_result = super::state_query(&test_case, lease_address.as_str());
 
     if let StateResponse::Opened {
-        previous_margin_due,
-        previous_interest_due,
+        overdue_margin,
+        overdue_interest,
         ..
     } = query_result
     {
         assert!(
-            previous_margin_due.is_zero(),
+            overdue_margin.is_zero(),
             "Expected 0 for margin interest due, got {}",
-            previous_margin_due.amount()
+            overdue_margin.amount()
         );
 
         assert!(
-            previous_interest_due.is_zero(),
+            overdue_interest.is_zero(),
             "Expected 0 for interest due, got {}",
-            previous_interest_due.amount()
+            overdue_interest.amount()
         );
     } else {
         unreachable!()
@@ -173,10 +173,10 @@ fn full_repay_with_max_ltd() {
         loan_interest_rate: Percent::from_permille(70),
         margin_interest_rate: Percent::from_permille(30),
         principal_due: price::total(percent.of(downpayment), super::price_lpn_of()).into(),
-        previous_margin_due: LpnCoin::ZERO.into(),
-        previous_interest_due: LpnCoin::ZERO.into(),
-        current_margin_due: LpnCoin::ZERO.into(),
-        current_interest_due: LpnCoin::ZERO.into(),
+        overdue_margin: LpnCoin::ZERO.into(),
+        overdue_interest: LpnCoin::ZERO.into(),
+        due_margin: LpnCoin::ZERO.into(),
+        due_interest: LpnCoin::ZERO.into(),
         validity: Timestamp::from_nanos(1537237454879305533),
         in_progress: None,
     };

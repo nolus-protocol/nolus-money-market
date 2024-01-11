@@ -371,7 +371,7 @@ pub(super) fn expected_open_state<
     payments: Coin<PaymentC>,
     closed: Coin<AssetC>,
     last_paid: Timestamp,
-    current_period_start: Timestamp,
+    due_period_start: Timestamp,
     now: Timestamp,
 ) -> StateResponse
 where
@@ -386,35 +386,33 @@ where
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
         - price::total(payments, price_lpn_of::<PaymentC>());
     let (overdue, due) = (
-        current_period_start
-            .nanos()
-            .saturating_sub(last_paid.nanos()),
-        now.nanos().saturating_sub(current_period_start.nanos()),
+        due_period_start.nanos().saturating_sub(last_paid.nanos()),
+        now.nanos().saturating_sub(due_period_start.nanos()),
     );
     StateResponse::Opened {
         amount: (total - closed).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: expected_principal.into(),
-        previous_margin_due: calculate_interest(
+        overdue_margin: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate_margin,
             overdue,
         )
         .into(),
-        previous_interest_due: calculate_interest(
+        overdue_interest: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate,
             overdue,
         )
         .into(),
-        current_margin_due: calculate_interest(
+        due_margin: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate_margin,
             due,
         )
         .into(),
-        current_interest_due: calculate_interest(
+        due_interest: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate,
             due,
