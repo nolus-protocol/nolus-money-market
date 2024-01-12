@@ -44,6 +44,16 @@ pub(crate) fn add_protocol(
     }
 }
 
+pub(crate) fn remove_protocol(storage: &mut dyn Storage, name: String) -> Result<()> {
+    if PROTOCOL.has(storage, name.clone()) {
+        PROTOCOL.remove(storage, name);
+
+        Ok(())
+    } else {
+        Err(Error::ProtocolDoesNotExists(name))
+    }
+}
+
 pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
     PROTOCOL
         .keys(storage, None, None, Order::Ascending)

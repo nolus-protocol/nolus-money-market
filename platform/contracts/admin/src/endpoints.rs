@@ -118,6 +118,7 @@ pub fn execute(
         ExecuteMsg::RegisterProtocol { name, ref protocol } => {
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
+        ExecuteMsg::UnregisterProtocol { name } => unregister_protocol(deps.storage, name),
     }
 }
 
@@ -131,6 +132,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         SudoMsg::RegisterProtocol { name, ref protocol } => {
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
+        SudoMsg::UnregisterProtocol { name } => unregister_protocol(deps.storage, name),
         SudoMsg::MigrateContracts(MigrateContracts {
             release,
             migration_spec,
@@ -241,6 +243,10 @@ fn register_protocol(
     protocol.validate(querier)?;
 
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
+}
+
+fn unregister_protocol(storage: &mut dyn Storage, name: String) -> ContractResult<CwResponse> {
+    state_contracts::remove_protocol(storage, name).map(|()| response::empty_response())
 }
 
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {

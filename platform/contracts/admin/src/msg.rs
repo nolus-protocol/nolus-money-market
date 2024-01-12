@@ -39,6 +39,9 @@ pub enum ExecuteMsg {
         name: String,
         protocol: Protocol,
     },
+    UnregisterProtocol {
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -50,6 +53,9 @@ pub enum SudoMsg {
     RegisterProtocol {
         name: String,
         protocol: Protocol,
+    },
+    UnregisterProtocol {
+        name: String,
     },
     MigrateContracts(MigrateContracts),
     /// A message for **internal purposes only**.
