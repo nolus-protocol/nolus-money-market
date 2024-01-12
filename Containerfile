@@ -6,6 +6,8 @@ ENV features=""
 
 ENV CHECK_DEPENDENCIES_UPDATED="true"
 
+ARG check_container_dependencies_updated="true"
+
 ARG binaryen_ver="version_116"
 
 RUN ["rustup", "target", "add", "wasm32-unknown-unknown"]
@@ -22,7 +24,7 @@ ADD "./tools/" "/tools/"
 
 WORKDIR "/tools/"
 
-RUN ["cargo", "update", "--locked"]
+RUN "test" "'${check_container_dependencies_updated}'" "=" "'false'" || "cargo" "update" "--locked"
 
 RUN ["cargo", "install", "--path", "/tools/cargo-features/"]
 

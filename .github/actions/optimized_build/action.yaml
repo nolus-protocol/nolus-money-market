@@ -30,7 +30,15 @@ runs:
         target_protocol: "${{ inputs.target_protocol }}"
     - name: "Build container image"
       shell: "sh"
-      run: 'sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.74"'
+      run: |
+        CHECK_DEPENDENCIES_UPDATED='true'
+
+        if test '${{ inputs.upload_artifacts }}' = 'false'
+        then
+          CHECK_DEPENDENCIES_UPDATED='false'
+        fi
+
+        sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.74" --build-arg "check_container_dependencies_updated=${CHECK_DEPENDENCIES_UPDATED}"
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
