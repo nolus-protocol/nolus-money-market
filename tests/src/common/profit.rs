@@ -5,7 +5,7 @@ use profit::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{test_case::{app::App, TestCase}, CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 
@@ -30,6 +30,13 @@ impl Instantiator {
             treasury,
             oracle,
             timealarms,
+            dex: ConnectionParams {
+                connection_id: TestCase::DEX_CONNECTION_ID,
+                transfer_channel: Ics20Channel {
+                    local_endpoint: TestCase::PROFIT_IBC_CHANNEL.into(),
+                    remote_endpoint: "channel-262".into(),
+                },
+            },
         };
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)

@@ -32,7 +32,7 @@ use crate::{
 use super::{
     buy_back::BuyBack,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum, SwapClient,
+    Config, ConfigManagement, ProfitCurrencies, State, StateEnum, SwapClient,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -161,10 +161,6 @@ impl Handler for Idle {
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
         DexResult::Finished(self.on_time_alarm(deps.querier, env))
     }
-}
-
-impl SetupDexHandler for Idle {
-    type State = Self;
 }
 
 impl Display for Idle {

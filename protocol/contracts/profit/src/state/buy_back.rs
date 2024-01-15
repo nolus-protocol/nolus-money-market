@@ -23,7 +23,7 @@ use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::C
 use super::{
     idle::Idle,
     resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, ProfitCurrencies, SetupDexHandler, State, StateEnum, SwapClient,
+    Config, ConfigManagement, ProfitCurrencies, State, StateEnum, SwapClient,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -149,18 +149,6 @@ impl ConfigManagement
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
         Err(ContractError::unsupported_operation(BuyBack::QUERY_ERROR))
     }
-}
-
-impl SetupDexHandler
-    for StateLocalOut<
-        BuyBack,
-        ProfitCurrencies,
-        SwapClient,
-        ForwardToDexEntry,
-        ForwardToDexEntryContinue,
-    >
-{
-    type State = Self;
 }
 
 trait TryFind
