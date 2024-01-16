@@ -1,3 +1,4 @@
+use dex::{ConnectionParams, Ics20Channel};
 use profit::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::InstantiateMsg,
@@ -5,7 +6,10 @@ use profit::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use super::{test_case::{app::App, TestCase}, CwContractWrapper, ADMIN};
+use super::{
+    test_case::{app::App, TestCase},
+    CwContractWrapper, ADMIN,
+};
 
 pub(crate) struct Instantiator;
 
