@@ -105,9 +105,7 @@ impl ConfigManagement for State {
 
 impl State {
     pub fn new(config: Config, dex: ConnectionParams) -> Self {
-        Self(StateEnum::OpenIca(IcaConnector::new(OpenIca::new(
-            config, dex,
-        ))))
+        IcaConnector::new(OpenIca::new(config, dex)).into()
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
