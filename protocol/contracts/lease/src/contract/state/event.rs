@@ -61,8 +61,10 @@ where
         .emit("to", lease)
         .emit_coin("payment", receipt.total())
         .emit_to_string_value("loan-close", receipt.close())
-        .emit_coin_amount("margin-interest", receipt.margin_paid())
-        .emit_coin_amount("loan-interest", receipt.interest_paid())
+        .emit_coin_amount("overdue-margin-interest", receipt.overdue_margin_paid())
+        .emit_coin_amount("overdue-loan-interest", receipt.overdue_interest_paid())
+        .emit_coin_amount("due-margin-interest", receipt.due_margin_paid())
+        .emit_coin_amount("due-loan-interest", receipt.due_interest_paid())
         .emit_coin_amount("principal", receipt.principal_paid())
         .emit_coin_amount("change", receipt.change())
 }

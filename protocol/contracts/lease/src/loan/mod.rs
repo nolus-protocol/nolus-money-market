@@ -167,14 +167,15 @@ where
         let change = prev_period_receipt.change;
 
         let mut receipt = RepayReceipt::default();
-        let mut margin_paid = prev_period_receipt.margin_paid;
-        let mut interest_paid = prev_period_receipt.interest_paid;
+        receipt.pay_overdue_margin(prev_period_receipt.margin_paid);
+        receipt.pay_overdue_interest(prev_period_receipt.interest_paid);
+        debug_assert_eq!(payment, change + receipt.total());
 
         let change = if !self.overdue_at(by) {
             let period_receipt = self.repay_due_period(change, by);
             profit.send(period_receipt.margin_paid);
-            margin_paid += period_receipt.margin_paid;
-            interest_paid += period_receipt.interest_paid;
+            receipt.pay_due_margin(period_receipt.margin_paid);
+            receipt.pay_due_interest(period_receipt.interest_paid);
 
             let principal_due = self.lpp_loan.principal_due();
             let (principal_paid, change) = self.repay_principal(period_receipt.change, by);
@@ -184,8 +185,6 @@ where
             debug_assert!(change == Coin::ZERO);
             change
         };
-        receipt.pay_margin(margin_paid);
-        receipt.pay_interest(interest_paid);
         debug_assert_eq!(payment, change + receipt.total());
 
         receipt.keep_change(change);
@@ -975,37 +974,24 @@ mod tests {
             let receipt = loan.repay(payment.into(), now, &mut profit).unwrap();
 
             assert_eq!(exp_receipt, receipt);
-
-            let overdue_margin_paid = before_state
-                .overdue_margin_interest
-                .min(exp_receipt.margin_paid());
-            let due_margin_paid = exp_receipt.margin_paid() - overdue_margin_paid;
-            assert!(before_state.due_margin_interest >= due_margin_paid);
-            {
-                let overdue_interest_paid = before_state
-                    .overdue_interest
-                    .min(exp_receipt.interest_paid());
-                let due_interest_paid = exp_receipt.interest_paid() - overdue_interest_paid;
-                assert!(before_state.due_interest >= due_interest_paid);
-                assert_eq!(
-                    state(
-                        before_state.principal_due - exp_receipt.principal_paid(),
-                        before_state.overdue_margin_interest - overdue_margin_paid,
-                        before_state.overdue_interest - overdue_interest_paid,
-                        before_state.due_margin_interest - due_margin_paid,
-                        before_state.due_interest - due_interest_paid,
-                    ),
-                    loan.state(now)
-                );
-            }
+            assert_eq!(
+                state(
+                    before_state.principal_due - exp_receipt.principal_paid(),
+                    before_state.overdue_margin_interest - exp_receipt.overdue_margin_paid(),
+                    before_state.overdue_interest - exp_receipt.overdue_interest_paid(),
+                    before_state.due_margin_interest - exp_receipt.due_margin_paid(),
+                    before_state.due_interest - exp_receipt.due_interest_paid()
+                ),
+                loan.state(now)
+            );
             assert_eq!(
                 {
                     let mut profit_amounts = vec![];
-                    if overdue_margin_paid != Coin::default() {
-                        profit_amounts.push(overdue_margin_paid);
+                    if exp_receipt.overdue_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.overdue_margin_paid());
                     }
-                    if due_margin_paid != Coin::default() {
-                        profit_amounts.push(due_margin_paid);
+                    if exp_receipt.due_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.due_margin_paid());
                     }
                     if !profit_amounts.is_empty() {
                         bank::bank_send_multiple(Batch::default(), PROFIT_ADDR, &profit_amounts)
@@ -1052,8 +1038,10 @@ mod tests {
         {
             let mut receipt = RepayReceipt::default();
             receipt.pay_principal(principal.into(), paid_principal.into());
-            receipt.pay_margin(paid_overdue_margin.into() + paid_due_margin.into());
-            receipt.pay_interest(paid_overdue_interest.into() + paid_due_interest.into());
+            receipt.pay_overdue_margin(paid_overdue_margin.into());
+            receipt.pay_overdue_interest(paid_overdue_interest.into());
+            receipt.pay_due_margin(paid_due_margin.into());
+            receipt.pay_due_interest(paid_due_interest.into());
             receipt.keep_change(change.into());
             receipt
         }
