@@ -88,7 +88,7 @@ impl<'c> From<Sender<'c>> for Transaction {
         let mut trx = Self::default();
         sender
             .into_ibc_msgs()
-            .for_each(|msg| trx.add_message(MsgTransfer::NAME, msg));
+            .for_each(|msg| trx.add_message(MsgTransfer::type_url(), msg));
         trx
     }
 }
@@ -131,7 +131,7 @@ mod test {
         assert_eq!(Transaction::try_from(funds_sender), {
             let mut trx = Transaction::default();
             trx.add_message(
-                MsgTransfer::NAME,
+                MsgTransfer::type_url(),
                 new_msg(
                     channel,
                     sender.clone(),
@@ -141,7 +141,7 @@ mod test {
                 ),
             );
             trx.add_message(
-                MsgTransfer::NAME,
+                MsgTransfer::type_url(),
                 new_msg(
                     channel,
                     sender,

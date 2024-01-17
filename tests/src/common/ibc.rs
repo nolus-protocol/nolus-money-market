@@ -45,7 +45,7 @@ pub(crate) fn expect_remote_transfer<T>(
     let messages: Vec<ProtobufAny> = response.expect_submit_tx(connection_id, ica_id);
 
     let message: MsgTransfer = match messages.as_slice() {
-        [message] if message.type_url == MsgTransfer::NAME => {
+        [message] if message.type_url == MsgTransfer::type_url() => {
             Message::decode(message.value.as_slice()).unwrap()
         }
         _ => unimplemented!(),
