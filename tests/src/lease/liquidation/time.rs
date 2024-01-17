@@ -162,6 +162,6 @@ fn liquidation_time_alarm_1() {
 fn liquidation_time_alarm_2() {
     liquidation_time_alarm(
         LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::GRACE_PERIOD,
-        Some(LeaseCoin::new(45792563600)),
+        Some(LeaseCoin::new(5088062621)), //the overdue amount for the LeaserInstantiator::GRACE_PERIOD
     );
 }
