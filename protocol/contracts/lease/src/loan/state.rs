@@ -13,4 +13,5 @@ where
     pub overdue_margin_interest: Coin<Lpn>,
     pub due_interest: Coin<Lpn>,
     pub due_margin_interest: Coin<Lpn>,
+    // TODO add due_by: Timestamp
 }

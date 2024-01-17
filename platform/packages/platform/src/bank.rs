@@ -335,21 +335,13 @@ where
     }
 }
 
-#[cfg(feature = "testing")]
-pub fn bank_send<C>(batch: Batch, to: &str, amount: Coin<C>) -> Batch
-where
-    C: Currency,
-{
-    bank_send_multiple(batch, to, &[amount])
-}
-
 // TODO get rid of the `bank_send*` fn-s. Use FixedAddressSender instead
 #[cfg(feature = "testing")]
-pub fn bank_send_multiple<C>(mut batch: Batch, to: &str, amount: &[Coin<C>]) -> Batch
+pub fn bank_send<C>(mut batch: Batch, to: &str, amount: Coin<C>) -> Batch
 where
     C: Currency,
 {
-    bank_send_impl(&mut batch, &Addr::unchecked(to), amount);
+    bank_send_impl(&mut batch, &Addr::unchecked(to), &[amount]);
     batch
 }
 

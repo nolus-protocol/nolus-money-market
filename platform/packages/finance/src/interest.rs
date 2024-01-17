@@ -76,7 +76,7 @@ where
         P: Zero + Debug + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
         Duration: Fractionable<P>,
     {
-        let by_within_period = self.move_within_period(by);
+        let by_within_period = self.period.move_within(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
         if interest_due_per_period == P::ZERO {
@@ -97,10 +97,6 @@ where
         let res = Self::with_interest(self.interest).and_period(self.period.shift_start(delta));
         debug_assert_eq!(self.till(), res.till());
         res
-    }
-
-    fn move_within_period(&self, t: Timestamp) -> Timestamp {
-        t.clamp(self.start(), self.till())
     }
 
     fn interest_by<P>(&self, principal: P, by: Timestamp) -> P

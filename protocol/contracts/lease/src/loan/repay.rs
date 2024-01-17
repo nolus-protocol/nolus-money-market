@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
 where
     C: Currency,
