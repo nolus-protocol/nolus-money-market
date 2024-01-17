@@ -50,7 +50,7 @@ cosmwasm-std = { version = "1.5", default-features = false }
 
 # Other
 astroport = { version = "2.9", default-features = false }
-osmosis-std = { version = "0.21", default-features = false }
+osmosis-std = { version = "0.22", default-features = false }
 
 [profile.release]
 opt-level = "s"
