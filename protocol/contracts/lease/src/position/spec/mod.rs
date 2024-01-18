@@ -10,7 +10,7 @@ use finance::{
 
 use crate::{
     error::{ContractError, ContractResult},
-    position::{Cause, Liquidation, Status},
+    position::{Cause, Debt, Liquidation},
 };
 
 mod dto;
@@ -68,13 +68,13 @@ where
         }
     }
 
-    pub fn check_liability<Asset>(
+    pub fn debt<Asset>(
         &self,
         asset: Coin<Asset>,
         total_due: Coin<Lpn>,
         overdue: Coin<Lpn>,
         asset_in_lpns: Price<Asset, Lpn>,
-    ) -> Status<Asset>
+    ) -> Debt<Asset>
     where
         Asset: Currency,
     {
@@ -86,7 +86,7 @@ where
 
         self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
-            .map(Status::Liquidation)
+            .map(Debt::Bad)
             .unwrap_or_else(|| {
                 let ltv = Percent::from_ratio(total_due, asset);
                 // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
@@ -244,15 +244,15 @@ where
         }
     }
 
-    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
+    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Debt<Asset>
     where
         Asset: Currency,
     {
         debug_assert!(ltv < self.liability.max());
         if total_due.is_zero() {
-            Status::NoDebt
+            Debt::No
         } else {
-            Status::No {
+            Debt::Ok {
                 zone: self.liability.zone_of(ltv),
                 recalc_in: self.liability.recalculation_time(),
             }
@@ -374,7 +374,7 @@ mod test_check_liability {
         price::{self, Price},
     };
 
-    use crate::position::{Cause, Position, Status};
+    use crate::position::{Cause, Debt, Position};
 
     use super::Spec;
 
@@ -387,14 +387,8 @@ mod test_check_liability {
     fn no_debt() {
         let warn_ltv = Percent::from_permille(11);
         let spec = position_with_first(warn_ltv, 100, 1, 1);
-        assert_eq!(
-            spec.check_liability(0.into(), 0.into(), price(1, 1)),
-            Status::NoDebt,
-        );
-        assert_eq!(
-            spec.check_liability(0.into(), 0.into(), price(3, 1)),
-            Status::NoDebt,
-        );
+        assert_eq!(spec.debt(0.into(), 0.into(), price(1, 1)), Debt::No,);
+        assert_eq!(spec.debt(0.into(), 0.into(), price(3, 1)), Debt::No,);
     }
 
     #[test]
@@ -403,43 +397,43 @@ mod test_check_liability {
         let position = position_with_first(warn_ltv, 100, 1, 1);
 
         assert_eq!(
-            position.check_liability(1.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(1.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(1.into(), 0.into(), price(5, 1)),
-            Status::No {
+            position.debt(1.into(), 0.into(), price(5, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(50.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(50.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(25.into(), 0.into(), price(2, 1)),
-            Status::No {
+            position.debt(25.into(), 0.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(51.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(51.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(17.into(), 0.into(), price(3, 1)),
-            Status::No {
+            position.debt(17.into(), 0.into(), price(3, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
@@ -452,29 +446,29 @@ mod test_check_liability {
         let position = position_with_first(warn_ltv, 100, 1, 15);
 
         assert_eq!(
-            position.check_liability(50.into(), 14.into(), price(1, 1)),
-            Status::No {
+            position.debt(50.into(), 14.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(25.into(), 4.into(), price(2, 3)),
-            Status::No {
+            position.debt(25.into(), 4.into(), price(2, 3)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(51.into(), 14.into(), price(1, 1)),
-            Status::No {
+            position.debt(51.into(), 14.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(17.into(), 4.into(), price(3, 1)),
-            Status::No {
+            position.debt(17.into(), 4.into(), price(3, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
@@ -487,65 +481,65 @@ mod test_check_liability {
         let position = position_with_first(warn_ltv, 1000, 10, 1);
 
         assert_eq!(
-            position.check_liability(711.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(711.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(237.into(), 0.into(), price(3, 1)),
-            Status::No {
+            position.debt(237.into(), 0.into(), price(3, 1)),
+            Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(712.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(712.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(178.into(), 0.into(), price(4, 1)),
-            Status::No {
+            position.debt(178.into(), 0.into(), price(4, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(712.into(), 1.into(), price(1, 1)),
-            Status::partial(1.into(), Cause::Overdue()),
+            position.debt(712.into(), 1.into(), price(1, 1)),
+            Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(89.into(), 1.into(), price(8, 1)),
-            Status::partial(8.into(), Cause::Overdue()),
+            position.debt(89.into(), 1.into(), price(8, 1)),
+            Debt::partial(8.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(721.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(721.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(103.into(), 0.into(), price(7, 1)),
-            Status::No {
+            position.debt(103.into(), 0.into(), price(7, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(722.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(722.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(361.into(), 0.into(), price(2, 1)),
-            Status::No {
+            position.debt(361.into(), 0.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
@@ -558,33 +552,33 @@ mod test_check_liability {
         let position = position_with_first(warn_ltv, 1000, 10, 3);
 
         assert_eq!(
-            position.check_liability(712.into(), 2.into(), price(1, 1)),
-            Status::No {
+            position.debt(712.into(), 2.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(356.into(), 1.into(), price(2, 1)),
-            Status::No {
+            position.debt(356.into(), 1.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(721.into(), 2.into(), price(1, 1)),
-            Status::No {
+            position.debt(721.into(), 2.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(721.into(), 5.into(), price(1, 1)),
-            Status::partial(5.into(), Cause::Overdue()),
+            position.debt(721.into(), 5.into(), price(1, 1)),
+            Debt::partial(5.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(240.into(), 3.into(), price(3, 1)),
-            Status::partial(9.into(), Cause::Overdue()),
+            position.debt(240.into(), 3.into(), price(3, 1)),
+            Debt::partial(9.into(), Cause::Overdue()),
         );
     }
 
@@ -594,54 +588,54 @@ mod test_check_liability {
         let position = position_with_second(warn_ltv, 1000, 10, 1);
 
         assert_eq!(
-            position.check_liability(122.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(122.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(15.into(), 0.into(), price(8, 1)),
-            Status::No {
+            position.debt(15.into(), 0.into(), price(8, 1)),
+            Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(123.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(123.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(82.into(), 0.into(), price(3, 2)),
-            Status::No {
+            position.debt(82.into(), 0.into(), price(3, 2)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(123.into(), 4.into(), price(1, 1)),
-            Status::partial(4.into(), Cause::Overdue())
+            position.debt(123.into(), 4.into(), price(1, 1)),
+            Debt::partial(4.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.check_liability(132.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(132.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(66.into(), 0.into(), price(2, 1)),
-            Status::No {
+            position.debt(66.into(), 0.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(133.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(133.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
@@ -654,22 +648,22 @@ mod test_check_liability {
         let position = position_with_second(warn_ltv, 1000, 10, 5);
 
         assert_eq!(
-            position.check_liability(128.into(), 4.into(), price(1, 1)),
-            Status::No {
+            position.debt(128.into(), 4.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(32.into(), 1.into(), price(4, 1)),
-            Status::No {
+            position.debt(32.into(), 1.into(), price(4, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(128.into(), 5.into(), price(1, 1)),
-            Status::partial(5.into(), Cause::Overdue())
+            position.debt(128.into(), 5.into(), price(1, 1)),
+            Debt::partial(5.into(), Cause::Overdue())
         );
     }
 
@@ -680,44 +674,44 @@ mod test_check_liability {
         let position = position_with_third(warn_third_ltv, 1000, 100, 1);
 
         assert_eq!(
-            position.check_liability(380.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(380.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(190.into(), 0.into(), price(2, 1)),
-            Status::No {
+            position.debt(190.into(), 0.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(381.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(381.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(381.into(), 375.into(), price(1, 1)),
-            Status::partial(375.into(), Cause::Overdue())
+            position.debt(381.into(), 375.into(), price(1, 1)),
+            Debt::partial(375.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.check_liability(573.into(), 562.into(), price(2, 3)),
-            Status::partial(374.into(), Cause::Overdue())
+            position.debt(573.into(), 562.into(), price(2, 3)),
+            Debt::partial(374.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.check_liability(390.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(390.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(391.into(), 0.into(), price(1, 1)),
-            Status::partial(
+            position.debt(391.into(), 0.into(), price(1, 1)),
+            Debt::partial(
                 384.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -734,54 +728,54 @@ mod test_check_liability {
         let position = position_with_third(warn_third_ltv, 1000, 100, 386);
 
         assert_eq!(
-            position.check_liability(380.into(), 1.into(), price(1, 1)),
-            Status::No {
+            position.debt(380.into(), 1.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(126.into(), 1.into(), price(3, 1)),
-            Status::No {
+            position.debt(126.into(), 1.into(), price(3, 1)),
+            Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(381.into(), 375.into(), price(1, 1)),
-            Status::No {
+            position.debt(381.into(), 375.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(391.into(), 385.into(), price(1, 1)),
-            Status::No {
+            position.debt(391.into(), 385.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(391.into(), 386.into(), price(1, 1)),
-            Status::partial(386.into(), Cause::Overdue()),
+            position.debt(391.into(), 386.into(), price(1, 1)),
+            Debt::partial(386.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(392.into(), 0.into(), price(1, 1)),
-            Status::No {
+            position.debt(392.into(), 0.into(), price(1, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(364.into(), 0.into(), price(2, 1)),
-            Status::No {
+            position.debt(364.into(), 0.into(), price(2, 1)),
+            Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.check_liability(393.into(), 0.into(), price(1, 1)),
-            Status::partial(
+            position.debt(393.into(), 0.into(), price(1, 1)),
+            Debt::partial(
                 386.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -790,8 +784,8 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(788.into(), 0.into(), price(1, 2)),
-            Status::partial(
+            position.debt(788.into(), 0.into(), price(1, 2)),
+            Debt::partial(
                 387.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -807,16 +801,16 @@ mod test_check_liability {
         let position = position_with_max(max_ltv, 1000, 100, 1);
 
         assert_eq!(
-            position.check_liability(880.into(), 1.into(), price(1, 1)),
-            Status::partial(1.into(), Cause::Overdue()),
+            position.debt(880.into(), 1.into(), price(1, 1)),
+            Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(139.into(), 1.into(), price(4, 1)),
-            Status::partial(4.into(), Cause::Overdue()),
+            position.debt(139.into(), 1.into(), price(4, 1)),
+            Debt::partial(4.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(881.into(), 879.into(), price(1, 1)),
-            Status::partial(
+            position.debt(881.into(), 879.into(), price(1, 1)),
+            Debt::partial(
                 879.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -825,23 +819,23 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(881.into(), 880.into(), price(1, 1)),
-            Status::partial(880.into(), Cause::Overdue()),
+            position.debt(881.into(), 880.into(), price(1, 1)),
+            Debt::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(294.into(), 294.into(), price(1, 3)),
-            Status::partial(98.into(), Cause::Overdue()),
+            position.debt(294.into(), 294.into(), price(1, 3)),
+            Debt::partial(98.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(294.into(), 293.into(), price(3, 1)),
-            Status::full(Cause::Liability {
+            position.debt(294.into(), 293.into(), price(3, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.check_liability(1000.into(), 1.into(), price(1, 1)),
-            Status::full(Cause::Liability {
+            position.debt(1000.into(), 1.into(), price(1, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
@@ -854,8 +848,8 @@ mod test_check_liability {
         let position = position_with_max(max_ltv, 1000, 100, 1);
 
         assert_eq!(
-            position.check_liability(900.into(), 897.into(), price(1, 1)),
-            Status::partial(
+            position.debt(900.into(), 897.into(), price(1, 1)),
+            Debt::partial(
                 898.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -864,16 +858,16 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(900.into(), 899.into(), price(1, 1)),
-            Status::partial(899.into(), Cause::Overdue()),
+            position.debt(900.into(), 899.into(), price(1, 1)),
+            Debt::partial(899.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(233.into(), 233.into(), price(3, 1)),
-            Status::partial(699.into(), Cause::Overdue()),
+            position.debt(233.into(), 233.into(), price(3, 1)),
+            Debt::partial(699.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(901.into(), 889.into(), price(1, 1)),
-            Status::partial(
+            position.debt(901.into(), 889.into(), price(1, 1)),
+            Debt::partial(
                 900.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -882,8 +876,8 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(902.into(), 889.into(), price(1, 1)),
-            Status::full(Cause::Liability {
+            position.debt(902.into(), 889.into(), price(1, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
@@ -896,8 +890,8 @@ mod test_check_liability {
         let position = position_with_max(max_ltv, 1000, 230, 1);
 
         assert_eq!(
-            position.check_liability(768.into(), 765.into(), price(1, 1)),
-            Status::partial(
+            position.debt(768.into(), 765.into(), price(1, 1)),
+            Debt::partial(
                 765.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -906,8 +900,8 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(1560.into(), 1552.into(), price(1, 2)),
-            Status::partial(
+            position.debt(1560.into(), 1552.into(), price(1, 2)),
+            Debt::partial(
                 777.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -916,16 +910,16 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(768.into(), 768.into(), price(1, 1)),
-            Status::partial(768.into(), Cause::Overdue()),
+            position.debt(768.into(), 768.into(), price(1, 1)),
+            Debt::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1560.into(), 1556.into(), price(1, 2)),
-            Status::partial(778.into(), Cause::Overdue()),
+            position.debt(1560.into(), 1556.into(), price(1, 2)),
+            Debt::partial(778.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(788.into(), 768.into(), price(1, 1)),
-            Status::full(Cause::Liability {
+            position.debt(788.into(), 768.into(), price(1, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
@@ -938,8 +932,8 @@ mod test_check_liability {
         let position = position_with_max(max_ltv, 1000, 120, 15);
 
         assert_eq!(
-            position.check_liability(882.into(), 1.into(), price(1, 1)),
-            Status::partial(
+            position.debt(882.into(), 1.into(), price(1, 1)),
+            Debt::partial(
                 880.into(),
                 Cause::Liability {
                     ltv: max_ltv,
@@ -948,22 +942,22 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.check_liability(883.into(), 1.into(), price(1, 1)),
-            Status::full(Cause::Liability {
+            position.debt(883.into(), 1.into(), price(1, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.check_liability(294.into(), 1.into(), price(3, 1)),
-            Status::full(Cause::Liability {
+            position.debt(294.into(), 1.into(), price(3, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.check_liability(1000.into(), 1.into(), price(1, 1)),
-            Status::full(Cause::Liability {
+            position.debt(1000.into(), 1.into(), price(1, 1)),
+            Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
@@ -976,20 +970,20 @@ mod test_check_liability {
         let position = position_with_max(max_ltv, 1000, 326, 15);
 
         assert_eq!(
-            position.check_liability(772.into(), 674.into(), price(1, 1)),
-            Status::partial(674.into(), Cause::Overdue()),
+            position.debt(772.into(), 674.into(), price(1, 1)),
+            Debt::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1674.into(), 1674.into(), price(1, 2)),
-            Status::partial(837.into(), Cause::Overdue()),
+            position.debt(1674.into(), 1674.into(), price(1, 2)),
+            Debt::partial(837.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(772.into(), 675.into(), price(1, 1)),
-            Status::full(Cause::Overdue()),
+            position.debt(772.into(), 675.into(), price(1, 1)),
+            Debt::full(Cause::Overdue()),
         );
         assert_eq!(
-            position.check_liability(1676.into(), 1676.into(), price(1, 2)),
-            Status::full(Cause::Overdue()),
+            position.debt(1676.into(), 1676.into(), price(1, 2)),
+            Debt::full(Cause::Overdue()),
         );
     }
 

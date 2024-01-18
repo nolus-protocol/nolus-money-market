@@ -22,28 +22,28 @@ where
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(test, derive(Debug))]
-pub enum Status<Asset>
+pub enum Debt<Asset>
 where
     Asset: Currency,
 {
-    NoDebt,
-    No { zone: Zone, recalc_in: Duration },
-    Liquidation(Liquidation<Asset>),
+    No,
+    Ok { zone: Zone, recalc_in: Duration },
+    Bad(Liquidation<Asset>),
 }
 
-impl<Asset> Status<Asset>
+impl<Asset> Debt<Asset>
 where
     Asset: Currency,
 {
     #[cfg(test)]
     pub(crate) fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
         debug_assert!(!amount.is_zero());
-        Self::Liquidation(Liquidation::Partial { amount, cause })
+        Self::Bad(Liquidation::Partial { amount, cause })
     }
 
     #[cfg(test)]
     pub(crate) fn full(cause: Cause) -> Self {
-        Self::Liquidation(Liquidation::Full(cause))
+        Self::Bad(Liquidation::Full(cause))
     }
 }
 
@@ -52,62 +52,62 @@ mod test_status {
     use currencies::test::StableC1;
     use finance::{duration::Duration, percent::Percent};
 
-    use super::{Cause, Liquidation, Status, Zone};
+    use super::{Cause, Debt, Liquidation, Zone};
 
     #[test]
     fn ord() {
         let recalc_in = Duration::HOUR;
 
         assert!(
-            Status::<StableC1>::No {
+            Debt::<StableC1>::Ok {
                 zone: Zone::no_warnings(Percent::from_permille(1)),
                 recalc_in
-            } < Status::No {
+            } < Debt::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
                 recalc_in
             }
         );
         assert!(
-            Status::<StableC1>::No {
+            Debt::<StableC1>::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
                 recalc_in
-            } < Status::No {
+            } < Debt::Ok {
                 zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
                 recalc_in
             }
         );
         assert!(
-            Status::<StableC1>::No {
+            Debt::<StableC1>::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
                 recalc_in
-            } < Status::No {
+            } < Debt::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(3)),
                 recalc_in
             }
         );
         assert!(
-            Status::No {
+            Debt::Ok {
                 zone: Zone::first(Percent::from_permille(2), Percent::from_permille(3)),
                 recalc_in
-            } < Status::<StableC1>::No {
+            } < Debt::<StableC1>::Ok {
                 zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
                 recalc_in
             }
         );
         assert!(
-            Status::No {
+            Debt::Ok {
                 zone: Zone::third(Percent::from_permille(991), Percent::from_permille(1000)),
                 recalc_in
-            } < Status::<StableC1>::Liquidation(Liquidation::Partial {
+            } < Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
             })
         );
         assert!(
-            Status::<StableC1>::Liquidation(Liquidation::Partial {
+            Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
-            }) < Status::<StableC1>::Liquidation(Liquidation::Partial {
+            }) < Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
@@ -116,22 +116,22 @@ mod test_status {
             })
         );
         assert!(
-            Status::<StableC1>::Liquidation(Liquidation::Partial {
+            Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
-            }) < Status::<StableC1>::Liquidation(Liquidation::Partial {
+            }) < Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 2.into(),
                 cause: Cause::Overdue()
             })
         );
         assert!(
-            Status::<StableC1>::Liquidation(Liquidation::Partial {
+            Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            }) < Status::<StableC1>::Liquidation(Liquidation::Partial {
+            }) < Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 2.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
@@ -140,13 +140,13 @@ mod test_status {
             })
         );
         assert!(
-            Status::<StableC1>::partial(
+            Debt::<StableC1>::partial(
                 1.into(),
                 Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            ) < Status::<StableC1>::partial(
+            ) < Debt::<StableC1>::partial(
                 1.into(),
                 Cause::Liability {
                     ltv: Percent::from_permille(1),
@@ -155,29 +155,29 @@ mod test_status {
             )
         );
         assert!(
-            Status::<StableC1>::partial(
+            Debt::<StableC1>::partial(
                 1.into(),
                 Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            ) < Status::<StableC1>::full(Cause::Liability {
+            ) < Debt::<StableC1>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(2)
             })
         );
         assert!(
-            Status::<StableC1>::full(Cause::Liability {
+            Debt::<StableC1>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(1)
-            }) < Status::<StableC1>::full(Cause::Liability {
+            }) < Debt::<StableC1>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(2)
             })
         );
         assert!(
-            Status::<StableC1>::full(Cause::Overdue())
-                < Status::<StableC1>::full(Cause::Liability {
+            Debt::<StableC1>::full(Cause::Overdue())
+                < Debt::<StableC1>::full(Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 })

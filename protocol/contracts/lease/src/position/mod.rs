@@ -13,7 +13,7 @@ use crate::{
 
 pub use dto::PositionDTO;
 pub use spec::Spec;
-pub use status::{Cause, Liquidation, Status};
+pub use status::{Cause, Debt, Liquidation};
 
 mod dto;
 mod spec;
@@ -62,14 +62,14 @@ where
         self.amount -= asset
     }
 
-    pub fn check_liability(
+    pub fn debt(
         &self,
         total_due: Coin<Lpn>,
         overdue: Coin<Lpn>,
         asset_in_lpns: Price<Asset, Lpn>,
-    ) -> Status<Asset> {
+    ) -> Debt<Asset> {
         self.spec
-            .check_liability(self.amount, total_due, overdue, asset_in_lpns)
+            .debt(self.amount, total_due, overdue, asset_in_lpns)
     }
 
     /// Check if the amount can be used for repayment.

@@ -12,7 +12,7 @@ use crate::{
     api::LeaseCoin,
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, Lease as LeaseDO},
-    position::{Cause, Liquidation, Status},
+    position::{Cause, Debt, Liquidation},
 };
 
 pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
@@ -29,12 +29,12 @@ where
 {
     let status = lease.liquidation_status(when)?;
     Ok(match status {
-        Status::NoDebt => CmdResult::NoDebt,
-        Status::No { zone, recalc_in } => CmdResult::NewAlarms {
+        Debt::No => CmdResult::NoDebt,
+        Debt::Ok { zone, recalc_in } => CmdResult::NewAlarms {
             alarms: lease.reschedule(&when, recalc_in, &zone, time_alarms, price_alarms)?,
             current_liability: zone,
         },
-        Status::Liquidation(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),
+        Debt::Bad(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),
     })
 }
 

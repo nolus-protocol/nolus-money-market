@@ -5,7 +5,7 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractResult, loan::LiabilityStatus, position::Status};
+use crate::{error::ContractResult, loan::LiabilityStatus, position::Debt};
 
 use super::Lease;
 
@@ -16,7 +16,7 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
+    pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Debt<Asset>> {
         let LiabilityStatus { total_due, overdue } = self.loan.liability_status(now);
 
         let overdue = if self.loan.grace_period_end() <= now {
@@ -25,10 +25,8 @@ where
             Coin::ZERO
         };
 
-        self.price_of_lease_currency().map(|asset_in_lpns| {
-            self.position
-                .check_liability(total_due, overdue, asset_in_lpns)
-        })
+        self.price_of_lease_currency()
+            .map(|asset_in_lpns| self.position.debt(total_due, overdue, asset_in_lpns))
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
