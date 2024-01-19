@@ -48,7 +48,7 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    State::new(
+    let init_state = State::new_state(
         Config::new(
             msg.cadence_hours,
             msg.treasury,
@@ -56,10 +56,18 @@ pub fn instantiate(
             TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
         ),
         msg.dex,
-    )
-    .store(deps.storage)?;
+    );
 
-    Ok(response::empty_response())
+    let state_response = StateMachineResponse {
+        response: MessageResponse::messages_only(init_state.enter()),
+        next_state: init_state,
+    };
+
+    let state: State = state_response.next_state.into();
+
+    state.store(deps.storage)?;
+
+    Ok(response::response_only_messages(state_response.response))
 }
 
 #[entry_point]

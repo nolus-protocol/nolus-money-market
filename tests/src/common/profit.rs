@@ -7,7 +7,7 @@ use profit::{
 use sdk::cosmwasm_std::Addr;
 
 use super::{
-    test_case::{app::App, TestCase},
+    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
     CwContractWrapper, ADMIN,
 };
 
@@ -15,13 +15,13 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate(
-        app: &mut App,
+    pub fn instantiate<'r>(
+        app: &'r mut App,
         cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
         timealarms: Addr,
-    ) -> Addr {
+    ) -> ResponseWithInterChainMsgs<'r, Addr> {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
@@ -35,7 +35,7 @@ impl Instantiator {
             oracle,
             timealarms,
             dex: ConnectionParams {
-                connection_id: TestCase::DEX_CONNECTION_ID,
+                connection_id: TestCase::DEX_CONNECTION_ID.into(),
                 transfer_channel: Ics20Channel {
                     local_endpoint: TestCase::PROFIT_IBC_CHANNEL.into(),
                     remote_endpoint: "channel-262".into(),
@@ -45,6 +45,5 @@ impl Instantiator {
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
             .unwrap()
-            .unwrap_response()
     }
 }

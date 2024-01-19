@@ -9,7 +9,7 @@ use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 use super::{idle::Idle, Config, ConfigManagement, IcaConnector, State};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(super) struct OpenIca {
+pub(crate) struct OpenIca {
     config: Config,
     dex: ConnectionParams,
 }
