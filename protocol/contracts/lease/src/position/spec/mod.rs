@@ -374,7 +374,7 @@ mod test_check_liability {
         price::{self, Price},
     };
 
-    use crate::position::{Cause, Debt, Position};
+    use crate::position::{Cause, Debt};
 
     use super::Spec;
 
@@ -386,53 +386,56 @@ mod test_check_liability {
     #[test]
     fn no_debt() {
         let warn_ltv = Percent::from_permille(11);
-        let spec = position_with_first(warn_ltv, 100, 1, 1);
-        assert_eq!(spec.debt(0.into(), 0.into(), price(1, 1)), Debt::No,);
-        assert_eq!(spec.debt(0.into(), 0.into(), price(3, 1)), Debt::No,);
+        let spec = spec_with_first(warn_ltv, 1, 1);
+        let asset: Coin<TestCurrency> = 100.into();
+
+        assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(1, 1)), Debt::No,);
+        assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(3, 1)), Debt::No,);
     }
 
     #[test]
     fn warnings_none_zero_liq() {
         let warn_ltv = Percent::from_percent(51);
-        let position = position_with_first(warn_ltv, 100, 1, 1);
+        let spec = spec_with_first(warn_ltv, 1, 1);
+        let asset: Coin<TestCurrency> = 100.into();
 
         assert_eq!(
-            position.debt(1.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 1.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(1.into(), 0.into(), price(5, 1)),
+            spec.debt(asset, 1.into(), 0.into(), price(5, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(50.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 50.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(25.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, 25.into(), 0.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(51.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 51.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(17.into(), 0.into(), price(3, 1)),
+            spec.debt(asset, 17.into(), 0.into(), price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
@@ -443,31 +446,32 @@ mod test_check_liability {
     #[test]
     fn warnings_none_min_transaction() {
         let warn_ltv = Percent::from_percent(51);
-        let position = position_with_first(warn_ltv, 100, 1, 15);
+        let spec = spec_with_first(warn_ltv, 1, 15);
+        let asset: Coin<TestCurrency> = 100.into();
 
         assert_eq!(
-            position.debt(50.into(), 14.into(), price(1, 1)),
+            spec.debt(asset, 50.into(), 14.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(25.into(), 4.into(), price(2, 3)),
+            spec.debt(asset, 25.into(), 4.into(), price(2, 3)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(51.into(), 14.into(), price(1, 1)),
+            spec.debt(asset, 51.into(), 14.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(17.into(), 4.into(), price(3, 1)),
+            spec.debt(asset, 17.into(), 4.into(), price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
@@ -478,67 +482,68 @@ mod test_check_liability {
     #[test]
     fn warnings_first() {
         let warn_ltv = Percent::from_permille(712);
-        let position = position_with_first(warn_ltv, 1000, 10, 1);
+        let spec = spec_with_first(warn_ltv, 10, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(711.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 711.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(237.into(), 0.into(), price(3, 1)),
+            spec.debt(asset, 237.into(), 0.into(), price(3, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(712.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 712.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(178.into(), 0.into(), price(4, 1)),
+            spec.debt(asset, 178.into(), 0.into(), price(4, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(712.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 712.into(), 1.into(), price(1, 1)),
             Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(89.into(), 1.into(), price(8, 1)),
+            spec.debt(asset, 89.into(), 1.into(), price(8, 1)),
             Debt::partial(8.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(721.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 721.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(103.into(), 0.into(), price(7, 1)),
+            spec.debt(asset, 103.into(), 0.into(), price(7, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(722.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 722.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(361.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, 361.into(), 0.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
@@ -549,35 +554,36 @@ mod test_check_liability {
     #[test]
     fn warnings_first_min_transaction() {
         let warn_ltv = Percent::from_permille(712);
-        let position = position_with_first(warn_ltv, 1000, 10, 3);
+        let spec = spec_with_first(warn_ltv, 10, 3);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(712.into(), 2.into(), price(1, 1)),
+            spec.debt(asset, 712.into(), 2.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(356.into(), 1.into(), price(2, 1)),
+            spec.debt(asset, 356.into(), 1.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(721.into(), 2.into(), price(1, 1)),
+            spec.debt(asset, 721.into(), 2.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(721.into(), 5.into(), price(1, 1)),
+            spec.debt(asset, 721.into(), 5.into(), price(1, 1)),
             Debt::partial(5.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(240.into(), 3.into(), price(3, 1)),
+            spec.debt(asset, 240.into(), 3.into(), price(3, 1)),
             Debt::partial(9.into(), Cause::Overdue()),
         );
     }
@@ -585,56 +591,57 @@ mod test_check_liability {
     #[test]
     fn warnings_second() {
         let warn_ltv = Percent::from_permille(123);
-        let position = position_with_second(warn_ltv, 1000, 10, 1);
+        let spec = spec_with_second(warn_ltv, 10, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(122.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 122.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(15.into(), 0.into(), price(8, 1)),
+            spec.debt(asset, 15.into(), 0.into(), price(8, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(123.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 123.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(82.into(), 0.into(), price(3, 2)),
+            spec.debt(asset, 82.into(), 0.into(), price(3, 2)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(123.into(), 4.into(), price(1, 1)),
+            spec.debt(asset, 123.into(), 4.into(), price(1, 1)),
             Debt::partial(4.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.debt(132.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 132.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(66.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, 66.into(), 0.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(133.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 133.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
                 recalc_in: RECALC_IN
@@ -645,24 +652,25 @@ mod test_check_liability {
     #[test]
     fn warnings_second_min_transaction() {
         let warn_ltv = Percent::from_permille(123);
-        let position = position_with_second(warn_ltv, 1000, 10, 5);
+        let spec = spec_with_second(warn_ltv, 10, 5);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(128.into(), 4.into(), price(1, 1)),
+            spec.debt(asset, 128.into(), 4.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(32.into(), 1.into(), price(4, 1)),
+            spec.debt(asset, 32.into(), 1.into(), price(4, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(128.into(), 5.into(), price(1, 1)),
+            spec.debt(asset, 128.into(), 5.into(), price(1, 1)),
             Debt::partial(5.into(), Cause::Overdue())
         );
     }
@@ -671,46 +679,47 @@ mod test_check_liability {
     fn warnings_third() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
-        let position = position_with_third(warn_third_ltv, 1000, 100, 1);
+        let spec = spec_with_third(warn_third_ltv, 100, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(380.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 380.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(190.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, 190.into(), 0.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(381.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 381.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(381.into(), 375.into(), price(1, 1)),
+            spec.debt(asset, 381.into(), 375.into(), price(1, 1)),
             Debt::partial(375.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.debt(573.into(), 562.into(), price(2, 3)),
+            spec.debt(asset, 573.into(), 562.into(), price(2, 3)),
             Debt::partial(374.into(), Cause::Overdue())
         );
         assert_eq!(
-            position.debt(390.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 390.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(391.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 391.into(), 0.into(), price(1, 1)),
             Debt::partial(
                 384.into(),
                 Cause::Liability {
@@ -725,56 +734,57 @@ mod test_check_liability {
     fn warnings_third_min_transaction() {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
-        let position = position_with_third(warn_third_ltv, 1000, 100, 386);
+        let spec = spec_with_third(warn_third_ltv, 100, 386);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(380.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 380.into(), 1.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(126.into(), 1.into(), price(3, 1)),
+            spec.debt(asset, 126.into(), 1.into(), price(3, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(381.into(), 375.into(), price(1, 1)),
+            spec.debt(asset, 381.into(), 375.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(391.into(), 385.into(), price(1, 1)),
+            spec.debt(asset, 391.into(), 385.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(391.into(), 386.into(), price(1, 1)),
+            spec.debt(asset, 391.into(), 386.into(), price(1, 1)),
             Debt::partial(386.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(392.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 392.into(), 0.into(), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(364.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, 364.into(), 0.into(), price(2, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
                 recalc_in: RECALC_IN
             },
         );
         assert_eq!(
-            position.debt(393.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, 393.into(), 0.into(), price(1, 1)),
             Debt::partial(
                 386.into(),
                 Cause::Liability {
@@ -784,7 +794,7 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(788.into(), 0.into(), price(1, 2)),
+            spec.debt(asset, 788.into(), 0.into(), price(1, 2)),
             Debt::partial(
                 387.into(),
                 Cause::Liability {
@@ -798,18 +808,19 @@ mod test_check_liability {
     #[test]
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
-        let position = position_with_max(max_ltv, 1000, 100, 1);
+        let spec = spec_with_max(max_ltv, 100, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(880.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 880.into(), 1.into(), price(1, 1)),
             Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(139.into(), 1.into(), price(4, 1)),
+            spec.debt(asset, 139.into(), 1.into(), price(4, 1)),
             Debt::partial(4.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(881.into(), 879.into(), price(1, 1)),
+            spec.debt(asset, 881.into(), 879.into(), price(1, 1)),
             Debt::partial(
                 879.into(),
                 Cause::Liability {
@@ -819,22 +830,22 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(881.into(), 880.into(), price(1, 1)),
+            spec.debt(asset, 881.into(), 880.into(), price(1, 1)),
             Debt::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(294.into(), 294.into(), price(1, 3)),
+            spec.debt(asset, 294.into(), 294.into(), price(1, 3)),
             Debt::partial(98.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(294.into(), 293.into(), price(3, 1)),
+            spec.debt(asset, 294.into(), 293.into(), price(3, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.debt(1000.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 1000.into(), 1.into(), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -845,10 +856,11 @@ mod test_check_liability {
     #[test]
     fn liquidate_partial_min_asset() {
         let max_ltv = Percent::from_permille(881);
-        let position = position_with_max(max_ltv, 1000, 100, 1);
+        let spec = spec_with_max(max_ltv, 100, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(900.into(), 897.into(), price(1, 1)),
+            spec.debt(asset, 900.into(), 897.into(), price(1, 1)),
             Debt::partial(
                 898.into(),
                 Cause::Liability {
@@ -858,15 +870,15 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(900.into(), 899.into(), price(1, 1)),
+            spec.debt(asset, 900.into(), 899.into(), price(1, 1)),
             Debt::partial(899.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(233.into(), 233.into(), price(3, 1)),
+            spec.debt(asset, 233.into(), 233.into(), price(3, 1)),
             Debt::partial(699.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(901.into(), 889.into(), price(1, 1)),
+            spec.debt(asset, 901.into(), 889.into(), price(1, 1)),
             Debt::partial(
                 900.into(),
                 Cause::Liability {
@@ -876,7 +888,7 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(902.into(), 889.into(), price(1, 1)),
+            spec.debt(asset, 902.into(), 889.into(), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -887,10 +899,11 @@ mod test_check_liability {
     #[test]
     fn liquidate_full() {
         let max_ltv = Percent::from_permille(768);
-        let position = position_with_max(max_ltv, 1000, 230, 1);
+        let spec = spec_with_max(max_ltv, 230, 1);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(768.into(), 765.into(), price(1, 1)),
+            spec.debt(asset, 768.into(), 765.into(), price(1, 1)),
             Debt::partial(
                 765.into(),
                 Cause::Liability {
@@ -900,7 +913,7 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(1560.into(), 1552.into(), price(1, 2)),
+            spec.debt(asset, 1560.into(), 1552.into(), price(1, 2)),
             Debt::partial(
                 777.into(),
                 Cause::Liability {
@@ -910,15 +923,15 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(768.into(), 768.into(), price(1, 1)),
+            spec.debt(asset, 768.into(), 768.into(), price(1, 1)),
             Debt::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(1560.into(), 1556.into(), price(1, 2)),
+            spec.debt(asset, 1560.into(), 1556.into(), price(1, 2)),
             Debt::partial(778.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(788.into(), 768.into(), price(1, 1)),
+            spec.debt(asset, 788.into(), 768.into(), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -929,10 +942,11 @@ mod test_check_liability {
     #[test]
     fn liquidate_full_liability() {
         let max_ltv = Percent::from_permille(673);
-        let position = position_with_max(max_ltv, 1000, 120, 15);
+        let spec = spec_with_max(max_ltv, 120, 15);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(882.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 882.into(), 1.into(), price(1, 1)),
             Debt::partial(
                 880.into(),
                 Cause::Liability {
@@ -942,21 +956,21 @@ mod test_check_liability {
             ),
         );
         assert_eq!(
-            position.debt(883.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 883.into(), 1.into(), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.debt(294.into(), 1.into(), price(3, 1)),
+            spec.debt(asset, 294.into(), 1.into(), price(3, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            position.debt(1000.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, 1000.into(), 1.into(), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -967,22 +981,23 @@ mod test_check_liability {
     #[test]
     fn liquidate_full_overdue() {
         let max_ltv = Percent::from_permille(773);
-        let position = position_with_max(max_ltv, 1000, 326, 15);
+        let spec = spec_with_max(max_ltv, 326, 15);
+        let asset: Coin<TestCurrency> = 1000.into();
 
         assert_eq!(
-            position.debt(772.into(), 674.into(), price(1, 1)),
+            spec.debt(asset, 772.into(), 674.into(), price(1, 1)),
             Debt::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(1674.into(), 1674.into(), price(1, 2)),
+            spec.debt(asset, 1674.into(), 1674.into(), price(1, 2)),
             Debt::partial(837.into(), Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(772.into(), 675.into(), price(1, 1)),
+            spec.debt(asset, 772.into(), 675.into(), price(1, 1)),
             Debt::full(Cause::Overdue()),
         );
         assert_eq!(
-            position.debt(1676.into(), 1676.into(), price(1, 2)),
+            spec.debt(asset, 1676.into(), 1676.into(), price(1, 2)),
             Debt::full(Cause::Overdue()),
         );
     }
@@ -997,54 +1012,30 @@ mod test_check_liability {
         price::total_of(price_asset.into()).is(price_lpn.into())
     }
 
-    fn position_with_first<Asset, Lpn>(
-        warn: Percent,
-        asset: Asset,
-        min_asset: Lpn,
-        min_transaction: Lpn,
-    ) -> Position<TestCurrency, TestLpn>
+    fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
     where
-        Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP + STEP + STEP, asset, min_asset, min_transaction)
+        spec_with_max(warn + STEP + STEP + STEP, min_asset, min_transaction)
     }
 
-    fn position_with_second<Asset, Lpn>(
-        warn: Percent,
-        asset: Asset,
-        min_asset: Lpn,
-        min_transaction: Lpn,
-    ) -> Position<TestCurrency, TestLpn>
+    fn spec_with_second<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
     where
-        Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP + STEP, asset, min_asset, min_transaction)
+        spec_with_max(warn + STEP + STEP, min_asset, min_transaction)
     }
 
-    fn position_with_third<Asset, Lpn>(
-        warn: Percent,
-        asset: Asset,
-        min_asset: Lpn,
-        min_transaction: Lpn,
-    ) -> Position<TestCurrency, TestLpn>
+    fn spec_with_third<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
     where
-        Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
-        position_with_max(warn + STEP, asset, min_asset, min_transaction)
+        spec_with_max(warn + STEP, min_asset, min_transaction)
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-    fn position_with_max<Asset, Lpn>(
-        max: Percent,
-        asset: Asset,
-        min_asset: Lpn,
-        min_transaction: Lpn,
-    ) -> Position<TestCurrency, TestLpn>
+    fn spec_with_max<Lpn>(max: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
     where
-        Asset: Into<Coin<TestCurrency>>,
         Lpn: Into<Coin<TestLpn>>,
     {
         let initial = STEP;
@@ -1065,9 +1056,7 @@ mod test_check_liability {
             max,
             RECALC_IN,
         );
-        let spec = Spec::new(liability, min_asset.into(), min_transaction.into());
-
-        Position::new(asset.into(), spec)
+        Spec::new(liability, min_asset.into(), min_transaction.into())
     }
 }
 
