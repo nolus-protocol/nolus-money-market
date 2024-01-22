@@ -15,13 +15,13 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate<'r>(
-        app: &'r mut App,
+    pub fn instantiate(
+        app: &mut App,
         cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
         timealarms: Addr,
-    ) -> ResponseWithInterChainMsgs<'r, Addr> {
+    ) -> ResponseWithInterChainMsgs<'_, Addr> {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
