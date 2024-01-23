@@ -104,7 +104,7 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub fn new_state(config: Config, dex: ConnectionParams) -> IcaConnector {
+    pub fn start(config: Config, dex: ConnectionParams) -> IcaConnector {
         IcaConnector::new(OpenIca::new(config, dex))
     }
 
