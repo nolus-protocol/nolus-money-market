@@ -7,9 +7,11 @@ use profit::{
 use sdk::cosmwasm_std::Addr;
 
 use super::{
-    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
+    test_case::{app::App, TestCase},
     CwContractWrapper, ADMIN,
 };
+
+use crate::common::test_case::response::RemoteChain;
 
 pub(crate) struct Instantiator;
 
@@ -21,7 +23,7 @@ impl Instantiator {
         treasury: Addr,
         oracle: Addr,
         timealarms: Addr,
-    ) -> ResponseWithInterChainMsgs<'_, Addr> {
+    ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
@@ -44,6 +46,10 @@ impl Instantiator {
         };
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
+            .map(|mut response| {
+                response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::PROFIT_ICA_ID);
+                response.unwrap_response()
+            })
             .unwrap()
     }
 }

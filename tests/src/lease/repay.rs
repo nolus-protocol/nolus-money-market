@@ -177,7 +177,7 @@ fn full_repay_with_max_ltd() {
         overdue_interest: LpnCoin::ZERO.into(),
         due_margin: LpnCoin::ZERO.into(),
         due_interest: LpnCoin::ZERO.into(),
-        validity: Timestamp::from_nanos(1537237449879305533),
+        validity: Timestamp::from_nanos(1537237454879305533),
         in_progress: None,
     };
     let query_result = super::state_query(&test_case, lease_address.as_str());

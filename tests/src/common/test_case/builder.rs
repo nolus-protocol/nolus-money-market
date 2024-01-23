@@ -19,7 +19,6 @@ use crate::common::{
     oracle::Instantiator as OracleInstantiator,
     profit::Instantiator as ProfitInstantiator,
     protocols::{Instantiator as ProtocolsInstantiator, Registry},
-    test_case::response::RemoteChain,
     test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
     timealarms::Instantiator as TimeAlarmsInstantiator,
     treasury::Instantiator as TreasuryInstantiator,
@@ -207,18 +206,14 @@ where
             _lpn,
         } = self;
 
-        let mut profit_response = ProfitInstantiator::instantiate(
+        let profit_addr = ProfitInstantiator::instantiate(
             &mut test_case.app,
             cadence_hours,
             test_case.address_book.treasury().clone(),
             test_case.address_book.oracle().clone(),
             test_case.address_book.time_alarms().clone(),
         );
-
-        profit_response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::PROFIT_ICA_ID);
-
-        let profit_addr = profit_response.unwrap_response();
-
+        
         test_case.app.update_block(next_block);
 
         Self::send_open_ica_response(&mut test_case, profit_addr.clone());
