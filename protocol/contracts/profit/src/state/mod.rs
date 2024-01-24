@@ -104,15 +104,15 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub fn start(config: Config, dex: ConnectionParams) -> IcaConnector {
+    pub(crate) fn start(config: Config, dex: ConnectionParams) -> IcaConnector {
         IcaConnector::new(OpenIca::new(config, dex))
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+    pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Self> {
         STATE.load(storage).map_err(Into::into)
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+    pub(crate) fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
         STATE.save(storage, self).map_err(Into::into)
     }
 }

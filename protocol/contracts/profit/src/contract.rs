@@ -58,7 +58,7 @@ pub fn instantiate(
         msg.dex,
     );
 
-    let response = MessageResponse::messages_only(init_state.enter());
+    let response = init_state.enter();
 
     let state: State = init_state.into();
 
