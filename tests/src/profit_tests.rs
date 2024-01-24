@@ -57,8 +57,8 @@ where
 fn update_config() {
     type Lpn = StableC1;
 
-    const INITIAL_CACDENCE_HOURS: u16 = 2;
-    const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
+    const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
+    const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
 
     let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
@@ -103,8 +103,8 @@ fn update_config() {
 fn update_config_unauthorized() {
     type Lpn = StableC1;
 
-    const INITIAL_CACDENCE_HOURS: u16 = 2;
-    const UPDATED_CACDENCE_HOURS: u16 = INITIAL_CACDENCE_HOURS + 1;
+    const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
+    const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
 
     let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
@@ -543,7 +543,7 @@ fn on_alarm_native_and_foreign_transfer() {
 #[test]
 fn integration_with_time_alarms() {
     type Lpn = StableC1;
-    const CADENCE_HOURS: u16 = 2;
+    const CADENCE_HOURS: CadenceHours = 2;
 
     let mut test_case = test_case_with::<Lpn>(CADENCE_HOURS, None);
 
