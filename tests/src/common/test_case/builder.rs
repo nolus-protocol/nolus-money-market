@@ -4,7 +4,10 @@ use currency::Currency;
 use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
-use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
+use profit::{
+    msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg},
+    typedefs::CadenceHours,
+};
 use sdk::{
     cosmwasm_std::{self, Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, AppResponse},
@@ -199,7 +202,7 @@ where
 {
     pub fn init_profit(
         self,
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
     ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
         let Self {
             mut test_case,
@@ -213,7 +216,7 @@ where
             test_case.address_book.oracle().clone(),
             test_case.address_book.time_alarms().clone(),
         );
-        
+
         test_case.app.update_block(next_block);
 
         Self::send_open_ica_response(&mut test_case, profit_addr.clone());
@@ -236,7 +239,7 @@ where
     fn test_config(
         test_case: &mut TestCase<ProtocolsRegistry, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
         profit_addr: Addr,
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
     ) {
         let ProfitConfigResponse {
             cadence_hours: reported_cadence_hours,
