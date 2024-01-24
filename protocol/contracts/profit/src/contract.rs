@@ -48,7 +48,7 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    let init_state = State::start(
+    let (state, response) = State::start(
         Config::new(
             msg.cadence_hours,
             msg.treasury,
@@ -57,10 +57,6 @@ pub fn instantiate(
         ),
         msg.dex,
     );
-
-    let response = init_state.enter();
-
-    let state: State = init_state.into();
 
     state
         .store(deps.storage)

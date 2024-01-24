@@ -7,7 +7,10 @@ use dex::{
     ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
 };
-use platform::state_machine::{self, Response as StateMachineResponse};
+use platform::{
+    batch::Batch,
+    state_machine::{self, Response as StateMachineResponse},
+};
 use sdk::{
     cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
@@ -104,8 +107,12 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub(crate) fn start(config: Config, dex: ConnectionParams) -> IcaConnector {
-        IcaConnector::new(OpenIca::new(config, dex))
+    pub(crate) fn start(config: Config, dex: ConnectionParams) -> (State, Batch) {
+        let init_state = IcaConnector::new(OpenIca::new(config, dex));
+
+        let response = init_state.enter();
+        let state: State = init_state.into();
+        (state, response)
     }
 
     pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Self> {

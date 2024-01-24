@@ -36,7 +36,7 @@ use super::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Idle {
+pub(super) struct Idle {
     config: Config,
     account: Account,
 }
