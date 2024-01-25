@@ -363,7 +363,7 @@ mod test_calc_borrow {
 }
 
 #[cfg(test)]
-mod test_check_liability {
+mod test_debt {
 
     use currencies::test::{PaymentC3, StableC1};
     use finance::{
