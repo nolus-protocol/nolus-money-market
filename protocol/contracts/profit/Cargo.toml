@@ -24,7 +24,7 @@ contract = [
     "dep:cosmwasm-std",
     "dep:currencies",
     "dep:currency",
-    "dep:dex",
+    "dex/impl",
     "dep:finance",
     "dep:oracle-platform",
     "dep:platform",
@@ -39,7 +39,7 @@ testing = []
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
-dex = { workspace = true, optional = true, features = ["impl"] }
+dex = { workspace = true }
 finance = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use dex::ConnectionParams;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -15,6 +16,7 @@ pub struct InstantiateMsg {
     pub treasury: Addr,
     pub oracle: Addr,
     pub timealarms: Addr,
+    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize)]

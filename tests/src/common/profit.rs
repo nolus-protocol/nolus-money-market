@@ -1,3 +1,4 @@
+use dex::{ConnectionParams, Ics20Channel};
 use profit::{
     contract::{execute, instantiate, query, reply, sudo},
     msg::InstantiateMsg,
@@ -5,7 +6,12 @@ use profit::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    test_case::{app::App, TestCase},
+    CwContractWrapper, ADMIN,
+};
+
+use crate::common::test_case::response::RemoteChain;
 
 pub(crate) struct Instantiator;
 
@@ -30,10 +36,20 @@ impl Instantiator {
             treasury,
             oracle,
             timealarms,
+            dex: ConnectionParams {
+                connection_id: TestCase::DEX_CONNECTION_ID.into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: TestCase::PROFIT_IBC_CHANNEL.into(),
+                    remote_endpoint: "channel-262".into(),
+                },
+            },
         };
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
+            .map(|mut response| {
+                response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::PROFIT_ICA_ID);
+                response.unwrap_response()
+            })
             .unwrap()
-            .unwrap_response()
     }
 }

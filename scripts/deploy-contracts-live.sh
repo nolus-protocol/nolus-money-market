@@ -149,7 +149,7 @@ deploy_contracts() {
   local -r oracle_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/oracle.wasm" "$oracle_init_msg" "$protocol-oracle" "$protocol")
 
   # upload and instantiate Profit
-  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'"$treasury_contract_address"'","oracle":"'"$oracle_contract_address"'","timealarms":"'"$timealarms_contract_address"'"}'
+  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'"$treasury_contract_address"'","oracle":"'"$oracle_contract_address"'","timealarms":"'"$timealarms_contract_address"'","dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
   local -r profit_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/profit.wasm" "$profit_init_msg" "$protocol-profit" "$protocol")
 
   # instantiate Leaser

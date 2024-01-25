@@ -6,7 +6,7 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
+use super::{idle::Idle, Config, ConfigManagement, IcaConnector, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
@@ -51,8 +51,4 @@ impl ConfigManagement for IcaConnector {
     fn try_query_config(&self) -> ContractResult<ConfigResponse> {
         Err(ContractError::unsupported_operation(OpenIca::QUERY_ERROR))
     }
-}
-
-impl SetupDexHandler for IcaConnector {
-    type State = Self;
 }

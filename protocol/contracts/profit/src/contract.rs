@@ -1,10 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
-use dex::{
-    ConnectionParams, ContinueResult as DexResult, Handler as _, Ics20Channel,
-    Response as DexResponse,
-};
+use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
     message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
@@ -22,7 +19,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
+    state::{Config, ConfigManagement as _, State},
 };
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -51,15 +48,19 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    State::new(Config::new(
-        msg.cadence_hours,
-        msg.treasury,
-        OracleRef::try_from(msg.oracle, deps.querier)?,
-        TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
-    ))
-    .store(deps.storage)?;
+    let (state, response) = State::start(
+        Config::new(
+            msg.cadence_hours,
+            msg.treasury,
+            OracleRef::try_from(msg.oracle, deps.querier)?,
+            TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
+        ),
+        msg.dex,
+    );
 
-    Ok(response::empty_response())
+    state
+        .store(deps.storage)
+        .map(|()| response::response_only_messages(response))
 }
 
 #[entry_point]
@@ -142,22 +143,6 @@ fn try_handle_neutron_msg(
         NeutronSudoMsg::Response { data, .. } => Result::from(state.on_response(data, deps, env)),
         NeutronSudoMsg::Error { .. } => state.on_error(deps, env).map_err(Into::into),
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps, env).map_err(Into::into),
-        NeutronSudoMsg::OpenAck {
-            port_id: connection_id,
-            channel_id: local_endpoint,
-            counterparty_channel_id: remote_endpoint,
-            counterparty_version,
-        } if counterparty_version.is_empty() => state.setup_dex(
-            deps,
-            env,
-            ConnectionParams {
-                connection_id,
-                transfer_channel: Ics20Channel {
-                    local_endpoint,
-                    remote_endpoint,
-                },
-            },
-        ),
         NeutronSudoMsg::OpenAck {
             counterparty_version,
             ..
