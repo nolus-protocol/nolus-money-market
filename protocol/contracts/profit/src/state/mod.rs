@@ -107,7 +107,7 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub(crate) fn start(config: Config, dex: ConnectionParams) -> (Self, Batch) {
+    pub fn start(config: Config, dex: ConnectionParams) -> (Self, Batch) {
         let init_state = IcaConnector::new(OpenIca::new(config, dex));
 
         let response = init_state.enter();
@@ -115,11 +115,11 @@ impl State {
         (state, response)
     }
 
-    pub(crate) fn load(storage: &dyn Storage) -> ContractResult<Self> {
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         STATE.load(storage).map_err(Into::into)
     }
 
-    pub(crate) fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
         STATE.save(storage, self).map_err(Into::into)
     }
 }
