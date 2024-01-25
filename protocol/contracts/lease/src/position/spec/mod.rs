@@ -387,7 +387,7 @@ mod test_debt {
     fn no_debt() {
         let warn_ltv = Percent::from_permille(11);
         let spec = spec_with_first(warn_ltv, 1, 1);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(1, 1)), Debt::No,);
         assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(3, 1)), Debt::No,);
@@ -397,7 +397,7 @@ mod test_debt {
     fn warnings_none_zero_liq() {
         let warn_ltv = Percent::from_percent(51);
         let spec = spec_with_first(warn_ltv, 1, 1);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         assert_eq!(
             spec.debt(asset, 1.into(), 0.into(), price(1, 1)),
@@ -447,7 +447,7 @@ mod test_debt {
     fn warnings_none_min_transaction() {
         let warn_ltv = Percent::from_percent(51);
         let spec = spec_with_first(warn_ltv, 1, 15);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         assert_eq!(
             spec.debt(asset, 50.into(), 14.into(), price(1, 1)),
@@ -483,7 +483,7 @@ mod test_debt {
     fn warnings_first() {
         let warn_ltv = Percent::from_permille(712);
         let spec = spec_with_first(warn_ltv, 10, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 711.into(), 0.into(), price(1, 1)),
@@ -555,7 +555,7 @@ mod test_debt {
     fn warnings_first_min_transaction() {
         let warn_ltv = Percent::from_permille(712);
         let spec = spec_with_first(warn_ltv, 10, 3);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 712.into(), 2.into(), price(1, 1)),
@@ -592,7 +592,7 @@ mod test_debt {
     fn warnings_second() {
         let warn_ltv = Percent::from_permille(123);
         let spec = spec_with_second(warn_ltv, 10, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 122.into(), 0.into(), price(1, 1)),
@@ -653,7 +653,7 @@ mod test_debt {
     fn warnings_second_min_transaction() {
         let warn_ltv = Percent::from_permille(123);
         let spec = spec_with_second(warn_ltv, 10, 5);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 128.into(), 4.into(), price(1, 1)),
@@ -680,7 +680,7 @@ mod test_debt {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = spec_with_third(warn_third_ltv, 100, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 380.into(), 0.into(), price(1, 1)),
@@ -735,7 +735,7 @@ mod test_debt {
         let warn_third_ltv = Percent::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = spec_with_third(warn_third_ltv, 100, 386);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 380.into(), 1.into(), price(1, 1)),
@@ -809,7 +809,7 @@ mod test_debt {
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
         let spec = spec_with_max(max_ltv, 100, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 880.into(), 1.into(), price(1, 1)),
@@ -857,7 +857,7 @@ mod test_debt {
     fn liquidate_partial_min_asset() {
         let max_ltv = Percent::from_permille(881);
         let spec = spec_with_max(max_ltv, 100, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 900.into(), 897.into(), price(1, 1)),
@@ -900,7 +900,7 @@ mod test_debt {
     fn liquidate_full() {
         let max_ltv = Percent::from_permille(768);
         let spec = spec_with_max(max_ltv, 230, 1);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 768.into(), 765.into(), price(1, 1)),
@@ -943,7 +943,7 @@ mod test_debt {
     fn liquidate_full_liability() {
         let max_ltv = Percent::from_permille(673);
         let spec = spec_with_max(max_ltv, 120, 15);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 882.into(), 1.into(), price(1, 1)),
@@ -982,7 +982,7 @@ mod test_debt {
     fn liquidate_full_overdue() {
         let max_ltv = Percent::from_permille(773);
         let spec = spec_with_max(max_ltv, 326, 15);
-        let asset: Coin<TestCurrency> = 1000.into();
+        let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, 772.into(), 674.into(), price(1, 1)),
@@ -1145,7 +1145,7 @@ mod test_validate_close {
     #[test]
     fn too_small_amount() {
         let spec = spec(75, 15);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         let result_1 = spec.validate_close_amount(asset, 14.into(), price(1, 1));
         assert!(matches!(
@@ -1163,7 +1163,7 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_transaction() {
         let spec = spec(85, 15);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         let result_1 = spec.validate_close_amount(asset, 15.into(), price(1, 1));
         assert!(result_1.is_ok());
@@ -1175,7 +1175,7 @@ mod test_validate_close {
     #[test]
     fn too_big_amount() {
         let spec = spec(25, 1);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         let result_1 = spec.validate_close_amount(asset, 76.into(), price(1, 1));
         assert!(matches!(
@@ -1193,7 +1193,7 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_asset() {
         let spec = spec(25, 1);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         let result_1 = spec.validate_close_amount(asset, 75.into(), price(1, 1));
         assert!(result_1.is_ok());
@@ -1205,7 +1205,7 @@ mod test_validate_close {
     #[test]
     fn valid_amount() {
         let spec = spec(40, 10);
-        let asset: Coin<TestCurrency> = 100.into();
+        let asset = 100.into();
 
         let result_1 = spec.validate_close_amount(asset, 53.into(), price(1, 1));
         assert!(result_1.is_ok());
