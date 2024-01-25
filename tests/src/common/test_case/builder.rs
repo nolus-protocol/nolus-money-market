@@ -217,10 +217,10 @@ where
             test_case.address_book.time_alarms().clone(),
         );
 
-        test_case.app.update_block(next_block);
-
         Self::send_open_ica_response(&mut test_case, profit_addr.clone());
         Self::test_config(&mut test_case, profit_addr.clone(), cadence_hours);
+
+        test_case.app.update_block(next_block);
 
         let profit_ica_addr: Addr =
             TestCase::ica_addr(profit_addr.as_str(), TestCase::PROFIT_ICA_ID);
