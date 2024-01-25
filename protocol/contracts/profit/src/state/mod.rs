@@ -107,7 +107,7 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub(crate) fn start(config: Config, dex: ConnectionParams) -> (State, Batch) {
+    pub(crate) fn start(config: Config, dex: ConnectionParams) -> (Self, Batch) {
         let init_state = IcaConnector::new(OpenIca::new(config, dex));
 
         let response = init_state.enter();
