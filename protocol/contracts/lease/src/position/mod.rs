@@ -1,6 +1,7 @@
 use currency::Currency;
 use finance::{
     coin::Coin,
+    duration::Duration,
     fraction::Fraction,
     liability::Level,
     price::{total_of, Price},
@@ -12,10 +13,12 @@ use crate::{
 };
 
 pub use dto::PositionDTO;
+pub use interest::InterestDue;
 pub use spec::Spec;
 pub use status::{Cause, Debt, Liquidation};
 
 mod dto;
+mod interest;
 mod spec;
 mod status;
 
@@ -60,6 +63,16 @@ where
         );
 
         self.amount -= asset
+    }
+
+    /// Compute how much time is necessary for the due interest to become collectable
+    ///
+    /// If it is already enough to be collected then return zero.
+    pub fn overdue_liquidation_in<Interest>(&self, interest: &Interest) -> Duration
+    where
+        Interest: InterestDue<Lpn>,
+    {
+        self.spec.overdue_liquidation_in(interest)
     }
 
     pub fn debt(

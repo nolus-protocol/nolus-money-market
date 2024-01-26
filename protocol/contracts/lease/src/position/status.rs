@@ -25,9 +25,17 @@ where
 pub enum Debt<Asset>
 where
     Asset: Currency,
+    // Lpn: Currency,
 {
     No,
-    Ok { zone: Zone, recalc_in: Duration },
+    Ok {
+        zone: Zone,
+        recalc_in: Duration,
+        // TODO
+        //  collect_overdue_in: Duration,
+        //  price_low: Price<Asset, Lpn>,
+        //  price_high: Price<Asset, Lpn>,
+    },
     Bad(Liquidation<Asset>),
 }
 

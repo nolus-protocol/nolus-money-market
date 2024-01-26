@@ -12,6 +12,9 @@ use crate::{
     zero::Zero,
 };
 
+// TODO cease using it to store state
+// - remove Serialize, Deserialize implementations
+// - refactor from owning to referring data
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InterestPeriod<U, F> {
     period: Period,
@@ -41,22 +44,17 @@ where
         }
     }
 
-    pub fn zero_length(&self) -> bool {
-        self.period.length() == Duration::default()
-    }
-
+    // TODO remove once get rid of grace periods
     pub fn period(&self) -> Period {
         self.period
     }
 
+    // TODO remove once migrate `fn pay` result to `(Timestamp, _)`
     pub fn start(&self) -> Timestamp {
         self.period.start()
     }
 
-    pub fn till(&self) -> Timestamp {
-        self.period.till()
-    }
-
+    // TODO remove once migrate the Loan state to not keep InterestPeriod
     pub fn interest_rate(&self) -> F {
         self.interest
     }
@@ -84,12 +82,18 @@ where
         } else {
             let repayment = cmp::min(interest_due_per_period, payment);
 
+            // TODO consider changing the algo by computing the paid period on annual basis, not the payment period one
+            // currently it is in favor of payment for small periods since the due interest for the period is rounded down
             let period = Duration::between(self.start(), by_within_period);
             let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
 
             let change = payment - repayment;
             (self.shift_start(period_paid_for), change)
         }
+    }
+
+    fn till(&self) -> Timestamp {
+        self.period.till()
     }
 
     #[track_caller]
@@ -107,9 +111,18 @@ where
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start(), by);
 
-        let interest_due_per_year = self.interest.of(principal);
-        period.annualized_slice_of(interest_due_per_year)
+        interest(self.interest, principal, period)
     }
+}
+
+// TODO use it in production code instead of going through InterestPeriod
+pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> P
+where
+    F: Fraction<U>,
+    P: Fractionable<U> + TimeSliceable,
+{
+    let interest_per_year = rate.of(principal);
+    period.annualized_slice_of(interest_per_year)
 }
 
 #[cfg(test)]

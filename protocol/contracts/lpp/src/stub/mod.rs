@@ -74,12 +74,12 @@ impl LppRef {
             type Output = Cmd::Output;
             type Error = CmdError<Cmd::Error, ContractError>;
 
-            fn on<C>(self) -> AnyVisitorResult<Self>
+            fn on<Lpn>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency + Serialize + DeserializeOwned,
+                Lpn: Currency + Serialize + DeserializeOwned,
             {
                 self.lpp_ref
-                    .into_loan::<C>(self.lease, self.querier)
+                    .into_loan::<Lpn>(self.lease, self.querier)
                     .map_err(CmdError::from_api_err)
                     .and_then(|lpp_loan| {
                         self.cmd.exec(lpp_loan).map_err(CmdError::from_customer_err)
@@ -187,6 +187,11 @@ impl LppRef {
         }
     }
 }
+
+// #[cfg(feature = "testing")]
+// pub fn unchecked_lpp_loan<Lpn>(loan: LoanResponse<Lpn>) -> impl LppLoan<Lpn> {
+
+// }
 
 pub struct LppBatch<Ref> {
     pub lpp_ref: Ref,

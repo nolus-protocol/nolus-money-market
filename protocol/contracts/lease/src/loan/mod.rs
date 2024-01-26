@@ -23,7 +23,7 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-pub use self::state::State;
+pub use self::state::{Overdue, State};
 pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
 
 mod liability;
@@ -35,6 +35,7 @@ mod state;
 pub(crate) struct LoanDTO {
     lpp: LppRef,
     interest_payment_spec: InterestPaymentSpec,
+    // TODO replace it with paid_by: Timestamp and interest: Percent
     current_period: InterestPeriod<Units, Percent>,
     profit: ProfitRef,
 }
@@ -164,9 +165,10 @@ where
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
         let state = self.state(by);
-        let overdue_interest_payment = state.overdue_interest.min(payment);
+        let overdue_interest_payment = state.overdue.interest().min(payment);
         let overdue_margin_payment = state
-            .overdue_margin_interest
+            .overdue
+            .margin()
             .min(payment - overdue_interest_payment);
         let due_interest_payment = state
             .due_interest
@@ -223,34 +225,35 @@ where
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Lpn> {
         self.debug_check_start_due_before(now, "in the past. Now is ");
-        let due_period = Period::till_length(now, self.interest_payment_spec.due_period());
 
-        let total_margin_due_period = Period::from_till(self.due_period.start(), now);
-        debug_assert_eq!(total_margin_due_period.till(), due_period.till());
-        let margin_overdue_period =
-            total_margin_due_period.cut_end(&due_period.intersect(&total_margin_due_period));
+        let due_period_margin = Period::from_till(self.due_period.start(), now);
+
+        let overdue = Overdue::new(
+            &due_period_margin,
+            self.interest_payment_spec.due_period(),
+            self.due_period.interest_rate(),
+            &self.lpp_loan,
+        );
 
         let principal_due = self.lpp_loan.principal_due();
-        let margin_interest_period = InterestPeriod::with_interest(self.due_period.interest_rate());
-        let overdue_margin_interest = margin_interest_period
-            .and_period(margin_overdue_period)
-            .interest(principal_due);
-        let due_margin_interest = margin_interest_period
-            .and_period(total_margin_due_period)
-            .interest(principal_due)
-            - overdue_margin_interest;
-
-        let overdue_interest = self.lpp_loan.interest_due(due_period.start());
-        let due_interest = self.lpp_loan.interest_due(due_period.till()) - overdue_interest;
+        let due_margin_interest = {
+            let margin_interest_period =
+                InterestPeriod::with_interest(self.due_period.interest_rate());
+            margin_interest_period
+                .and_period(due_period_margin)
+                .interest(principal_due)
+                - overdue.margin()
+        };
+        let due_interest =
+            self.lpp_loan.interest_due(due_period_margin.till()) - overdue.interest();
 
         State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.due_period.interest_rate(),
             principal_due,
-            overdue_interest,
-            overdue_margin_interest,
             due_interest,
             due_margin_interest,
+            overdue,
         }
     }
 
@@ -280,7 +283,7 @@ mod tests {
     use currencies::test::StableC1;
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
-        error::ContractError as LppError,
+        error::{ContractError as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
         stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
@@ -298,8 +301,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const PROFIT_ADDR: &str = "profit_addr";
 
-    type Lpn = StableC1;
-    type LppResult<T> = Result<T, LppError>;
+    pub(super) type Lpn = StableC1;
 
     mod test_repay {
         use serde::{Deserialize, Serialize};
@@ -323,7 +325,7 @@ mod tests {
         use crate::loan::{
             repay::Receipt as RepayReceipt,
             tests::{create_loan_custom, profit_stub, PROFIT_ADDR},
-            Loan, State,
+            Loan, Overdue, State,
         };
 
         use super::{
@@ -356,10 +358,12 @@ mod tests {
         #[test]
         fn full_max_overdue_full_max_due_repay() {
             let principal = 1000;
-            let delta_to_fully_paid = 50;
+            let delta_to_fully_paid = 30;
             let payment_at = LEASE_START + Duration::YEAR + Duration::YEAR;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
+            assert!(delta_to_fully_paid < one_year_margin);
+            assert!(delta_to_fully_paid < one_year_interest);
 
             let loan = LoanResponse {
                 principal_due: principal.into(),
@@ -377,25 +381,31 @@ mod tests {
                         principal,
                         one_year_margin,
                         one_year_interest,
-                        one_year_margin,
-                        one_year_interest,
+                        Overdue::Accrued {
+                            interest: one_year_interest.into(),
+                            margin: one_year_margin.into(),
+                        },
                     ),
                     receipt(principal, 0, 0, repay_overdue_interest, 0, 0, 0),
+                    Duration::default(),
                     payment_at,
                 )
             }
 
             {
-                let repay_fully_overdue_interest_and_some_margin = one_year_margin;
+                let repay_fully_overdue_interest_and_some_margin =
+                    delta_to_fully_paid + delta_to_fully_paid;
                 repay(
                     &mut loan,
                     repay_fully_overdue_interest_and_some_margin,
                     state(
                         principal,
                         one_year_margin,
-                        delta_to_fully_paid,
-                        one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: delta_to_fully_paid.into(),
+                            margin: one_year_margin.into(),
+                        },
                     ),
                     receipt(
                         principal,
@@ -406,52 +416,67 @@ mod tests {
                         0,
                         0,
                     ),
+                    Duration::default(),
                     payment_at,
                 )
             }
 
             {
-                let repay_fully_overdue_margin_and_some_due_interest = one_year_interest;
+                let overdue_margin = one_year_margin - delta_to_fully_paid;
+                let repay_fully_overdue_margin_and_some_due_interest =
+                    overdue_margin + delta_to_fully_paid;
                 repay(
                     &mut loan,
                     repay_fully_overdue_margin_and_some_due_interest,
                     state(
                         principal,
-                        delta_to_fully_paid,
-                        0,
                         one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: 0.into(),
+                            margin: overdue_margin.into(),
+                        },
                     ),
                     receipt(
                         principal,
                         0,
-                        delta_to_fully_paid,
+                        overdue_margin,
                         0,
                         0,
-                        repay_fully_overdue_margin_and_some_due_interest - delta_to_fully_paid,
+                        repay_fully_overdue_margin_and_some_due_interest - overdue_margin,
                         0,
                     ),
+                    Duration::default(),
                     payment_at,
                 )
             }
 
             {
-                let interest_due = delta_to_fully_paid;
+                let interest_due = one_year_interest - delta_to_fully_paid;
                 let surplus = delta_to_fully_paid;
                 let full_repayment = interest_due + one_year_margin + principal + surplus;
                 repay(
                     &mut loan,
                     full_repayment,
-                    state(principal, 0, 0, one_year_margin, delta_to_fully_paid),
+                    state(
+                        principal,
+                        one_year_margin,
+                        interest_due,
+                        Overdue::Accrued {
+                            interest: 0.into(),
+                            margin: 0.into(),
+                        },
+                    ),
                     receipt(
                         principal,
                         principal,
                         0,
                         0,
                         one_year_margin,
-                        delta_to_fully_paid,
+                        interest_due,
                         surplus,
                     ),
+                    Duration::YEAR,
                     payment_at,
                 )
             }
@@ -473,8 +498,17 @@ mod tests {
             repay(
                 &mut loan,
                 payment,
-                state(principal, 0, 0, due_margin, 0),
+                state(
+                    principal,
+                    due_margin,
+                    0,
+                    Overdue::Accrued {
+                        interest: 0.into(),
+                        margin: 0.into(),
+                    },
+                ),
                 receipt(principal, 0, 0, 0, payment, 0, 0),
+                Duration::YEAR.into_slice_per_ratio::<Coin<Lpn>>(payment.into(), due_margin.into()),
                 now,
             );
         }
@@ -505,12 +539,15 @@ mod tests {
                     payment,
                     state(
                         principal,
-                        overdue_margin,
-                        overdue_interest,
                         one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: overdue_interest.into(),
+                            margin: overdue_margin.into(),
+                        },
                     ),
                     receipt(principal, 0, 0, partial_overdue_interest, 0, 0, 0),
+                    Duration::default(),
                     repay_at,
                 );
             }
@@ -548,12 +585,15 @@ mod tests {
                     payment,
                     state(
                         principal,
-                        one_year_margin * 2 + overdue_margin_modulo_year,
-                        one_year_interest * 2 + overdue_interest_modulo_year,
                         one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: (one_year_interest * 2 + overdue_interest_modulo_year).into(),
+                            margin: (one_year_margin * 2 + overdue_margin_modulo_year).into(),
+                        },
                     ),
                     receipt(principal, 0, 0, payment, 0, 0, 0),
+                    Duration::default(),
                     repay_at,
                 );
             }
@@ -565,10 +605,12 @@ mod tests {
                     payment,
                     state(
                         principal,
-                        one_year_margin * 2 + overdue_margin_modulo_year,
-                        overdue_interest_modulo_year - interest_payment,
                         one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: (overdue_interest_modulo_year - interest_payment).into(),
+                            margin: (one_year_margin * 2 + overdue_margin_modulo_year).into(),
+                        },
                     ),
                     receipt(
                         principal,
@@ -579,6 +621,7 @@ mod tests {
                         0,
                         0,
                     ),
+                    Duration::default(),
                     repay_at,
                 );
             }
@@ -589,12 +632,15 @@ mod tests {
                     payment,
                     state(
                         principal,
-                        one_year_margin * 2,
-                        0,
                         one_year_margin,
                         one_year_interest,
+                        Overdue::Accrued {
+                            interest: 0.into(),
+                            margin: (one_year_margin * 2).into(),
+                        },
                     ),
                     receipt(principal, 0, one_year_margin * 2, 0, 0, interest_payment, 0),
+                    Duration::default(),
                     repay_at,
                 );
             }
@@ -607,10 +653,12 @@ mod tests {
                     payment,
                     state(
                         principal,
-                        0,
-                        0,
                         one_year_margin,
                         one_year_interest - interest_payment,
+                        Overdue::Accrued {
+                            interest: 0.into(),
+                            margin: 0.into(),
+                        },
                     ),
                     receipt(
                         principal,
@@ -621,6 +669,7 @@ mod tests {
                         one_year_interest - interest_payment,
                         change,
                     ),
+                    Duration::YEAR,
                     repay_at,
                 );
             }
@@ -639,12 +688,17 @@ mod tests {
                 interest_paid: LEASE_START,
             };
 
-            let since_start_current_period =
+            let overdue_period =
                 Duration::YEAR - Duration::HOUR - Duration::HOUR - Duration::HOUR - Duration::HOUR;
-            let repay_at = LEASE_START + Duration::YEAR + since_start_current_period;
-            let overdue_margin = since_start_current_period.annualized_slice_of(due_margin);
-            let overdue_interest = since_start_current_period.annualized_slice_of(due_interest);
+            let repay_at = LEASE_START + Duration::YEAR + overdue_period;
+            let overdue_margin = overdue_period.annualized_slice_of(due_margin);
+            let overdue_interest = overdue_period.annualized_slice_of(due_interest);
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
+            let due_period_paid =
+                Duration::between(LEASE_START, repay_at).into_slice_per_ratio::<Coin<Lpn>>(
+                    (overdue_margin + due_margin_payment).into(),
+                    (overdue_margin + due_margin).into(),
+                ) - overdue_period;
 
             let mut loan = create_loan(loan);
             repay(
@@ -652,10 +706,12 @@ mod tests {
                 payment,
                 state(
                     principal,
-                    overdue_margin,
-                    overdue_interest,
                     due_margin,
                     due_interest,
+                    Overdue::Accrued {
+                        interest: overdue_interest.into(),
+                        margin: overdue_margin.into(),
+                    },
                 ),
                 receipt(
                     principal,
@@ -666,6 +722,7 @@ mod tests {
                     due_interest,
                     0,
                 ),
+                due_period_paid,
                 repay_at,
             );
         }
@@ -676,12 +733,12 @@ mod tests {
             let principal_paid = 234;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
-            let duration_since_start = Duration::HOUR + Duration::HOUR + Duration::HOUR;
-            let due_margin = duration_since_start.annualized_slice_of(one_year_margin);
-            let due_interest = duration_since_start.annualized_slice_of(one_year_interest);
+            let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
+            let due_margin = due_period.annualized_slice_of(one_year_margin);
+            let due_interest = due_period.annualized_slice_of(one_year_interest);
             let payment = due_margin + due_interest + principal_paid;
 
-            let repay_at = LEASE_START + duration_since_start;
+            let repay_at = LEASE_START + due_period;
             let mut loan = create_loan(LoanResponse {
                 principal_due: principal.into(),
                 annual_interest_rate: LOAN_INTEREST_RATE,
@@ -690,8 +747,14 @@ mod tests {
             repay(
                 &mut loan,
                 payment,
-                state(principal, 0, 0, due_margin, due_interest),
+                state(
+                    principal,
+                    due_margin,
+                    due_interest,
+                    Overdue::StartIn(Duration::YEAR - due_period),
+                ),
                 receipt(principal, principal_paid, 0, 0, due_margin, due_interest, 0),
+                due_period,
                 repay_at,
             );
         }
@@ -727,12 +790,15 @@ mod tests {
                     loan_interest_rate,
                     margin_interest_rate,
                     principal,
-                    overdue_margin,
-                    overdue_interest,
                     due_margin,
                     due_interest,
+                    Overdue::Accrued {
+                        interest: overdue_interest.into(),
+                        margin: overdue_margin.into(),
+                    },
                 ),
                 receipt(principal, 0, overdue_margin, overdue_interest, 0, 0, 0),
+                Duration::default(),
                 repay_at,
             );
             repay(
@@ -742,12 +808,15 @@ mod tests {
                     loan_interest_rate,
                     margin_interest_rate,
                     principal,
-                    0,
-                    0,
                     due_margin,
                     due_interest,
+                    Overdue::Accrued {
+                        interest: 0.into(),
+                        margin: 0.into(),
+                    },
                 ),
                 receipt(principal, principal_paid, 0, 0, due_margin, due_interest, 0),
+                Duration::YEAR,
                 repay_at,
             );
         }
@@ -758,9 +827,9 @@ mod tests {
             let principal_paid = 234;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
-            let duration_since_start = Duration::HOUR + Duration::HOUR + Duration::HOUR;
-            let due_margin = duration_since_start.annualized_slice_of(one_year_margin);
-            let due_interest = duration_since_start.annualized_slice_of(one_year_interest);
+            let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
+            let due_margin = due_period.annualized_slice_of(one_year_margin);
+            let due_interest = due_period.annualized_slice_of(one_year_interest);
             let mut loan = create_loan(LoanResponse {
                 principal_due: principal.into(),
                 annual_interest_rate: LOAN_INTEREST_RATE,
@@ -768,12 +837,18 @@ mod tests {
             });
             {
                 let payment = due_margin + due_interest + principal_paid;
-                let repay_at = LEASE_START + duration_since_start;
+                let repay_at = LEASE_START + due_period;
                 repay(
                     &mut loan,
                     payment,
-                    state(principal, 0, 0, due_margin, due_interest),
+                    state(
+                        principal,
+                        due_margin,
+                        due_interest,
+                        Overdue::StartIn(Duration::YEAR - due_period),
+                    ),
                     receipt(principal, principal_paid, 0, 0, due_margin, due_interest, 0),
+                    due_period,
                     repay_at,
                 )
             }
@@ -781,7 +856,7 @@ mod tests {
             {
                 let principal_due = principal - principal_paid;
                 let change = 97;
-                let duration_since_prev_payment = Duration::YEAR - duration_since_start;
+                let duration_since_prev_payment = Duration::YEAR - due_period;
                 let due_margin = duration_since_prev_payment
                     .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due));
                 let due_interest = duration_since_prev_payment
@@ -791,7 +866,12 @@ mod tests {
                 repay(
                     &mut loan,
                     payment,
-                    state(principal_due, 0, 0, due_margin, due_interest),
+                    state(
+                        principal_due,
+                        due_margin,
+                        due_interest,
+                        Overdue::StartIn(due_period),
+                    ),
                     receipt(
                         principal_due,
                         principal_due,
@@ -801,6 +881,7 @@ mod tests {
                         due_interest,
                         change,
                     ),
+                    duration_since_prev_payment,
                     repay_at,
                 )
             }
@@ -808,28 +889,12 @@ mod tests {
 
         #[test]
         fn repay_zero() {
-            let payment = 15;
             let principal = 13;
             let total_margin = MARGIN_INTEREST_RATE.of(principal);
             let total_interest = LOAN_INTEREST_RATE.of(principal);
 
             let due_period = Duration::HOUR;
-            let since_last_paid = Duration::YEAR;
-
-            let overdue_margin = (since_last_paid - due_period).annualized_slice_of(total_margin);
-            let due_margin = total_margin - overdue_margin;
-            assert_eq!(Amount::ZERO, due_margin);
-            assert_eq!(Amount::ZERO, total_margin);
-
-            let overdue_interest =
-                (since_last_paid - due_period).annualized_slice_of(total_interest);
-            let due_interest = total_interest - overdue_interest;
-            assert_eq!(1, due_interest);
-
-            let principal_paid =
-                payment - overdue_margin - due_margin - overdue_interest - due_interest;
-
-            let repay_at = LEASE_START + since_last_paid;
+            let since_start = Duration::YEAR;
             let mut loan = create_loan_custom(
                 MARGIN_INTEREST_RATE,
                 LoanResponse {
@@ -840,33 +905,76 @@ mod tests {
                 LEASE_START,
                 due_period,
             );
+            let repay_at = LEASE_START + since_start;
+            let principal_left = {
+                let due_period_paid = Duration::default();
 
-            repay(
-                &mut loan,
-                payment,
-                state(
-                    principal,
-                    overdue_margin,
-                    overdue_interest,
-                    due_margin,
-                    due_interest,
-                ),
-                receipt(
-                    principal,
-                    principal_paid,
-                    overdue_margin,
-                    overdue_interest,
-                    due_margin,
-                    due_interest,
-                    payment
-                        - principal_paid
-                        - overdue_margin
-                        - overdue_interest
-                        - due_margin
-                        - due_interest,
-                ),
-                repay_at,
-            );
+                let overdue_margin = (since_start - due_period).annualized_slice_of(total_margin);
+                let due_margin = total_margin - overdue_margin;
+                assert_eq!(Amount::ZERO, due_margin);
+                assert_eq!(Amount::ZERO, total_margin);
+
+                let overdue_interest =
+                    (since_start - due_period).annualized_slice_of(total_interest);
+                let due_interest = total_interest - overdue_interest;
+                assert_eq!(1, due_interest);
+
+                let payment = 15;
+                let principal_paid =
+                    payment - overdue_margin - due_margin - overdue_interest - due_interest;
+
+                repay(
+                    &mut loan,
+                    payment,
+                    state(
+                        principal,
+                        due_margin,
+                        due_interest,
+                        Overdue::Accrued {
+                            interest: overdue_interest.into(),
+                            margin: overdue_margin.into(),
+                        },
+                    ),
+                    receipt(
+                        principal,
+                        principal_paid,
+                        overdue_margin,
+                        overdue_interest,
+                        due_margin,
+                        due_interest,
+                        payment
+                            - principal_paid
+                            - overdue_margin
+                            - overdue_interest
+                            - due_margin
+                            - due_interest,
+                    ),
+                    due_period_paid,
+                    repay_at,
+                );
+                principal - principal_paid
+            };
+            {
+                let change = 2;
+                let payment = principal_left + change;
+                let repay_at = LEASE_START + since_start;
+                repay(
+                    &mut loan,
+                    payment,
+                    state(
+                        principal_left,
+                        0,
+                        0,
+                        Overdue::Accrued {
+                            interest: 0.into(),
+                            margin: 0.into(),
+                        },
+                    ),
+                    receipt(principal_left, principal_left, 0, 0, 0, 0, change),
+                    Duration::default(),
+                    repay_at,
+                );
+            }
         }
 
         #[track_caller]
@@ -875,6 +983,7 @@ mod tests {
             payment: P,
             before_state: State<Lpn>,
             exp_receipt: RepayReceipt<Lpn>,
+            exp_due_period_paid: Duration,
             now: Timestamp,
         ) where
             P: Into<Coin<Lpn>> + Copy,
@@ -886,24 +995,12 @@ mod tests {
                 Ok(exp_receipt),
                 loan.repay(payment.into(), now, &mut profit)
             );
-            {
-                assert_eq!(
-                    State {
-                        annual_interest_margin: before_state.annual_interest_margin,
-                        annual_interest: before_state.annual_interest,
-                        principal_due: before_state.principal_due - exp_receipt.principal_paid(),
-                        overdue_margin_interest: before_state.overdue_margin_interest
-                            - exp_receipt.overdue_margin_paid(),
-                        overdue_interest: before_state.overdue_interest
-                            - exp_receipt.overdue_interest_paid(),
-                        due_margin_interest: before_state.due_margin_interest
-                            - exp_receipt.due_margin_paid(),
-                        due_interest: before_state.due_interest - exp_receipt.due_interest_paid()
-                    },
-                    loan.state(now),
-                    "Expected state after"
-                );
-            }
+            assert_eq!(
+                after_state(before_state, exp_due_period_paid, exp_receipt),
+                loan.state(now),
+                "Expected state after"
+            );
+
             assert_eq!(
                 {
                     let margin_paid =
@@ -918,12 +1015,48 @@ mod tests {
             )
         }
 
+        fn after_state<Lpn>(
+            before_state: State<Lpn>,
+            exp_due_period_paid: Duration,
+            exp_receipt: RepayReceipt<Lpn>,
+        ) -> State<Lpn>
+        where
+            Lpn: Currency,
+        {
+            let exp_overdue = if before_state.overdue.start_in() == Duration::default() {
+                let exp_interest =
+                    before_state.overdue.interest() - exp_receipt.overdue_interest_paid();
+                let exp_margin = before_state.overdue.margin() - exp_receipt.overdue_margin_paid();
+                if exp_interest.is_zero()
+                    && exp_margin.is_zero()
+                    && exp_due_period_paid != Duration::default()
+                {
+                    Overdue::StartIn(exp_due_period_paid)
+                } else {
+                    Overdue::Accrued {
+                        interest: exp_interest,
+                        margin: exp_margin,
+                    }
+                }
+            } else {
+                Overdue::StartIn(before_state.overdue.start_in() + exp_due_period_paid)
+            };
+            State {
+                annual_interest_margin: before_state.annual_interest_margin,
+                annual_interest: before_state.annual_interest,
+                principal_due: before_state.principal_due - exp_receipt.principal_paid(),
+                due_margin_interest: before_state.due_margin_interest
+                    - exp_receipt.due_margin_paid(),
+                due_interest: before_state.due_interest - exp_receipt.due_interest_paid(),
+                overdue: exp_overdue,
+            }
+        }
+
         fn state<P>(
             principal: P,
-            overdue_margin_interest: P,
-            overdue_interest: P,
             due_margin_interest: P,
             due_interest: P,
+            overdue: Overdue<Lpn>,
         ) -> State<Lpn>
         where
             P: Into<Coin<Lpn>>,
@@ -932,10 +1065,9 @@ mod tests {
                 LOAN_INTEREST_RATE,
                 MARGIN_INTEREST_RATE,
                 principal,
-                overdue_margin_interest,
-                overdue_interest,
                 due_margin_interest,
                 due_interest,
+                overdue,
             )
         }
 
@@ -943,10 +1075,9 @@ mod tests {
             annual_interest: Percent,
             annual_interest_margin: Percent,
             principal: P,
-            overdue_margin_interest: P,
-            overdue_interest: P,
             due_margin_interest: P,
             due_interest: P,
+            overdue: Overdue<Lpn>,
         ) -> State<Lpn>
         where
             P: Into<Coin<Lpn>>,
@@ -955,10 +1086,9 @@ mod tests {
                 annual_interest,
                 annual_interest_margin,
                 principal_due: principal.into(),
-                overdue_margin_interest: overdue_margin_interest.into(),
-                overdue_interest: overdue_interest.into(),
                 due_margin_interest: due_margin_interest.into(),
                 due_interest: due_interest.into(),
+                overdue,
             }
         }
 
@@ -991,47 +1121,20 @@ mod tests {
             coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent,
             period::Period,
         };
-        use lpp::msg::LoanResponse;
+        use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::loan::{tests::create_loan_custom, State};
+        use crate::loan::{
+            tests::{create_loan_custom, LppLoanLocal},
+            Overdue, State,
+        };
 
         use super::{LEASE_START, MARGIN_INTEREST_RATE};
 
-        fn interest<Lpn>(period_len: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
-        where
-            Lpn: Currency,
-        {
-            InterestPeriod::with_interest(rate)
-                .and_period(Period::from_length(Timestamp::default(), period_len))
-                .interest(principal_due)
-        }
-
-        fn interests<Lpn>(
-            paid_by: Timestamp,
-            now: Timestamp,
-            due_period: Duration,
-            principal_due: Coin<Lpn>,
-            rate: Percent,
-        ) -> (Coin<Lpn>, Coin<Lpn>)
-        where
-            Lpn: Currency,
-        {
-            let overdue_at = if Duration::between(Timestamp::default(), now) < due_period {
-                Timestamp::default()
-            } else {
-                now - due_period
-            }
-            .clamp(paid_by, now);
-            (
-                interest(Duration::between(paid_by, overdue_at), principal_due, rate),
-                interest(Duration::between(overdue_at, now), principal_due, rate),
-            )
-        }
-
+        #[track_caller]
         fn test_state(interest_paid_by: Timestamp, margin_paid_by: Timestamp, now: Timestamp) {
             let principal_due = 10000.into();
-            let due_period = Duration::YEAR;
+            let due_period_len = Duration::YEAR;
             let annual_interest_margin = MARGIN_INTEREST_RATE;
             let annual_interest = Percent::from_permille(145);
 
@@ -1045,34 +1148,32 @@ mod tests {
                 MARGIN_INTEREST_RATE,
                 loan_resp.clone(),
                 margin_paid_by,
-                due_period,
+                due_period_len,
             );
-
-            let (expected_margin_overdue, expected_margin_due) = interests(
-                margin_paid_by,
-                now,
-                due_period,
-                principal_due,
+            let due_period_margin = Period::from_till(margin_paid_by, now);
+            let lpp_loan = LppLoanLocal::new(loan_resp);
+            let overdue = Overdue::new(
+                &due_period_margin,
+                due_period_len,
                 annual_interest_margin,
+                &lpp_loan,
             );
-
-            let (expected_interest_overdue, expected_interest_due) = interests(
-                interest_paid_by,
-                now,
-                due_period,
-                principal_due,
-                annual_interest,
+            let due_period = Period::till_length(
+                due_period_margin.till(),
+                due_period_len.min(due_period_margin.length()),
             );
+            let expected_margin_due = interest(due_period, principal_due, annual_interest_margin);
+            let expected_interest_due =
+                lpp_loan.interest_due(due_period_margin.till()) - overdue.interest();
 
             assert_eq!(
                 State {
                     annual_interest,
                     annual_interest_margin,
-                    overdue_interest: expected_interest_overdue,
-                    overdue_margin_interest: expected_margin_overdue,
+                    principal_due,
                     due_interest: expected_interest_due,
                     due_margin_interest: expected_margin_due,
-                    principal_due,
+                    overdue,
                 },
                 loan.state(now),
                 "Got different state than expected!",
@@ -1091,6 +1192,15 @@ mod tests {
                 LEASE_START,
                 LEASE_START + since_paid,
             );
+        }
+
+        fn interest<Lpn>(period: Period, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
+        where
+            Lpn: Currency,
+        {
+            InterestPeriod::with_interest(rate)
+                .and_period(period)
+                .interest(principal_due)
         }
 
         #[test]
@@ -1195,13 +1305,14 @@ mod tests {
         }
     }
 
+    // TODO migrate to using lpp::stub::unchecked_lpp_loan
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct LppLoanLocal {
+    pub(super) struct LppLoanLocal {
         loan: LoanResponse<Lpn>,
     }
 
     impl LppLoanLocal {
-        fn new(loan: LoanResponse<Lpn>) -> Self {
+        pub fn new(loan: LoanResponse<Lpn>) -> Self {
             Self { loan }
         }
     }

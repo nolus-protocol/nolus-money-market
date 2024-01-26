@@ -3,6 +3,7 @@ use std::ops::Add;
 use currency::Currency;
 use finance::{
     coin::Coin,
+    duration::Duration,
     liability::Liability,
     percent::Percent,
     price::{self, Price},
@@ -12,6 +13,8 @@ use crate::{
     error::{ContractError, ContractResult},
     position::{Cause, Debt, Liquidation},
 };
+
+use super::InterestDue;
 
 mod dto;
 
@@ -66,6 +69,13 @@ where
                 Ok(borrow)
             }
         }
+    }
+
+    pub fn overdue_liquidation_in<Interest>(&self, interest: &Interest) -> Duration
+    where
+        Interest: InterestDue<Lpn>,
+    {
+        interest.time_to_get_to(self.min_transaction)
     }
 
     pub fn debt<Asset>(

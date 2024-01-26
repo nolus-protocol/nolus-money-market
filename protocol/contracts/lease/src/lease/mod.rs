@@ -17,6 +17,7 @@ pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
 mod alarm;
 mod close;
 mod dto;
+mod interest;
 mod liquidation;
 mod paid;
 mod repay;
@@ -88,13 +89,16 @@ where
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
         let loan = self.loan.state(now);
+        let overdue_collect_in = self.position.overdue_liquidation_in(&loan);
+
         State {
             amount: self.position.amount(),
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
-            overdue_margin: loan.overdue_margin_interest,
-            overdue_interest: loan.overdue_interest,
+            overdue_margin: loan.overdue.margin(),
+            overdue_interest: loan.overdue.interest(),
+            overdue_collect_in,
             due_margin: loan.due_margin_interest,
             due_interest: loan.due_interest,
             validity: now,
@@ -137,6 +141,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Add;
+
     use serde::{Deserialize, Serialize};
 
     use currencies::test::{PaymentC7, StableC1};
@@ -167,7 +173,6 @@ mod tests {
     const ORACLE_ADDR: &str = "oracle_addr";
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
-    const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     const DUE_PERIOD: Duration = Duration::from_days(100);
     const GRACE_PERIOD: Duration = Duration::from_days(10);
     pub(super) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
@@ -190,6 +195,7 @@ mod tests {
         }
     }
 
+    // TODO migrate to using lpp::stub::unchecked_lpp_loan
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct LppLoanLocal<Lpn>
     where
@@ -328,12 +334,6 @@ mod tests {
         )
     }
 
-    pub fn request_state(
-        lease: Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>,
-    ) -> State<TestCurrency, TestLpn> {
-        lease.state(LEASE_STATE_AT)
-    }
-
     pub fn coin(a: u128) -> Coin<TestCurrency> {
         Coin::new(a)
     }
@@ -343,20 +343,21 @@ mod tests {
     }
 
     #[test]
-    // Open state -> Lease's balance in the loan's currency > 0, loan exists in the lpp
     fn state_opened() {
         let lease_amount = coin(1000);
         let interest_rate = Percent::from_permille(50);
-        // LPP loan
+        let overdue_collect_in = Duration::from_days(500); //=min_transaction/principal_due/(interest+margin)*1000*365
+
         let loan = LoanResponse {
-            principal_due: lpn_coin(300),
+            principal_due: lpn_coin(100_000),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
-
         let lease = open_lease(lease_amount, loan.clone());
 
-        let res = request_state(lease);
+        let state_since_open = Duration::from_nanos(150);
+        let state_at = LEASE_START.add(state_since_open);
+        let res = lease.state(state_at);
         let exp = State {
             amount: lease_amount,
             interest_rate,
@@ -364,9 +365,10 @@ mod tests {
             principal_due: loan.principal_due,
             overdue_margin: lpn_coin(0),
             overdue_interest: lpn_coin(0),
+            overdue_collect_in,
             due_margin: lpn_coin(0),
             due_interest: lpn_coin(0),
-            validity: LEASE_STATE_AT,
+            validity: state_at,
         };
 
         assert_eq!(exp, res);

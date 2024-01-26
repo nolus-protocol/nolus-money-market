@@ -315,8 +315,8 @@ mod tests {
     fn projected_liability(lease: &TestLease, at: Timestamp) -> Coin<TestLpn> {
         let l = lease.loan.state(at);
         l.principal_due
-            + l.overdue_interest
-            + l.overdue_margin_interest
+            + l.overdue.interest()
+            + l.overdue.margin()
             + l.due_interest
             + l.due_margin_interest
     }

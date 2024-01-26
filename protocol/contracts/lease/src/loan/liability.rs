@@ -10,10 +10,11 @@ where
     Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
 {
+    // TODO get rid of
     pub(crate) fn liability_status(&self, now: Timestamp) -> LiabilityStatus<Lpn> {
         let state = self.state(now);
 
-        let overdue = state.overdue_margin_interest + state.overdue_interest;
+        let overdue = state.overdue.margin() + state.overdue.interest();
 
         let total_due =
             state.principal_due + overdue + state.due_margin_interest + state.due_interest;
