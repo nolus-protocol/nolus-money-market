@@ -16,13 +16,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::type_url::TypeUrl;
 
+// TODO intro an abstraction of a request, and
+// 1. remove the public visibility
+// 2. add a `fn ExactAmountIn::parse_req`
 pub type RequestMsg = MsgSwapExactAmountIn;
 
 impl TypeUrl for RequestMsg {
     const TYPE_URL: &'static str = Self::TYPE_URL;
 }
 
-pub type ResponseMsg = MsgSwapExactAmountInResponse;
+type ResponseMsg = MsgSwapExactAmountInResponse;
 
 impl TypeUrl for ResponseMsg {
     const TYPE_URL: &'static str = Self::TYPE_URL;

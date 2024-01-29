@@ -1,11 +1,9 @@
 [package]
 name = "profit"
-version = "0.5.8"
+version = "0.5.9"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -15,7 +13,8 @@ net_dev = ["contract", "currencies/net_dev"]
 net_test = ["contract", "currencies/net_test"]
 net_main = ["contract", "currencies/net_main"]
 
-astroport = ["contract", "currencies/astroport", "swap/astroport"]
+astroport_main = ["contract", "currencies/astroport", "swap/astroport_main"]
+astroport_test = ["contract", "currencies/astroport", "swap/astroport_test"]
 osmosis = ["contract", "currencies/osmosis", "swap/osmosis"]
 
 contract = [

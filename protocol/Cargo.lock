@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -959,7 +959,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "access-control",
  "cosmwasm-std",

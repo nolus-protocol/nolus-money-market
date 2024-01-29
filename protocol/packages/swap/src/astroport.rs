@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use astroport::{
     asset::AssetInfo,
     router::{ExecuteMsg, SwapOperation, SwapResponseData},
@@ -30,37 +32,37 @@ impl TypeUrl for RequestMsg {
     const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
 }
 
-pub type ResponseMsg = MsgExecuteContractResponse;
+type ResponseMsg = MsgExecuteContractResponse;
 
 impl TypeUrl for ResponseMsg {
     const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Impl;
+pub struct RouterImpl<R>(PhantomData<R>);
 
-trait RouterAddress {
+trait Router {
     const ROUTER_ADDR: &'static str;
 }
 
-// TODO pass the ExactAmountIn impl as a type parameter of the dex package
-// #[cfg(any(feature = "net_dev", feature = "net_test"))]
-// impl RouterAddress for Impl {
-//     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-//     const ROUTER_ADDR: &'static str =
-//         "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
-// }
-
-// TODO pass the ExactAmountIn impl as a type parameter of the dex package
-// temporarily use the main net address
-// #[cfg(feature = "net_main")]
-impl RouterAddress for Impl {
+pub struct Main {}
+impl Router for Main {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
     const ROUTER_ADDR: &'static str =
         "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
 }
 
-impl ExactAmountIn for Impl {
+pub struct Test {}
+impl Router for Test {
+    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+    const ROUTER_ADDR: &'static str =
+        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+}
+
+impl<R> ExactAmountIn for RouterImpl<R>
+where
+    R: Router,
+{
     fn build<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
@@ -86,7 +88,7 @@ impl ExactAmountIn for Impl {
             .and_then(|swap_msg| cosmwasm_std::to_json_vec(&swap_msg).map_err(Into::into))
             .map(|msg| RequestMsg {
                 sender: sender.into(),
-                contract: Self::ROUTER_ADDR.into(),
+                contract: R::ROUTER_ADDR.into(),
                 msg,
                 funds: vec![token_in],
             })
@@ -197,6 +199,8 @@ mod test {
     use finance::coin::Coin;
     use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 
+    use crate::astroport::Main;
+
     use super::SwapTarget;
 
     const INVALID_TICKER: SymbolStatic = "NotATicker";
@@ -292,7 +296,7 @@ mod test {
     fn resp() {
         use dex::swap::ExactAmountIn;
 
-        type SwapClient = super::Impl;
+        type SwapClient = super::RouterImpl<Main>;
 
         let amount = 20;
         let mut resp = vec![SwapClient::build_resp(amount)].into_iter();

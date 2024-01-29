@@ -6,6 +6,8 @@ edition.workspace = true
 license.workspace = true
 
 [features]
+astroport_main = ["astroport"]
+astroport_test = ["astroport"]
 astroport = [
     "sdk/cosmos_ibc",
     "dep:astroport",
