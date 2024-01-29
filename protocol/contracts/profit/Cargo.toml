@@ -9,12 +9,11 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract", "currencies/net_dev"]
-net_test = ["contract", "currencies/net_test"]
-net_main = ["contract", "currencies/net_main"]
+net_dev = ["contract", "currencies/net_dev", "swap/test"]
+net_test = ["contract", "currencies/net_test", "swap/test"]
+net_main = ["contract", "currencies/net_main", "swap/main"]
 
-astroport_main = ["contract", "currencies/astroport", "swap/astroport_main"]
-astroport_test = ["contract", "currencies/astroport", "swap/astroport_test"]
+astroport = ["contract", "currencies/astroport", "swap/astroport"]
 osmosis = ["contract", "currencies/osmosis", "swap/osmosis"]
 
 contract = [

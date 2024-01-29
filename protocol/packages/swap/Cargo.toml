@@ -6,8 +6,11 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-astroport_main = ["astroport"]
-astroport_test = ["astroport"]
+# TODO get rid of main and test and specialize astroport into ~_main and ~_test when the CI builds protocols provided as input
+# instead of implicitly building them in matrix
+main = []
+test = []
+
 astroport = [
     "sdk/cosmos_ibc",
     "dep:astroport",

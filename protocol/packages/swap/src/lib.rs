@@ -1,6 +1,6 @@
-#[cfg(feature = "astroport_main")]
+#[cfg(all(feature = "astroport", feature = "main"))]
 pub type Impl = astroport::RouterImpl<astroport::Main>;
-#[cfg(feature = "astroport_test")]
+#[cfg(all(feature = "astroport", feature = "test"))]
 pub type Impl = astroport::RouterImpl<astroport::Test>;
 #[cfg(feature = "osmosis")]
 pub use self::osmosis::*;
@@ -9,4 +9,3 @@ pub use self::osmosis::*;
 mod astroport;
 #[cfg(feature = "osmosis")]
 mod osmosis;
-mod type_url;

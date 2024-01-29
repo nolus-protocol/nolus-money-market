@@ -14,22 +14,11 @@ use platform::{
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 use serde::{Deserialize, Serialize};
 
-use crate::type_url::TypeUrl;
-
 // TODO intro an abstraction of a request, and
 // 1. remove the public visibility
 // 2. add a `fn ExactAmountIn::parse_req`
 pub type RequestMsg = MsgSwapExactAmountIn;
-
-impl TypeUrl for RequestMsg {
-    const TYPE_URL: &'static str = Self::TYPE_URL;
-}
-
 type ResponseMsg = MsgSwapExactAmountInResponse;
-
-impl TypeUrl for ResponseMsg {
-    const TYPE_URL: &'static str = Self::TYPE_URL;
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Impl;

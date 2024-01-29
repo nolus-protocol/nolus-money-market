@@ -18,25 +18,15 @@ use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtoCoin,
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
+        traits::Name,
         Any,
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 use serde::{Deserialize, Serialize};
 
-use crate::type_url::TypeUrl;
-
 pub type RequestMsg = MsgExecuteContract;
-
-impl TypeUrl for RequestMsg {
-    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
-}
-
 type ResponseMsg = MsgExecuteContractResponse;
-
-impl TypeUrl for ResponseMsg {
-    const TYPE_URL: &'static str = <Self as sdk::cosmos_sdk_proto::traits::Name>::NAME;
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct RouterImpl<R>(PhantomData<R>);
@@ -93,7 +83,7 @@ where
                 funds: vec![token_in],
             })
             .map(|req| {
-                trx.add_message(RequestMsg::TYPE_URL, req);
+                trx.add_message(RequestMsg::NAME, req);
             })
     }
 
@@ -105,7 +95,7 @@ where
             .next()
             .ok_or_else(|| Error::MissingResponse("router swap".into()))
             .and_then(|resp| {
-                trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)
+                trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::NAME)
                     .map_err(Into::into)
             })
             .and_then(|cosmwasm_resp| {
@@ -123,7 +113,7 @@ where
         })
         .expect("test result serialization works");
         Any {
-            type_url: ResponseMsg::TYPE_URL.into(),
+            type_url: ResponseMsg::NAME.into(),
             value: (ResponseMsg { data: swap_resp }).encode_to_vec(),
         }
     }
