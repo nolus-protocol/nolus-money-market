@@ -211,7 +211,6 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     let ica_port: String = format!("icacontroller-{ica_addr}");
     let ica_channel: String = format!("channel-{ica_addr}");
 
-    dbg!("111111");
     let mut response: ResponseWithInterChainMsgs<'_, ()> = confirm_ica_and_transfer_funds(
         app,
         lease_addr.clone(),
@@ -220,14 +219,12 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (downpayment, exp_borrow),
     );
 
-    dbg!("222222222");
     let requests: Vec<RequestMsg> = super::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     );
 
-    dbg!("3333333333");
     () = response.unwrap_response();
 
     check_state_opening(app, lease_addr.clone());
@@ -264,7 +261,6 @@ where
     DownpaymentC: Currency,
     Lpn: Currency,
 {
-    dbg!("111111222222");
     let mut response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
         app,
         lease_addr.clone(),
@@ -275,7 +271,6 @@ where
     )
     .ignore_response();
 
-    dbg!("11111133333333");
     let downpayment: CwCoin = ibc::expect_transfer(
         &mut response,
         TestCase::LEASER_IBC_CHANNEL,
@@ -289,7 +284,6 @@ where
 
     check_state_opening(app, lease_addr.clone());
 
-    dbg!("1111114444");
     let mut response: ResponseWithInterChainMsgs<'_, ()> = ibc::do_transfer(
         app,
         lease_addr.clone(),
@@ -299,7 +293,6 @@ where
     )
     .ignore_response();
 
-    dbg!("111111555555");
     let borrow: CwCoin = ibc::expect_transfer(
         &mut response,
         TestCase::LEASER_IBC_CHANNEL,
@@ -312,9 +305,6 @@ where
     assert_eq!(borrow, to_cosmwasm(exp_borrow));
 
     check_state_opening(app, lease_addr.clone());
-
-    dbg!("111111666666666");
-    dbg!(&borrow);
 
     ibc::do_transfer(app, lease_addr, ica_addr, false, &borrow).ignore_response()
 }

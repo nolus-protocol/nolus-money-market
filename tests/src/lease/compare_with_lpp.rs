@@ -16,13 +16,13 @@ fn manual_calculation() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;
     let lease_address = super::open_lease(&mut test_case, downpayment, None);
-    let quote_result = dbg!(lease::quote_query(&test_case, downpayment));
+    let quote_result = lease::quote_query(&test_case, downpayment);
 
     let query_result = super::state_query(&test_case, lease_address.as_ref());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
 
-    assert_eq!(dbg!(query_result), expected_result);
+    assert_eq!(query_result, expected_result);
 
     test_case.app.time_shift(
         LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD
@@ -37,13 +37,14 @@ fn manual_calculation() {
         principal_due: Coin::<LpnCurrency>::new(1_857_142_857_142).into(),
         overdue_margin: LpnCoin::new(13_737_769_080).into(),
         overdue_interest: LpnCoin::new(32_054_794_520).into(),
+        overdue_collect_in: Duration::default(),
         due_margin: LpnCoin::new(13_737_769_080).into(),
         due_interest: LpnCoin::new(32_054_794_520).into(),
         validity: super::block_time(&test_case),
         in_progress: None,
     };
 
-    assert_eq!(dbg!(query_result), expected_result);
+    assert_eq!(query_result, expected_result);
 }
 
 #[test]
@@ -56,7 +57,7 @@ fn lpp_state_implicit_time() {
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
 
-    assert_eq!(dbg!(query_result), expected_result);
+    assert_eq!(query_result, expected_result);
 
     test_case.app.time_shift(
         LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD
@@ -108,7 +109,7 @@ fn lpp_state_explicit_time() {
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
 
-    assert_eq!(dbg!(query_result), expected_result);
+    assert_eq!(query_result, expected_result);
 
     test_case.app.time_shift(
         LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD

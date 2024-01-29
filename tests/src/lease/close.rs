@@ -19,7 +19,6 @@ fn state_closed() {
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_addr: Addr = super::open_lease(&mut test_case, downpayment, None);
-    dbg!("111111999999999");
     let borrowed_lpn: LpnCoin = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin =
         price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());

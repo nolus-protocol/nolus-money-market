@@ -175,6 +175,7 @@ fn full_repay_with_max_ltd() {
         principal_due: price::total(percent.of(downpayment), super::price_lpn_of()).into(),
         overdue_margin: LpnCoin::ZERO.into(),
         overdue_interest: LpnCoin::ZERO.into(),
+        overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
         due_margin: LpnCoin::ZERO.into(),
         due_interest: LpnCoin::ZERO.into(),
         validity: Timestamp::from_nanos(1537237449879305533),

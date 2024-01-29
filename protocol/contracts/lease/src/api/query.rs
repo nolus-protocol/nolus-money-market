@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Percent;
+use finance::{duration::Duration, percent::Percent};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
@@ -33,6 +33,7 @@ pub enum StateResponse {
         principal_due: LpnCoin,
         overdue_margin: LpnCoin,
         overdue_interest: LpnCoin,
+        overdue_collect_in: Duration,
         due_margin: LpnCoin,
         due_interest: LpnCoin,
         validity: Timestamp,

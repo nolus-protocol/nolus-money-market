@@ -352,16 +352,6 @@ fn deposit_and_withdraw() {
     );
 
     // loans should not change asserts for lender2, the default loan
-    let balance_lpp: LppBalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.lpp().clone(),
-            &QueryLpp::LppBalance(),
-        )
-        .unwrap();
-    dbg!(balance_lpp);
-
     let _: Addr = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
         test_case.address_book.lease_code_id(),
@@ -389,7 +379,6 @@ fn deposit_and_withdraw() {
             &QueryLpp::LppBalance(),
         )
         .unwrap();
-    dbg!(&balance_lpp);
 
     let balance_nlpn2: BalanceResponse = test_case
         .app
@@ -693,7 +682,7 @@ fn loan_open_and_repay() {
             &QueryLpp::LppBalance(),
         )
         .unwrap();
-    dbg!(&resp);
+
     assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
@@ -1056,7 +1045,6 @@ fn compare_lpp_states() {
             &QueryLpp::LppBalance(),
         )
         .unwrap();
-    dbg!(&resp);
     assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);

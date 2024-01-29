@@ -14,7 +14,7 @@ use lease::{
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
-    cosmwasm_std::{Addr, Event, Timestamp},
+    cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
 use swap::RequestMsg;
@@ -117,9 +117,7 @@ fn partial_close_loan_not_closed() {
             DOWNPAYMENT,
             repay_principal,
             close_amount,
-            Timestamp::default(),
-            Timestamp::default(),
-            Timestamp::default(),
+            Instantiator::REPAYMENT_PERIOD,
         ),
         state
     );

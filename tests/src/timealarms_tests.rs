@@ -520,7 +520,6 @@ fn test_time_notify() {
         .ignore_response()
         .unwrap_response();
     let resp = dispatch(&mut test_case, 100);
-    dbg!(&resp);
     assert!(any_error(&resp));
     assert_eq!(sent_alarms(&resp), Some(2));
     resp.assert_event(&Event::new("wasm-timealarm").add_attribute("receiver", lease3.clone()));

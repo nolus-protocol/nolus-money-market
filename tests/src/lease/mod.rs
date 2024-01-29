@@ -13,7 +13,8 @@ use leaser::msg::QuoteResponse;
 use sdk::cosmwasm_std::{coin, Addr, Timestamp};
 
 use crate::common::{
-    self, cwcoin, cwcoin_dex, leaser as leaser_mod,
+    self, cwcoin, cwcoin_dex,
+    leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
     test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -124,13 +125,10 @@ where
 pub(super) fn calculate_interest(
     principal: Coin<LpnCurrency>,
     interest_rate: Percent,
-    duration: u64,
+    duration: Duration,
 ) -> Coin<LpnCurrency> {
     InterestPeriod::with_interest(interest_rate)
-        .and_period(Period::from_length(
-            Timestamp::default(),
-            Duration::from_nanos(duration),
-        ))
+        .and_period(Period::from_length(Timestamp::default(), duration))
         .interest(principal)
 }
 
@@ -370,24 +368,25 @@ pub(super) fn expected_open_state<
     downpayment: Coin<DownpaymentC>,
     payments: Coin<PaymentC>,
     closed: Coin<AssetC>,
-    last_paid: Timestamp,
-    due_period_start: Timestamp,
-    now: Timestamp,
+    max_due: Duration,
 ) -> StateResponse
 where
     DownpaymentC: Currency,
     PaymentC: Currency,
     AssetC: Currency,
 {
+    let now = test_case.app.block_info().time;
+    let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
     let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
     let expected_principal: LpnCoin = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
         - price::total(payments, price_lpn_of::<PaymentC>());
+    let due_period_start = (now - max_due).max(last_paid);
     let (overdue, due) = (
-        due_period_start.nanos().saturating_sub(last_paid.nanos()),
-        now.nanos().saturating_sub(due_period_start.nanos()),
+        Duration::between(last_paid, due_period_start),
+        Duration::between(due_period_start, now),
     );
     StateResponse::Opened {
         amount: (total - closed).into(),
@@ -406,6 +405,11 @@ where
             overdue,
         )
         .into(),
+        overdue_collect_in: if overdue == Duration::default() {
+            Duration::between(now - max_due, last_paid)
+        } else {
+            Duration::default()
+        },
         due_margin: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate_margin,
@@ -456,9 +460,7 @@ where
         downpayment,
         payments,
         Coin::<LeaseCurrency>::default(),
-        Timestamp::default(),
-        Timestamp::default(),
-        Timestamp::default(),
+        LeaserInstantiator::REPAYMENT_PERIOD,
     )
 }
 

@@ -21,6 +21,7 @@ impl StateResponse {
             principal_due: open_lease.principal_due.into(),
             overdue_margin: open_lease.overdue_margin.into(),
             overdue_interest: open_lease.overdue_interest.into(),
+            overdue_collect_in: open_lease.overdue_collect_in,
             due_margin: open_lease.due_margin.into(),
             due_interest: open_lease.due_interest.into(),
             validity: open_lease.validity,

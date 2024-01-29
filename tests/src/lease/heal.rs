@@ -16,7 +16,7 @@ use crate::{
 #[test]
 fn active_state() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
-    let downpayment = LeaseCoin::new(100);
+    let downpayment = LeaseCoin::new(10_000);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
     let query_result = super::state_query(&test_case, &lease.clone().into_string());
