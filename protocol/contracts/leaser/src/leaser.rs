@@ -11,7 +11,7 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
 use crate::{
-    cmd::Quote,
+    cmd::{LpnCurrencies, Quote},
     migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
@@ -42,7 +42,7 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::try_new(config.lpp, self.deps.querier)?;
+        let lpp = LppRef::<LpnCurrencies>::try_new(config.lpp_addr, self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 
@@ -126,7 +126,7 @@ fn update_lpp_impl(
     batch: &mut Batch,
 ) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp;
-    let lpp_update_code = ExecuteMsg::NewLeaseCode {
+    let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };
     batch

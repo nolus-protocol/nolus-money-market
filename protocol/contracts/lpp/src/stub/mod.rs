@@ -1,11 +1,10 @@
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currencies::Lpns;
 use currency::{
-    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice,
-    Tickers,
+    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned,
+    SymbolSlice, Tickers,
 };
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -26,26 +25,37 @@ pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct LppRef {
+pub struct LppRef<Lpns> {
     addr: Addr,
-    currency: SymbolOwned,
+    lpn: SymbolOwned,
+    #[serde(skip)]
+    _lpns: PhantomData<Lpns>,
 }
 
-impl LppRef {
+impl<Lpns> LppRef<Lpns>
+where
+    Lpns: Group + Serialize,
+{
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
-        let currency = resp.lpn_ticker().into();
+        let lpn = resp.lpn_ticker();
 
-        Ok(Self { addr, currency })
+        currency::validate::<Lpns>(lpn)
+            .map(|()| Self {
+                addr,
+                lpn: lpn.to_string(),
+                _lpns: PhantomData,
+            })
+            .map_err(Into::into)
     }
 
     pub fn addr(&self) -> &Addr {
         &self.addr
     }
 
-    pub fn currency(&self) -> &SymbolSlice {
-        &self.currency
+    pub fn lpn(&self) -> &SymbolSlice {
+        &self.lpn
     }
 
     pub fn execute_loan<Cmd>(
@@ -55,20 +65,21 @@ impl LppRef {
         querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLoan,
+        Cmd: WithLppLoan<Lpns>,
         ContractError: Into<Cmd::Error>,
     {
-        struct CurrencyVisitor<'a, Cmd, Lease> {
+        struct CurrencyVisitor<'a, Cmd, Lpns, Lease> {
             cmd: Cmd,
-            lpp_ref: LppRef,
+            lpp_ref: LppRef<Lpns>,
             lease: Lease,
             querier: QuerierWrapper<'a>,
         }
 
-        impl<'a, Cmd, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lease>
+        impl<'a, Cmd, Lpns, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lpns, Lease>
         where
-            Cmd: WithLppLoan,
+            Cmd: WithLppLoan<Lpns>,
             ContractError: Into<Cmd::Error>,
+            Lpns: Group + Serialize,
             Lease: Into<Addr>,
         {
             type Output = Cmd::Output;
@@ -87,10 +98,9 @@ impl LppRef {
             }
         }
 
-        // TODO push the group
         Tickers
             .visit_any::<Lpns, _>(
-                &self.currency.clone(),
+                &self.lpn.clone(),
                 CurrencyVisitor {
                     cmd,
                     lpp_ref: self,
@@ -107,18 +117,19 @@ impl LppRef {
         querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLender,
+        Cmd: WithLppLender<Lpns>,
         ContractError: Into<Cmd::Error>,
     {
-        struct CurrencyVisitor<'a, Cmd> {
+        struct CurrencyVisitor<'a, Cmd, Lpns> {
             cmd: Cmd,
-            lpp_ref: LppRef,
+            lpp_ref: LppRef<Lpns>,
             querier: QuerierWrapper<'a>,
         }
 
-        impl<'a, Cmd> AnyVisitor for CurrencyVisitor<'a, Cmd>
+        impl<'a, Cmd, Lpns> AnyVisitor for CurrencyVisitor<'a, Cmd, Lpns>
         where
-            Cmd: WithLppLender,
+            Cmd: WithLppLender<Lpns>,
+            Lpns: Group + Serialize,
         {
             type Output = Cmd::Output;
             type Error = CmdError<Cmd::Error, ContractError>;
@@ -133,10 +144,9 @@ impl LppRef {
             }
         }
 
-        // TODO push the group
         Tickers
             .visit_any::<Lpns, _>(
-                &self.currency.clone(),
+                &self.lpn.clone(),
                 CurrencyVisitor {
                     cmd,
                     lpp_ref: self,
@@ -150,9 +160,10 @@ impl LppRef {
         self,
         lease: impl Into<Addr>,
         querier: QuerierWrapper<'_>,
-    ) -> Result<LppLoanImpl<Lpn>>
+    ) -> Result<LppLoanImpl<Lpn, Lpns>>
     where
         Lpn: Currency + DeserializeOwned,
+        Lpns: Group + Serialize,
     {
         querier
             .query_wasm_smart(
@@ -166,9 +177,10 @@ impl LppRef {
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
-    fn into_lender<C>(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, C>
+    fn into_lender<Lpn>(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns>
     where
-        C: Currency,
+        Lpn: Currency,
+        Lpns: Group,
     {
         LppLenderStub::new(self, querier)
     }
@@ -183,7 +195,8 @@ impl LppRef {
     {
         Self {
             addr: Addr::unchecked(addr),
-            currency: Lpn::TICKER.into(),
+            lpn: Lpn::TICKER.into(),
+            _lpns: PhantomData::<Lpns>,
         }
     }
 }
