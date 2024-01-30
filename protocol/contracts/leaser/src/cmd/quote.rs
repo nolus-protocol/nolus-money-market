@@ -21,7 +21,7 @@ impl<'r> WithLppLender for Quote<'r> {
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpns, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency,
