@@ -92,7 +92,7 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due: Coin<Lpn> = self.total_due(env.block.time);
+            let total_due: Coin<Lpn> = self.total_due(&env.block.time);
 
             self.commited_balance(&env.contract.address, querier, pending_deposit)
                 .map(|balance: Coin<Lpn>| {
@@ -116,7 +116,7 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(env.block.time);
+        let total_interest_due = self.total.total_interest_due_by_now(&env.block.time);
 
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
@@ -142,7 +142,7 @@ where
             price::total_of(balance_nlpn).is(self.total_lpn(
                 deps.querier,
                 &env.contract.address,
-                env.block.time,
+                &env.block.time,
                 pending_deposit,
             )?)
         };
@@ -182,7 +182,7 @@ where
         quote: Coin<Lpn>,
         account: &Addr,
         querier: QuerierWrapper<'_>,
-        now: Timestamp,
+        now: &Timestamp,
     ) -> Result<Option<Percent>> {
         let balance = self.balance(account, querier)?;
 
@@ -215,7 +215,7 @@ where
         let now = env.block.time;
 
         let annual_interest_rate =
-            match self.query_quote(amount, &env.contract.address, deps.querier, now)? {
+            match self.query_quote(amount, &env.contract.address, deps.querier, &now)? {
                 Some(rate) => Ok(rate),
                 None => Err(ContractError::NoLiquidity {}),
             }?;
@@ -245,7 +245,7 @@ where
     ) -> Result<Coin<Lpn>> {
         let mut loan = Loan::load(deps.storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(env.block.time, repay_amount);
+        let payment = loan.repay(&env.block.time, repay_amount);
         Loan::save(deps.storage, lease_addr, loan)?;
 
         self.total
@@ -284,7 +284,7 @@ where
         bank::balance(account, querier).map_err(Into::into)
     }
 
-    fn total_due(&self, now: Timestamp) -> Coin<Lpn> {
+    fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
         self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
     }
 
@@ -292,7 +292,7 @@ where
         &self,
         querier: QuerierWrapper<'_>,
         account: &Addr,
-        now: Timestamp,
+        now: &Timestamp,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
         self.commited_balance(account, querier, pending_deposit)
@@ -420,7 +420,7 @@ mod test {
                 Coin::new(7_700_000),
                 &env.contract.address,
                 deps.as_ref().querier,
-                env.block.time,
+                &env.block.time,
             )
             .expect("can't query quote")
             .expect("should return some interest_rate");
@@ -440,7 +440,7 @@ mod test {
                 Coin::new(1_000_000),
                 &env.contract.address,
                 deps.as_ref().querier,
-                env.block.time,
+                &env.block.time,
             )
             .expect("can't query quote")
             .expect("should return some interest_rate");
@@ -520,13 +520,13 @@ mod test {
         assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(env.block.time), 0u128.into());
+        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
 
         // pay interest for year/10
-        let payment = loan.interest_due(env.block.time);
+        let payment = loan.interest_due(&env.block.time);
 
         let repay = lpp
             .try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), payment)
@@ -541,7 +541,7 @@ mod test {
         assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(env.block.time), 0u128.into());
+        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         lpp.try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), Coin::new(0))
@@ -554,7 +554,7 @@ mod test {
         let payment = Loan::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query the loan")
             .expect("should exist")
-            .interest_due(env.block.time)
+            .interest_due(&env.block.time)
             + Coin::new(amount)
             + Coin::new(100);
 
@@ -726,7 +726,7 @@ mod test {
         let payment = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
-            .interest_due(env.block.time);
+            .interest_due(&env.block.time);
         assert_eq!(payment, Coin::new(0));
 
         let repay = lpp
@@ -802,7 +802,7 @@ mod test {
                 Coin::new(5_000_000),
                 &env.contract.address,
                 deps.as_ref().querier,
-                env.block.time,
+                &env.block.time,
             )
             .expect("can't query quote")
             .expect("should return some interest_rate");
@@ -821,7 +821,7 @@ mod test {
             .total_lpn(
                 deps.as_ref().querier,
                 &env.contract.address,
-                env.block.time,
+                &env.block.time,
                 Coin::ZERO,
             )
             .expect("should query total_lpn");
@@ -857,7 +857,7 @@ mod test {
             .total_lpn(
                 deps.as_ref().querier,
                 &env.contract.address,
-                env.block.time,
+                &env.block.time,
                 Coin::ZERO,
             )
             .expect("should query total_lpn");

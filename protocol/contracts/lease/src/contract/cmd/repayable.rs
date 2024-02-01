@@ -25,7 +25,7 @@ pub(crate) trait RepayFn {
         self,
         lease: &mut LeaseDO<Lpn, Asset, Lpp, Oracle>,
         amount: Coin<Lpn>,
-        now: Timestamp,
+        now: &Timestamp,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
@@ -42,21 +42,21 @@ pub(crate) trait Emitter {
         Lpn: Currency;
 }
 
-pub(crate) struct Repay<RepayableT, EmitterT>
+pub(crate) struct Repay<'a, RepayableT, EmitterT>
 where
     RepayableT: RepayFn,
     EmitterT: Emitter,
 {
     repay_fn: RepayableT,
     amount: LpnCoin,
-    now: Timestamp,
+    now: &'a Timestamp,
     emitter_fn: EmitterT,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
 }
 
-impl<RepayableT, EmitterT> Repay<RepayableT, EmitterT>
+impl<'a, RepayableT, EmitterT> Repay<'a, RepayableT, EmitterT>
 where
     RepayableT: RepayFn,
     EmitterT: Emitter,
@@ -64,7 +64,7 @@ where
     pub fn new(
         repay_fn: RepayableT,
         amount: LpnCoin,
-        now: Timestamp,
+        now: &'a Timestamp,
         emitter_fn: EmitterT,
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
@@ -101,7 +101,7 @@ pub(crate) struct RepayResult {
     pub liquidation: LiquidationStatus,
 }
 
-impl<RepayableT, EmitterT> WithLease for Repay<RepayableT, EmitterT>
+impl<'a, RepayableT, EmitterT> WithLease for Repay<'a, RepayableT, EmitterT>
 where
     RepayableT: RepayFn,
     EmitterT: Emitter,

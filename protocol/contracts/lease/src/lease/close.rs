@@ -50,7 +50,7 @@ where
         &mut self,
         asset: Coin<Asset>,
         payment: Coin<Lpn>,
-        now: Timestamp,
+        now: &Timestamp,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
@@ -63,7 +63,7 @@ where
     pub(crate) fn close_full<Profit, Change>(
         mut self,
         payment: Coin<Lpn>,
-        now: Timestamp,
+        now: &Timestamp,
         mut profit: Profit,
         mut change_recipient: Change,
     ) -> ContractResult<FullRepayReceipt<Lpn>>

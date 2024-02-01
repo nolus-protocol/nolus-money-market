@@ -88,7 +88,7 @@ where
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
-        let loan = self.loan.state(now);
+        let loan = self.loan.state(&now);
         let overdue_collect_in = self.position.overdue_collection_in(&loan);
 
         State {
@@ -221,11 +221,11 @@ mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: Timestamp) -> Coin<Lpn> {
+        fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+        fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
             self.loan.repay(by, repayment)
         }
 

@@ -17,7 +17,7 @@ use crate::{
 
 pub(crate) fn check_debt<Lpn, Asset, Lpp, Oracle>(
     lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
-    when: Timestamp,
+    when: &Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
 ) -> ContractResult<DebtStatusDTO>
@@ -33,7 +33,7 @@ where
 }
 
 pub(crate) struct Cmd<'a> {
-    now: Timestamp,
+    now: &'a Timestamp,
     time_alarms: &'a TimeAlarmsRef,
     price_alarms: &'a OracleRef,
 }
@@ -99,7 +99,7 @@ where
 
 impl<'a> Cmd<'a> {
     pub fn new(
-        now: Timestamp,
+        now: &'a Timestamp,
         time_alarms: &'a TimeAlarmsRef,
         price_alarms: &'a OracleRef,
     ) -> Self {

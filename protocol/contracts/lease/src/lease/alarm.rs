@@ -21,7 +21,7 @@ where
 {
     pub(super) fn reschedule(
         &self,
-        now: Timestamp,
+        now: &Timestamp,
         recheck_in: Duration,
         liquidation_zone: &Zone,
         total_due: Coin<Lpn>,
@@ -106,11 +106,11 @@ mod tests {
         let liability_alarm_on = FIRST_LIQ_WARN;
         let due = {
             let lease = &lease;
-            lease.loan.state(now)
+            lease.loan.state(&now)
         };
         let alarm_msgs = lease
             .reschedule(
-                LEASE_START,
+                &LEASE_START,
                 RECHECK_TIME,
                 &Zone::no_warnings(liability_alarm_on),
                 due.total_due(),
@@ -166,7 +166,7 @@ mod tests {
         );
         let alarm_msgs = lease
             .reschedule(
-                reschedule_at,
+                &reschedule_at,
                 RECHECK_TIME,
                 &zone,
                 total_due,

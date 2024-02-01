@@ -15,7 +15,7 @@ impl RepayFn for RepayLeaseFn {
         self,
         lease: &mut Lease<Lpn, Asset, Lpp, Oracle>,
         payment: Coin<Lpn>,
-        now: Timestamp,
+        now: &Timestamp,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where

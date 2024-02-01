@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
@@ -13,20 +13,20 @@ pub struct Period {
 }
 
 impl Period {
-    pub fn from_till(start: Timestamp, till: Timestamp) -> Self {
-        debug_assert!(start <= till);
-        Self::from_length(start, Duration::between(start, till))
+    pub fn from_till(start: Timestamp, till: &Timestamp) -> Self {
+        debug_assert!(&start <= till);
+        Self::from_length(start, Duration::between(&start, till))
     }
 
     pub fn from_length(start: Timestamp, length: Duration) -> Self {
         Self { start, length }
     }
 
-    pub fn till_length(till: Timestamp, max_length: Duration) -> Self {
-        let start = if till < Timestamp::default().add(max_length) {
+    pub fn till_length(till: &Timestamp, max_length: Duration) -> Self {
+        let start = if till < &Timestamp::default().add(max_length) {
             Timestamp::default()
         } else {
-            till - max_length
+            till.sub(max_length)
         };
         Self::from_till(start, till)
     }
@@ -69,10 +69,10 @@ impl Period {
         debug_assert_ne!(common, self);
 
         let res = if self.start() == common.start() {
-            Self::from_till(common.till(), self.till())
+            Self::from_till(common.till(), &self.till())
         } else {
             debug_assert_eq!(self.till(), common.till());
-            Self::from_till(self.start(), common.start())
+            Self::from_till(self.start(), &common.start())
         };
 
         debug_assert!(common.intersect(&res).zero_length());
@@ -90,7 +90,7 @@ impl Period {
     fn intersect(self, other: &Self) -> Self {
         Self::from_till(
             self.move_within(other.start()),
-            self.move_within(other.till()),
+            &self.move_within(other.till()),
         )
     }
 }
@@ -111,18 +111,18 @@ mod test {
 
     #[test]
     fn till_length() {
-        let p = Period::till_length(Timestamp::from_seconds(1000), Duration::from_secs(200));
+        let p = Period::till_length(&Timestamp::from_seconds(1000), Duration::from_secs(200));
 
         assert_eq!(from_till(800, 1000), p);
         assert!(!p.zero_length());
         assert!(
-            Period::till_length(Timestamp::from_seconds(1000), Duration::default()).zero_length()
+            Period::till_length(&Timestamp::from_seconds(1000), Duration::default()).zero_length()
         );
     }
 
     #[test]
     fn till_length_max() {
-        let p = Period::till_length(Timestamp::from_seconds(1000), Duration::from_secs(1000));
+        let p = Period::till_length(&Timestamp::from_seconds(1000), Duration::from_secs(1000));
 
         assert_eq!(from_till(0, 1000), p);
         assert!(!p.zero_length());
@@ -130,7 +130,7 @@ mod test {
 
     #[test]
     fn till_length_underflow() {
-        let p = Period::till_length(Timestamp::from_seconds(200), Duration::from_secs(1000));
+        let p = Period::till_length(&Timestamp::from_seconds(200), Duration::from_secs(1000));
 
         assert_eq!(from_till(0, 200), p);
         assert!(!p.zero_length());
@@ -172,7 +172,7 @@ mod test {
     fn shift_start() {
         let p = Period::from_till(
             Timestamp::from_nanos(100),
-            Timestamp::from_nanos(100) + Duration::YEAR,
+            &(Timestamp::from_nanos(100) + Duration::YEAR),
         );
         assert_eq!(
             Period::from_length(
@@ -200,7 +200,7 @@ mod test {
     fn from_till(from_sec: u64, till_sec: u64) -> Period {
         Period::from_till(
             Timestamp::from_seconds(from_sec),
-            Timestamp::from_seconds(till_sec),
+            &Timestamp::from_seconds(till_sec),
         )
     }
 }

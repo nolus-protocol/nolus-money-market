@@ -29,7 +29,7 @@ where
     pub(crate) fn repay<Profit>(
         &mut self,
         payment: Coin<Lpn>,
-        now: Timestamp,
+        now: &Timestamp,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where

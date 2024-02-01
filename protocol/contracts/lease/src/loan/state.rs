@@ -57,9 +57,9 @@ where
         } else {
             // due to the right-opened nature of intervals, if '==' then the due period end is the overdue period start
             let overdue_period = if due_period_margin.length() == max_due {
-                Period::till_length(due_period_margin.start(), Default::default())
+                Period::till_length(&due_period_margin.start(), Default::default())
             } else {
-                let due_period_max = Period::till_length(due_period_margin.till(), max_due);
+                let due_period_max = Period::till_length(&due_period_margin.till(), max_due);
                 due_period_margin.cut(&due_period_max)
             };
 
@@ -67,7 +67,7 @@ where
             let margin = InterestPeriod::with_interest(margin_interest)
                 .and_period(overdue_period)
                 .interest(lpp_loan.principal_due());
-            let interest = lpp_loan.interest_due(overdue_period.till());
+            let interest = lpp_loan.interest_due(&overdue_period.till());
 
             Self::Accrued { interest, margin }
         }
@@ -172,7 +172,8 @@ mod test {
 
         let lpp_loan = LppLoanLocal::new(LOAN);
         let overdue = Overdue::new(&due_period_margin, max_due, MARGIN_INTEREST_RATE, &lpp_loan);
-        let exp_interest = lpp_loan.interest_due(LOAN.interest_paid + due_period_length - max_due);
+        let exp_interest =
+            lpp_loan.interest_due(&(LOAN.interest_paid + due_period_length - max_due));
         let exp_margin =
             interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period);
         assert_eq!(

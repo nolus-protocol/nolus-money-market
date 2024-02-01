@@ -102,7 +102,7 @@ impl Active {
         let time_alarms_ref = self.lease.lease.time_alarms.clone();
         let oracle_ref = self.lease.lease.oracle.clone();
         let liquidation_status = self.lease.lease.clone().execute(
-            LiquidationStatusCmd::new(env.block.time, &time_alarms_ref, &oracle_ref),
+            LiquidationStatusCmd::new(&env.block.time, &time_alarms_ref, &oracle_ref),
             querier,
         )?;
 

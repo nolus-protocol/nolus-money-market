@@ -23,7 +23,7 @@ where
 {
     pub(crate) fn check_debt(
         &self,
-        now: Timestamp,
+        now: &Timestamp,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<DebtStatus<Asset>> {

@@ -43,11 +43,11 @@ where
 {
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
-    pub fn interest_due(&self, by: Timestamp) -> Coin<Lpn> {
+    pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
         self.due_period(by).interest(self.principal_due)
     }
 
-    pub fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
         let (due_period, interest_change) =
             self.due_period(by).pay(self.principal_due, repayment, by);
 
@@ -65,10 +65,10 @@ where
         }
     }
 
-    fn due_period(&self, by: Timestamp) -> InterestPeriod<Units, Percent> {
+    fn due_period(&self, by: &Timestamp) -> InterestPeriod<Units, Percent> {
         InterestPeriod::with_interest(self.annual_interest_rate).and_period(Period::from_till(
             self.interest_paid,
-            by.max(self.interest_paid),
+            by.max(&self.interest_paid),
         ))
     }
 }
@@ -133,11 +133,11 @@ mod test {
 
         assert_eq!(
             Coin::<StableC1>::from(50),
-            l.interest_due(l.interest_paid + Duration::YEAR)
+            l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 
-        assert_eq!(Coin::ZERO, l.interest_due(l.interest_paid));
-        assert_eq!(Coin::ZERO, l.interest_due(l.interest_paid.minus_nanos(1)));
+        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid));
+        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid.minus_nanos(1)));
     }
 
     #[test]
@@ -145,10 +145,11 @@ mod test {
         let principal_at_start = Coin::<StableC1>::from(500);
         let interest = Percent::from_percent(50);
         let start_at = Timestamp::from_nanos(200);
+        let interest_paid = start_at;
         let mut l = Loan {
             principal_due: principal_at_start,
             annual_interest_rate: interest,
-            interest_paid: start_at,
+            interest_paid,
         };
 
         let payment1 = 10.into();
@@ -158,7 +159,7 @@ mod test {
                 principal: payment1,
                 excess: Coin::ZERO
             },
-            l.repay(l.interest_paid, payment1)
+            l.repay(&interest_paid, payment1)
         );
         assert_eq!(
             Loan {
@@ -188,7 +189,7 @@ mod test {
                 principal: Coin::ZERO,
                 excess: Coin::ZERO
             },
-            l.repay(at_first_year_end, interest_a_year)
+            l.repay(&at_first_year_end, interest_a_year)
         );
         assert_eq!(
             Loan {
@@ -220,7 +221,7 @@ mod test {
                 principal: principal_start,
                 excess,
             },
-            l.repay(at_first_hour_end, exp_interest + principal_start + excess)
+            l.repay(&at_first_hour_end, exp_interest + principal_start + excess)
         );
         assert_eq!(
             Loan {
@@ -260,11 +261,11 @@ mod test {
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-            let interest: Coin<StableC1> = loan.interest_due(time);
+            let interest: Coin<StableC1> = loan.interest_due(&time);
             assert_eq!(interest, 100u128.into());
 
             // partial repay
-            let payment = loan.repay(time, 600u128.into());
+            let payment = loan.repay(&time, 600u128.into());
             assert_eq!(payment.interest, 100u128.into());
             assert_eq!(payment.principal, 500u128.into());
             assert_eq!(payment.excess, 0u128.into());
@@ -276,7 +277,7 @@ mod test {
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             // repay with excess, should close the loan
-            let payment = loan.repay(time, 600u128.into());
+            let payment = loan.repay(&time, 600u128.into());
             assert_eq!(payment.interest, 0u128.into());
             assert_eq!(payment.principal, 500u128.into());
             assert_eq!(payment.excess, 100u128.into());

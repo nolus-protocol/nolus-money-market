@@ -66,7 +66,7 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn between(start: Timestamp, end: Timestamp) -> Self {
+    pub fn between(start: &Timestamp, end: &Timestamp) -> Self {
         debug_assert!(start <= end);
         Self(end.nanos() - start.nanos())
     }
@@ -133,6 +133,15 @@ impl Add<Duration> for Timestamp {
 
     #[track_caller]
     fn add(self, rhs: Duration) -> Self::Output {
+        (&self).add(rhs)
+    }
+}
+
+impl Add<Duration> for &Timestamp {
+    type Output = Timestamp;
+
+    #[track_caller]
+    fn add(self, rhs: Duration) -> Self::Output {
         self.plus_nanos(rhs.nanos())
     }
 }
@@ -148,6 +157,15 @@ impl Add<Duration> for Duration {
 
 impl Sub<Duration> for Timestamp {
     type Output = Self;
+
+    #[track_caller]
+    fn sub(self, rhs: Duration) -> Self::Output {
+        (&self).sub(rhs)
+    }
+}
+
+impl Sub<Duration> for &Timestamp {
+    type Output = Timestamp;
 
     #[track_caller]
     fn sub(self, rhs: Duration) -> Self::Output {
@@ -212,20 +230,20 @@ mod tests {
         let t1 = T::from_seconds(24);
         let t2 = t1 + d;
 
-        assert_eq!(d, D::between(t1, t2));
+        assert_eq!(d, D::between(&t1, &t2));
     }
 
     #[test]
     #[should_panic]
     fn between_underflow() {
         let t = T::from_seconds(24);
-        let _ = D::between(t + D::from_nanos(1), t);
+        let _ = D::between(&(t + D::from_nanos(1)), &t);
     }
 
     #[test]
     fn from_max() {
         assert_eq!(
-            D::between(T::from_nanos(0), T::from_nanos(Units::MAX)),
+            D::between(&T::from_nanos(0), &T::from_nanos(Units::MAX)),
             D::from_nanos(Units::MAX)
         );
         assert_eq!(

@@ -65,7 +65,7 @@ where
         Self::STORAGE.load(storage)
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<Lpn> {
+    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
         InterestPeriod::<Coin<Lpn>, _>::with_interest(self.annual_interest_rate)
             .and_period(Period::from_till(self.last_update_time, ctime))
             .interest(self.total_principal_due)
@@ -78,7 +78,7 @@ where
         amount: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> Result<&Self, ContractError> {
-        self.total_interest_due = self.total_interest_due_by_now(ctime);
+        self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
         // TODO: get rid of fully qualified syntax
         self.annual_interest_rate = Rational::new(
@@ -101,7 +101,7 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
-        self.total_interest_due = self.total_interest_due_by_now(ctime) - loan_interest_payment;
+        self.total_interest_due = self.total_interest_due_by_now(&ctime) - loan_interest_payment;
 
         self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
             zero_interest_rate()
@@ -155,7 +155,7 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
         env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(env.block.time);
+        let interest_due = total.total_interest_due_by_now(&env.block.time);
         assert_eq!(interest_due, Coin::new(1000));
 
         total.repay(
@@ -167,7 +167,7 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
         env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(env.block.time);
+        let interest_due = total.total_interest_due_by_now(&env.block.time);
         assert_eq!(interest_due, 500u128.into());
     }
 }

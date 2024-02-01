@@ -94,7 +94,7 @@ fn lpp_state_implicit_time() {
         query_result,
         (
             loan_resp.principal_due,
-            loan_resp.interest_due(test_case.app.block_info().time)
+            loan_resp.interest_due(&(test_case.app.block_info().time))
         )
     );
 }
@@ -140,6 +140,6 @@ fn lpp_state_explicit_time() {
 
     assert_eq!(
         query_result,
-        loan.interest_due(lease::block_time(&test_case))
+        loan.interest_due(&lease::block_time(&test_case))
     );
 }

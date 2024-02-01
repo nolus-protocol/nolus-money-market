@@ -74,7 +74,7 @@ where
 {
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
-    match lpp.query_quote(quote, &env.contract.address, deps.querier, env.block.time)? {
+    match lpp.query_quote(quote, &env.contract.address, deps.querier, &env.block.time)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
         None => Ok(QueryQuoteResponse::NoLiquidity),
     }

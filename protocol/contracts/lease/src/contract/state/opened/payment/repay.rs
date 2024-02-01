@@ -90,7 +90,7 @@ where
             RepayCmd::new(
                 self.0.repay_fn(),
                 amount,
-                env.block.time,
+                &env.block.time,
                 self.0.emitter_fn(env),
                 profit,
                 time_alarms,

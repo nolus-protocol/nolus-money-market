@@ -63,19 +63,20 @@ where
     where
         P: Fractionable<U> + TimeSliceable,
     {
-        self.interest_by(principal, self.till())
+        self.interest_by(principal, &self.till())
     }
 
     ///
     /// The return.1 is the change after the payment. The actual payment is
     /// equal to the payment minus the returned change.
-    pub fn pay<P>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
+    pub fn pay<P>(self, principal: P, payment: P, by: &Timestamp) -> (Self, P)
     where
         P: Zero + Debug + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
         Duration: Fractionable<P>,
     {
-        let by_within_period = self.period.move_within(by);
-        let interest_due_per_period = self.interest_by(principal, by_within_period);
+        // TODO create a Period[self.period.start, by) and intersect it with self.period
+        let by_within_period = self.period.move_within(*by);
+        let interest_due_per_period = self.interest_by(principal, &by_within_period);
 
         if interest_due_per_period == P::ZERO {
             (self, payment)
@@ -84,7 +85,7 @@ where
 
             // TODO consider changing the algo by computing the paid period on annual basis, not the payment period one
             // currently it is in favor of payment for small periods since the due interest for the period is rounded down
-            let period = Duration::between(self.start(), by_within_period);
+            let period = Duration::between(&self.start(), &by_within_period);
             let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
 
             let change = payment - repayment;
@@ -103,13 +104,13 @@ where
         res
     }
 
-    fn interest_by<P>(&self, principal: P, by: Timestamp) -> P
+    fn interest_by<P>(&self, principal: P, by: &Timestamp) -> P
     where
         P: Fractionable<U> + TimeSliceable,
     {
-        debug_assert!(self.start() <= by);
-        debug_assert!(by <= self.till());
-        let period = Duration::between(self.start(), by);
+        debug_assert!(&self.start() <= by);
+        debug_assert!(by <= &self.till());
+        let period = Duration::between(&self.start(), by);
 
         interest(self.interest, principal, period)
     }
@@ -151,7 +152,7 @@ mod tests {
             p,
             principal,
             payment,
-            by,
+            &by,
             PERIOD_START,
             PERIOD_LENGTH,
             payment,
@@ -168,7 +169,7 @@ mod tests {
             p,
             principal,
             payment,
-            by,
+            &by,
             PERIOD_START,
             PERIOD_LENGTH,
             payment,
@@ -185,7 +186,7 @@ mod tests {
             p,
             principal,
             payment,
-            PERIOD_START + PERIOD_LENGTH + PERIOD_LENGTH,
+            &(PERIOD_START + PERIOD_LENGTH + PERIOD_LENGTH),
             PERIOD_START + PERIOD_LENGTH,
             Duration::from_nanos(0),
             exp_change,
@@ -195,7 +196,7 @@ mod tests {
             p,
             principal,
             payment,
-            PERIOD_START,
+            &PERIOD_START,
             PERIOD_START,
             PERIOD_LENGTH,
             payment,
@@ -213,7 +214,7 @@ mod tests {
             p,
             principal,
             payment,
-            by,
+            &by,
             by,
             Duration::from_nanos(0),
             exp_change,
@@ -231,7 +232,7 @@ mod tests {
             p,
             principal,
             payment,
-            by,
+            &by,
             PERIOD_START,
             PERIOD_LENGTH,
             exp_change,
@@ -261,7 +262,7 @@ mod tests {
         p: Percent,
         principal: MyCoin,
         payment: MyCoin,
-        by: Timestamp,
+        by: &Timestamp,
         exp_start: Timestamp,
         exp_length: Duration,
         exp_change: MyCoin,

@@ -385,8 +385,8 @@ where
         - price::total(payments, price_lpn_of::<PaymentC>());
     let due_period_start = (now - max_due).max(last_paid);
     let (overdue, due) = (
-        Duration::between(last_paid, due_period_start),
-        Duration::between(due_period_start, now),
+        Duration::between(&last_paid, &due_period_start),
+        Duration::between(&due_period_start, &now),
     );
     StateResponse::Opened {
         amount: (total - closed).into(),
@@ -406,7 +406,7 @@ where
         )
         .into(),
         overdue_collect_in: if overdue == Duration::default() {
-            Duration::between(now - max_due, last_paid)
+            Duration::between(&(now - max_due), &last_paid)
         } else {
             Duration::default()
         },

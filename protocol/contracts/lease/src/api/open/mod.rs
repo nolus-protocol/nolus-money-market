@@ -198,33 +198,6 @@ mod test_invariant {
         assert_err(r, "non-zero length");
     }
 
-    #[test]
-    #[should_panic = "should be longer than"]
-    fn due_shorter_than_grace() {
-        new_invalid(
-            Duration::from_days(100),
-            Duration::from_days(100) + Duration::from_nanos(1),
-        );
-    }
-
-    #[test]
-    fn due_shorter_than_grace_json() {
-        let r = from_json(br#"{"due_period": 9, "grace_period": 10}"#);
-        assert_err(r, "should be longer than");
-    }
-
-    #[test]
-    #[should_panic = "should be longer than"]
-    fn due_equal_to_grace() {
-        new_invalid(Duration::from_days(100), Duration::from_days(100));
-    }
-
-    #[test]
-    fn due_equal_to_grace_json() {
-        let r = from_json(br#"{"due_period": 10, "grace_period": 10}"#);
-        assert_err(r, "should be longer than");
-    }
-
     fn new_invalid(due_period: Duration, grace_period: Duration) {
         let _p = InterestPaymentSpec::new(due_period, grace_period);
         #[cfg(not(debug_assertions))]

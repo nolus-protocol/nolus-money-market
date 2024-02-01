@@ -79,6 +79,7 @@ where
 
 pub struct BankView<'a> {
     account: &'a Addr,
+    //TODO use ref type
     querier: QuerierWrapper<'a>,
 }
 

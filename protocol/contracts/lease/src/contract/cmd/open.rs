@@ -22,7 +22,7 @@ pub(crate) fn open_lease(
     form: NewLeaseForm,
     lease_addr: Addr,
     start_at: Timestamp,
-    now: Timestamp,
+    now: &Timestamp,
     amount: LeaseCoin,
     querier: QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
@@ -47,18 +47,18 @@ pub(crate) fn open_lease(
     with_lease_deps::execute(cmd, lease_addr, &asset_currency, deps.0, deps.1, querier)
 }
 
-struct LeaseFactory {
+struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
-    now: Timestamp,
+    now: &'a Timestamp,
     amount: LeaseCoin,
 }
 
-impl WithLeaseDeps for LeaseFactory {
+impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     type Output = IntoDTOResult;
     type Error = ContractError;
 

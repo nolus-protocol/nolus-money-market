@@ -732,7 +732,7 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         interest1.of(loan1).into()
     );
 
@@ -808,7 +808,7 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -840,7 +840,7 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         Coin::new(0)
     );
 
@@ -1100,7 +1100,7 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         interest1.of(loan1).into()
     );
 
@@ -1176,7 +1176,7 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -1208,7 +1208,7 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&test_case.app)),
+        loan1_resp.interest_due(&block_time(&test_case.app)),
         Coin::new(0)
     );
 

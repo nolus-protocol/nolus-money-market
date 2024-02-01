@@ -61,7 +61,7 @@ pub fn instantiate(
 
     setup_alarm(
         msg.timealarms,
-        env.block.time,
+        &env.block.time,
         Duration::from_hours(msg.cadence_hours),
         deps.querier,
     )
@@ -151,7 +151,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
     let config = Config::load(deps.storage)?;
     let setup_alarm = setup_alarm(
         timealarm,
-        now,
+        &now,
         Duration::from_hours(config.cadence_hours),
         deps.querier,
     )?;
@@ -172,7 +172,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
         });
 
         cmd::dispatch(
-            Period::from_till(last_dispatch, now),
+            Period::from_till(last_dispatch, &now),
             &config.tvl_to_apr,
             lpps,
             oracles,
@@ -204,7 +204,7 @@ fn protocols(
 
 fn setup_alarm(
     timealarm: Addr,
-    now: Timestamp,
+    now: &Timestamp,
     alarm_in: Duration,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Batch> {
