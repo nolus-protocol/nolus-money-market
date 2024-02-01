@@ -23,10 +23,9 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
+pub(crate) use self::repay::Receipt as RepayReceipt;
 pub use self::state::{Overdue, State};
-pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
 
-mod liability;
 mod repay;
 mod state;
 
@@ -138,18 +137,6 @@ where
         }
     }
 
-    pub(crate) fn grace_period_end(&self) -> Timestamp {
-        self.grace_period_end_impl(&self.due_period.period())
-    }
-
-    pub(crate) fn next_grace_period_end(&self, after: &Timestamp) -> Timestamp {
-        let mut current_period = self.due_period.period();
-        while &self.grace_period_end_impl(&current_period) <= after {
-            current_period = next_due_period(current_period, &self.interest_payment_spec);
-        }
-        self.grace_period_end_impl(&current_period)
-    }
-
     /// Repay the loan interests and principal by the given timestamp.
     ///
     /// The time intervals are always open-ended!
@@ -257,10 +244,6 @@ where
         }
     }
 
-    fn grace_period_end_impl(&self, due_period: &Period) -> Timestamp {
-        due_period.till() + self.interest_payment_spec.grace_period()
-    }
-
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
         debug_assert!(
             self.due_period.start() <= when,
@@ -270,10 +253,6 @@ where
             when
         );
     }
-}
-
-fn next_due_period(due_period: Period, payment_spec: &InterestPaymentSpec) -> Period {
-    due_period.next(payment_spec.due_period())
 }
 
 #[cfg(test)]
@@ -1236,72 +1215,6 @@ mod tests {
         #[test]
         fn state_two_years_plus_day() {
             test_states_paid_by(Duration::YEAR + Duration::YEAR + Duration::from_days(1))
-        }
-    }
-
-    mod test_grace_period_end {
-        use finance::duration::Duration;
-        use lpp::msg::LoanResponse;
-
-        use crate::loan::tests::MARGIN_INTEREST_RATE;
-
-        use super::{create_loan_custom, LEASE_START, LOAN_INTEREST_RATE};
-
-        #[ignore = "pending refactoring"]
-        #[test]
-        fn in_current_period() {
-            const BIT: Duration = Duration::from_nanos(1);
-            let due_period = Duration::YEAR;
-            let grace_period = Duration::HOUR;
-            let next_grace_period_end = LEASE_START + due_period + grace_period;
-
-            let loan = create_loan_custom(
-                MARGIN_INTEREST_RATE,
-                LoanResponse {
-                    principal_due: 1000.into(),
-                    annual_interest_rate: LOAN_INTEREST_RATE,
-                    interest_paid: LEASE_START,
-                },
-                LEASE_START,
-                due_period,
-            );
-            assert_eq!(next_grace_period_end, loan.grace_period_end());
-            assert_eq!(
-                next_grace_period_end,
-                loan.next_grace_period_end(&(LEASE_START + Duration::from_days(10)))
-            );
-            assert_eq!(
-                next_grace_period_end,
-                loan.next_grace_period_end(&(LEASE_START + due_period))
-            );
-            assert_eq!(
-                next_grace_period_end,
-                loan.next_grace_period_end(&(LEASE_START + due_period + BIT))
-            );
-            assert_eq!(
-                next_grace_period_end,
-                loan.next_grace_period_end(&(next_grace_period_end - BIT))
-            );
-            assert_eq!(
-                next_grace_period_end + due_period,
-                loan.next_grace_period_end(&next_grace_period_end)
-            );
-            assert_eq!(
-                next_grace_period_end + due_period,
-                loan.next_grace_period_end(&(next_grace_period_end + BIT))
-            );
-            assert_eq!(
-                next_grace_period_end + due_period,
-                loan.next_grace_period_end(&(next_grace_period_end + due_period - BIT))
-            );
-            assert_eq!(
-                next_grace_period_end + due_period + due_period,
-                loan.next_grace_period_end(&(next_grace_period_end + due_period))
-            );
-            assert_eq!(
-                next_grace_period_end + due_period + due_period,
-                loan.next_grace_period_end(&(next_grace_period_end + due_period + BIT))
-            );
         }
     }
 

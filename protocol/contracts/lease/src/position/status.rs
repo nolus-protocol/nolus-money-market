@@ -30,7 +30,7 @@ where
     No,
     Ok {
         zone: Zone,
-        recalc_in: Duration,
+        recheck_in: Duration,
         // TODO
         //  collect_overdue_in: Duration,
         //  price_low: Price<Asset, Lpn>,
@@ -64,48 +64,48 @@ mod test_status {
 
     #[test]
     fn ord() {
-        let recalc_in = Duration::HOUR;
+        let recheck_in = Duration::HOUR;
 
         assert!(
             Debt::<StableC1>::Ok {
                 zone: Zone::no_warnings(Percent::from_permille(1)),
-                recalc_in
+                recheck_in
             } < Debt::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
-                recalc_in
+                recheck_in
             }
         );
         assert!(
             Debt::<StableC1>::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
-                recalc_in
+                recheck_in
             } < Debt::Ok {
                 zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
-                recalc_in
+                recheck_in
             }
         );
         assert!(
             Debt::<StableC1>::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(2)),
-                recalc_in
+                recheck_in
             } < Debt::Ok {
                 zone: Zone::first(Percent::from_permille(1), Percent::from_permille(3)),
-                recalc_in
+                recheck_in
             }
         );
         assert!(
             Debt::Ok {
                 zone: Zone::first(Percent::from_permille(2), Percent::from_permille(3)),
-                recalc_in
+                recheck_in
             } < Debt::<StableC1>::Ok {
                 zone: Zone::second(Percent::from_permille(1), Percent::from_permille(2)),
-                recalc_in
+                recheck_in
             }
         );
         assert!(
             Debt::Ok {
                 zone: Zone::third(Percent::from_permille(991), Percent::from_permille(1000)),
-                recalc_in
+                recheck_in
             } < Debt::<StableC1>::Bad(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()

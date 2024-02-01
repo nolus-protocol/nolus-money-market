@@ -112,12 +112,6 @@ impl InterestPaymentSpec {
             self.due_period == Duration::default(),
             "The interest due period should be with non-zero length",
         )
-        .and_then(|_| {
-            ContractError::broken_invariant_if::<InterestPaymentSpec>(
-                self.due_period <= self.grace_period,
-                "The interest due period should be longer than grace period to avoid overlapping",
-            )
-        })
     }
 }
 

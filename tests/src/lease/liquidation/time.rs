@@ -15,12 +15,15 @@ use crate::common::{
 
 use super::{
     super::{create_test_case, feed_price, open_lease, price_lpn_of, state_query, LeaseTestCase},
-    LeaseCoin, PaymentCoin, PaymentCurrency, DOWNPAYMENT,
+    LeaseCoin, PaymentCoin, PaymentCurrency,
 };
 
-fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseCoin>) {
+fn liquidation_time_alarm(
+    downpayment: PaymentCoin,
+    time_pass: Duration,
+    liquidation_amount: Option<LeaseCoin>,
+) {
     let mut test_case: LeaseTestCase = create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_addr: Addr = open_lease(&mut test_case, downpayment, None);
 
     let StateResponse::Opened {
@@ -125,8 +128,10 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
 
     if let StateResponse::Opened {
         amount,
-        overdue_margin,
+        due_interest,
+        due_margin,
         overdue_interest,
+        overdue_margin,
         ..
     } = query_result
     {
@@ -134,34 +139,37 @@ fn liquidation_time_alarm(time_pass: Duration, liquidation_amount: Option<LeaseC
             LeaseCoin::try_from(amount).unwrap(),
             lease_amount - liquidated_amount
         );
-
-        assert!(overdue_margin.is_zero());
+        assert!(due_interest.is_zero());
+        assert!(due_margin.is_zero());
 
         assert!(overdue_interest.is_zero());
+        assert!(overdue_margin.is_zero());
     }
 }
 
 #[test]
-fn liquidation_time_alarm_0() {
+fn liquidation_by_time_due_more_than_min_no_overdue() {
     liquidation_time_alarm(
+        1_000_000.into(),
         LeaserInstantiator::REPAYMENT_PERIOD - Duration::from_nanos(1),
         None,
     );
 }
 
 #[test]
-fn liquidation_time_alarm_1() {
+fn liquidation_by_time_overdue_less_than_min() {
     liquidation_time_alarm(
-        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::GRACE_PERIOD
-            - Duration::from_nanos(1),
+        100.into(),
+        LeaserInstantiator::REPAYMENT_PERIOD + Duration::from_days(1),
         None,
     );
 }
 
 #[test]
-fn liquidation_time_alarm_2() {
+fn liquidation_by_time_overdue_more_than_min() {
     liquidation_time_alarm(
-        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::GRACE_PERIOD,
-        Some(LeaseCoin::new(5088062621)), //the overdue amount for the LeaserInstantiator::GRACE_PERIOD
+        1_000_000_000.into(),
+        LeaserInstantiator::REPAYMENT_PERIOD,
+        Some(LeaseCoin::new(45792562)), //the total interest due for the LeaserInstantiator::REPAYMENT_PERIOD = (7% + 3%) * 65/(100-65)*Downpayment * LeaserInstantiator::REPAYMENT_PERIOD/365
     );
 }

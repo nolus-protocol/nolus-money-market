@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub use dto::PositionDTO;
-pub use interest::InterestDue;
+pub use interest::{Due as DueTrait, OverdueCollection};
 pub use spec::Spec;
 pub use status::{Cause, Debt, Liquidation};
 
@@ -68,21 +68,18 @@ where
     /// Compute how much time is necessary for the due interest to become collectable
     ///
     /// If it is already enough to be collected then return zero.
-    pub fn overdue_liquidation_in<Interest>(&self, interest: &Interest) -> Duration
+    pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
     where
-        Interest: InterestDue<Lpn>,
+        Due: DueTrait<Lpn>,
     {
-        self.spec.overdue_liquidation_in(interest)
+        self.spec.overdue_collection_in(due)
     }
 
-    pub fn debt(
-        &self,
-        total_due: Coin<Lpn>,
-        overdue: Coin<Lpn>,
-        asset_in_lpns: Price<Asset, Lpn>,
-    ) -> Debt<Asset> {
-        self.spec
-            .debt(self.amount, total_due, overdue, asset_in_lpns)
+    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset, Lpn>) -> Debt<Asset>
+    where
+        Due: DueTrait<Lpn>,
+    {
+        self.spec.debt(self.amount, due, asset_in_lpns)
     }
 
     /// Check if the amount can be used for repayment.

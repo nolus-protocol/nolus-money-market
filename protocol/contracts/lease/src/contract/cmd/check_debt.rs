@@ -11,31 +11,25 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LeaseCoin,
     error::{ContractError, ContractResult},
-    lease::{with_lease::WithLease, Lease as LeaseDO},
-    position::{Cause, Debt, Liquidation},
+    lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
+    position::{Cause, Liquidation},
 };
 
-pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
+pub(crate) fn check_debt<Lpn, Asset, Lpp, Oracle>(
     lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
     when: Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
-) -> ContractResult<CmdResult>
+) -> ContractResult<DebtStatusDTO>
 where
     Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
-    let status = lease.liquidation_status(when)?;
-    Ok(match status {
-        Debt::No => CmdResult::NoDebt,
-        Debt::Ok { zone, recalc_in } => CmdResult::NewAlarms {
-            alarms: lease.reschedule(&when, recalc_in, &zone, time_alarms, price_alarms)?,
-            current_liability: zone,
-        },
-        Debt::Bad(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),
-    })
+    lease
+        .check_debt(when, time_alarms, price_alarms)
+        .map(Into::into)
 }
 
 pub(crate) struct Cmd<'a> {
@@ -44,7 +38,7 @@ pub(crate) struct Cmd<'a> {
     price_alarms: &'a OracleRef,
 }
 
-pub(crate) enum CmdResult {
+pub(crate) enum DebtStatusDTO {
     NoDebt,
     NewAlarms {
         current_liability: Zone,
@@ -67,6 +61,25 @@ pub(crate) struct PartialLiquidationDTO {
 #[derive(Serialize, Deserialize)]
 pub(crate) struct FullLiquidationDTO {
     pub cause: Cause,
+}
+
+impl<Asset> From<DebtStatus<Asset>> for DebtStatusDTO
+where
+    Asset: Currency,
+{
+    fn from(value: DebtStatus<Asset>) -> Self {
+        match value {
+            DebtStatus::NoDebt => Self::NoDebt,
+            DebtStatus::NewAlarms {
+                current_liability,
+                alarms,
+            } => Self::NewAlarms {
+                current_liability,
+                alarms,
+            },
+            DebtStatus::NeedLiquidation(liquidation) => Self::NeedLiquidation(liquidation.into()),
+        }
+    }
 }
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
@@ -99,7 +112,7 @@ impl<'a> Cmd<'a> {
 }
 
 impl<'a> WithLease for Cmd<'a> {
-    type Output = CmdResult;
+    type Output = DebtStatusDTO;
 
     type Error = ContractError;
 
@@ -113,6 +126,6 @@ impl<'a> WithLease for Cmd<'a> {
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
     {
-        status_and_schedule(&lease, self.now, self.time_alarms, self.price_alarms)
+        check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
     }
 }

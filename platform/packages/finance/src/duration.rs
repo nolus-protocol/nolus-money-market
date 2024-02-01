@@ -43,6 +43,8 @@ impl Duration {
 
     pub const YEAR: Duration = Self::from_days(365);
 
+    pub const MAX: Duration = Self::from_nanos(Units::MAX);
+
     pub const fn from_nanos(nanos: Units) -> Self {
         Self(nanos)
     }

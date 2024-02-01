@@ -26,8 +26,6 @@ impl Instantiator {
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
 
-    pub const GRACE_PERIOD: Duration = Duration::from_days(10);
-
     pub const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
     pub const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
@@ -82,10 +80,7 @@ impl Instantiator {
             lpp_ust_addr: lpp_addr,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
-            lease_interest_payment: InterestPaymentSpec::new(
-                Self::REPAYMENT_PERIOD,
-                Self::GRACE_PERIOD,
-            ),
+            lease_interest_payment: InterestPaymentSpec::new(Self::REPAYMENT_PERIOD, Duration::MAX),
             time_alarms,
             market_price_oracle,
             profit,

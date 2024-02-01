@@ -18,7 +18,7 @@ use crate::{
     loan::RepayReceipt,
 };
 
-use super::{liquidation_status, LiquidationStatus};
+use super::{check_debt, LiquidationStatus};
 
 pub(crate) trait RepayFn {
     fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
@@ -128,12 +128,8 @@ where
             .do_repay(&mut lease, amount, self.now, &mut profit_sender)?;
         let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
-        let liquidation = liquidation_status::status_and_schedule(
-            &lease,
-            self.now,
-            &self.time_alarms,
-            &self.price_alarms,
-        )?;
+        let liquidation =
+            check_debt::check_debt(&lease, self.now, &self.time_alarms, &self.price_alarms)?;
 
         lease.try_into_dto(self.profit, self.time_alarms).map(
             |IntoDTOResult {

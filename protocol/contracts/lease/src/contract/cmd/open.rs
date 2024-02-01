@@ -16,7 +16,7 @@ use crate::{
     position::{Position, Spec as PositionSpec},
 };
 
-use super::{liquidation_status, LiquidationStatus};
+use super::{check_debt, LiquidationStatus};
 
 pub(crate) fn open_lease(
     form: NewLeaseForm,
@@ -91,7 +91,7 @@ impl WithLeaseDeps for LeaseFactory {
                 )
             })?;
 
-        let alarms = match liquidation_status::status_and_schedule(
+        let alarms = match check_debt::check_debt(
             &lease,
             self.now,
             &self.time_alarms,

@@ -14,7 +14,7 @@ use crate::{
     position::{Cause, Debt, Liquidation},
 };
 
-use super::InterestDue;
+use super::{interest::OverdueCollection, DueTrait};
 
 mod dto;
 
@@ -71,36 +71,32 @@ where
         }
     }
 
-    pub fn overdue_liquidation_in<Interest>(&self, interest: &Interest) -> Duration
+    pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
     where
-        Interest: InterestDue<Lpn>,
+        Due: DueTrait<Lpn>,
     {
-        interest.time_to_get_to(self.min_transaction)
+        self.overdue_collection(due).start_in()
     }
 
-    pub fn debt<Asset>(
+    pub fn debt<Asset, Due>(
         &self,
         asset: Coin<Asset>,
-        total_due: Coin<Lpn>,
-        overdue: Coin<Lpn>,
+        due: &Due,
         asset_in_lpns: Price<Asset, Lpn>,
     ) -> Debt<Asset>
     where
         Asset: Currency,
+        Due: DueTrait<Lpn>,
     {
-        debug_assert!(overdue <= total_due);
-
-        let total_due = price::total(total_due, asset_in_lpns.inv());
-        let overdue = price::total(overdue, asset_in_lpns.inv());
-        debug_assert!(overdue <= total_due);
+        let total_due = price::total(due.total_due(), asset_in_lpns.inv());
 
         self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
-            .max(self.may_ask_liquidation_overdue(asset, overdue, asset_in_lpns))
+            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
             .map(Debt::Bad)
             .unwrap_or_else(|| {
                 let ltv = Percent::from_ratio(total_due, asset);
                 // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
-                self.no_liquidation(total_due, ltv.min(self.liability.third_liq_warn()))
+                self.no_liquidation(due, ltv.min(self.liability.third_liq_warn()))
             })
     }
 
@@ -218,16 +214,20 @@ where
         )
     }
 
-    fn may_ask_liquidation_overdue<Asset>(
+    fn may_ask_liquidation_overdue<Asset, Due>(
         &self,
         asset: Coin<Asset>,
-        overdue: Coin<Asset>,
+        due: &Due,
         asset_in_lpns: Price<Asset, Lpn>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
+        Due: DueTrait<Lpn>,
     {
-        self.may_ask_liquidation(asset, Cause::Overdue(), overdue, asset_in_lpns)
+        let collectable = self.overdue_collection(due).amount();
+        debug_assert!(collectable <= due.total_due());
+        let to_liquidate = price::total(collectable, asset_in_lpns.inv());
+        self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
     }
 
     fn may_ask_liquidation<Asset>(
@@ -254,19 +254,29 @@ where
         }
     }
 
-    fn no_liquidation<Asset>(&self, total_due: Coin<Asset>, ltv: Percent) -> Debt<Asset>
+    fn no_liquidation<Asset, Due>(&self, due: &Due, ltv: Percent) -> Debt<Asset>
     where
         Asset: Currency,
+        Due: DueTrait<Lpn>,
     {
         debug_assert!(ltv < self.liability.max());
-        if total_due.is_zero() {
+        if due.total_due().is_zero() {
             Debt::No
         } else {
             Debt::Ok {
                 zone: self.liability.zone_of(ltv),
-                recalc_in: self.liability.recalculation_time(),
+                recheck_in: self
+                    .overdue_collection_in(due)
+                    .min(self.liability.recalculation_time()),
             }
         }
+    }
+
+    fn overdue_collection<Due>(&self, due: &Due) -> OverdueCollection<Lpn>
+    where
+        Due: DueTrait<Lpn>,
+    {
+        due.overdue_collection(self.min_transaction)
     }
 }
 
@@ -384,7 +394,7 @@ mod test_debt {
         price::{self, Price},
     };
 
-    use crate::position::{Cause, Debt};
+    use crate::position::{Cause, Debt, DueTrait, OverdueCollection};
 
     use super::Spec;
 
@@ -392,6 +402,24 @@ mod test_debt {
     type TestLpn = StableC1;
 
     const RECALC_IN: Duration = Duration::from_hours(1);
+    struct TestDue {
+        total_due: Coin<TestLpn>,
+        overdue: Coin<TestLpn>,
+    }
+    impl DueTrait<TestLpn> for TestDue {
+        fn total_due(&self) -> Coin<TestLpn> {
+            self.total_due
+        }
+
+        #[track_caller]
+        fn overdue_collection(&self, min_amount: Coin<TestLpn>) -> OverdueCollection<TestLpn> {
+            if self.overdue.is_zero() || self.overdue < min_amount {
+                OverdueCollection::StartIn(Duration::from_days(5))
+            } else {
+                OverdueCollection::Overdue(self.overdue)
+            }
+        }
+    }
 
     #[test]
     fn no_debt() {
@@ -399,8 +427,8 @@ mod test_debt {
         let spec = spec_with_first(warn_ltv, 1, 1);
         let asset = 100.into();
 
-        assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(1, 1)), Debt::No,);
-        assert_eq!(spec.debt(asset, 0.into(), 0.into(), price(3, 1)), Debt::No,);
+        assert_eq!(spec.debt(asset, &due(0, 0), price(1, 1)), Debt::No,);
+        assert_eq!(spec.debt(asset, &due(0, 0), price(3, 1)), Debt::No,);
     }
 
     #[test]
@@ -410,45 +438,45 @@ mod test_debt {
         let asset = 100.into();
 
         assert_eq!(
-            spec.debt(asset, 1.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(1, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 1.into(), 0.into(), price(5, 1)),
+            spec.debt(asset, &due(1, 0), price(5, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 50.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(50, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 25.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, &due(25, 0), price(2, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 51.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(51, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 17.into(), 0.into(), price(3, 1)),
+            spec.debt(asset, &due(17, 0), price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
     }
@@ -460,31 +488,31 @@ mod test_debt {
         let asset = 100.into();
 
         assert_eq!(
-            spec.debt(asset, 50.into(), 14.into(), price(1, 1)),
+            spec.debt(asset, &due(50, 14), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 25.into(), 4.into(), price(2, 3)),
+            spec.debt(asset, &due(25, 4), price(2, 3)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 51.into(), 14.into(), price(1, 1)),
+            spec.debt(asset, &due(51, 14), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 17.into(), 4.into(), price(3, 1)),
+            spec.debt(asset, &due(17, 4), price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
     }
@@ -496,67 +524,67 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 711.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(711, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 237.into(), 0.into(), price(3, 1)),
+            spec.debt(asset, &due(237, 0), price(3, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 712.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(712, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 178.into(), 0.into(), price(4, 1)),
+            spec.debt(asset, &due(178, 0), price(4, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 712.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(712, 1), price(1, 1)),
             Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 89.into(), 1.into(), price(8, 1)),
+            spec.debt(asset, &due(89, 1), price(8, 1)),
             Debt::partial(8.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 721.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(712, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 103.into(), 0.into(), price(7, 1)),
+            spec.debt(asset, &due(103, 0), price(7, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 722.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(722, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 361.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, &due(361, 0), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
     }
@@ -568,32 +596,32 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 712.into(), 2.into(), price(1, 1)),
+            spec.debt(asset, &due(712, 2), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 356.into(), 1.into(), price(2, 1)),
+            spec.debt(asset, &due(356, 1), price(2, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 721.into(), 2.into(), price(1, 1)),
+            spec.debt(asset, &due(721, 2), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 721.into(), 5.into(), price(1, 1)),
+            spec.debt(asset, &due(721, 5), price(1, 1)),
             Debt::partial(5.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 240.into(), 3.into(), price(3, 1)),
+            spec.debt(asset, &due(240, 3), price(3, 1)),
             Debt::partial(9.into(), Cause::Overdue()),
         );
     }
@@ -605,56 +633,56 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 122.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(122, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 15.into(), 0.into(), price(8, 1)),
+            spec.debt(asset, &due(15, 0), price(8, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 123.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(123, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 82.into(), 0.into(), price(3, 2)),
+            spec.debt(asset, &due(82, 0), price(3, 2)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 123.into(), 4.into(), price(1, 1)),
+            spec.debt(asset, &due(123, 4), price(1, 1)),
             Debt::partial(4.into(), Cause::Overdue())
         );
         assert_eq!(
-            spec.debt(asset, 132.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(132, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 66.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, &due(66, 0), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 133.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(133, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
     }
@@ -666,21 +694,21 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 128.into(), 4.into(), price(1, 1)),
+            spec.debt(asset, &due(128, 4), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 32.into(), 1.into(), price(4, 1)),
+            spec.debt(asset, &due(32, 1), price(4, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 128.into(), 5.into(), price(1, 1)),
+            spec.debt(asset, &due(128, 5), price(1, 1)),
             Debt::partial(5.into(), Cause::Overdue())
         );
     }
@@ -693,43 +721,43 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 380.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(380, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 190.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, &due(190, 0), price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 381.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(381, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 381.into(), 375.into(), price(1, 1)),
+            spec.debt(asset, &due(381, 375), price(1, 1)),
             Debt::partial(375.into(), Cause::Overdue())
         );
         assert_eq!(
-            spec.debt(asset, 573.into(), 562.into(), price(2, 3)),
+            spec.debt(asset, &due(573, 562), price(2, 3)),
             Debt::partial(374.into(), Cause::Overdue())
         );
         assert_eq!(
-            spec.debt(asset, 390.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(390, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 391.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(391, 0), price(1, 1)),
             Debt::partial(
                 384.into(),
                 Cause::Liability {
@@ -748,53 +776,53 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 380.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(380, 1), price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 126.into(), 1.into(), price(3, 1)),
+            spec.debt(asset, &due(126, 1), price(3, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 381.into(), 375.into(), price(1, 1)),
+            spec.debt(asset, &due(381, 375), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 391.into(), 385.into(), price(1, 1)),
+            spec.debt(asset, &due(391, 385), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 391.into(), 386.into(), price(1, 1)),
+            spec.debt(asset, &due(391, 386), price(1, 1)),
             Debt::partial(386.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 392.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(392, 0), price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 364.into(), 0.into(), price(2, 1)),
+            spec.debt(asset, &due(364, 0), price(2, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recalc_in: RECALC_IN
+                recheck_in: RECALC_IN
             },
         );
         assert_eq!(
-            spec.debt(asset, 393.into(), 0.into(), price(1, 1)),
+            spec.debt(asset, &due(393, 0), price(1, 1)),
             Debt::partial(
                 386.into(),
                 Cause::Liability {
@@ -804,7 +832,7 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 788.into(), 0.into(), price(1, 2)),
+            spec.debt(asset, &due(788, 0), price(1, 2)),
             Debt::partial(
                 387.into(),
                 Cause::Liability {
@@ -822,15 +850,15 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 880.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(880, 1), price(1, 1)),
             Debt::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 139.into(), 1.into(), price(4, 1)),
+            spec.debt(asset, &due(139, 1), price(4, 1)),
             Debt::partial(4.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 881.into(), 879.into(), price(1, 1)),
+            spec.debt(asset, &due(881, 879), price(1, 1)),
             Debt::partial(
                 879.into(),
                 Cause::Liability {
@@ -840,22 +868,22 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 881.into(), 880.into(), price(1, 1)),
+            spec.debt(asset, &due(881, 880), price(1, 1)),
             Debt::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 294.into(), 294.into(), price(1, 3)),
+            spec.debt(asset, &due(294, 294), price(1, 3)),
             Debt::partial(98.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 294.into(), 293.into(), price(3, 1)),
+            spec.debt(asset, &due(294, 293), price(3, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            spec.debt(asset, 1000.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(1000, 1), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -870,7 +898,7 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 900.into(), 897.into(), price(1, 1)),
+            spec.debt(asset, &due(900, 897), price(1, 1)),
             Debt::partial(
                 898.into(),
                 Cause::Liability {
@@ -880,15 +908,15 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 900.into(), 899.into(), price(1, 1)),
+            spec.debt(asset, &due(900, 899), price(1, 1)),
             Debt::partial(899.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 233.into(), 233.into(), price(3, 1)),
+            spec.debt(asset, &due(233, 233), price(3, 1)),
             Debt::partial(699.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 901.into(), 889.into(), price(1, 1)),
+            spec.debt(asset, &due(901, 889), price(1, 1)),
             Debt::partial(
                 900.into(),
                 Cause::Liability {
@@ -898,7 +926,7 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 902.into(), 889.into(), price(1, 1)),
+            spec.debt(asset, &due(902, 889), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -913,7 +941,7 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 768.into(), 765.into(), price(1, 1)),
+            spec.debt(asset, &due(768, 765), price(1, 1)),
             Debt::partial(
                 765.into(),
                 Cause::Liability {
@@ -923,7 +951,7 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 1560.into(), 1552.into(), price(1, 2)),
+            spec.debt(asset, &due(1560, 1552), price(1, 2)),
             Debt::partial(
                 777.into(),
                 Cause::Liability {
@@ -933,15 +961,15 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 768.into(), 768.into(), price(1, 1)),
+            spec.debt(asset, &due(768, 768), price(1, 1)),
             Debt::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 1560.into(), 1556.into(), price(1, 2)),
+            spec.debt(asset, &due(1560, 1556), price(1, 2)),
             Debt::partial(778.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 788.into(), 768.into(), price(1, 1)),
+            spec.debt(asset, &due(788, 768), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -956,7 +984,7 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 882.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(882, 1), price(1, 1)),
             Debt::partial(
                 880.into(),
                 Cause::Liability {
@@ -966,21 +994,21 @@ mod test_debt {
             ),
         );
         assert_eq!(
-            spec.debt(asset, 883.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(883, 1), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            spec.debt(asset, 294.into(), 1.into(), price(3, 1)),
+            spec.debt(asset, &due(294, 1), price(3, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
-            spec.debt(asset, 1000.into(), 1.into(), price(1, 1)),
+            spec.debt(asset, &due(1000, 1), price(1, 1)),
             Debt::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
@@ -995,19 +1023,19 @@ mod test_debt {
         let asset = 1000.into();
 
         assert_eq!(
-            spec.debt(asset, 772.into(), 674.into(), price(1, 1)),
+            spec.debt(asset, &due(772, 674), price(1, 1)),
             Debt::partial(674.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 1674.into(), 1674.into(), price(1, 2)),
+            spec.debt(asset, &due(1674, 1674), price(1, 2)),
             Debt::partial(837.into(), Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 772.into(), 675.into(), price(1, 1)),
+            spec.debt(asset, &due(772, 675), price(1, 1)),
             Debt::full(Cause::Overdue()),
         );
         assert_eq!(
-            spec.debt(asset, 1676.into(), 1676.into(), price(1, 2)),
+            spec.debt(asset, &due(1676, 1676), price(1, 2)),
             Debt::full(Cause::Overdue()),
         );
     }
@@ -1020,6 +1048,16 @@ mod test_debt {
         Lpn: Into<Coin<TestLpn>>,
     {
         price::total_of(price_asset.into()).is(price_lpn.into())
+    }
+
+    fn due<StableAmount>(total_due: StableAmount, overdue_collectable: StableAmount) -> TestDue
+    where
+        StableAmount: Into<Coin<TestLpn>>,
+    {
+        TestDue {
+            total_due: total_due.into(),
+            overdue: overdue_collectable.into(),
+        }
     }
 
     fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>

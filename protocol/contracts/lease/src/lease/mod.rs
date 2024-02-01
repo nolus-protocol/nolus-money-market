@@ -12,13 +12,13 @@ use crate::{
     position::Position,
 };
 
-pub(super) use self::{dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
+pub(super) use self::{debt::DebtStatus, dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
 
 mod alarm;
 mod close;
+mod debt;
 mod dto;
-mod interest;
-mod liquidation;
+mod due;
 mod paid;
 mod repay;
 mod state;
@@ -89,7 +89,7 @@ where
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
         let loan = self.loan.state(now);
-        let overdue_collect_in = self.position.overdue_liquidation_in(&loan);
+        let overdue_collect_in = self.position.overdue_collection_in(&loan);
 
         State {
             amount: self.position.amount(),
@@ -173,12 +173,12 @@ mod tests {
     const ORACLE_ADDR: &str = "oracle_addr";
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
-    const DUE_PERIOD: Duration = Duration::from_days(100);
+    pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
     const GRACE_PERIOD: Duration = Duration::from_days(10);
     pub(super) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
     pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
-    pub(super) const RECALC_TIME: Duration = Duration::from_hours(24);
+    pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
     pub(super) type TestLpn = StableC1;
     pub(super) type TestCurrency = PaymentC7;
     pub(super) type TestLease =
@@ -318,7 +318,7 @@ mod tests {
             SECOND_LIQ_WARN,
             THIRD_LIQ_WARN,
             Percent::from_percent(80),
-            RECALC_TIME,
+            RECHECK_TIME,
         );
         let position_spec = PositionSpec::<TestLpn>::new(
             liability,
