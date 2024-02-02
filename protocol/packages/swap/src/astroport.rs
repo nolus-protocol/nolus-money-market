@@ -1,3 +1,6 @@
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use std::any::type_name;
 use std::marker::PhantomData;
 
 use astroport::{
@@ -7,6 +10,9 @@ use astroport::{
 use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use dex::swap::SwapRequest;
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
@@ -24,6 +30,10 @@ use sdk::{
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use crate::utils;
 
 pub type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
@@ -59,6 +69,48 @@ impl<R> ExactAmountIn for RouterImpl<R>
 where
     R: Router,
 {
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
+    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    where
+        GIn: Group,
+    {
+        let RequestMsg {
+            sender: _,
+            contract,
+            msg,
+            funds,
+        } = utils::parse_request_from_any(request);
+
+        assert_eq!(
+            contract,
+            R::ROUTER_ADDR,
+            "Expected message to be addressed to currently selected router!"
+        );
+
+        let token_in = utils::parse_one_token_from_vec(funds);
+
+        let ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive: None,
+            to: None,
+            max_spread: Some(Self::MAX_IMPACT),
+        } = cosmwasm_std::from_json(msg).expect(&format!(
+            r#"Expected message to be from type "{}""#,
+            type_name::<ExecuteMsg>()
+        ))
+        else {
+            utils::pattern_match_else("ExecuteSwapOperations");
+        };
+
+        let swap_path = collect_swap_path(operations, token_in.ticker().clone());
+
+        SwapRequest {
+            token_in,
+            swap_path,
+        }
+    }
+
     fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
@@ -108,7 +160,8 @@ where
             .map(|swap_resp| swap_resp.return_amount.into())
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
     fn build_response(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
@@ -155,6 +208,38 @@ where
                 scanner.last_denom = next_denom;
                 op
             }))
+        })
+        .collect()
+}
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+fn collect_swap_path(operations: Vec<SwapOperation>, token_in: String) -> SwapPath {
+    operations
+        .into_iter()
+        .scan(token_in, |expected_offer_denom, operation| {
+            let SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
+                ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
+            } = operation
+            else {
+                unimplemented!(
+                    r#"Expected "AstroSwap" operation with both assets being native tokens!"#
+                );
+            };
+
+            assert_eq!(
+                offer_denom.as_str(),
+                expected_offer_denom.as_str(),
+                "Expected operation's offered denom to be the same as the last asked denom!"
+            );
+
+            *expected_offer_denom = ask_denom.clone();
+
+            Some(SwapTarget {
+                pool_id: Default::default(),
+                target: ask_denom,
+            })
         })
         .collect()
 }
@@ -295,6 +380,8 @@ mod test {
         ));
     }
 
+    // revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
     #[test]
     fn resp() {
         use dex::swap::ExactAmountIn;

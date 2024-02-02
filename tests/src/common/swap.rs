@@ -116,13 +116,13 @@ fn send_response<'r>(
     inituator_contract_addr: Addr,
     amounts: &[Amount],
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
-    use dex::swap::ExactAmountIn;
+    use dex::swap::ExactAmountIn as _;
 
     ibc::send_response(
         app,
         inituator_contract_addr.clone(),
         Binary(platform::trx::encode_msg_responses(
-            amounts.iter().copied().map(Impl::build_resp),
+            amounts.iter().copied().map(Impl::build_response),
         )),
     )
 }

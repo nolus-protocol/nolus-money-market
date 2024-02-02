@@ -9,3 +9,7 @@ pub use self::osmosis::*;
 mod astroport;
 #[cfg(feature = "osmosis")]
 mod osmosis;
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+mod utils;

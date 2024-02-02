@@ -6,7 +6,21 @@ use oracle::api::swap::SwapPath;
 use platform::{ica::HostAccount, trx::Transaction};
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::StdError};
 
+#[cfg(feature = "testing")]
+pub struct SwapRequest<GIn>
+where
+    GIn: Group,
+{
+    pub token_in: CoinDTO<GIn>,
+    pub swap_path: SwapPath,
+}
+
 pub trait ExactAmountIn {
+    #[cfg(feature = "testing")]
+    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    where
+        GIn: Group;
+
     /// `swap_path` should be a non-empty list
     ///
     /// `GIn` - the group of the input token

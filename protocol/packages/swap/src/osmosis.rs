@@ -1,3 +1,7 @@
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use std::any::type_name;
+
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
@@ -5,6 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use dex::swap::{Error, ExactAmountIn, Result};
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use dex::swap::SwapRequest;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -13,6 +20,10 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use crate::utils;
 
 // TODO intro an abstraction of a request, and
 // 1. remove the public visibility
@@ -24,6 +35,40 @@ type ResponseMsg = MsgSwapExactAmountInResponse;
 pub struct Impl;
 
 impl ExactAmountIn for Impl {
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
+    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    where
+        GIn: Group,
+    {
+        let RequestMsg {
+            sender: _,
+            routes,
+            token_in: Some(token_in),
+            token_out_min_amount,
+        } = utils::parse_request_from_any_and_type_url(request, RequestMsg::TYPE_URL)
+        else {
+            utils::pattern_match_else(type_name::<RequestMsg>())
+        };
+
+        assert_eq!({ token_out_min_amount }, "1");
+
+        let token_in = utils::parse_token(&token_in.amount, token_in.denom);
+
+        SwapRequest {
+            token_in,
+            swap_path: routes
+                .into_iter()
+                .map(
+                    |SwapAmountInRoute {
+                         pool_id,
+                         token_out_denom: target,
+                     }| SwapTarget { pool_id, target },
+                )
+                .collect(),
+        }
+    }
+
     fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
