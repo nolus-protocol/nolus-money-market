@@ -189,7 +189,9 @@ where
     }
 }
 
-// TODO remove this back-door
+// TODO remove this back-door / put `#[cfg(...)]
+//
+// #[cfg(any(test, feature = "testing"))]
 pub fn from_amount_ticker<G>(amount: Amount, ticker: SymbolOwned) -> Result<CoinDTO<G>>
 where
     G: Group,
