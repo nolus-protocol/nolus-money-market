@@ -191,13 +191,22 @@ mod test {
     };
     use dex::swap::Error;
     use finance::coin::Coin;
-    use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
+    use oracle::api::swap::SwapTarget;
+    use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::Decimal};
 
-    use crate::astroport::Main;
-
-    use super::SwapTarget;
+    use super::{Main, RouterImpl};
 
     const INVALID_TICKER: SymbolStatic = "NotATicker";
+
+    #[test]
+    fn const_eq_max_allowed_slippage() {
+        assert_eq!(
+            RouterImpl::<Main>::MAX_IMPACT,
+            astroport::pair::MAX_ALLOWED_SLIPPAGE
+                .parse::<Decimal>()
+                .unwrap()
+        );
+    }
 
     #[test]
     fn to_dex_symbol() {
