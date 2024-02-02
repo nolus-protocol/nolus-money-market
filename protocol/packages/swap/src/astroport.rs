@@ -51,6 +51,10 @@ impl Router for Test {
 #[derive(Serialize, Deserialize)]
 pub struct RouterImpl<R>(PhantomData<R>);
 
+impl<R> RouterImpl<R> {
+    const MAX_IMPACT: Decimal = Decimal::percent(50); // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
+}
+
 impl<R> ExactAmountIn for RouterImpl<R>
 where
     R: Router,
@@ -65,8 +69,6 @@ where
         GIn: Group,
         GSwap: Group,
     {
-        const MAX_IMPACT: Decimal = Decimal::percent(50); // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
-
         debug_assert!(!swap_path.is_empty());
         let token_in = to_proto_coin(token_in)?;
 
@@ -75,7 +77,7 @@ where
                 operations,
                 minimum_receive: None, // disable checks on the received amount
                 to: None,              // means the sender
-                max_spread: Some(MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
+                max_spread: Some(Self::MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
             })
             .and_then(|swap_msg| cosmwasm_std::to_json_vec(&swap_msg).map_err(Into::into))
             .map(|msg| RequestMsg {
