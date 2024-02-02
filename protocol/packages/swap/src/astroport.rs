@@ -28,9 +28,6 @@ use sdk::{
 pub type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
 
-#[derive(Serialize, Deserialize)]
-pub struct RouterImpl<R>(PhantomData<R>);
-
 trait Router {
     const ROUTER_ADDR: &'static str;
 }
@@ -50,6 +47,9 @@ impl Router for Test {
     const ROUTER_ADDR: &'static str =
         "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct RouterImpl<R>(PhantomData<R>);
 
 impl<R> ExactAmountIn for RouterImpl<R>
 where
