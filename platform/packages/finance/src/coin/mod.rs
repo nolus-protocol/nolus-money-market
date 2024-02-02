@@ -2,6 +2,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
+    num::NonZeroU128,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
@@ -18,6 +19,7 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+pub type NonZeroAmount = NonZeroU128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
