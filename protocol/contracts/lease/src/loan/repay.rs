@@ -1,7 +1,7 @@
 use currency::Currency;
 use finance::coin::Coin;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
 where
     C: Currency,
@@ -19,6 +19,31 @@ impl<C> Receipt<C>
 where
     C: Currency,
 {
+    pub fn new(
+        overdue_interest: Coin<C>,
+        overdue_margin: Coin<C>,
+        due_interest: Coin<C>,
+        due_margin: Coin<C>,
+        principal_due: Coin<C>,
+        principal_paid: Coin<C>,
+        change: Coin<C>,
+    ) -> Self {
+        debug_assert!(
+            principal_paid <= principal_due,
+            "Payment exceeds principal!"
+        );
+
+        Self {
+            overdue_interest_paid: overdue_interest,
+            overdue_margin_paid: overdue_margin,
+            due_interest_paid: due_interest,
+            due_margin_paid: due_margin,
+            principal_paid,
+            change,
+            close: principal_due == principal_paid,
+        }
+    }
+
     pub fn overdue_margin_paid(&self) -> Coin<C> {
         self.overdue_margin_paid
     }
@@ -55,52 +80,12 @@ where
             + self.principal_paid
             + self.change
     }
-
-    pub(super) fn pay_overdue_margin(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.overdue_margin_paid, Coin::default());
-
-        self.overdue_margin_paid = payment;
-    }
-
-    pub(super) fn pay_overdue_interest(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.overdue_interest_paid, Coin::default());
-
-        self.overdue_interest_paid = payment;
-    }
-
-    pub(super) fn pay_due_margin(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.due_margin_paid, Coin::default());
-
-        self.due_margin_paid = payment;
-    }
-
-    pub(super) fn pay_due_interest(&mut self, payment: Coin<C>) {
-        debug_assert_eq!(self.due_interest_paid, Coin::default());
-
-        self.due_interest_paid = payment;
-    }
-
-    pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
-        debug_assert_eq!(self.principal_paid, Coin::default());
-
-        debug_assert!(payment <= principal, "Payment exceeds principal!");
-
-        self.principal_paid = payment;
-
-        self.close = principal == payment;
-    }
-
-    pub(super) fn keep_change(&mut self, change: Coin<C>) {
-        debug_assert_eq!(self.change, Coin::default());
-
-        self.change = change;
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use currency::test::SuperGroupTestC1;
-    use finance::coin::Coin;
+    use finance::{coin::Coin, zero::Zero};
 
     use crate::loan::RepayReceipt;
 
@@ -110,18 +95,19 @@ mod tests {
     fn pay_principal_full() {
         let principal = Coin::<BorrowC>::new(10);
 
-        let mut receipt = RepayReceipt::default();
-
-        receipt.pay_principal(principal, principal);
-
-        assert_eq!(
-            receipt,
-            RepayReceipt {
-                principal_paid: principal,
-                close: true,
-                ..Default::default()
-            },
+        let receipt = RepayReceipt::new(
+            Coin::ZERO,
+            Coin::ZERO,
+            Coin::ZERO,
+            Coin::ZERO,
+            principal,
+            principal,
+            Coin::ZERO,
         );
+
+        assert_eq!(principal, receipt.principal_paid());
+        assert!(receipt.close());
+        assert_eq!(principal, receipt.total());
     }
 
     #[cfg(debug_assertions)]
@@ -130,10 +116,14 @@ mod tests {
     fn pay_principal_overpaid() {
         let principal = Coin::<BorrowC>::new(10);
 
-        let payment = principal + Coin::<BorrowC>::new(1);
-
-        let mut receipt = RepayReceipt::default();
-
-        receipt.pay_principal(principal, payment);
+        RepayReceipt::new(
+            Coin::ZERO,
+            Coin::ZERO,
+            Coin::ZERO,
+            Coin::ZERO,
+            principal,
+            principal + Coin::new(1),
+            Coin::ZERO,
+        );
     }
 }

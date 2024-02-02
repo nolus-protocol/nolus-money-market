@@ -181,7 +181,6 @@ where
                     .and_period(Period::from_till(self.due_period.period().start(), by))
                     .pay(state.principal_due, margin_paid, by);
             debug_assert!(margin_payment_change.is_zero());
-            // debug_assert!(margin_period_past_payment.start() == by || principal_payment.is_zero());
             self.due_period = margin_period_past_payment;
         }
 
@@ -197,14 +196,15 @@ where
             debug_assert_eq!(excess, Coin::ZERO);
         }
 
-        // TODO refactor RepayReceipt into immutable
-        let mut receipt = RepayReceipt::default();
-        receipt.pay_overdue_interest(overdue_interest_payment);
-        receipt.pay_overdue_margin(overdue_margin_payment);
-        receipt.pay_due_interest(due_interest_payment);
-        receipt.pay_due_margin(due_margin_payment);
-        receipt.pay_principal(state.principal_due, principal_paid);
-        receipt.keep_change(change);
+        let receipt = RepayReceipt::new(
+            overdue_interest_payment,
+            overdue_margin_payment,
+            due_interest_payment,
+            due_margin_payment,
+            state.principal_due,
+            principal_paid,
+            change,
+        );
         debug_assert_eq!(payment, receipt.total());
 
         Ok(receipt)
@@ -1083,14 +1083,15 @@ mod tests {
         where
             P: Into<Coin<Lpn>>,
         {
-            let mut receipt = RepayReceipt::default();
-            receipt.pay_principal(principal.into(), paid_principal.into());
-            receipt.pay_overdue_margin(paid_overdue_margin.into());
-            receipt.pay_overdue_interest(paid_overdue_interest.into());
-            receipt.pay_due_margin(paid_due_margin.into());
-            receipt.pay_due_interest(paid_due_interest.into());
-            receipt.keep_change(change.into());
-            receipt
+            RepayReceipt::new(
+                paid_overdue_interest.into(),
+                paid_overdue_margin.into(),
+                paid_due_interest.into(),
+                paid_due_margin.into(),
+                principal.into(),
+                paid_principal.into(),
+                change.into(),
+            )
         }
     }
 
