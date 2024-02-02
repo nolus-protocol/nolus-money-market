@@ -50,7 +50,6 @@ where
         PriceAlarms: PriceAlarmsTrait,
     {
         debug_assert!(!currency::equal::<Lpn, Asset>());
-        // TODO pass the prices from Debt::No()
         debug_assert!(!total_due.is_zero());
 
         let below = self.position.price_at(liquidation_zone.high(), total_due)?;
