@@ -4,6 +4,7 @@ use astroport::{
     asset::AssetInfo,
     router::{ExecuteMsg, SwapOperation, SwapResponseData},
 };
+use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use dex::swap::{Error, ExactAmountIn, Result};
@@ -23,7 +24,6 @@ use sdk::{
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
-use serde::{Deserialize, Serialize};
 
 pub type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
@@ -36,6 +36,7 @@ trait Router {
 }
 
 pub struct Main {}
+
 impl Router for Main {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
     const ROUTER_ADDR: &'static str =
@@ -43,6 +44,7 @@ impl Router for Main {
 }
 
 pub struct Test {}
+
 impl Router for Test {
     /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
     const ROUTER_ADDR: &'static str =
@@ -219,7 +221,7 @@ mod test {
         assert_eq!(
             ProtoCoin {
                 denom: SuperGroupTestC1::DEX_SYMBOL.into(),
-                amount: coin_amount.to_string()
+                amount: coin_amount.to_string(),
             },
             super::to_proto_coin::<SuperGroup>(&coin.into()).unwrap()
         );

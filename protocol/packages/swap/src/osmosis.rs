@@ -1,6 +1,7 @@
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
+use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use dex::swap::{Error, ExactAmountIn, Result};
@@ -12,7 +13,6 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
-use serde::{Deserialize, Serialize};
 
 // TODO intro an abstraction of a request, and
 // 1. remove the public visibility
