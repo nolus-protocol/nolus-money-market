@@ -131,7 +131,7 @@ where
             where
                 G: Group,
             {
-                self.1 += SwapClient::parse(&mut self.0)?;
+                self.1 += SwapClient::parse_response(&mut self.0)?;
                 Ok(IterNext::Continue)
             }
         }

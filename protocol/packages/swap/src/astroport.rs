@@ -53,7 +53,7 @@ impl<R> ExactAmountIn for RouterImpl<R>
 where
     R: Router,
 {
-    fn build<GIn, GSwap>(
+    fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
@@ -87,7 +87,7 @@ where
             })
     }
 
-    fn parse<I>(trx_resps: &mut I) -> Result<Amount>
+    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
         I: Iterator<Item = Any>,
     {
@@ -105,7 +105,7 @@ where
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn build_resp(amount_out: Amount) -> Any {
+    fn build_response(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
         let swap_resp = cosmwasm_std::to_json_vec(&SwapResponseData {
@@ -289,8 +289,8 @@ mod test {
         type SwapClient = super::RouterImpl<Main>;
 
         let amount = 20;
-        let mut resp = vec![SwapClient::build_resp(amount)].into_iter();
-        let parsed = SwapClient::parse(&mut resp).unwrap();
+        let mut resp = vec![SwapClient::build_response(amount)].into_iter();
+        let parsed = SwapClient::parse_response(&mut resp).unwrap();
         assert_eq!(amount, parsed);
         assert_eq!(None, resp.next());
     }

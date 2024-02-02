@@ -103,7 +103,7 @@ impl<'a> SwapTrx<'a> {
             .swap_path(amount.ticker().into(), currency_out.into(), self.querier)
             .map_err(Into::into)
             .and_then(|swap_path| {
-                SwapClient::build::<GIn, GSwap>(
+                SwapClient::build_request::<GIn, GSwap>(
                     &mut self.trx,
                     self.ica_account.clone(),
                     amount,
