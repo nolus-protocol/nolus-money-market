@@ -189,8 +189,7 @@ where
     }
 }
 
-// TODO remove this back-door / put `#[cfg(...)]
-//
+// TODO remove usages from non-testing code and put behind `#[cfg(...)]
 // #[cfg(any(test, feature = "testing"))]
 pub fn from_amount_ticker<G>(amount: Amount, ticker: SymbolOwned) -> Result<CoinDTO<G>>
 where
