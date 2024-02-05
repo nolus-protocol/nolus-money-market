@@ -34,7 +34,7 @@ osmosis = [
     "dep:serde",
 ]
 
-testing = ["dex/testing"]
+testing = ["finance/testing", "dex/testing"]
 
 [dependencies]
 currency = { workspace = true, optional = true }
@@ -50,4 +50,5 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }
 # dex = { workspace = true, features = ["testing"] } uncomment TODO report a cargo bug that 'test' cfg is not applied
