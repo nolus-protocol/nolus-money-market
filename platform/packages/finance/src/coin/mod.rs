@@ -1,8 +1,9 @@
+#[cfg(feature = "testing")]
+use std::num::NonZeroU128;
 use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    num::NonZeroU128,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
@@ -19,6 +20,7 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+#[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
 #[derive(
