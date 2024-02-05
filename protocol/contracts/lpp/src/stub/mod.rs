@@ -25,7 +25,7 @@ pub mod lender;
 pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
+#[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,

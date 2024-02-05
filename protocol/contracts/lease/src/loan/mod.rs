@@ -4,10 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::Coin,
-    interest::InterestPeriod,
-    percent::{Percent, Units},
-    period::Period,
+    coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent, period::Period,
     zero::Zero,
 };
 use lpp::{
@@ -28,34 +25,26 @@ pub use self::state::{Overdue, State};
 
 mod repay;
 mod state;
+mod unchecked;
 
 #[derive(Serialize, Deserialize, Clone)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "unchecked::LoanDTO"
+)]
 pub(crate) struct LoanDTO {
     lpp: LppRef,
-    interest_payment_spec: InterestPaymentSpec,
-    // TODO replace it with paid_by: Timestamp and interest: Percent
-    current_period: InterestPeriod<Units, Percent>,
     profit: ProfitRef,
+    due_period: Duration,
+    margin_interest: Percent,
+    margin_paid_by: Timestamp, // only this one should vary!
 }
 
 impl LoanDTO {
-    fn new(
-        lpp: LppRef,
-        interest_payment_spec: InterestPaymentSpec,
-        current_period: InterestPeriod<Units, Percent>,
-        profit: ProfitRef,
-    ) -> Self {
-        Self {
-            lpp,
-            interest_payment_spec,
-            current_period,
-            profit,
-        }
-    }
-
     pub(crate) fn annual_margin_interest(&self) -> Percent {
-        self.current_period.interest_rate()
+        self.margin_interest
     }
 
     pub(crate) fn lpp(&self) -> &LppRef {
@@ -69,10 +58,11 @@ impl LoanDTO {
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Loan<Lpn, LppLoan> {
-    lpn: PhantomData<Lpn>,
+    _lpn: PhantomData<Lpn>,
     lpp_loan: LppLoan,
-    interest_payment_spec: InterestPaymentSpec,
-    due_period: InterestPeriod<Units, Percent>,
+    due_period: Duration,
+    margin_interest: Percent,
+    margin_paid_by: Timestamp, // only this one should vary!
 }
 
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
@@ -84,12 +74,13 @@ where
     pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
         Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| {
             (
-                LoanDTO::new(
-                    lpp_batch.lpp_ref,
-                    self.interest_payment_spec,
-                    self.due_period,
+                LoanDTO {
+                    lpp: lpp_batch.lpp_ref,
                     profit,
-                ),
+                    due_period: self.due_period,
+                    margin_interest: self.margin_interest,
+                    margin_paid_by: self.margin_paid_by,
+                },
                 lpp_batch.batch,
             )
         })
@@ -115,25 +106,22 @@ where
         annual_margin_interest: Percent,
         interest_payment_spec: InterestPaymentSpec,
     ) -> Self {
-        let due_period = InterestPeriod::with_interest(annual_margin_interest).and_period(
-            Period::from_length(start, interest_payment_spec.due_period()),
-        );
         Self {
-            lpn: PhantomData,
+            _lpn: PhantomData,
             lpp_loan,
-            interest_payment_spec,
-            due_period,
+            due_period: interest_payment_spec.due_period(),
+            margin_interest: annual_margin_interest,
+            margin_paid_by: start,
         }
     }
 
     pub(super) fn from_dto(dto: LoanDTO, lpp_loan: LppLoan) -> Self {
-        {
-            Self {
-                lpn: PhantomData,
-                lpp_loan,
-                interest_payment_spec: dto.interest_payment_spec,
-                due_period: dto.current_period,
-            }
+        Self {
+            _lpn: PhantomData,
+            lpp_loan,
+            due_period: dto.due_period,
+            margin_interest: dto.margin_interest,
+            margin_paid_by: dto.margin_paid_by,
         }
     }
 
@@ -177,11 +165,11 @@ where
 
         {
             let (margin_period_past_payment, margin_payment_change) =
-                InterestPeriod::with_interest(self.due_period.interest_rate())
-                    .and_period(Period::from_till(self.due_period.period().start(), by))
+                InterestPeriod::with_interest(self.margin_interest)
+                    .and_period(Period::from_till(self.margin_paid_by, by))
                     .pay(state.principal_due, margin_paid, by);
             debug_assert!(margin_payment_change.is_zero());
-            self.due_period = margin_period_past_payment;
+            self.margin_paid_by = margin_period_past_payment.start();
         }
 
         profit.send(margin_paid);
@@ -213,19 +201,18 @@ where
     pub(crate) fn state(&self, now: &Timestamp) -> State<Lpn> {
         self.debug_check_start_due_before(now, "in the past. Now is ");
 
-        let due_period_margin = Period::from_till(self.due_period.start(), now);
+        let due_period_margin = Period::from_till(self.margin_paid_by, now);
 
         let overdue = Overdue::new(
             &due_period_margin,
-            self.interest_payment_spec.due_period(),
-            self.due_period.interest_rate(),
+            self.due_period,
+            self.margin_interest,
             &self.lpp_loan,
         );
 
         let principal_due = self.lpp_loan.principal_due();
         let due_margin_interest = {
-            let margin_interest_period =
-                InterestPeriod::with_interest(self.due_period.interest_rate());
+            let margin_interest_period = InterestPeriod::with_interest(self.margin_interest);
             margin_interest_period
                 .and_period(due_period_margin)
                 .interest(principal_due)
@@ -236,7 +223,7 @@ where
 
         State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
-            annual_interest_margin: self.due_period.interest_rate(),
+            annual_interest_margin: self.margin_interest,
             principal_due,
             due_interest,
             due_margin_interest,
@@ -246,9 +233,9 @@ where
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
         debug_assert!(
-            &self.due_period.start() <= when,
+            &self.margin_paid_by <= when,
             "The current due period starting at {}s, should begin {} {}s",
-            self.due_period.start(),
+            self.margin_paid_by,
             when_descr,
             when
         );
@@ -1095,6 +1082,7 @@ mod tests {
         }
     }
 
+    #[cfg(test)]
     mod test_state {
         use currency::Currency;
         use finance::{
