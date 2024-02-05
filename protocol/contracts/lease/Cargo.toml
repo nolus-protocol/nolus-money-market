@@ -39,7 +39,7 @@ skel = [
     "dep:timealarms",
     "dep:thiserror",
 ]
-testing = ["currencies/testing", "currency/testing", "finance/testing"]
+testing = ["currencies/testing", "currency/testing", "finance/testing", "lpp/testing", "profit/testing"]
 
 [dependencies]
 access-control = { workspace = true, optional = true }
