@@ -20,10 +20,9 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
-
 // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
-use crate::utils;
+use sdk::cosmos_sdk_proto::prost::Message;
 
 // TODO intro an abstraction of a request, and
 // 1. remove the public visibility
@@ -35,40 +34,6 @@ type ResponseMsg = MsgSwapExactAmountInResponse;
 pub struct Impl;
 
 impl ExactAmountIn for Impl {
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
-    #[cfg(feature = "testing")]
-    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
-    where
-        GIn: Group,
-    {
-        let RequestMsg {
-            sender: _,
-            routes,
-            token_in: Some(token_in),
-            token_out_min_amount,
-        } = utils::parse_request_from_any_and_type_url(request, RequestMsg::TYPE_URL)
-        else {
-            utils::pattern_match_else(type_name::<RequestMsg>())
-        };
-
-        assert_eq!({ token_out_min_amount }, "1");
-
-        let token_in = utils::parse_token(&token_in.amount, token_in.denom);
-
-        SwapRequest {
-            token_in,
-            swap_path: routes
-                .into_iter()
-                .map(
-                    |SwapAmountInRoute {
-                         pool_id,
-                         token_out_denom: target,
-                     }| SwapTarget { pool_id, target },
-                )
-                .collect(),
-        }
-    }
-
     fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
@@ -118,6 +83,40 @@ impl ExactAmountIn for Impl {
 
     // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
+    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    where
+        GIn: Group,
+    {
+        let RequestMsg {
+            sender: _,
+            routes,
+            token_in: Some(token_in),
+            token_out_min_amount,
+        } = parse_request_from_any_and_type_url(request, RequestMsg::TYPE_URL)
+        else {
+            crate::pattern_match_else(type_name::<RequestMsg>())
+        };
+
+        assert_eq!({ token_out_min_amount }, "1");
+
+        let token_in = crate::parse_token(&token_in.amount, token_in.denom);
+
+        SwapRequest {
+            token_in,
+            swap_path: routes
+                .into_iter()
+                .map(
+                    |SwapAmountInRoute {
+                         pool_id,
+                         token_out_denom: target,
+                     }| SwapTarget { pool_id, target },
+                )
+                .collect(),
+        }
+    }
+
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
     fn build_response(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
 
@@ -160,6 +159,20 @@ where
     Tickers
         .visit_any::<G, _>(ticker, DexSymbols {})
         .map_err(Error::from)
+}
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+fn parse_request_from_any_and_type_url<T>(request: Any, type_url: &str) -> T
+where
+    T: Message + Default,
+{
+    assert_eq!(
+        request.type_url, type_url,
+        "Different type URL than expected one encountered!"
+    );
+
+    T::decode(request.value.as_slice()).expect("Expected a swap request message!")
 }
 
 #[cfg(test)]

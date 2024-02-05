@@ -10,10 +10,10 @@ use astroport::{
 use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+use dex::swap::{Error, ExactAmountIn, Result};
 // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use dex::swap::SwapRequest;
-use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -21,6 +21,9 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+use sdk::cosmos_sdk_proto::prost::Message;
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtoCoin,
@@ -30,10 +33,6 @@ use sdk::{
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
-
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
-#[cfg(feature = "testing")]
-use crate::utils;
 
 pub type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
@@ -69,48 +68,6 @@ impl<R> ExactAmountIn for RouterImpl<R>
 where
     R: Router,
 {
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
-    #[cfg(feature = "testing")]
-    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
-    where
-        GIn: Group,
-    {
-        let RequestMsg {
-            sender: _,
-            contract,
-            msg,
-            funds,
-        } = utils::parse_request_from_any(request);
-
-        assert_eq!(
-            contract,
-            R::ROUTER_ADDR,
-            "Expected message to be addressed to currently selected router!"
-        );
-
-        let token_in = utils::parse_one_token_from_vec(funds);
-
-        let ExecuteMsg::ExecuteSwapOperations {
-            operations,
-            minimum_receive: None,
-            to: None,
-            max_spread: Some(Self::MAX_IMPACT),
-        } = cosmwasm_std::from_json(msg).expect(&format!(
-            r#"Expected message to be from type "{}""#,
-            type_name::<ExecuteMsg>()
-        ))
-        else {
-            utils::pattern_match_else("ExecuteSwapOperations");
-        };
-
-        let swap_path = collect_swap_path(operations, token_in.ticker().clone());
-
-        SwapRequest {
-            token_in,
-            swap_path,
-        }
-    }
-
     fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
@@ -158,6 +115,48 @@ where
                 cosmwasm_std::from_json::<SwapResponseData>(cosmwasm_resp.data).map_err(Into::into)
             })
             .map(|swap_resp| swap_resp.return_amount.into())
+    }
+
+    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+    #[cfg(feature = "testing")]
+    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    where
+        GIn: Group,
+    {
+        let RequestMsg {
+            sender: _,
+            contract,
+            msg,
+            funds,
+        } = parse_request_from_any(request);
+
+        assert_eq!(
+            contract,
+            R::ROUTER_ADDR,
+            "Expected message to be addressed to currently selected router!"
+        );
+
+        let token_in = parse_one_token_from_vec(funds);
+
+        let ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive: None,
+            to: None,
+            max_spread: Some(Self::MAX_IMPACT),
+        } = cosmwasm_std::from_json(msg).expect(&format!(
+            r#"Expected message to be from type "{}""#,
+            type_name::<ExecuteMsg>()
+        ))
+        else {
+            crate::pattern_match_else("ExecuteSwapOperations");
+        };
+
+        let swap_path = collect_swap_path(operations, token_in.ticker().clone());
+
+        SwapRequest {
+            token_in,
+            swap_path,
+        }
     }
 
     // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
@@ -264,6 +263,28 @@ where
     Tickers
         .visit_any::<G, _>(ticker.as_ref(), DexSymbols {})
         .map_err(Error::from)
+}
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+fn parse_request_from_any<T>(request: Any) -> T
+where
+    T: Message + Default + Name,
+{
+    request.to_msg().expect("Expected a swap request message!")
+}
+
+// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
+#[cfg(feature = "testing")]
+fn parse_one_token_from_vec<G>(funds: Vec<ProtoCoin>) -> CoinDTO<G>
+where
+    G: Group,
+{
+    if let [token_in] = funds.as_slice() {
+        crate::parse_token(&token_in.amount, token_in.denom.clone())
+    } else {
+        unimplemented!("Expected only one type of token!");
+    }
 }
 
 #[cfg(test)]
