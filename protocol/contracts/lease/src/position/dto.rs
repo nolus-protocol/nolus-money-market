@@ -10,6 +10,7 @@ use super::{Position, Spec};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionDTO {
     amount: LeaseCoin,
     spec: PositionSpecDTO,

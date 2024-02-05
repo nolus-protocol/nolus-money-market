@@ -29,7 +29,7 @@ mod unchecked;
 /// framework does not support type parameterization or where the currency type
 /// is unknown at compile time.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "unchecked::CoinDTO")]
+#[serde(deny_unknown_fields, rename_all = "snake_case", try_from = "unchecked::CoinDTO")]
 pub struct CoinDTO<G>
 where
     G: Group,

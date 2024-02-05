@@ -4,6 +4,7 @@ use sdk::schemars::{self, JsonSchema};
 
 /// Parameters needed to operate with the Dex network
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ConnectionParams {
     /// The IBC connection to the DEX used to transfer in/out, swap and hold assets
     pub connection_id: String,
@@ -14,6 +15,7 @@ pub struct ConnectionParams {
 
 /// IBC ICS-20 channel parameters
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Ics20Channel {
     /// The id of the local endpoint
     pub local_endpoint: String,

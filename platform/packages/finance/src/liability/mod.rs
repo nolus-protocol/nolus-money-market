@@ -22,8 +22,7 @@ mod zone;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(rename_all = "snake_case")]
-#[serde(try_from = "unchecked::Liability")]
+#[serde(deny_unknown_fields, rename_all = "snake_case", try_from = "unchecked::Liability")]
 pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
     /// initial > 0

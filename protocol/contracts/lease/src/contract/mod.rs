@@ -16,6 +16,7 @@ pub mod msg;
 mod state;
 
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,

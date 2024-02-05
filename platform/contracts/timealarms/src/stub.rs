@@ -26,6 +26,7 @@ pub trait WithTimeAlarms {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct TimeAlarmsRef {
     addr: Addr,
 }

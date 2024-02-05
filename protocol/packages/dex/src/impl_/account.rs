@@ -15,6 +15,7 @@ use super::{
 };
 
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,

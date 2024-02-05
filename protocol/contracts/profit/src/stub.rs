@@ -9,6 +9,7 @@ use crate::msg::{ConfigResponse, QueryMsg};
 pub type ProfitStub = LazySenderStub;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProfitRef {
     addr: Addr,
 }
