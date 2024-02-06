@@ -77,28 +77,22 @@ mod test_two_versions {
 
     use crate::loan::{tests::Lpn, LoanDTO};
 
-    fn loan_v5_0() -> LoanDTO {
-        LoanDTO {
-            lpp: LppRef::unchecked::<_, Lpn>(
-                "nolus1qg5ega6dykkxc307y25pecuufrjkxkaggkkxh7nad0vhyhtuhw3sqaa3c5",
-            ),
-            profit: ProfitRef::unchecked::<_>(
-                "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu",
-            ),
-            due_period: Duration::from_nanos(604800000000000),
-            margin_interest: Percent::from_permille(40),
-            margin_paid_by: Timestamp::from_nanos(1706820166180052443),
-        }
-    }
+    const LPP_ADDR: &str = "nolus1qg5ega6dykkxc307y25pecuufrjkxkaggkkxh7nad0vhyhtuhw3sqaa3c5";
+    const PROFIT_ADDR: &str = "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
+    const DUE_PERIOD: Duration = Duration::from_nanos(604800000000000);
+    const MARGIN_INTEREST: Percent = Percent::from_permille(40);
+    const PAID_BY: Timestamp = Timestamp::from_nanos(1706820166180052443);
 
     #[test]
     fn read_4_2_into_5_0() {
         let raw_4_2 = format!(
-            r#"{{"lpp":{{"addr":"nolus1qg5ega6dykkxc307y25pecuufrjkxkaggkkxh7nad0vhyhtuhw3sqaa3c5","currency":{:?}}},
-        "profit":{{"addr":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}},
-        "interest_payment_spec":{{"due_period":604800000000000,"grace_period":172800000000000}},
-        "current_period":{{"period":{{"start":"1706820166180052443","length":0}},"interest":40}}}}"#,
-            Lpn::TICKER
+            r#"{{"lpp":{{"addr":"{LPP_ADDR}","currency":"{lpn_ticker}"}}, "profit":{{"addr":"{PROFIT_ADDR}"}},
+                "interest_payment_spec":{{"due_period":{due_period},"grace_period":172800000000000}},
+                "current_period":{{"period":{{"start":"{paid_by}","length":0}},"interest":{interest}}}}}"#,
+            lpn_ticker = Lpn::TICKER,
+            due_period = DUE_PERIOD.nanos(),
+            paid_by = PAID_BY.nanos(),
+            interest = MARGIN_INTEREST.units(),
         );
 
         assert_eq!(loan_v5_0(), from_json(raw_4_2.clone()).unwrap());
@@ -116,5 +110,15 @@ mod test_two_versions {
             from_json(to_json_vec(&loan_v5_0()).expect("serialization passed"))
                 .expect("deserialization passed")
         );
+    }
+
+    fn loan_v5_0() -> LoanDTO {
+        LoanDTO {
+            lpp: LppRef::unchecked::<_, Lpn>(LPP_ADDR),
+            profit: ProfitRef::unchecked::<_>(PROFIT_ADDR),
+            due_period: DUE_PERIOD,
+            margin_interest: MARGIN_INTEREST,
+            margin_paid_by: PAID_BY,
+        }
     }
 }
