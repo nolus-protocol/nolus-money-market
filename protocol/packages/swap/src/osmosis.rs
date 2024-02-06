@@ -7,9 +7,9 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
 use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, ExactAmountIn, Result};
 #[cfg(feature = "testing")]
 use dex::swap::SwapRequest;
+use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -17,9 +17,9 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 #[cfg(feature = "testing")]
 use sdk::cosmos_sdk_proto::prost::Message;
+use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 
 // TODO change visibility to private
 pub type RequestMsg = MsgSwapExactAmountIn;

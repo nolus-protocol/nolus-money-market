@@ -9,9 +9,9 @@ use astroport::{
 use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
-use dex::swap::{Error, ExactAmountIn, Result};
 #[cfg(feature = "testing")]
 use dex::swap::SwapRequest;
+use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
@@ -277,8 +277,8 @@ where
 
 #[cfg(feature = "testing")]
 fn from_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
-    where
-        G: Group,
+where
+    G: Group,
 {
     DexSymbols
         .visit_any::<G, _>(ticker, Tickers {})
