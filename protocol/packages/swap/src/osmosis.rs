@@ -77,9 +77,10 @@ impl ExactAmountIn for Impl {
     }
 
     #[cfg(feature = "testing")]
-    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
     where
         GIn: Group,
+        GSwap: Group,
     {
         let RequestMsg {
             sender: _,
@@ -103,7 +104,15 @@ impl ExactAmountIn for Impl {
                     |SwapAmountInRoute {
                          pool_id,
                          token_out_denom: target,
-                     }| SwapTarget { pool_id, target },
+                     }| {
+                        SwapTarget {
+                            pool_id,
+                            target: currency::DexSymbols
+                                .visit_any::<GSwap, _>(&target, currency::Tickers)
+                                .expect("Asked asset doesn't belong to swapping currency group!")
+                                .into(),
+                        }
+                    },
                 )
                 .collect(),
         }

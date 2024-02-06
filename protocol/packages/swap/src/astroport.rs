@@ -116,9 +116,10 @@ where
     }
 
     #[cfg(feature = "testing")]
-    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
     where
         GIn: Group,
+        GSwap: Group,
     {
         let RequestMsg {
             sender: _,
@@ -148,7 +149,7 @@ where
             crate::pattern_match_else("ExecuteSwapOperations");
         };
 
-        let swap_path = collect_swap_path(operations, token_in.ticker().clone());
+        let swap_path = collect_swap_path::<GSwap>(operations, token_in.ticker().clone());
 
         SwapRequest {
             token_in,
@@ -208,13 +209,22 @@ where
 }
 
 #[cfg(feature = "testing")]
-fn collect_swap_path(operations: Vec<SwapOperation>, token_in: String) -> SwapPath {
+fn collect_swap_path<GSwap>(operations: Vec<SwapOperation>, token_in: String) -> SwapPath
+where
+    GSwap: Group,
+{
     operations
         .into_iter()
         .scan(token_in, |expected_offer_denom, operation| {
             let SwapOperation::AstroSwap {
-                offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
-                ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
+                offer_asset_info:
+                    AssetInfo::NativeToken {
+                        denom: offer_dex_denom,
+                    },
+                ask_asset_info:
+                    AssetInfo::NativeToken {
+                        denom: ask_dex_denom,
+                    },
             } = operation
             else {
                 unimplemented!(
@@ -222,8 +232,14 @@ fn collect_swap_path(operations: Vec<SwapOperation>, token_in: String) -> SwapPa
                 );
             };
 
+            let offer_denom = from_dex_symbol::<GSwap>(&offer_dex_denom)
+                .expect("Offered asset doesn't belong to swapping currency group!");
+            let ask_denom = from_dex_symbol::<GSwap>(&ask_dex_denom)
+                .expect("Asked asset doesn't belong to swapping currency group!")
+                .to_owned();
+
             assert_eq!(
-                offer_denom.as_str(),
+                offer_denom,
                 expected_offer_denom.as_str(),
                 "Expected operation's offered denom to be the same as the last asked denom!"
             );
@@ -256,6 +272,16 @@ where
 {
     Tickers
         .visit_any::<G, _>(ticker, DexSymbols {})
+        .map_err(Error::from)
+}
+
+#[cfg(feature = "testing")]
+fn from_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
+    where
+        G: Group,
+{
+    DexSymbols
+        .visit_any::<G, _>(ticker, Tickers {})
         .map_err(Error::from)
 }
 
