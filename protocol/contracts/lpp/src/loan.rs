@@ -48,15 +48,14 @@ where
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
-        let (due_period, interest_change) =
-            self.due_period(by).pay(self.principal_due, repayment, by);
+        let (paid_by, interest_change) = self.due_period(by).pay(self.principal_due, repayment, by);
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);
         let excess = interest_change - principal_paid;
 
         self.principal_due -= principal_paid;
-        self.interest_paid = due_period.start();
+        self.interest_paid = paid_by;
 
         RepayShares {
             interest: interest_paid,

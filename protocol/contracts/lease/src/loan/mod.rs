@@ -164,12 +164,12 @@ where
         );
 
         {
-            let (margin_period_past_payment, margin_payment_change) =
+            let (margin_paid_by, margin_payment_change) =
                 InterestPeriod::with_interest(self.margin_interest)
                     .and_period(Period::from_till(self.margin_paid_by, by))
                     .pay(state.principal_due, margin_paid, by);
             debug_assert!(margin_payment_change.is_zero());
-            self.margin_paid_by = margin_period_past_payment.start();
+            self.margin_paid_by = margin_paid_by;
         }
 
         profit.send(margin_paid);

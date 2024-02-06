@@ -188,11 +188,6 @@ impl LppRef {
     }
 }
 
-// #[cfg(feature = "testing")]
-// pub fn unchecked_lpp_loan<Lpn>(loan: LoanResponse<Lpn>) -> impl LppLoan<Lpn> {
-
-// }
-
 pub struct LppBatch<Ref> {
     pub lpp_ref: Ref,
     pub batch: Batch,

@@ -47,19 +47,6 @@ impl Period {
         self.start + self.length
     }
 
-    // TODO get rid it out when factor out Period as a result of InterestPeriod::pay
-    pub fn shift_start(self, delta: Duration) -> Self {
-        debug_assert!(delta <= self.length);
-        let res = Self::from_length(self.start + delta, self.length - delta);
-        debug_assert_eq!(self.till(), res.till());
-        res
-    }
-
-    // TODO remove when remove grace time
-    pub fn next(self, length: Duration) -> Self {
-        Self::from_length(self.till(), length)
-    }
-
     /// Cut off a period from this
     ///
     /// Pre: `self.intersect(other)` either starts at `self.start()` or ends at `self.till()`
@@ -166,35 +153,6 @@ mod test {
         assert_eq!(from_till(100, 180), p1.cut(&from_till(180, 200)));
         assert_eq!(from_till(110, 200), p1.cut(&from_till(80, 110)));
         assert_eq!(from_till(150, 200), p1.cut(&from_till(100, 150)));
-    }
-
-    #[test]
-    fn shift_start() {
-        let p = Period::from_till(
-            Timestamp::from_nanos(100),
-            &(Timestamp::from_nanos(100) + Duration::YEAR),
-        );
-        assert_eq!(
-            Period::from_length(
-                Timestamp::from_nanos(100) + Duration::HOUR,
-                Duration::YEAR - Duration::HOUR
-            ),
-            p.shift_start(Duration::HOUR)
-        );
-    }
-
-    #[test]
-    fn next() {
-        let p = Period::from_length(Timestamp::from_nanos(100), Duration::YEAR);
-        assert_eq!(
-            Period::from_length(Timestamp::from_nanos(100) + Duration::YEAR, Duration::HOUR),
-            p.next(Duration::HOUR)
-        );
-
-        assert_eq!(
-            p.shift_start(Duration::HOUR).next(Duration::HOUR),
-            p.next(Duration::HOUR)
-        );
     }
 
     fn from_till(from_sec: u64, till_sec: u64) -> Period {
