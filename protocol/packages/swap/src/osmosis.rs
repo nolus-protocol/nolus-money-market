@@ -24,9 +24,7 @@ use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
 #[cfg(feature = "testing")]
 use sdk::cosmos_sdk_proto::prost::Message;
 
-// TODO intro an abstraction of a request, and
-// 1. remove the public visibility
-// 2. add a `fn ExactAmountIn::parse_req`
+// TODO change visibility to private
 pub type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
