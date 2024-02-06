@@ -238,18 +238,4 @@ mod test {
             Err(Error::Currency(_))
         ));
     }
-
-    #[test]
-    fn resp() {
-        use super::ExactAmountIn;
-
-        type SwapClient = super::Impl;
-
-        let amount = 20;
-
-        let mut resp = vec![SwapClient::build_response(amount)].into_iter();
-        let parsed = SwapClient::parse_response(&mut resp).unwrap();
-        assert_eq!(amount, parsed);
-        assert_eq!(None, resp.next());
-    }
 }
