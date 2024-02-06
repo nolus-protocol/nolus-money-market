@@ -58,7 +58,7 @@ where
     where
         P: Fractionable<U> + TimeSliceable,
     {
-        self.interest_by(principal, &self.till())
+        interest(self.interest, principal, self.period.length())
     }
 
     /// Computes how much time this payment covers, return.0, and the change if over, return.1
@@ -69,39 +69,23 @@ where
         P: Zero + Debug + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
         Duration: Fractionable<P>,
     {
-        // TODO create a Period[self.period.start, by) and intersect it with self.period
-        let by_within_period = self.period.move_within(*by);
-        let interest_due_per_period = self.interest_by(principal, &by_within_period);
+        let due_period = Duration::between(&self.start(), &self.period.move_within(*by));
+        let interest_due_per_period = {
+            // TODO create a Period[self.period.start, by) and intersect it with self.period
+            interest(self.interest, principal, due_period)
+        };
 
         let (paid_for, change) = if interest_due_per_period == P::ZERO {
             (Duration::from_nanos(0), payment)
         } else {
             let repayment = cmp::min(interest_due_per_period, payment);
 
-            // TODO consider changing the algo by computing the paid period on annual basis, not the payment period one
-            // currently it is in favor of payment for small periods since the due interest for the period is rounded down
-            let period = Duration::between(&self.start(), &by_within_period);
-            let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
-
+            let period_paid_for =
+                due_period.into_slice_per_ratio(repayment, interest_due_per_period);
             let change = payment - repayment;
             (period_paid_for, change)
         };
         (self.start() + paid_for, change)
-    }
-
-    fn till(&self) -> Timestamp {
-        self.period.till()
-    }
-
-    fn interest_by<P>(&self, principal: P, by: &Timestamp) -> P
-    where
-        P: Fractionable<U> + TimeSliceable,
-    {
-        debug_assert!(&self.start() <= by);
-        debug_assert!(by <= &self.till());
-        let period = Duration::between(&self.start(), by);
-
-        interest(self.interest, principal, period)
     }
 }
 
