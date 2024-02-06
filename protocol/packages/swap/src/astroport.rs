@@ -193,8 +193,8 @@ where
 
     swap_path
         .iter()
-        .map(|swap_target| &swap_target.target)
-        .map(to_dex_symbol::<_, G>)
+        .map(|swap_target| swap_target.target.as_str())
+        .map(to_dex_symbol::<G>)
         .scan(scanner, |scanner, may_next_denom| {
             Some(may_next_denom.map(|next_denom| {
                 let op = SwapOperation::AstroSwap {
@@ -256,13 +256,12 @@ where
         })
 }
 
-fn to_dex_symbol<Symbol, G>(ticker: &Symbol) -> Result<&SymbolSlice>
+fn to_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
 where
-    Symbol: AsRef<SymbolSlice> + ?Sized,
     G: Group,
 {
     Tickers
-        .visit_any::<G, _>(ticker.as_ref(), DexSymbols {})
+        .visit_any::<G, _>(ticker, DexSymbols {})
         .map_err(Error::from)
 }
 
@@ -320,14 +319,14 @@ mod test {
         type Currency = SuperGroupTestC1;
         assert_eq!(
             Ok(Currency::DEX_SYMBOL),
-            super::to_dex_symbol::<_, SuperGroup>(Currency::TICKER)
+            super::to_dex_symbol::<SuperGroup>(Currency::TICKER)
         );
     }
 
     #[test]
     fn to_dex_symbol_err() {
         assert!(matches!(
-            super::to_dex_symbol::<_, SuperGroup>(INVALID_TICKER),
+            super::to_dex_symbol::<SuperGroup>(INVALID_TICKER),
             Err(Error::Currency(_))
         ));
     }
