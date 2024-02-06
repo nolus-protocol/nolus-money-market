@@ -49,7 +49,7 @@ impl ExactAmountIn for Impl {
         // For the first version, we accept whatever price impact and slippage.
         const MIN_OUT_AMOUNT: &str = "1";
         let routes = to_route::<GSwap>(swap_path)?;
-        let token_in = Some(to_cwcoin(token_in)?);
+        let token_in = Some(to_dex_cwcoin(token_in)?);
         let token_out_min_amount = MIN_OUT_AMOUNT.into();
         let msg = RequestMsg {
             sender: sender.into(),
@@ -143,7 +143,7 @@ where
         .collect()
 }
 
-fn to_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
+fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
 where
     G: Group,
 {
@@ -203,11 +203,11 @@ mod test {
     }
 
     #[test]
-    fn to_cwcoin() {
+    fn to_dex_cwcoin() {
         let coin: Coin<SuperGroupTestC1> = 3541415.into();
         assert_eq!(
             CwCoin::new(coin.into(), SuperGroupTestC1::DEX_SYMBOL),
-            super::to_cwcoin::<SuperGroup>(&coin.into()).unwrap()
+            super::to_dex_cwcoin::<SuperGroup>(&coin.into()).unwrap()
         );
     }
 

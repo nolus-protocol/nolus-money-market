@@ -80,7 +80,7 @@ where
         GSwap: Group,
     {
         debug_assert!(!swap_path.is_empty());
-        let token_in = to_proto_coin(token_in)?;
+        let token_in = to_dex_proto_coin(token_in)?;
 
         to_operations::<GSwap>(&token_in.denom, swap_path)
             .map(|operations| ExecuteMsg::ExecuteSwapOperations {
@@ -244,7 +244,7 @@ fn collect_swap_path(operations: Vec<SwapOperation>, token_in: String) -> SwapPa
         .collect()
 }
 
-fn to_proto_coin<G>(token: &CoinDTO<G>) -> Result<ProtoCoin>
+fn to_dex_proto_coin<G>(token: &CoinDTO<G>) -> Result<ProtoCoin>
 where
     G: Group,
 {
@@ -332,7 +332,7 @@ mod test {
     }
 
     #[test]
-    fn to_cwcoin() {
+    fn to_dex_cwcoin() {
         let coin_amount = 3541415;
         let coin: Coin<SuperGroupTestC1> = coin_amount.into();
         assert_eq!(
@@ -340,7 +340,7 @@ mod test {
                 denom: SuperGroupTestC1::DEX_SYMBOL.into(),
                 amount: coin_amount.to_string(),
             },
-            super::to_proto_coin::<SuperGroup>(&coin.into()).unwrap()
+            super::to_dex_proto_coin::<SuperGroup>(&coin.into()).unwrap()
         );
     }
 
