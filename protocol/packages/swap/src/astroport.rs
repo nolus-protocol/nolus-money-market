@@ -94,7 +94,7 @@ where
                 funds: vec![token_in],
             })
             .map(|req| {
-                trx.add_message(RequestMsg::NAME, req);
+                trx.add_message(RequestMsg::type_url(), req);
             })
     }
 
