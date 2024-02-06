@@ -49,6 +49,7 @@ osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
+swap = { path = ".", features = ["testing"] }
+
 currency = { workspace = true, features = ["testing"] }
-finance = { workspace = true, features = ["testing"] }
-# dex = { workspace = true, features = ["testing"] } uncomment TODO report a cargo bug that 'test' cfg is not applied
+platform = { workspace = true, features = ["testing"] }
