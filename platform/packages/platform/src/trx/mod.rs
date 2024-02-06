@@ -29,6 +29,17 @@ impl Transaction {
     }
 }
 
+#[cfg(feature = "testing")]
+impl IntoIterator for Transaction {
+    type Item = ProtobufAny;
+
+    type IntoIter = std::vec::IntoIter<ProtobufAny>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.msgs.into_iter()
+    }
+}
+
 pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any>> {
     TxMsgData::decode(data)
         .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter())
@@ -63,6 +74,7 @@ where
 #[cfg(test)]
 mod test {
     use base64::{engine::general_purpose, Engine};
+
     use sdk::cosmos_sdk_proto::Any;
 
     #[test]
