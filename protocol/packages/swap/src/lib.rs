@@ -13,16 +13,18 @@ mod astroport;
 mod osmosis;
 
 #[cfg(feature = "testing")]
-fn parse_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
+fn parse_dex_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
 where
     G: currency::Group,
 {
-    finance::coin::from_amount_ticker(
+    use finance::coin::{from_amount_dex_symbol, NonZeroAmount};
+
+    from_amount_dex_symbol(
         amount
-            .parse::<finance::coin::NonZeroAmount>()
+            .parse::<NonZeroAmount>()
             .expect("Expected swap-in amount to be a non-zero unsigned integer!")
             .get(),
-        denom,
+        &denom,
     )
     .expect("Expected swap-in token to be part of selected group!")
 }

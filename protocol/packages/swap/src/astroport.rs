@@ -299,7 +299,7 @@ where
     G: Group,
 {
     if let [token_in] = funds.as_slice() {
-        crate::parse_token(&token_in.amount, token_in.denom.clone())
+        crate::parse_dex_token(&token_in.amount, token_in.denom.clone())
     } else {
         unimplemented!("Expected only one type of token!");
     }
