@@ -13,7 +13,7 @@ mod osmosis;
 
 // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
-pub(crate) fn parse_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
+fn parse_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
 where
     G: currency::Group,
 {
@@ -30,7 +30,7 @@ where
 // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 #[cold]
-pub(crate) fn pattern_match_else(message_name: &str) -> ! {
+fn pattern_match_else(message_name: &str) -> ! {
     unimplemented!(
         r#"Expected "{message_name}" message symmetric to the one built by the "build_request" method!"#
     );
