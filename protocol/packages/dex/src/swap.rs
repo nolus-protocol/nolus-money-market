@@ -26,9 +26,10 @@ pub trait ExactAmountIn {
         I: Iterator<Item = Any>;
 
     #[cfg(feature = "testing")]
-    fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
+    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
     where
-        GIn: Group;
+        GIn: Group,
+        GSwap: Group;
 
     #[cfg(feature = "testing")]
     fn build_response(amount_out: Amount) -> Any;
