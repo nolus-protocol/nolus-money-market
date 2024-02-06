@@ -1,4 +1,3 @@
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use std::any::type_name;
 
@@ -9,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use dex::swap::{Error, ExactAmountIn, Result};
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use dex::swap::SwapRequest;
 use finance::coin::{Amount, CoinDTO};
@@ -20,7 +18,6 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use sdk::cosmos_sdk_proto::prost::Message;
 
@@ -79,7 +76,6 @@ impl ExactAmountIn for Impl {
         Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
     }
 
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
     fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
     where
@@ -113,7 +109,6 @@ impl ExactAmountIn for Impl {
         }
     }
 
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
     fn build_response(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
@@ -159,7 +154,6 @@ where
         .map_err(Error::from)
 }
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 fn parse_request_from_any_and_type_url<T>(request: Any, type_url: &str) -> T
 where
@@ -236,7 +230,6 @@ mod test {
         ));
     }
 
-    #[cfg(feature = "testing")] // remove TODO report a cargo bug that 'test' cfg is not applied
     #[test]
     fn resp() {
         use super::ExactAmountIn;

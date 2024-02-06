@@ -12,7 +12,6 @@ mod astroport;
 #[cfg(feature = "osmosis")]
 mod osmosis;
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 fn parse_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
 where
@@ -28,7 +27,6 @@ where
     .expect("Expected swap-in token to be part of selected group!")
 }
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 #[cold]
 fn pattern_match_else(message_name: &str) -> ! {

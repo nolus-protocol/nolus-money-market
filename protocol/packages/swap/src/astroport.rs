@@ -1,4 +1,3 @@
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use std::any::type_name;
 use std::marker::PhantomData;
@@ -11,7 +10,6 @@ use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
 use dex::swap::{Error, ExactAmountIn, Result};
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use dex::swap::SwapRequest;
 use finance::coin::{Amount, CoinDTO};
@@ -21,7 +19,6 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 use sdk::cosmos_sdk_proto::prost::Message;
 use sdk::{
@@ -118,7 +115,6 @@ where
             .map(|swap_resp| swap_resp.return_amount.into())
     }
 
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
     fn parse_request<GIn>(request: Any) -> SwapRequest<GIn>
     where
@@ -160,7 +156,6 @@ where
         }
     }
 
-    // #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
     fn build_response(amount_out: Amount) -> Any {
         use sdk::cosmos_sdk_proto::traits::Message as _;
@@ -212,7 +207,6 @@ where
         .collect()
 }
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 fn collect_swap_path(operations: Vec<SwapOperation>, token_in: String) -> SwapPath {
     operations
@@ -265,7 +259,6 @@ where
         .map_err(Error::from)
 }
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 fn parse_request_from_any<T>(request: Any) -> T
 where
@@ -274,7 +267,6 @@ where
     request.to_msg().expect("Expected a swap request message!")
 }
 
-// #[cfg(any(test, feature = "testing"))] revert TODO report a cargo bug that 'test' cfg is not applied
 #[cfg(feature = "testing")]
 fn parse_one_token_from_vec<G>(funds: Vec<ProtoCoin>) -> CoinDTO<G>
 where
@@ -401,7 +393,6 @@ mod test {
         ));
     }
 
-    // revert TODO report a cargo bug that 'test' cfg is not applied
     #[cfg(feature = "testing")]
     #[test]
     fn resp() {
