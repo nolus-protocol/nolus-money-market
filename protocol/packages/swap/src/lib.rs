@@ -13,20 +13,51 @@ mod astroport;
 mod osmosis;
 
 #[cfg(feature = "testing")]
-fn parse_dex_token<G>(amount: &str, denom: String) -> finance::coin::CoinDTO<G>
+fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::CoinDTO<G>
 where
     G: currency::Group,
 {
-    use finance::coin::{from_amount_dex_symbol, NonZeroAmount};
+    use std::marker::PhantomData;
 
-    from_amount_dex_symbol(
-        amount
-            .parse::<NonZeroAmount>()
-            .expect("Expected swap-in amount to be a non-zero unsigned integer!")
-            .get(),
-        &denom,
-    )
-    .expect("Expected swap-in token to be part of selected group!")
+    use serde::{de::DeserializeOwned, ser::Serialize};
+
+    use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _};
+    use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
+
+    struct ConstructDto<G>
+    where
+        G: Group,
+    {
+        amount: Amount,
+        _group: PhantomData<G>,
+    }
+    impl<G> AnyVisitor for ConstructDto<G>
+    where
+        G: Group,
+    {
+        type Output = CoinDTO<G>;
+        type Error = currency::error::Error;
+
+        fn on<C>(self) -> AnyVisitorResult<Self>
+        where
+            C: Currency + Serialize + DeserializeOwned,
+        {
+            Ok(Coin::<C>::new(self.amount).into())
+        }
+    }
+
+    currency::DexSymbols
+        .visit_any::<G, _>(
+            denom,
+            ConstructDto {
+                amount: amount
+                    .parse::<NonZeroAmount>()
+                    .expect("Expected swap-in amount to be a non-zero unsigned integer!")
+                    .get(),
+                _group: PhantomData,
+            },
+        )
+        .expect("Expected swap-in token to be part of selected group!")
 }
 
 #[cfg(feature = "testing")]

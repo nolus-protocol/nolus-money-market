@@ -94,7 +94,7 @@ impl ExactAmountIn for Impl {
 
         assert_eq!({ token_out_min_amount }, "1");
 
-        let token_in = crate::parse_dex_token(&token_in.amount, token_in.denom);
+        let token_in = crate::parse_dex_token(&token_in.amount, &token_in.denom);
 
         SwapRequest {
             token_in,
