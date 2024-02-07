@@ -24,15 +24,6 @@ pub trait ExactAmountIn {
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
         I: Iterator<Item = Any>;
-
-    #[cfg(feature = "testing")]
-    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
-    where
-        GIn: Group,
-        GSwap: Group;
-
-    #[cfg(feature = "testing")]
-    fn build_response(amount_out: Amount) -> Any;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -53,13 +44,4 @@ pub enum Error {
 
     #[error("[Swap] Expected response to {0} is not found")]
     MissingResponse(String),
-}
-
-#[cfg(feature = "testing")]
-pub struct SwapRequest<GIn>
-where
-    GIn: Group,
-{
-    pub token_in: CoinDTO<GIn>,
-    pub swap_path: SwapPath,
 }
