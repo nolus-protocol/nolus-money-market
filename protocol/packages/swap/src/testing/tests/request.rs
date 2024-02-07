@@ -2,7 +2,7 @@ use currency::{
     test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC2, SuperGroupTestC3},
     Currency as _,
 };
-use dex::swap::{ExactAmountIn, SwapRequest};
+use dex::swap::ExactAmountIn;
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
@@ -10,7 +10,11 @@ use sdk::{
     cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Binary,
     neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
 };
-use swap::Impl;
+
+use crate::{
+    testing::{ExactAmountInExt, SwapRequest},
+    Impl,
+};
 
 #[test]
 fn build_and_parse() {
@@ -32,7 +36,7 @@ fn build_and_parse() {
     let SwapRequest {
         token_in,
         swap_path,
-    } = <Impl as ExactAmountIn>::parse_request::<SubGroup, SuperGroup>(request);
+    } = <Impl as ExactAmountInExt>::parse_request::<SubGroup, SuperGroup>(request);
 
     assert_eq!(token_in, expected_token_in);
     assert_eq!(swap_path, expected_swap_path);
