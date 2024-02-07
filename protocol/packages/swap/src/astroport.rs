@@ -31,8 +31,7 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-// TODO change visibility to private
-pub type RequestMsg = MsgExecuteContract;
+type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
 
 trait Router {
