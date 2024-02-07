@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use serde::{de::DeserializeOwned, ser::Serialize};
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _};
-use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
 use sdk::cosmos_sdk_proto::Any;
@@ -11,7 +10,7 @@ use sdk::cosmos_sdk_proto::Any;
 #[cfg(test)]
 mod tests;
 
-pub trait ExactAmountInExt: ExactAmountIn {
+pub trait ExactAmountInSkel {
     fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
     where
         GIn: Group,

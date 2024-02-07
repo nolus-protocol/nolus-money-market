@@ -18,11 +18,11 @@ use sdk::{
     cosmwasm_std,
 };
 
-use crate::testing::{pattern_match_else, ExactAmountInExt, SwapRequest};
+use crate::testing::{pattern_match_else, ExactAmountInSkel, SwapRequest};
 
 use super::{RequestMsg, ResponseMsg, Router, RouterImpl};
 
-impl<R> ExactAmountInExt for RouterImpl<R>
+impl<R> ExactAmountInSkel for RouterImpl<R>
 where
     Self: ExactAmountIn,
     R: Router,

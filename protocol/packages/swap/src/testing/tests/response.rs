@@ -1,12 +1,12 @@
 use dex::swap::ExactAmountIn;
 
-use crate::{testing::ExactAmountInExt, Impl};
+use crate::{testing::ExactAmountInSkel, Impl};
 
 #[test]
 fn build_and_parse() {
     let expected_amount = 20;
 
-    let mut resp = vec![<Impl as ExactAmountInExt>::build_response(expected_amount)].into_iter();
+    let mut resp = vec![<Impl as ExactAmountInSkel>::build_response(expected_amount)].into_iter();
 
     let parsed = <Impl as ExactAmountIn>::parse_response(&mut resp).unwrap();
 

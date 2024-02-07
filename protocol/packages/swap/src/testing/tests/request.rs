@@ -12,7 +12,7 @@ use sdk::{
 };
 
 use crate::{
-    testing::{ExactAmountInExt, SwapRequest},
+    testing::{ExactAmountInSkel, SwapRequest},
     Impl,
 };
 
@@ -36,7 +36,7 @@ fn build_and_parse() {
     let SwapRequest {
         token_in,
         swap_path,
-    } = <Impl as ExactAmountInExt>::parse_request::<SubGroup, SuperGroup>(request);
+    } = <Impl as ExactAmountInSkel>::parse_request::<SubGroup, SuperGroup>(request);
 
     assert_eq!(token_in, expected_token_in);
     assert_eq!(swap_path, expected_swap_path);

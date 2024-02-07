@@ -7,11 +7,11 @@ use finance::coin::Amount;
 use oracle::api::swap::SwapTarget;
 use sdk::{cosmos_sdk_proto::prost::Message as _, cosmos_sdk_proto::Any as CosmosAny};
 
-use crate::testing::{parse_dex_token, pattern_match_else, ExactAmountInExt, SwapRequest};
+use crate::testing::{parse_dex_token, pattern_match_else, ExactAmountInSkel, SwapRequest};
 
 use super::{Impl, RequestMsg, ResponseMsg};
 
-impl ExactAmountInExt for Impl {
+impl ExactAmountInSkel for Impl {
     fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn>
     where
         GIn: Group,
