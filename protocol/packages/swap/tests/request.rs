@@ -3,6 +3,7 @@ use currency::{
     Currency as _,
 };
 use dex::swap::{ExactAmountIn, SwapRequest};
+use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
 use sdk::{
@@ -13,8 +14,7 @@ use swap::Impl;
 
 #[test]
 fn build_and_parse() {
-    let expected_token_in =
-        finance::coin::from_amount_ticker::<SubGroup>(20, SubGroupTestC1::TICKER.into()).unwrap();
+    let expected_token_in: CoinDTO<SubGroup> = Coin::<SubGroupTestC1>::new(20).into();
 
     let expected_swap_path = vec![
         SwapTarget {
