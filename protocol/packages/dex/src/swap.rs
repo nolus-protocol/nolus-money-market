@@ -11,7 +11,7 @@ pub trait ExactAmountIn {
     ///
     /// `GIn` - the group of the input token
     /// `GSwap` - the group common for all tokens in the swap path
-    fn build<GIn, GSwap>(
+    fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
@@ -21,12 +21,9 @@ pub trait ExactAmountIn {
         GIn: Group,
         GSwap: Group;
 
-    fn parse<I>(trx_resps: &mut I) -> Result<Amount>
+    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
         I: Iterator<Item = Any>;
-
-    #[cfg(feature = "testing")]
-    fn build_resp(amount_out: Amount) -> Any;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

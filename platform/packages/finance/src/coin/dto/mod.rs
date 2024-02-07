@@ -4,13 +4,13 @@ use std::{
     result::Result as StdResult,
 };
 
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{
     self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
     GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
@@ -189,7 +189,8 @@ where
     }
 }
 
-// TODO remove this back-door
+// TODO remove usages from non-testing code and put behind `#[cfg(...)]
+// #[cfg(any(test, feature = "testing"))]
 pub fn from_amount_ticker<G>(amount: Amount, ticker: SymbolOwned) -> Result<CoinDTO<G>>
 where
     G: Group,
@@ -200,16 +201,19 @@ where
 pub struct IntoDTO<G> {
     _g: PhantomData<G>,
 }
+
 impl<G> IntoDTO<G> {
     pub fn new() -> Self {
         Self { _g: PhantomData {} }
     }
 }
+
 impl<G> Default for IntoDTO<G> {
     fn default() -> Self {
         Self::new()
     }
 }
+
 impl<G> WithCoin for IntoDTO<G>
 where
     G: Group,
@@ -227,13 +231,13 @@ where
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::{from_json, to_json_vec};
     use serde::{Deserialize, Serialize};
 
     use currency::{
         test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
     };
+    use sdk::cosmwasm_std::{from_json, to_json_vec};
 
     use crate::{
         coin::{Amount, Coin, CoinDTO},
@@ -244,6 +248,7 @@ mod test {
         Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize,
     )]
     struct MyTestCurrency;
+
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
         const BANK_SYMBOL: SymbolStatic = "ibc/1";
@@ -252,6 +257,7 @@ mod test {
 
     #[derive(PartialEq)]
     struct MyTestGroup {}
+
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 

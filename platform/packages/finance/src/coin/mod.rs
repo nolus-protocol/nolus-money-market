@@ -1,3 +1,5 @@
+#[cfg(feature = "testing")]
+use std::num::NonZeroU128;
 use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
@@ -18,6 +20,8 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+#[cfg(feature = "testing")]
+pub type NonZeroAmount = NonZeroU128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
