@@ -11,7 +11,7 @@ pub type SuperGroupTestC6 = impl_::TestC6;
 
 pub type SubGroupTestC1 = impl_::TestC10;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
@@ -41,7 +41,7 @@ impl Group for SuperGroup {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
