@@ -1,6 +1,6 @@
 use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use sdk::cosmwasm_std::Timestamp;
 
@@ -12,10 +12,9 @@ use crate::{
     zero::Zero,
 };
 
-// TODO cease using it to store state
-// - remove Serialize, Deserialize implementations
-// - refactor from owning to referring data
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+/// Deprecated
+/// TODO remove it once the support for v0.4.2 is dropped
+#[derive(Deserialize)]
 pub struct InterestPeriod<U, F> {
     period: Period,
     #[serde(skip)]
@@ -28,22 +27,6 @@ where
     F: Fraction<U> + Copy,
     U: PartialEq,
 {
-    pub fn with_interest(interest: F) -> Self {
-        Self {
-            period: Period::default(),
-            interest_units: PhantomData,
-            interest,
-        }
-    }
-
-    pub fn and_period(self, period: Period) -> Self {
-        Self {
-            period,
-            interest_units: self.interest_units,
-            interest: self.interest,
-        }
-    }
-
     // TODO remove once migrate `fn pay` result to `(Timestamp, _)`
     pub fn start(&self) -> Timestamp {
         self.period.start()
@@ -53,16 +36,9 @@ where
     pub fn interest_rate(&self) -> F {
         self.interest
     }
-
-    pub fn interest<P>(&self, principal: P) -> P
-    where
-        P: Fractionable<U> + TimeSliceable,
-    {
-        interest(self.interest, principal, self.period.length())
-    }
 }
 
-// TODO use it in production code instead of going through InterestPeriod
+/// Computes how much interest is accrued
 pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> P
 where
     F: Fraction<U>,
@@ -97,17 +73,13 @@ where
 #[cfg(test)]
 mod tests {
     use currency::test::SubGroupTestC1;
-    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period,
-        ratio::Rational, zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
+        zero::Zero,
     };
 
-    use super::InterestPeriod;
-
     type MyCoin = Coin<SubGroupTestC1>;
-    const PERIOD_START: Timestamp = Timestamp::from_nanos(0);
     const PERIOD_LENGTH: Duration = Duration::YEAR;
 
     #[test]
@@ -203,7 +175,7 @@ mod tests {
         let part = MyCoin::new(125);
         let r = Rational::new(part, whole);
 
-        let res = ip::<MyCoin, _>(r).interest(whole);
+        let res = super::interest::<MyCoin, _, _>(r, whole, PERIOD_LENGTH);
         assert_eq!(part, res);
     }
 
@@ -212,7 +184,7 @@ mod tests {
         let principal = MyCoin::new(1001);
         let r = Rational::new(MyCoin::ZERO, principal);
 
-        let res = ip::<MyCoin, _>(r).interest(principal);
+        let res = super::interest::<MyCoin, _, _>(r, principal, PERIOD_LENGTH);
         assert_eq!(MyCoin::ZERO, res);
     }
 
@@ -227,14 +199,5 @@ mod tests {
         let (paid_for, change) = super::pay(rate, principal, payment, pay_for);
         assert_eq!(exp_paid_for, paid_for);
         assert_eq!(exp_change, change);
-    }
-
-    fn ip<U, F>(fraction: F) -> InterestPeriod<U, F>
-    where
-        U: PartialEq,
-        F: Copy + Fraction<U>,
-    {
-        InterestPeriod::with_interest(fraction)
-            .and_period(Period::from_length(PERIOD_START, PERIOD_LENGTH))
     }
 }

@@ -4,7 +4,7 @@ use access_control::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
-use finance::{duration::Duration, percent::Percent, period::Period};
+use finance::{duration::Duration, percent::Percent};
 use lpp_platform::UsdGroup;
 use platform::{batch::Batch, message::Response as MessageResponse, response};
 use sdk::{
@@ -172,7 +172,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
         });
 
         cmd::dispatch(
-            Period::from_till(last_dispatch, &now),
+            Duration::between(&last_dispatch, &now),
             &config.tvl_to_apr,
             lpps,
             oracles,

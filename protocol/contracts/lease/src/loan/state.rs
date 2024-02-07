@@ -1,7 +1,6 @@
 use currency::Currency;
 use finance::{
-    coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent, period::Period,
-    zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
@@ -64,9 +63,11 @@ where
             };
 
             // TODO consider using the `trait InterestDue`
-            let margin = InterestPeriod::with_interest(margin_interest)
-                .and_period(overdue_period)
-                .interest(lpp_loan.principal_due());
+            let margin = interest::interest(
+                margin_interest,
+                lpp_loan.principal_due(),
+                overdue_period.length(),
+            );
             let interest = lpp_loan.interest_due(&overdue_period.till());
 
             Self::Accrued { interest, margin }

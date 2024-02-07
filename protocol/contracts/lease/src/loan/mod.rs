@@ -4,12 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::Coin,
-    duration::Duration,
-    interest::{self, InterestPeriod},
-    percent::Percent,
-    period::Period,
-    zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
 };
 use lpp::{
     loan::RepayShares,
@@ -198,13 +193,11 @@ where
         );
 
         let principal_due = self.lpp_loan.principal_due();
-        let due_margin_interest = {
-            let margin_interest_period = InterestPeriod::with_interest(self.margin_interest);
-            margin_interest_period
-                .and_period(due_period_margin)
-                .interest(principal_due)
-                - overdue.margin()
-        };
+        let due_margin_interest = interest::interest(
+            self.margin_interest,
+            principal_due,
+            due_period_margin.length(),
+        ) - overdue.margin();
         let due_interest =
             self.lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
@@ -1093,11 +1086,7 @@ mod tests {
 
     #[cfg(test)]
     mod test_state {
-        use currency::Currency;
-        use finance::{
-            coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent,
-            period::Period,
-        };
+        use finance::{duration::Duration, interest, percent::Percent, period::Period};
         use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
@@ -1135,11 +1124,9 @@ mod tests {
                 annual_interest_margin,
                 &lpp_loan,
             );
-            let due_period = Period::till_length(
-                &due_period_margin.till(),
-                due_period_len.min(due_period_margin.length()),
-            );
-            let expected_margin_due = interest(due_period, principal_due, annual_interest_margin);
+            let due_period = due_period_len.min(due_period_margin.length());
+            let expected_margin_due =
+                interest::interest(annual_interest_margin, principal_due, due_period);
             let expected_interest_due =
                 lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
@@ -1162,15 +1149,6 @@ mod tests {
             test_state(LEASE_START, LEASE_START, &paid_by);
             test_state(LEASE_START, paid_by, &paid_by);
             test_state(paid_by, LEASE_START, &paid_by);
-        }
-
-        fn interest<Lpn>(period: Period, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
-        where
-            Lpn: Currency,
-        {
-            InterestPeriod::with_interest(rate)
-                .and_period(period)
-                .interest(principal_due)
         }
 
         #[test]

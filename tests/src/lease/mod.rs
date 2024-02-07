@@ -3,9 +3,8 @@ use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    interest::InterestPeriod,
+    interest,
     percent::Percent,
-    period::Period,
     price::{self, Price},
 };
 use lease::api::query::{StateQuery, StateResponse};
@@ -127,9 +126,7 @@ pub(super) fn calculate_interest(
     interest_rate: Percent,
     duration: Duration,
 ) -> Coin<LpnCurrency> {
-    InterestPeriod::with_interest(interest_rate)
-        .and_period(Period::from_length(Timestamp::default(), duration))
-        .interest(principal)
+    interest::interest(interest_rate, principal, duration)
 }
 
 pub(super) fn open_lease<

@@ -5,13 +5,7 @@ use sdk::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
-use finance::{
-    coin::Coin,
-    duration::Duration,
-    interest::{self, InterestPeriod},
-    percent::{Percent, Units},
-    period::Period,
-};
+use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::error::{ContractError, Result};
@@ -45,7 +39,11 @@ where
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
     pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
-        self.due_period(by).interest(self.principal_due)
+        interest::interest(
+            self.annual_interest_rate,
+            self.principal_due,
+            self.due_period(by),
+        )
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
@@ -53,7 +51,7 @@ where
             self.annual_interest_rate,
             self.principal_due,
             repayment,
-            Duration::between(&self.interest_paid, by.max(&self.interest_paid)),
+            self.due_period(by),
         );
 
         let interest_paid = repayment - interest_change;
@@ -70,11 +68,8 @@ where
         }
     }
 
-    fn due_period(&self, by: &Timestamp) -> InterestPeriod<Units, Percent> {
-        InterestPeriod::with_interest(self.annual_interest_rate).and_period(Period::from_till(
-            self.interest_paid,
-            by.max(&self.interest_paid),
-        ))
+    fn due_period(&self, by: &Timestamp) -> Duration {
+        Duration::between(&self.interest_paid, by.max(&self.interest_paid))
     }
 }
 

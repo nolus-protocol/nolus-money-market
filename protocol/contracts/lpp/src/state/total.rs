@@ -3,10 +3,10 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
+    duration::Duration,
     fraction::Fraction,
-    interest::InterestPeriod,
+    interest,
     percent::Percent,
-    period::Period,
     ratio::Rational,
     zero::Zero,
 };
@@ -66,10 +66,11 @@ where
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
-        InterestPeriod::<Coin<Lpn>, _>::with_interest(self.annual_interest_rate)
-            .and_period(Period::from_till(self.last_update_time, ctime))
-            .interest(self.total_principal_due)
-            + self.total_interest_due
+        interest::interest::<Coin<Lpn>, _, _>(
+            self.annual_interest_rate,
+            self.total_principal_due,
+            Duration::between(&self.last_update_time, ctime),
+        ) + self.total_interest_due
     }
 
     pub fn borrow(

@@ -1,5 +1,5 @@
 use currency::NlsPlatform;
-use finance::{coin::Coin, period::Period};
+use finance::{coin::Coin, duration::Duration};
 use lpp_platform::{Lpp as LppTrait, Usd};
 use oracle_platform::Oracle as OracleTrait;
 use platform::{batch::Batch, message::Response as MessageResponse};
@@ -14,7 +14,7 @@ use super::RewardCalculator;
 /// The total amount is transferred from the Treasury.
 /// `lpps` and `oracles` should match in length.
 pub fn dispatch<Lpps, Oracle, Oracles>(
-    period: Period,
+    period: Duration,
     scale: &RewardScale,
     lpps: Lpps,
     oracles: Oracles,
@@ -89,13 +89,11 @@ where
 #[cfg(test)]
 mod test {
     use currency::{NativePlatform, NlsPlatform};
-    use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period, price,
-    };
+    use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
     use lpp_platform::{test::DummyLpp, CoinUsd, Usd};
     use oracle_platform::{test::DummyOracle, Oracle as OracleTrait};
     use platform::{batch::Batch, response};
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Addr;
 
     use crate::{
         state::reward_scale::{RewardScale, TotalValueLocked},
@@ -122,7 +120,14 @@ mod test {
         let treasury = Addr::unchecked("Treasury");
 
         let resp = response::response_only_messages(
-            super::dispatch(year(), &scale, lpps, oracles.iter(), treasury.clone()).unwrap(),
+            super::dispatch(
+                Duration::YEAR,
+                &scale,
+                lpps,
+                oracles.iter(),
+                treasury.clone(),
+            )
+            .unwrap(),
         );
         assert_eq!(resp.messages.len(), 3 + 1);
         let reward1 = reward(&apr, lpp0_tvl, &oracles[0]);
@@ -163,7 +168,7 @@ mod test {
         ];
         let treasury = Addr::unchecked("Treasury");
 
-        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), treasury);
+        let resp = super::dispatch(Duration::YEAR, &scale, lpps, oracles.iter(), treasury);
         assert!(matches!(resp, Err(ContractError::LppPlatformError(_))));
     }
 
@@ -186,7 +191,7 @@ mod test {
         ];
         let treasury = Addr::unchecked("Treasury");
 
-        let resp = super::dispatch(year(), &scale, lpps, oracles.iter(), treasury);
+        let resp = super::dispatch(Duration::YEAR, &scale, lpps, oracles.iter(), treasury);
         assert!(matches!(resp, Err(ContractError::Oracle(_))));
     }
 
@@ -201,9 +206,5 @@ mod test {
                 .unwrap()
                 .inv(),
         )
-    }
-
-    fn year() -> Period {
-        Period::from_length(Timestamp::from_nanos(0), Duration::YEAR)
     }
 }

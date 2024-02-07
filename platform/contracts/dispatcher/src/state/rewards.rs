@@ -1,5 +1,5 @@
 use currency::{NativePlatform, NlsPlatform};
-use finance::{coin::Coin, interest::InterestPeriod, percent::Percent, period::Period};
+use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
 use lpp_platform::{CoinUsd, Usd, UsdGroup};
 use oracle_platform::{convert, Oracle};
 
@@ -7,7 +7,7 @@ use crate::result::ContractResult;
 
 pub(crate) fn calculate<'a, Dexes, DexOracleRef, DexOracle>(
     apr: Percent,
-    period: Period,
+    period: Duration,
     tvls_oracles: Dexes,
 ) -> impl Iterator<Item = ContractResult<Coin<NlsPlatform>>> + 'a
 where
@@ -16,9 +16,8 @@ where
     DexOracleRef: AsRef<DexOracle>,
     DexOracle: Oracle<Usd> + 'a,
 {
-    let interest_period = InterestPeriod::with_interest(apr).and_period(period);
     tvls_oracles.into_iter().map(move |tvl_oracle| {
-        let reward_in_usd = interest_period.interest(tvl_oracle.0);
+        let reward_in_usd = interest::interest(apr, tvl_oracle.0, period);
         convert::from_base::<_, UsdGroup, _, _, NativePlatform>(
             tvl_oracle.1.as_ref(),
             reward_in_usd,
@@ -30,19 +29,16 @@ where
 #[cfg(test)]
 mod test {
     use currency::{NativePlatform, NlsPlatform};
-    use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period, price,
-    };
+    use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
     use lpp_platform::Usd;
     use oracle_platform::{test::DummyOracle, Oracle as OracleTrait};
-    use sdk::cosmwasm_std::Timestamp;
 
     use crate::ContractError;
 
     #[test]
     fn calculate_ok() {
         let apr = Percent::from_percent(20);
-        let period = Period::from_length(Timestamp::from_nanos(239471696), Duration::from_days(1));
+        let period = Duration::from_days(1);
         let lpp_tvls: Vec<Coin<Usd>> = vec![25_000.into(), 8_000.into()];
         let oracles = vec![DummyOracle::with_price(2), DummyOracle::with_price(3)];
 
@@ -65,7 +61,7 @@ mod test {
     #[test]
     fn calculate_no_price() {
         let apr = Percent::from_percent(20);
-        let period = Period::from_length(Timestamp::from_nanos(239471696), Duration::from_days(1));
+        let period = Duration::from_days(1);
         let lpp_tvls: Vec<Coin<Usd>> = vec![25_000.into(), 8_000.into()];
         let oracles = vec![DummyOracle::with_price(2), DummyOracle::failing()];
 

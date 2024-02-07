@@ -1,5 +1,5 @@
 use currency::NlsPlatform;
-use finance::{coin::Coin, percent::Percent, period::Period};
+use finance::{coin::Coin, duration::Duration, percent::Percent};
 use lpp_platform::{msg::LppBalanceResponse, CoinUsd, Lpp as LppTrait, Usd};
 use oracle_platform::Oracle as OracleTrait;
 
@@ -52,7 +52,7 @@ impl RewardCalculator {
 
     pub fn calculate<'o, Oracle, Oracles>(
         self,
-        period: Period,
+        period: Duration,
         oracles: Oracles,
     ) -> impl Iterator<Item = ContractResult<Coin<NlsPlatform>>> + 'o
     where
@@ -68,12 +68,9 @@ impl RewardCalculator {
 #[cfg(test)]
 mod tests {
     use currency::{NativePlatform, NlsPlatform};
-    use finance::{
-        duration::Duration, fraction::Fraction, percent::Percent, period::Period, price,
-    };
+    use finance::{duration::Duration, fraction::Fraction, percent::Percent, price};
     use lpp_platform::{test::DummyLpp, CoinUsd};
     use oracle_platform::{test::DummyOracle, Oracle};
-    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
@@ -120,7 +117,7 @@ mod tests {
         assert_eq!(calc.apr(), bar0_apr);
 
         let oracles = vec![DummyOracle::with_price(2), DummyOracle::with_price(3)];
-        let mut rewards = calc.calculate(year(), &oracles);
+        let mut rewards = calc.calculate(Duration::YEAR, &oracles);
         assert_eq!(
             Some(Ok(price::total(
                 bar0_apr.of(lpp0_tvl),
@@ -152,9 +149,5 @@ mod tests {
             RewardCalculator::new(lpps, &scale),
             Err(ContractError::LppPlatformError(_))
         ))
-    }
-
-    fn year() -> Period {
-        Period::from_length(Timestamp::from_nanos(0), Duration::YEAR)
     }
 }
