@@ -7,7 +7,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::Currency;
 use finance::{
     coin::Coin,
-    interest::InterestPeriod,
+    duration::Duration,
+    interest::{self, InterestPeriod},
     percent::{Percent, Units},
     period::Period,
 };
@@ -48,14 +49,19 @@ where
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
-        let (paid_by, interest_change) = self.due_period(by).pay(self.principal_due, repayment, by);
+        let (paid_for, interest_change) = interest::pay(
+            self.annual_interest_rate,
+            self.principal_due,
+            repayment,
+            Duration::between(&self.interest_paid, by.max(&self.interest_paid)),
+        );
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);
         let excess = interest_change - principal_paid;
 
         self.principal_due -= principal_paid;
-        self.interest_paid = paid_by;
+        self.interest_paid += paid_for;
 
         RepayShares {
             interest: interest_paid,

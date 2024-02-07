@@ -4,7 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{
-    coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent, period::Period,
+    coin::Coin,
+    duration::Duration,
+    interest::{self, InterestPeriod},
+    percent::Percent,
+    period::Period,
     zero::Zero,
 };
 use lpp::{
@@ -163,26 +167,9 @@ where
             interest_paid + margin_paid + principal_paid + change
         );
 
-        {
-            let (margin_paid_by, margin_payment_change) =
-                InterestPeriod::with_interest(self.margin_interest)
-                    .and_period(Period::from_till(self.margin_paid_by, by))
-                    .pay(state.principal_due, margin_paid, by);
-            debug_assert!(margin_payment_change.is_zero());
-            self.margin_paid_by = margin_paid_by;
-        }
-
+        self.repay_margin(state.principal_due, margin_paid, by);
         profit.send(margin_paid);
-        {
-            let RepayShares {
-                interest,
-                principal,
-                excess,
-            } = self.lpp_loan.repay(by, interest_paid + principal_paid);
-            debug_assert_eq!(interest, interest_paid);
-            debug_assert_eq!(principal, principal_paid);
-            debug_assert_eq!(excess, Coin::ZERO);
-        }
+        self.repay_loan(interest_paid, principal_paid, by);
 
         let receipt = RepayReceipt::new(
             overdue_interest_payment,
@@ -229,6 +216,28 @@ where
             due_margin_interest,
             overdue,
         }
+    }
+
+    fn repay_margin(&mut self, principal_due: Coin<Lpn>, margin_paid: Coin<Lpn>, by: &Timestamp) {
+        let (margin_paid_for, margin_payment_change) = interest::pay(
+            self.margin_interest,
+            principal_due,
+            margin_paid,
+            Duration::between(&self.margin_paid_by, by),
+        );
+        debug_assert!(margin_payment_change.is_zero());
+        self.margin_paid_by += margin_paid_for;
+    }
+
+    fn repay_loan(&mut self, interest_paid: Coin<Lpn>, principal_paid: Coin<Lpn>, by: &Timestamp) {
+        let RepayShares {
+            interest,
+            principal,
+            excess,
+        } = self.lpp_loan.repay(by, interest_paid + principal_paid);
+        debug_assert_eq!(interest, interest_paid);
+        debug_assert_eq!(principal, principal_paid);
+        debug_assert_eq!(excess, Coin::ZERO);
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {

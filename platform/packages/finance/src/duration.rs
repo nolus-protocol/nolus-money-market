@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, Sub},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use serde::{Deserialize, Serialize};
@@ -146,6 +146,13 @@ impl Add<Duration> for &Timestamp {
     }
 }
 
+impl AddAssign<Duration> for Timestamp {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: Duration) {
+        *self = self.add(rhs);
+    }
+}
+
 impl Add<Duration> for Duration {
     type Output = Self;
 
@@ -170,6 +177,13 @@ impl Sub<Duration> for &Timestamp {
     #[track_caller]
     fn sub(self, rhs: Duration) -> Self::Output {
         self.minus_nanos(rhs.nanos())
+    }
+}
+
+impl SubAssign<Duration> for Timestamp {
+    #[track_caller]
+    fn sub_assign(&mut self, rhs: Duration) {
+        *self = self.sub(rhs);
     }
 }
 
@@ -207,6 +221,13 @@ mod tests {
     }
 
     #[test]
+    fn add_asssign() {
+        let mut t = T::from_seconds(100);
+        t += D::from_secs(200);
+        assert_eq!(T::from_seconds(300), t);
+    }
+
+    #[test]
     #[should_panic]
     fn add_overflow() {
         let _ = T::from_nanos(u64::MAX - 12) + D::from_nanos(13);
@@ -216,6 +237,13 @@ mod tests {
     fn sub() {
         let d = D::from_secs(12345678);
         assert_eq!(D::from_nanos(0), d - d);
+    }
+
+    #[test]
+    fn sub_asssign() {
+        let mut t = T::from_seconds(100);
+        t -= D::from_secs(20);
+        assert_eq!(T::from_seconds(80), t);
     }
 
     #[test]

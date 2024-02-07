@@ -92,7 +92,7 @@ where
             self.last_sample = Sample { price: Some(avg) }
         }
         self.sample_prices.clear();
-        self.sample_start = self.sample_start + self.sample_span;
+        self.sample_start += self.sample_span;
     }
 }
 

@@ -60,33 +60,6 @@ where
     {
         interest(self.interest, principal, self.period.length())
     }
-
-    /// Computes how much time this payment covers, return.0, and the change if over, return.1
-    ///
-    /// The actual payment is equal to the payment minus the returned change.
-    pub fn pay<P>(self, principal: P, payment: P, by: &Timestamp) -> (Timestamp, P)
-    where
-        P: Zero + Debug + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
-        Duration: Fractionable<P>,
-    {
-        let due_period = Duration::between(&self.start(), &self.period.move_within(*by));
-        let interest_due_per_period = {
-            // TODO create a Period[self.period.start, by) and intersect it with self.period
-            interest(self.interest, principal, due_period)
-        };
-
-        let (paid_for, change) = if interest_due_per_period == P::ZERO {
-            (Duration::from_nanos(0), payment)
-        } else {
-            let repayment = cmp::min(interest_due_per_period, payment);
-
-            let period_paid_for =
-                due_period.into_slice_per_ratio(repayment, interest_due_per_period);
-            let change = payment - repayment;
-            (period_paid_for, change)
-        };
-        (self.start() + paid_for, change)
-    }
 }
 
 // TODO use it in production code instead of going through InterestPeriod
@@ -97,6 +70,28 @@ where
 {
     let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
+}
+
+/// Computes how much time this payment covers, return.0, and the change, return.1
+///
+/// The actual payment is equal to the payment minus the returned change.
+pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> (Duration, P)
+where
+    F: Fraction<U>,
+    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero,
+    Duration: Fractionable<P>,
+{
+    let interest_due_per_period: P = interest(rate, principal, period);
+
+    if interest_due_per_period == P::ZERO {
+        (Duration::from_nanos(0), payment)
+    } else {
+        let repayment: P = cmp::min(interest_due_per_period, payment);
+
+        let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
+        let change = payment - repayment;
+        (period_paid_for, change)
+    }
 }
 
 #[cfg(test)]
@@ -120,8 +115,14 @@ mod tests {
         let p = Percent::from_percent(10);
         let principal = MyCoin::ZERO;
         let payment = MyCoin::new(300);
-        let by = PERIOD_START + PERIOD_LENGTH;
-        pay_impl(p, principal, payment, &by, PERIOD_START, payment);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_LENGTH,
+            Duration::default(),
+            payment,
+        );
     }
 
     #[test]
@@ -129,8 +130,14 @@ mod tests {
         let p = Percent::from_percent(10);
         let principal = MyCoin::new(1000);
         let payment = MyCoin::ZERO;
-        let by = PERIOD_START + PERIOD_LENGTH;
-        pay_impl(p, principal, payment, &by, PERIOD_START, payment);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_LENGTH,
+            Duration::default(),
+            payment,
+        );
     }
 
     #[test]
@@ -143,12 +150,19 @@ mod tests {
             p,
             principal,
             payment,
-            &(PERIOD_START + PERIOD_LENGTH + PERIOD_LENGTH),
-            PERIOD_START + PERIOD_LENGTH,
+            PERIOD_LENGTH,
+            PERIOD_LENGTH,
             exp_change,
         );
 
-        pay_impl(p, principal, payment, &PERIOD_START, PERIOD_START, payment);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            Duration::default(),
+            Duration::default(),
+            payment,
+        );
     }
 
     #[test]
@@ -156,9 +170,15 @@ mod tests {
         let p = Percent::from_percent(10);
         let principal = MyCoin::new(1000);
         let payment = MyCoin::new(300);
-        let by = PERIOD_START + PERIOD_LENGTH;
         let exp_change = payment - p.of(principal);
-        pay_impl(p, principal, payment, &by, by, exp_change);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_LENGTH,
+            PERIOD_LENGTH,
+            exp_change,
+        );
     }
 
     #[test]
@@ -166,9 +186,15 @@ mod tests {
         let p = Percent::from_percent(10);
         let principal = MyCoin::new(9); // 10% of 9 = 0
         let payment = MyCoin::new(100);
-        let by = PERIOD_START + PERIOD_LENGTH;
         let exp_change = payment - p.of(principal);
-        pay_impl(p, principal, payment, &by, PERIOD_START, exp_change);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_LENGTH,
+            Duration::default(),
+            exp_change,
+        );
     }
 
     #[test]
@@ -191,18 +217,15 @@ mod tests {
     }
 
     fn pay_impl(
-        p: Percent,
+        rate: Percent,
         principal: MyCoin,
         payment: MyCoin,
-        by: &Timestamp,
-        exp_start: Timestamp,
+        pay_for: Duration,
+        exp_paid_for: Duration,
         exp_change: MyCoin,
     ) {
-        let ip = ip(p);
-        assert_eq!(p, ip.interest_rate());
-
-        let (paid_by, change) = ip.pay(principal, payment, by);
-        assert_eq!(exp_start, paid_by);
+        let (paid_for, change) = super::pay(rate, principal, payment, pay_for);
+        assert_eq!(exp_paid_for, paid_for);
         assert_eq!(exp_change, change);
     }
 
