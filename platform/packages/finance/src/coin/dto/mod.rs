@@ -198,17 +198,6 @@ where
     CoinDTO::new_checked(amount, ticker)
 }
 
-#[cfg(feature = "testing")]
-pub fn from_amount_dex_symbol<G>(amount: Amount, dex_symbol: &SymbolSlice) -> Result<CoinDTO<G>>
-where
-    G: Group,
-{
-    currency::DexSymbols
-        .visit_any::<G, _>(dex_symbol, currency::Tickers)
-        .map_err(From::from)
-        .and_then(|ticker| CoinDTO::new_checked(amount, ticker.into()))
-}
-
 pub struct IntoDTO<G> {
     _g: PhantomData<G>,
 }

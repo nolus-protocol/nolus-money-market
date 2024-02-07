@@ -14,8 +14,6 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
 
-#[cfg(feature = "testing")]
-pub use self::dto::from_amount_dex_symbol;
 pub use self::dto::{from_amount_ticker, CoinDTO, IntoDTO};
 
 mod dto;
