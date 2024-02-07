@@ -27,28 +27,7 @@ fn build_and_parse() {
         },
     ];
 
-    let request: CosmosAny = {
-        let mut tx = Transaction::default();
-
-        <Impl as ExactAmountIn>::build_request::<SubGroup, SuperGroup>(
-            &mut tx,
-            String::from("host_account").try_into().unwrap(),
-            &expected_token_in,
-            &expected_swap_path,
-        )
-        .unwrap();
-
-        let mut msgs = tx.into_iter();
-
-        let NeutronAny {
-            type_url,
-            value: Binary(value),
-        } = msgs.next().unwrap();
-
-        assert!(msgs.next().is_none());
-
-        CosmosAny { type_url, value }
-    };
+    let request: CosmosAny = build_request(expected_token_in.clone(), expected_swap_path.clone());
 
     let SwapRequest {
         token_in,
@@ -57,4 +36,30 @@ fn build_and_parse() {
 
     assert_eq!(token_in, expected_token_in);
     assert_eq!(swap_path, expected_swap_path);
+}
+
+fn build_request(
+    expected_token_in: CoinDTO<SubGroup>,
+    expected_swap_path: Vec<SwapTarget>,
+) -> CosmosAny {
+    let mut tx = Transaction::default();
+
+    <Impl as ExactAmountIn>::build_request::<SubGroup, SuperGroup>(
+        &mut tx,
+        String::from("host_account").try_into().unwrap(),
+        &expected_token_in,
+        &expected_swap_path,
+    )
+    .unwrap();
+
+    let mut msgs = tx.into_iter();
+
+    let NeutronAny {
+        type_url,
+        value: Binary(value),
+    } = msgs.next().unwrap();
+
+    assert!(msgs.next().is_none());
+
+    CosmosAny { type_url, value }
 }
