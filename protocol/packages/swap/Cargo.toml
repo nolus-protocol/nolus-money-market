@@ -49,8 +49,5 @@ osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-# Library itself is added as its `testing` feature is required for the integration tests.
-swap = { path = ".", features = ["testing"] }
-
 currency = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }

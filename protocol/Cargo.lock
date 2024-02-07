@@ -1365,7 +1365,6 @@ dependencies = [
  "platform",
  "sdk",
  "serde",
- "swap",
 ]
 
 [[package]]
