@@ -116,7 +116,7 @@ fn send_response<'r>(
     inituator_contract_addr: Addr,
     amounts: &[Amount],
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
-    use dex::swap::ExactAmountIn as _;
+    use swap::testing::ExactAmountInExt as _;
 
     ibc::send_response(
         app,
