@@ -1,5 +1,5 @@
 use currency::Currency;
-use finance::{coin::Coin, duration::Duration, fraction::Fraction};
+use finance::{coin::Coin, duration::Duration, interest};
 
 use crate::{
     loan::State,
@@ -21,9 +21,11 @@ where
         } else {
             let overdue_left = min_amount - total_due_interest;
 
-            // TODO define the following as a fn in InterestPayment and replace all occurences
-            let total_interest_a_year =
-                (self.annual_interest + self.annual_interest_margin).of(self.principal_due);
+            let total_interest_a_year = interest::interest(
+                self.annual_interest + self.annual_interest_margin,
+                self.principal_due,
+                Duration::YEAR,
+            );
             if total_interest_a_year.is_zero() {
                 Duration::MAX
             } else {

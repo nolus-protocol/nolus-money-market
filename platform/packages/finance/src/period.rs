@@ -69,16 +69,15 @@ impl Period {
         res
     }
 
-    // TODO make it private and refactor the callers to use `intersect`
-    pub(super) fn move_within(&self, timestamp: Timestamp) -> Timestamp {
-        timestamp.clamp(self.start, self.till())
-    }
-
     fn intersect(self, other: &Self) -> Self {
         Self::from_till(
             self.move_within(other.start()),
             &self.move_within(other.till()),
         )
+    }
+
+    fn move_within(&self, timestamp: Timestamp) -> Timestamp {
+        timestamp.clamp(self.start, self.till())
     }
 }
 
