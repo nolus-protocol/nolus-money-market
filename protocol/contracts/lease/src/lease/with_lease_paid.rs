@@ -43,7 +43,7 @@ where
     where
         Asset: Currency,
     {
-        let lpn = self.lease_dto.loan.lpp().currency().to_owned();
+        let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
         Tickers.visit_any::<Lpns, _>(
             &lpn,
             FactoryStage2 {

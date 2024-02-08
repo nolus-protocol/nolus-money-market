@@ -51,7 +51,6 @@ pub(super) struct LppLenderStub<'a, Lpn, Lpns> {
 
 impl<'a, Lpn, Lpns> LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpns: Group,
     Lpn: Currency,
     Lpns: Group,
 {
@@ -73,7 +72,6 @@ where
 
 impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpns: Group,
     Lpn: Currency + DeserializeOwned,
     Lpns: Group + Serialize,
 {

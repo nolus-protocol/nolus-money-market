@@ -7,6 +7,7 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
+    api::LpnCurrencies,
     error::{ContractError, ContractResult},
     lease::Lease,
     loan::RepayReceipt,
@@ -37,7 +38,7 @@ where
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {

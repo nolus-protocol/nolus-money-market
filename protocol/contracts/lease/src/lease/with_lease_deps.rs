@@ -2,14 +2,18 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use currencies::{LeaseGroup, Lpns};
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
+use currencies::LeaseGroup;
+use currency::{
+    self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolSlice, Tickers,
+};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,
 };
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+
+use crate::api::LpnCurrencies;
 
 pub trait WithLeaseDeps {
     type Output;
@@ -22,21 +26,22 @@ pub trait WithLeaseDeps {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
-        Asset: Currency;
+        Asset: Currency,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>;
 }
 
-pub fn execute<Cmd>(
+pub fn execute<Cmd, Lpns>(
     cmd: Cmd,
     lease_addr: Addr,
     asset: &SymbolSlice,
-    lpp: LppRef,
+    lpp: LppRef<Lpns>,
     oracle: OracleRef,
     querier: QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
+    Lpns: Group,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
@@ -53,17 +58,18 @@ where
     )
 }
 
-struct FactoryStage1<'r, Cmd> {
+struct FactoryStage1<'r, Cmd, Lpns> {
     cmd: Cmd,
     lease_addr: Addr,
-    lpp: LppRef,
+    lpp: LppRef<Lpns>,
     oracle: OracleRef,
     querier: QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
+impl<'r, Cmd, Lpns> AnyVisitor for FactoryStage1<'r, Cmd, Lpns>
 where
     Cmd: WithLeaseDeps,
+    Lpns: Group,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
@@ -104,10 +110,11 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpns, LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
+        Lpns: Group,
+        LppLoan: LppLoanTrait<Lpn, Lpns>,
     {
         self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
             FactoryStage4 {
@@ -133,7 +140,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: Currency,
     Lpn: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

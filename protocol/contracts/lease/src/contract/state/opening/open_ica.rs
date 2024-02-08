@@ -1,6 +1,5 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
-
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use dex::{
     Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
@@ -16,7 +15,7 @@ use crate::{
     api::{
         open::NewLeaseContract,
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies,
+        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies,
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,
@@ -29,7 +28,12 @@ pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (
+        LppRef<LpnCurrencies>,
+        OracleRef,
+        TimeAlarmsRef,
+        FinalizerRef,
+    ),
     start_opening_at: Timestamp,
 }
 
@@ -38,7 +42,12 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+        deps: (
+            LppRef<LpnCurrencies>,
+            OracleRef,
+            TimeAlarmsRef,
+            FinalizerRef,
+        ),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

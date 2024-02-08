@@ -41,6 +41,7 @@ where
 
         let lpn = resp.lpn_ticker();
 
+<<<<<<< HEAD
         currency::validate::<Lpns>(lpn)
             .map(|()| Self {
                 addr,
@@ -48,6 +49,16 @@ where
                 _lpns: PhantomData,
             })
             .map_err(Into::into)
+=======
+        // TODO: Add check that the lpn is present in Lpns
+        // Lpns::maybe_visit(matcher, &lpn, visitor)
+
+        Ok(Self {
+            addr,
+            lpn,
+            _lpns: PhantomData::<Lpns>,
+        })
+>>>>>>> 37dd28ac (Add Lpns type parameter for lpp traits)
     }
 
     pub fn addr(&self) -> &Addr {
@@ -187,7 +198,10 @@ where
 }
 
 #[cfg(any(test, feature = "testing"))]
-impl LppRef {
+impl<Lpns> LppRef<Lpns>
+where
+    Lpns: Group,
+{
     pub fn unchecked<A, Lpn>(addr: A) -> Self
     where
         A: Into<String>,

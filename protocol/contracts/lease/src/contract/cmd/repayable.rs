@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCoin,
+    api::{LpnCoin, LpnCurrencies},
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
@@ -30,7 +30,7 @@ pub(crate) trait RepayFn {
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
         Lpn: Currency,
-        Lpp: LppLoanTrait<Lpn>,
+        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
         Profit: FixedAddressSender;
@@ -116,9 +116,9 @@ where
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpp: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
         Asset: Currency,
+        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>,
     {
         let amount = self.amount.try_into()?;
         let mut profit_sender = self.profit.clone().into_stub();

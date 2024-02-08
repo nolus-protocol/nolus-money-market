@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currencies::{LeaseGroup, Lpns, PaymentGroup};
+use currencies::{LeaseGroup, PaymentGroup};
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
@@ -23,8 +23,9 @@ impl<'r> WithLppLender for Quote<'r> {
 
     fn exec<Lpn, Lpns, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency,
+        Lpns: Group,
+        Lpp: LppLenderTrait<Lpn, Lpns>,
     {
         self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
             QuoteStage2 {

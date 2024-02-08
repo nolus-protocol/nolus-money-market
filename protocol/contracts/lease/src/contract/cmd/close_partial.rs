@@ -5,7 +5,12 @@ use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{api::LeaseCoin, error::ContractResult, lease::Lease, loan::RepayReceipt};
+use crate::{
+    api::{LeaseCoin, LpnCurrencies},
+    error::ContractResult,
+    lease::Lease,
+    loan::RepayReceipt,
+};
 
 use super::repayable::RepayFn;
 
@@ -27,7 +32,7 @@ impl RepayFn for CloseFn {
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
         Lpn: Currency,
-        Lpp: LppLoanTrait<Lpn>,
+        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>,
         Asset: Currency,
         Profit: FixedAddressSender,

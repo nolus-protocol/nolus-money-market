@@ -5,7 +5,7 @@ use platform::{bank::FixedAddressSender, message::Response as MessageResponse};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::LpnCoin,
+    api::{LpnCoin, LpnCurrencies},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -55,9 +55,9 @@ where
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpp: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
         Asset: Currency,
+        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>,
     {
         let lease_addr = lease.addr().clone();
 

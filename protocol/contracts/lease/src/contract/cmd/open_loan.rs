@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currencies::{Lpns, PaymentGroup};
-use currency::Currency;
+use currencies::PaymentGroup;
+use currency::{Currency, Group};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     percent::Percent,
@@ -14,7 +14,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{open::PositionSpecDTO, DownpaymentCoin, LpnCoin},
+    api::{open::PositionSpecDTO, DownpaymentCoin, LpnCoin, LpnCurrencies},
     error::ContractError,
     position::Spec as PositionSpec,
 };
@@ -50,10 +50,11 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpns, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLender: LppLenderTrait<Lpn>,
+        Lpns: Group,
+        LppLender: LppLenderTrait<Lpn, Lpns>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
             &self.funds_in,
@@ -96,7 +97,7 @@ where
     where
         C: Currency,
     {
-        let downpayment_lpn = convert::to_base::<Lpn, Lpns, C, PaymentGroup>(
+        let downpayment_lpn = convert::to_base::<Lpn, LpnCurrencies, C, PaymentGroup>(
             self.oracle.clone(),
             in_amount,
             self.querier,
@@ -128,10 +129,11 @@ impl WithLppLender for OpenLoanResp {
 
     type Error = ContractError;
 
-    fn exec<Lpn, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpns, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLender: LppLenderTrait<Lpn>,
+        Lpns: Group,
+        LppLender: LppLenderTrait<Lpn, Lpns>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
 

@@ -144,6 +144,7 @@ mod test {
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
         let batch: LppBatch<LppRef<LpnCurrencies>> = loan.try_into().unwrap();
+
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
     }
@@ -165,6 +166,7 @@ mod test {
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
         let batch: LppBatch<LppRef<LpnCurrencies>> = loan.try_into().unwrap();
+
         assert_eq!(lpp_ref, batch.lpp_ref);
         {
             let mut exp = Batch::default();

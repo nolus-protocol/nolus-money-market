@@ -101,7 +101,7 @@ impl SwapTask for BuyLpn {
     }
 
     fn out_currency(&self) -> &SymbolSlice {
-        self.lease.lease.loan.lpp().currency()
+        self.lease.lease.loan.lpp().lpn()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>

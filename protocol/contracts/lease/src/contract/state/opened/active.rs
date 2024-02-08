@@ -56,7 +56,7 @@ impl Active {
             Some(lpn_payment) => {
                 // TODO use Never and safe_unwrap instead
                 let payment = lpn_payment.expect("Expected IntoDTO to pass");
-                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().currency());
+                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().lpn());
                 repay::repay(self.lease, payment, env, querier)
             }
             None => self.start_swap(info.funds, env.block.time, querier),
@@ -187,7 +187,7 @@ impl Handler for Active {
     }
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
-        balance::balance(&lease_addr, self.lease.lease.loan.lpp().currency(), querier).and_then(
+        balance::balance(&lease_addr, self.lease.lease.loan.lpp().lpn(), querier).and_then(
             |balance| {
                 if balance.is_zero() {
                     Err(ContractError::InconsistencyNotDetected())

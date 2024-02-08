@@ -20,7 +20,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies,
+        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -54,7 +54,12 @@ pub(in crate::contract::state::opening) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (
+        LppRef<LpnCurrencies>,
+        OracleRef,
+        TimeAlarmsRef,
+        FinalizerRef,
+    ),
     start_opening_at: Timestamp,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
@@ -74,7 +79,12 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (
+        LppRef<LpnCurrencies>,
+        OracleRef,
+        TimeAlarmsRef,
+        FinalizerRef,
+    ),
     start_opening_at: Timestamp,
 }
 
@@ -84,7 +94,12 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+        deps: (
+            LppRef<LpnCurrencies>,
+            OracleRef,
+            TimeAlarmsRef,
+            FinalizerRef,
+        ),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

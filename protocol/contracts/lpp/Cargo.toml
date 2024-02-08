@@ -17,13 +17,13 @@ astroport = ["contract", "currencies/astroport"]
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
 
-contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning"]
+contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies"]
 stub = []
 testing = ["currency/testing"]
 
 [dependencies]
 access-control = { workspace = true }
-currencies = { workspace = true }
+currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }

@@ -2,6 +2,8 @@ use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
+use crate::api::LpnCurrencies;
+
 use super::Lease;
 
 pub trait WithLease {
@@ -15,6 +17,6 @@ pub trait WithLease {
     where
         Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>;
 }
