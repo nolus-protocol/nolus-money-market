@@ -11,11 +11,9 @@ macro_rules! define_symbol {
         } $(,)?
     ) => {
         pub const $currency: $crate::symbols_macro::CurrencySymbols = {
-            use $crate::symbols_macro::CurrencySymbols;
-
             $(
                 #[cfg(any($(feature = $net),+))]
-                { CurrencySymbols { $($body)* } }
+                { $crate::symbols_macro::CurrencySymbols { $($body)* } }
             )+
             #[cfg(all($($(not(feature = $net)),+),+))]
             compile_error!(concat!(stringify!($currency), " is not supported on the selected (if any) network! The currency is supported on the following networks: ", $($($net, ", "),+),+))
