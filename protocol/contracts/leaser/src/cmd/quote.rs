@@ -15,19 +15,18 @@ use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{msg::QuoteResponse, ContractError};
 
-use super::Quote;
+use super::{LpnCurrencies, Quote};
 
-impl<'r> WithLppLender for Quote<'r> {
+impl<'r> WithLppLender<LpnCurrencies> for Quote<'r> {
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn exec<Lpn, Lpns, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpns: Group,
-        Lpp: LppLenderTrait<Lpn, Lpns>,
+        Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     {
-        self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
+        self.oracle.execute_as_oracle::<Lpn, LpnCurrencies, _>(
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
@@ -70,7 +69,7 @@ pub struct LppQuote<Lpn, Lpp> {
 
 impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Lpn: Currency,
 {
     pub fn new(lpp: Lpp) -> StdResult<LppQuote<Lpn, Lpp>> {
@@ -97,7 +96,7 @@ where
 struct QuoteStage2<Lpn, Lpp>
 where
     Lpn: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
@@ -110,7 +109,7 @@ where
 impl<Lpn, Lpp> WithOracle<Lpn> for QuoteStage2<Lpn, Lpp>
 where
     Lpn: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     type Output = QuoteResponse;
     type Error = ContractError;
@@ -143,7 +142,7 @@ where
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     downpayment: DownpaymentCoin,
@@ -158,7 +157,7 @@ where
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     type Output = QuoteResponse;
@@ -192,7 +191,7 @@ struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Lpn: Currency,
     Dpc: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     downpayment: Coin<Dpc>,
@@ -207,7 +206,7 @@ impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Lpn: Currency,
     Dpc: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     type Output = QuoteResponse;

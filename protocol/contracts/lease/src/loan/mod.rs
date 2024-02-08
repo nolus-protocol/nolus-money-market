@@ -261,6 +261,8 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
+    use crate::api::{open::InterestPaymentSpec, LpnCurrencies};
+
     use super::Loan;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(50);
@@ -1198,7 +1200,7 @@ mod tests {
         }
     }
 
-    impl LppLoanTrait<Lpn> for LppLoanLocal {
+    impl LppLoanTrait<Lpn, LpnCurrencies> for LppLoanLocal {
         fn principal_due(&self) -> Coin<Lpn> {
             self.loan.principal_due
         }
@@ -1216,7 +1218,7 @@ mod tests {
         }
     }
 
-    impl TryFrom<LppLoanLocal> for LppBatch<LppRef> {
+    impl TryFrom<LppLoanLocal> for LppBatch<LppRef<LpnCurrencies>> {
         type Error = LppError;
         fn try_from(_: LppLoanLocal) -> LppResult<Self> {
             unreachable!()

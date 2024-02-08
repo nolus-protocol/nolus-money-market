@@ -30,7 +30,7 @@ where
 }
 
 pub trait WithLppLender<Lpns>
-where   
+where
     Lpns: Group,
 {
     type Output;

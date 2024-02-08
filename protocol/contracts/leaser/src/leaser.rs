@@ -4,7 +4,7 @@ use currency::SymbolOwned;
 use finance::percent::Percent;
 use lease::api::{
     open::{InterestPaymentSpec, PositionSpecDTO},
-    DownpaymentCoin, LpnCurrencies, MigrateMsg,
+    DownpaymentCoin, MigrateMsg,
 };
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;

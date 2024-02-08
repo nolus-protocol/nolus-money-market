@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 
 use currencies::PaymentGroup;
-use currency::{Currency, Group};
+use currency::Currency;
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     percent::Percent,
@@ -45,16 +45,15 @@ impl<'a> OpenLoanReq<'a> {
     }
 }
 
-impl<'a> WithLppLender for OpenLoanReq<'a> {
+impl<'a> WithLppLender<LpnCurrencies> for OpenLoanReq<'a> {
     type Output = OpenLoanReqResult;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpns, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpns: Group,
-        LppLender: LppLenderTrait<Lpn, Lpns>,
+        LppLender: LppLenderTrait<Lpn, LpnCurrencies>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
             &self.funds_in,
@@ -124,16 +123,15 @@ impl OpenLoanResp {
     }
 }
 
-impl WithLppLender for OpenLoanResp {
+impl WithLppLender<LpnCurrencies> for OpenLoanResp {
     type Output = OpenLoanRespResult;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpns, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpns: Group,
-        LppLender: LppLenderTrait<Lpn, Lpns>,
+        LppLender: LppLenderTrait<Lpn, LpnCurrencies>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
 

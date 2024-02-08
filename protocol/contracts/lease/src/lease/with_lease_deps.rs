@@ -3,9 +3,7 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use currencies::LeaseGroup;
-use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolSlice, Tickers,
-};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,
@@ -31,17 +29,16 @@ pub trait WithLeaseDeps {
         Oracle: OracleTrait<Lpn>;
 }
 
-pub fn execute<Cmd, Lpns>(
+pub fn execute<Cmd>(
     cmd: Cmd,
     lease_addr: Addr,
     asset: &SymbolSlice,
-    lpp: LppRef<Lpns>,
+    lpp: LppRef<LpnCurrencies>,
     oracle: OracleRef,
     querier: QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Lpns: Group,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
@@ -58,18 +55,17 @@ where
     )
 }
 
-struct FactoryStage1<'r, Cmd, Lpns> {
+struct FactoryStage1<'r, Cmd> {
     cmd: Cmd,
     lease_addr: Addr,
-    lpp: LppRef<Lpns>,
+    lpp: LppRef<LpnCurrencies>,
     oracle: OracleRef,
     querier: QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Lpns> AnyVisitor for FactoryStage1<'r, Cmd, Lpns>
+impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
 where
     Cmd: WithLeaseDeps,
-    Lpns: Group,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
@@ -100,7 +96,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
     querier: QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Asset> WithLppLoan for FactoryStage2<'r, Cmd, Asset>
+impl<'r, Cmd, Asset> WithLppLoan<LpnCurrencies> for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency,
@@ -110,13 +106,12 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, Lpns, LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Lpns: Group,
-        LppLoan: LppLoanTrait<Lpn, Lpns>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     {
-        self.oracle.execute_as_oracle::<Lpn, Lpns, _>(
+        self.oracle.execute_as_oracle::<Lpn, LpnCurrencies, _>(
             FactoryStage4 {
                 cmd: self.cmd,
                 asset: self.asset,

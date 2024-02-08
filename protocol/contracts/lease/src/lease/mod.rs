@@ -162,6 +162,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
+        api::{open::InterestPaymentSpec, LpnCurrencies},
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };
@@ -212,7 +213,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> LppLoan<Lpn> for LppLoanLocal<Lpn>
+    impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn>
     where
         Lpn: Currency,
     {
@@ -233,7 +234,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef>
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<LpnCurrencies>>
     where
         Lpn: Currency,
     {
