@@ -4,6 +4,8 @@ use finance::{
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
+use crate::api::LpnCurrencies;
+
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State<Lpn>
 where
@@ -49,7 +51,7 @@ where
         lpp_loan: &LppLoan,
     ) -> Self
     where
-        LppLoan: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     {
         if due_period_margin.length() < max_due {
             Self::StartIn(max_due - due_period_margin.length())

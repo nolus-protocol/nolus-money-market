@@ -8,7 +8,7 @@ use lpp::stub::LppRef;
 use profit::stub::ProfitRef;
 use serde::Deserialize;
 
-use crate::api::open::InterestPaymentSpec;
+use crate::api::{open::InterestPaymentSpec, LpnCurrencies};
 
 use super::LoanDTO as LastVersionLoanDTO;
 
@@ -16,7 +16,7 @@ use super::LoanDTO as LastVersionLoanDTO;
 /// TODO clean-up the v0.4.2 support once all leases have gone through this migration
 #[derive(Deserialize)]
 pub(super) struct LoanDTO {
-    lpp: LppRef,
+    lpp: LppRef<LpnCurrencies>,
     profit: ProfitRef,
     // v0.5.0 fields follow
     #[serde(default)]
@@ -86,7 +86,7 @@ mod test_two_versions {
     #[test]
     fn read_4_2_into_5_0() {
         let raw_4_2 = format!(
-            r#"{{"lpp":{{"addr":"{LPP_ADDR}","currency":"{lpn_ticker}"}}, "profit":{{"addr":"{PROFIT_ADDR}"}},
+            r#"{{"lpp":{{"addr":"{LPP_ADDR}","lpn":"{lpn_ticker}"}}, "profit":{{"addr":"{PROFIT_ADDR}"}},
                 "interest_payment_spec":{{"due_period":{due_period},"grace_period":172800000000000}},
                 "current_period":{{"period":{{"start":"{paid_by}","length":0}},"interest":{interest}}}}}"#,
             lpn_ticker = Lpn::TICKER,

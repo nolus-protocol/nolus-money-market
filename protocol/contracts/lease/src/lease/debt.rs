@@ -8,6 +8,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LpnCurrencies,
     error::ContractResult,
     position::{Debt, DueTrait, Liquidation},
 };
@@ -17,7 +18,7 @@ use super::Lease;
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
