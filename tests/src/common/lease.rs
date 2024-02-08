@@ -1,3 +1,4 @@
+use currencies::PaymentGroup;
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 use lease::{
@@ -10,16 +11,13 @@ use lease::{
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
-use platform::{
-    coin_legacy::{self, to_cosmwasm},
-    contract::CodeId,
-};
+use platform::{coin_legacy::to_cosmwasm, contract::CodeId};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use swap::RequestMsg;
+use swap::testing::SwapRequest;
 
 use super::{
     ibc,
@@ -67,7 +65,7 @@ impl Instantiator {
                 code_id,
                 Addr::unchecked(ADMIN),
                 &msg,
-                &[coin_legacy::to_cosmwasm(lease_config.downpayment)],
+                &[to_cosmwasm(lease_config.downpayment)],
                 "lease",
                 None,
             )
@@ -216,7 +214,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (downpayment, exp_borrow),
     );
 
-    let requests: Vec<RequestMsg> = super::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = super::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

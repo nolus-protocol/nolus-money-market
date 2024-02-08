@@ -1,7 +1,8 @@
 use std::slice;
 
 use ::lease::api::{query::StateResponse, ExecuteMsg};
-use ::swap::RequestMsg as SwapRequestMsg;
+use ::swap::testing::SwapRequest;
+use currencies::PaymentGroup;
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -273,7 +274,7 @@ pub(crate) fn repay<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_payment_and_transfer(test_case, lease_addr.clone(), payment);
 
-    let requests: Vec<SwapRequestMsg> = swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -281,7 +282,7 @@ pub(crate) fn repay<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp
 
     () = response.unwrap_response();
 
-    let swap_out_lpn: LpnCoin = price::total(payment, super::price_lpn_of());
+    let swap_out_lpn: LpnCoin = price::total(payment, price_lpn_of());
 
     let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
 

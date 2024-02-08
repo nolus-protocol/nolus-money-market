@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
+use currencies::PaymentGroup;
 use finance::{coin::Amount, duration::Duration, price};
 use lease::api::{query::StateResponse, ExecuteMsg};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
-use swap::RequestMsg;
+use swap::testing::SwapRequest;
 
 use crate::common::{
     ibc,
@@ -56,7 +57,7 @@ fn liquidation_time_alarm(
         return;
     };
 
-    let requests: Vec<RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = crate::common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

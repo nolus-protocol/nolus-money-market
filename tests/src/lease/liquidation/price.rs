@@ -1,3 +1,4 @@
+use currencies::PaymentGroup;
 use currency::Currency;
 use finance::{coin::Amount, percent::Percent};
 use lease::api::{query::StateResponse, ExecuteMsg};
@@ -6,7 +7,7 @@ use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
-use swap::RequestMsg;
+use swap::testing::SwapRequest;
 
 use crate::{
     common::{
@@ -87,7 +88,7 @@ fn full_liquidation() {
     )
     .ignore_response();
 
-    let requests: Vec<RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -95,7 +96,7 @@ fn full_liquidation() {
 
     () = response.unwrap_response();
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
         &mut test_case.app,
         lease_addr.clone(),
         ica_addr.clone(),
