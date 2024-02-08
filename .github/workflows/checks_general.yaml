@@ -19,6 +19,7 @@ jobs:
             working_directory: "tests"
           # - protocol: "astroport" # TODO Add `astroport`
           #   working_directory: "tests"
+          - working_directory: "tools"
     name: "Checks [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
       target_net: "${{ matrix.net }}"
