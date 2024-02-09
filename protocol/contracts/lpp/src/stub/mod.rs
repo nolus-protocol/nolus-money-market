@@ -37,7 +37,7 @@ where
     Lpns: Group + Serialize,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+        let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Config())?;
 
         let lpn = resp.lpn_ticker();
 
@@ -168,7 +168,7 @@ where
         querier
             .query_wasm_smart(
                 self.addr(),
-                &QueryMsg::Loan {
+                &QueryMsg::<Lpns>::Loan {
                     lease_addr: lease.into(),
                 },
             )

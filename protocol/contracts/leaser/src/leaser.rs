@@ -128,7 +128,7 @@ fn update_lpp_impl(
     new_code_id: CodeId,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let lpp = Config::load(storage)?.lpp;
+    let lpp = Config::load(storage)?.lpp_addr;
     let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };

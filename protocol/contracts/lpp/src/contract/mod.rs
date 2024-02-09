@@ -95,7 +95,7 @@ struct ExecuteWithLpn<'a> {
     deps: DepsMut<'a>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<Lpns>,
 }
 
 impl<'a> ExecuteWithLpn<'a> {
@@ -142,7 +142,7 @@ impl<'a> ExecuteWithLpn<'a> {
         deps: DepsMut<'a>,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg,
+        msg: ExecuteMsg<Lpns>,
     ) -> Result<CwResponse> {
         let context = Self {
             deps,
@@ -174,7 +174,7 @@ pub fn execute(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<Lpns>,
 ) -> Result<CwResponse> {
     // no currency context variants
     match msg {
@@ -218,7 +218,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
 struct QueryWithLpn<'a> {
     deps: Deps<'a>,
     env: Env,
-    msg: QueryMsg,
+    msg: QueryMsg<Lpns>,
 }
 
 impl<'a> QueryWithLpn<'a> {
@@ -251,7 +251,7 @@ impl<'a> QueryWithLpn<'a> {
         Ok(res)
     }
 
-    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary> {
+    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg<Lpns>) -> Result<Binary> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
@@ -273,7 +273,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<Lpns>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
         QueryMsg::Balance { address } => {

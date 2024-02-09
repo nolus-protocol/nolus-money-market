@@ -79,7 +79,7 @@ where
         self.batch
             .schedule_execute_wasm_reply_on_success_no_funds(
                 self.id().clone(),
-                &ExecuteMsg::OpenLoan {
+                &ExecuteMsg::<Lpns>::OpenLoan {
                     amount: amount.into(),
                 },
                 Self::OPEN_LOAN_REQ_ID,
@@ -96,7 +96,7 @@ where
     }
 
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
-        let msg = QueryMsg::Quote {
+        let msg = QueryMsg::<Lpns>::Quote {
             amount: amount.into(),
         };
         self.querier

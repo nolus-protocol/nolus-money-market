@@ -104,7 +104,7 @@ where
         if !stub.repayment.is_zero() {
             batch.schedule_execute_wasm_no_reply(
                 stub.lpp_ref.addr().clone(),
-                &ExecuteMsg::RepayLoan(),
+                &ExecuteMsg::<Lpns>::RepayLoan(),
                 Some(stub.repayment),
             )?;
         }

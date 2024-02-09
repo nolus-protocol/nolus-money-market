@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::Lpns;
-use currency::{Currency, NlsPlatform, SymbolOwned};
+use currency::{Currency, Group, NlsPlatform, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},
@@ -32,7 +31,10 @@ pub struct MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<Lpns>
+where
+    Lpns: Group,
+{
     NewLeaseCode {
         lease_code_id: Uint64,
     },
@@ -70,7 +72,10 @@ pub enum SudoMsg {
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum QueryMsg {
+pub enum QueryMsg<Lpns>
+where
+    Lpns: Group,
+{
     Config(),
     Quote {
         amount: CoinDTO<Lpns>,
