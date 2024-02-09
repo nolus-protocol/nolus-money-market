@@ -183,9 +183,9 @@ where
         .into()
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, deps, env)
+        timeout::on_timeout_retry(self, state_label, querier, env)
     }
 }
 

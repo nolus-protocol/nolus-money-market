@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, Reply};
+use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -44,51 +44,51 @@ where
     fn on_open_ica(
         self,
         _counterparty_version: String,
-        deps: Deps<'_>,
+        _deps: Deps<'_>,
         _env: Env,
     ) -> ContinueResult<Self> {
-        Err(err(self, "handle open ica response", deps.api))
+        Err(err(self, "handle open ica response"))
     }
 
     /// The entry point of a response delivery
-    fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err(self, "handle transaction response", deps.api)).into()
+    fn on_response(self, _data: Binary, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle transaction response")).into()
     }
 
     /// The entry point of an error delivery
-    fn on_error(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle transaction error", deps.api))
+    fn on_error(self, _deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
+        Err(err(self, "handle transaction error"))
     }
 
     /// The entry point of a timeout delivery
-    fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle transaction timeout", deps.api))
+    fn on_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
+        Err(err(self, "handle transaction timeout"))
     }
 
     /// The actual delivery of a response
     ///
     /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err(self, "handle inner", deps.api)).into()
+    fn on_inner(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle inner")).into()
     }
 
     /// The actual delivery of an ICA open response, error, and timeout
     ///
     /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner_continue(self, deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle inner to 'Continue' response", deps.api))
+    fn on_inner_continue(self, _deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
+        Err(err(self, "handle inner to 'Continue' response"))
     }
 
-    fn heal(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err(self, "handle heal", deps.api)).into()
+    fn heal(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle heal")).into()
     }
 
-    fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
-        Err(err(self, "handle reply", deps.api))
+    fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
+        Err(err(self, "handle reply"))
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, _env: Env) -> Result<Self> {
-        Err(err(self, "handle time alarm", deps.api)).into()
+    fn on_time_alarm(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle time alarm")).into()
     }
 }
 
@@ -122,13 +122,11 @@ where
     }
 }
 
-pub(crate) fn err<S>(state: S, op: &str, api: &dyn Api) -> Error
+pub(crate) fn err<S>(state: S, op: &str) -> Error
 where
     S: Display,
 {
-    let err = Error::unsupported_operation(op, state);
-    api.debug(&format!("{err}"));
-    err
+    Error::unsupported_operation(op, state)
 }
 
 impl<H> From<ContinueResult<H>> for Result<H>

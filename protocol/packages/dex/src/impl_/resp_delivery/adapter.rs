@@ -9,25 +9,19 @@ pub trait DeliveryAdapter<H, Response>
 where
     H: Handler,
 {
-    fn deliver(handler: H, _response: Response, deps: Deps<'_>, _env: Env) -> ResponseResult<H> {
-        Err(response::err(
-            handler,
-            "deliver transaction response",
-            deps.api,
-        ))
-        .into()
+    fn deliver(handler: H, _response: Response, _deps: Deps<'_>, _env: Env) -> ResponseResult<H> {
+        Err(response::err(handler, "deliver transaction response")).into()
     }
 
     fn deliver_continue(
         handler: H,
         _response: Response,
-        deps: Deps<'_>,
+        _deps: Deps<'_>,
         _env: Env,
     ) -> ResponseContinueResult<H> {
         Err(response::err(
             handler,
             "deliver ica_open response, error or timeout",
-            deps.api,
         ))
     }
 }

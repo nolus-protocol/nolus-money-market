@@ -26,7 +26,6 @@ impl<H> State<H> {
     }
 }
 
-#[cfg(feature = "astroport")]
 impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where
@@ -66,9 +65,9 @@ where
             .map_err(Into::into)
     }
 
-    fn on_dex_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_dex_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         self.handler
-            .on_timeout(deps, env)
+            .on_timeout(querier, env)
             .map(state_machine::from)
             .map_err(Into::into)
     }

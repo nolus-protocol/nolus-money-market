@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 
+use cosmwasm_std::QuerierWrapper;
 use currencies::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
@@ -195,11 +196,13 @@ impl Handler for State {
         }
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_timeout(deps, env).map(state_machine::from),
-            StateEnum::Idle(idle) => idle.on_timeout(deps, env).map(state_machine::from),
-            StateEnum::BuyBack(buy_back) => buy_back.on_timeout(deps, env).map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.on_timeout(querier, env).map(state_machine::from),
+            StateEnum::Idle(idle) => idle.on_timeout(querier, env).map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => {
+                buy_back.on_timeout(querier, env).map(state_machine::from)
+            }
         }
     }
 

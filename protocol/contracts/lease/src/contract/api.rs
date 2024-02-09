@@ -11,6 +11,10 @@ use crate::{
 
 use super::state::Response;
 
+// TODO get rid of using `Deps` - (A) from this level inward the storage should not be accessible
+// even with read-only access, and (B) avoid holding a read-only reference to Storage that is too
+// limitating. Ref: `on_dex_timeout`
+
 #[enum_dispatch]
 pub(super) trait Contract
 where
@@ -38,7 +42,7 @@ where
         err("dex error")
     }
 
-    fn on_dex_timeout(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn on_dex_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("dex timeout")
     }
 

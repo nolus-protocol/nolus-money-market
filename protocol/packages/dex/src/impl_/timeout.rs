@@ -3,7 +3,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, Env};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::error::Result;
@@ -18,23 +18,21 @@ use super::{
 pub(crate) fn on_timeout_retry<S, SEnum, L>(
     current_state: S,
     state_label: L,
-    deps: Deps<'_>,
+    querier: QuerierWrapper<'_>,
     env: Env,
 ) -> Result<StateMachineResponse<SEnum>>
 where
     S: Enterable + Into<SEnum>,
     L: Into<String>,
 {
-    let emitter = emit_timeout(
-        state_label,
-        env.contract.address.clone(),
-        TimeoutPolicy::Retry,
-    );
-    let batch = current_state.enter(env.block.time, deps.querier)?;
-    Ok(StateMachineResponse::from(
-        MessageResponse::messages_with_events(batch, emitter),
-        current_state,
-    ))
+    current_state.enter(env.block.time, querier).map(|batch| {
+        let emitter = emit_timeout(state_label, env.contract.address, TimeoutPolicy::Retry);
+
+        StateMachineResponse::from(
+            MessageResponse::messages_with_events(batch, emitter),
+            current_state,
+        )
+    })
 }
 
 pub(crate) fn on_timeout_repair_channel<S, L, SEnum, SwapResult>(

@@ -140,7 +140,7 @@ where
         self.on_response(deps, env)
     }
 
-    fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, _querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         let timealarms = self.spec.time_alarm().clone();
         timeout::on_timeout_repair_channel(self, state_label, timealarms, env)

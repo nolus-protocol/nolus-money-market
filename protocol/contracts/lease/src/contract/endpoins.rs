@@ -1,20 +1,22 @@
-#[cfg(feature = "astroport")]
-use cosmwasm_std::Addr;
-use currencies::LeaseGroup;
+#[cfg(feature = "osmosis")]
+use dex::TransferInInit;
 #[cfg(feature = "astroport")]
 use finance::coin::Amount;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
+        entry_point, to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
+        Reply, Storage,
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
+    api::{
+        open::NewLeaseContract, query::StateQuery, ExecuteMsg, LeaseAssetCurrencies, MigrateMsg,
+    },
     contract::api::Contract,
     error::ContractResult,
 };
@@ -35,7 +37,7 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     //TODO move the following validations into the deserialization
     deps.api.addr_validate(new_lease.finalizer.as_str())?;
-    currency::validate::<LeaseGroup>(&new_lease.form.currency)?;
+    currency::validate::<LeaseAssetCurrencies>(&new_lease.form.currency)?;
     deps.api.addr_validate(new_lease.form.customer.as_str())?;
 
     platform::contract::validate_addr(deps.querier, &new_lease.form.time_alarms)?;
@@ -56,7 +58,7 @@ pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage: &mut _| may_migrate(storage, &env),
+        |storage: &mut _| may_migrate(storage, deps.querier, env),
         Into::into,
     )
     .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
@@ -77,6 +79,7 @@ pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRe
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
+// TODO factor out the implementations of execute, sudo, and reply to use  `fn process_lease`
 #[entry_point]
 pub fn execute(
     mut deps: DepsMut<'_>,
@@ -118,9 +121,11 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-fn may_migrate(_storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
-    let _this_lease = &env.contract.address;
-
+fn may_migrate(
+    storage: &mut dyn Storage,
+    _querier: QuerierWrapper<'_>,
+    env: Env,
+) -> ContractResult<MessageResponse> {
     #[cfg(feature = "astroport")]
     {
         const NEUTRON_LEASE1: &str =
@@ -133,15 +138,16 @@ fn may_migrate(_storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageR
         const NEUTRON_LEASE2_AMOUNT1: Amount = 11668296;
         const NEUTRON_LEASE2_AMOUNT2: Amount = 17502294;
 
-        if _this_lease == &NEUTRON_LEASE1 {
+        let this_lease = this_contract_ref(&env);
+        if this_lease == &NEUTRON_LEASE1 {
             process_lease(
-                _storage,
-                add_amounts(NEUTRON_LEASE1_AMOUNT1, NEUTRON_LEASE1_AMOUNT2, _this_lease),
+                storage,
+                add_amounts(NEUTRON_LEASE1_AMOUNT1, NEUTRON_LEASE1_AMOUNT2, this_lease),
             )
-        } else if _this_lease == &NEUTRON_LEASE2 {
+        } else if this_lease == &NEUTRON_LEASE2 {
             process_lease(
-                _storage,
-                add_amounts(NEUTRON_LEASE2_AMOUNT1, NEUTRON_LEASE2_AMOUNT2, _this_lease),
+                storage,
+                add_amounts(NEUTRON_LEASE2_AMOUNT1, NEUTRON_LEASE2_AMOUNT2, this_lease),
             )
         } else {
             Ok(MessageResponse::default())
@@ -149,16 +155,16 @@ fn may_migrate(_storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageR
     }
     #[cfg(feature = "osmosis")]
     {
-        // const TIMEOUT_LEASE: &str = "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
-        // if this_lease == &TIMEOUT_LEASE {
-        //     process_lease(storage, transfer_finish_time_out(this_lease, deps, env))
-        // } else {
-        Ok(MessageResponse::default())
-        // }
+        const TIMEOUT_LEASE: &str =
+            "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
+        if this_contract_ref(&env) == &TIMEOUT_LEASE {
+            process_lease(storage, transfer_finish_time_out(_querier, env))
+        } else {
+            Ok(MessageResponse::default())
+        }
     }
 }
 
-#[cfg(feature = "astroport")]
 fn process_lease<ProcFn>(
     storage: &mut dyn Storage,
     process_fn: ProcFn,
@@ -206,31 +212,34 @@ fn add_amounts(
     }
 }
 
-// fn transfer_finish_time_out<'a>(
-//     this_lease: &'a Addr,
-//     deps: Deps<'a>,
-//     env: Env,
-// ) -> impl FnOnce(State) -> ContractResult<Response> + 'a {
-//     move |lease| {
-//         let new_state = match lease {
-//             State::ClosingTransferIn(state) => state.map(|dex_state| match dex_state {
-//                 dex::StateLocalOut::TransferInFinish(transfer_in_finish) => {
-//                     <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _, _>>>::into(
-//                         transfer_in_finish.into_init(),
-//                     )
-//                 }
-//                 _ => {
-//                     unreachable!(
-//                         "Found a dex sub-state != TransferInFinish for {}",
-//                         this_lease
-//                     )
-//                 }
-//             }),
-//             _ => unreachable!("Found a state != ClosingTransferIn for {}", this_lease),
-//         };
-//         new_state.on_dex_timeout(deps, env)
-//     }
-// }
+#[cfg(feature = "osmosis")]
+fn transfer_finish_time_out(
+    querier: QuerierWrapper<'_>,
+    env: Env,
+) -> impl FnOnce(State) -> ContractResult<Response> + '_ {
+    move |lease| {
+        let new_state = match lease {
+            State::ClosingTransferIn(state) => state.map(|dex_state| match dex_state {
+                dex::StateLocalOut::TransferInFinish(transfer_in_finish) => {
+                    <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _, _>>>::into(
+                        transfer_in_finish.into_init(),
+                    )
+                }
+                _ => {
+                    unreachable!(
+                        "Found a dex sub-state != TransferInFinish for {}",
+                        this_contract_ref(&env)
+                    )
+                }
+            }),
+            _ => unreachable!(
+                "Found a state != ClosingTransferIn for {}",
+                this_contract(env)
+            ),
+        };
+        new_state.on_dex_timeout(querier, env)
+    }
+}
 
 fn process_execute(
     msg: ExecuteMsg,
@@ -266,11 +275,20 @@ fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> Contrac
             counterparty_version,
         } => state.on_open_ica(counterparty_version, deps, env),
         SudoMsg::Response { request: _, data } => state.on_dex_response(data, deps, env),
-        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(deps, env),
+        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(deps.querier, env),
         SudoMsg::Error {
             request: _,
             details: _,
         } => state.on_dex_error(deps, env),
         _ => unreachable!(),
     }
+}
+
+fn this_contract_ref(env: &Env) -> &Addr {
+    &env.contract.address
+}
+
+#[cfg(feature = "osmosis")]
+fn this_contract(env: Env) -> Addr {
+    env.contract.address
 }

@@ -350,7 +350,7 @@ mod impl_into {
 
 mod impl_handler {
     use currency::Group;
-    use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply};
+    use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Reply};
 
     use crate::{
         impl_::{
@@ -514,27 +514,33 @@ mod impl_handler {
             }
         }
 
-        fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+        fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
-                State::TransferOut(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, deps, env),
-                State::SwapExactIn(inner) => Handler::on_timeout(inner, deps, env),
-                State::SwapExactInRespDelivery(inner) => Handler::on_timeout(inner, deps, env),
+                State::TransferOut(inner) => Handler::on_timeout(inner, querier, env),
+                State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
+                State::SwapExactIn(inner) => Handler::on_timeout(inner, querier, env),
+                State::SwapExactInRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_timeout(inner, deps, env)
+                    Handler::on_timeout(inner, querier, env)
                 }
-                State::SwapExactInPreRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::SwapExactInRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::SwapExactInPostRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferInInit(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferInInitRespDelivery(inner) => Handler::on_timeout(inner, deps, env),
+                State::SwapExactInPreRecoverIca(inner) => Handler::on_timeout(inner, querier, env),
+                State::SwapExactInRecoverIca(inner) => Handler::on_timeout(inner, querier, env),
+                State::SwapExactInPostRecoverIca(inner) => Handler::on_timeout(inner, querier, env),
+                State::TransferInInit(inner) => Handler::on_timeout(inner, querier, env),
+                State::TransferInInitRespDelivery(inner) => {
+                    Handler::on_timeout(inner, querier, env)
+                }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_timeout(inner, deps, env)
+                    Handler::on_timeout(inner, querier, env)
                 }
-                State::TransferInInitPreRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferInInitRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferInInitPostRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
-                State::TransferInFinish(inner) => Handler::on_timeout(inner, deps, env),
+                State::TransferInInitPreRecoverIca(inner) => {
+                    Handler::on_timeout(inner, querier, env)
+                }
+                State::TransferInInitRecoverIca(inner) => Handler::on_timeout(inner, querier, env),
+                State::TransferInInitPostRecoverIca(inner) => {
+                    Handler::on_timeout(inner, querier, env)
+                }
+                State::TransferInFinish(inner) => Handler::on_timeout(inner, querier, env),
             }
         }
 
