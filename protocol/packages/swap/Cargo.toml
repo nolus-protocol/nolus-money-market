@@ -35,7 +35,7 @@ osmosis = [
     "dep:serde",
 ]
 
-migration = ["testing"]
+migration = ["testing", "platform/testing"]
 testing = ["finance/testing", "dex/testing"]
 
 [dependencies]
