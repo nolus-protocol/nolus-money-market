@@ -53,6 +53,12 @@ impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMs
             _delivery_adapter: PhantomData,
         }
     }
+
+    #[cfg(feature = "migration")]
+    pub fn patch_response(mut self, new_response: R) -> Self {
+        self.response = new_response;
+        self
+    }
 }
 
 #[cfg(feature = "migration")]

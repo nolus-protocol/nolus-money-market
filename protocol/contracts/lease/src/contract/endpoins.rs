@@ -1,4 +1,8 @@
+#[cfg(feature = "astroport")]
+use cosmwasm_std::Addr;
 use currencies::LeaseGroup;
+#[cfg(feature = "astroport")]
+use finance::coin::Amount;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -48,11 +52,11 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage: &mut _| may_migrate(storage, &_env),
+        |storage: &mut _| may_migrate(storage, &env),
         Into::into,
     )
     .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
@@ -114,44 +118,119 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-fn may_migrate(storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
-    use currencies::Lpns;
-    use currency::SymbolStatic;
-    use dex::TransferInInit;
-    use finance::coin::Amount;
+fn may_migrate(_storage: &mut dyn Storage, env: &Env) -> ContractResult<MessageResponse> {
+    let _this_lease = &env.contract.address;
 
-    const LEASE1: &str = "nolus1sszfhvtrj5m92t6uv9q7zh9hvz93nlttsz2reutjtj73tzqydzustzrw3w";
-    const LEASE2: &str = "nolus1q2ekwjj87jglqsszwy6ah5t08h0k8kq67ed0l899sku2qt0dztpsnwt6sw";
-    const COIN_AMOUNT: Amount = 15;
-    const COIN_CURRENCY: SymbolStatic = "USDC";
+    #[cfg(feature = "astroport")]
+    {
+        const NEUTRON_LEASE1: &str =
+            "nolus1yhcph5r2x9rss6tluptttma736rknasjwn3659620ysu5fhmx2wq47gmch";
+        const NEUTRON_LEASE1_AMOUNT1: Amount = 28883542;
+        const NEUTRON_LEASE1_AMOUNT2: Amount = 7220808;
 
-    let this_lease = &env.contract.address;
-    if this_lease == &LEASE1 || this_lease == &LEASE2 {
-        state::load(storage)
-            .map(|lease| match lease {
-                State::BuyLpn(state) => state
-                    .map(|dex_state| match dex_state {
-                        dex::StateLocalOut::SwapExactIn(swap_exact_in) => {
-                            let coin_in = finance::coin::from_amount_ticker::<Lpns>(
-                                COIN_AMOUNT,
-                                COIN_CURRENCY.into(),
-                            )
-                            .expect("USDC is a member of Lpns");
-                            <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _, _>>>::into(
-                                swap_exact_in.into_next(coin_in),
-                            )
-                        }
-                        _ => {
-                            unreachable!("Found a dex sub-state != SwapExactIn for {}", this_lease)
-                        }
-                    })
-                    .into(),
-                _ => unreachable!("Found a state != BuyLpn for {}", this_lease),
-            })
-            .and_then(|next_state: State| state::save(storage, &next_state))?;
+        const NEUTRON_LEASE2: &str =
+            "nolus1psw6ugdjm82mqnm4cj649e3jgu9pwe3p8jnrk7qjf284knq3crfsh7pk2r";
+        const NEUTRON_LEASE2_AMOUNT1: Amount = 11668296;
+        const NEUTRON_LEASE2_AMOUNT2: Amount = 17502294;
+
+        if _this_lease == &NEUTRON_LEASE1 {
+            process_lease(
+                _storage,
+                add_amounts(NEUTRON_LEASE1_AMOUNT1, NEUTRON_LEASE1_AMOUNT2, _this_lease),
+            )
+        } else if _this_lease == &NEUTRON_LEASE2 {
+            process_lease(
+                _storage,
+                add_amounts(NEUTRON_LEASE2_AMOUNT1, NEUTRON_LEASE2_AMOUNT2, _this_lease),
+            )
+        } else {
+            Ok(MessageResponse::default())
+        }
     }
-    Ok(MessageResponse::default())
+    #[cfg(feature = "osmosis")]
+    {
+        // const TIMEOUT_LEASE: &str = "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
+        // if this_lease == &TIMEOUT_LEASE {
+        //     process_lease(storage, transfer_finish_time_out(this_lease, deps, env))
+        // } else {
+        Ok(MessageResponse::default())
+        // }
+    }
 }
+
+#[cfg(feature = "astroport")]
+fn process_lease<ProcFn>(
+    storage: &mut dyn Storage,
+    process_fn: ProcFn,
+) -> ContractResult<MessageResponse>
+where
+    ProcFn: FnOnce(State) -> ContractResult<Response>,
+{
+    state::load(storage).and_then(process_fn).and_then(
+        |Response {
+             response,
+             next_state,
+         }| state::save(storage, &next_state).map(|()| response),
+    )
+}
+
+#[cfg(feature = "astroport")]
+fn add_amounts(
+    amount1: Amount,
+    amount2: Amount,
+    this_lease: &Addr,
+) -> impl FnOnce(State) -> ContractResult<Response> + '_ {
+    use dex::SwapExactInRespDelivery;
+
+    move |lease| {
+        let updated_state = match lease {
+            State::BuyAsset(state) => state.map(|dex_state| match dex_state {
+                dex::StateRemoteOut::SwapExactInRespDelivery(resp_delivery) => {
+                    let resp_with_amounts = swap::migration::build_two_responses(amount1, amount2);
+                    let resp_delivery_updated =
+                        resp_delivery.patch_response(resp_with_amounts.into());
+                    <SwapExactInRespDelivery<_, _, _, _, _> as Into<
+                        dex::StateRemoteOut<_, _, _, _, _, _>,
+                    >>::into(resp_delivery_updated)
+                }
+                _ => {
+                    unreachable!(
+                        "Found a dex sub-state != SwapExactInResponseDelivery for {}",
+                        this_lease
+                    )
+                }
+            }),
+            _ => unreachable!("Found a state != BuyAsset for {}", this_lease),
+        };
+        Ok(Response::no_msgs(updated_state))
+    }
+}
+
+// fn transfer_finish_time_out<'a>(
+//     this_lease: &'a Addr,
+//     deps: Deps<'a>,
+//     env: Env,
+// ) -> impl FnOnce(State) -> ContractResult<Response> + 'a {
+//     move |lease| {
+//         let new_state = match lease {
+//             State::ClosingTransferIn(state) => state.map(|dex_state| match dex_state {
+//                 dex::StateLocalOut::TransferInFinish(transfer_in_finish) => {
+//                     <TransferInInit<_, _> as Into<dex::StateLocalOut<_, _, _, _, _>>>::into(
+//                         transfer_in_finish.into_init(),
+//                     )
+//                 }
+//                 _ => {
+//                     unreachable!(
+//                         "Found a dex sub-state != TransferInFinish for {}",
+//                         this_lease
+//                     )
+//                 }
+//             }),
+//             _ => unreachable!("Found a state != ClosingTransferIn for {}", this_lease),
+//         };
+//         new_state.on_dex_timeout(deps, env)
+//     }
+// }
 
 fn process_execute(
     msg: ExecuteMsg,

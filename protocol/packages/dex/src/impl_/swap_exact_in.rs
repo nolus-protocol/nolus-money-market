@@ -316,16 +316,6 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SEnum, SwapGroup, SwapClient> SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
-where
-    SwapTask: SwapTaskT,
-{
-    pub fn into_next(self, coin_in: CoinDTO<SwapTask::OutG>) -> TransferInInit<SwapTask, SEnum> {
-        TransferInInit::new(self.spec, coin_in)
-    }
-}
-
-#[cfg(feature = "migration")]
 impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapGroup, SwapClient>
     MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
     for SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>

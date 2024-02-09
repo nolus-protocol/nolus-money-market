@@ -18,6 +18,7 @@ astroport = [
     "currencies/astroport",
     "dex/migration",
     "swap/astroport",
+    "swap/migration"
 ]
 osmosis = ["contract", "currencies/osmosis", "dex/migration", "swap/osmosis"]
 

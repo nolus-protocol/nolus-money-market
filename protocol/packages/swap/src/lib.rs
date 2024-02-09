@@ -6,6 +6,8 @@ pub use self::osmosis::*;
 pub type Impl = astroport::RouterImpl<astroport::Main>;
 #[cfg(all(feature = "astroport", feature = "test"))]
 pub type Impl = astroport::RouterImpl<astroport::Test>;
+#[cfg(all(feature = "astroport", feature = "migration"))]
+pub use astroport::migration;
 
 #[cfg(feature = "astroport")]
 mod astroport;

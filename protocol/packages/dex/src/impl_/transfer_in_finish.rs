@@ -52,6 +52,16 @@ where
 }
 
 #[cfg(feature = "migration")]
+impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    pub fn into_init(self) -> TransferInInit<SwapTask, SEnum> {
+        TransferInInit::new(self.spec, self.amount_in)
+    }
+}
+
+#[cfg(feature = "migration")]
 impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
     for TransferInFinish<SwapTask, SEnum>
 where

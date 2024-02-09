@@ -26,6 +26,7 @@ impl<H> State<H> {
     }
 }
 
+#[cfg(feature = "astroport")]
 impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where
