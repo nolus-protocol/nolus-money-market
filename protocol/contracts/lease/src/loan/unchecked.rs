@@ -54,7 +54,7 @@ impl From<LoanDTO> for LastVersionLoanDTO {
             assert_ne!(value.margin_paid_by, Timestamp::default());
 
             // v0.5.0 detected
-            LastVersionLoanDTO {
+            Self {
                 lpp: value.lpp,
                 profit: value.profit,
                 due_period: value.due_period,

@@ -1,11 +1,8 @@
 use std::collections::HashSet;
 
 use currency::SymbolOwned;
-use finance::percent::Percent;
-use lease::api::{
-    open::{InterestPaymentSpec, PositionSpecDTO},
-    DownpaymentCoin, MigrateMsg,
-};
+use finance::{duration::Duration, percent::Percent};
+use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
@@ -45,7 +42,7 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::try_new(config.lpp_addr, self.deps.querier)?;
+        let lpp = LppRef::try_new(config.lpp, self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 
@@ -68,16 +65,15 @@ pub(super) fn try_configure(
     storage: &mut dyn Storage,
     lease_interest_rate_margin: Percent,
     lease_position_spec: PositionSpecDTO,
-    lease_interest_payment: InterestPaymentSpec,
+    lease_due_period: Duration,
 ) -> ContractResult<MessageResponse> {
     Config::update(
         storage,
         lease_interest_rate_margin,
         lease_position_spec,
-        lease_interest_payment,
-    )?;
-
-    Ok(Default::default())
+        lease_due_period,
+    )
+    .map(|()| MessageResponse::default())
 }
 
 pub(super) fn try_migrate_leases<MsgFactory>(
@@ -129,7 +125,7 @@ fn update_lpp_impl(
     new_code_id: CodeId,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let lpp = Config::load(storage)?.lpp_addr;
+    let lpp = Config::load(storage)?.lpp;
     let lpp_update_code = ExecuteMsg::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };

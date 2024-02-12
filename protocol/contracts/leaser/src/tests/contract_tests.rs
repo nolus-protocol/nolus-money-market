@@ -42,10 +42,10 @@ type TheCurrency = StableC1;
 const DENOM: SymbolStatic = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
-fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
+fn leaser_instantiate_msg(lease_code_id: CodeId, lpp: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id: Uint64::new(lease_code_id),
-        lpp_ust_addr: lpp_addr,
+        lpp,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
@@ -60,10 +60,7 @@ fn leaser_instantiate_msg(lease_code_id: CodeId, lpp_addr: Addr) -> crate::msg::
             lpn_coin(1000),
             lpn_coin(10),
         ),
-        lease_interest_payment: InterestPaymentSpec::new(
-            Duration::from_days(90),
-            Duration::from_days(10),
-        ),
+        lease_due_period: Duration::from_days(90),
         time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
         market_price_oracle: Addr::unchecked(ORACLE_ADDR),
         profit: Addr::unchecked(PROFIT_ADDR),
@@ -118,7 +115,7 @@ fn proper_initialization() {
     let config_response: ConfigResponse = from_json(res).unwrap();
     let config = config_response.config;
     assert_eq!(1, config.lease_code_id);
-    assert_eq!(lpp_addr, config.lpp_addr);
+    assert_eq!(lpp_addr, config.lpp);
 }
 
 #[test]
@@ -139,22 +136,21 @@ fn test_update_config() {
         lpn_coin(4_211_442_000),
         lpn_coin(100_000),
     );
-    let expected_repaiment =
-        InterestPaymentSpec::new(Duration::from_secs(100), Duration::from_secs(10));
+    let expected_due_period = Duration::from_secs(100);
 
     setup_test_case(deps.as_mut());
 
     let msg = SudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         lease_position_spec: expected_position_spec.clone(),
-        lease_interest_payment: expected_repaiment.clone(),
+        lease_due_period: expected_due_period,
     };
 
     sudo(deps.as_mut(), mock_env(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
     assert_eq!(expected_position_spec, config.lease_position_spec);
-    assert_eq!(expected_repaiment, config.lease_interest_payment);
+    assert_eq!(expected_due_period, config.lease_due_period);
 }
 
 #[test]

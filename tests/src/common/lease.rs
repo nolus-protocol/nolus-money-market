@@ -3,8 +3,8 @@ use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Per
 use lease::{
     api::{
         open::{
-            ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
-            NewLeaseForm, PositionSpecDTO,
+            ConnectionParams, Ics20Channel, LoanForm, NewLeaseContract, NewLeaseForm,
+            PositionSpecDTO,
         },
         query::{StateQuery, StateResponse},
     },
@@ -103,10 +103,10 @@ impl Instantiator {
                     super::lpn_coin(345),
                 ),
                 loan: LoanForm {
-                    annual_margin_interest: config.annual_margin_interest,
                     lpp: addresses.lpp,
-                    interest_payment: config.interest_payment,
                     profit: addresses.profit,
+                    annual_margin_interest: config.annual_margin_interest,
+                    due_period: config.lease_due_period,
                 },
                 time_alarms: addresses.time_alarms,
                 market_price_oracle: addresses.oracle,
@@ -152,7 +152,7 @@ pub(crate) struct InstantiatorConfig {
     pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
-    pub interest_payment: InterestPaymentSpec,
+    pub lease_due_period: Duration,
     // Dex
     pub dex: ConnectionParams,
 }
@@ -169,11 +169,8 @@ impl Default for InstantiatorConfig {
             liability_max_percent: Percent::from_percent(80),
             liability_recalc_time: Duration::from_days(20),
 
-            annual_margin_interest: Percent::from_percent(0), // 3.1%
-            interest_payment: InterestPaymentSpec::new(
-                Duration::from_secs(100),
-                Duration::from_secs(10),
-            ),
+            annual_margin_interest: Percent::from_permille(31),
+            lease_due_period: Duration::from_secs(100),
 
             dex: ConnectionParams {
                 connection_id: "connection-0".into(),

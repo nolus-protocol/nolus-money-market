@@ -24,7 +24,8 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -35,7 +36,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    contract::validate_addr(deps.querier, &msg.lpp_ust_addr)?;
+    contract::validate_addr(deps.querier, &msg.lpp)?;
     contract::validate_addr(deps.querier, &msg.time_alarms)?;
     contract::validate_addr(deps.querier, &msg.market_price_oracle)?;
     contract::validate_addr(deps.querier, &msg.profit)?;
@@ -57,9 +58,19 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
     // Statically assert that the message is empty when doing a software-only update.
     let MigrateMsg {} = msg;
 
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
-        .or_else(|err| platform_error::log(err, deps.api))
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage: &mut _| {
+            use super::state::v1::Config as ConfigOld;
+            ConfigOld::migrate(storage)
+                .and_then(|config_new| config_new.store(storage))
+                .map(|()| MessageResponse::default())
+        },
+        Into::into,
+    )
+    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]
@@ -132,12 +143,12 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
         SudoMsg::Config {
             lease_interest_rate_margin,
             lease_position_spec,
-            lease_interest_payment,
+            lease_due_period,
         } => leaser::try_configure(
             deps.storage,
             lease_interest_rate_margin,
             lease_position_spec,
-            lease_interest_payment,
+            lease_due_period,
         ),
     }
     .map(response::response_only_messages)

@@ -77,10 +77,10 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             .and_then(|spec| Position::<Asset, Lpn>::try_from(self.amount, spec))
             .map(|position| {
                 let loan = Loan::new(
-                    self.start_at,
                     lpp_loan,
+                    self.start_at,
                     self.form.loan.annual_margin_interest,
-                    self.form.loan.interest_payment,
+                    self.form.loan.due_period,
                 );
                 Lease::<_, Asset, _, _>::new(
                     self.lease_addr,

@@ -55,10 +55,10 @@ impl Borrow {
                 max_ltd,
                 position_spec: config.lease_position_spec,
                 loan: LoanForm {
-                    annual_margin_interest: config.lease_interest_rate_margin,
-                    lpp: config.lpp_addr,
-                    interest_payment: config.lease_interest_payment,
+                    lpp: config.lpp,
                     profit: config.profit,
+                    annual_margin_interest: config.lease_interest_rate_margin,
+                    due_period: config.lease_due_period,
                 },
                 time_alarms: config.time_alarms,
                 market_price_oracle: config.market_price_oracle,

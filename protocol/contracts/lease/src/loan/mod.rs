@@ -14,10 +14,7 @@ use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{
-    api::open::InterestPaymentSpec,
-    error::{ContractError, ContractResult},
-};
+use crate::error::{ContractError, ContractResult};
 
 pub(crate) use self::repay::Receipt as RepayReceipt;
 pub use self::state::{Overdue, State};
@@ -100,15 +97,15 @@ where
     LppLoan: LppLoanTrait<Lpn>,
 {
     pub(super) fn new(
-        start: Timestamp,
         lpp_loan: LppLoan,
+        start: Timestamp,
         annual_margin_interest: Percent,
-        interest_payment_spec: InterestPaymentSpec,
+        due_period: Duration,
     ) -> Self {
         Self {
             _lpn: PhantomData,
             lpp_loan,
-            due_period: interest_payment_spec.due_period(),
+            due_period,
             margin_interest: annual_margin_interest,
             margin_paid_by: start,
         }
@@ -259,8 +256,6 @@ mod tests {
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
-
-    use crate::api::open::InterestPaymentSpec;
 
     use super::Loan;
 
@@ -1235,10 +1230,10 @@ mod tests {
         due_period: Duration,
     ) -> Loan<Lpn, LppLoanLocal> {
         Loan::new(
-            due_start,
             LppLoanLocal::new(loan),
+            due_start,
             annual_margin_interest,
-            InterestPaymentSpec::new(due_period, Duration::from_secs(0)),
+            due_period,
         )
     }
 

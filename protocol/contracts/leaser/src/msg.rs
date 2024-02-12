@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
-use finance::percent::Percent;
+use finance::{duration::Duration, percent::Percent};
 use lease::api::{
-    open::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO},
+    open::{ConnectionParams, PositionSpecDTO},
     DownpaymentCoin, LeaseCoin, LpnCoin,
 };
 use sdk::{
@@ -18,13 +18,13 @@ pub use crate::state::config::Config;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
-    pub lpp_ust_addr: Addr,
-    pub lease_interest_rate_margin: Percent,
-    pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_payment: InterestPaymentSpec,
+    pub lpp: Addr,
+    pub profit: Addr,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
-    pub profit: Addr,
+    pub lease_position_spec: PositionSpecDTO,
+    pub lease_interest_rate_margin: Percent,
+    pub lease_due_period: Duration,
     pub dex: ConnectionParams,
 }
 
@@ -75,7 +75,7 @@ pub enum SudoMsg {
     Config {
         lease_interest_rate_margin: Percent,
         lease_position_spec: PositionSpecDTO,
-        lease_interest_payment: InterestPaymentSpec,
+        lease_due_period: Duration,
     },
 }
 

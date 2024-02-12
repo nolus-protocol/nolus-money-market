@@ -161,7 +161,6 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        api::open::InterestPaymentSpec,
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };
@@ -174,7 +173,6 @@ mod tests {
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
-    const GRACE_PERIOD: Duration = Duration::from_days(10);
     pub(super) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
     pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
@@ -294,23 +292,19 @@ mod tests {
     }
 
     pub fn open_lease(amount: Coin<TestCurrency>, loan: LoanResponse<TestLpn>) -> TestLease {
-        open_lease_with_payment_spec(
-            amount,
-            loan,
-            InterestPaymentSpec::new(DUE_PERIOD, GRACE_PERIOD),
-        )
+        open_lease_with_payment_spec(amount, loan, DUE_PERIOD)
     }
 
     pub fn open_lease_with_payment_spec(
         amount: Coin<TestCurrency>,
         loan: LoanResponse<TestLpn>,
-        interest_spec: InterestPaymentSpec,
+        due_period: Duration,
     ) -> TestLease {
         let lease = Addr::unchecked(LEASE_ADDR);
         let oracle: OracleLocalStub = Addr::unchecked(ORACLE_ADDR).into();
 
         let loan = loan.into();
-        let loan = Loan::new(LEASE_START, loan, MARGIN_INTEREST_RATE, interest_spec);
+        let loan = Loan::new(loan, LEASE_START, MARGIN_INTEREST_RATE, due_period);
         let liability = Liability::new(
             Percent::from_percent(65),
             Percent::from_percent(70),

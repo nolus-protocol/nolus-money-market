@@ -57,19 +57,23 @@ pub struct NewLeaseForm {
 #[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename = "loan", rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "unchecked::LoanForm"
+)]
 /// The value remains intact.
 pub struct LoanForm {
+    /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.
+    pub lpp: Addr,
+    /// The Profit contract to which the margin interest is sent.
+    pub profit: Addr,
     /// The delta added on top of the LPP Loan interest rate.
     ///
     /// The amount, a part of any payment, goes to the Profit contract.
     pub annual_margin_interest: Percent,
-    /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.
-    pub lpp: Addr,
-    /// Interest repayment parameters
-    pub interest_payment: InterestPaymentSpec,
-    /// The Profit contract to which the margin interest is sent.
-    pub profit: Addr,
+    /// How long the accrued interest is due before getting overdue.
+    pub due_period: Duration,
 }
 
 #[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]

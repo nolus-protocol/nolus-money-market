@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{
-    open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     LpnCoin,
 };
 use leaser::{
@@ -63,7 +63,7 @@ impl Instantiator {
     pub fn instantiate(
         app: &mut App,
         lease_code_id: CodeId,
-        lpp_addr: Addr,
+        lpp: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
         profit: Addr,
@@ -77,10 +77,10 @@ impl Instantiator {
 
         let msg = InstantiateMsg {
             lease_code_id: Uint64::new(lease_code_id),
-            lpp_ust_addr: lpp_addr,
+            lpp,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
-            lease_interest_payment: InterestPaymentSpec::new(Self::REPAYMENT_PERIOD, Duration::MAX),
+            lease_due_period: Self::REPAYMENT_PERIOD,
             time_alarms,
             market_price_oracle,
             profit,
