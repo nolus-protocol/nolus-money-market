@@ -1,4 +1,3 @@
-use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
@@ -14,7 +13,10 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
+    api::{
+        alarms::StableCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
+        QueryMsg, SudoMsg,
+    },
     contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
@@ -48,7 +50,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        Tickers.visit_any::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
+        Tickers.visit_any::<StableCurrency, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 
@@ -167,9 +169,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
 #[cfg(test)]
 mod tests {
-    use currencies::{
-        test::{LeaseC1, PaymentC1, PaymentC5, StableC1},
-        LeaseGroup, Lpns,
+    use currencies::test::{
+        LeaseAssetCurrencies, LeaseC1, LpnCurrencies, PaymentC1, PaymentC5, StableC1,
     };
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent, price};
@@ -252,7 +253,7 @@ mod tests {
     fn impl_add_price_alarm() {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
-        let alarm = Alarm::<LeaseGroup, Lpns>::new(
+        let alarm = Alarm::<LeaseAssetCurrencies, LpnCurrencies>::new(
             price::total_of::<LeaseC1>(10.into()).is::<StableC1>(1.into()),
             Some(price::total_of(7.into()).is(1.into())),
         );

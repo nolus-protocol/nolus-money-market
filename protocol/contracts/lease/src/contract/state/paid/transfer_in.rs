@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::LeaseGroup;
 use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
@@ -20,7 +19,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         query::{paid::ClosingTrx, StateResponse as QueryStateResponse},
-        LeasePaymentCurrencies,
+        LeaseAssetCurrencies, LeasePaymentCurrencies,
     },
     contract::{
         cmd::Close,
@@ -36,7 +35,7 @@ use crate::{
     lease::{with_lease_paid, LeaseDTO},
 };
 
-type AssetGroup = LeaseGroup;
+type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartTransferInState<
     TransferIn,
     LeasePaymentCurrencies,
@@ -77,7 +76,7 @@ impl TransferIn {
         ))
     }
 
-    fn amount(&self) -> &CoinDTO<LeaseGroup> {
+    fn amount(&self) -> &CoinDTO<LeaseAssetCurrencies> {
         self.lease.lease.position.amount()
     }
 

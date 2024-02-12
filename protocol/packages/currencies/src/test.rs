@@ -27,3 +27,7 @@ pub type LeaseC4 = LC4;
 pub type LeaseC5 = LC5;
 
 pub type NativeC = Nls;
+
+pub type LeaseAssetCurrencies = LeaseGroup;
+pub type LpnCurrencies = Lpns;
+pub type PaymentCurrencies = PaymentGroup;

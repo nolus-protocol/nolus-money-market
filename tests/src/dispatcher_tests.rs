@@ -1,7 +1,4 @@
-use currencies::{
-    test::{NativeC, StableC1},
-    Lpns,
-};
+use currencies::test::{LpnCurrencies, NativeC, StableC1};
 use currency::{Currency, NlsPlatform};
 use finance::coin::{Amount, Coin};
 use platform::coin_legacy;
@@ -191,7 +188,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .execute(
             lender.clone(),
             test_case.address_book.lpp().clone(),
-            &lpp::msg::ExecuteMsg::<Lpns>::Deposit {},
+            &lpp::msg::ExecuteMsg::<LpnCurrencies>::Deposit {},
             &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap()
@@ -223,7 +220,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &lpp::msg::QueryMsg::<Lpns>::Rewards { address: lender },
+            &lpp::msg::QueryMsg::<LpnCurrencies>::Rewards { address: lender },
         )
         .unwrap();
 

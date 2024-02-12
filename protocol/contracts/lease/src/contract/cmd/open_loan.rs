@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currencies::PaymentGroup;
 use currency::Currency;
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
@@ -14,7 +13,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{open::PositionSpecDTO, DownpaymentCoin, LpnCoin, LpnCurrencies},
+    api::{open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies, LpnCoin, LpnCurrencies},
     error::ContractError,
     position::Spec as PositionSpec,
 };
@@ -55,7 +54,7 @@ impl<'a> WithLppLender<LpnCurrencies> for OpenLoanReq<'a> {
         Lpn: Currency,
         LppLender: LppLenderTrait<Lpn, LpnCurrencies>,
     {
-        let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
+        let (downpayment, downpayment_lpn) = bank::may_received::<LeasePaymentCurrencies, _>(
             &self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
@@ -96,7 +95,7 @@ where
     where
         C: Currency,
     {
-        let downpayment_lpn = convert::to_base::<Lpn, LpnCurrencies, C, PaymentGroup>(
+        let downpayment_lpn = convert::to_base::<Lpn, LpnCurrencies, C, LeasePaymentCurrencies>(
             self.oracle.clone(),
             in_amount,
             self.querier,

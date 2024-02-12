@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::Lpns;
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
+    api::{position::PositionClose, query::StateResponse, DownpaymentCoin, LpnCurrencies},
     contract::{
         cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
@@ -51,7 +50,8 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let may_lpn_payment = bank::may_received::<Lpns, _>(&info.funds, IntoDTO::<Lpns>::new());
+        let may_lpn_payment =
+            bank::may_received::<LpnCurrencies, _>(&info.funds, IntoDTO::<LpnCurrencies>::new());
         match may_lpn_payment {
             Some(lpn_payment) => {
                 // TODO use Never and safe_unwrap instead

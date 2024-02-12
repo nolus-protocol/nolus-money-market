@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::Lpns;
 use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
@@ -17,7 +16,7 @@ use crate::{
             opened::{OngoingTrx, RepayTrx},
             StateResponse as QueryStateResponse,
         },
-        LeasePaymentCurrencies, PaymentCoin,
+        LeasePaymentCurrencies, LpnCurrencies, PaymentCoin,
     },
     contract::{
         state::{
@@ -79,7 +78,7 @@ impl BuyLpn {
 }
 
 impl SwapTask for BuyLpn {
-    type OutG = Lpns;
+    type OutG = LpnCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;

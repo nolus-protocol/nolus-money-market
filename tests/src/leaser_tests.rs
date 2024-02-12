@@ -1,6 +1,5 @@
-use currencies::{
-    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, StableC1},
-    Lpns,
+use currencies::test::{
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnCurrencies, NativeC, StableC1,
 };
 use currency::Currency;
 use finance::{
@@ -465,7 +464,7 @@ fn open_loans_lpp_fails() {
         deps: DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: lpp::msg::ExecuteMsg<Lpns>,
+        msg: lpp::msg::ExecuteMsg<LpnCurrencies>,
     ) -> Result<Response, lpp::error::ContractError> {
         match msg {
             lpp::msg::ExecuteMsg::OpenLoan { amount: _ } => {

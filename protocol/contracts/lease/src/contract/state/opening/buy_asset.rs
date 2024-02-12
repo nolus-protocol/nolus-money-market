@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::LeaseGroup;
 use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
@@ -20,7 +19,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies,
+        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies, LpnCurrencies,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -39,7 +38,7 @@ use crate::{
 
 use super::open_ica::OpenIcaAccount;
 
-type AssetGroup = LeaseGroup;
+type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,

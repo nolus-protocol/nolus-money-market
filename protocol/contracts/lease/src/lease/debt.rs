@@ -1,4 +1,3 @@
-use currencies::LeaseGroup;
 use currency::Currency;
 use finance::{liability::Zone, price::Price};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
@@ -8,7 +7,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCurrencies,
+    api::{LeaseAssetCurrencies, LpnCurrencies},
     error::ContractResult,
     position::{Debt, DueTrait, Liquidation},
 };
@@ -52,7 +51,7 @@ where
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
         self.oracle
-            .price_of::<Asset, LeaseGroup>()
+            .price_of::<Asset, LeaseAssetCurrencies>()
             .map_err(Into::into)
     }
 }

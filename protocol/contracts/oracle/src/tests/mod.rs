@@ -1,6 +1,5 @@
-use currencies::{
-    test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
-    PaymentGroup,
+use currencies::test::{
+    NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentCurrencies, StableC1,
 };
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
@@ -30,7 +29,7 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
-pub(crate) type PriceGroup = PaymentGroup;
+pub(crate) type PriceGroup = PaymentCurrencies;
 pub(crate) type TheCurrency = StableC1;
 pub(crate) type TheStableGroup = StableCurrency;
 
@@ -46,7 +45,7 @@ where
         .into()
 }
 
-pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<PaymentGroup, TheCurrency>
+pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<PriceGroup, TheCurrency>
 where
     C: Currency,
 {

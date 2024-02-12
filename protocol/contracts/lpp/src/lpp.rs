@@ -1,6 +1,6 @@
-use currencies::Lpns;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -20,6 +20,8 @@ use crate::{
     msg::PriceResponse,
     state::{Config, Deposit, Total},
 };
+
+pub(crate) type LpnCurrencies = Lpns;
 
 // TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
 // and LiquidityPool and Loan. The contract API implementation should depend on

@@ -173,9 +173,8 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 
 #[cfg(test)]
 mod tests {
-    use currencies::{
-        test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
-        PaymentGroup,
+    use currencies::test::{
+        PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentCurrencies, StableC1,
     };
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
@@ -183,7 +182,7 @@ mod tests {
 
     use super::BuyBack;
 
-    fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
+    fn buy_back_instance(coins: Vec<CoinDTO<PaymentCurrencies>>) -> BuyBack {
         use dex::{Account, ConnectionParams, Ics20Channel};
         use oracle_platform::OracleRef;
         use platform::ica::HostAccount;

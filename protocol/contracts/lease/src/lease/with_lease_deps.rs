@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use currencies::LeaseGroup;
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
@@ -11,7 +10,7 @@ use lpp::stub::{
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::api::LpnCurrencies;
+use crate::api::{LeaseAssetCurrencies, LpnCurrencies};
 
 pub trait WithLeaseDeps {
     type Output;
@@ -43,7 +42,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
-    Tickers.visit_any::<LeaseGroup, _>(
+    Tickers.visit_any::<LeaseAssetCurrencies, _>(
         asset,
         FactoryStage1 {
             cmd,

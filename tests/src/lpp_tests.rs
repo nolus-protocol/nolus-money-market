@@ -1,7 +1,4 @@
-use currencies::{
-    test::{LeaseC1, NativeC, StableC1},
-    Lpns,
-};
+use currencies::test::{LeaseC1, LpnCurrencies, NativeC, StableC1};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -129,7 +126,7 @@ fn config_update_parameters() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Config(),
+            &QueryLpp::<LpnCurrencies>::Config(),
         )
         .unwrap();
 
@@ -167,7 +164,7 @@ fn open_loan_unauthorized_contract_id() {
         .execute(
             test_case.address_book.lpp().clone(),
             test_case.address_book.lpp().clone(),
-            &lpp::msg::ExecuteMsg::<Lpns>::OpenLoan {
+            &lpp::msg::ExecuteMsg::<LpnCurrencies>::OpenLoan {
                 amount: test::funds::<_, Lpn>(100),
             },
             &[lpn_cwcoin(200)],
@@ -202,7 +199,7 @@ fn open_loan_no_liquidity() {
         .execute(
             lease_addr,
             test_case.address_book.lpp().clone(),
-            &lpp::msg::ExecuteMsg::<Lpns>::OpenLoan {
+            &lpp::msg::ExecuteMsg::<LpnCurrencies>::OpenLoan {
                 amount: test::funds::<_, Lpn>(2500),
             },
             &[lpn_cwcoin(200)],
@@ -265,7 +262,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(init_deposit)],
         )
         .unwrap()
@@ -286,7 +283,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Price(),
+            &QueryLpp::<LpnCurrencies>::Price(),
         )
         .unwrap();
     assert_eq!(
@@ -300,7 +297,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(test_deposit)],
         )
         .unwrap()
@@ -312,7 +309,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance {
+            &QueryLpp::<LpnCurrencies>::Balance {
                 address: lender2.clone(),
             },
         )
@@ -322,7 +319,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Price(),
+            &QueryLpp::<LpnCurrencies>::Price(),
         )
         .unwrap();
     assert_eq!(
@@ -336,7 +333,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender3.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(post_deposit)],
         )
         .unwrap()
@@ -347,7 +344,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance {
+            &QueryLpp::<LpnCurrencies>::Balance {
                 address: lender2.clone(),
             },
         )
@@ -357,7 +354,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Price(),
+            &QueryLpp::<LpnCurrencies>::Price(),
         )
         .unwrap();
     assert_eq!(
@@ -390,7 +387,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::LppBalance(),
+            &QueryLpp::<LpnCurrencies>::LppBalance(),
         )
         .unwrap();
 
@@ -399,7 +396,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance {
+            &QueryLpp::<LpnCurrencies>::Balance {
                 address: lender2.clone(),
             },
         )
@@ -409,7 +406,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Price(),
+            &QueryLpp::<LpnCurrencies>::Price(),
         )
         .unwrap();
     assert_eq!(
@@ -422,7 +419,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance { address: lender1 },
+            &QueryLpp::<LpnCurrencies>::Balance { address: lender1 },
         )
         .unwrap();
 
@@ -431,7 +428,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance { address: lender3 },
+            &QueryLpp::<LpnCurrencies>::Balance { address: lender3 },
         )
         .unwrap();
 
@@ -448,7 +445,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Burn {
+            &ExecuteLpp::<LpnCurrencies>::Burn {
                 amount: to_burn.into(),
             },
             &[],
@@ -461,7 +458,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Burn {
+            &ExecuteLpp::<LpnCurrencies>::Burn {
                 amount: withdraw_amount_nlpn.into(),
             },
             &[],
@@ -475,7 +472,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Balance {
+            &QueryLpp::<LpnCurrencies>::Balance {
                 address: lender2.clone(),
             },
         )
@@ -488,7 +485,7 @@ fn deposit_and_withdraw() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Burn {
+            &ExecuteLpp::<LpnCurrencies>::Burn {
                 amount: (rest_nlpn).into(),
             },
             &[],
@@ -502,7 +499,7 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp(),
-            &QueryLpp::<Lpns>::Balance { address: lender2 },
+            &QueryLpp::<LpnCurrencies>::Balance { address: lender2 },
         )
         .unwrap();
     assert_eq!(balance_nlpn.balance.u128(), 0);
@@ -538,7 +535,7 @@ fn loan_open_wrong_id() {
         .execute(
             hacker,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::OpenLoan {
+            &ExecuteLpp::<LpnCurrencies>::OpenLoan {
                 amount: Coin::<Lpn>::new(loan).into(),
             },
             &[],
@@ -620,7 +617,7 @@ fn loan_open_and_repay() {
         .execute(
             lender,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(init_deposit)],
         )
         .unwrap()
@@ -649,7 +646,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Quote {
+            &QueryLpp::<LpnCurrencies>::Quote {
                 amount: Coin::<Lpn>::new(loan1).into(),
             },
         )
@@ -679,7 +676,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::OpenLoan {
+            &ExecuteLpp::<LpnCurrencies>::OpenLoan {
                 amount: Coin::<Lpn>::new(loan1).into(),
             },
             &[],
@@ -696,7 +693,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::LppBalance(),
+            &QueryLpp::<LpnCurrencies>::LppBalance(),
         )
         .unwrap();
 
@@ -709,7 +706,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Quote {
+            &QueryLpp::<LpnCurrencies>::Quote {
                 amount: Coin::<Lpn>::new(loan2).into(),
             },
         )
@@ -740,7 +737,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -759,7 +756,7 @@ fn loan_open_and_repay() {
         .execute(
             hacker,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(loan1)],
         )
         .unwrap_err();
@@ -770,7 +767,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(0)],
         )
         .unwrap_err();
@@ -792,7 +789,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr2,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[coin_legacy::to_cosmwasm::<NativeC>(
                 repay_interest_part.into(),
             )],
@@ -805,7 +802,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(repay_interest_part)],
         )
         .unwrap()
@@ -817,7 +814,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -835,7 +832,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(
                 interest1.of(loan1) - repay_interest_part + repay_due_part,
             )],
@@ -849,7 +846,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -867,7 +864,7 @@ fn loan_open_and_repay() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
         )
         .unwrap()
@@ -879,7 +876,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -895,7 +892,7 @@ fn loan_open_and_repay() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::LppBalance(),
+            &QueryLpp::<LpnCurrencies>::LppBalance(),
         )
         .unwrap();
 
@@ -977,7 +974,7 @@ fn compare_lpp_states() {
         .execute(
             lender,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(init_deposit)],
         )
         .unwrap()
@@ -1006,7 +1003,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Quote {
+            &QueryLpp::<LpnCurrencies>::Quote {
                 amount: Coin::<Lpn>::new(loan1).into(),
             },
         )
@@ -1042,7 +1039,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::OpenLoan {
+            &ExecuteLpp::<LpnCurrencies>::OpenLoan {
                 amount: Coin::<Lpn>::new(loan1).into(),
             },
             &[],
@@ -1059,7 +1056,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::LppBalance(),
+            &QueryLpp::<LpnCurrencies>::LppBalance(),
         )
         .unwrap();
     assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
@@ -1071,7 +1068,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Quote {
+            &QueryLpp::<LpnCurrencies>::Quote {
                 amount: Coin::<Lpn>::new(loan2).into(),
             },
         )
@@ -1108,7 +1105,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -1127,7 +1124,7 @@ fn compare_lpp_states() {
         .execute(
             hacker,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(loan1)],
         )
         .unwrap_err();
@@ -1138,7 +1135,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(0)],
         )
         .unwrap_err();
@@ -1160,7 +1157,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr2,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[coin_legacy::to_cosmwasm::<NativeC>(
                 repay_interest_part.into(),
             )],
@@ -1173,7 +1170,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(repay_interest_part)],
         )
         .unwrap()
@@ -1185,7 +1182,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -1203,7 +1200,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(
                 interest1.of(loan1) - repay_interest_part + repay_due_part,
             )],
@@ -1217,7 +1214,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -1235,7 +1232,7 @@ fn compare_lpp_states() {
         .execute(
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::RepayLoan(),
+            &ExecuteLpp::<LpnCurrencies>::RepayLoan(),
             &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
         )
         .unwrap()
@@ -1247,7 +1244,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Loan {
+            &QueryLpp::<LpnCurrencies>::Loan {
                 lease_addr: loan_addr1.clone(),
             },
         )
@@ -1263,7 +1260,7 @@ fn compare_lpp_states() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::LppBalance(),
+            &QueryLpp::<LpnCurrencies>::LppBalance(),
         )
         .unwrap();
 
@@ -1332,7 +1329,7 @@ fn test_rewards() {
         .execute(
             treasury.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::DistributeRewards(),
+            &ExecuteLpp::<LpnCurrencies>::DistributeRewards(),
             &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards0.into())],
         )
         .unwrap_err();
@@ -1343,7 +1340,7 @@ fn test_rewards() {
         .execute(
             lender1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(deposit1)],
         )
         .unwrap()
@@ -1361,7 +1358,7 @@ fn test_rewards() {
         .execute(
             treasury.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::DistributeRewards(),
+            &ExecuteLpp::<LpnCurrencies>::DistributeRewards(),
             &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards1.into())],
         )
         .unwrap()
@@ -1374,7 +1371,7 @@ fn test_rewards() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Deposit(),
+            &ExecuteLpp::<LpnCurrencies>::Deposit(),
             &[lpn_cwcoin(deposit2)],
         )
         .unwrap()
@@ -1386,7 +1383,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards {
+            &QueryLpp::<LpnCurrencies>::Rewards {
                 address: lender1.clone(),
             },
         )
@@ -1399,7 +1396,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards {
+            &QueryLpp::<LpnCurrencies>::Rewards {
                 address: lender2.clone(),
             },
         )
@@ -1413,7 +1410,7 @@ fn test_rewards() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::ClaimRewards {
+            &ExecuteLpp::<LpnCurrencies>::ClaimRewards {
                 other_recipient: None,
             },
             &[],
@@ -1426,7 +1423,7 @@ fn test_rewards() {
         .execute(
             lender1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::ClaimRewards {
+            &ExecuteLpp::<LpnCurrencies>::ClaimRewards {
                 other_recipient: Some(Addr::unchecked("-")),
             },
             &[],
@@ -1439,7 +1436,7 @@ fn test_rewards() {
         .execute(
             lender1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::ClaimRewards {
+            &ExecuteLpp::<LpnCurrencies>::ClaimRewards {
                 other_recipient: None,
             },
             &[],
@@ -1453,7 +1450,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards {
+            &QueryLpp::<LpnCurrencies>::Rewards {
                 address: lender1.clone(),
             },
         )
@@ -1469,7 +1466,7 @@ fn test_rewards() {
         .execute(
             treasury,
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::DistributeRewards(),
+            &ExecuteLpp::<LpnCurrencies>::DistributeRewards(),
             &[coin_legacy::to_cosmwasm::<NativeC>(tot_rewards2.into())],
         )
         .unwrap()
@@ -1481,7 +1478,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards {
+            &QueryLpp::<LpnCurrencies>::Rewards {
                 address: lender1.clone(),
             },
         )
@@ -1494,7 +1491,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards {
+            &QueryLpp::<LpnCurrencies>::Rewards {
                 address: lender2.clone(),
             },
         )
@@ -1508,7 +1505,7 @@ fn test_rewards() {
         .execute(
             lender1.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::Burn {
+            &ExecuteLpp::<LpnCurrencies>::Burn {
                 amount: deposit1.into(),
             },
             &[],
@@ -1526,7 +1523,7 @@ fn test_rewards() {
     // lender account is removed
     let resp: Result<RewardsResponse, _> = test_case.app.query().query_wasm_smart(
         test_case.address_book.lpp().clone(),
-        &QueryLpp::<Lpns>::Rewards { address: lender1 },
+        &QueryLpp::<LpnCurrencies>::Rewards { address: lender1 },
     );
 
     assert!(resp.is_err());
@@ -1537,7 +1534,7 @@ fn test_rewards() {
         .execute(
             lender2.clone(),
             test_case.address_book.lpp().clone(),
-            &ExecuteLpp::<Lpns>::ClaimRewards {
+            &ExecuteLpp::<LpnCurrencies>::ClaimRewards {
                 other_recipient: Some(recipient.clone()),
             },
             &[],
@@ -1551,7 +1548,7 @@ fn test_rewards() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &QueryLpp::<Lpns>::Rewards { address: lender2 },
+            &QueryLpp::<LpnCurrencies>::Rewards { address: lender2 },
         )
         .unwrap();
 

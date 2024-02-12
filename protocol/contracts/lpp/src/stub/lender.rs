@@ -118,7 +118,7 @@ impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpns>
 mod test {
     use std::marker::PhantomData;
 
-    use currencies::test::{LpnCurrencies,StableC1};
+    use currencies::test::{LpnCurrencies, StableC1};
     use currency::Currency;
     use finance::coin::Coin;
     use platform::response::{self};
