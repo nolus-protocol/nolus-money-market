@@ -6,6 +6,9 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
+use self::only::PaymentOnlyGroup;
+
+mod only;
 mod osmosis_tests;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
@@ -23,5 +26,6 @@ impl Group for PaymentGroup {
         LeaseGroup::maybe_visit(matcher, symbol, visitor)
             .or_else(|v| Lpns::maybe_visit(matcher, symbol, v))
             .or_else(|v| Native::maybe_visit(matcher, symbol, v))
+            .or_else(|v| PaymentOnlyGroup::maybe_visit(matcher, symbol, v))
     }
 }

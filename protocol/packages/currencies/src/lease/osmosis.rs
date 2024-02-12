@@ -468,6 +468,168 @@ define_symbol! {
 }
 define_currency!(Tia, TIA);
 
+define_symbol! {
+    ST_TIA {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/stutia
+            bank: "ibc/NA_ST_TIA",
+            // full ibc route: transfer/channel-???/stutia
+            dex: "ibc/NA_ST_TIA_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/stutia
+            bank: "ibc/NA_ST_TIA",
+            // full ibc route: transfer/channel-???/stutia
+            dex: "ibc/NA_ST_TIA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-326/stutia
+            bank: "ibc/8D4FC51F696E03711B9B37A5787FB89BD2DDBAF788813478B002D552A12F9157",
+            // full ibc route: transfer/channel-326/stutia
+            dex: "ibc/698350B8A61D575025F3ED13E9AC9C0F45C89DEFE92F76D5838F1D3C1A7FF7C9",
+        },
+    }
+}
+define_currency!(StTia, ST_TIA);
+
+define_symbol! {
+    JKL {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/ujkl
+            bank: "ibc/NA_JKL",
+            // full ibc route: transfer/channel-???/ujkl
+            dex: "ibc/NA_JKL_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/ujkl
+            bank: "ibc/NA_JKL",
+            // full ibc route: transfer/channel-???/ujkl
+            dex: "ibc/NA_JKL_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-412/ujkl
+            bank: "ibc/28F026607184B151F1F7D7F5D8AE644528550EB05203A28B6233DFA923669876",
+            // full ibc route: transfer/channel-412/ujkl
+            dex: "ibc/8E697BDABE97ACE8773C6DF7402B2D1D5104DD1EEABE12608E3469B7F64C15BA",
+        },
+    }
+}
+define_currency!(Jkl, JKL);
+
+define_symbol! {
+    MILK_TIA {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/umilkTIA
+            bank: "ibc/NA_MILK_TIA",
+            dex: "factory/NA_MILK_TIA_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/umilkTIA
+            bank: "ibc/NA_MILK_TIA",
+            dex: "factory/NA_MILK_TIA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/factory/osmo1f5vfcph2dvfeqcqkhetwv75fda69z7e5c2dldm3kvgj23crkv6wqcn47a0/umilkTIA
+            bank: "ibc/16065EE5282C5217685C8F084FC44864C25C706AC37356B0D62811D50B96920F",
+             dex: "factory/osmo1f5vfcph2dvfeqcqkhetwv75fda69z7e5c2dldm3kvgj23crkv6wqcn47a0/umilkTIA",
+        },
+    }
+}
+define_currency!(MilkTia, MILK_TIA);
+
+define_symbol! {
+    LVN {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/ulvn
+            bank: "ibc/NA_LVN",
+            dex: "factory/NA_LVN_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/ulvn
+            bank: "ibc/NA_LVN",
+            dex: "factory/NA_LVN_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn
+            bank: "ibc/4786BEBBFDD989C467C4552AD73065D8B2578230B8428B3B9275D540EB04C851",
+            dex: "factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn",
+        },
+    }
+}
+define_currency!(Lvn, LVN);
+
+define_symbol! {
+    QSR {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/uqsr
+            bank: "ibc/NA_QSR",
+            // full ibc route: transfer/channel-???/uqsr
+            dex: "ibc/NA_QSR_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/uqsr
+            bank: "ibc/NA_QSR",
+            // full ibc route: transfer/channel-???/uqsr
+            dex: "ibc/NA_QSR_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-688/uqsr
+            bank: "ibc/FF456FD21AA44251D2122BF19B20C5FE717A1EBD054A59FA1CA4B21742048CA0",
+            // full ibc route: transfer/channel-688/uqsr
+            dex: "ibc/1B708808D372E959CD4839C594960309283424C775F4A038AAEBE7F83A988477",
+        },
+    }
+}
+define_currency!(Qsr, QSR);
+
+define_symbol! {
+    PICA {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/ppica
+            bank: "ibc/NA_PICA",
+            // full ibc route: transfer/channel-???/ppica
+            dex: "ibc/NA_PICA_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/ppica
+            bank: "ibc/NA_PICA",
+            // full ibc route: transfer/channel-???/ppica
+            dex: "ibc/NA_PICA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-1279/ppica
+            bank: "ibc/7F2DC2A595EDCAEC1C03D607C6DC3C79EDDC029A53D16C0788835C1A9AA06306",
+            // full ibc route: transfer/channel-1279/ppica
+            dex: "ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516",
+        },
+    }
+}
+define_currency!(Pica, PICA);
+
+define_symbol! {
+    DYM {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/adym
+            bank: "ibc/NA_DYM",
+            // full ibc route: transfer/channel-???/adym
+            dex: "ibc/NA_DYM_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/adym
+            bank: "ibc/NA_DYM",
+            // full ibc route: transfer/channel-???/adym
+            dex: "ibc/NA_DYM_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-19774/adym
+            bank: "ibc/9C7F70E92CCBA0F2DC94796B0682955E090676EA7A2F8E0A4611956B79CB4406",
+            // full ibc route: transfer/channel-19774/adym
+            dex: "ibc/9A76CDF0CBCEF37923F32518FA15E5DC92B9F56128292BC4D63C4AEA76CBB110",
+        },
+    }
+}
+define_currency!(Dym, DYM);
+
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
     symbol: &SymbolSlice,
@@ -497,6 +659,13 @@ where
         .or_else(|visitor| maybe_visit::<_, Evmos, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Tia, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, StTia, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Jkl, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, MilkTia, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Lvn, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Qsr, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Pica, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -511,7 +680,7 @@ mod test {
         {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
     };
 
-    use super::{Atom, Osmo, StAtom, StOsmo, Tia, Wbtc, Weth};
+    use super::{Atom, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -522,6 +691,9 @@ mod test {
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Lvn, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
         maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
@@ -538,6 +710,9 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Pica, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Qsr, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Dym, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
