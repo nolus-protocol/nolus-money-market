@@ -91,6 +91,60 @@ define_symbol! {
 }
 define_currency!(Dydx, DYDX);
 
+define_symbol! {
+    TIA {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/transfer/channel-?/utia
+            bank: "ibc/NA_TIA",
+            // full ibc route: transfer/channel-?/utia
+            dex: "ibc/NA_TIA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/transfer/channel-35/utia
+            bank: "ibc/8970C50B6F78D9AB5D0656E6BBD234BC1132ACBF680B8B6F506BB90CD2A06D81",
+            // full ibc route: transfer/channel-35/utia
+            dex: "ibc/773B4D0A3CD667B2275D5A4A7A2F0909C0BA0F4059C0B9181E680DDF4965DCC7",
+        },
+    }
+}
+define_currency!(Tia, TIA);
+
+define_symbol! {
+    ST_TIA {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/transfer/channel-?/stutia
+            bank: "ibc/NA_ST_TIA",
+            // full ibc route: transfer/channel-?/stutia
+            dex: "ibc/NA_ST_TIA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/transfer/channel-8/stutia
+            bank: "ibc/13B5CDC63B4A997453AF882CFC67BFDF932910C1BF3795C34B89548F2C5B1CD1",
+            // full ibc route: transfer/channel-8/stutia
+            dex: "ibc/6569E05DEE32B339D9286A52BE33DFCEFC97267F23EF9CFDE0C055140967A9A5",
+        },
+    }
+}
+define_currency!(StTia, ST_TIA);
+
+define_symbol! {
+    STK_ATOM {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/transfer/channel-?/stk/uatom
+            bank: "ibc/NA_STK_ATOM",
+            // full ibc route: transfer/channel-?/stk/uatom
+            dex: "ibc/NA_STK_ATOM_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/transfer/channel-49/stk/uatom
+            bank: "ibc/DAC47DFAA22682AAFFE28D1B3969BBF6405311F0A3F1228C45519AAE81CD9B9E",
+            // full ibc route: transfer/channel-49/stk/uatom
+            dex: "ibc/3649CE0C8A2C79048D8C6F31FF18FA69C9BC7EB193512E0BD03B733011290445",
+        },
+    }
+}
+define_currency!(StkAtom, STK_ATOM);
+
 #[cfg(feature = "testing")]
 mod testing_currencies {
     use sdk::schemars;
