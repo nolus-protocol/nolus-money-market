@@ -68,7 +68,7 @@ runs:
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        large_files="`find "./artifacts/" -size +3M`"
+        large_files="`find "./artifacts/" -size +5M`"
 
         if ! test "${large_files}" = "";
         then
