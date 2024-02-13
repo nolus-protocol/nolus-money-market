@@ -11,13 +11,15 @@ use finance::price::{
     Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Storage, Timestamp},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Timestamp},
     cw_storage_plus::Map,
 };
 
 use crate::{config::Config, error::PriceFeedsError, feed::PriceFeed};
 
 pub type PriceFeedBin = Vec<u8>;
+
 pub struct PriceFeeds<'m, G> {
     storage: Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>,
     config: Config,
@@ -36,16 +38,19 @@ where
         }
     }
 
-    pub fn feed(
+    pub fn feed<S>(
         &self,
-        storage: &mut dyn Storage,
+        storage: &mut S,
         at: Timestamp,
         sender_raw: &Addr,
         prices: &[PriceDTO<G, G>],
-    ) -> Result<(), PriceFeedsError> {
+    ) -> Result<(), PriceFeedsError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         for price in prices {
             self.storage.update(
-                storage,
+                storage.as_dyn_mut(),
                 (
                     price.base().ticker().to_string(),
                     price.quote().ticker().to_string(),
@@ -65,9 +70,9 @@ where
         Ok(())
     }
 
-    pub fn price<'a, QuoteC, QuoteG, Iter>(
+    pub fn price<'a, S, QuoteC, QuoteG, Iter>(
         &'m self,
-        storage: &'a dyn Storage,
+        storage: &'a S,
         at: Timestamp,
         total_feeders: usize,
         leaf_to_root: Iter,
@@ -75,6 +80,7 @@ where
     where
         'm: 'a,
         G: Group,
+        S: storage::Dyn + ?Sized,
         QuoteC: Currency + DeserializeOwned,
         QuoteG: Group,
         Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
@@ -92,19 +98,20 @@ where
         )
     }
 
-    pub fn price_of_feed<C, QuoteC>(
+    pub fn price_of_feed<S, C, QuoteC>(
         &self,
-        storage: &dyn Storage,
+        storage: &S,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
+        S: storage::Dyn + ?Sized,
         C: Currency + DeserializeOwned,
         QuoteC: Currency + DeserializeOwned,
     {
         let feed_bin = self
             .storage
-            .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
+            .may_load(storage.as_dyn(), (C::TICKER.into(), QuoteC::TICKER.into()))?;
         load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at, total_feeders))
     }
 }
@@ -121,22 +128,26 @@ where
         |bin| postcard::from_bytes(&bin).map_err(Into::into),
     )
 }
-struct PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
+
+struct PriceCollect<'a, S, Iter, C, G, QuoteC, QuoteG>
 where
+    S: storage::Dyn + ?Sized,
     Iter: Iterator<Item = &'a SymbolSlice>,
     C: Currency,
     QuoteC: Currency,
 {
     currency_path: Iter,
     feeds: &'a PriceFeeds<'a, G>,
-    storage: &'a dyn Storage,
+    storage: &'a S,
     at: Timestamp,
     total_feeders: usize,
     price: Price<C, QuoteC>,
     _quote_g: PhantomData<QuoteG>,
 }
-impl<'a, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
+
+impl<'a, S, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, S, Iter, C, G, QuoteC, QuoteG>
 where
+    S: storage::Dyn + ?Sized,
     Iter: Iterator<Item = &'a SymbolSlice>,
     C: Currency + DeserializeOwned,
     QuoteC: Currency,
@@ -144,7 +155,7 @@ where
     fn do_collect(
         mut currency_path: Iter,
         feeds: &'a PriceFeeds<'a, G>,
-        storage: &'a dyn Storage,
+        storage: &'a S,
         at: Timestamp,
         total_feeders: usize,
         price: Price<C, QuoteC>,
@@ -169,9 +180,11 @@ where
         }
     }
 }
-impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor
-    for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
+
+impl<'a, S, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor
+    for PriceCollect<'a, S, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
+    S: storage::Dyn + ?Sized,
     Iter: Iterator<Item = &'a SymbolSlice>,
     QuoteC: Currency + DeserializeOwned,
     G: Group,
@@ -187,7 +200,7 @@ where
     {
         let next_price =
             self.feeds
-                .price_of_feed::<C, _>(self.storage, self.at, self.total_feeders)?;
+                .price_of_feed::<S, C, _>(self.storage, self.at, self.total_feeders)?;
         let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
@@ -286,7 +299,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC1::TICKER].into_iter()
+                [SuperGroupTestC1::TICKER].into_iter(),
             )
         );
 
@@ -296,7 +309,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter(),
             )
         );
     }
@@ -330,7 +343,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter(),
             )
         );
         assert_eq!(
@@ -339,7 +352,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SubGroupTestC1::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SubGroupTestC1::TICKER].into_iter(),
             )
         );
     }
@@ -370,7 +383,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC2::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC2::TICKER].into_iter(),
             )
         );
         assert_eq!(
@@ -379,7 +392,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter()
+                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
             )
         );
         assert_eq!(
@@ -388,7 +401,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC3::TICKER, SuperGroupTestC4::TICKER].into_iter()
+                [SuperGroupTestC3::TICKER, SuperGroupTestC4::TICKER].into_iter(),
             )
         );
         assert_eq!(
@@ -397,7 +410,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC3::TICKER, SubGroupTestC1::TICKER].into_iter()
+                [SuperGroupTestC3::TICKER, SubGroupTestC1::TICKER].into_iter(),
             )
         );
         assert_eq!(
@@ -411,7 +424,7 @@ mod test {
                     SuperGroupTestC3::TICKER,
                     SuperGroupTestC4::TICKER
                 ]
-                .into_iter()
+                .into_iter(),
             )
         );
         assert_eq!(
@@ -425,7 +438,7 @@ mod test {
                     SuperGroupTestC3::TICKER,
                     SubGroupTestC1::TICKER
                 ]
-                .into_iter()
+                .into_iter(),
             )
         );
     }

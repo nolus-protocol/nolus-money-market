@@ -1,7 +1,4 @@
-use std::{
-    iter,
-    ops::{Deref, DerefMut},
-};
+use std::iter;
 
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +8,8 @@ use finance::{
     price::{self, Price},
 };
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdError as CwError, Storage},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Order, StdError as CwError},
     cw_storage_plus::{
         Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, IntKey, Key, MultiIndex,
         Prefixer, PrimaryKey,
@@ -119,10 +117,10 @@ where
     IndexedMap::new(alarms_namespace, indexes)
 }
 
-pub struct PriceAlarms<'storage, G, S>
+pub struct PriceAlarms<S, G>
 where
+    S: storage::Dyn,
     G: Group + Clone,
-    S: Deref<Target = dyn Storage + 'storage>,
 {
     storage: S,
     alarms_below: IndexedMap<G>,
@@ -130,10 +128,10 @@ where
     in_delivery: Deque<'static, AlarmWithSubscriber<G>>,
 }
 
-impl<'storage, G, S> PriceAlarms<'storage, G, S>
+impl<S, G> PriceAlarms<S, G>
 where
+    S: storage::Dyn,
     G: Group + Clone,
-    S: Deref<Target = dyn Storage + 'storage>,
 {
     pub fn new(
         storage: S,
@@ -165,7 +163,7 @@ where
     }
 
     pub fn ensure_no_in_delivery(&self) -> Result<(), AlarmError> {
-        match self.in_delivery.is_empty(self.storage.deref()) {
+        match self.in_delivery.is_empty(self.storage.as_dyn()) {
             Ok(true) => Ok(()),
             Ok(false) => Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
                 "Assertion requested",
@@ -174,19 +172,19 @@ where
         }
     }
 
-    fn iter_below<C>(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G>
+    fn iter_below<'r, C>(&'r self, price: &NormalizedPrice<G>) -> BoxedIter<'r, G>
     where
         C: Currency,
     {
         self.alarms_below.idx.0.sub_prefix(C::TICKER.into()).range(
-            self.storage.deref(),
+            self.storage.as_dyn(),
             None,
             Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
             Order::Ascending,
         )
     }
 
-    fn iter_above_or_equal<C>(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G>
+    fn iter_above_or_equal<'r, C>(&'r self, price: &NormalizedPrice<G>) -> BoxedIter<'r, G>
     where
         C: Currency,
     {
@@ -195,7 +193,7 @@ where
             .0
             .sub_prefix(C::TICKER.into())
             .range(
-                self.storage.deref(),
+                self.storage.as_dyn(),
                 Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
                 None,
                 Order::Ascending,
@@ -203,10 +201,10 @@ where
     }
 }
 
-impl<'storage, G, S> PriceAlarms<'storage, G, S>
+impl<S, G> PriceAlarms<S, G>
 where
+    S: storage::DynMut,
     G: Group + Clone,
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
     pub fn add_alarm<C, BaseC>(
         &mut self,
@@ -230,13 +228,13 @@ where
 
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_above_or_equal
-            .remove(self.storage.deref_mut(), subscriber)
+            .remove(self.storage.as_dyn_mut(), subscriber)
             .map_err(AlarmError::RemoveAboveOrEqual)
     }
 
     pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
-            .remove(self.storage.deref_mut(), subscriber.clone())
+            .remove(self.storage.as_dyn_mut(), subscriber.clone())
             .map_err(AlarmError::RemoveBelow)
             .and_then(|()| self.remove_above_or_equal(subscriber))
     }
@@ -244,12 +242,12 @@ where
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         let below: NormalizedPrice<G> = self
             .alarms_below
-            .load(self.storage.deref(), subscriber.clone())
+            .load(self.storage.as_dyn(), subscriber.clone())
             .map_err(AlarmError::InDeliveryLoadBelow)?;
 
         self.alarms_below
             .replace(
-                self.storage.deref_mut(),
+                self.storage.as_dyn_mut(),
                 subscriber.clone(),
                 None,
                 Some(&below),
@@ -258,13 +256,13 @@ where
 
         let above: Option<NormalizedPrice<G>> = self
             .alarms_above_or_equal
-            .may_load(self.storage.deref(), subscriber.clone())
+            .may_load(self.storage.as_dyn(), subscriber.clone())
             .map_err(AlarmError::InDeliveryLoadAboveOrEqual)?;
 
         if let Some(above) = &above {
             self.alarms_above_or_equal
                 .replace(
-                    self.storage.deref_mut(),
+                    self.storage.as_dyn_mut(),
                     subscriber.clone(),
                     None,
                     Some(above),
@@ -274,7 +272,7 @@ where
 
         self.in_delivery
             .push_back(
-                self.storage.deref_mut(),
+                self.storage.as_dyn_mut(),
                 &AlarmWithSubscriber {
                     subscriber,
                     below,
@@ -318,7 +316,7 @@ where
         PopErrFn: FnOnce(CwError) -> AlarmError,
     {
         self.in_delivery
-            .pop_front(self.storage.deref_mut())
+            .pop_front(self.storage.as_dyn_mut())
             .map_err(error_on_pop)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber<G>>| {
                 maybe_alarm.ok_or_else(|| {
@@ -333,7 +331,7 @@ where
         alarm: &NormalizedPrice<G>,
     ) -> Result<(), AlarmError> {
         Self::add_alarm_internal(
-            self.storage.deref_mut(),
+            &mut self.storage,
             &self.alarms_below,
             subscriber,
             alarm,
@@ -347,7 +345,7 @@ where
         alarm: &NormalizedPrice<G>,
     ) -> Result<(), AlarmError> {
         Self::add_alarm_internal(
-            self.storage.deref_mut(),
+            &mut self.storage,
             &self.alarms_above_or_equal,
             subscriber,
             alarm,
@@ -356,7 +354,7 @@ where
     }
 
     fn add_alarm_internal<ErrFn>(
-        storage: &mut dyn Storage,
+        storage: &mut S,
         alarms: &IndexedMap<G>,
         subscriber: Addr,
         alarm: &NormalizedPrice<G>,
@@ -365,7 +363,9 @@ where
     where
         ErrFn: FnOnce(CwError) -> AlarmError,
     {
-        alarms.save(storage, subscriber, alarm).map_err(error_map)
+        alarms
+            .save(storage.as_dyn_mut(), subscriber, alarm)
+            .map_err(error_map)
     }
 }
 
@@ -460,9 +460,10 @@ pub mod tests {
         const LOWER_PRICE: fn() -> PriceBaseQuote =
             || price::total_of(PRICE_BASE).is(PRICE_QUOTE - Coin::new(1));
 
-        fn expect_no_alarms<'storage>(
-            alarms: &PriceAlarms<'storage, SuperGroup, &mut (dyn Storage + 'storage)>,
-        ) {
+        fn expect_no_alarms<S>(alarms: &PriceAlarms<S, SuperGroup>)
+        where
+            S: storage::DynMut + ?Sized,
+        {
             // Catch below
             assert_eq!(alarms.alarms(LOWER_PRICE()).count(), 0);
 
@@ -473,7 +474,7 @@ pub mod tests {
         /* TEST START */
 
         let mut storage: MockStorage = MockStorage::new();
-        let mut alarms: PriceAlarms<'_, SuperGroup, &mut dyn Storage> = alarms(&mut storage);
+        let mut alarms = alarms(&mut storage);
 
         let subscriber: Addr = Addr::unchecked("addr1");
 
@@ -751,9 +752,10 @@ pub mod tests {
         );
     }
 
-    fn alarms<'storage, 'storage_ref>(
-        storage: &'storage_ref mut (dyn Storage + 'storage),
-    ) -> PriceAlarms<'storage, SuperGroup, &'storage_ref mut (dyn Storage + 'storage)> {
+    fn alarms<S>(storage: &mut S) -> PriceAlarms<S, SuperGroup>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         PriceAlarms::new(
             storage,
             "alarms_below",
