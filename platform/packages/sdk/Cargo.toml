@@ -23,7 +23,7 @@ cosmos = []
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 
 [dependencies]
-cosmwasm-std = { workspace = true }
+cosmwasm-std.workspace = true
 cosmwasm-schema = { workspace = true, optional = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }
@@ -34,3 +34,6 @@ serde = { workspace = true, optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cw-multi-test = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
+
+[dev-dependencies]
+cw-multi-test.workspace = true
