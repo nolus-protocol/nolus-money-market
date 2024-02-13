@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage},
+    cosmwasm_ext::as_dyn::{storage, AsDyn},
+    cosmwasm_std::{Addr, Order},
     cw_storage_plus::{Item, Map},
 };
 
@@ -14,55 +15,68 @@ use crate::{
 const PLATFORM: Item<'_, PlatformTemplate<Addr>> = Item::new("platform_contracts");
 const PROTOCOL: Map<'_, String, Protocol> = Map::new("protocol_contracts");
 
-pub(crate) fn store(
-    storage: &mut dyn Storage,
-    contracts: ContractsGroupedByProtocol,
-) -> Result<()> {
+pub(crate) fn store<S>(storage: &mut S, contracts: ContractsGroupedByProtocol) -> Result<()>
+where
+    S: storage::DynMut + ?Sized,
+{
     PLATFORM
-        .save(storage, &contracts.platform)
+        .save(storage.as_dyn_mut(), &contracts.platform)
         .map_err(Into::into)
         .and_then(|()| {
             contracts.protocol.into_iter().try_for_each(
                 |(protocol, ref contracts): (String, Protocol)| {
                     PROTOCOL
-                        .save(storage, protocol, contracts)
+                        .save(storage.as_dyn_mut(), protocol, contracts)
                         .map_err(Into::into)
                 },
             )
         })
 }
 
-pub(crate) fn add_protocol(
-    storage: &mut dyn Storage,
-    name: String,
-    protocol: &Protocol,
-) -> Result<()> {
-    if PROTOCOL.has(storage, name.clone()) {
+pub(crate) fn add_protocol<S>(storage: &mut S, name: String, protocol: &Protocol) -> Result<()>
+where
+    S: storage::DynMut + ?Sized,
+{
+    if PROTOCOL.has(storage.as_dyn(), name.clone()) {
         Err(Error::ProtocolSetAlreadyExists(name))
     } else {
-        PROTOCOL.save(storage, name, protocol).map_err(Into::into)
+        PROTOCOL
+            .save(storage.as_dyn_mut(), name, protocol)
+            .map_err(Into::into)
     }
 }
 
-pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
+pub(crate) fn protocols<S>(storage: &S) -> Result<Vec<String>>
+where
+    S: storage::Dyn + ?Sized,
+{
     PROTOCOL
-        .keys(storage, None, None, Order::Ascending)
+        .keys(storage.as_dyn(), None, None, Order::Ascending)
         .collect::<std::result::Result<_, _>>()
         .map_err(Into::into)
 }
 
-pub(crate) fn load_platform(storage: &dyn Storage) -> Result<PlatformTemplate<Addr>> {
-    PLATFORM.load(storage).map_err(Into::into)
+pub(crate) fn load_platform<S>(storage: &S) -> Result<PlatformTemplate<Addr>>
+where
+    S: storage::Dyn + ?Sized,
+{
+    PLATFORM.load(storage.as_dyn()).map_err(Into::into)
 }
 
-pub(crate) fn load_protocol(storage: &dyn Storage, name: String) -> Result<Protocol> {
-    PROTOCOL.load(storage, name).map_err(Into::into)
+pub(crate) fn load_protocol<S>(storage: &S, name: String) -> Result<Protocol>
+where
+    S: storage::Dyn + ?Sized,
+{
+    PROTOCOL.load(storage.as_dyn(), name).map_err(Into::into)
 }
 
-pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
+pub(crate) fn load_all<S>(storage: &S) -> Result<ContractsGroupedByProtocol>
+where
+    S: storage::Dyn + ?Sized,
+{
     load_platform(storage).and_then(|platform: PlatformTemplate<Addr>| {
         PROTOCOL
-            .range(storage, None, None, Order::Ascending)
+            .range(storage.as_dyn(), None, None, Order::Ascending)
             .collect::<::std::result::Result<_, _>>()
             .map(|protocol: BTreeMap<String, Protocol>| ContractsTemplate { platform, protocol })
             .map_err(Into::into)

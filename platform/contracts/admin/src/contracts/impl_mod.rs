@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 
 use platform::{batch::Batch, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Binary, WasmMsg},
+};
 use versioning::ReleaseLabel;
 
 use crate::{
@@ -73,13 +76,16 @@ where
     }
 }
 
-pub(crate) fn migrate(
-    storage: &mut dyn Storage,
+pub(crate) fn migrate<S>(
+    storage: &mut S,
     admin_contract_addr: Addr,
     release: ReleaseLabel,
     migration_spec: ContractsMigration,
     post_migration_execute: ContractsPostMigrationExecute,
-) -> Result<MessageResponse> {
+) -> Result<MessageResponse>
+where
+    S: storage::DynMut + ?Sized,
+{
     ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
 
     let contracts_addrs: ContractsGroupedByProtocol = state_contracts::load_all(storage)?;
