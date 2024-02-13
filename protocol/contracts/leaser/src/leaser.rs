@@ -5,10 +5,15 @@ use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
-use platform::contract::CodeId;
-use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Addr, Deps, Storage};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    contract::CodeId,
+    message::Response as MessageResponse,
+};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Deps},
+};
 
 use crate::{
     cmd::Quote,
@@ -61,12 +66,15 @@ impl<'a> Leaser<'a> {
     }
 }
 
-pub(super) fn try_configure(
-    storage: &mut dyn Storage,
+pub(super) fn try_configure<S>(
+    storage: &mut S,
     lease_interest_rate_margin: Percent,
     lease_position_spec: PositionSpecDTO,
     lease_due_period: Duration,
-) -> ContractResult<MessageResponse> {
+) -> ContractResult<MessageResponse>
+where
+    S: storage::DynMut + ?Sized,
+{
     Config::update(
         storage,
         lease_interest_rate_margin,
@@ -76,13 +84,14 @@ pub(super) fn try_configure(
     .map(|()| MessageResponse::default())
 }
 
-pub(super) fn try_migrate_leases<MsgFactory>(
-    storage: &mut dyn Storage,
+pub(super) fn try_migrate_leases<S, MsgFactory>(
+    storage: &mut S,
     new_code_id: CodeId,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
+    S: storage::DynMut + ?Sized,
     MsgFactory: Fn(Addr) -> MigrateMsg,
 {
     Config::update_lease_code(storage, new_code_id)?;
@@ -95,13 +104,14 @@ where
         })
 }
 
-pub(super) fn try_migrate_leases_cont<MsgFactory>(
-    storage: &mut dyn Storage,
+pub(super) fn try_migrate_leases_cont<S, MsgFactory>(
+    storage: &mut S,
     next_customer: Addr,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
+    S: storage::DynMut + ?Sized,
     MsgFactory: Fn(Addr) -> MigrateMsg,
 {
     let lease_code_id = Config::load(storage)?.lease_code_id;
@@ -112,19 +122,21 @@ where
     })
 }
 
-pub(super) fn update_lpp(
-    storage: &dyn Storage,
+pub(super) fn update_lpp<S>(
+    storage: &S,
     new_code_id: CodeId,
     mut batch: Batch,
-) -> ContractResult<Batch> {
+) -> ContractResult<Batch>
+where
+    S: storage::Dyn + ?Sized,
+{
     update_lpp_impl(storage, new_code_id, &mut batch).map(|()| batch)
 }
 
-fn update_lpp_impl(
-    storage: &dyn Storage,
-    new_code_id: CodeId,
-    batch: &mut Batch,
-) -> ContractResult<()> {
+fn update_lpp_impl<S>(storage: &S, new_code_id: CodeId, batch: &mut Batch) -> ContractResult<()>
+where
+    S: storage::Dyn + ?Sized,
+{
     let lpp = Config::load(storage)?.lpp;
     let lpp_update_code = ExecuteMsg::NewLeaseCode {
         lease_code_id: new_code_id.into(),

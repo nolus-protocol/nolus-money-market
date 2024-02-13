@@ -58,7 +58,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
     // Statically assert that the message is empty when doing a software-only update.
     let MigrateMsg {} = msg;
 
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software_and_storage::<_, CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
         |storage: &mut _| {
