@@ -21,10 +21,10 @@ use oracle::{
 };
 use platform::{batch::Batch, coin_legacy, contract::CodeId};
 use sdk::{
-    cosmwasm_ext::{InterChainMsg, Response as CwResponse},
+    cosmwasm_ext::{as_dyn::storage, InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
         self, coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
-        Storage, Timestamp,
+        Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
@@ -547,17 +547,16 @@ const ORACLE_ADDR: Item<'static, Addr> = Item::new("oracle_addr");
 
 const SHOULD_FAIL: Item<'static, bool> = Item::new("should_fail");
 
-fn schedule_alarm(
-    storage: &dyn Storage,
-    base: Amount,
-    quote: Amount,
-) -> ContractResult<CwResponse> {
+fn schedule_alarm<S>(storage: &S, base: Amount, quote: Amount) -> ContractResult<CwResponse>
+where
+    S: storage::Dyn + ?Sized,
+{
     Ok(platform::response::response_only_messages(
         platform::message::Response::messages_only({
             let mut batch: Batch = Batch::default();
 
             batch.schedule_execute_wasm_no_reply::<_, BaseC>(
-                ORACLE_ADDR.load(storage).unwrap(),
+                ORACLE_ADDR.load(storage.as_dyn()).unwrap(),
                 &ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
                         price::total_of::<BaseC>(base.into()).is::<StableC1>(quote.into()),
