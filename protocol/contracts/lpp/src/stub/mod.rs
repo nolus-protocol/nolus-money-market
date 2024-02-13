@@ -27,6 +27,7 @@ pub mod loan;
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 pub struct LppRef<Lpns> {
     addr: Addr,
+    #[serde(alias = "currency")]
     lpn: SymbolOwned,
     #[serde(skip)]
     _lpns: PhantomData<Lpns>,
