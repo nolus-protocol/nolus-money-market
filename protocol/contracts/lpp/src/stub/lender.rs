@@ -118,7 +118,7 @@ impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpns>
 mod test {
     use std::marker::PhantomData;
 
-    use currencies::test::{LpnCurrencies, StableC1};
+    use currencies::{test::StableC1, Lpns};
     use currency::Currency;
     use finance::coin::Coin;
     use platform::response::{self};
@@ -137,7 +137,7 @@ mod test {
         let lpp = LppRef {
             addr: addr.clone(),
             lpn: ToOwned::to_owned(StableC1::TICKER),
-            _lpns: PhantomData::<LpnCurrencies>,
+            _lpns: PhantomData::<Lpns>,
         };
         let borrow_amount = Coin::<StableC1>::new(10);
         let querier = MockQuerier::default();
@@ -159,8 +159,8 @@ mod test {
         {
             assert_eq!(addr.as_str(), contract_addr);
             assert!(funds.is_empty());
-            let lpp_msg: ExecuteMsg<LpnCurrencies> = from_json(msg).expect("invalid Lpp message");
-            if let ExecuteMsg::<LpnCurrencies>::OpenLoan { amount } = lpp_msg {
+            let lpp_msg: ExecuteMsg<Lpns> = from_json(msg).expect("invalid Lpp message");
+            if let ExecuteMsg::<Lpns>::OpenLoan { amount } = lpp_msg {
                 assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {
                 panic!("Bad Lpp message type!");

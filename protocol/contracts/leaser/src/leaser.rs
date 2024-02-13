@@ -11,11 +11,12 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
 use crate::{
-    cmd::{LpnCurrencies, Quote},
+    cmd::Quote,
     migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
+    LpnCurrencies,
 };
 
 pub struct Leaser<'a> {

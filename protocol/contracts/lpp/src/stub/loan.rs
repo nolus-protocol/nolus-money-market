@@ -117,7 +117,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{LpnCurrencies, StableC1};
+    use currencies::{test::StableC1, Lpns};
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
@@ -143,7 +143,7 @@ mod test {
             },
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
-        let batch: LppBatch<LppRef<LpnCurrencies>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
@@ -165,14 +165,14 @@ mod test {
         let payment2 = 4.into();
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
-        let batch: LppBatch<LppRef<LpnCurrencies>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         {
             let mut exp = Batch::default();
             exp.schedule_execute_wasm_no_reply(
                 lpp_ref.addr().clone(),
-                &ExecuteMsg::<LpnCurrencies>::RepayLoan(),
+                &ExecuteMsg::<Lpns>::RepayLoan(),
                 Some(payment1 + payment2),
             )
             .unwrap();

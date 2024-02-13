@@ -1,3 +1,4 @@
+use crate::native::Nls;
 #[cfg(feature = "astroport")]
 use crate::lease::astroport::{
     Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, TestC1 as LC5,
@@ -27,7 +28,3 @@ pub type LeaseC4 = LC4;
 pub type LeaseC5 = LC5;
 
 pub type NativeC = Nls;
-
-pub type LeaseAssetCurrencies = LeaseGroup;
-pub type LpnCurrencies = Lpns;
-pub type PaymentCurrencies = PaymentGroup;

@@ -3,6 +3,7 @@ use std::ops::DerefMut as _;
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
+use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{message::Response as PlatformResponse, response};
 use sdk::{
@@ -13,7 +14,7 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
-    lpp::{LiquidityPool, LpnCurrencies},
+    lpp::LiquidityPool,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
 };
@@ -25,6 +26,7 @@ mod rewards;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+pub(crate) type LpnCurrencies = Lpns;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,

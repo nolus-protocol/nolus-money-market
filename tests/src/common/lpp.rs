@@ -1,4 +1,4 @@
-use currencies::test::LpnCurrencies;
+use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -87,7 +87,7 @@ impl Instantiator {
             .execute(
                 lease_code_admin,
                 lpp.clone(),
-                &ExecuteMsg::<LpnCurrencies>::NewLeaseCode { lease_code_id },
+                &ExecuteMsg::<Lpns>::NewLeaseCode { lease_code_id },
                 &[],
             )
             .unwrap()
@@ -100,7 +100,7 @@ impl Instantiator {
 pub(crate) fn mock_query(
     deps: Deps<'_>,
     env: Env,
-    msg: QueryMsg<LpnCurrencies>,
+    msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_json_binary(&lpp_platform::msg::LppBalanceResponse {
@@ -118,7 +118,7 @@ pub(crate) fn mock_query(
 pub(crate) fn mock_quote_query(
     deps: Deps<'_>,
     env: Env,
-    msg: QueryMsg<LpnCurrencies>,
+    msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_json_binary(

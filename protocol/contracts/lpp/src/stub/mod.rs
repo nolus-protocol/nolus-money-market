@@ -200,7 +200,7 @@ where
         Self {
             addr: Addr::unchecked(addr),
             lpn: Lpn::TICKER.into(),
-            _lpns: PhantomData::<Lpns>,
+            _lpns: PhantomData,
         }
     }
 }

@@ -13,9 +13,9 @@ use lpp::{
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
-use crate::{msg::QuoteResponse, ContractError};
+use crate::{msg::QuoteResponse, ContractError, LpnCurrencies};
 
-use super::{LpnCurrencies, Quote};
+use super::Quote;
 
 impl<'r> WithLppLender<LpnCurrencies> for Quote<'r> {
     type Output = QuoteResponse;

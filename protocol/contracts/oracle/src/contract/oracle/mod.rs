@@ -164,7 +164,10 @@ where
 
 #[cfg(test)]
 mod test_normalized_price_not_found {
-    use currencies::test::{LpnCurrencies, NativeC, StableC1};
+    use currencies::{
+        test::{NativeC, StableC1},
+        Lpns,
+    };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
@@ -183,7 +186,7 @@ mod test_normalized_price_not_found {
     use super::{feed::Feeds, feeder::Feeders, Oracle};
 
     type BaseCurrency = StableC1;
-    type BaseGroup = LpnCurrencies;
+    type BaseGroup = Lpns;
 
     type NlsCoin = Coin<NativeC>;
     type UsdcCoin = Coin<StableC1>;

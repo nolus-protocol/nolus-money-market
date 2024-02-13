@@ -1,4 +1,3 @@
-use currencies::Lpns;
 use currency::SymbolOwned;
 use finance::{liability::Liability, percent::Percent};
 use lease::api::DownpaymentCoin;
@@ -7,8 +6,6 @@ use sdk::cosmwasm_std::QuerierWrapper;
 
 pub mod borrow;
 pub mod quote;
-
-pub(crate) type LpnCurrencies = Lpns;
 
 pub struct Quote<'r> {
     querier: QuerierWrapper<'r>,

@@ -1,6 +1,5 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -15,13 +14,12 @@ use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
+    contract::LpnCurrencies,
     error::{ContractError, Result},
     loan::Loan,
     msg::PriceResponse,
     state::{Config, Deposit, Total},
 };
-
-pub(crate) type LpnCurrencies = Lpns;
 
 // TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
 // and LiquidityPool and Loan. The contract API implementation should depend on
@@ -123,9 +121,9 @@ where
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         Ok(LppBalanceResponse {
-            balance: lpp_platform::into_usd::<_, Lpns>(balance),
-            total_principal_due: lpp_platform::into_usd::<_, Lpns>(total_principal_due),
-            total_interest_due: lpp_platform::into_usd::<_, Lpns>(total_interest_due),
+            balance: lpp_platform::into_usd::<_, LpnCurrencies>(balance),
+            total_principal_due: lpp_platform::into_usd::<_, LpnCurrencies>(total_principal_due),
+            total_interest_due: lpp_platform::into_usd::<_, LpnCurrencies>(total_interest_due),
             balance_nlpn,
         })
     }

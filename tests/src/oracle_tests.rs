@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::test::{
-    LeaseAssetCurrencies, LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnCurrencies,
-    PaymentCurrencies, StableC1,
+use currencies::{
+    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, StableC1},
+    LeaseGroup, Lpns, PaymentGroup,
 };
 use currency::Currency;
 use finance::{
@@ -350,7 +350,7 @@ fn test_config_update() {
         Coin::<StableC1>::new(quote),
     );
 
-    let price: PriceDTO<PaymentCurrencies, LpnCurrencies> = test_case
+    let price: PriceDTO<PaymentGroup, Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -387,13 +387,12 @@ fn test_config_update() {
         &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
-    let price: Result<PriceDTO<LeaseAssetCurrencies, LpnCurrencies>, _> =
-        test_case.app.query().query_wasm_smart(
-            test_case.address_book.oracle().clone(),
-            &OracleQ::Price {
-                currency: BaseC::TICKER.into(),
-            },
-        );
+    let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
+        test_case.address_book.oracle().clone(),
+        &OracleQ::Price {
+            currency: BaseC::TICKER.into(),
+        },
+    );
 
     assert!(price.is_err());
 }
@@ -506,7 +505,7 @@ fn test_zero_price_dto() {
     oracle_mod::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
-    let price: PriceDTO<PaymentCurrencies, PaymentCurrencies> = cosmwasm_std::from_json(
+    let price: PriceDTO<PaymentGroup, PaymentGroup> = cosmwasm_std::from_json(
         r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
     )
     .unwrap();

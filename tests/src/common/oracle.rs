@@ -1,5 +1,6 @@
-use currencies::test::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LpnCurrencies, NativeC, PaymentCurrencies, StableC1,
+use currencies::{
+    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC1},
+    Lpns, PaymentGroup,
 };
 use currency::Currency;
 use finance::{
@@ -90,7 +91,7 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
         })
         .map_err(ContractError::ConvertToBinary),
         QueryMsg::Price { currency: _ } => {
-            to_json_binary(&PriceDTO::<PaymentCurrencies, LpnCurrencies>::from(price))
+            to_json_binary(&PriceDTO::<PaymentGroup, Lpns>::from(price))
                 .map_err(ContractError::ConvertToBinary)
         }
         _ => query(deps, env, msg),

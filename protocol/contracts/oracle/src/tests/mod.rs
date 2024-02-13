@@ -1,5 +1,6 @@
-use currencies::test::{
-    NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentCurrencies, StableC1,
+use currencies::{
+    test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+    PaymentGroup,
 };
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
@@ -29,7 +30,7 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
-pub(crate) type PriceGroup = PaymentCurrencies;
+pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC1;
 pub(crate) type TheStableGroup = StableCurrency;
 
