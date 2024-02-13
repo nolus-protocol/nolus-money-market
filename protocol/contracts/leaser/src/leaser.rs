@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use currency::SymbolOwned;
-use finance::percent::Percent;
+use finance::{duration::Duration, percent::Percent};
 use lease::api::{
-    open::{InterestPaymentSpec, PositionSpecDTO},
+    open::PositionSpecDTO,
     DownpaymentCoin, MigrateMsg,
 };
 use lpp::{msg::ExecuteMsg, stub::LppRef};
@@ -45,7 +45,7 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::<LpnCurrencies>::try_new(config.lpp_addr, self.deps.querier)?;
+        let lpp = LppRef::<LpnCurrencies>::try_new(config.lpp, self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 
@@ -128,7 +128,7 @@ fn update_lpp_impl(
     new_code_id: CodeId,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let lpp = Config::load(storage)?.lpp_addr;
+    let lpp = Config::load(storage)?.lpp;
     let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };

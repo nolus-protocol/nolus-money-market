@@ -15,7 +15,7 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{open::InterestPaymentSpec, LpnCurrencies},
+    api::LpnCurrencies,
     error::{ContractError, ContractResult},
 };
 
@@ -261,7 +261,7 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::api::{open::InterestPaymentSpec, LpnCurrencies};
+    use crate::api::LpnCurrencies;
 
     use super::Loan;
 
