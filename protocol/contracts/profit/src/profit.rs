@@ -5,7 +5,10 @@ use platform::{
     batch::{Emit as _, Emitter},
     message::Response as PlatformResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, Storage};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Env},
+};
 
 use crate::{
     msg::ConfigResponse,
@@ -43,7 +46,10 @@ impl Profit {
         }
     }
 
-    pub fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
-        State::load(storage).and_then(|state: State| state.try_query_config())
+    pub fn query_config<S>(storage: &S) -> ContractResult<ConfigResponse>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        State::load(storage.as_dyn()).and_then(|state: State| state.try_query_config())
     }
 }
