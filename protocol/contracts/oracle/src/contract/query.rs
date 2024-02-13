@@ -38,8 +38,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
-        type QueryOracle<'storage, S, BaseC> =
-            Oracle<'storage, S, PriceCurrencies, BaseC, StableCurrency>;
+        type QueryOracle<S, BaseC> = Oracle<S, PriceCurrencies, BaseC, StableCurrency>;
 
         match self.msg {
             QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
@@ -48,11 +47,11 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .collect::<Vec<_>>(),
             ),
             QueryMsg::Price { currency } => to_json_binary(
-                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<_, OracleBase>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,
             ),
             QueryMsg::Prices {} => {
-                let prices = QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                let prices = QueryOracle::<_, OracleBase>::load(self.deps.storage)?
                     .try_query_prices(self.env.block.time)?;
 
                 to_json_binary(&PricesResponse { prices })
@@ -67,7 +66,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .into_human_readable(),
             }),
             QueryMsg::AlarmsStatus {} => to_json_binary(
-                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<_, OracleBase>::load(self.deps.storage)?
                     .try_query_alarms(self.env.block.time)?,
             ),
             _ => {

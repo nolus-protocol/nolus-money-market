@@ -5,7 +5,10 @@ use serde::de::DeserializeOwned;
 use currency::{Currency, Group, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::{config::Config, market_price::PriceFeeds};
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Timestamp},
+};
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
@@ -13,9 +16,9 @@ use crate::{
     state::supported_pairs::SupportedPairs,
 };
 
-use self::{leg_cmd::LegCmd, price_querier::FedPrices};
-
 use super::PriceResult;
+
+use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 
 mod leg_cmd;
 mod price_querier;
@@ -40,13 +43,16 @@ where
         }
     }
 
-    pub(crate) fn feed_prices(
+    pub(crate) fn feed_prices<S>(
         &self,
-        storage: &mut dyn Storage,
+        storage: &mut S,
         block_time: Timestamp,
         sender_raw: &Addr,
         prices: &[PriceDTO<PriceG, PriceG>],
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ContractError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         let tree = SupportedPairs::<BaseC>::load(storage)?;
         if prices.iter().any(|price| {
             !tree.swap_pairs_df().any(
@@ -66,19 +72,18 @@ where
         Ok(())
     }
 
-    pub fn all_prices_iter<'r, 'self_, 'storage, I>(
-        &'self_ self,
-        storage: &'storage dyn Storage,
+    pub fn all_prices_iter<'r, S, I>(
+        &'r self,
+        storage: &'r S,
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + 'r
     where
-        'self_: 'r,
-        'storage: 'r,
+        S: storage::Dyn + ?Sized,
         I: Iterator<Item = SwapLeg> + 'r,
     {
-        let cmd: LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>> = LegCmd::new(
+        let cmd: LegCmd<PriceG, BaseC, FedPrices<'_, S, PriceG>> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
@@ -86,7 +91,7 @@ where
         swap_pairs_df
             .scan(
                 cmd,
-                |cmd: &mut LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>>, leg: SwapLeg| {
+                |cmd: &mut LegCmd<PriceG, BaseC, FedPrices<'_, S, PriceG>>, leg: SwapLeg| {
                     Some(
                         currency::visit_any_on_tickers::<PriceG, PriceG, _>(
                             &leg.from,
@@ -100,16 +105,19 @@ where
             .flatten()
     }
 
-    pub fn calc_price(
+    pub fn calc_price<S>(
         &self,
-        storage: &dyn Storage,
+        storage: &S,
         tree: &SupportedPairs<BaseC>,
         currency: &SymbolOwned,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
+    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         self.feeds
-            .price::<BaseC, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
+            .price::<_, BaseC, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
             .map_err(Into::into)
     }
 }
@@ -141,6 +149,7 @@ mod test {
     pub struct TestFeeds(
         pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, PriceCurrencies>>,
     );
+
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where

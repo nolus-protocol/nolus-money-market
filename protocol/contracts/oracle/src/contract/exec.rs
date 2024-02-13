@@ -1,11 +1,11 @@
-use finance::price::dto::PriceDTO;
 use serde::de::DeserializeOwned;
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
+use finance::price::dto::PriceDTO;
 use platform::{contract, response};
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
+    cosmwasm_ext::{as_dyn::storage, Response as CwResponse},
+    cosmwasm_std::{Addr, DepsMut, Env, Timestamp},
 };
 
 use crate::{
@@ -62,7 +62,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     return Err(ContractError::UnknownFeeder {});
                 }
 
-                try_feed_prices::<PriceCurrencies, BaseC, PriceCurrencies>(
+                try_feed_prices::<_, PriceCurrencies, BaseC, PriceCurrencies>(
                     self.deps.storage,
                     self.env.block.time,
                     self.sender,
@@ -88,13 +88,14 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     }
 }
 
-fn try_feed_prices<G, BaseC, QuoteG>(
-    storage: &mut dyn Storage,
+fn try_feed_prices<S, G, BaseC, QuoteG>(
+    storage: &mut S,
     block_time: Timestamp,
     sender: Addr,
     prices: Vec<PriceDTO<G, G>>,
 ) -> ContractResult<()>
 where
+    S: storage::DynMut + ?Sized,
     G: Group,
     BaseC: Currency + DeserializeOwned,
     QuoteG: Group,

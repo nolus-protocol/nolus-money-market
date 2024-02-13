@@ -7,8 +7,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-        SubMsgResult,
+        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult,
     },
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
@@ -147,8 +146,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
-    let mut alarms: MarketAlarms<'_, &mut (dyn Storage + '_), PriceCurrencies> =
-        MarketAlarms::new(deps.storage);
+    let mut alarms: MarketAlarms<_, PriceCurrencies> = MarketAlarms::new(deps.storage);
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 

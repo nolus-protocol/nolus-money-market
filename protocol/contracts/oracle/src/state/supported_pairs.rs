@@ -6,7 +6,7 @@ use currencies::PaymentGroup;
 use currency::{
     AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
-use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+use sdk::{cosmwasm_ext::as_dyn::storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
@@ -80,15 +80,21 @@ where
         Ok(self)
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+    pub fn load<S>(storage: &S) -> ContractResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Self::DB_ITEM
-            .load(storage)
+            .load(storage.as_dyn())
             .map_err(ContractError::LoadSupportedPairs)
     }
 
-    pub fn save(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+    pub fn save<S>(&self, storage: &mut S) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::DB_ITEM
-            .save(storage, self)
+            .save(storage.as_dyn_mut(), self)
             .map_err(ContractError::StoreSupportedPairs)
     }
 
@@ -283,7 +289,7 @@ mod tests {
                 "token5".to_string(),
                 "token1".to_string(),
                 "token2".to_string(),
-                TheCurrency::TICKER.to_string()
+                TheCurrency::TICKER.to_string(),
             ]
         );
     }

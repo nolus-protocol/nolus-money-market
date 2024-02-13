@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use serde::de::DeserializeOwned;
 
 use currency::{Currency, Group, SymbolOwned};
@@ -8,7 +6,10 @@ use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Timestamp},
+};
 
 use crate::{
     api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
@@ -26,9 +27,9 @@ pub mod feeder;
 pub(crate) type PriceResult<PriceG, OracleBase> =
     Result<BasePrice<PriceG, OracleBase>, ContractError>;
 
-pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
+pub(crate) struct Oracle<S, PriceG, BaseC, BaseG>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
     PriceG: Group,
     BaseC: Currency + DeserializeOwned,
     BaseG: Group,
@@ -39,18 +40,17 @@ where
     feeds: Feeds<PriceG, BaseC, BaseG>,
 }
 
-impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
+impl<S, PriceG, BaseC, BaseG> Oracle<S, PriceG, BaseC, BaseG>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
     PriceG: Group + Clone,
     BaseC: Currency + DeserializeOwned,
     BaseG: Group,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
-        let tree = SupportedPairs::load(storage.deref())?;
-        let feeders =
-            Feeders::total_registered(storage.deref()).map_err(ContractError::LoadFeeders)?;
-        let config = Config::load(storage.deref()).map_err(ContractError::LoadConfig)?;
+        let tree = SupportedPairs::load(&storage)?;
+        let feeders = Feeders::total_registered(&storage).map_err(ContractError::LoadFeeders)?;
+        let config = Config::load(&storage).map_err(ContractError::LoadConfig)?;
         let feeds = Feeds::<PriceG, BaseC, BaseG>::with(config.price_config);
 
         Ok(Self {
@@ -65,7 +65,7 @@ where
         &self,
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
-        MarketAlarms::new(self.storage.deref())
+        MarketAlarms::new(&self.storage)
             .try_query_alarms::<_, BaseC>(self.calc_all_prices(block_time))
             .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
     }
@@ -93,25 +93,21 @@ where
         currency: &SymbolOwned,
     ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
         self.feeds
-            .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
+            .calc_price(&self.storage, &self.tree, currency, at, self.feeders)
     }
 
     fn calc_all_prices(
         &self,
         at: Timestamp,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + '_ {
-        self.feeds.all_prices_iter(
-            self.storage.deref(),
-            self.tree.swap_pairs_df(),
-            at,
-            self.feeders,
-        )
+        self.feeds
+            .all_prices_iter(&self.storage, self.tree.swap_pairs_df(), at, self.feeders)
     }
 }
 
-impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
+impl<S, PriceG, BaseC, BaseG> Oracle<S, PriceG, BaseC, BaseG>
 where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    S: storage::DynMut,
     PriceG: Group + Clone,
     BaseC: Currency + DeserializeOwned,
     BaseG: Group,
@@ -124,7 +120,7 @@ where
         block_time: Timestamp,
         max_count: u32,
     ) -> ContractResult<(u32, MessageResponse)> {
-        let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
+        let subscribers: Vec<Addr> = MarketAlarms::new(&self.storage)
             .ensure_no_in_delivery()?
             .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))?
             .take(max_count.try_into()?)
@@ -133,8 +129,7 @@ where
         #[cfg(debug_assertions)]
         Self::assert_unique_subscribers(&subscribers);
 
-        let mut alarms: MarketAlarms<'_, &mut (dyn Storage + 'storage), PriceG> =
-            MarketAlarms::new(self.storage.deref_mut());
+        let mut alarms: MarketAlarms<_, PriceG> = MarketAlarms::new(&mut self.storage);
 
         subscribers
             .into_iter()
@@ -171,9 +166,12 @@ mod test_normalized_price_not_found {
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
-    use sdk::cosmwasm_std::{
-        testing::{MockApi, MockQuerier, MockStorage},
-        Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+    use sdk::{
+        cosmwasm_ext::as_dyn::AsDynMut,
+        cosmwasm_std::{
+            testing::{MockApi, MockQuerier, MockStorage},
+            Addr, DepsMut, Empty, QuerierWrapper, Timestamp,
+        },
     };
 
     use crate::{
@@ -220,10 +218,13 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn init(storage: &mut dyn Storage, price_config: &PriceConfig) {
+    fn init<S>(storage: &mut S, price_config: &PriceConfig)
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Feeders::try_register(
             DepsMut {
-                storage,
+                storage: storage.as_dyn_mut(),
                 api: &MockApi::default(),
                 querier: QuerierWrapper::new(&MockQuerier::<Empty>::new(&[])),
             },
@@ -244,9 +245,11 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn add_alarm(storage: &mut dyn Storage) {
-        let mut alarms: MarketAlarms<'_, &mut dyn Storage, PriceCurrencies> =
-            MarketAlarms::new(storage);
+    fn add_alarm<S>(storage: &mut S)
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        let mut alarms: MarketAlarms<_, PriceCurrencies> = MarketAlarms::new(storage);
 
         alarms
             .try_add_price_alarm::<BaseCurrency, _>(
@@ -260,7 +263,10 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn feed_price(price_config: &PriceConfig, storage: &mut dyn Storage) {
+    fn feed_price<S>(price_config: &PriceConfig, storage: &mut S)
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Feeds::<PriceCurrencies, BaseCurrency, BaseGroup>::with(price_config.clone())
             .feed_prices(
                 storage,
@@ -272,8 +278,11 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn dispatch(storage: &mut dyn Storage, expected_count: u32) {
-        let mut oracle: Oracle<'_, &mut dyn Storage, PriceCurrencies, BaseCurrency, BaseGroup> =
+    fn dispatch<S>(storage: &mut S, expected_count: u32)
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        let mut oracle: Oracle<_, PriceCurrencies, BaseCurrency, BaseGroup> =
             Oracle::load(storage).unwrap();
 
         let alarms: u32 = oracle.try_notify_alarms(NOW, 16).unwrap().0;
@@ -282,9 +291,11 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn deliver(storage: &mut dyn Storage, count: u32) {
-        let mut alarms: MarketAlarms<'_, &mut dyn Storage, PriceCurrencies> =
-            MarketAlarms::new(storage);
+    fn deliver<S>(storage: &mut S, count: u32)
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        let mut alarms: MarketAlarms<_, PriceCurrencies> = MarketAlarms::new(storage);
 
         for _ in 0..count {
             alarms.last_delivered().unwrap();
@@ -292,7 +303,10 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn dispatch_and_deliver(storage: &mut dyn Storage, expected_count: u32) {
+    fn dispatch_and_deliver<S>(storage: &mut S, expected_count: u32)
+    where
+        S: storage::DynMut + ?Sized,
+    {
         dispatch(storage, expected_count);
 
         deliver(storage, expected_count)
