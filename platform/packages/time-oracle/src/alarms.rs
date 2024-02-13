@@ -1,10 +1,8 @@
-use std::{
-    iter,
-    ops::{Deref, DerefMut},
-};
+use std::iter;
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdResult as CwResult, Storage, Timestamp},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Order, StdResult as CwResult, Timestamp},
     cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, MultiIndex},
 };
 
@@ -43,18 +41,18 @@ type AlarmsSelectionIterator<'storage> = iter::Map<
     fn(CwResult<(Addr, TimeSeconds)>) -> Result<Addr, AlarmError>,
 >;
 
-pub struct Alarms<'storage, S>
+pub struct Alarms<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     storage: S,
     alarms: IndexedMap,
     in_delivery: Deque<'static, Addr>,
 }
 
-impl<'storage, S> Alarms<'storage, S>
+impl<S> Alarms<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     pub fn new(
         storage: S,
@@ -74,7 +72,7 @@ where
             .idx
             .alarms
             .range(
-                self.storage.deref(),
+                self.storage.as_dyn(),
                 None,
                 Some(Bound::inclusive((as_seconds(ctime), Addr::unchecked("")))),
                 Order::Ascending,
@@ -84,37 +82,46 @@ where
                     .map_err(AlarmError::from)
             })
     }
-}
 
-impl<'storage, S> Alarms<'storage, S>
-where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
-{
-    pub fn add(&mut self, subscriber: Addr, time: Timestamp) -> Result<(), AlarmError> {
-        self.add_internal(subscriber, as_seconds(time))
-    }
-
-    pub fn ensure_no_in_delivery(&mut self) -> Result<&mut Self, AlarmError> {
+    pub fn ensure_no_in_delivery(&self) -> Result<&Self, AlarmError> {
         self.in_delivery
-            .is_empty(self.storage.deref_mut())?
+            .is_empty(self.storage.as_dyn())?
             .then_some(self)
             .ok_or_else(|| {
                 AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from("Assertion requested"))
             })
     }
 
+    pub fn ensure_no_in_delivery_mut(&mut self) -> Result<&mut Self, AlarmError> {
+        if let Err(error) = self.ensure_no_in_delivery() {
+            Err(error)
+        } else {
+            Ok(self)
+        }
+    }
+}
+
+impl<S> Alarms<S>
+where
+    S: storage::DynMut,
+{
+    pub fn add(&mut self, subscriber: Addr, time: Timestamp) -> Result<(), AlarmError> {
+        self.add_internal(subscriber, as_seconds(time))
+    }
+
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
-        self.alarms
-            .remove(self.storage.deref_mut(), subscriber.clone())?;
+        let storage = self.storage.as_dyn_mut();
+
+        self.alarms.remove(storage, subscriber.clone())?;
 
         self.in_delivery
-            .push_back(self.storage.deref_mut(), &subscriber)
+            .push_back(storage, &subscriber)
             .map_err(Into::into)
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
-            .pop_front(self.storage.deref_mut())
+            .pop_front(self.storage.as_dyn_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<Addr>| {
                 if maybe_alarm.is_some() {
@@ -129,7 +136,7 @@ where
 
     pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
         self.in_delivery
-            .pop_front(self.storage.deref_mut())
+            .pop_front(self.storage.as_dyn_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<Addr>| maybe_alarm.ok_or_else(|| AlarmError::EmptyAlarmsInDeliveryQueue(
                 String::from("Received failure reply status"))
@@ -139,7 +146,7 @@ where
 
     fn add_internal(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
         self.alarms
-            .save(self.storage.deref_mut(), subscriber, &time)
+            .save(self.storage.as_dyn_mut(), subscriber, &time)
             .map_err(Into::into)
     }
 }
@@ -150,16 +157,17 @@ pub mod tests {
 
     use super::*;
 
-    fn alarms<'storage>(
-        storage: &'storage mut (dyn Storage + 'storage),
-    ) -> Alarms<'storage, &'storage mut (dyn Storage + 'storage)> {
+    fn alarms<S>(storage: S) -> Alarms<S>
+    where
+        S: storage::Dyn,
+    {
         Alarms::new(storage, "alarms", "alarms_idx", "in_delivery")
     }
 
     #[allow(clippy::needless_lifetimes)]
-    fn query_alarms<'r, S>(alarms: &Alarms<'r, S>, t_sec: TimeSeconds) -> Vec<Addr>
+    fn query_alarms<S>(alarms: &Alarms<S>, t_sec: TimeSeconds) -> Vec<Addr>
     where
-        S: Deref<Target = dyn Storage + 'r>,
+        S: storage::Dyn,
     {
         alarms
             .alarms_selection(Timestamp::from_seconds(t_sec))
@@ -169,8 +177,7 @@ pub mod tests {
 
     #[test]
     fn test_add() {
-        let mut storage = MockStorage::new();
-        let mut alarms = alarms(&mut storage);
+        let mut alarms = alarms(MockStorage::new());
 
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(3);
@@ -193,8 +200,7 @@ pub mod tests {
 
     #[test]
     fn test_selection() {
-        let mut storage = MockStorage::new();
-        let mut alarms = alarms(&mut storage);
+        let mut alarms = alarms(MockStorage::new());
 
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
