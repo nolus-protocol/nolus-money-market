@@ -1,6 +1,5 @@
-// TODO only export `Impl`
 #[cfg(feature = "osmosis")]
-pub use self::osmosis::*;
+pub use self::osmosis::Impl;
 
 #[cfg(all(feature = "astroport", feature = "main"))]
 pub type Impl = astroport::RouterImpl<astroport::Main>;

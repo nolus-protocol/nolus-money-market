@@ -1,3 +1,4 @@
+use currencies::PaymentGroup;
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -17,7 +18,7 @@ use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
-use swap::RequestMsg;
+use swap::testing::SwapRequest;
 
 use crate::common::{
     self, ibc,
@@ -285,13 +286,13 @@ fn do_close(
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<RequestMsg> = crate::common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
         &mut response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     );
 
-    let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
+    let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
         &mut test_case.app,
         lease_addr.clone(),
         TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID),

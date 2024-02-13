@@ -52,10 +52,12 @@ where
             minimum_receive: None,
             to: None,
             max_spread: Some(Self::MAX_IMPACT),
-        } = cosmwasm_std::from_json(msg).expect(&format!(
-            r#"Expected message to be from type "{}""#,
-            type_name::<ExecuteMsg>()
-        ))
+        } = cosmwasm_std::from_json(msg).unwrap_or_else(|_| {
+            panic!(
+                r#"Expected message to be from type "{}""#,
+                type_name::<ExecuteMsg>()
+            )
+        })
         else {
             pattern_match_else("ExecuteSwapOperations");
         };
