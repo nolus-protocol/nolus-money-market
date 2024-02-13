@@ -1,5 +1,5 @@
 [toolchain]
-channel = "1.74" # Keep it in sync with the docker image built from `Containerfile` and used to build optimized contracts
+channel = "1.75" # Keep it in sync with the docker image built from `Containerfile` and used to build optimized contracts
 targets = ["wasm32-unknown-unknown"]
 components = ["clippy", "rustfmt"]
 profile = "minimal"
