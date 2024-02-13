@@ -1,11 +1,12 @@
-use std::ops::{Deref, DerefMut};
-
 use platform::{
     contract,
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp},
+};
 use time_oracle::Alarms;
 
 use crate::{
@@ -20,16 +21,16 @@ const IN_DELIVERY_NAMESPACE: &str = "in_delivery";
 const REPLY_ID: Id = 0;
 const EVENT_TYPE: &str = "timealarm";
 
-pub(super) struct TimeAlarms<'storage, S>
+pub(super) struct TimeAlarms<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
-    time_alarms: Alarms<'storage, S>,
+    time_alarms: Alarms<S>,
 }
 
-impl<'storage, S> TimeAlarms<'storage, S>
+impl<S> TimeAlarms<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     pub fn new(storage: S) -> Self {
         Self {
@@ -54,9 +55,9 @@ where
     }
 }
 
-impl<'storage, S> TimeAlarms<'storage, S>
+impl<S> TimeAlarms<S>
 where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    S: storage::DynMut,
 {
     pub fn try_add(
         &mut self,
@@ -81,7 +82,7 @@ where
         max_count: AlarmsCount,
     ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
-            .ensure_no_in_delivery()?
+            .ensure_no_in_delivery_mut()?
             .alarms_selection(ctime)
             .take(max_count.try_into()?)
             .collect::<Result<Vec<_>, _>>()?
@@ -120,6 +121,7 @@ mod tests {
 
     use platform::contract;
     use sdk::cosmwasm_std::{
+        testing::MockStorage,
         testing::{self, mock_dependencies, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
     };
@@ -161,15 +163,13 @@ mod tests {
         let mut mock_querier = MockQuerier::default();
         mock_querier.update_wasm(contract::testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
-        let mut deps_temp = mock_dependencies();
-        let mut deps = deps_temp.as_mut();
-        deps.querier = querier;
+
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new(deps.storage)
-            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
+        assert!(TimeAlarms::new(MockStorage::new())
+            .try_add(&querier, &env, msg_sender, Timestamp::from_nanos(4))
             .is_ok());
     }
 
@@ -178,15 +178,12 @@ mod tests {
         let mut mock_querier = MockQuerier::default();
         mock_querier.update_wasm(contract::testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
-        let mut deps_temp = mock_dependencies();
-        let mut deps = deps_temp.as_mut();
-        deps.querier = querier;
 
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(100);
 
         let msg_sender = Addr::unchecked("some address");
-        TimeAlarms::new(deps.storage)
+        TimeAlarms::new(MockStorage::new())
             .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
             .unwrap_err();
     }
