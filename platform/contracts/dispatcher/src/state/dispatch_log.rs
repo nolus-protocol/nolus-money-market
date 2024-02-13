@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
+    cosmwasm_ext::as_dyn::{storage, AsDyn},
+    cosmwasm_std::Timestamp,
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -21,20 +22,23 @@ impl DispatchLog {
     }
 
     // TODO merge the functionality of this and `update`
-    pub fn last_dispatch(storage: &dyn Storage) -> Timestamp {
+    pub fn last_dispatch<S>(storage: &S) -> Timestamp
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Self::STORAGE
-            .load(storage)
+            .load(storage.as_dyn())
             .map(|log| log.last_dispatch)
             .unwrap_or_default()
     }
 
-    pub fn update(
-        storage: &mut dyn Storage,
-        current_dispatch: Timestamp,
-    ) -> Result<(), ContractError> {
-        match Self::STORAGE.may_load(storage)? {
+    pub fn update<S>(storage: &mut S, current_dispatch: Timestamp) -> Result<(), ContractError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        match Self::STORAGE.may_load(storage.as_dyn())? {
             None => Self::STORAGE.save(
-                storage,
+                storage.as_dyn_mut(),
                 &DispatchLog {
                     last_dispatch: current_dispatch,
                 },
@@ -43,10 +47,13 @@ impl DispatchLog {
                 if current_dispatch < l.last_dispatch {
                     return Err(ContractError::InvalidTimeConfiguration {});
                 }
-                Self::STORAGE.update(storage, |mut log| -> Result<DispatchLog, ContractError> {
-                    log.last_dispatch = current_dispatch;
-                    Ok(log)
-                })?;
+                Self::STORAGE.update(
+                    storage.as_dyn_mut(),
+                    |mut log| -> Result<DispatchLog, ContractError> {
+                        log.last_dispatch = current_dispatch;
+                        Ok(log)
+                    },
+                )?;
             }
         }
 
