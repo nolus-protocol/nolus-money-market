@@ -188,11 +188,13 @@ impl Handler for State {
         }
     }
 
-    fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_error(deps, env),
-            StateEnum::Idle(idle) => idle.on_error(deps, env),
-            StateEnum::BuyBack(buy_back) => buy_back.on_error(deps, env).map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.on_error(querier, env),
+            StateEnum::Idle(idle) => idle.on_error(querier, env),
+            StateEnum::BuyBack(buy_back) => {
+                buy_back.on_error(querier, env).map(state_machine::from)
+            }
         }
     }
 

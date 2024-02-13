@@ -56,7 +56,7 @@ where
     }
 
     /// The entry point of an error delivery
-    fn on_error(self, _deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
+    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
         Err(err(self, "handle transaction error"))
     }
 

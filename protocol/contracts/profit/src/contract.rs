@@ -141,7 +141,7 @@ fn try_handle_neutron_msg(
 ) -> ContractResult<DexResponse<State>> {
     match msg {
         NeutronSudoMsg::Response { data, .. } => Result::from(state.on_response(data, deps, env)),
-        NeutronSudoMsg::Error { .. } => state.on_error(deps, env).map_err(Into::into),
+        NeutronSudoMsg::Error { .. } => state.on_error(deps.querier, env).map_err(Into::into),
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
         NeutronSudoMsg::OpenAck {
             counterparty_version,

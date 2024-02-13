@@ -38,7 +38,7 @@ where
         err("dex response")
     }
 
-    fn on_dex_error(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn on_dex_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("dex error")
     }
 

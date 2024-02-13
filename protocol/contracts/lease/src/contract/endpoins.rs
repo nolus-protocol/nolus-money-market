@@ -157,8 +157,12 @@ fn may_migrate(
     {
         const TIMEOUT_LEASE: &str =
             "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
+        const TRANSFER_OUT_ERROR_LEASE: &str =
+            "nolus1jndqg7vkpe7c605c3urf3sug07qwcfqxnrzvxs5phj47flxl2uyqg5fkye";
         if this_contract_ref(&env) == &TIMEOUT_LEASE {
             process_lease(storage, transfer_finish_time_out(_querier, env))
+        } else if this_contract_ref(&env) == &TRANSFER_OUT_ERROR_LEASE {
+            process_lease(storage, |lease| lease.on_dex_error(_querier, env))
         } else {
             Ok(MessageResponse::default())
         }
@@ -279,7 +283,7 @@ fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> Contrac
         SudoMsg::Error {
             request: _,
             details: _,
-        } => state.on_dex_error(deps, env),
+        } => state.on_dex_error(deps.querier, env),
         _ => unreachable!(),
     }
 }

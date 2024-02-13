@@ -187,6 +187,12 @@ where
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
     }
+
+    // occasionslly, we get errors from handling the transfer receive message at the remote network
+    // we cannot do anything else except keep trying to transfer again
+    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+        self.on_timeout(querier, env)
+    }
 }
 
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Contract

@@ -58,9 +58,9 @@ where
         self.handler.on_response(data, deps, env).into()
     }
 
-    fn on_dex_error(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_dex_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         self.handler
-            .on_error(deps, env)
+            .on_error(querier, env)
             .map(state_machine::from)
             .map_err(Into::into)
     }
