@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "schema")]
-use sdk::schemars::{self, JsonSchema};
 use sdk::{
-    cosmwasm_std::{StdError, StdResult, Storage},
+    cosmwasm_ext::as_dyn::{storage, AsDyn},
+    cosmwasm_std::{StdError, StdResult},
     cw_storage_plus::Item,
+    schemars::{self, JsonSchema},
 };
 
 pub use self::release::ReleaseLabel;
@@ -99,16 +99,20 @@ macro_rules! version {
 
 const VERSION_STORAGE_KEY: Item<'static, Version> = Item::new("contract_version");
 
-pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
-    VERSION_STORAGE_KEY.save(storage, &version)
+pub fn initialize<S>(storage: &mut S, version: Version) -> StdResult<()>
+where
+    S: storage::DynMut + ?Sized,
+{
+    VERSION_STORAGE_KEY.save(storage.as_dyn_mut(), &version)
 }
 
-pub fn update_software<ContractError, MapErrorFunctor>(
-    storage: &mut dyn Storage,
+pub fn update_software<S, ContractError, MapErrorFunctor>(
+    storage: &mut S,
     new: Version,
     map_error: MapErrorFunctor,
 ) -> Result<ReleaseLabel, ContractError>
 where
+    S: storage::DynMut + ?Sized,
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
@@ -119,20 +123,21 @@ where
 }
 
 pub fn update_software_and_storage<
+    S,
     const FROM_STORAGE_VERSION: VersionSegment,
     ContractError,
     MigrateStorageFunctor,
     MigrateStorageFunctorResponse,
     MapErrorFunctor,
 >(
-    storage: &mut dyn Storage,
+    storage: &mut S,
     new: Version,
     migrate_storage: MigrateStorageFunctor,
     map_error: MapErrorFunctor,
 ) -> Result<(ReleaseLabel, MigrateStorageFunctorResponse), ContractError>
 where
-    MigrateStorageFunctor:
-        FnOnce(&mut dyn Storage) -> Result<MigrateStorageFunctorResponse, ContractError>,
+    S: storage::DynMut + ?Sized,
+    MigrateStorageFunctor: FnOnce(&mut S) -> Result<MigrateStorageFunctorResponse, ContractError>,
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
@@ -145,12 +150,18 @@ where
         .map(|response| (release::label(), response))
 }
 
-fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {
-    VERSION_STORAGE_KEY.load(storage)
+fn load_version<S>(storage: &mut S) -> Result<Version, StdError>
+where
+    S: storage::Dyn + ?Sized,
+{
+    VERSION_STORAGE_KEY.load(storage.as_dyn())
 }
 
-fn save_version(storage: &mut dyn Storage, new: &Version) -> Result<(), StdError> {
-    VERSION_STORAGE_KEY.save(storage, new)
+fn save_version<S>(storage: &mut S, new: &Version) -> Result<(), StdError>
+where
+    S: storage::DynMut + ?Sized,
+{
+    VERSION_STORAGE_KEY.save(storage.as_dyn_mut(), new)
 }
 
 #[cfg(test)]
