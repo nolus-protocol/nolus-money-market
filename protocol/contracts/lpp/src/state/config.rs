@@ -3,10 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::Currency;
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
-use sdk::{
-    cosmwasm_std::{Storage, Uint64},
-    cw_storage_plus::Item,
-};
+use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Uint64, cw_storage_plus::Item};
 
 use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
 
@@ -52,12 +49,20 @@ impl Config {
         self.min_utilization
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
-        Self::STORAGE.save(storage, self).map_err(Into::into)
+    pub fn store<S>(&self, storage: &mut S) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        Self::STORAGE
+            .save(storage.as_dyn_mut(), self)
+            .map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> Result<Self> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+    pub fn load<S>(storage: &S) -> Result<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::STORAGE.load(storage.as_dyn()).map_err(Into::into)
     }
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
@@ -67,37 +72,47 @@ impl Config {
         Price::identity()
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code_id: Uint64) -> Result<()> {
+    pub fn update_lease_code<S>(storage: &mut S, lease_code_id: Uint64) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::update_field(storage, |config| Self {
             lease_code_id,
             ..config
         })
     }
 
-    pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
-        Self::update_field(storage, |config| Self {
+    pub fn update_borrow_rate<S>(storage: &mut S, borrow_rate: InterestRate) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        Self::update_field(storage.as_dyn_mut(), |config| Self {
             borrow_rate,
             ..config
         })
     }
 
-    pub fn update_min_utilization(
-        storage: &mut dyn Storage,
+    pub fn update_min_utilization<S>(
+        storage: &mut S,
         min_utilization: BoundToHundredPercent,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::update_field(storage, |config| Self {
             min_utilization,
             ..config
         })
     }
 
-    fn update_field<F>(storage: &mut dyn Storage, f: F) -> Result<()>
+    fn update_field<S, F>(storage: &mut S, f: F) -> Result<()>
     where
+        S: storage::DynMut + ?Sized,
         F: FnOnce(Config) -> Config,
     {
         Self::STORAGE
-            .update(storage, |config: Self| Ok(f(config)))
-            .map(|_| ())
+            .update(storage.as_dyn_mut(), |config: Self| Ok(f(config)))
+            .map(drop)
     }
 }
 

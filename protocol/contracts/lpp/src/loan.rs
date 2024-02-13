@@ -1,12 +1,13 @@
-use sdk::{
-    cosmwasm_std::{Addr, Storage, Timestamp},
-    cw_storage_plus::Map,
-};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
-use sdk::schemars::{self, JsonSchema};
+use sdk::{
+    cosmwasm_ext::as_dyn::{storage, AsDyn},
+    cosmwasm_std::{Addr, Timestamp},
+    cw_storage_plus::Map,
+    schemars::{self, JsonSchema},
+};
 
 use crate::error::{ContractError, Result};
 
@@ -77,38 +78,55 @@ impl<Lpn> Loan<Lpn>
 where
     Lpn: Currency + Serialize + DeserializeOwned,
 {
-    pub fn open(storage: &mut dyn Storage, addr: Addr, loan: &Self) -> Result<()> {
-        if Self::STORAGE.has(storage, addr.clone()) {
+    pub fn open<S>(storage: &mut S, addr: Addr, loan: &Self) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        if Self::STORAGE.has(storage.as_dyn(), addr.clone()) {
             return Err(ContractError::LoanExists {});
         }
 
-        Self::STORAGE.save(storage, addr, loan).map_err(Into::into)
+        Self::STORAGE
+            .save(storage.as_dyn_mut(), addr, loan)
+            .map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage, addr: Addr) -> Result<Self> {
-        Self::STORAGE.load(storage, addr).map_err(Into::into)
+    pub fn load<S>(storage: &S, addr: Addr) -> Result<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::STORAGE
+            .load(storage.as_dyn(), addr)
+            .map_err(Into::into)
     }
 
-    pub fn save(storage: &mut dyn Storage, addr: Addr, loan: Self) -> Result<()> {
+    pub fn save<S>(storage: &mut S, addr: Addr, loan: Self) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         if loan.principal_due.is_zero() {
-            Self::STORAGE.remove(storage, addr);
+            Self::STORAGE.remove(storage.as_dyn_mut(), addr);
+
             Ok(())
         } else {
             Self::STORAGE
-                .update(storage, addr, |loaded_loan| {
+                .update(storage.as_dyn_mut(), addr, |loaded_loan| {
                     let mut loaded_loan = loaded_loan.ok_or(ContractError::NoLoan {})?;
                     loaded_loan.principal_due = loan.principal_due;
                     loaded_loan.interest_paid = loan.interest_paid;
 
-                    Ok::<_, ContractError>(loaded_loan)
+                    Ok(loaded_loan)
                 })
-                .map(|_| ())
+                .map(drop)
         }
     }
 
-    pub fn query(storage: &dyn Storage, lease_addr: Addr) -> Result<Option<Loan<Lpn>>> {
+    pub fn query<S>(storage: &S, lease_addr: Addr) -> Result<Option<Loan<Lpn>>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Self::STORAGE
-            .may_load(storage, lease_addr)
+            .may_load(storage.as_dyn(), lease_addr)
             .map_err(Into::into)
     }
 }
@@ -157,7 +175,7 @@ mod test {
             RepayShares {
                 interest: Coin::ZERO,
                 principal: payment1,
-                excess: Coin::ZERO
+                excess: Coin::ZERO,
             },
             l.repay(&interest_paid, payment1)
         );
@@ -165,7 +183,7 @@ mod test {
             Loan {
                 principal_due: principal_at_start - payment1,
                 annual_interest_rate: interest,
-                interest_paid: l.interest_paid
+                interest_paid: l.interest_paid,
             },
             l
         );
@@ -187,7 +205,7 @@ mod test {
             RepayShares {
                 interest: interest_a_year,
                 principal: Coin::ZERO,
-                excess: Coin::ZERO
+                excess: Coin::ZERO,
             },
             l.repay(&at_first_year_end, interest_a_year)
         );
@@ -195,7 +213,7 @@ mod test {
             Loan {
                 principal_due: principal_start,
                 annual_interest_rate: interest,
-                interest_paid: at_first_year_end
+                interest_paid: at_first_year_end,
             },
             l
         );
@@ -227,7 +245,7 @@ mod test {
             Loan {
                 principal_due: Coin::ZERO,
                 annual_interest_rate: interest,
-                interest_paid: at_first_hour_end
+                interest_paid: at_first_hour_end,
             },
             l
         );
