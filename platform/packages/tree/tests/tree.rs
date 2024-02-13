@@ -1,5 +1,4 @@
 use sdk::cosmwasm_std;
-
 use tree::{FindBy, HumanReadableTree, Tree};
 
 mod serde {

@@ -1,5 +1,6 @@
-use crate::coin::{Coin, CoinDTO};
 use currency::{Currency, Group};
+
+use crate::coin::{Coin, CoinDTO};
 
 pub fn funds<G, C>(amount: u128) -> CoinDTO<G>
 where
@@ -10,11 +11,12 @@ where
 }
 
 pub mod coin {
+    use currency::{equal, Currency};
+
     use crate::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
         error::Error,
     };
-    use currency::{equal, Currency};
 
     #[derive(PartialEq, Eq, Debug, Clone)]
     pub struct Expect<CExp>(pub Coin<CExp>)

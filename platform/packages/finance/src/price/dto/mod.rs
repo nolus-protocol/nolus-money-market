@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::{Currency, Group};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -9,7 +10,6 @@ use crate::{
     error::{Error, Result as FinanceResult},
     price::Price,
 };
-use currency::{Currency, Group};
 
 mod unchecked;
 pub mod with_price;
@@ -183,12 +183,13 @@ where
 mod test {
     use std::cmp::Ordering;
 
+    use currency::test::{
+        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+    };
+
     use crate::{
         coin::Coin,
         price::{self, dto::PriceDTO, Price},
-    };
-    use currency::test::{
-        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
     };
 
     type TestPriceDTO = PriceDTO<SubGroup, SuperGroup>;
@@ -244,14 +245,13 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-
     use serde::Deserialize;
 
+    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
+    use currency::{Currency, Group};
     use sdk::cosmwasm_std::{from_json, StdError, StdResult};
 
     use crate::coin::{Coin, CoinDTO};
-    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, Group};
 
     use super::PriceDTO;
 

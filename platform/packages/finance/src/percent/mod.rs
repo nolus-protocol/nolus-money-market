@@ -176,11 +176,12 @@ pub(super) mod test {
         ops::{Div, Mul},
     };
 
+    use currency::test::SubGroupTestC1;
+
     use crate::{
         coin::Coin, fraction::Fraction, fractionable::Percentable, percent::Percent,
         ratio::Rational,
     };
-    use currency::test::SubGroupTestC1;
 
     use super::Units;
 

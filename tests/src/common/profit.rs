@@ -6,12 +6,12 @@ use profit::{
 };
 use sdk::cosmwasm_std::Addr;
 
+use crate::common::test_case::response::RemoteChain;
+
 use super::{
     test_case::{app::App, TestCase},
     CwContractWrapper, ADMIN,
 };
-
-use crate::common::test_case::response::RemoteChain;
 
 pub(crate) struct Instantiator;
 

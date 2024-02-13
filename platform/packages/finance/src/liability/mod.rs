@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::ops::Sub;
+
+use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
@@ -13,8 +14,10 @@ use crate::{
     zero::Zero,
 };
 
-pub use self::level::Level;
-pub use self::zone::Zone;
+pub use self::{
+    level::Level,
+    zone::Zone
+};
 
 mod level;
 mod unchecked;
@@ -179,6 +182,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+    use currency::test::SubGroupTestC1;
     use sdk::cosmwasm_std::{from_json, StdError};
 
     use crate::{
@@ -190,7 +194,6 @@ mod test {
     };
 
     use super::{Liability, Zone};
-    use currency::test::SubGroupTestC1;
 
     #[test]
     fn new_valid() {
