@@ -5,14 +5,17 @@ use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
-use crate::api::alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result, StableCurrency};
+use crate::{
+    api::alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
+    BaseCurrencyGroup,
+};
 
 pub trait PriceAlarms
 where
     Self: Into<Batch> + Sized,
 {
     //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, StableCurrency>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()>;
 }
 
 pub trait AsAlarms {
@@ -52,7 +55,7 @@ impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase>
 where
     OracleBase: Currency,
 {
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, StableCurrency>) -> Result<()> {
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),

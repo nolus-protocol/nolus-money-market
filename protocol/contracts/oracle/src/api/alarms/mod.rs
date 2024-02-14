@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currencies::{LeaseGroup, Lpns};
+use currencies::LeaseGroup;
 use currency::Group;
 use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
@@ -11,9 +11,10 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+use crate::BaseCurrencyGroup;
+
 mod unchecked;
 
-pub type StableCurrency = Lpns;
 pub type AlarmCurrencies = LeaseGroup;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -21,7 +22,7 @@ pub type AlarmCurrencies = LeaseGroup;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, StableCurrency>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>,
     },
 }
 
@@ -115,10 +116,10 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use super::{Alarm, AlarmCurrencies, StableCurrency};
+    use super::{Alarm, AlarmCurrencies, BaseCurrencyGroup};
 
     type AssetG = AlarmCurrencies;
-    type LpnG = StableCurrency;
+    type LpnG = BaseCurrencyGroup;
 
     #[test]
     fn below_price_ok() {

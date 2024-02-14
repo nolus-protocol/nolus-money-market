@@ -21,8 +21,9 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{alarms::StableCurrency, swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
+    BaseCurrencyGroup,
 };
 
 #[cfg(test)]
@@ -32,7 +33,7 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC1;
-pub(crate) type TheStableGroup = StableCurrency;
+pub(crate) type TheStableGroup = BaseCurrencyGroup;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where

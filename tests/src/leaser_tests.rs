@@ -1,7 +1,4 @@
-use currencies::{
-    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, StableC1},
-    Lpns,
-};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, StableC1};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -15,7 +12,8 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod,
+    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod,
+    lpp::{self as lpp_mod, LppExecuteMsg},
     oracle as oracle_mod,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder,
@@ -465,7 +463,7 @@ fn open_loans_lpp_fails() {
         deps: DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: lpp::msg::ExecuteMsg<Lpns>,
+        msg: LppExecuteMsg,
     ) -> Result<Response, lpp::error::ContractError> {
         match msg {
             lpp::msg::ExecuteMsg::OpenLoan { amount: _ } => {

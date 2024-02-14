@@ -16,6 +16,8 @@ use crate::{
     state::Deposit,
 };
 
+use super::LpnCurrencies;
+
 pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
     info: MessageInfo,
@@ -57,7 +59,8 @@ pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBala
 where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
-    LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
+    LiquidityPool::<Lpn>::load(deps.storage)
+        .and_then(|lpp| lpp.query_lpp_balance::<LpnCurrencies>(&deps, &env))
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {

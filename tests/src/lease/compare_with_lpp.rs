@@ -1,12 +1,11 @@
 use ::lease::api::query::StateResponse;
-use currencies::Lpns;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
 };
 
 use crate::{
-    common::leaser::Instantiator as LeaserInstantiator,
+    common::{leaser::Instantiator as LeaserInstantiator, lpp::LppQueryMsg},
     lease::{self, LeaseCoin},
 };
 
@@ -70,7 +69,7 @@ fn lpp_state_implicit_time() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &lpp::msg::QueryMsg::<Lpns>::Loan {
+            &LppQueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },
         )
@@ -122,7 +121,7 @@ fn lpp_state_explicit_time() {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &lpp::msg::QueryMsg::<Lpns>::Loan {
+            &LppQueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },
         )

@@ -19,6 +19,9 @@ use sdk::{
 
 use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
+pub type LppExecuteMsg = ExecuteMsg<Lpns>;
+pub type LppQueryMsg = QueryMsg<Lpns>;
+
 pub(crate) struct Instantiator;
 
 impl Instantiator {
@@ -87,7 +90,7 @@ impl Instantiator {
             .execute(
                 lease_code_admin,
                 lpp.clone(),
-                &ExecuteMsg::<Lpns>::NewLeaseCode { lease_code_id },
+                &LppExecuteMsg::NewLeaseCode { lease_code_id },
                 &[],
             )
             .unwrap()

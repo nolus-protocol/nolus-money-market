@@ -13,14 +13,12 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{
-        alarms::StableCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
-        QueryMsg, SudoMsg,
-    },
+    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
     contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
+    BaseCurrencyGroup,
 };
 
 use self::{
@@ -50,7 +48,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        Tickers.visit_any::<StableCurrency, _>(&context.msg.config.base_asset.clone(), context)
+        Tickers.visit_any::<BaseCurrencyGroup, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 

@@ -1,3 +1,5 @@
+use currencies::Lpns;
+
 #[cfg(feature = "contract")]
 pub use crate::error::ContractError;
 
@@ -15,3 +17,5 @@ pub mod state;
 pub mod stub;
 #[cfg(test)]
 mod tests;
+
+pub(crate) type BaseCurrencyGroup = Lpns;

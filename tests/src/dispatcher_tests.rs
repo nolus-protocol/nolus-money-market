@@ -1,7 +1,4 @@
-use currencies::{
-    test::{NativeC, StableC1},
-    Lpns,
-};
+use currencies::test::{NativeC, StableC1};
 use currency::{Currency, NlsPlatform};
 use finance::coin::{Amount, Coin};
 use platform::coin_legacy;
@@ -12,7 +9,9 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, lpp as lpp_mod, oracle as oracle_mod,
+    cwcoin,
+    lpp::{self as lpp_mod, LppExecuteMsg, LppQueryMsg},
+    oracle as oracle_mod,
     protocols::Registry,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
@@ -191,7 +190,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .execute(
             lender.clone(),
             test_case.address_book.lpp().clone(),
-            &lpp::msg::ExecuteMsg::<Lpns>::Deposit {},
+            &LppExecuteMsg::Deposit {},
             &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap()
@@ -223,7 +222,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &lpp::msg::QueryMsg::<Lpns>::Rewards { address: lender },
+            &LppQueryMsg::Rewards { address: lender },
         )
         .unwrap();
 

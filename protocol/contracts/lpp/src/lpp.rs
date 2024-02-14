@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -14,7 +14,6 @@ use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
-    contract::LpnCurrencies,
     error::{ContractError, Result},
     loan::Loan,
     msg::PriceResponse,
@@ -111,7 +110,10 @@ where
         }
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse> {
+    pub fn query_lpp_balance<Lpns>(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse>
+    where
+        Lpns: Group,
+    {
         let balance = self.balance(&env.contract.address, deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
@@ -121,9 +123,9 @@ where
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         Ok(LppBalanceResponse {
-            balance: lpp_platform::into_usd::<_, LpnCurrencies>(balance),
-            total_principal_due: lpp_platform::into_usd::<_, LpnCurrencies>(total_principal_due),
-            total_interest_due: lpp_platform::into_usd::<_, LpnCurrencies>(total_interest_due),
+            balance: lpp_platform::into_usd::<_, Lpns>(balance),
+            total_principal_due: lpp_platform::into_usd::<_, Lpns>(total_principal_due),
+            total_interest_due: lpp_platform::into_usd::<_, Lpns>(total_interest_due),
             balance_nlpn,
         })
     }
@@ -311,7 +313,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currencies::test::StableC1;
+    use currencies::{test::StableC1, Lpns};
     use currency::Currency;
     use finance::{
         coin::{Amount, Coin},
@@ -828,7 +830,7 @@ mod test {
         assert_eq!(total_lpn, 11_100_000u128.into());
 
         let lpp_balance = lpp
-            .query_lpp_balance(&deps.as_ref(), &env)
+            .query_lpp_balance::<Lpns>(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
         assert_eq!(lpp_balance.balance, Coin::new(5_000_000));
         assert_eq!(lpp_balance.total_principal_due, Coin::new(5_000_000));
