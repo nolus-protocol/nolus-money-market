@@ -4,7 +4,7 @@ use sdk::schemars;
 use crate::{define_currency, define_symbol};
 
 define_symbol! {
-    USDC {
+    USDC_AXELAR {
         ["net_dev"]: {
             // full ibc route: transfer/channel-0/transfer/channel-3/uausdc
             bank: "ibc/5DE4FCAF68AE40F81F738C857C0D95F7C1BC47B00FA1026E85C1DD92524D4A11",
@@ -25,7 +25,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Usdc, USDC);
+define_currency!(UsdcAxelar, USDC_AXELAR);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
@@ -37,37 +37,5 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
-}
-
-// TODO move up and use for any protocol
-#[cfg(test)]
-mod test {
-    use currency::Currency;
-
-    use crate::{
-        lease::osmosis::Osmo,
-        lpn::{osmosis::Usdc, Lpns},
-        native::osmosis::Nls,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
-    };
-
-    #[test]
-    fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<Usdc, Lpns>();
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Usdc::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Osmo::TICKER);
-    }
-
-    #[test]
-    fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<Usdc, Lpns>();
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Usdc::TICKER);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Osmo::BANK_SYMBOL);
-    }
+    maybe_visit::<_, UsdcAxelar, _>(matcher, symbol, visitor)
 }

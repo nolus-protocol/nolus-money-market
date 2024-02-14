@@ -1,4 +1,8 @@
-#[cfg(not(any(feature = "astroport", feature = "osmosis")))]
+#[cfg(not(any(
+    feature = "astroport",
+    feature = "osmosis",
+    feature = "osmosis-osmosis-usdc_noble"
+)))]
 compile_error!("No protocol selected!");
 
 #[cfg(not(any(feature = "net_dev", feature = "net_test", feature = "net_main")))]

@@ -21,6 +21,7 @@ astroport = [
     "swap/migration"
 ]
 osmosis = ["contract", "currencies/osmosis", "dex/migration", "swap/osmosis"]
+osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble", "swap/osmosis"]
 
 contract = [
     "skel",

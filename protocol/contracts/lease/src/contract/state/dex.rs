@@ -26,6 +26,7 @@ impl<H> State<H> {
     }
 }
 
+#[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
 impl<H> State<H> {
     pub fn map<MapFn, HTo>(self, map_fn: MapFn) -> State<HTo>
     where

@@ -7,11 +7,15 @@ use sdk::schemars::{self, JsonSchema};
 use self::astroport as impl_mod;
 #[cfg(feature = "osmosis")]
 use self::osmosis as impl_mod;
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+use self::osmosis_osmosis_usdc_noble as impl_mod;
 
 #[cfg(feature = "astroport")]
 pub(crate) mod astroport;
 #[cfg(feature = "osmosis")]
 pub(crate) mod osmosis;
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+pub(crate) mod osmosis_osmosis_usdc_noble;
 
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

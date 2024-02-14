@@ -15,6 +15,7 @@ net_main = ["currencies/net_main"]
 
 astroport = ["currencies/astroport"]
 osmosis = ["currencies/osmosis"]
+osmosis-osmosis-usdc_noble = ["currencies/osmosis-osmosis-usdc_noble"]
 
 testing = ["currency/testing", "lease/testing"]
 

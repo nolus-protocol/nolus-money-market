@@ -5,12 +5,12 @@ use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "osmosis", feature = "osmosis-osmosis-usdc_noble"))]
 use self::osmosis as impl_mod;
 
 #[cfg(feature = "astroport")]
 pub(crate) mod astroport;
-#[cfg(feature = "osmosis")]
+#[cfg(any(feature = "osmosis", feature = "osmosis-osmosis-usdc_noble"))]
 pub(crate) mod osmosis;
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]

@@ -3,10 +3,12 @@ use dex::TransferInInit;
 #[cfg(feature = "astroport")]
 use finance::coin::Amount;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
+#[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
+use sdk::cosmwasm_std::Addr;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
+        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
         Reply, Storage,
     },
     neutron_sdk::sudo::msg::SudoMsg,
@@ -122,9 +124,9 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
 }
 
 fn may_migrate(
-    storage: &mut dyn Storage,
+    _storage: &mut dyn Storage,
     _querier: QuerierWrapper<'_>,
-    env: Env,
+    _env: Env,
 ) -> ContractResult<MessageResponse> {
     #[cfg(feature = "astroport")]
     {
@@ -138,15 +140,15 @@ fn may_migrate(
         const NEUTRON_LEASE2_AMOUNT1: Amount = 11668296;
         const NEUTRON_LEASE2_AMOUNT2: Amount = 17502294;
 
-        let this_lease = this_contract_ref(&env);
+        let this_lease = this_contract_ref(&_env);
         if this_lease == &NEUTRON_LEASE1 {
             process_lease(
-                storage,
+                _storage,
                 add_amounts(NEUTRON_LEASE1_AMOUNT1, NEUTRON_LEASE1_AMOUNT2, this_lease),
             )
         } else if this_lease == &NEUTRON_LEASE2 {
             process_lease(
-                storage,
+                _storage,
                 add_amounts(NEUTRON_LEASE2_AMOUNT1, NEUTRON_LEASE2_AMOUNT2, this_lease),
             )
         } else {
@@ -159,16 +161,21 @@ fn may_migrate(
             "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
         const TRANSFER_OUT_ERROR_LEASE: &str =
             "nolus1jndqg7vkpe7c605c3urf3sug07qwcfqxnrzvxs5phj47flxl2uyqg5fkye";
-        if this_contract_ref(&env) == &TIMEOUT_LEASE {
-            process_lease(storage, transfer_finish_time_out(_querier, env))
-        } else if this_contract_ref(&env) == &TRANSFER_OUT_ERROR_LEASE {
-            process_lease(storage, |lease| lease.on_dex_error(_querier, env))
+        if this_contract_ref(&_env) == &TIMEOUT_LEASE {
+            process_lease(_storage, transfer_finish_time_out(_querier, _env))
+        } else if this_contract_ref(&_env) == &TRANSFER_OUT_ERROR_LEASE {
+            process_lease(_storage, |lease| lease.on_dex_error(_querier, _env))
         } else {
             Ok(MessageResponse::default())
         }
     }
+    #[cfg(feature = "osmosis-osmosis-usdc_noble")]
+    {
+        Ok(MessageResponse::default())
+    }
 }
 
+#[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
 fn process_lease<ProcFn>(
     storage: &mut dyn Storage,
     process_fn: ProcFn,
@@ -288,6 +295,7 @@ fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> Contrac
     }
 }
 
+#[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
 fn this_contract_ref(env: &Env) -> &Addr {
     &env.contract.address
 }

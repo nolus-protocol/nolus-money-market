@@ -15,6 +15,7 @@ net_main = ["contract", "currencies/net_main", "swap/main"]
 
 astroport = ["contract", "currencies/astroport", "swap/astroport"]
 osmosis = ["contract", "currencies/osmosis", "swap/osmosis"]
+osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble", "swap/osmosis"]
 
 contract = [
     "sdk/contract",
