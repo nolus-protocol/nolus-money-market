@@ -5,8 +5,8 @@ use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
-use crate::{
-    api::alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
+use crate::api::{
+    alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
     BaseCurrencyGroup,
 };
 

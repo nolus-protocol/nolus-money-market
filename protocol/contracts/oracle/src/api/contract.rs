@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::PaymentGroup;
+use currencies::{Lpns, PaymentGroup};
 use currency::SymbolOwned;
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
@@ -10,11 +10,10 @@ use sdk::{
 };
 use tree::HumanReadableTree;
 
-use crate::BaseCurrencyGroup;
-
 pub use super::alarms::Alarm;
 use super::{alarms::AlarmCurrencies, swap::SwapTarget};
 
+pub type BaseCurrencyGroup = Lpns;
 pub type PriceCurrencies = PaymentGroup;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 

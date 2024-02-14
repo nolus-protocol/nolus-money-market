@@ -9,11 +9,10 @@ use sdk::{
 };
 
 use crate::{
-    api::{Config, DispatchAlarmsResponse, ExecuteMsg, PriceCurrencies},
+    api::{BaseCurrencyGroup, Config, DispatchAlarmsResponse, ExecuteMsg, PriceCurrencies},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,
-    BaseCurrencyGroup,
 };
 
 use super::oracle::{feed::Feeds, feeder::Feeders};

@@ -11,7 +11,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::BaseCurrencyGroup;
+use crate::api::BaseCurrencyGroup;
 
 mod unchecked;
 
@@ -116,7 +116,9 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use super::{Alarm, AlarmCurrencies, BaseCurrencyGroup};
+    use crate::api::BaseCurrencyGroup;
+
+    use super::{Alarm, AlarmCurrencies};
 
     type AssetG = AlarmCurrencies;
     type LpnG = BaseCurrencyGroup;

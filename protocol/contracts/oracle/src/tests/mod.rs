@@ -21,9 +21,8 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{swap::SwapTarget, BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
-    BaseCurrencyGroup,
 };
 
 #[cfg(test)]

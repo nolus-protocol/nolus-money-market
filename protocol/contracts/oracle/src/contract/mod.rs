@@ -13,12 +13,14 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
+    api::{
+        BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
+        QueryMsg, SudoMsg,
+    },
     contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
-    BaseCurrencyGroup,
 };
 
 use self::{
