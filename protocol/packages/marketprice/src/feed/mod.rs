@@ -69,7 +69,7 @@ where
 
         let discount_factor = config.discount_factor();
 
-        let samples_nb = config.samples_number().try_into()?;
+        let samples_nb = config.samples_number().into();
 
         samples
             .take(samples_nb)

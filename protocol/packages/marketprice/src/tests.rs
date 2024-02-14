@@ -135,7 +135,7 @@ fn marketprice_add_feed() {
             )
             .unwrap();
 
-        assert_eq!(PriceDTO::try_from(price1).unwrap(), price_resp);
+        assert_eq!(PriceDTO::from(price1), price_resp);
     }
 }
 
@@ -287,7 +287,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = PriceDTO::<G, G>::try_from(price).unwrap();
+    let price = PriceDTO::<G, G>::from(price);
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)

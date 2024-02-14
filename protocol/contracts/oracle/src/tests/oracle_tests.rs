@@ -37,10 +37,9 @@ fn feed_direct_price() {
     where
         BaseG: Group,
     {
-        PriceDTO::try_from(
-            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
-        )
-        .unwrap()
+        price::total_of(Coin::<PaymentC4>::new(10))
+            .is(Coin::<StableC1>::new(120))
+            .into()
     }
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
@@ -68,19 +67,11 @@ fn feed_indirect_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let price_a_to_b =
-        PriceDTO::try_from(
-            price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(120)),
-        )
-        .unwrap();
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(120)));
     let price_b_to_c =
-        PriceDTO::try_from(
-            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(5)),
-        )
-        .unwrap();
-    let price_c_to_usdc = PriceDTO::try_from(
-        price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(5)),
-    )
-    .unwrap();
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(5)));
+    let price_c_to_usdc =
+        PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(5)));
 
     // Feed indirect price from PaymentC5 to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
@@ -99,8 +90,7 @@ fn feed_indirect_price() {
     .unwrap();
 
     let expected_price =
-        PriceDTO::try_from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)))
-            .unwrap();
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<StableC1>::new(3)));
     let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
@@ -126,14 +116,8 @@ fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let prices = vec![
-        PriceDTO::try_from(
-            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)),
-        )
-        .unwrap(),
-        PriceDTO::try_from(
-            price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(22)),
-        )
-        .unwrap(),
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12))),
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(22))),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
@@ -149,7 +133,7 @@ fn deliver_alarm() {
     let current_price =
         price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(23451));
     let feed_price_msg = ExecuteMsg::FeedPrices {
-        prices: vec![current_price.try_into().unwrap()],
+        prices: vec![current_price.into()],
     };
     let feed_resp = execute(deps.as_mut(), mock_env(), info.clone(), feed_price_msg);
     assert_eq!(Ok(CwResponse::default()), feed_resp);
