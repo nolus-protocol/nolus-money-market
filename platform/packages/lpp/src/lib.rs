@@ -1,8 +1,4 @@
-use currency::{
-    NlsPlatform,
-    Currency,
-    Group
-};
+use currency::{Currency, Group, NlsPlatform};
 use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
@@ -12,7 +8,7 @@ use stub::LppStub;
 use crate::msg::LppBalanceResponse;
 pub use crate::{
     nlpn::NLpn,
-    usd::{CoinUsd, Usd, UsdGroup}
+    usd::{CoinUsd, Usd, UsdGroup},
 };
 
 pub mod error;

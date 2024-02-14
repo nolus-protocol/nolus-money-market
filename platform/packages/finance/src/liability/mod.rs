@@ -14,10 +14,7 @@ use crate::{
     zero::Zero,
 };
 
-pub use self::{
-    level::Level,
-    zone::Zone
-};
+pub use self::{level::Level, zone::Zone};
 
 mod level;
 mod unchecked;

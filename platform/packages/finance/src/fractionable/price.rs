@@ -99,7 +99,7 @@ mod test {
             fraction::Fraction,
             fractionable::price::test::{c, q},
             price,
-            ratio::Rational
+            ratio::Rational,
         };
 
         #[test]

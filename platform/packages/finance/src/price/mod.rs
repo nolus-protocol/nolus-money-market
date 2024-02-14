@@ -282,8 +282,7 @@ mod test {
 
     use currency::{
         test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
-        SymbolStatic
+        Currency, SymbolStatic,
     };
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
@@ -625,7 +624,7 @@ mod test {
 mod test_invariant {
     use currency::{
         test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency
+        Currency,
     };
 
     use crate::{coin::Coin, price::Price};
