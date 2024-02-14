@@ -10,8 +10,6 @@ use crate::{api::Alarm as AlarmDTO, error::ContractError, result::ContractResult
 
 use super::oracle::PriceResult;
 
-use self::iter::Iter as AlarmsIter;
-
 mod iter;
 
 const NAMESPACE_ALARMS_BELOW: &str = "alarms_below";
@@ -46,15 +44,15 @@ where
         }
     }
 
-    pub fn notify_alarms_iter<I, BaseC>(
-        &self,
+    pub fn notify_alarms_iter<'r, 'iterator, I, BaseC>(
+        &'r self,
         prices: I,
-    ) -> ContractResult<AlarmsIter<'_, S, I, PriceG, BaseC>>
+    ) -> impl Iterator<Item = ContractResult<Addr>> + 'r
     where
-        I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+        I: Iterator<Item = PriceResult<PriceG, BaseC>> + 'r,
         BaseC: Currency,
     {
-        AlarmsIter::new(&self.alarms, prices)
+        iter::new(&self.alarms, prices)
     }
 
     pub fn try_query_alarms<I, BaseC>(&self, prices: I) -> Result<bool, ContractError>
@@ -62,10 +60,10 @@ where
         I: Iterator<Item = PriceResult<PriceG, BaseC>>,
         BaseC: Currency,
     {
-        Ok(AlarmsIter::new(&self.alarms, prices)?
+        iter::new(&self.alarms, prices)
             .next()
-            .transpose()?
-            .is_some())
+            .transpose()
+            .map(|maybe_addr| maybe_addr.is_some())
     }
 
     pub fn ensure_no_in_delivery(&self) -> ContractResult<&Self> {

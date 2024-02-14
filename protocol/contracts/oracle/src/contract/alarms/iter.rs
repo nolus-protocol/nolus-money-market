@@ -9,96 +9,51 @@ use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Addr};
 
 use crate::{contract::alarms::PriceResult, error::ContractError, result::ContractResult};
 
-type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
-type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
-
-pub struct Iter<'alarms, S, I, PriceG, BaseC>
-where
-    S: storage::Dyn,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
-{
+pub fn new<'alarms, 'iterator, 'r, S, PriceG, I, BaseC>(
     alarms: &'alarms PriceAlarms<S, PriceG>,
     price_iter: I,
-    alarm_iter: Option<AlarmIter<'alarms, PriceG>>,
-}
-
-impl<'alarms, S, I, PriceG, BaseC> Iter<'alarms, S, I, PriceG, BaseC>
+) -> impl Iterator<Item = ContractResult<Addr>> + 'r
 where
+    'alarms: 'r,
+    'iterator: 'r,
     S: storage::Dyn,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC>> + 'iterator,
     PriceG: Group + Clone,
     BaseC: Currency,
 {
-    pub fn new(alarms: &'alarms PriceAlarms<S, PriceG>, price_iter: I) -> ContractResult<Self> {
-        let mut iter = Self {
-            alarms,
-            price_iter,
-            alarm_iter: None,
-        };
-        iter.alarm_iter = iter.next_alarms()?;
-        Ok(iter)
-    }
-
-    fn move_to_next_alarms(&mut self) -> ContractResult<()> {
-        debug_assert!(self.next_alarm().is_none());
-
-        self.alarm_iter = self.next_alarms()?;
-        Ok(())
-    }
-
-    fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms, PriceG>>> {
-        self.price_iter
-            .next()
-            .map(|price_result: PriceResult<PriceG, BaseC>| {
-                price_result.and_then(|ref price| {
-                    Tickers.visit_any::<PriceG, Cmd<'alarms, '_, S, PriceG, BaseC>>(
-                        price.base_ticker(),
-                        Cmd {
-                            alarms: self.alarms,
-                            price,
-                        },
-                    )
-                })
+    price_iter
+        .map(move |price_result: PriceResult<PriceG, BaseC>| {
+            price_result.and_then(move |ref price| {
+                Tickers.visit_any::<PriceG, Cmd<'_, '_, S, PriceG, BaseC>>(
+                    price.base_ticker(),
+                    Cmd { alarms, price },
+                )
             })
-            .transpose()
-    }
-
-    fn next_alarm(&mut self) -> Option<ContractResult<Addr>> {
-        debug_assert!(self.alarm_iter.is_some());
-        self.alarm_iter
-            .as_mut()
-            .expect("calling 'next_alarm' on Some price alarms")
-            .next()
-    }
+        })
+        .flat_map(move |result| match result {
+            Ok(iter) => IterOrErr::Iter(iter),
+            Err(error) => IterOrErr::Err(iter::once(Err(error))),
+        })
 }
 
-impl<'alarms, S, I, PriceG, BaseC> Iterator for Iter<'alarms, S, I, PriceG, BaseC>
-where
-    S: storage::Dyn,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
-{
-    type Item = ContractResult<Addr>;
+enum IterOrErr<T, Err, Iter: Iterator<Item = Result<T, Err>>> {
+    Iter(Iter),
+    Err(iter::Once<Result<T, Err>>),
+}
+
+impl<T, Err, Iter: Iterator<Item = Result<T, Err>>> Iterator for IterOrErr<T, Err, Iter> {
+    type Item = Result<T, Err>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.alarm_iter.as_ref()?;
-
-        let mut result = self.next_alarm();
-        while result.is_none() && self.alarm_iter.is_some() {
-            result = if let Err(error) = self.move_to_next_alarms() {
-                Some(Err(error))
-            } else if self.alarm_iter.is_none() {
-                None
-            } else {
-                self.next_alarm()
-            }
+        match self {
+            IterOrErr::Iter(iter) => iter.next(),
+            IterOrErr::Err(iter) => iter.next(),
         }
-        result
     }
 }
+
+type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
+type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
 
 struct Cmd<'alarms, 'price, S, PriceG, BaseC>
 where

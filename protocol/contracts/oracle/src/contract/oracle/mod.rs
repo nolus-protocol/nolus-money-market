@@ -122,7 +122,7 @@ where
     ) -> ContractResult<(u32, MessageResponse)> {
         let subscribers: Vec<Addr> = MarketAlarms::new(&self.storage)
             .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))?
+            .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
@@ -167,7 +167,7 @@ mod test_normalized_price_not_found {
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
     use sdk::{
-        cosmwasm_ext::as_dyn::AsDynMut,
+        cosmwasm_ext::as_dyn::storage,
         cosmwasm_std::{
             testing::{MockApi, MockQuerier, MockStorage},
             Addr, DepsMut, Empty, QuerierWrapper, Timestamp,
