@@ -25,35 +25,3 @@ define_symbol! {
     }
 }
 define_currency!(Usdc, USDC);
-
-// TODO move up and use for any protocol
-#[cfg(test)]
-mod test {
-    use currency::Currency;
-
-    use crate::{
-        lease::osmosis::Osmo,
-        lpn::{osmosis_osmosis_usdc_axelar::Usdc, Lpns},
-        native::osmosis::Nls,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
-    };
-
-    #[test]
-    fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<Usdc, Lpns>();
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Usdc::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(Osmo::TICKER);
-    }
-
-    #[test]
-    fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<Usdc, Lpns>();
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Usdc::TICKER);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Osmo::BANK_SYMBOL);
-    }
-}

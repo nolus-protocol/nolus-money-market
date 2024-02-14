@@ -25,36 +25,3 @@ define_symbol! {
     }
 }
 define_currency!(UsdcAxelar, USDC_AXELAR);
-
-#[cfg(test)]
-mod test {
-    use currency::Currency;
-
-    use crate::{
-        lease::astroport::Ntrn,
-        lpn::Lpns,
-        native::Nls,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
-    };
-
-    use super::UsdcAxelar;
-
-    #[test]
-    fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<UsdcAxelar, Lpns>();
-        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(UsdcAxelar::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(Ntrn::TICKER);
-    }
-
-    #[test]
-    fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<UsdcAxelar, Lpns>();
-        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(UsdcAxelar::TICKER);
-        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(Ntrn::BANK_SYMBOL);
-    }
-}

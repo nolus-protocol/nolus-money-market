@@ -32,3 +32,31 @@ impl Group for Lpns {
         currency::maybe_visit_any::<_, Lpn, _>(matcher, symbol, visitor)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use currency::Currency;
+
+    use crate::{
+        lpn::{Lpn, Lpns},
+        native::Nls,
+        test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        },
+    };
+
+    #[test]
+    fn maybe_visit_on_ticker() {
+        maybe_visit_on_ticker_impl::<Lpn, Lpns>();
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::TICKER);
+    }
+
+    #[test]
+    fn maybe_visit_on_bank_symbol() {
+        maybe_visit_on_bank_symbol_impl::<Lpn, Lpns>();
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::BANK_SYMBOL);
+    }
+}

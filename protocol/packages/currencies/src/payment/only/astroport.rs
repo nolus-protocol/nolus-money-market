@@ -40,7 +40,7 @@ mod test {
 
     use crate::{
         lease::astroport::Atom,
-        lpn::{astroport::UsdcAxelar, Lpns},
+        lpn::{Lpn, Lpns},
         native::astroport::Nls,
         payment::only::PaymentOnlyGroup,
         test_impl::{
@@ -55,8 +55,8 @@ mod test {
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<UsdcNoble, PaymentOnlyGroup>();
         maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcAxelar::TICKER);
-        maybe_visit_on_ticker_err::<UsdcAxelar, Lpns>(UsdcNoble::TICKER);
+        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(UsdcNoble::TICKER);
     }
 
     #[test]
@@ -65,7 +65,7 @@ mod test {
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::TICKER);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Atom::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcAxelar::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcAxelar, Lpns>(UsdcNoble::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(UsdcNoble::BANK_SYMBOL);
     }
 }
