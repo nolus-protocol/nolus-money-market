@@ -8,7 +8,6 @@ pub use crate::error::Result as DexResult;
 pub use self::{
     account::Account,
     connectable::DexConnectable,
-    entry_delay::EntryDelay,
     ica_connector::{
         Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
@@ -35,7 +34,6 @@ pub use migration::{InspectSpec, MigrateSpec};
 mod account;
 mod coin_index;
 mod connectable;
-mod entry_delay;
 mod filter;
 mod ica_connector;
 mod ica_recover;
@@ -61,9 +59,6 @@ pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, Forward
 pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
     ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
 
-pub type SwapExactInPreRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> =
-    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient>>;
-
 pub type SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> = IcaConnector<
     InRecovery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, SEnum>,
     <SwapTask as SwapTaskT>::Result,
@@ -80,14 +75,8 @@ pub type SwapExactInRecoverIcaRespDelivery<
     ForwardToInnerMsg,
 >;
 
-pub type SwapExactInPostRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> =
-    EntryDelay<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>>;
-
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;
-
-pub type TransferInInitPreRecoverIca<SwapTask, SEnum> =
-    EntryDelay<TransferInInitRecoverIca<SwapTask, SEnum>>;
 
 pub type TransferInInitRecoverIca<SwapTask, SEnum> = IcaConnector<
     InRecovery<TransferInInit<SwapTask, SEnum>, SEnum>,
@@ -96,9 +85,6 @@ pub type TransferInInitRecoverIca<SwapTask, SEnum> = IcaConnector<
 
 pub type TransferInInitRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ICAOpenResponseDelivery<TransferInInitRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
-
-pub type TransferInInitPostRecoverIca<SwapTask, SEnum> =
-    EntryDelay<TransferInInit<SwapTask, SEnum>>;
 
 /// Contract during DEX
 pub trait Contract

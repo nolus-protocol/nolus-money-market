@@ -10,7 +10,6 @@ use crate::error::Result;
 
 use super::{
     connectable::DexConnectable,
-    entry_delay::EntryDelay,
     ica_connector::{Enterable, IcaConnector},
     ica_recover::InRecovery,
 };
@@ -43,9 +42,7 @@ pub(crate) fn on_timeout_repair_channel<S, L, SEnum, SwapResult>(
 ) -> Result<StateMachineResponse<SEnum>>
 where
     S: Enterable + DexConnectable + Into<SEnum>,
-    EntryDelay<IcaConnector<InRecovery<S, SEnum>, SwapResult>>: Into<SEnum>,
     SEnum: From<IcaConnector<InRecovery<S, SEnum>, SwapResult>>,
-    EntryDelay<S>: Into<SEnum>,
     L: Into<String>,
 {
     let emitter = emit_timeout(
@@ -53,14 +50,9 @@ where
         env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
-    let pre_recover_ica = EntryDelay::new(
-        IcaConnector::new(InRecovery::new(current_state, time_alarms.clone())),
-        time_alarms,
-    );
-    pre_recover_ica
-        .enter(env.block.time)
-        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
-        .map(|resp| StateMachineResponse::from(resp, pre_recover_ica))
+    let recover_ica = IcaConnector::new(InRecovery::new(current_state, time_alarms));
+    let resp = MessageResponse::messages_with_events(recover_ica.enter(), emitter);
+    Ok(StateMachineResponse::from(resp, recover_ica))
 }
 
 #[derive(Debug)]
