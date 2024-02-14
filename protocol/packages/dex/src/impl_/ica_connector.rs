@@ -29,13 +29,6 @@ pub const ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = true;
 pub const NO_ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = !ICS27_MESSAGE_ENTERING_NEXT_STATE;
 
 /// Entity expecting to be connected to ICA
-///
-/// Due to the fact that at the time we get the acknowledgement the underlying channel
-/// is not yet fully functional, we are not allowed to use it right away.
-/// There are usecases that do not use it immediatelly so they are ok to go at
-/// this "preconnection" state. The others should be called in a next block to the
-/// one that delivers the acknowledgement. Usually that could be done with
-/// a time alarm.
 pub trait IcaConnectee {
     type State;
     type NextState: Enterable + Into<Self::State>;

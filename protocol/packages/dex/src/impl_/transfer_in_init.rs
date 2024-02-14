@@ -17,8 +17,8 @@ use super::{
     timeout,
     transfer_in_finish::TransferInFinish,
     trx::IBC_TIMEOUT,
-    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitPostRecoverIca,
-    TransferInInitPreRecoverIca, TransferInInitRecoverIca, TransferInInitState,
+    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitRecoverIca,
+    TransferInInitState,
 };
 
 /// Transfer in a coin from DEX
@@ -94,9 +94,7 @@ where
     SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
-    SEnum: From<TransferInInitPreRecoverIca<SwapTask, SEnum>>,
     SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
-    SEnum: From<TransferInInitPostRecoverIca<SwapTask, SEnum>>,
 {
     fn on_response(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
         let finish: TransferInFinish<SwapTask, SEnum> =
@@ -129,9 +127,7 @@ where
     SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
-    SEnum: From<TransferInInitPreRecoverIca<SwapTask, SEnum>>,
     SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
-    SEnum: From<TransferInInitPostRecoverIca<SwapTask, SEnum>>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
