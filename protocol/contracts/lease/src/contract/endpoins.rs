@@ -1,4 +1,4 @@
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 use dex::TransferInInit;
 #[cfg(feature = "astroport")]
 use finance::coin::Amount;
@@ -155,7 +155,7 @@ fn may_migrate(
             Ok(MessageResponse::default())
         }
     }
-    #[cfg(feature = "osmosis")]
+    #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
     {
         const TIMEOUT_LEASE: &str =
             "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
@@ -223,7 +223,7 @@ fn add_amounts(
     }
 }
 
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 fn transfer_finish_time_out(
     querier: QuerierWrapper<'_>,
     env: Env,
@@ -300,7 +300,7 @@ fn this_contract_ref(env: &Env) -> &Addr {
     &env.contract.address
 }
 
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 fn this_contract(env: Env) -> Addr {
     env.contract.address
 }

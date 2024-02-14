@@ -14,7 +14,7 @@ net_test = ["contract", "currencies/net_test"]
 net_main = ["contract", "currencies/net_main"]
 
 astroport = ["contract", "currencies/astroport"]
-osmosis = ["contract", "currencies/osmosis"]
+osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
 
 contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning"]

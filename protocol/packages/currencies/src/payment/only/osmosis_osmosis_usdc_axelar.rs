@@ -46,7 +46,7 @@ mod test {
 
     use crate::{
         lease::osmosis::Osmo,
-        lpn::{osmosis::Usdc, Lpns},
+        lpn::{Lpn, Lpns},
         native::osmosis::Nls,
         payment::only::PaymentOnlyGroup,
         test_impl::{
@@ -61,8 +61,8 @@ mod test {
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<UsdcNoble, PaymentOnlyGroup>();
         maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Usdc::TICKER);
-        maybe_visit_on_ticker_err::<Usdc, Lpns>(UsdcNoble::TICKER);
+        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(UsdcNoble::TICKER);
     }
 
     #[test]
@@ -71,6 +71,6 @@ mod test {
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::TICKER);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Osmo::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
     }
 }

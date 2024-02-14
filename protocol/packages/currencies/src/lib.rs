@@ -1,6 +1,6 @@
 #[cfg(not(any(
     feature = "astroport",
-    feature = "osmosis",
+    feature = "osmosis-osmosis-usdc_axelar",
     feature = "osmosis-osmosis-usdc_noble"
 )))]
 compile_error!("No protocol selected!");

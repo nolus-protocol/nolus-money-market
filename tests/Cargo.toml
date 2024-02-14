@@ -9,7 +9,8 @@ license = "Apache-2.0"
 
 [features]
 astroport = ["lease/astroport", "profit/astroport"]
-osmosis = ["lease/osmosis", "profit/osmosis"]
+osmosis-osmosis-usdc_axelar = ["lease/osmosis-osmosis-usdc_axelar", "profit/osmosis-osmosis-usdc_axelar"]
+osmosis-osmosis-usdc_noble = ["lease/osmosis-osmosis-usdc_noble", "profit/osmosis-osmosis-usdc_noble"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"] }

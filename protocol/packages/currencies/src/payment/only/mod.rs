@@ -5,15 +5,15 @@ use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "astroport")]
 use self::astroport as impl_mod;
-#[cfg(feature = "osmosis")]
-use self::osmosis as impl_mod;
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
+use self::osmosis_osmosis_usdc_axelar as impl_mod;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]
 use self::osmosis_osmosis_usdc_noble as impl_mod;
 
 #[cfg(feature = "astroport")]
 pub(crate) mod astroport;
-#[cfg(feature = "osmosis")]
-pub(crate) mod osmosis;
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
+pub(crate) mod osmosis_osmosis_usdc_axelar;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]
 pub(crate) mod osmosis_osmosis_usdc_noble;
 

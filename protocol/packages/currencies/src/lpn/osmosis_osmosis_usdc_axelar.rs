@@ -1,4 +1,3 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol};
@@ -27,19 +26,6 @@ define_symbol! {
 }
 define_currency!(Usdc, USDC);
 
-pub(super) fn maybe_visit<M, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
-where
-    M: Matcher + ?Sized,
-    V: AnyVisitor,
-{
-    use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Usdc, _>(matcher, symbol, visitor)
-}
-
 // TODO move up and use for any protocol
 #[cfg(test)]
 mod test {
@@ -47,7 +33,7 @@ mod test {
 
     use crate::{
         lease::osmosis::Osmo,
-        lpn::{osmosis::Usdc, Lpns},
+        lpn::{osmosis_osmosis_usdc_axelar::Usdc, Lpns},
         native::osmosis::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,

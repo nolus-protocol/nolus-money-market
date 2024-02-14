@@ -677,7 +677,7 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::osmosis::Usdc, native::osmosis::Nls},
+        {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
     };
 
     use super::{Atom, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
@@ -694,11 +694,11 @@ mod test {
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Lvn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Lpn::BANK_SYMBOL);
     }
 
     #[test]
@@ -713,9 +713,9 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Pica, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Qsr, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Dym, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
     }

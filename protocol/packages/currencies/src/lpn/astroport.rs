@@ -1,4 +1,3 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol};
@@ -26,19 +25,6 @@ define_symbol! {
     }
 }
 define_currency!(UsdcAxelar, USDC_AXELAR);
-
-pub(super) fn maybe_visit<M, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
-where
-    M: Matcher + ?Sized,
-    V: AnyVisitor,
-{
-    use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, UsdcAxelar, _>(matcher, symbol, visitor)
-}
 
 #[cfg(test)]
 mod test {
