@@ -39,7 +39,7 @@ jobs:
       - "check_deps_versions"
     uses: "./.github/workflows/build_and_check_optimized.yaml"
     with:
-      upload_artifacts: "${{ github.event_name == 'tag' }}"
+      upload_artifacts: "${{ github.ref_type == 'tag' }}"
   draft_release:
     runs-on: ubuntu-latest
     if: "${{ github.ref_type }} == 'tag'"
