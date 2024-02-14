@@ -18,7 +18,7 @@ on:
 jobs:
   check_deps_versions:
     runs-on: "ubuntu-latest"
-    if: "${{ github.ref_type }} == 'tag'"
+    if: "github.ref_type == 'tag'"
     strategy:
       fail-fast: true
       matrix:
@@ -29,12 +29,12 @@ jobs:
         run: "cargo +stable update --locked"
         working-directory: "${{ matrix.working_directory }}"
   perform_checks:
-    if: "${{ github.ref_type }} == 'tag' || always()"
+    if: "github.ref_type == 'tag' || always()"
     needs:
       - "check_deps_versions"
     uses: "./.github/workflows/checks_general.yaml"
   build_and_check_optimized:
-    if: "${{ github.ref_type }} == 'tag' || always()"
+    if: "github.ref_type == 'tag' || always()"
     needs:
       - "check_deps_versions"
     uses: "./.github/workflows/build_and_check_optimized.yaml"
@@ -42,7 +42,7 @@ jobs:
       upload_artifacts: "${{ github.ref_type == 'tag' }}"
   draft_release:
     runs-on: ubuntu-latest
-    if: "${{ github.ref_type }} == 'tag'"
+    if: "github.ref_type == 'tag'"
     needs:
       - "perform_checks"
       - "build_and_check_optimized"
