@@ -12,10 +12,12 @@ jobs:
       matrix:
         working_directory: [ "protocol" ]
         net: [ "dev", "test", "main" ]
-        protocol: [ "osmosis" ] # TODO Add `astroport`
+        protocol: [ "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble" ] # TODO Add `astroport`
         include:
           - working_directory: "platform"
-          - protocol: "osmosis"
+          - protocol: "osmosis-osmosis-usdc_axelar"
+            working_directory: "tests"
+          - protocol: "osmosis-osmosis-usdc_nobler"
             working_directory: "tests"
           # - protocol: "astroport" # TODO Add `astroport`
           #   working_directory: "tests"
@@ -24,5 +26,5 @@ jobs:
     with:
       target_net: "${{ matrix.net }}"
       target_protocol: "${{ matrix.protocol }}"
-      protocols_list: "astroport,osmosis"
+      protocols_list: "astroport,osmosis-osmosis-usdc_axelar,osmosis-osmosis-usdc_noble"
       working_directory: "${{ matrix.working_directory }}"
