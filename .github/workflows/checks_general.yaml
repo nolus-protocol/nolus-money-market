@@ -17,7 +17,7 @@ jobs:
           - working_directory: "platform"
           - protocol: "osmosis-osmosis-usdc_axelar"
             working_directory: "tests"
-          - protocol: "osmosis-osmosis-usdc_nobler"
+          - protocol: "osmosis-osmosis-usdc_noble"
             working_directory: "tests"
           # - protocol: "astroport" # TODO Add `astroport`
           #   working_directory: "tests"
