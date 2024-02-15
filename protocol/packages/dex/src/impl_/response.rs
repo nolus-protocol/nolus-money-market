@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -83,7 +83,7 @@ where
         Err(err(self, "handle heal")).into()
     }
 
-    fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
+    fn reply(self, _querier: QuerierWrapper<'_>, _env: Env, _msg: Reply) -> ContinueResult<Self> {
         Err(err(self, "handle reply"))
     }
 

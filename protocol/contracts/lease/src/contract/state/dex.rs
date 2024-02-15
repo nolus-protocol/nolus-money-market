@@ -2,9 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
 use platform::state_machine;
-use sdk::cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp,
-};
+use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::query::StateResponse as QueryStateResponse,
@@ -96,9 +94,9 @@ where
         self.handler.state(now, querier)
     }
 
-    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+    fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         self.handler
-            .reply(deps, env, msg)
+            .reply(querier, env, msg)
             .map(state_machine::from)
             .map_err(Into::into)
     }

@@ -29,8 +29,8 @@ where
         self.handler.state(now, querier)
     }
 
-    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
-        self.handler.reply(deps, env, msg)
+    fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+        self.handler.reply(querier, env, msg)
     }
 
     fn repay(

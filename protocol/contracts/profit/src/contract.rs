@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
+use cosmwasm_std::QuerierWrapper;
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -179,20 +180,20 @@ where
 }
 
 fn try_handle_reply_message<F>(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     msg: Reply,
     handler: F,
 ) -> ContractResult<MessageResponse>
 where
-    F: FnOnce(State, &mut DepsMut<'_>, Env, Reply) -> DexResult<State>,
+    F: FnOnce(State, QuerierWrapper<'_>, Env, Reply) -> DexResult<State>,
 {
     let state: State = State::load(deps.storage)?;
 
     let DexResponse::<State> {
         response,
         next_state,
-    } = handler(state, &mut deps, env, msg)?;
+    } = handler(state, deps.querier, env, msg)?;
 
     next_state
         .store(deps.storage)

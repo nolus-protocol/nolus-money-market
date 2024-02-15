@@ -78,7 +78,12 @@ where
 
     fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
-    fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
+    fn reply(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _msg: Reply,
+    ) -> ContractResult<Response> {
         err("reply")
     }
 

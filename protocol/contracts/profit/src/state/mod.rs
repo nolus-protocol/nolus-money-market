@@ -13,7 +13,7 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, Reply as CwReply, Storage, Timestamp},
+    cosmwasm_std::{Binary, Deps, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -226,11 +226,13 @@ impl Handler for State {
         }
     }
 
-    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: CwReply) -> ContinueResult<Self> {
+    fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: CwReply) -> ContinueResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.reply(deps, env, msg).map(state_machine::from),
-            StateEnum::Idle(idle) => idle.reply(deps, env, msg).map(state_machine::from),
-            StateEnum::BuyBack(buy_back) => buy_back.reply(deps, env, msg).map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.reply(querier, env, msg).map(state_machine::from),
+            StateEnum::Idle(idle) => idle.reply(querier, env, msg).map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => {
+                buy_back.reply(querier, env, msg).map(state_machine::from)
+            }
         }
     }
 

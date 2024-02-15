@@ -1,7 +1,7 @@
 use enum_dispatch::enum_dispatch;
 
 use platform::state_machine::Response as StateMachineResponse;
-use sdk::cosmwasm_std::{Api, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::{position::PositionClose, query::StateResponse},
@@ -18,64 +18,66 @@ where
 {
     fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
-    fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
-        err("reply", deps.api)
+    fn reply(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _msg: Reply,
+    ) -> ContractResult<Response> {
+        err("reply")
     }
 
     fn repay(
         self,
-        deps: &mut DepsMut<'_>,
+        _deps: &mut DepsMut<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        err("repay", deps.api)
+        err("repay")
     }
 
     fn close_position(
         self,
         _spec: PositionClose,
-        deps: &mut DepsMut<'_>,
+        _deps: &mut DepsMut<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        err("close position", deps.api)
+        err("close position")
     }
 
     fn close(
         self,
-        deps: &mut DepsMut<'_>,
+        _deps: &mut DepsMut<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        err("close", deps.api)
+        err("close")
     }
 
     fn on_time_alarm(
         self,
-        deps: Deps<'_>,
+        _deps: Deps<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        err("on time alarm", deps.api)
+        err("on time alarm")
     }
 
     fn on_price_alarm(
         self,
-        deps: Deps<'_>,
+        _deps: Deps<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        err("on price alarm", deps.api)
+        err("on price alarm")
     }
 
-    fn heal(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
-        err("heal", deps.api)
+    fn heal(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("heal")
     }
 }
 
-fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {
-    let err = ContractError::unsupported_operation(op);
-    api.debug(&format!("{:?}", op));
-
-    Err(err)
+fn err<R>(op: &str) -> ContractResult<R> {
+    Err(ContractError::unsupported_operation(op))
 }

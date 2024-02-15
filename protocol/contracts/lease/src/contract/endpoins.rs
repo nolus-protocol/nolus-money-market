@@ -68,15 +68,8 @@ pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<
 }
 
 #[entry_point]
-pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
-    state::load(deps.storage)
-        .and_then(|state| state.reply(&mut deps, env, msg))
-        .and_then(
-            |Response {
-                 response,
-                 next_state,
-             }| state::save(deps.storage, &next_state).map(|()| response),
-        )
+pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
+    process_lease(deps.storage, |lease| lease.reply(deps.querier, env, msg))
         .map(response::response_only_messages)
         .or_else(|err| platform_error::log(err, deps.api))
 }

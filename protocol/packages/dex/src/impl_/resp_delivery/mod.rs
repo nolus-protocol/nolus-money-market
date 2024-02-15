@@ -8,7 +8,7 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, Binary, Deps, Env, QuerierWrapper, Reply, Timestamp};
 
 use serde::{Deserialize, Serialize};
 
@@ -163,7 +163,7 @@ where
         self.do_deliver_continue(deps, env)
     }
 
-    fn reply(self, _deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
+    fn reply(self, _querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
         debug_assert_eq!(msg.id, REPLY_ID);
         debug_assert!(msg.result.is_err());
 

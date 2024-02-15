@@ -7,7 +7,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -64,12 +64,17 @@ impl RequestLoan {
         }))
     }
 
-    fn on_response(self, deps: Deps<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+    fn on_response(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        msg: Reply,
+    ) -> ContractResult<Response> {
         let loan = self
             .deps
             .0
             .clone()
-            .execute_lender(OpenLoanResp::new(msg), deps.querier)?;
+            .execute_lender(OpenLoanResp::new(msg), querier)?;
 
         let emitter = self.emit_ok(env.contract.address);
 
@@ -100,7 +105,7 @@ impl Handler for RequestLoan {
         unreachable!()
     }
 
-    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
-        self.on_response(deps.as_ref(), env, msg)
+    fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+        self.on_response(querier, env, msg)
     }
 }

@@ -350,7 +350,7 @@ mod impl_into {
 
 mod impl_handler {
     use currency::Group;
-    use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Reply};
+    use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Reply};
 
     use crate::{
         impl_::{
@@ -664,27 +664,33 @@ mod impl_handler {
             }
         }
 
-        fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
+        fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
-                State::TransferOut(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferOutRespDelivery(inner) => Handler::reply(inner, deps, env, msg),
-                State::SwapExactIn(inner) => Handler::reply(inner, deps, env, msg),
-                State::SwapExactInRespDelivery(inner) => Handler::reply(inner, deps, env, msg),
+                State::TransferOut(inner) => Handler::reply(inner, querier, env, msg),
+                State::TransferOutRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
+                State::SwapExactIn(inner) => Handler::reply(inner, querier, env, msg),
+                State::SwapExactInRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::reply(inner, deps, env, msg)
+                    Handler::reply(inner, querier, env, msg)
                 }
-                State::SwapExactInPreRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::SwapExactInRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::SwapExactInPostRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferInInit(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferInInitRespDelivery(inner) => Handler::reply(inner, deps, env, msg),
+                State::SwapExactInPreRecoverIca(inner) => Handler::reply(inner, querier, env, msg),
+                State::SwapExactInRecoverIca(inner) => Handler::reply(inner, querier, env, msg),
+                State::SwapExactInPostRecoverIca(inner) => Handler::reply(inner, querier, env, msg),
+                State::TransferInInit(inner) => Handler::reply(inner, querier, env, msg),
+                State::TransferInInitRespDelivery(inner) => {
+                    Handler::reply(inner, querier, env, msg)
+                }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::reply(inner, deps, env, msg)
+                    Handler::reply(inner, querier, env, msg)
                 }
-                State::TransferInInitPreRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferInInitRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferInInitPostRecoverIca(inner) => Handler::reply(inner, deps, env, msg),
-                State::TransferInFinish(inner) => Handler::reply(inner, deps, env, msg),
+                State::TransferInInitPreRecoverIca(inner) => {
+                    Handler::reply(inner, querier, env, msg)
+                }
+                State::TransferInInitRecoverIca(inner) => Handler::reply(inner, querier, env, msg),
+                State::TransferInInitPostRecoverIca(inner) => {
+                    Handler::reply(inner, querier, env, msg)
+                }
+                State::TransferInFinish(inner) => Handler::reply(inner, querier, env, msg),
             }
         }
 
