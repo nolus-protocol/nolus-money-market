@@ -1,3 +1,4 @@
+#[cfg(any(feature = "contract", feature = "stub_alarms"))]
 use currencies::Lpns;
 
 #[cfg(feature = "contract")]
@@ -10,4 +11,5 @@ mod contract;
 #[cfg(feature = "stub_swap")]
 pub mod swap;
 
+#[cfg(any(feature = "contract", feature = "stub_alarms"))]
 pub type BaseCurrencyGroup = Lpns;
