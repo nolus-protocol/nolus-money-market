@@ -1,21 +1,19 @@
-use std::ops::{Deref, DerefMut};
-
-use sdk::cosmwasm_std::{Addr, Storage};
+use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Addr};
 
 use crate::{error::Result, SingleUserAccess};
 
 const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
-pub struct ContractOwnerAccess<'storage, S>
+pub struct ContractOwnerAccess<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
-    access: SingleUserAccess<'storage, 'static, S>,
+    access: SingleUserAccess<'static, S>,
 }
 
-impl<'storage, S> ContractOwnerAccess<'storage, S>
+impl<S> ContractOwnerAccess<S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     pub const fn new(storage: S) -> Self {
         Self {
@@ -28,9 +26,9 @@ where
     }
 }
 
-impl<'storage, S> ContractOwnerAccess<'storage, S>
+impl<S> ContractOwnerAccess<S>
 where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    S: storage::DynMut,
 {
     pub fn grant_to(&mut self, user: &Addr) -> Result {
         self.access.grant_to(user)
@@ -39,15 +37,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{testing::MockStorage, Addr};
 
     use crate::{error::Error, ContractOwnerAccess};
 
     #[test]
     fn grant_check() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &mut dyn Storage = &mut storage;
-        let mut access = ContractOwnerAccess::new(storage_ref);
+        let mut access = ContractOwnerAccess::new(MockStorage::new());
         let user = Addr::unchecked("happy user");
 
         assert!(access.check(&user).is_err());
@@ -57,9 +53,7 @@ mod tests {
 
     #[test]
     fn check_no_grant() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &dyn Storage = &mut storage;
-        let access = ContractOwnerAccess::new(storage_ref);
+        let access = ContractOwnerAccess::new(MockStorage::new());
         let not_authorized = Addr::unchecked("hacker");
 
         assert!(matches!(

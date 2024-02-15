@@ -7,7 +7,10 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo},
+};
 
 use crate::{
     error::Result,
@@ -80,8 +83,9 @@ where
     }
 }
 
-pub fn query_loan<Lpn>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse<Lpn>>
+pub fn query_loan<S, Lpn>(storage: &S, lease_addr: Addr) -> Result<QueryLoanResponse<Lpn>>
 where
+    S: storage::Dyn + ?Sized,
     Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
     Loan::query(storage, lease_addr)

@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, StdResult},
     cw_storage_plus::Item,
 };
 
@@ -40,40 +41,55 @@ impl Config {
         }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, &self)
+    pub fn store<S>(self, storage: &mut S) -> StdResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        Self::STORAGE.save(storage.as_dyn_mut(), &self)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn load<S>(storage: &S) -> StdResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::STORAGE.load(storage.as_dyn())
     }
 
-    pub fn update_cadence_hours(
-        storage: &mut dyn Storage,
+    pub fn update_cadence_hours<S>(
+        storage: &mut S,
         cadence_hours: CadenceHours,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::STORAGE
-            .update(storage, |config| -> Result<Config, ContractError> {
-                Ok(Self {
-                    cadence_hours,
-                    ..config
-                })
-            })
+            .update(
+                storage.as_dyn_mut(),
+                |config| -> Result<Config, ContractError> {
+                    Ok(Self {
+                        cadence_hours,
+                        ..config
+                    })
+                },
+            )
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    pub fn update_tvl_to_apr(
-        storage: &mut dyn Storage,
-        tvl_to_apr: RewardScale,
-    ) -> ContractResult<()> {
+    pub fn update_tvl_to_apr<S>(storage: &mut S, tvl_to_apr: RewardScale) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::STORAGE
-            .update(storage, |config| -> Result<Config, ContractError> {
-                Ok(Self {
-                    tvl_to_apr,
-                    ..config
-                })
-            })
+            .update(
+                storage.as_dyn_mut(),
+                |config| -> Result<Config, ContractError> {
+                    Ok(Self {
+                        tvl_to_apr,
+                        ..config
+                    })
+                },
+            )
             .map(|_| ())
             .map_err(Into::into)
     }
@@ -82,10 +98,8 @@ impl Config {
 pub(crate) mod migration {
     use serde::{Deserialize, Serialize, Serializer};
 
-    use sdk::{
-        cosmwasm_std::{Addr, Storage},
-        cw_storage_plus::Item,
-    };
+    use sdk::cosmwasm_ext::as_dyn::{storage, AsDyn};
+    use sdk::{cosmwasm_std::Addr, cw_storage_plus::Item};
 
     use crate::{
         result::ContractResult,
@@ -121,9 +135,12 @@ pub(crate) mod migration {
         }
     }
 
-    pub fn migrate(storage: &mut dyn Storage, protocols_registry: Addr) -> ContractResult<()> {
+    pub fn migrate<S>(storage: &mut S, protocols_registry: Addr) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         STORAGE
-            .load(storage)
+            .load(storage.as_dyn())
             .map(|old| old.migrate(protocols_registry))
             .and_then(|config: Config| config.store(storage))
             .map_err(Into::into)

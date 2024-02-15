@@ -7,7 +7,10 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo},
+};
 
 use crate::{
     error::{ContractError, Result},
@@ -60,7 +63,10 @@ where
     LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
 }
 
-pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
+pub(super) fn query_rewards<S>(storage: &S, addr: Addr) -> Result<RewardsResponse>
+where
+    S: storage::Dyn + ?Sized,
+{
     let rewards = Deposit::may_load(storage, addr)?
         .ok_or(ContractError::NoDeposit {})?
         .query_rewards(storage)?;

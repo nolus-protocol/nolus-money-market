@@ -233,9 +233,10 @@ impl<'a> QueryWithLpn<'a> {
 
                 to_json_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
             }
-            QueryMsg::Loan { lease_addr } => {
-                to_json_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
-            }
+            QueryMsg::Loan { lease_addr } => to_json_binary(&borrow::query_loan::<_, Lpn>(
+                self.deps.storage,
+                lease_addr,
+            )?),
             QueryMsg::LppBalance() => {
                 to_json_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
             }

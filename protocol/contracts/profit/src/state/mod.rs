@@ -1,9 +1,8 @@
 use std::fmt::{Display, Formatter};
 
-use cosmwasm_std::QuerierWrapper;
-use currencies::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
+use currencies::PaymentGroup;
 use dex::{
     ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
@@ -13,7 +12,8 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{Binary, Env, Reply as CwReply, Storage, Timestamp},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Binary, Env, QuerierWrapper, Reply as CwReply, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -116,12 +116,18 @@ impl State {
         (state, response)
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
-        STATE.load(storage).map_err(Into::into)
+    pub fn load<S>(storage: &S) -> ContractResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        STATE.load(storage.as_dyn()).map_err(Into::into)
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        STATE.save(storage, self).map_err(Into::into)
+    pub fn store<S>(&self, storage: &mut S) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        STATE.save(storage.as_dyn_mut(), self).map_err(Into::into)
     }
 }
 

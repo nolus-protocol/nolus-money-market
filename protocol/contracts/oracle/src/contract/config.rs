@@ -1,9 +1,12 @@
-use sdk::cosmwasm_std::Storage;
+use sdk::cosmwasm_ext::as_dyn::storage;
 
 use crate::{api::Config, ContractError};
 
-pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractError> {
-    Config::load(storage).map_err(ContractError::LoadConfig)
+pub(super) fn query_config<S>(storage: &S) -> Result<Config, ContractError>
+where
+    S: storage::Dyn + ?Sized,
+{
+    Config::load(storage.as_dyn()).map_err(ContractError::LoadConfig)
 }
 
 #[cfg(test)]
@@ -65,7 +68,7 @@ mod tests {
                     Duration::from_secs(5),
                     7,
                     Percent::from_percent(88),
-                )
+                ),
             }
         );
     }

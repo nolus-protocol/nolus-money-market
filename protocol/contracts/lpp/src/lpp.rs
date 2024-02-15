@@ -1,6 +1,6 @@
-use currencies::Lpns;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -12,7 +12,10 @@ use finance::{
 };
 use lpp_platform::{msg::LppBalanceResponse, NLpn};
 use platform::{bank, contract};
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+};
 
 use crate::{
     error::{ContractError, Result},
@@ -68,13 +71,19 @@ impl<Lpn> LiquidityPool<Lpn>
 where
     Lpn: 'static + Currency + Serialize + DeserializeOwned,
 {
-    pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
+    pub fn store<S>(storage: &mut S, config: Config) -> Result<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         config
             .store(storage)
             .and_then(|()| Total::<Lpn>::new().store(storage).map_err(Into::into))
     }
 
-    pub fn load(storage: &dyn Storage) -> Result<Self> {
+    pub fn load<S>(storage: &S) -> Result<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         let config = Config::load(storage)?;
         let total = Total::load(storage)?;
 
@@ -841,7 +850,7 @@ mod test {
             price::total(Coin::<NLpn>::new(1000), price.get()),
             price::total(
                 Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(100)).is(Coin::new(111))
+                price::total_of(Coin::new(100)).is(Coin::new(111)),
             )
         );
 
@@ -870,7 +879,7 @@ mod test {
             price::total(Coin::<NLpn>::new(1000), price.get()),
             price::total(
                 Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(100)).is(Coin::new(111))
+                price::total_of(Coin::new(100)).is(Coin::new(111)),
             )
         );
 

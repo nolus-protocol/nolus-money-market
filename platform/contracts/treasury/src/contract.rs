@@ -7,8 +7,8 @@ use platform::{
     response,
 };
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_ext::{as_dyn::storage, Response as CwResponse},
+    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo},
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
@@ -76,22 +76,26 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
     }
 }
 
-fn try_configure_reward_dispatcher(
-    storage: &mut dyn Storage,
+fn try_configure_reward_dispatcher<S>(
+    storage: &mut S,
     rewards_dispatcher: &Addr,
-) -> ContractResult<()> {
+) -> ContractResult<()>
+where
+    S: storage::DynMut + ?Sized,
+{
     SingleUserAccess::new(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)
         .grant_to(rewards_dispatcher)
         .map_err(Into::into)
 }
 
-fn try_send_rewards<B>(
-    storage: &dyn Storage,
+fn try_send_rewards<S, B>(
+    storage: &S,
     sender: Addr,
     amount: Coin<NlsPlatform>,
     account: &mut B,
 ) -> ContractResult<()>
 where
+    S: storage::Dyn + ?Sized,
     B: BankAccount,
 {
     SingleUserAccess::new(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)

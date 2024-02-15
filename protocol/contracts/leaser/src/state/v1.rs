@@ -1,11 +1,9 @@
+use serde::{Deserialize, Serialize, Serializer};
+
 use finance::percent::Percent;
 use lease::api::open::{ConnectionParams, InterestPaymentSpec, PositionSpecDTO};
 use platform::contract::CodeId;
-use sdk::{
-    cosmwasm_std::{Addr, Storage},
-    cw_storage_plus::Item,
-};
-use serde::{Deserialize, Serialize, Serializer};
+use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Addr, cw_storage_plus::Item};
 
 use crate::result::ContractResult;
 
@@ -27,9 +25,12 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn migrate(storage: &dyn Storage) -> ContractResult<ConfigNew> {
+    pub fn migrate<S>(storage: &S) -> ContractResult<ConfigNew>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Self::STORAGE
-            .load(storage)
+            .load(storage.as_dyn())
             .map_err(Into::into)
             .map(|config| ConfigNew {
                 lease_code_id: config.lease_code_id,

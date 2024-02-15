@@ -3,26 +3,28 @@ use serde::de::DeserializeOwned;
 use currency::{Currency, Group};
 use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
-use sdk::cosmwasm_std::{Storage, Timestamp};
+use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Timestamp};
 
 use crate::ContractError;
 
-pub struct FedPrices<'a, G>
+pub struct FedPrices<'a, S, G>
 where
+    S: storage::Dyn + ?Sized,
     G: Group,
 {
-    storage: &'a dyn Storage,
+    storage: &'a S,
     feeds: &'a PriceFeeds<'static, G>,
     at: Timestamp,
     total_feeders: usize,
 }
 
-impl<'a, G> FedPrices<'a, G>
+impl<'a, S, G> FedPrices<'a, S, G>
 where
+    S: storage::Dyn + ?Sized,
     G: Group,
 {
     pub fn new(
-        storage: &'a dyn Storage,
+        storage: &'a S,
         feeds: &'a PriceFeeds<'static, G>,
         at: Timestamp,
         total_feeders: usize,
@@ -43,8 +45,9 @@ pub trait PriceQuerier {
         Q: Currency + DeserializeOwned;
 }
 
-impl<'a, G> PriceQuerier for FedPrices<'a, G>
+impl<'a, S, G> PriceQuerier for FedPrices<'a, S, G>
 where
+    S: storage::Dyn + ?Sized,
     G: Group,
 {
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>

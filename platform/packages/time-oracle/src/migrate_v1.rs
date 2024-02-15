@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
+    cosmwasm_ext::as_dyn::storage,
     cosmwasm_std::{Addr, Order, StdError, Storage, Timestamp},
     cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
 };
@@ -57,7 +58,10 @@ impl AlarmsOld {
         }
     }
 
-    pub fn migrate(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
+    pub fn migrate<S>(&self, storage: &mut S) -> Result<(), AlarmError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         let old_alarms = self.alarms();
 
         let (alarms, ids) = old_alarms
@@ -102,12 +106,10 @@ impl AlarmsOld {
     }
 
     #[cfg(test)]
-    fn add(
-        &self,
-        storage: &mut dyn Storage,
-        addr: Addr,
-        time: Timestamp,
-    ) -> Result<(), AlarmError> {
+    fn add<S>(&self, storage: &mut S, addr: Addr, time: Timestamp) -> Result<(), AlarmError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         let id = self.next_id.may_load(storage)?.unwrap_or_default();
 
         let alarm = AlarmOld {
@@ -175,12 +177,7 @@ pub mod tests {
         // single alarm per address(4) + index(4)
         assert_eq!(8, storage.range(None, None, Order::Ascending).count());
 
-        let new_alarms = Alarms::new(
-            &mut storage as &mut dyn Storage,
-            "alarms",
-            "alarms_idx",
-            "in_delivery",
-        );
+        let new_alarms = Alarms::new(storage, "alarms", "alarms_idx", "in_delivery");
         let result: Vec<_> = new_alarms
             .alarms_selection(Timestamp::from_seconds(10))
             .map(Result::unwrap)

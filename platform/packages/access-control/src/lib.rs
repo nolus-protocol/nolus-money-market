@@ -1,9 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
-use sdk::{
-    cosmwasm_std::{Addr, Storage},
-    cw_storage_plus::Item,
-};
+use sdk::{cosmwasm_ext::as_dyn::storage, cosmwasm_std::Addr, cw_storage_plus::Item};
 
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
@@ -19,17 +14,17 @@ pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
     }
 }
 
-pub struct SingleUserAccess<'storage, 'namespace, S>
+pub struct SingleUserAccess<'namespace, S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     storage: S,
     storage_item: Item<'namespace, Addr>,
 }
 
-impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+impl<'namespace, S> SingleUserAccess<'namespace, S>
 where
-    S: Deref<Target = dyn Storage + 'storage>,
+    S: storage::Dyn,
 {
     pub const fn new(storage: S, storage_namespace: &'namespace str) -> Self {
         Self {
@@ -40,26 +35,26 @@ where
 
     pub fn check(&self, user: &Addr) -> Result {
         self.storage_item
-            .load(self.storage.deref())
+            .load(self.storage.as_dyn())
             .map_err(Into::into)
             .and_then(|granted_to| check(&granted_to, user))
     }
 }
 
-impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+impl<'namespace, S> SingleUserAccess<'namespace, S>
 where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    S: storage::DynMut,
 {
     pub fn grant_to(&mut self, user: &Addr) -> Result {
         self.storage_item
-            .save(self.storage.deref_mut(), user)
+            .save(self.storage.as_dyn_mut(), user)
             .map_err(Into::into)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{testing::MockStorage, Addr};
 
     use crate::{
         error::{Error, Result},
@@ -70,9 +65,7 @@ mod tests {
 
     #[test]
     fn grant_check() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &mut dyn Storage = &mut storage;
-        let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
+        let mut access = SingleUserAccess::new(MockStorage::new(), NAMESPACE);
         let user = Addr::unchecked("cosmic address");
 
         assert!(access.check(&user).is_err());
@@ -82,9 +75,7 @@ mod tests {
 
     #[test]
     fn check_no_grant() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &dyn Storage = &mut storage;
-        let access = SingleUserAccess::new(storage_ref, NAMESPACE);
+        let access = SingleUserAccess::new(MockStorage::new(), NAMESPACE);
         let not_authorized = Addr::unchecked("hacker");
 
         assert!(matches!(

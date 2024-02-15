@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -77,12 +78,20 @@ pub(crate) enum State {
 
 const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
 
-pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
-    STATE_DB_ITEM.load(storage).map_err(Into::into)
+pub(super) fn load<S>(storage: &S) -> ContractResult<State>
+where
+    S: storage::Dyn + ?Sized,
+{
+    STATE_DB_ITEM.load(storage.as_dyn()).map_err(Into::into)
 }
 
-pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> ContractResult<()> {
-    STATE_DB_ITEM.save(storage, next_state).map_err(Into::into)
+pub(super) fn save<S>(storage: &mut S, next_state: &State) -> ContractResult<()>
+where
+    S: storage::DynMut + ?Sized,
+{
+    STATE_DB_ITEM
+        .save(storage.as_dyn_mut(), next_state)
+        .map_err(Into::into)
 }
 
 pub(super) fn new_lease(

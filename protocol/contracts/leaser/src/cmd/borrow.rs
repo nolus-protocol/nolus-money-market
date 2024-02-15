@@ -1,9 +1,11 @@
 use currency::SymbolOwned;
 use finance::percent::Percent;
 use lease::api::open::{LoanForm, NewLeaseContract, NewLeaseForm};
-use platform::batch::Batch;
-use platform::message::Response as MessageResponse;
-use sdk::cosmwasm_std::{Addr, Coin, Storage};
+use platform::{batch::Batch, message::Response as MessageResponse};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Coin},
+};
 
 use crate::{
     state::{config::Config, leases::Leases},
@@ -13,15 +15,18 @@ use crate::{
 use super::Borrow;
 
 impl Borrow {
-    pub fn with(
-        storage: &mut dyn Storage,
+    pub fn with<S>(
+        storage: &mut S,
         amount: Vec<Coin>,
         customer: Addr,
         admin: Addr,
         finalizer: Addr,
         currency: SymbolOwned,
         max_ltd: Option<Percent>,
-    ) -> Result<MessageResponse, ContractError> {
+    ) -> Result<MessageResponse, ContractError>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Leases::cache_open_req(storage, &customer)
             .and_then(|()| Config::load(storage))
             .and_then(|config| {

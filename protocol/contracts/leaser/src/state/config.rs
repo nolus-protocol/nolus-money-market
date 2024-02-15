@@ -4,7 +4,8 @@ use finance::{duration::Duration, percent::Percent};
 use lease::api::open::{ConnectionParams, PositionSpecDTO};
 use platform::contract::CodeId;
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::Addr,
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -42,22 +43,33 @@ impl Config {
         }
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::STORAGE.save(storage, self).map_err(Into::into)
+    pub fn store<S>(&self, storage: &mut S) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        Self::STORAGE
+            .save(storage.as_dyn_mut(), self)
+            .map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+    pub fn load<S>(storage: &S) -> ContractResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::STORAGE.load(storage.as_dyn()).map_err(Into::into)
     }
 
-    pub fn update(
-        storage: &mut dyn Storage,
+    pub fn update<S>(
+        storage: &mut S,
         lease_interest_rate_margin: Percent,
         lease_position_spec: PositionSpecDTO,
         lease_due_period: Duration,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::STORAGE
-            .update(storage, |mut c| -> ContractResult<Config> {
+            .update(storage.as_dyn_mut(), |mut c| -> ContractResult<Config> {
                 c.lease_interest_rate_margin = lease_interest_rate_margin;
                 c.lease_position_spec = lease_position_spec;
                 c.lease_due_period = lease_due_period;
@@ -67,9 +79,12 @@ impl Config {
             .map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, new_code: CodeId) -> ContractResult<()> {
+    pub fn update_lease_code<S>(storage: &mut S, new_code: CodeId) -> ContractResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         Self::STORAGE
-            .update(storage, |mut c| -> ContractResult<Config> {
+            .update(storage.as_dyn_mut(), |mut c| -> ContractResult<Config> {
                 c.lease_code_id = new_code;
                 Ok(c)
             })

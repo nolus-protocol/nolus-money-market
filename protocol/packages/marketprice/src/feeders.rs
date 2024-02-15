@@ -3,7 +3,8 @@ use std::collections::HashSet;
 use thiserror::Error;
 
 use sdk::{
-    cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, DepsMut, StdError, StdResult},
     cw_storage_plus::Item,
 };
 
@@ -32,13 +33,21 @@ impl<'f> PriceFeeders<'f> {
         Self(Item::new(namespace))
     }
 
-    pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        self.0.may_load(storage).map(Option::unwrap_or_default)
+    pub fn get<S>(&self, storage: &S) -> StdResult<HashSet<Addr>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        self.0
+            .may_load(storage.as_dyn())
+            .map(Option::unwrap_or_default)
     }
 
-    pub fn is_registered(&self, storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
+    pub fn is_registered<S>(&self, storage: &S, address: &Addr) -> StdResult<bool>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         self.0
-            .may_load(storage)
+            .may_load(storage.as_dyn())
             .map(|maybe_addrs: Option<HashSet<Addr>>| {
                 maybe_addrs.map_or(false, |addrs: HashSet<Addr>| addrs.contains(address))
             })

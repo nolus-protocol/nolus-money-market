@@ -11,7 +11,8 @@ use finance::{
     zero::Zero,
 };
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{StdResult, Timestamp},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -57,12 +58,18 @@ where
         self.total_principal_due
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, self)
+    pub fn load<S>(storage: &S) -> StdResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::STORAGE.load(storage.as_dyn())
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn store<S>(&self, storage: &mut S) -> StdResult<()>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        Self::STORAGE.save(storage.as_dyn_mut(), self)
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {

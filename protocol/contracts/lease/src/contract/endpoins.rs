@@ -6,10 +6,9 @@ use platform::{error as platform_error, message::Response as MessageResponse, re
 #[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
 use sdk::cosmwasm_std::Addr;
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_ext::{as_dyn::storage, Response as CwResponse},
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        Reply, Storage,
+        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
@@ -57,7 +56,7 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software_and_storage::<_, CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
         |storage: &mut _| may_migrate(storage, deps.querier, env),
@@ -105,11 +104,14 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-fn may_migrate(
-    _storage: &mut dyn Storage,
-    _querier: QuerierWrapper<'_>,
-    _env: Env,
-) -> ContractResult<MessageResponse> {
+fn may_migrate<S>(
+    storage: &mut S,
+    querier: QuerierWrapper<'_>,
+    env: Env,
+) -> ContractResult<MessageResponse>
+where
+    S: storage::DynMut + ?Sized,
+{
     #[cfg(feature = "astroport")]
     {
         const NEUTRON_LEASE1: &str =
@@ -122,15 +124,17 @@ fn may_migrate(
         const NEUTRON_LEASE2_AMOUNT1: Amount = 11668296;
         const NEUTRON_LEASE2_AMOUNT2: Amount = 17502294;
 
-        let this_lease = this_contract_ref(&_env);
+        let _ = querier;
+
+        let this_lease = this_contract_ref(&env);
         if this_lease == &NEUTRON_LEASE1 {
             process_lease(
-                _storage,
+                storage,
                 add_amounts(NEUTRON_LEASE1_AMOUNT1, NEUTRON_LEASE1_AMOUNT2, this_lease),
             )
         } else if this_lease == &NEUTRON_LEASE2 {
             process_lease(
-                _storage,
+                storage,
                 add_amounts(NEUTRON_LEASE2_AMOUNT1, NEUTRON_LEASE2_AMOUNT2, this_lease),
             )
         } else {
@@ -143,25 +147,27 @@ fn may_migrate(
             "nolus13z34cafmq553y8y2zywdvv2zzfzp8590qqyg4dwjyvdtj2mj7tgqeusqtt";
         const TRANSFER_OUT_ERROR_LEASE: &str =
             "nolus1jndqg7vkpe7c605c3urf3sug07qwcfqxnrzvxs5phj47flxl2uyqg5fkye";
-        if this_contract_ref(&_env) == &TIMEOUT_LEASE {
-            process_lease(_storage, transfer_finish_time_out(_querier, _env))
-        } else if this_contract_ref(&_env) == &TRANSFER_OUT_ERROR_LEASE {
-            process_lease(_storage, |lease| lease.on_dex_error(_querier, _env))
+        if this_contract_ref(&env) == &TIMEOUT_LEASE {
+            process_lease(storage, transfer_finish_time_out(querier, env))
+        } else if this_contract_ref(&env) == &TRANSFER_OUT_ERROR_LEASE {
+            process_lease(storage, |lease| lease.on_dex_error(querier, env))
         } else {
             Ok(MessageResponse::default())
         }
     }
     #[cfg(feature = "osmosis-osmosis-usdc_noble")]
     {
+        let _ = storage;
+        let _ = querier;
+        let _ = env;
+
         Ok(MessageResponse::default())
     }
 }
 
-fn process_lease<ProcFn>(
-    storage: &mut dyn Storage,
-    process_fn: ProcFn,
-) -> ContractResult<MessageResponse>
+fn process_lease<S, ProcFn>(storage: &mut S, process_fn: ProcFn) -> ContractResult<MessageResponse>
 where
+    S: storage::DynMut + ?Sized,
     ProcFn: FnOnce(State) -> ContractResult<Response>,
 {
     state::load(storage).and_then(process_fn).and_then(

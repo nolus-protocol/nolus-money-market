@@ -8,7 +8,10 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Uint128},
+};
 
 use crate::{
     error::{ContractError, Result},
@@ -113,7 +116,10 @@ where
     })
 }
 
-pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
+pub fn query_balance<S>(storage: &S, addr: Addr) -> Result<BalanceResponse>
+where
+    S: storage::Dyn + ?Sized,
+{
     let balance: u128 = Deposit::query_balance_nlpn(storage, addr)?
         .unwrap_or_default()
         .into();
@@ -134,7 +140,10 @@ mod test {
         percent::{bound::BoundToHundredPercent, Percent},
     };
     use platform::coin_legacy;
-    use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Storage};
+    use sdk::{
+        cosmwasm_ext::as_dyn::storage,
+        cosmwasm_std::{Addr, Coin as CwCoin, Storage},
+    };
 
     use crate::{borrow::InterestRate, state::Config};
 
@@ -147,7 +156,10 @@ mod test {
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
     const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
-    fn setup_storage(mut storage: &mut dyn Storage, min_utilization: BoundToHundredPercent) {
+    fn setup_storage<S>(mut storage: &mut S, min_utilization: BoundToHundredPercent)
+    where
+        S: storage::DynMut + ?Sized,
+    {
         ContractOwnerAccess::new(storage.deref_mut())
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();

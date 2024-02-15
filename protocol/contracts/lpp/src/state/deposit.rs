@@ -8,7 +8,8 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
+    cosmwasm_ext::as_dyn::{storage, AsDyn},
+    cosmwasm_std::{Addr, DepsMut, StdResult},
     cw_storage_plus::{Item, Map},
 };
 
@@ -44,61 +45,75 @@ impl Deposit {
     const DEPOSITS: Map<'static, Addr, DepositData> = Map::new("deposits");
     const GLOBALS: Item<'static, DepositsGlobals> = Item::new("deposits_globals");
 
-    pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
+    pub fn load_or_default<S>(storage: &S, addr: Addr) -> StdResult<Self>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         let data = Self::DEPOSITS
-            .may_load(storage, addr.clone())?
+            .may_load(storage.as_dyn(), addr.clone())?
             .unwrap_or_default();
 
         Ok(Self { addr, data })
     }
 
-    pub fn may_load(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Self>> {
+    pub fn may_load<S>(storage: &S, addr: Addr) -> StdResult<Option<Self>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         let result = Self::DEPOSITS
-            .may_load(storage, addr.clone())?
+            .may_load(storage.as_dyn(), addr.clone())?
             .map(|data| Self { addr, data });
         Ok(result)
     }
 
-    pub fn deposit<Lpn>(
+    pub fn deposit<S, Lpn>(
         &mut self,
-        storage: &mut dyn Storage,
+        storage: &mut S,
         amount_lpn: Coin<Lpn>,
         price: NTokenPrice<Lpn>,
     ) -> Result<Coin<NLpn>>
     where
+        S: storage::DynMut + ?Sized,
         Lpn: Currency + Serialize + DeserializeOwned,
     {
         if amount_lpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);
         }
 
-        let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+        let mut globals = Self::GLOBALS
+            .may_load(storage.as_dyn())?
+            .unwrap_or_default();
         self.update_rewards(&globals);
 
         let deposited_nlpn = price::total(amount_lpn, price.get().inv());
         self.data.deposited_nlpn += deposited_nlpn;
 
-        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
+        Self::DEPOSITS.save(storage.as_dyn_mut(), self.addr.clone(), &self.data)?;
 
         globals.balance_nlpn = globals
             .balance_nlpn
             .checked_add(deposited_nlpn)
             .ok_or(ContractError::OverflowError)?;
 
-        Self::GLOBALS.save(storage, &globals)?;
+        Self::GLOBALS.save(storage.as_dyn_mut(), &globals)?;
 
         Ok(deposited_nlpn)
     }
 
     /// return optional reward payment msg in case of deleting account
-    pub fn withdraw(
+    pub fn withdraw<S>(
         &mut self,
-        storage: &mut dyn Storage,
+        storage: &mut S,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<Option<Coin<NlsPlatform>>> {
+    ) -> Result<Option<Coin<NlsPlatform>>>
+    where
+        S: storage::DynMut + ?Sized,
+    {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
+
+        let storage = storage.as_dyn_mut();
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
@@ -163,36 +178,52 @@ impl Deposit {
     }
 
     /// query accounted rewards
-    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<NlsPlatform>> {
-        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+    pub fn query_rewards<S>(&self, storage: &S) -> StdResult<Coin<NlsPlatform>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        let globals = Self::GLOBALS
+            .may_load(storage.as_dyn())?
+            .unwrap_or_default();
         Ok(self.calculate_reward(&globals))
     }
 
     /// pay accounted rewards to the deposit owner or optional recipient
-    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<NlsPlatform>> {
-        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+    pub fn claim_rewards<S>(&mut self, storage: &mut S) -> StdResult<Coin<NlsPlatform>>
+    where
+        S: storage::DynMut + ?Sized,
+    {
+        let globals = Self::GLOBALS
+            .may_load(storage.as_dyn())?
+            .unwrap_or_default();
         self.update_rewards(&globals);
 
         let reward = self.data.pending_rewards_nls;
         self.data.pending_rewards_nls = Coin::ZERO;
 
-        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
+        Self::DEPOSITS.save(storage.as_dyn_mut(), self.addr.clone(), &self.data)?;
 
         Ok(reward)
     }
 
     /// lpp derivative tokens balance
-    pub fn balance_nlpn(storage: &dyn Storage) -> StdResult<Coin<NLpn>> {
+    pub fn balance_nlpn<S>(storage: &S) -> StdResult<Coin<NLpn>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Ok(Self::GLOBALS
-            .may_load(storage)?
+            .may_load(storage.as_dyn())?
             .unwrap_or_default()
             .balance_nlpn)
     }
 
     /// deposit derivative tokens balance
-    pub fn query_balance_nlpn(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Coin<NLpn>>> {
+    pub fn query_balance_nlpn<S>(storage: &S, addr: Addr) -> StdResult<Option<Coin<NLpn>>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         let maybe_balance = Self::DEPOSITS
-            .may_load(storage, addr)?
+            .may_load(storage.as_dyn(), addr)?
             .map(|data| data.deposited_nlpn);
         Ok(maybe_balance)
     }

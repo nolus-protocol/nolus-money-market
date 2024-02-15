@@ -1,10 +1,10 @@
 use access_control::ContractOwnerAccess;
 use platform::{batch::Batch, contract::CodeId, response};
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_ext::{as_dyn::storage, Response as CwResponse},
     cosmwasm_std::{
         ensure_eq, entry_point, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut,
-        Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
+        Env, MessageInfo, QuerierWrapper, Reply, WasmMsg,
     },
 };
 use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
@@ -232,12 +232,15 @@ fn instantiate_reply(
     }
 }
 
-fn register_protocol(
-    storage: &mut dyn Storage,
+fn register_protocol<S>(
+    storage: &mut S,
     querier: QuerierWrapper<'_>,
     name: String,
     protocol: &Protocol,
-) -> ContractResult<CwResponse> {
+) -> ContractResult<CwResponse>
+where
+    S: storage::DynMut + ?Sized,
+{
     protocol.validate(querier)?;
 
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())

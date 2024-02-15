@@ -8,10 +8,10 @@ use finance::{duration::Duration, percent::Percent};
 use lpp_platform::UsdGroup;
 use platform::{batch::Batch, message::Response as MessageResponse, response};
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_ext::{as_dyn::storage, Response as CwResponse},
     cosmwasm_std::{
         entry_point, to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        StdResult, Storage, Timestamp,
+        StdResult, Timestamp,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -71,10 +71,10 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
     use crate::state::migration;
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software_and_storage::<_, CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage: &mut dyn Storage| migration::migrate(storage, msg.protocols_registry),
+        |storage| migration::migrate(storage, msg.protocols_registry),
         Into::into,
     )
     .map(|(label, ())| label)
@@ -125,15 +125,17 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
     .map_err(Into::into)
 }
 
-fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
+fn query_config<S>(storage: &S) -> StdResult<ConfigResponse>
+where
+    S: storage::Dyn + ?Sized,
+{
     Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
 }
 
-fn query_reward(
-    storage: &dyn Storage,
-    querier: QuerierWrapper<'_>,
-    env: &Env,
-) -> ContractResult<Percent> {
+fn query_reward<S>(storage: &S, querier: QuerierWrapper<'_>, env: &Env) -> ContractResult<Percent>
+where
+    S: storage::Dyn + ?Sized,
+{
     let config: Config = Config::load(storage)?;
 
     protocols(config.protocols_registry, querier).and_then(|protocols| {

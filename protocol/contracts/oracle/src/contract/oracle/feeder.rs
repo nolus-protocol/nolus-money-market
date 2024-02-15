@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use marketprice::feeders::PriceFeeders;
-use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
+use sdk::{
+    cosmwasm_ext::as_dyn::storage,
+    cosmwasm_std::{Addr, DepsMut, StdResult},
+};
 
 use crate::{api::Config, result::ContractResult, ContractError};
 
@@ -15,12 +18,18 @@ pub struct Feeders {
 impl Feeders {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
 
-    pub(crate) fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        Self::FEEDERS.get(storage)
+    pub(crate) fn get<S>(storage: &S) -> StdResult<HashSet<Addr>>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::FEEDERS.get(storage.as_dyn())
     }
 
-    pub(crate) fn is_feeder(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
-        Self::FEEDERS.is_registered(storage, address)
+    pub(crate) fn is_feeder<S>(storage: &S, address: &Addr) -> StdResult<bool>
+    where
+        S: storage::Dyn + ?Sized,
+    {
+        Self::FEEDERS.is_registered(storage.as_dyn(), address)
     }
 
     pub(crate) fn try_register(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
@@ -45,7 +54,10 @@ impl Feeders {
         Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
     }
 
-    pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
+    pub(crate) fn total_registered<S>(storage: &S) -> StdResult<usize>
+    where
+        S: storage::Dyn + ?Sized,
+    {
         Self::get(storage).map(|c| c.len())
     }
 }
