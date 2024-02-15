@@ -58,7 +58,7 @@ The command below builds a contract if ran from the contract directory,
 or builds the contracts of the workspace from within which it is ran:
 
 ```sh
-RELEASE_VERSION='dev-release' NET_NAME='dev' PROTOCOL_NAME='osmosis' cargo build --features "net_${$NET_NAME},${PROTOCOL_NAME}" --target=wasm32-unknown-unknown
+RELEASE_VERSION='dev-release' NET_NAME='dev' PROTOCOL_NAME='osmosis-osmosis-usdc_axelar' cargo build --features "net_${$NET_NAME},${PROTOCOL_NAME}" --target=wasm32-unknown-unknown
 ```
 
 One way to avoid having to set those environment variables is to
@@ -117,7 +117,7 @@ each set of contracts, depending on their workspace (indicated by
 
 * ```sh
   export NET='dev'
-  export PROTOCOL='osmosis'
+  export PROTOCOL='osmosis-osmosis-usdc_axelar'
   export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
   ```
 
@@ -212,7 +212,7 @@ Due to the fact that contract addresses depend on the order in which they are de
 nolusd q wasm contract-state smart <admin_contract_address> '{"instantiate_address":{"code_id":<code_id_from_the_previous_step>,"protocol":"<protocol>"}}'
 ```
 
-Where <`protocol`> is a combination of the chosen DEX name and the protocol currency (eg "osmosis-USDC").
+Where <`protocol`> is a combination of the chosen DEX name and the protocol currency (eg "osmosis-osmosis-usdc_axelar").
 
 #### Instantiate the contract
 
@@ -222,7 +222,7 @@ On a live network, a new contract can be instantiated through the `admin` contra
 nolusd tx wasm execute <admin_contract_address> '{"instantiate":{"code_id":<code_id>,"label":"<label>","message":"<init_msg>","protocol":"<protocol>","expected_address":"<expected_address_received_from_the_previous_step>"}}' --from <network_DEX_admin_key>
 ```
 
-Where <`label`> can be a combination of the chosen protocol and the contract name (eg `osmosis-USDC-leaser`)
+Where <`label`> can be a combination of the chosen protocol and the contract name (eg `osmosis-osmosis-usdc_axelar-leaser`)
 
 If the given expected address matches the real one, the instantiation will be successful.
 
