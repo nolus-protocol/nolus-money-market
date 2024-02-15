@@ -19,8 +19,7 @@ mod test;
 #[cfg(any(test, feature = "testing"))]
 mod testing;
 
-// TODO change visibility to private
-pub type RequestMsg = MsgSwapExactAmountIn;
+type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
 #[derive(Serialize, Deserialize)]
