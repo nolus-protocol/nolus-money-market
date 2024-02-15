@@ -18,7 +18,6 @@ use lpp::{
     state::Config,
 };
 use lpp_platform::msg::LppBalanceResponse;
-
 use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Event, Timestamp},

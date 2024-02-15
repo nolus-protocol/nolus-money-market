@@ -1,7 +1,7 @@
+use currency::Currency;
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::coin::{Amount, Coin};
-use currency::Currency;
 
 use super::HigherRank;
 
@@ -36,12 +36,13 @@ where
 }
 #[cfg(test)]
 mod test {
+    use currency::test::SuperGroupTestC1;
+
     use crate::{
         coin::{Amount, Coin},
         percent::Percent,
         ratio::Rational,
     };
-    use currency::test::SuperGroupTestC1;
 
     #[test]
     fn safe_mul() {

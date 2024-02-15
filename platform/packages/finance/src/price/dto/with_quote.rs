@@ -1,10 +1,11 @@
+use currency::{
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
+};
+
 use crate::{
     coin::{Coin, CoinDTO},
     error::Error,
     price,
-};
-use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
 };
 
 use super::{PriceDTO, WithQuote};

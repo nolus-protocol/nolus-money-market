@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
 use currency::Currency;
+
+use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
 
 use super::Fractionable;
 
@@ -67,8 +68,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::coin::{Amount, Coin};
     use currency::test::{SubGroupTestC1, SuperGroupTestC1};
+
+    use crate::coin::{Amount, Coin};
 
     mod percent {
         use crate::fraction::Fraction;
@@ -90,12 +92,15 @@ mod test {
         }
     }
     mod usize_ratio {
-        use crate::coin::{Amount, Coin};
-        use crate::fraction::Fraction;
-        use crate::fractionable::price::test::{c, q};
-        use crate::price;
-        use crate::ratio::Rational;
         use currency::test::{SubGroupTestC1, SuperGroupTestC1};
+
+        use crate::{
+            coin::{Amount, Coin},
+            fraction::Fraction,
+            fractionable::price::test::{c, q},
+            price,
+            ratio::Rational,
+        };
 
         #[test]
         fn greater_than_one() {

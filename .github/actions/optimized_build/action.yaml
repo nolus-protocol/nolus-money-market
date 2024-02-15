@@ -38,7 +38,7 @@ runs:
           CHECK_DEPENDENCIES_UPDATED='false'
         fi
 
-        sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.74" --build-arg "check_container_dependencies_updated=${CHECK_DEPENDENCIES_UPDATED}"
+        sudo docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.75" --build-arg "check_container_dependencies_updated=${CHECK_DEPENDENCIES_UPDATED}"
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |

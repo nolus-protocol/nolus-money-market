@@ -16,24 +16,18 @@ where
 }
 
 pub trait AsAlarms {
-    type Impl<'oref, OracleBase>: PriceAlarms
-    where
-        OracleBase: Currency;
-
-    // TODO return `impl PriceAlarms` once swicth to Rust 1.75
-    fn as_alarms<OracleBase>(&self) -> AlarmsStub<'_, OracleBase>
+    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
     where
         OracleBase: Currency;
 }
 
 impl AsAlarms for OracleRef {
-    type Impl<'oref, OracleBase: Currency> = AlarmsStub<'oref, OracleBase>;
-
-    fn as_alarms<OracleBase>(&self) -> AlarmsStub<'_, OracleBase>
+    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
     where
         OracleBase: Currency,
     {
         self.check_base::<OracleBase>();
+
         AlarmsStub {
             oracle_ref: self,
             batch: Batch::default(),
@@ -42,7 +36,7 @@ impl AsAlarms for OracleRef {
     }
 }
 
-pub struct AlarmsStub<'a, OracleBase> {
+struct AlarmsStub<'a, OracleBase> {
     oracle_ref: &'a OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     batch: Batch,

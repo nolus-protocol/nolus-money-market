@@ -1,6 +1,6 @@
-use ::lease::api::LpnCoin;
 use serde::{Deserialize, Serialize};
 
+use ::lease::api::LpnCoin;
 use currencies::test::{NativeC, StableC1};
 use currency::Currency;
 use finance::{

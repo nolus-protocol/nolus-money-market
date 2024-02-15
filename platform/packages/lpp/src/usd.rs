@@ -1,9 +1,9 @@
-use finance::coin::Coin;
 use serde::{Deserialize, Serialize};
 
 use currency::{
     AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
 };
+use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(

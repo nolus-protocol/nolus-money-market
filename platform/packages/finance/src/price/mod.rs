@@ -280,6 +280,10 @@ where
 mod test {
     use std::ops::{Add, AddAssign, Mul};
 
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency, SymbolStatic,
+    };
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -287,8 +291,6 @@ mod test {
         price::{self, Price},
         ratio::Rational,
     };
-    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, SymbolStatic};
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     struct QuoteQuoteCurrency {}
@@ -620,9 +622,12 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
+    use currency::{
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+        Currency,
+    };
+
     use crate::{coin::Coin, price::Price};
-    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
-    use currency::Currency;
 
     #[test]
     #[should_panic = "zero"]

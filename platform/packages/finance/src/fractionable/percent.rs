@@ -1,9 +1,10 @@
+use currency::Currency;
+
 use crate::{
     coin::Coin,
     percent::{Percent, Units},
     ratio::Ratio,
 };
-use currency::Currency;
 
 use super::{Fractionable, HigherRank};
 

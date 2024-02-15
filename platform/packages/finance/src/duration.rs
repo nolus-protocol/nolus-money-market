@@ -318,8 +318,7 @@ mod tests {
         assert_eq!(None, D::from_nanos(Units::MAX).checked_mul(2));
         assert_eq!(
             None,
-            D::from_nanos(Units::MAX / Units::try_from(u16::MAX).unwrap() + 1)
-                .checked_mul(u16::MAX)
+            D::from_nanos(Units::MAX / Units::from(u16::MAX) + 1).checked_mul(u16::MAX)
         );
     }
 }

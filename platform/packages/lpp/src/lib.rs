@@ -1,5 +1,4 @@
-use currency::NlsPlatform;
-use currency::{Currency, Group};
+use currency::{Currency, Group, NlsPlatform};
 use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
@@ -7,9 +6,10 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use stub::LppStub;
 
 use crate::msg::LppBalanceResponse;
-
-pub use crate::nlpn::NLpn;
-pub use crate::usd::{CoinUsd, Usd, UsdGroup};
+pub use crate::{
+    nlpn::NLpn,
+    usd::{CoinUsd, Usd, UsdGroup},
+};
 
 pub mod error;
 pub mod msg;

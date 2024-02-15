@@ -128,7 +128,7 @@ mod test {
         funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
         funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
 
-        assert_eq!(Transaction::try_from(funds_sender), {
+        assert_eq!(Transaction::from(funds_sender), {
             let mut trx = Transaction::default();
             trx.add_message(
                 MsgTransfer::type_url(),
@@ -150,7 +150,7 @@ mod test {
                     timeout,
                 ),
             );
-            Ok(trx)
+            trx
         });
     }
 

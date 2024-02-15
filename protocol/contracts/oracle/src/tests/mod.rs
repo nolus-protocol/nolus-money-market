@@ -117,22 +117,18 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceDTO::try_from(
+            PriceDTO::from(
                 price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(12)),
-            )
-            .unwrap(),
-            PriceDTO::try_from(
+            ),
+            PriceDTO::from(
                 price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
-            )
-            .unwrap(),
-            PriceDTO::try_from(
+            ),
+            PriceDTO::from(
                 price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC1>::new(12)),
-            )
-            .unwrap(),
-            PriceDTO::try_from(
+            ),
+            PriceDTO::from(
                 price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC1>::new(120)),
-            )
-            .unwrap(),
+            ),
         ],
     }
 }

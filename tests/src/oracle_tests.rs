@@ -363,10 +363,9 @@ fn test_config_update() {
 
     assert_eq!(
         price,
-        PriceDTO::try_from(
-            price::total_of(Coin::<BaseC>::new(base)).is(Coin::<StableC1>::new(quote))
-        )
-        .unwrap()
+        price::total_of(Coin::<BaseC>::new(base))
+            .is(Coin::<StableC1>::new(quote))
+            .into()
     );
 
     let response: AppResponse = test_case

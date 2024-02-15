@@ -2,9 +2,8 @@ use std::any::type_name;
 
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{OverflowError, StdError};
-
 use currency::{error::Error as CurrencyError, Currency, SymbolOwned};
+use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use crate::percent::Units as PercentUnits;
 

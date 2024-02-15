@@ -2,8 +2,9 @@ use std::marker::PhantomData;
 
 use crate::{error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, SingleVisitor};
 
+pub use self::group::*;
+
 mod group;
-pub use group::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expect<C>(PhantomData<C>);
