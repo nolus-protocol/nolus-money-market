@@ -4,9 +4,7 @@ use currencies::Lpns;
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{
-    Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp,
-};
+use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
@@ -152,56 +150,51 @@ impl Handler for Active {
 
     fn repay(
         self,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_repay(deps.querier, &env, info)
+        self.try_repay(querier, &env, info)
     }
 
     fn close_position(
         self,
         spec: PositionClose,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(&self.lease.lease.customer, &info.sender)
             .map_err(Into::into)
-            .and_then(|()| customer_close::start(spec, self.lease, &env, deps.querier))
+            .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
     }
 
     fn on_time_alarm(
         self,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_time_alarm(deps.querier, &env, info)
+        self.try_on_time_alarm(querier, &env, info)
     }
     fn on_price_alarm(
         self,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_price_alarm(deps.querier, &env, info)
+        self.try_on_price_alarm(querier, &env, info)
     }
-    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
-        balance::balance(
-            &lease_addr,
-            self.lease.lease.loan.lpp().currency(),
-            deps.querier,
-        )
-        .and_then(|balance| {
-            if balance.is_zero() {
-                Err(ContractError::InconsistencyNotDetected())
-            } else {
-                {
-                    repay::repay(self.lease, balance, &env, deps.querier)
+        balance::balance(&lease_addr, self.lease.lease.loan.lpp().currency(), querier).and_then(
+            |balance| {
+                if balance.is_zero() {
+                    Err(ContractError::InconsistencyNotDetected())
+                } else {
+                    repay::repay(self.lease, balance, &env, querier)
                 }
-            }
-        })
+            },
+        )
     }
 }

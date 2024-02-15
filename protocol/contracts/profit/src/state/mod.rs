@@ -13,7 +13,7 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{Binary, Deps, Env, Reply as CwReply, Storage, Timestamp},
+    cosmwasm_std::{Binary, Env, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -168,23 +168,23 @@ impl Handler for State {
     fn on_open_ica(
         self,
         counterparty_version: String,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContinueResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_open_ica(counterparty_version, deps, env),
-            StateEnum::Idle(idle) => idle.on_open_ica(counterparty_version, deps, env),
+            StateEnum::OpenIca(ica) => ica.on_open_ica(counterparty_version, querier, env),
+            StateEnum::Idle(idle) => idle.on_open_ica(counterparty_version, querier, env),
             StateEnum::BuyBack(buy_back) => buy_back
-                .on_open_ica(counterparty_version, deps, env)
+                .on_open_ica(counterparty_version, querier, env)
                 .map(state_machine::from),
         }
     }
 
-    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> DexResult<Self> {
+    fn on_response(self, data: Binary, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_response(data, deps, env).map_into(),
-            StateEnum::Idle(idle) => idle.on_response(data, deps, env).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.on_response(data, deps, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.on_response(data, querier, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_response(data, querier, env).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.on_response(data, querier, env).map_into(),
         }
     }
 
@@ -208,20 +208,22 @@ impl Handler for State {
         }
     }
 
-    fn on_inner(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
+    fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_inner(deps, env).map_into(),
-            StateEnum::Idle(idle) => idle.on_inner(deps, env).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.on_inner(deps, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.on_inner(querier, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_inner(querier, env).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.on_inner(querier, env).map_into(),
         }
     }
 
-    fn on_inner_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_inner_continue(deps, env).map(state_machine::from),
-            StateEnum::Idle(idle) => idle.on_inner_continue(deps, env).map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.on_inner_continue(querier, env).map(state_machine::from),
+            StateEnum::Idle(idle) => idle
+                .on_inner_continue(querier, env)
+                .map(state_machine::from),
             StateEnum::BuyBack(buy_back) => buy_back
-                .on_inner_continue(deps, env)
+                .on_inner_continue(querier, env)
                 .map(state_machine::from),
         }
     }
@@ -236,11 +238,11 @@ impl Handler for State {
         }
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
+    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_time_alarm(deps, env).map_into(),
-            StateEnum::Idle(idle) => idle.on_time_alarm(deps, env).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.on_time_alarm(deps, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.on_time_alarm(querier, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_time_alarm(querier, env).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.on_time_alarm(querier, env).map_into(),
         }
     }
 }

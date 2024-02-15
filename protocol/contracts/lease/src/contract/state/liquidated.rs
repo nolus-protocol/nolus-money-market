@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{api::query::StateResponse, error::ContractResult};
 
@@ -16,7 +16,7 @@ impl Handler for Liquidated {
 
     fn on_time_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -24,7 +24,7 @@ impl Handler for Liquidated {
     }
     fn on_price_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {

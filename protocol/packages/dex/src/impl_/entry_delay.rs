@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 #[cfg(feature = "migration")]
@@ -78,9 +78,9 @@ where
     type Response = R;
     type SwapResult = SR;
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
         self.enterable
-            .enter(env.block.time, deps.querier)
+            .enter(env.block.time, querier)
             .map(|batch| Response::<Self>::from(batch, self.enterable))
             .into()
     }

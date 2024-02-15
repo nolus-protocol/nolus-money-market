@@ -1,7 +1,7 @@
 use enum_dispatch::enum_dispatch;
 
 use platform::state_machine::Response as StateMachineResponse;
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::{position::PositionClose, query::StateResponse},
@@ -29,7 +29,7 @@ where
 
     fn repay(
         self,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -39,7 +39,7 @@ where
     fn close_position(
         self,
         _spec: PositionClose,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -48,7 +48,7 @@ where
 
     fn close(
         self,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -57,7 +57,7 @@ where
 
     fn on_time_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -66,14 +66,14 @@ where
 
     fn on_price_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("on price alarm")
     }
 
-    fn heal(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("heal")
     }
 }

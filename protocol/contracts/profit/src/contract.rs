@@ -141,14 +141,16 @@ fn try_handle_neutron_msg(
     state: State,
 ) -> ContractResult<DexResponse<State>> {
     match msg {
-        NeutronSudoMsg::Response { data, .. } => Result::from(state.on_response(data, deps, env)),
+        NeutronSudoMsg::Response { data, .. } => {
+            Result::from(state.on_response(data, deps.querier, env))
+        }
         NeutronSudoMsg::Error { .. } => state.on_error(deps.querier, env).map_err(Into::into),
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
         NeutronSudoMsg::OpenAck {
             counterparty_version,
             ..
         } => state
-            .on_open_ica(counterparty_version, deps, env)
+            .on_open_ica(counterparty_version, deps.querier, env)
             .map_err(Into::into),
         NeutronSudoMsg::TxQueryResult { .. } | NeutronSudoMsg::KVQueryResult { .. } => {
             unimplemented!()
@@ -162,7 +164,7 @@ fn try_handle_execute_message<F, R, E>(
     handler: F,
 ) -> ContractResult<MessageResponse>
 where
-    F: FnOnce(State, Deps<'_>, Env) -> R,
+    F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
     R: Into<Result<DexResponse<State>, E>>,
     ContractError: From<E>,
 {
@@ -171,7 +173,7 @@ where
     let DexResponse::<State> {
         response,
         next_state,
-    } = handler(state, deps.as_ref(), env).into()?;
+    } = handler(state, deps.querier, env).into()?;
 
     next_state
         .store(deps.storage)

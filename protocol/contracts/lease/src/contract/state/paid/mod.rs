@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{api::query::StateResponse, contract::Lease, error::ContractResult};
 
@@ -29,7 +29,7 @@ impl Handler for Active {
 
     fn close(
         self,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -37,13 +37,13 @@ impl Handler for Active {
 
         let start_transfer_in = transfer_in::start(self.lease);
         start_transfer_in
-            .enter(env.block.time, deps.querier)
+            .enter(env.block.time, querier)
             .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
             .map_err(Into::into)
     }
     fn on_time_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -51,7 +51,7 @@ impl Handler for Active {
     }
     fn on_price_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {

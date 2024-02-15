@@ -8,7 +8,7 @@ use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
@@ -98,28 +98,30 @@ where
     Self: Into<SEnum>,
     TransferInInit<SwapTask, SEnum>: Into<SEnum>,
 {
-    pub(super) fn try_complete(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        transfer_in::check_received(&self.amount_in, &env.contract.address, deps.querier)
-            .map_or_else(Into::into, |received| {
+    pub(super) fn try_complete(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        transfer_in::check_received(&self.amount_in, &env.contract.address, querier).map_or_else(
+            Into::into,
+            |received| {
                 if received {
-                    self.complete(&env, deps.querier)
+                    self.complete(&env, querier)
                 } else {
-                    self.try_again(env, deps)
+                    self.try_again(env, querier)
                 }
-            })
+            },
+        )
     }
 
     fn complete(self, env: &Env, querier: QuerierWrapper<'_>) -> HandlerResult<Self> {
         response::res_finished(self.spec.finish(self.amount_in, env, querier))
     }
 
-    fn try_again(self, env: Env, deps: Deps<'_>) -> HandlerResult<Self> {
+    fn try_again(self, env: Env, querier: QuerierWrapper<'_>) -> HandlerResult<Self> {
         let now = env.block.time;
         let emitter = self.emit_ok();
         if now >= self.timeout {
             let next_state = TransferInInit::new(self.spec, self.amount_in);
             next_state
-                .enter(now, deps.querier)
+                .enter(now, querier)
                 .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
                 .into()
@@ -148,12 +150,12 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
-    fn heal(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_time_alarm(deps, env)
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.on_time_alarm(querier, env)
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        self.try_complete(deps, env)
+    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.try_complete(querier, env)
     }
 }
 

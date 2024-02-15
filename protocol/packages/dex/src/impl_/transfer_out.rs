@@ -13,7 +13,7 @@ use platform::{
     message::Response as MessageResponse,
     never::{self, Never},
 };
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     error::{Error, Result},
@@ -172,13 +172,18 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
-    fn on_response(self, _resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_response(
+        self,
+        _resp: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         let label = self.spec.label();
         let now = env.block.time;
         if self.last_coin() {
-            Self::on_response(SwapExactIn::new(self.spec), label, now, deps.querier)
+            Self::on_response(SwapExactIn::new(self.spec), label, now, querier)
         } else {
-            Self::on_response(self.next(), label, now, deps.querier)
+            Self::on_response(self.next(), label, now, querier)
         }
         .into()
     }

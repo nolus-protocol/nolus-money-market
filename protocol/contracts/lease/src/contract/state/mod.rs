@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{
-        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp,
-    },
+    cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -88,11 +86,11 @@ pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> ContractRes
 }
 
 pub(super) fn new_lease(
-    deps: &mut DepsMut<'_>,
+    querier: QuerierWrapper<'_>,
     info: MessageInfo,
     spec: NewLeaseContract,
 ) -> ContractResult<(Batch, State)> {
-    opening::request_loan::RequestLoan::new(deps, info, spec)
+    opening::request_loan::RequestLoan::new(querier, info, spec)
         .map(|(batch, start_state)| (batch, start_state.into()))
 }
 

@@ -10,7 +10,7 @@ use platform::{
     ica::HostAccount,
     message,
 };
-use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 
 use crate::error::Result;
 #[cfg(feature = "migration")]
@@ -133,7 +133,7 @@ where
     fn on_open_ica(
         self,
         counterparty_version: String,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContinueResult<Self> {
         let ica = self.build_account(counterparty_version, &env)?;
@@ -141,7 +141,7 @@ where
         let contract = env.contract.address.clone();
         let next_state = self.connectee.connected(ica);
         next_state
-            .enter(env.block.time, deps.querier)
+            .enter(env.block.time, querier)
             .map(|batch| {
                 message::Response::messages_with_events(batch, Self::emit_ok(contract, ica_host))
             })

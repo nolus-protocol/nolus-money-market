@@ -13,7 +13,7 @@ use finance::{
 use platform::{batch::Batch, trx};
 use sdk::{
     cosmos_sdk_proto::Any,
-    cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp},
+    cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp},
 };
 
 use crate::{
@@ -217,13 +217,18 @@ where
     >;
     type SwapResult = SwapTask::Result;
 
-    fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_response(
+        self,
+        resp: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
         self.decode_response(resp.as_slice(), &self.spec)
             .map(|amount_out| TransferInInit::new(self.spec, amount_out))
             .and_then(|next_state| {
                 next_state
-                    .enter(env.block.time, deps.querier)
+                    .enter(env.block.time, querier)
                     .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
             })
             .into()
@@ -265,14 +270,17 @@ where
     >;
     type SwapResult = SwapTask::Result;
 
-    fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_response(
+        self,
+        resp: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
         self.decode_response(resp.as_slice(), &self.spec)
             .map_or_else(
                 |err| HandlerResult::Continue(Err(err)),
-                |amount_out| {
-                    response::res_finished(self.spec.finish(amount_out, &env, deps.querier))
-                },
+                |amount_out| response::res_finished(self.spec.finish(amount_out, &env, querier)),
             )
     }
 

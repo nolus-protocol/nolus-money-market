@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
 use platform::state_machine;
-use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::query::StateResponse as QueryStateResponse,
@@ -44,17 +44,22 @@ where
     fn on_open_ica(
         self,
         counterparty_version: String,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
         self.handler
-            .on_open_ica(counterparty_version, deps, env)
+            .on_open_ica(counterparty_version, querier, env)
             .map(state_machine::from)
             .map_err(Into::into)
     }
 
-    fn on_dex_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.on_response(data, deps, env).into()
+    fn on_dex_response(
+        self,
+        data: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler.on_response(data, querier, env).into()
     }
 
     fn on_dex_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
@@ -71,19 +76,23 @@ where
             .map_err(Into::into)
     }
 
-    fn on_dex_inner(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.on_inner(deps, env).into()
+    fn on_dex_inner(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.on_inner(querier, env).into()
     }
 
-    fn on_dex_inner_continue(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_dex_inner_continue(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
         self.handler
-            .on_inner_continue(deps, env)
+            .on_inner_continue(querier, env)
             .map(state_machine::from)
             .map_err(Into::into)
     }
 
-    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.heal(deps, env).into()
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.heal(querier, env).into()
     }
 
     fn state(
@@ -103,16 +112,16 @@ where
 
     fn on_time_alarm(
         self,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.on_time_alarm(deps, env).into()
+        self.handler.on_time_alarm(querier, env).into()
     }
 
     fn on_price_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {

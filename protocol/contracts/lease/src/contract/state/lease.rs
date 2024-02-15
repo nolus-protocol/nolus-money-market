@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::{position::PositionClose, query::StateResponse},
@@ -35,51 +35,51 @@ where
 
     fn repay(
         self,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.repay(deps, env, info)
+        self.handler.repay(querier, env, info)
     }
 
     fn close_position(
         self,
         spec: PositionClose,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.close_position(spec, deps, env, info)
+        self.handler.close_position(spec, querier, env, info)
     }
 
     fn close(
         self,
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.close(deps, env, info)
+        self.handler.close(querier, env, info)
     }
 
     fn on_time_alarm(
         self,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.on_time_alarm(deps, env, info)
+        self.handler.on_time_alarm(querier, env, info)
     }
 
     fn on_price_alarm(
         self,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.on_price_alarm(deps, env, info)
+        self.handler.on_price_alarm(querier, env, info)
     }
 
-    fn heal(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.heal(deps, env)
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.heal(querier, env)
     }
 }

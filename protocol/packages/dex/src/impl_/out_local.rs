@@ -350,7 +350,7 @@ mod impl_into {
 
 mod impl_handler {
     use currency::Group;
-    use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Reply};
+    use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
         impl_::{
@@ -379,24 +379,24 @@ mod impl_handler {
         fn on_open_ica(
             self,
             counterparty_version: String,
-            deps: Deps<'_>,
+            querier: QuerierWrapper<'_>,
             env: Env,
         ) -> ContinueResult<Self> {
             match self {
                 State::TransferOut(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::SwapExactIn(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::SwapExactInRecoverIca(inner) => {
                     crate::forward_to_inner_ica::<_, ForwardToInnerContinueMsg, Self>(
@@ -406,19 +406,19 @@ mod impl_handler {
                     )
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInInit(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInInitRecoverIca(inner) => {
                     crate::forward_to_inner_ica::<_, ForwardToInnerContinueMsg, Self>(
@@ -428,64 +428,69 @@ mod impl_handler {
                     )
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
                 State::TransferInFinish(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
             }
         }
 
-        fn on_response(self, response: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
+        fn on_response(
+            self,
+            response: Binary,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => {
                     crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
                     crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInit(inner) => {
                     crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
 
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInFinish(inner) => {
-                    Handler::on_response(inner, response, deps, env).map_into()
+                    Handler::on_response(inner, response, querier, env).map_into()
                 }
             }
         }
@@ -546,121 +551,129 @@ mod impl_handler {
             }
         }
 
-        fn on_inner(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+        fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::TransferOut(inner) => Handler::on_inner(inner, deps, env).map_into(),
+                State::TransferOut(inner) => Handler::on_inner(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_inner(inner, deps, env).map_into(),
+                State::SwapExactIn(inner) => Handler::on_inner(inner, querier, env).map_into(),
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
-                State::TransferInInit(inner) => Handler::on_inner(inner, deps, env).map_into(),
+                State::TransferInInit(inner) => Handler::on_inner(inner, querier, env).map_into(),
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::on_inner(inner, deps, env).map_into()
+                    Handler::on_inner(inner, querier, env).map_into()
                 }
-                State::TransferInFinish(inner) => Handler::on_inner(inner, deps, env).map_into(),
+                State::TransferInFinish(inner) => Handler::on_inner(inner, querier, env).map_into(),
             }
         }
 
-        fn on_inner_continue(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+        fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
-                State::TransferOut(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::TransferOut(inner) => Handler::on_inner_continue(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
-                State::SwapExactIn(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::SwapExactIn(inner) => Handler::on_inner_continue(inner, querier, env),
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
-                State::SwapExactInRecoverIca(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::SwapExactInRecoverIca(inner) => {
+                    Handler::on_inner_continue(inner, querier, env)
+                }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
-                State::TransferInInit(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::TransferInInit(inner) => Handler::on_inner_continue(inner, querier, env),
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::on_inner_continue(inner, deps, env)
+                    Handler::on_inner_continue(inner, querier, env)
                 }
-                State::TransferInFinish(inner) => Handler::on_inner_continue(inner, deps, env),
+                State::TransferInFinish(inner) => Handler::on_inner_continue(inner, querier, env),
             }
         }
 
-        fn heal(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+        fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::TransferOut(inner) => Handler::heal(inner, deps, env).map_into(),
-                State::TransferOutRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
-                State::SwapExactIn(inner) => Handler::heal(inner, deps, env).map_into(),
-                State::SwapExactInRespDelivery(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferOut(inner) => Handler::heal(inner, querier, env).map_into(),
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::heal(inner, querier, env).map_into()
+                }
+                State::SwapExactIn(inner) => Handler::heal(inner, querier, env).map_into(),
+                State::SwapExactInRespDelivery(inner) => {
+                    Handler::heal(inner, querier, env).map_into()
+                }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
-                State::SwapExactInRecoverIca(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::SwapExactInRecoverIca(inner) => {
+                    Handler::heal(inner, querier, env).map_into()
+                }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
-                State::TransferInInit(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferInInit(inner) => Handler::heal(inner, querier, env).map_into(),
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::heal(inner, deps, env).map_into()
+                    Handler::heal(inner, querier, env).map_into()
                 }
-                State::TransferInFinish(inner) => Handler::heal(inner, deps, env).map_into(),
+                State::TransferInFinish(inner) => Handler::heal(inner, querier, env).map_into(),
             }
         }
 
@@ -694,46 +707,48 @@ mod impl_handler {
             }
         }
 
-        fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+        fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::TransferOut(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::TransferOut(inner) => Handler::on_time_alarm(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::SwapExactIn(inner) => Handler::on_time_alarm(inner, querier, env).map_into(),
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::SwapExactInPreRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::SwapExactInPostRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
-                State::TransferInInit(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::TransferInInit(inner) => {
+                    Handler::on_time_alarm(inner, querier, env).map_into()
+                }
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::TransferInInitPreRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::TransferInInitRecoverIcaRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::TransferInInitPostRecoverIca(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::TransferInFinish(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
             }
         }

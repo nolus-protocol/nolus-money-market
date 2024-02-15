@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{Binary, Deps, Env};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::impl_::{
     response::{self, ContinueResult as ResponseContinueResult, Result as ResponseResult},
@@ -9,14 +9,19 @@ pub trait DeliveryAdapter<H, Response>
 where
     H: Handler,
 {
-    fn deliver(handler: H, _response: Response, _deps: Deps<'_>, _env: Env) -> ResponseResult<H> {
+    fn deliver(
+        handler: H,
+        _response: Response,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ResponseResult<H> {
         Err(response::err(handler, "deliver transaction response")).into()
     }
 
     fn deliver_continue(
         handler: H,
         _response: Response,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ResponseContinueResult<H> {
         Err(response::err(
@@ -31,8 +36,13 @@ impl<H> DeliveryAdapter<H, Binary> for ResponseDeliveryAdapter
 where
     H: Handler,
 {
-    fn deliver(handler: H, response: Binary, deps: Deps<'_>, env: Env) -> ResponseResult<H> {
-        handler.on_response(response, deps, env)
+    fn deliver(
+        handler: H,
+        response: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ResponseResult<H> {
+        handler.on_response(response, querier, env)
     }
 }
 
@@ -44,9 +54,9 @@ where
     fn deliver_continue(
         handler: H,
         counterparty_version: String,
-        deps: Deps<'_>,
+        querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ResponseContinueResult<H> {
-        handler.on_open_ica(counterparty_version, deps, env)
+        handler.on_open_ica(counterparty_version, querier, env)
     }
 }

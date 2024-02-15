@@ -32,7 +32,7 @@ const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VER
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     new_lease: NewLeaseContract,
@@ -49,7 +49,7 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
-    state::new_lease(&mut deps, info, new_lease)
+    state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
         .map(response::response_only_messages)
         .or_else(|err| platform_error::log(err, deps.api))
@@ -74,38 +74,27 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
         .or_else(|err| platform_error::log(err, deps.api))
 }
 
-// TODO factor out the implementations of execute, sudo, and reply to use  `fn process_lease`
 #[entry_point]
 pub fn execute(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    state::load(deps.storage)
-        .and_then(|state| process_execute(msg, state, &mut deps, env, info))
-        .and_then(
-            |Response {
-                 response,
-                 next_state,
-             }| state::save(deps.storage, &next_state).map(|()| response),
-        )
-        .map(response::response_only_messages)
-        .or_else(|err| platform_error::log(err, deps.api))
+    process_lease(deps.storage, |lease| {
+        process_execute(msg, lease, deps.querier, env, info)
+    })
+    .map(response::response_only_messages)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
-    state::load(deps.storage)
-        .and_then(|state| process_sudo(msg, state, deps.as_ref(), env))
-        .and_then(
-            |Response {
-                 response,
-                 next_state,
-             }| state::save(deps.storage, &next_state).map(|()| response),
-        )
-        .map(response::response_only_messages)
-        .or_else(|err| platform_error::log(err, deps.api))
+    process_lease(deps.storage, |lease| {
+        process_sudo(msg, lease, deps.querier, env)
+    })
+    .map(response::response_only_messages)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]
@@ -168,7 +157,6 @@ fn may_migrate(
     }
 }
 
-#[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
 fn process_lease<ProcFn>(
     storage: &mut dyn Storage,
     process_fn: ProcFn,
@@ -248,42 +236,47 @@ fn transfer_finish_time_out(
 fn process_execute(
     msg: ExecuteMsg,
     state: State,
-    deps: &mut DepsMut<'_>,
+    querier: QuerierWrapper<'_>,
     env: Env,
     info: MessageInfo,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::Repay() => state.repay(deps, env, info),
-        ExecuteMsg::ClosePosition(spec) => state.close_position(spec, deps, env, info),
-        ExecuteMsg::Close() => state.close(deps, env, info),
-        ExecuteMsg::TimeAlarm {} => state.on_time_alarm(deps.as_ref(), env, info),
-        ExecuteMsg::PriceAlarm() => state.on_price_alarm(deps.as_ref(), env, info),
+        ExecuteMsg::Repay() => state.repay(querier, env, info),
+        ExecuteMsg::ClosePosition(spec) => state.close_position(spec, querier, env, info),
+        ExecuteMsg::Close() => state.close(querier, env, info),
+        ExecuteMsg::TimeAlarm {} => state.on_time_alarm(querier, env, info),
+        ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {
             access_control::check(&info.sender, &env.contract.address)?;
-            state.on_dex_inner(deps.as_ref(), env)
+            state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(&info.sender, &env.contract.address)?;
-            state.on_dex_inner_continue(deps.as_ref(), env)
+            state.on_dex_inner_continue(querier, env)
         }
-        ExecuteMsg::Heal() => state.heal(deps.as_ref(), env),
+        ExecuteMsg::Heal() => state.heal(querier, env),
     }
 }
 
-fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+fn process_sudo(
+    msg: SudoMsg,
+    state: State,
+    querier: QuerierWrapper<'_>,
+    env: Env,
+) -> ContractResult<Response> {
     match msg {
         SudoMsg::OpenAck {
             port_id: _,
             channel_id: _,
             counterparty_channel_id: _,
             counterparty_version,
-        } => state.on_open_ica(counterparty_version, deps, env),
-        SudoMsg::Response { request: _, data } => state.on_dex_response(data, deps, env),
-        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(deps.querier, env),
+        } => state.on_open_ica(counterparty_version, querier, env),
+        SudoMsg::Response { request: _, data } => state.on_dex_response(data, querier, env),
+        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
         SudoMsg::Error {
             request: _,
             details: _,
-        } => state.on_dex_error(deps.querier, env),
+        } => state.on_dex_error(querier, env),
         _ => unreachable!(),
     }
 }

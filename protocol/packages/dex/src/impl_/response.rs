@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -44,14 +44,14 @@ where
     fn on_open_ica(
         self,
         _counterparty_version: String,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContinueResult<Self> {
         Err(err(self, "handle open ica response"))
     }
 
     /// The entry point of a response delivery
-    fn on_response(self, _data: Binary, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+    fn on_response(self, _data: Binary, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle transaction response")).into()
     }
 
@@ -68,18 +68,18 @@ where
     /// The actual delivery of a response
     ///
     /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+    fn on_inner(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle inner")).into()
     }
 
     /// The actual delivery of an ICA open response, error, and timeout
     ///
     /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner_continue(self, _deps: Deps<'_>, _env: Env) -> ContinueResult<Self> {
+    fn on_inner_continue(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
         Err(err(self, "handle inner to 'Continue' response"))
     }
 
-    fn heal(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle heal")).into()
     }
 
@@ -87,7 +87,7 @@ where
         Err(err(self, "handle reply"))
     }
 
-    fn on_time_alarm(self, _deps: Deps<'_>, _env: Env) -> Result<Self> {
+    fn on_time_alarm(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle time alarm")).into()
     }
 }

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{connection::ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
@@ -98,10 +98,10 @@ where
     SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
     SEnum: From<TransferInInitPostRecoverIca<SwapTask, SEnum>>,
 {
-    fn on_response(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_response(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         let finish: TransferInFinish<SwapTask, SEnum> =
             TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
-        finish.try_complete(deps, env).map_into()
+        finish.try_complete(querier, env).map_into()
     }
 }
 
@@ -136,8 +136,13 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
-    fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_response(deps, env)
+    fn on_response(
+        self,
+        _data: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        self.on_response(querier, env)
     }
 
     fn on_timeout(self, _querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
@@ -145,8 +150,8 @@ where
         let timealarms = self.spec.time_alarm().clone();
         timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
     }
-    fn heal(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_response(deps, env)
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.on_response(querier, env)
     }
 }
 

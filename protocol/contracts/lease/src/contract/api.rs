@@ -1,8 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
-use sdk::cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp,
-};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     api::{position::PositionClose, query::StateResponse},
@@ -10,10 +8,6 @@ use crate::{
 };
 
 use super::state::Response;
-
-// TODO get rid of using `Deps` - (A) from this level inward the storage should not be accessible
-// even with read-only access, and (B) avoid holding a read-only reference to Storage that is too
-// limitating. Ref: `on_dex_timeout`
 
 #[enum_dispatch]
 pub(super) trait Contract
@@ -23,7 +17,7 @@ where
     fn on_open_ica(
         self,
         _counterparty_version: String,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
         err("open ica response")
@@ -32,7 +26,7 @@ where
     fn on_dex_response(
         self,
         _response: Binary,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
         err("dex response")
@@ -55,7 +49,7 @@ where
     /// Intended to be invoked always by the same contract instance.
     /// The anticipated execution flow, for example when delivering a Dex response, is
     /// `on_dex_response`, `on_dex_inner`, sub-message-1, ... sub-message-N, `reply`
-    fn on_dex_inner(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn on_dex_inner(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("dex inner")
     }
 
@@ -68,11 +62,15 @@ where
     /// Intended to be invoked always by the same contract instance.
     /// The anticipated execution flow, for example when delivering a Dex response, is
     /// `on_dex_response`, `on_dex_inner`, sub-message-1, ... sub-message-N, `reply`
-    fn on_dex_inner_continue(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn on_dex_inner_continue(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
         err("dex inner continue")
     }
 
-    fn heal(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("heal")
     }
 
@@ -89,7 +87,7 @@ where
 
     fn repay(
         self,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -99,7 +97,7 @@ where
     fn close_position(
         self,
         _spec: PositionClose,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -108,7 +106,7 @@ where
 
     fn close(
         self,
-        _deps: &mut DepsMut<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -117,7 +115,7 @@ where
 
     fn on_time_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -126,7 +124,7 @@ where
 
     fn on_price_alarm(
         self,
-        _deps: Deps<'_>,
+        _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {

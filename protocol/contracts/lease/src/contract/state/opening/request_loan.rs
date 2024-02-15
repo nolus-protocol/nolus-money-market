@@ -7,7 +7,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -32,18 +32,18 @@ pub(crate) struct RequestLoan {
 
 impl RequestLoan {
     pub fn new(
-        deps: &mut DepsMut<'_>,
+        querier: QuerierWrapper<'_>,
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), deps.querier)?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
 
-        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), deps.querier)
+        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
-        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), deps.querier)?;
+        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), querier)?;
 
-        let finalizer = FinalizerRef::try_new(spec.finalizer.clone(), deps.querier)?;
+        let finalizer = FinalizerRef::try_new(spec.finalizer.clone(), querier)?;
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
@@ -51,9 +51,9 @@ impl RequestLoan {
                 info.funds,
                 spec.form.max_ltd,
                 oracle.clone(),
-                deps.querier,
+                querier,
             ),
-            deps.querier,
+            querier,
         )?;
         Ok((batch, {
             Self {
