@@ -11,7 +11,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::api::BaseCurrencyGroup;
+use super::BaseCurrencyGroup;
 
 mod unchecked;
 
