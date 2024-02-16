@@ -25,8 +25,8 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 6;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 7;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 8;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
