@@ -51,6 +51,12 @@ pub enum SudoMsg {
         name: String,
         protocol: Protocol,
     },
+    /// Trigger a migration of contracts
+    ///
+    /// This message is meant to be used when the Admin contract
+    /// itself does not need a migration. If one is needed then
+    /// it should start as Admin contract migration which would then
+    /// continue with the migration of the other contracts.
     MigrateContracts(MigrateContracts),
     /// A message for **internal purposes only**.
     ///

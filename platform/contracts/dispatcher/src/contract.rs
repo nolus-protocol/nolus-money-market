@@ -24,7 +24,7 @@ use crate::{
     state::{Config, DispatchLog},
 };
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -69,16 +69,13 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
-    use crate::state::migration;
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage: &mut dyn Storage| migration::migrate(storage, msg.protocols_registry),
-        Into::into,
-    )
-    .map(|(label, ())| label)
-    .and_then(response::response)
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg {}: MigrateMsg,
+) -> ContractResult<CwResponse> {
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
 }
 
 #[entry_point]
