@@ -17,7 +17,6 @@ use crate::{
     result::ContractResult,
 };
 
-// version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
@@ -36,7 +35,11 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg {}: MigrateMsg,
+) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
 }
