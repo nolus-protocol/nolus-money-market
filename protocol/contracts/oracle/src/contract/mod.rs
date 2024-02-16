@@ -89,7 +89,11 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg {}: MigrateMsg,
+) -> ContractResult<CwResponse> {
     versioning::update_software(
         deps.storage,
         CONTRACT_VERSION,
