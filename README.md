@@ -91,7 +91,7 @@ First, the image for building the contracts needs to be built. This happens by
 running the command shown here:
 
 ```sh
-docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.72"
+docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.75"
 ```
 
 Do note that the command is an example one and the Rust version, denoted by the
