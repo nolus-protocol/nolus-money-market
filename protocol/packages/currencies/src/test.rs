@@ -1,4 +1,3 @@
-use crate::native::Nls;
 #[cfg(feature = "astroport")]
 use crate::lease::astroport::{
     Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, TestC1 as LC5,
