@@ -7,6 +7,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LpnCurrencies,
     error::{ContractError, ContractResult},
     loan::Loan,
     position::Position,
@@ -54,7 +55,7 @@ impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
 where
     Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     pub(super) fn new(
@@ -110,7 +111,7 @@ impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
 where
     Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -161,6 +162,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
+        api::LpnCurrencies,
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };
@@ -211,7 +213,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> LppLoan<Lpn> for LppLoanLocal<Lpn>
+    impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn>
     where
         Lpn: Currency,
     {
@@ -232,7 +234,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef>
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<LpnCurrencies>>
     where
         Lpn: Currency,
     {

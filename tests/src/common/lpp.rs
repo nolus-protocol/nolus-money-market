@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -17,6 +18,9 @@ use sdk::{
 };
 
 use super::{test_case::app::App, CwContractWrapper, ADMIN};
+
+pub type LppExecuteMsg = ExecuteMsg<Lpns>;
+pub type LppQueryMsg = QueryMsg<Lpns>;
 
 pub(crate) struct Instantiator;
 
@@ -86,7 +90,7 @@ impl Instantiator {
             .execute(
                 lease_code_admin,
                 lpp.clone(),
-                &ExecuteMsg::NewLeaseCode { lease_code_id },
+                &LppExecuteMsg::NewLeaseCode { lease_code_id },
                 &[],
             )
             .unwrap()
@@ -96,7 +100,11 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(
+    deps: Deps<'_>,
+    env: Env,
+    msg: QueryMsg<Lpns>,
+) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_json_binary(&lpp_platform::msg::LppBalanceResponse {
             balance: Coin::new(1000000000),
@@ -113,7 +121,7 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
 pub(crate) fn mock_quote_query(
     deps: Deps<'_>,
     env: Env,
-    msg: QueryMsg,
+    msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_json_binary(

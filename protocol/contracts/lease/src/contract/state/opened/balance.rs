@@ -1,10 +1,9 @@
-use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    api::LpnCoin,
+    api::{LpnCoin, LpnCurrencies},
     error::{ContractError, ContractResult},
 };
 
@@ -13,7 +12,7 @@ pub(super) fn balance(
     currency: &SymbolSlice,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<LpnCoin> {
-    Tickers.visit_any::<Lpns, _>(currency, CheckBalance { account, querier })
+    Tickers.visit_any::<LpnCurrencies, _>(currency, CheckBalance { account, querier })
 }
 
 struct CheckBalance<'a> {

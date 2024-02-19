@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
@@ -15,10 +15,11 @@ use crate::{
 
 use super::{LppBatch, LppRef};
 
-pub trait LppLoan<Lpn>
+pub trait LppLoan<Lpn, Lpns>
 where
-    Self: TryInto<LppBatch<LppRef>, Error = ContractError>,
     Lpn: Currency,
+    Lpns: Group,
+    Self: TryInto<LppBatch<LppRef<Lpns>>, Error = ContractError>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
@@ -31,42 +32,47 @@ where
     fn annual_interest_rate(&self) -> Percent;
 }
 
-pub trait WithLppLoan {
+pub trait WithLppLoan<Lpns>
+where
+    Lpns: Group,
+{
     type Output;
     type Error;
 
     fn exec<Lpn, Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Loan: LppLoan<Lpn>;
+        Loan: LppLoan<Lpn, Lpns>;
 }
 
-pub(super) struct LppLoanImpl<Lpn>
+pub(super) struct LppLoanImpl<Lpn, Lpns>
 where
     Lpn: Currency,
 {
-    lpp_ref: LppRef,
-    currency: PhantomData<Lpn>,
+    lpp_ref: LppRef<Lpns>,
+    lpn: PhantomData<Lpn>,
     loan: Loan<Lpn>,
     repayment: Coin<Lpn>,
 }
 
-impl<Lpn> LppLoanImpl<Lpn>
+impl<Lpn, Lpns> LppLoanImpl<Lpn, Lpns>
 where
     Lpn: Currency + DeserializeOwned,
+    Lpns: Group,
 {
-    pub(super) fn new(lpp_ref: LppRef, loan: Loan<Lpn>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef<Lpns>, loan: Loan<Lpn>) -> Self {
         Self {
             lpp_ref,
-            currency: PhantomData,
+            lpn: PhantomData,
             loan,
             repayment: Default::default(),
         }
     }
 }
-impl<Lpn> LppLoan<Lpn> for LppLoanImpl<Lpn>
+impl<Lpn, Lpns> LppLoan<Lpn, Lpns> for LppLoanImpl<Lpn, Lpns>
 where
     Lpn: Currency,
+    Lpns: Group + Serialize,
 {
     fn principal_due(&self) -> Coin<Lpn> {
         self.loan.principal_due
@@ -86,18 +92,19 @@ where
     }
 }
 
-impl<Lpn> TryFrom<LppLoanImpl<Lpn>> for LppBatch<LppRef>
+impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpns>>
 where
     Lpn: Currency,
+    Lpns: Group + Serialize,
 {
     type Error = ContractError;
 
-    fn try_from(stub: LppLoanImpl<Lpn>) -> StdResult<Self, Self::Error> {
+    fn try_from(stub: LppLoanImpl<Lpn, Lpns>) -> StdResult<Self, Self::Error> {
         let mut batch = Batch::default();
         if !stub.repayment.is_zero() {
             batch.schedule_execute_wasm_no_reply(
                 stub.lpp_ref.addr().clone(),
-                &ExecuteMsg::RepayLoan(),
+                &ExecuteMsg::<Lpns>::RepayLoan(),
                 Some(stub.repayment),
             )?;
         }
@@ -110,7 +117,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::StableC1;
+    use currencies::{test::StableC1, Lpns};
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
@@ -136,7 +143,8 @@ mod test {
             },
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
-        let batch: LppBatch<LppRef> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
+
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
     }
@@ -157,13 +165,14 @@ mod test {
         let payment2 = 4.into();
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
-        let batch: LppBatch<LppRef> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
+
         assert_eq!(lpp_ref, batch.lpp_ref);
         {
             let mut exp = Batch::default();
             exp.schedule_execute_wasm_no_reply(
                 lpp_ref.addr().clone(),
-                &ExecuteMsg::RepayLoan(),
+                &ExecuteMsg::<Lpns>::RepayLoan(),
                 Some(payment1 + payment2),
             )
             .unwrap();

@@ -9,7 +9,9 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, lpp as lpp_mod, oracle as oracle_mod,
+    cwcoin,
+    lpp::{self as lpp_mod, LppExecuteMsg, LppQueryMsg},
+    oracle as oracle_mod,
     protocols::Registry,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
@@ -188,7 +190,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .execute(
             lender.clone(),
             test_case.address_book.lpp().clone(),
-            &lpp::msg::ExecuteMsg::Deposit {},
+            &LppExecuteMsg::Deposit {},
             &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap()
@@ -220,7 +222,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
-            &lpp::msg::QueryMsg::Rewards { address: lender },
+            &LppQueryMsg::Rewards { address: lender },
         )
         .unwrap();
 

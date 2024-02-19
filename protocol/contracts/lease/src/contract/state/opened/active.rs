@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::Lpns;
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
+    api::{position::PositionClose, query::StateResponse, DownpaymentCoin, LpnCurrencies},
     contract::{
         cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
@@ -51,12 +50,13 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let may_lpn_payment = bank::may_received::<Lpns, _>(&info.funds, IntoDTO::<Lpns>::new());
+        let may_lpn_payment =
+            bank::may_received::<LpnCurrencies, _>(&info.funds, IntoDTO::<LpnCurrencies>::new());
         match may_lpn_payment {
             Some(lpn_payment) => {
                 // TODO use Never and safe_unwrap instead
                 let payment = lpn_payment.expect("Expected IntoDTO to pass");
-                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().currency());
+                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().lpn());
                 repay::repay(self.lease, payment, env, querier)
             }
             None => self.start_swap(info.funds, env.block.time, querier),
@@ -187,7 +187,7 @@ impl Handler for Active {
     }
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
-        balance::balance(&lease_addr, self.lease.lease.loan.lpp().currency(), querier).and_then(
+        balance::balance(&lease_addr, self.lease.lease.loan.lpp().lpn(), querier).and_then(
             |balance| {
                 if balance.is_zero() {
                     Err(ContractError::InconsistencyNotDetected())

@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseForm, LeaseCoin},
+    api::{open::NewLeaseForm, LeaseCoin, LpnCurrencies},
     error::{ContractError, ContractResult},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
@@ -25,7 +25,7 @@ pub(crate) fn open_lease(
     now: &Timestamp,
     amount: LeaseCoin,
     querier: QuerierWrapper<'_>,
-    deps: (LppRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef<LpnCurrencies>, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
@@ -70,7 +70,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     where
         Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>,
     {
         let lease = PositionSpec::<Lpn>::try_from(self.form.position_spec)

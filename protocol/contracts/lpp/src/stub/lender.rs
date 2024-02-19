@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
-use currency::Currency;
+use currency::{Currency, Group};
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, ReplyId},
@@ -17,10 +17,11 @@ use crate::{
 
 use super::{LppBatch, LppRef};
 
-pub trait LppLender<Lpn>
+pub trait LppLender<Lpn, Lpns>
 where
-    Self: Into<LppBatch<LppRef>>,
     Lpn: Currency,
+    Lpns: Group,
+    Self: Into<LppBatch<LppRef<Lpns>>>,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
@@ -28,33 +29,37 @@ where
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
 }
 
-pub trait WithLppLender {
+pub trait WithLppLender<Lpns>
+where
+    Lpns: Group,
+{
     type Output;
     type Error;
 
-    fn exec<C, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> StdResult<Self::Output, Self::Error>
     where
-        L: LppLender<C>,
-        C: Currency;
+        Lpn: Currency,
+        Lpp: LppLender<Lpn, Lpns>;
 }
 
-pub(super) struct LppLenderStub<'a, Lpn> {
-    lpp_ref: LppRef,
-    currency: PhantomData<Lpn>,
+pub(super) struct LppLenderStub<'a, Lpn, Lpns> {
+    lpp_ref: LppRef<Lpns>,
+    lpn: PhantomData<Lpn>,
     querier: QuerierWrapper<'a>,
     batch: Batch,
 }
 
-impl<'a, Lpn> LppLenderStub<'a, Lpn>
+impl<'a, Lpn, Lpns> LppLenderStub<'a, Lpn, Lpns>
 where
     Lpn: Currency,
+    Lpns: Group,
 {
     const OPEN_LOAN_REQ_ID: ReplyId = 0;
 
-    pub(super) fn new(lpp_ref: LppRef, querier: QuerierWrapper<'a>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef<Lpns>, querier: QuerierWrapper<'a>) -> Self {
         Self {
             lpp_ref,
-            currency: PhantomData,
+            lpn: PhantomData,
             querier,
             batch: Batch::default(),
         }
@@ -65,15 +70,16 @@ where
     }
 }
 
-impl<'a, Lpn> LppLender<Lpn> for LppLenderStub<'a, Lpn>
+impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
 where
     Lpn: Currency + DeserializeOwned,
+    Lpns: Group + Serialize,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_reply_on_success_no_funds(
                 self.id().clone(),
-                &ExecuteMsg::OpenLoan {
+                &ExecuteMsg::<Lpns>::OpenLoan {
                     amount: amount.into(),
                 },
                 Self::OPEN_LOAN_REQ_ID,
@@ -90,7 +96,7 @@ where
     }
 
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
-        let msg = QueryMsg::Quote {
+        let msg = QueryMsg::<Lpns>::Quote {
             amount: amount.into(),
         };
         self.querier
@@ -99,8 +105,8 @@ where
     }
 }
 
-impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppRef> {
-    fn from(stub: LppLenderStub<'a, C>) -> Self {
+impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpns>> {
+    fn from(stub: LppLenderStub<'a, Lpn, Lpns>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
             batch: stub.batch,
@@ -110,7 +116,9 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppRef> {
 
 #[cfg(test)]
 mod test {
-    use currencies::test::StableC1;
+    use std::marker::PhantomData;
+
+    use currencies::{test::StableC1, Lpns};
     use currency::Currency;
     use finance::coin::Coin;
     use platform::response::{self};
@@ -128,7 +136,8 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            currency: ToOwned::to_owned(StableC1::TICKER),
+            lpn: ToOwned::to_owned(StableC1::TICKER),
+            _lpns: PhantomData::<Lpns>,
         };
         let borrow_amount = Coin::<StableC1>::new(10);
         let querier = MockQuerier::default();
@@ -150,8 +159,8 @@ mod test {
         {
             assert_eq!(addr.as_str(), contract_addr);
             assert!(funds.is_empty());
-            let lpp_msg: ExecuteMsg = from_json(msg).expect("invalid Lpp message");
-            if let ExecuteMsg::OpenLoan { amount } = lpp_msg {
+            let lpp_msg: ExecuteMsg<Lpns> = from_json(msg).expect("invalid Lpp message");
+            if let ExecuteMsg::<Lpns>::OpenLoan { amount } = lpp_msg {
                 assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {
                 panic!("Bad Lpp message type!");

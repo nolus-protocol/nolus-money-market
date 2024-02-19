@@ -1,18 +1,21 @@
-use currencies::PaymentGroup;
-use sdk::cosmwasm_std::Timestamp;
-
 use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
+use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
+use crate::{
+    api::{LeasePaymentCurrencies, LpnCurrencies},
+    error::ContractResult,
+    lease::Lease,
+    loan::RepayReceipt,
+};
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {
@@ -21,7 +24,7 @@ where
         PaymentC: Currency,
     {
         self.oracle
-            .price_of::<PaymentC, PaymentGroup>()
+            .price_of::<PaymentC, LeasePaymentCurrencies>()
             .map_err(Into::into)
             .and_then(|price| self.position.validate_payment(payment, price))
     }

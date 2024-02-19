@@ -12,7 +12,8 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod, lpp as lpp_mod,
+    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod,
+    lpp::{self as lpp_mod, LppExecuteMsg},
     oracle as oracle_mod,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder,
@@ -462,7 +463,7 @@ fn open_loans_lpp_fails() {
         deps: DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: lpp::msg::ExecuteMsg,
+        msg: LppExecuteMsg,
     ) -> Result<Response, lpp::error::ContractError> {
         match msg {
             lpp::msg::ExecuteMsg::OpenLoan { amount: _ } => {

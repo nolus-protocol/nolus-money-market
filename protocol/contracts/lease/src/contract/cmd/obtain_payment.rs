@@ -1,4 +1,3 @@
-use currencies::PaymentGroup;
 use currency::Currency;
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
@@ -7,7 +6,7 @@ use platform::bank;
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
-    api::PaymentCoin,
+    api::{LeasePaymentCurrencies, LpnCurrencies, PaymentCoin},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -34,10 +33,10 @@ impl WithLease for ObtainPayment {
     where
         Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>,
     {
-        bank::may_received::<PaymentGroup, _>(&self.cw_amount, RepaymentHandler { lease })
+        bank::may_received::<LeasePaymentCurrencies, _>(&self.cw_amount, RepaymentHandler { lease })
             .ok_or_else(ContractError::NoPaymentError)?
     }
 }
@@ -50,7 +49,7 @@ impl<Lpn, Asset, LppLoan, Oracle> WithCoin for RepaymentHandler<Lpn, Asset, LppL
 where
     Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
     type Output = PaymentCoin;

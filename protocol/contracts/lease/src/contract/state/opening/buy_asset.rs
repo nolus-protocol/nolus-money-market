@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::LeaseGroup;
 use currency::SymbolSlice;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
@@ -20,7 +19,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies,
+        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies, LpnCurrencies,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -39,7 +38,7 @@ use crate::{
 
 use super::open_ica::OpenIcaAccount;
 
-type AssetGroup = LeaseGroup;
+type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
@@ -54,7 +53,12 @@ pub(in crate::contract::state::opening) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (
+        LppRef<LpnCurrencies>,
+        OracleRef,
+        TimeAlarmsRef,
+        FinalizerRef,
+    ),
     start_opening_at: Timestamp,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
@@ -74,7 +78,12 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (
+        LppRef<LpnCurrencies>,
+        OracleRef,
+        TimeAlarmsRef,
+        FinalizerRef,
+    ),
     start_opening_at: Timestamp,
 }
 
@@ -84,7 +93,12 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+        deps: (
+            LppRef<LpnCurrencies>,
+            OracleRef,
+            TimeAlarmsRef,
+            FinalizerRef,
+        ),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

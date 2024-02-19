@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseCoin,
+    api::{LeaseCoin, LpnCurrencies},
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
     position::{Cause, Liquidation},
@@ -23,9 +23,9 @@ pub(crate) fn check_debt<Lpn, Asset, Lpp, Oracle>(
 ) -> ContractResult<DebtStatusDTO>
 where
     Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn>,
-    Oracle: OracleTrait<Lpn>,
     Asset: Currency,
+    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<Lpn>,
 {
     lease
         .check_debt(when, time_alarms, price_alarms)
@@ -122,9 +122,9 @@ impl<'a> WithLease for Cmd<'a> {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        Loan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
         Asset: Currency,
+        Loan: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>,
     {
         check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
     }

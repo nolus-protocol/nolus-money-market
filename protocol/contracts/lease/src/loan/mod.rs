@@ -14,7 +14,10 @@ use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::LpnCurrencies,
+    error::{ContractError, ContractResult},
+};
 
 pub(crate) use self::repay::Receipt as RepayReceipt;
 pub use self::state::{Overdue, State};
@@ -31,7 +34,7 @@ mod unchecked;
     try_from = "unchecked::LoanDTO"
 )]
 pub(crate) struct LoanDTO {
-    lpp: LppRef,
+    lpp: LppRef<LpnCurrencies>,
     profit: ProfitRef,
     due_period: Duration,
     margin_interest: Percent,
@@ -43,7 +46,7 @@ impl LoanDTO {
         self.margin_interest
     }
 
-    pub(crate) fn lpp(&self) -> &LppRef {
+    pub(crate) fn lpp(&self) -> &LppRef<LpnCurrencies> {
         &self.lpp
     }
 
@@ -64,11 +67,11 @@ pub struct Loan<Lpn, LppLoan> {
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
     Lpn: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
 {
     pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
-        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| {
+        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef<LpnCurrencies>>| {
             (
                 LoanDTO {
                     lpp: lpp_batch.lpp_ref,
@@ -83,10 +86,11 @@ where
     }
 
     pub(super) fn try_into_messages(self) -> ContractResult<Batch> {
-        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| lpp_batch.batch)
+        Self::try_loan_into(self.lpp_loan)
+            .map(|lpp_batch: LppBatch<LppRef<LpnCurrencies>>| lpp_batch.batch)
     }
 
-    fn try_loan_into(loan: LppLoan) -> ContractResult<LppBatch<LppRef>> {
+    fn try_loan_into(loan: LppLoan) -> ContractResult<LppBatch<LppRef<LpnCurrencies>>> {
         loan.try_into().map_err(Into::<ContractError>::into)
     }
 }
@@ -94,7 +98,7 @@ where
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
     Lpn: Currency,
-    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
 {
     pub(super) fn new(
         lpp_loan: LppLoan,
@@ -256,6 +260,8 @@ mod tests {
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
+
+    use crate::api::LpnCurrencies;
 
     use super::Loan;
 
@@ -1194,7 +1200,7 @@ mod tests {
         }
     }
 
-    impl LppLoanTrait<Lpn> for LppLoanLocal {
+    impl LppLoanTrait<Lpn, LpnCurrencies> for LppLoanLocal {
         fn principal_due(&self) -> Coin<Lpn> {
             self.loan.principal_due
         }
@@ -1212,7 +1218,7 @@ mod tests {
         }
     }
 
-    impl TryFrom<LppLoanLocal> for LppBatch<LppRef> {
+    impl TryFrom<LppLoanLocal> for LppBatch<LppRef<LpnCurrencies>> {
         type Error = LppError;
         fn try_from(_: LppLoanLocal) -> LppResult<Self> {
             unreachable!()

@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use currency::{Currency, SymbolSlice};
 use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::CodeId;
@@ -24,11 +25,11 @@ pub mod response;
 
 type OptionalLppEndpoints = Option<
     CwContractWrapper<
-        lpp::msg::ExecuteMsg,
+        lpp::msg::ExecuteMsg<Lpns>,
         lpp::error::ContractError,
         lpp::msg::InstantiateMsg,
         lpp::error::ContractError,
-        lpp::msg::QueryMsg,
+        lpp::msg::QueryMsg<Lpns>,
         lpp::error::ContractError,
         lpp::msg::SudoMsg,
         lpp::error::ContractError,

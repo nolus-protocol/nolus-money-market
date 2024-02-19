@@ -26,6 +26,7 @@ mod rewards;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+pub(crate) type LpnCurrencies = Lpns;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -52,7 +53,7 @@ impl<'a> InstantiateWithLpn<'a> {
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
         let context = Self { deps, msg };
 
-        Tickers.visit_any::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
+        Tickers.visit_any::<LpnCurrencies, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
 
@@ -76,7 +77,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
     // TODO move these checks on deserialization
-    currency::validate::<Lpns>(&msg.lpn_ticker)?;
+    currency::validate::<LpnCurrencies>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
     InstantiateWithLpn::cmd(deps, msg).map(|()| response::empty_response())
@@ -92,7 +93,7 @@ struct ExecuteWithLpn<'a> {
     deps: DepsMut<'a>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<LpnCurrencies>,
 }
 
 impl<'a> ExecuteWithLpn<'a> {
@@ -139,7 +140,7 @@ impl<'a> ExecuteWithLpn<'a> {
         deps: DepsMut<'a>,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg,
+        msg: ExecuteMsg<LpnCurrencies>,
     ) -> Result<CwResponse> {
         let context = Self {
             deps,
@@ -150,7 +151,7 @@ impl<'a> ExecuteWithLpn<'a> {
 
         let config = Config::load(context.deps.storage)?;
 
-        Tickers.visit_any::<Lpns, _>(config.lpn_ticker(), context)
+        Tickers.visit_any::<LpnCurrencies, _>(config.lpn_ticker(), context)
     }
 }
 
@@ -171,7 +172,7 @@ pub fn execute(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<LpnCurrencies>,
 ) -> Result<CwResponse> {
     // no currency context variants
     match msg {
@@ -215,7 +216,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
 struct QueryWithLpn<'a> {
     deps: Deps<'a>,
     env: Env,
-    msg: QueryMsg,
+    msg: QueryMsg<LpnCurrencies>,
 }
 
 impl<'a> QueryWithLpn<'a> {
@@ -248,12 +249,12 @@ impl<'a> QueryWithLpn<'a> {
         Ok(res)
     }
 
-    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary> {
+    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
 
-        Tickers.visit_any::<Lpns, _>(config.lpn_ticker(), context)
+        Tickers.visit_any::<LpnCurrencies, _>(config.lpn_ticker(), context)
     }
 }
 
@@ -270,7 +271,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
         QueryMsg::Balance { address } => {

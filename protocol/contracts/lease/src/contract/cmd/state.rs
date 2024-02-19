@@ -4,7 +4,10 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::query::{opened::OngoingTrx, StateResponse},
+    api::{
+        query::{opened::OngoingTrx, StateResponse},
+        LpnCurrencies,
+    },
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -31,9 +34,9 @@ impl WithLease for LeaseState {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
         Asset: Currency,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>,
     {
         Ok(StateResponse::opened_from(
             lease.state(self.now),

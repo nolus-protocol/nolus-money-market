@@ -2,7 +2,7 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
-    api::position::PartialClose,
+    api::{position::PartialClose, LpnCurrencies},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -29,7 +29,7 @@ impl<'spec> WithLease for Cmd<'spec> {
     where
         Lpn: currency::Currency,
         Asset: currency::Currency,
-        LppLoan: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
         Oracle: OracleTrait<Lpn>,
     {
         (&self.spec.amount)

@@ -6,7 +6,7 @@ use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{loan::LoanDTO, position::PositionDTO};
+use crate::{api::LpnCurrencies, loan::LoanDTO, position::PositionDTO};
 
 use super::{
     with_lease::WithLease,
@@ -90,9 +90,9 @@ where
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,
-        LppLoan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
         Asset: Currency,
+        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+        Oracle: OracleTrait<Lpn>,
     {
         self.cmd.exec(Lease::<_, Asset, _, _>::from_dto(
             self.lease_dto,

@@ -10,12 +10,12 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::ContractResult, lease::Lease};
+use crate::{api::LpnCurrencies, error::ContractResult, lease::Lease};
 
 impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
     Asset: Currency,
 {

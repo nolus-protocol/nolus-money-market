@@ -11,10 +11,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
-use super::{
-    alarms::{AlarmCurrencies, StableCurrency},
-    swap::SwapTarget,
-};
+use super::{alarms::AlarmCurrencies, swap::SwapTarget, BaseCurrencyGroup};
 
 pub type PriceCurrencies = PaymentGroup;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
@@ -39,7 +36,7 @@ pub enum ExecuteMsg {
         prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, StableCurrency>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms { max_count: AlarmsCount },
@@ -127,7 +124,7 @@ pub struct SwapTreeResponse {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PricesResponse {
-    pub prices: Vec<PriceDTO<PriceCurrencies, StableCurrency>>,
+    pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencyGroup>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

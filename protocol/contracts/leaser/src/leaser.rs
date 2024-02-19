@@ -16,6 +16,7 @@ use crate::{
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
+    LpnCurrencies,
 };
 
 pub struct Leaser<'a> {
@@ -42,7 +43,7 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::try_new(config.lpp, self.deps.querier)?;
+        let lpp = LppRef::<LpnCurrencies>::try_new(config.lpp, self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 
@@ -126,7 +127,7 @@ fn update_lpp_impl(
     batch: &mut Batch,
 ) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp;
-    let lpp_update_code = ExecuteMsg::NewLeaseCode {
+    let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };
     batch
