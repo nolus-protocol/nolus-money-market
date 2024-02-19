@@ -39,6 +39,13 @@ pub enum ExecuteMsg {
         name: String,
         protocol: Protocol,
     },
+    /// A message for **internal purposes only**.
+    ///
+    /// It is meant to clean-up any temporary storage changes.
+    ///
+    /// Manual execution by an outside sender is considered an
+    /// error, thus execution has to fail.
+    EndOfMigration {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -58,16 +65,6 @@ pub enum SudoMsg {
     /// it should start as Admin contract migration which would then
     /// continue with the migration of the other contracts.
     MigrateContracts(MigrateContracts),
-    /// A message for **internal purposes only**.
-    ///
-    /// It is meant to clean-up any temporary storage changes.
-    ///
-    /// Whether manual execution by an outside sender is or
-    /// is not allowed is left as undefined behavior.
-    ///
-    /// Whether it shall fail or succeed when manually executed
-    /// by an outside sender is left as undefined behaviour.
-    ClearStorage {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

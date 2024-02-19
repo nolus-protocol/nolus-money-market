@@ -71,18 +71,6 @@ impl<T> ProtocolTemplate<BTreeMap<String, T>> {
             Err(Error::MissingProtocol(protocol))
         }
     }
-
-    pub(in crate::contracts) fn ensure_empty(self) -> Result<()> {
-        [self.leaser, self.lpp, self.oracle, self.profit]
-            .into_iter()
-            .try_for_each(|mut map: BTreeMap<String, T>| {
-                if let Some((protocol, _)) = map.pop_last() {
-                    Err(Error::MissingProtocol(protocol))
-                } else {
-                    Ok(())
-                }
-            })
-    }
 }
 
 impl<T> Validate for ProtocolTemplate<T>
