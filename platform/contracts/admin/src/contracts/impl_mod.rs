@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
 use versioning::ReleaseLabel;
 
 use crate::{
-    msg::SudoMsg,
+    msg::ExecuteMsg,
     result::Result,
     state::{contract::Contract as ContractState, contracts as state_contracts},
     validate::{Validate, ValidateValues},
@@ -89,16 +89,16 @@ pub(crate) fn migrate(
             contracts_addrs
                 .post_migration_execute(post_migration_execute)
                 .and_then(|post_migration_execute_batch: Batch| {
-                    let mut clear_storage = Batch::default();
+                    let mut end_of_migration = Batch::default();
 
-                    clear_storage
+                    end_of_migration
                         .schedule_execute_wasm_no_reply_no_funds(
                             admin_contract_addr,
-                            &SudoMsg::ClearStorage {},
+                            &ExecuteMsg::EndOfMigration {},
                         )
                         .map(|()| {
                             migrate_batch
-                                .merge(clear_storage)
+                                .merge(end_of_migration)
                                 .merge(post_migration_execute_batch)
                                 .into()
                         })
