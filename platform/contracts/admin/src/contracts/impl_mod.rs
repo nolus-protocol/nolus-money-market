@@ -30,7 +30,6 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
                     .extract_entry(name)
                     .map(|migration_msgs| contracts.migrate(&mut batch, migration_msgs))
             })
-            .and_then(|()| migration_msgs.protocol.ensure_empty())
             .map(|()| batch)
     }
 
@@ -52,7 +51,6 @@ impl ContractsTemplate<Addr, BTreeMap<String, Protocol>> {
                     },
                 )
             })
-            .and_then(|()| execution_msgs.protocol.ensure_empty())
             .map(|()| batch)
     }
 }
