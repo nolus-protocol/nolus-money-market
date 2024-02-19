@@ -118,6 +118,17 @@ pub fn execute(
         ExecuteMsg::RegisterProtocol { name, ref protocol } => {
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
+        ExecuteMsg::EndOfMigration {} => {
+            ensure_eq!(
+                info.sender,
+                env.contract.address,
+                ContractError::AccessControl(access_control::error::Error::Unauthorized {})
+            );
+
+            ContractState::clear(deps.storage);
+
+            Ok(response::empty_response())
+        }
     }
 }
 
@@ -143,11 +154,6 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             post_migration_execute,
         )
         .map(response::response_only_messages),
-        SudoMsg::ClearStorage {} => {
-            ContractState::clear(deps.storage);
-
-            Ok(response::empty_response())
-        }
     }
 }
 
