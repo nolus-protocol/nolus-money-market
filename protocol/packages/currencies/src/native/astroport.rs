@@ -6,13 +6,13 @@ define_symbol! {
     NLS {
         ["net_dev"]: {
             bank: "unls",
-            // full ibc route: transfer/channel-209/unls
-            dex: "ibc/830F6CA3E33406586DFAADB25908769CB111046755EDAAD1D8D6A6E72A5E0C87"
+            // full ibc route: transfer/channel-571/unls
+            dex: "ibc/D1FAFE8009558038F94B9478D5066D633614DCD4CD78D4977BBC855DEDD36C91"
         },
         ["net_test"]: {
             bank: "unls",
-            // full ibc route: transfer/channel-208/unls
-            dex: "ibc/C9F36A5FCF5FBD26661F9A09900301755C8B042696E4F456ACD73FAA7AFA6551"
+            // full ibc route: transfer/channel-5598/unls
+            dex: "ibc/633DEE69AD15A09EFD664F665491018111B60FE1CE3A8286ECF4BECFED59A5CB"
         },
         ["net_main"]: {
             bank: "unls",

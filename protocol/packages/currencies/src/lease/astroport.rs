@@ -55,8 +55,8 @@ define_currency!(StAtom, ST_ATOM);
 define_symbol! {
     NTRN {
         ["net_dev"]: {
-            // full ibc route: transfer/channel-116/untrn
-            bank: "ibc/AED28B54A45FBE585FD81FF8571F729F87EF3CFD5DBBD1CAFED9E1AA20BFD983",
+            // full ibc route: transfer/channel-1/untrn
+            bank: "ibc/0C698C8970DB4C539455E5225665A804F6338753211319E44BAD39758B238695",
             dex: "untrn",
         },
         ["net_test"]: {
