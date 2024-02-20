@@ -10,8 +10,7 @@ use crate::{
     ContractError,
 };
 
-use super::Borrow;
-
+pub struct Borrow {}
 impl Borrow {
     pub fn with(
         storage: &mut dyn Storage,

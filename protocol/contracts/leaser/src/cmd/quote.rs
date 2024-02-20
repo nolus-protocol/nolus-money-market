@@ -15,29 +15,14 @@ use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{msg::QuoteResponse, ContractError, LpnCurrencies};
 
-use super::Quote;
-
-impl<'r> WithLppLender<LpnCurrencies> for Quote<'r> {
-    type Output = QuoteResponse;
-    type Error = ContractError;
-
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
-    where
-        Lpn: Currency,
-        Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    {
-        self.oracle.execute_as_oracle::<Lpn, LpnCurrencies, _>(
-            QuoteStage2 {
-                downpayment: self.downpayment,
-                lease_asset: self.lease_asset,
-                lpp_quote: LppQuote::new(lpp)?,
-                liability: self.liability,
-                lease_interest_rate_margin: self.lease_interest_rate_margin,
-                max_ltd: self.max_ltd,
-            },
-            self.querier,
-        )
-    }
+pub struct Quote<'r> {
+    querier: QuerierWrapper<'r>,
+    lease_asset: SymbolOwned,
+    downpayment: DownpaymentCoin,
+    oracle: OracleRef,
+    liability: Liability,
+    lease_interest_rate_margin: Percent,
+    max_ltd: Option<Percent>,
 }
 
 impl<'r> Quote<'r> {
@@ -59,6 +44,29 @@ impl<'r> Quote<'r> {
             lease_interest_rate_margin,
             max_ltd,
         }
+    }
+}
+
+impl<'r> WithLppLender<LpnCurrencies> for Quote<'r> {
+    type Output = QuoteResponse;
+    type Error = ContractError;
+
+    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    where
+        Lpn: Currency,
+        Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    {
+        self.oracle.execute_as_oracle::<Lpn, LpnCurrencies, _>(
+            QuoteStage2 {
+                downpayment: self.downpayment,
+                lease_asset: self.lease_asset,
+                lpp_quote: LppQuote::new(lpp)?,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltd: self.max_ltd,
+            },
+            self.querier,
+        )
     }
 }
 
