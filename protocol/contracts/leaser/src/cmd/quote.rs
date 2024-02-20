@@ -92,12 +92,13 @@ where
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let annual_interest_rate = match self.lpp.quote(borrow)? {
-            QueryQuoteResponse::QuoteInterestRate(rate) => rate,
-            QueryQuoteResponse::NoLiquidity => return Err(ContractError::NoLiquidity {}),
-        };
-
-        Ok(annual_interest_rate)
+        self.lpp
+            .quote(borrow)
+            .map_err(Into::into)
+            .and_then(|quote_resp| match quote_resp {
+                QueryQuoteResponse::QuoteInterestRate(rate) => Ok(rate),
+                QueryQuoteResponse::NoLiquidity => Err(ContractError::NoLiquidity {}),
+            })
     }
 }
 
