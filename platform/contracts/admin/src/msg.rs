@@ -81,7 +81,7 @@ pub enum QueryMsg {
     InstantiateAddress { code_id: CodeId, protocol: String },
     Protocols {},
     Platform {},
-    Protocol { protocol: String },
+    Protocol(String),
 }
 
 pub type ProtocolsQueryResponse = Vec<String>;

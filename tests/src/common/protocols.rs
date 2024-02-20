@@ -82,7 +82,7 @@ fn protocols_repo_query(
         QueryMsg::Protocols {} => to_json_binary::<ProtocolsQueryResponse>(
             &(0..protocols_nb).map(protocol_name).collect(),
         ),
-        QueryMsg::Protocol { protocol: _ } => {
+        QueryMsg::Protocol(_) => {
             const NET_NAME: &str = "dex_network";
 
             to_json_binary(&ProtocolQueryResponse {
