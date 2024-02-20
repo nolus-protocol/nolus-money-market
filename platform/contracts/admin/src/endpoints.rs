@@ -205,7 +205,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                 to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
             })
         }
-        QueryMsg::Protocol { protocol } => state_contracts::load_protocol(deps.storage, protocol)
+        QueryMsg::Protocol(protocol) => state_contracts::load_protocol(deps.storage, protocol)
             .and_then(|ref protocol| {
                 to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
             }),

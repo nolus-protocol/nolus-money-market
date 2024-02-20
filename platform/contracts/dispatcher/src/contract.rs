@@ -191,7 +191,7 @@ fn protocols(
                 .map(|protocol| {
                     querier.query_wasm_smart(
                         protocols_registry.clone(),
-                        &ProtocolsRegistry::Protocol { protocol },
+                        &ProtocolsRegistry::Protocol(protocol),
                     )
                 })
                 .collect()
