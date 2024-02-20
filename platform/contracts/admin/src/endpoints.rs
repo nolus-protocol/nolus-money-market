@@ -78,13 +78,11 @@ pub fn migrate(
 
 #[entry_point]
 pub fn execute(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(deps.branch().storage).check(&info.sender)?;
-
     match msg {
         ExecuteMsg::Instantiate {
             code_id,
@@ -93,6 +91,8 @@ pub fn execute(
             label,
             message,
         } => {
+            ensure_sender_is_owner(deps.storage, &info.sender)?;
+
             ContractState::Instantiate {
                 expected_code_id: code_id,
                 expected_address,
@@ -116,6 +116,8 @@ pub fn execute(
             Ok(response::response_only_messages(batch))
         }
         ExecuteMsg::RegisterProtocol { name, ref protocol } => {
+            ensure_sender_is_owner(deps.storage, &info.sender)?;
+
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
         ExecuteMsg::EndOfMigration {} => {
@@ -236,6 +238,12 @@ fn instantiate_reply(
             expected: expected_code_id,
         })
     }
+}
+
+fn ensure_sender_is_owner(storage: &mut dyn Storage, sender: &Addr) -> ContractResult<()> {
+    ContractOwnerAccess::new(storage)
+        .check(sender)
+        .map_err(Into::into)
 }
 
 fn register_protocol(
