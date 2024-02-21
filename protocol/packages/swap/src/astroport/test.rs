@@ -9,6 +9,8 @@ use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
 use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::Decimal};
 
+use crate::testing;
+
 use super::{Main, RouterImpl};
 
 const INVALID_TICKER: SymbolStatic = "NotATicker";
@@ -108,4 +110,13 @@ fn to_operations_err() {
         super::to_operations::<SuperGroup>(SuperGroupTestC1::DEX_SYMBOL, &path),
         Err(Error::Currency(_))
     ));
+}
+
+#[test]
+fn validate_a_response() {
+    let resp_base64 = "EksKLC9jb3Ntd2FzbS53YXNtLnYxLk1zZ0V4ZWN1dGVDb250cmFjdFJlc3BvbnNlEhsKGXsicmV0dXJuX2Ftb3VudCI6IjM4OTA4In0SSwosL2Nvc213YXNtLndhc20udjEuTXNnRXhlY3V0ZUNvbnRyYWN0UmVzcG9uc2USGwoZeyJyZXR1cm5fYW1vdW50IjoiNzIyNTUifQ==";
+    let exp_amount1 = 38908;
+    let exp_amount2 = 72255;
+
+    testing::validate_a_response(resp_base64, exp_amount1, exp_amount2)
 }

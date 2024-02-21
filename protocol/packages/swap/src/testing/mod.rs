@@ -6,6 +6,8 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
 use sdk::cosmos_sdk_proto::Any;
+#[cfg(test)]
+pub(crate) use tests::validate_a_response;
 
 #[cfg(test)]
 mod tests;
