@@ -8,6 +8,7 @@ use crate::{define_currency, define_symbol};
 // 2. Currencies that come from Axelar are documented at https://docs.axelar.dev/resources
 // 3. IBC routes from https://github.com/Nolus-Protocol/Wiki/blob/main/testnet-rila/currencies.json
 
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 define_symbol! {
     ATOM {
         ["net_dev"]: {
@@ -21,6 +22,29 @@ define_symbol! {
             bank: "ibc/CFAC783D503ABF2BD3C9BB1D2AC6CD6136192782EE936D9BE406977F6D133926",
             // full ibc route: transfer/channel-12/uatom
             dex: "ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-0/uatom
+            bank: "ibc/6CDD4663F2F09CD62285E2D45891FC149A3568E316CE3EBBE201A71A78A69388",
+            // full ibc route: transfer/channel-0/uatom
+            dex: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+        },
+    }
+}
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+define_symbol! {
+    ATOM {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-12/uatom
+            bank: "ibc/ECFDE61B64BB920E087E7448C4C3FE356B7BD13A1C2153119E98816C964FE196",
+            // full ibc route: transfer/channel-12/uatom
+            dex: "ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-4156/uatom
+            bank: "ibc/31104FCE0412CA93333DC76017D723CD3995866662B1C45A269EED8F05B378EB",
+            // full ibc route: transfer/channel-4156/uatom
+            dex: "ibc/9FF2B7A5F55038A7EE61F4FD6749D9A648B48E89830F2682B67B5DC158E2753Ce",
         },
         ["net_main"]: {
             // full ibc route: transfer/channel-0/transfer/channel-0/uatom
