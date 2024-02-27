@@ -44,7 +44,7 @@ define_symbol! {
             // full ibc route: transfer/channel-1993/transfer/channel-4156/uatom
             bank: "ibc/31104FCE0412CA93333DC76017D723CD3995866662B1C45A269EED8F05B378EB",
             // full ibc route: transfer/channel-4156/uatom
-            dex: "ibc/9FF2B7A5F55038A7EE61F4FD6749D9A648B48E89830F2682B67B5DC158E2753Ce",
+            dex: "ibc/9FF2B7A5F55038A7EE61F4FD6749D9A648B48E89830F2682B67B5DC158E2753C",
         },
         ["net_main"]: {
             // full ibc route: transfer/channel-0/transfer/channel-0/uatom
