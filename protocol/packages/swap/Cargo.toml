@@ -12,7 +12,6 @@ main = []
 test = []
 
 astroport = [
-    "migration",
     "sdk/cosmos_ibc",
     "dep:astroport",
     "dep:currency",
@@ -35,7 +34,6 @@ osmosis = [
     "dep:serde",
 ]
 
-migration = ["testing", "platform/testing"]
 testing = ["finance/testing", "dex/testing"]
 
 [dependencies]

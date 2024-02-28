@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -724,7 +724,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -852,7 +852,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.5.11"
+version = "0.5.12"
 dependencies = [
  "cosmwasm-std",
  "currencies",
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
