@@ -25,9 +25,6 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-#[cfg(feature = "migration")]
-pub mod migration;
-
 #[cfg(test)]
 mod test;
 #[cfg(any(test, feature = "testing"))]
