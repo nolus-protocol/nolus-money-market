@@ -175,7 +175,10 @@ where
     let result = maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Dydx, _>(matcher, symbol, visitor));
+        .or_else(|visitor| maybe_visit::<_, Dydx, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Tia, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, StTia, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor));
 
     #[cfg(not(feature = "testing"))]
     {
@@ -211,7 +214,7 @@ mod test {
         {lease::LeaseGroup, lpn::Lpn, native::Nls},
     };
 
-    use super::{Atom, Dydx, Ntrn, StAtom};
+    use super::{Atom, Dydx, Ntrn, StAtom, StTia, StkAtom, Tia};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -219,6 +222,9 @@ mod test {
         maybe_visit_on_ticker_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Ntrn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dydx, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<StkAtom, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
@@ -232,6 +238,9 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Atom, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Dydx, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<StTia, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<StkAtom, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
