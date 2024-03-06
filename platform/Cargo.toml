@@ -29,10 +29,10 @@ tree = { path = "packages/tree", default-features = false }
 versioning = { path = "packages/versioning", default-features = false }
 
 # General
-serde = { version = "1", default-features = false }
-thiserror = { version = "1", default-features = false }
 anyhow = "1"
 base64 = { version = "0.21", default-features = false }
+serde = { version = "1", default-features = false }
+thiserror = { version = "1", default-features = false }
 
 # CosmWasm
 cosmwasm-std = { version = "1.5", default-features = false, features = [
