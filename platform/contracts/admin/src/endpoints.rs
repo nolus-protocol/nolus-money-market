@@ -137,10 +137,16 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::ChangeDexAdmin { ref new_dex_admin } => ContractOwnerAccess::new(deps.storage)
-            .grant_to(new_dex_admin)
-            .map(|()| response::empty_response())
-            .map_err(Into::into),
+        SudoMsg::ChangeDexAdmin { ref new_dex_admin } => deps
+            .api
+            .addr_validate(new_dex_admin)
+            .map_err(Into::into)
+            .and_then(|new_dex_admin| {
+                ContractOwnerAccess::new(deps.storage)
+                    .grant_to(new_dex_admin)
+                    .map(|()| response::empty_response())
+                    .map_err(Into::into)
+            }),
         SudoMsg::RegisterProtocol { name, ref protocol } => {
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
