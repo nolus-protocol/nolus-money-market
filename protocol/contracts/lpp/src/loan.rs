@@ -15,7 +15,7 @@ use crate::error::{ContractError, Result};
 #[serde(rename_all = "snake_case")]
 pub struct Loan<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     pub principal_due: Coin<Lpn>,
     pub annual_interest_rate: Percent,
@@ -25,7 +25,7 @@ where
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct RepayShares<Lpn>
 where
-    Lpn: Currency,
+    Lpn: 'static,
 {
     pub interest: Coin<Lpn>,
     pub principal: Coin<Lpn>,

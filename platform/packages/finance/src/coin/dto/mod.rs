@@ -160,9 +160,7 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        Tickers
-            .maybe_visit(&coin.ticker, CoinFactory(coin))
-            .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
+        Tickers.visit(&coin.ticker, CoinFactory(coin))
     }
 }
 
@@ -181,7 +179,7 @@ where
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: Currency,
+    C: Currency + ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         // TODO consider adding a compile-time check that the currency belongs to the group
@@ -241,7 +239,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin, CoinDTO},
-        error::Error,
+        error::{Error, Result},
     };
 
     #[derive(
@@ -332,18 +330,28 @@ mod test {
     fn display() {
         assert_eq!(
             format!("25 {}", SuperGroupTestC1::TICKER),
-            test_coin::<SuperGroup, SuperGroupTestC1>(25).to_string()
+            test_coin::<SuperGroupTestC1, SuperGroup>(25).to_string()
         );
         assert_eq!(
             format!("0 {}", SuperGroupTestC2::TICKER),
-            test_coin::<SuperGroup, SuperGroupTestC2>(0).to_string()
+            test_coin::<SuperGroupTestC2, SuperGroup>(0).to_string()
         );
     }
 
-    fn test_coin<G, C>(amount: Amount) -> CoinDTO<G>
+    #[test]
+    fn try_from() {
+        let test_dto = test_coin::<SuperGroupTestC1, SuperGroup>(123);
+        let test: Result<Coin<SuperGroupTestC2>> = test_dto.try_into();
+        assert!(matches!(
+            test.expect_err("Try_into another currency of the same group should fail"),
+            Error::CurrencyError(_)
+        ),);
+    }
+
+    fn test_coin<C, G>(amount: Amount) -> CoinDTO<G>
     where
-        G: Group,
         C: Currency,
+        G: Group,
     {
         CoinDTO::<G>::from(Coin::<C>::new(amount))
     }

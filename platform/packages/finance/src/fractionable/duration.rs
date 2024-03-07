@@ -1,4 +1,3 @@
-use currency::Currency;
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::{coin::Coin, duration::Duration, ratio::Ratio};
@@ -15,7 +14,7 @@ where
 
 impl<C> Fractionable<Coin<C>> for Duration
 where
-    C: Currency + PartialEq + Default + Copy,
+    C: PartialEq,
 {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self

@@ -18,10 +18,7 @@ use crate::{
 type Tree = tree::Tree<SwapTarget>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
-pub struct SupportedPairs<B>
-where
-    B: Currency,
-{
+pub struct SupportedPairs<B> {
     tree: Tree,
     _type: PhantomData<B>,
 }

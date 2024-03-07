@@ -1,12 +1,11 @@
-use currency::Currency;
 use finance::{coin::Coin, duration::Duration, percent::Percent};
 use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct State<Asset, Lpn>
 where
-    Asset: Currency,
-    Lpn: Currency,
+    Asset: ?Sized,
+    Lpn: ?Sized,
 {
     pub amount: Coin<Asset>,
     pub interest_rate: Percent,

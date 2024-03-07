@@ -1,4 +1,3 @@
-use currency::Currency;
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::coin::{Amount, Coin};
@@ -8,7 +7,7 @@ use super::HigherRank;
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
-    C: Currency,
+    C: ?Sized,
 {
     type Type = Uint256;
 
@@ -17,7 +16,7 @@ where
 
 impl<C> From<Coin<C>> for Uint256
 where
-    C: Currency,
+    C: ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
@@ -27,7 +26,7 @@ where
 
 impl<C> From<Uint128> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();

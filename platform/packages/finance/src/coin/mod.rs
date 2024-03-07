@@ -26,7 +26,10 @@ pub type NonZeroAmount = NonZeroU128;
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Coin<C> {
+pub struct Coin<C>
+where
+    C: ?Sized,
+{
     amount: Amount,
     #[serde(skip)]
     ticker: PhantomData<C>,
@@ -34,7 +37,7 @@ pub struct Coin<C> {
 
 impl<C> Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     pub const fn new(amount: Amount) -> Self {
         Self {
@@ -82,7 +85,7 @@ where
     #[track_caller]
     pub(super) const fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
-        OtherC: Currency,
+        OtherC: ?Sized,
     {
         debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
         debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
@@ -109,14 +112,14 @@ where
 
 impl<C> Zero for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     const ZERO: Self = Self::new(Zero::ZERO);
 }
 
 impl<C> Add<Coin<C>> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     type Output = Self;
 
@@ -129,7 +132,7 @@ where
 
 impl<C> Sub<Coin<C>> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     type Output = Self;
 
@@ -142,7 +145,7 @@ where
 
 impl<C> AddAssign<Coin<C>> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: Coin<C>) {
@@ -152,7 +155,7 @@ where
 
 impl<C> SubAssign<Coin<C>> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
@@ -171,7 +174,7 @@ where
 
 impl<C> From<Amount> for Coin<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     fn from(amount: Amount) -> Self {
         Self::new(amount)
@@ -180,7 +183,7 @@ where
 
 impl<C> From<Coin<C>> for Amount
 where
-    C: Currency,
+    C: ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

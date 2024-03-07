@@ -1,5 +1,3 @@
-use currency::Currency;
-
 use crate::{
     coin::Coin,
     percent::{Percent, Units},
@@ -28,7 +26,7 @@ impl Fractionable<Units> for Percent {
 
 impl<C> Fractionable<Coin<C>> for Percent
 where
-    C: Currency + PartialEq + Default + Copy,
+    C: PartialEq,
 {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self

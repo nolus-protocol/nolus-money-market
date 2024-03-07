@@ -52,8 +52,8 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: ?Sized,
+    QuoteC: ?Sized,
 {
     amount: Coin<C>,
     amount_quote: Coin<QuoteC>,

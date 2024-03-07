@@ -47,7 +47,7 @@ pub trait GroupVisit: Matcher {
         G::maybe_visit(self, ticker, visitor)
     }
 }
-impl<M> GroupVisit for M where M: Matcher {}
+impl<T> GroupVisit for T where T: Matcher {}
 
 pub fn visit_any_on_tickers<G1, G2, V>(
     ticker1: &SymbolSlice,

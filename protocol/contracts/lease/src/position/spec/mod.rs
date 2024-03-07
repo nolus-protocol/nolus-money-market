@@ -19,7 +19,10 @@ use super::{interest::OverdueCollection, DueTrait};
 mod dto;
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Spec<Lpn> {
+pub struct Spec<Lpn>
+where
+    Lpn: ?Sized,
+{
     liability: Liability,
     min_asset: Coin<Lpn>,
     min_transaction: Coin<Lpn>,

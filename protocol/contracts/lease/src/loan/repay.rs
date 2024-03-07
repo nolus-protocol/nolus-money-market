@@ -4,7 +4,7 @@ use finance::coin::Coin;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     overdue_margin_paid: Coin<C>,
     overdue_interest_paid: Coin<C>,

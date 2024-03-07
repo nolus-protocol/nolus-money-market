@@ -11,7 +11,7 @@ use super::{dto::PriceDTO, Price};
 pub struct BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: ?Sized,
 {
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,

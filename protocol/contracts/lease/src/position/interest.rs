@@ -1,8 +1,10 @@
-use currency::Currency;
 use finance::{coin::Coin, duration::Duration, zero::Zero};
 
 /// Represent the due of a position
-pub trait Due<Lpn> {
+pub trait Due<Lpn>
+where
+    Lpn: ?Sized,
+{
     /// The total due amount
     ///
     /// Includes the principal and due interest.
@@ -17,7 +19,10 @@ pub trait Due<Lpn> {
     fn overdue_collection(&self, min_amount: Coin<Lpn>) -> OverdueCollection<Lpn>;
 }
 
-pub enum OverdueCollection<Lpn> {
+pub enum OverdueCollection<Lpn>
+where
+    Lpn: ?Sized,
+{
     /// No collectable overdue interest yet
     ///
     /// The period specifies in how much time the overdue will become collectable.
@@ -32,7 +37,7 @@ pub enum OverdueCollection<Lpn> {
 
 impl<Lpn> OverdueCollection<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Copy + ?Sized,
 {
     pub fn start_in(&self) -> Duration {
         match self {

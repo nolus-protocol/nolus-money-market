@@ -9,7 +9,7 @@ use crate::api::LpnCurrencies;
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     pub annual_interest: Percent,
     pub annual_interest_margin: Percent,
@@ -22,7 +22,7 @@ where
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub enum Overdue<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     /// No overdue interest yet
     ///
