@@ -2,7 +2,7 @@ use std::any::type_name;
 
 use thiserror::Error;
 
-use currency::{error::Error as CurrencyError, Currency, SymbolOwned};
+use currency::{error::Error as CurrencyError, Currency};
 use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use crate::percent::Units as PercentUnits;
@@ -17,9 +17,6 @@ pub enum Error {
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
-
-    #[error("[Finance] Found ticker '{0}' expecting '{1}'")]
-    UnexpectedTicker(String, String),
 
     #[error("[Finance] Expecting funds of '{0}' but found none")]
     NoFunds(String),
@@ -60,14 +57,6 @@ impl Error {
         C: Currency,
     {
         Self::UnexpectedFunds(C::TICKER.into())
-    }
-
-    pub fn unexpected_ticker<S, C>(ticker: S) -> Self
-    where
-        S: Into<SymbolOwned>,
-        C: Currency,
-    {
-        Self::UnexpectedTicker(ticker.into(), C::TICKER.into())
     }
 }
 

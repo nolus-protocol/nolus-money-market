@@ -205,9 +205,10 @@ fn partial_close_invalid_currency() {
         .unwrap_err();
 
     assert_eq!(
-        err.root_cause().downcast_ref::<finance::error::Error>(),
-        Some(&finance::error::Error::UnexpectedTicker(
+        err.root_cause().downcast_ref::<currency::error::Error>(),
+        Some(&currency::error::Error::UnexpectedSymbol(
             PaymentCurrency::TICKER.into(),
+            "ticker".to_owned(),
             LeaseCurrency::TICKER.into(),
         ))
     );
