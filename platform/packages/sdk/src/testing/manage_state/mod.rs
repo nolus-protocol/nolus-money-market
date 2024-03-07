@@ -57,9 +57,9 @@ pub enum LoadIntoStorageFromFileError {
 }
 
 fn try_load_into_storage<S, I, E>(storage: &mut S, mut iter: I) -> Result<(), E>
-    where
-        S: Storage + ?Sized,
-        I: Iterator<Item = Result<KvPair, E>>,
+where
+    S: Storage + ?Sized,
+    I: Iterator<Item = Result<KvPair, E>>,
 {
     iter.try_for_each(|kv_pair| {
         kv_pair.map(|kv_pair| storage.set(kv_pair.key().as_ref(), kv_pair.value().as_ref()))
