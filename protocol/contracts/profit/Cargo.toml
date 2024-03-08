@@ -30,7 +30,7 @@ contract = [
     "dep:thiserror",
     "dep:versioning",
 ]
-stub = ["dep:platform", "dep:thiserror"]
+stub = ["dep:platform", "dep:sdk", "dep:thiserror"]
 testing = []
 
 [dependencies]
