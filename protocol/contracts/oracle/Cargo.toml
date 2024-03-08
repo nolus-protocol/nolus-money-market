@@ -23,12 +23,13 @@ contract = [
     "stub_alarms",
     "stub_swap",
     "sdk/contract",
+    "dep:cosmwasm-std",
     "dep:currencies",
     "dep:marketprice",
     "dep:versioning",
 ]
 stub_alarms = ["dep:currencies"]
-stub_swap = ["dep:oracle-platform", "dep:sdk"]
+stub_swap = ["dep:oracle-platform"]
 testing = [
     "stub_alarms",
     "stub_swap",
@@ -43,9 +44,12 @@ finance = { workspace = true }
 marketprice = { workspace = true, optional = true  }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
-sdk = { workspace = true, optional = true }
+sdk = { workspace = true }
 tree = { workspace = true, features = ["schema"] }
 versioning = { workspace = true, optional = true, features = ["schema"] }
+
+# Required as a dependency by `entry_point` attribute macro
+cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

@@ -20,6 +20,7 @@ osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble
 contract = [
     "sdk/contract",
     "dep:access-control",
+    "dep:cosmwasm-std",
     "dep:currencies",
     "dep:currency",
     "dex/impl",
@@ -30,7 +31,7 @@ contract = [
     "dep:thiserror",
     "dep:versioning",
 ]
-stub = ["dep:platform", "dep:sdk", "dep:thiserror"]
+stub = ["dep:platform", "dep:thiserror"]
 testing = []
 
 [dependencies]
@@ -41,10 +42,13 @@ dex = { workspace = true }
 finance = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
-sdk = { workspace = true, optional = true }
+sdk = { workspace = true }
 swap = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 versioning = { workspace = true, optional = true }
+
+# Required as a dependency by `entry_point` attribute macro
+cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
