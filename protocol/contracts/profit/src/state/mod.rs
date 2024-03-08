@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 
-use cosmwasm_std::QuerierWrapper;
 use currencies::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +12,7 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{Binary, Env, Reply as CwReply, Storage, Timestamp},
+    cosmwasm_std::{Binary, Env, QuerierWrapper, Reply as CwReply, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 use swap::Impl;

@@ -127,7 +127,10 @@ mod test {
         price::{dto::PriceDTO, Price},
     };
     use price_querier::PriceQuerier;
-    use sdk::cosmwasm_std::testing::{self, MockStorage};
+    use sdk::cosmwasm_std::{
+        self,
+        testing::{self, MockStorage},
+    };
     use tree::HumanReadableTree;
 
     use crate::{
