@@ -12,7 +12,7 @@ pub enum ContractError {
 
     #[error("[TimeAlarms] Unauthorized")]
     Unauthorized {},
-    
+
     #[error("[TimeAlarms] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
 

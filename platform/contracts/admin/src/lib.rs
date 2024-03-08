@@ -1,4 +1,3 @@
-#[cfg(feature = "contract")]
 mod contracts;
 #[cfg(feature = "contract")]
 pub mod endpoints;
