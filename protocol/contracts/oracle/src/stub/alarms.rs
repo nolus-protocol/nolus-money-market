@@ -1,33 +1,39 @@
 use std::marker::PhantomData;
 
-use currency::Currency;
+use currency::{Currency, Group};
 use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
+use serde::Serialize;
 
-use crate::api::{
-    alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
-    BaseCurrencyGroup,
-};
+use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
-pub trait PriceAlarms
+pub trait PriceAlarms<AlarmCurrencies, BaseCurrency>
 where
+    BaseCurrency: Currency + Serialize,
+    AlarmCurrencies: Group,
     Self: Into<Batch> + Sized,
 {
     //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrency>) -> Result<()>;
 }
 
 pub trait AsAlarms {
-    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
+    fn as_alarms<OracleBase, AlarmCurrencies>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency;
+        OracleBase: Currency + Serialize,
+        AlarmCurrencies: Group;
 }
 
 impl AsAlarms for OracleRef {
-    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
+    fn as_alarms<OracleBase, AlarmCurrencies>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency,
+        OracleBase: Currency + Serialize,
+        AlarmCurrencies: Group,
     {
         self.check_base::<OracleBase>();
 
@@ -51,15 +57,17 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     }
 }
 
-impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase>
+impl<'a, OracleBase, AlarmCurrencies> PriceAlarms<AlarmCurrencies, OracleBase>
+    for AlarmsStub<'a, OracleBase>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + Serialize,
+    AlarmCurrencies: Group,
 {
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()> {
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, OracleBase>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),
-                &ExecuteMsg::AddPriceAlarm { alarm },
+                &ExecuteMsg::AddPriceAlarm::<OracleBase> { alarm },
                 vec![],
             )
             .map_err(Error::StubAddAlarm)?,
