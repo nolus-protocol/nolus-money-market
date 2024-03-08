@@ -44,11 +44,6 @@ postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 enum_dispatch = { version = "0.3", default-features = false }
 
-# CosmWasm
-# Consult the compatibility matrix [here](https://github.com/CosmWasm/wasmd#compatibility) before bumping!
-# Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { version = "1.5", default-features = false }
-
 # Other
 astroport = { version = "2.9", default-features = false }
 osmosis-std = { version = "0.22", default-features = false }
