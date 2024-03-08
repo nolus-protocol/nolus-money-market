@@ -2,7 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use currency::{Currency, Group};
 use finance::price::{
-    dto::{with_quote, PriceDTO, WithQuote},
+    base::BasePrice,
+    dto::{with_quote, WithQuote},
     Price,
 };
 use marketprice::alarms::PriceAlarms;
@@ -86,7 +87,7 @@ where
     pub fn try_add_price_alarm<BaseC, BaseG>(
         &mut self,
         receiver: Addr,
-        alarm: AlarmDTO<PriceG, BaseG>,
+        alarm: AlarmDTO<PriceG, BaseC>,
     ) -> Result<(), ContractError>
     where
         BaseC: Currency,
@@ -122,24 +123,23 @@ where
     }
 }
 
-struct AddAlarmsCmd<'storage, 'alarms, S, G, BaseG>
-where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
-    G: Group + Clone,
-    BaseG: Group,
-{
-    receiver: Addr,
-    above_or_equal: Option<PriceDTO<G, BaseG>>,
-    price_alarms: &'alarms mut PriceAlarms<'storage, G, S>,
-}
-
-impl<'storage, 'alarms, S, G, BaseC, BaseG> WithQuote<BaseC>
-    for AddAlarmsCmd<'storage, 'alarms, S, G, BaseG>
+struct AddAlarmsCmd<'storage, 'alarms, S, G, BaseC>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group + Clone,
     BaseC: Currency,
-    BaseG: Group,
+{
+    receiver: Addr,
+    above_or_equal: Option<BasePrice<G, BaseC>>,
+    price_alarms: &'alarms mut PriceAlarms<'storage, G, S>,
+}
+
+impl<'storage, 'alarms, S, G, BaseC> WithQuote<BaseC>
+    for AddAlarmsCmd<'storage, 'alarms, S, G, BaseC>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    G: Group + Clone,
+    BaseC: Currency,
 {
     type Output = ();
     type Error = ContractError;
@@ -162,7 +162,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC5, PaymentC6, PaymentC7};
+    use currencies::test::{PaymentC5, PaymentC6, PaymentC7, StableC1};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
@@ -172,10 +172,12 @@ mod test {
 
     use super::*;
 
+    type TestLpn = StableC1;
+
     fn alarm_dto<C>(
         below: (u128, u128),
         above: Option<(u128, u128)>,
-    ) -> AlarmDTO<PriceCurrencies, BaseCurrencies>
+    ) -> AlarmDTO<PriceCurrencies, TestLpn>
     where
         C: Currency,
     {
@@ -187,7 +189,7 @@ mod test {
 
     fn add_alarms<'a>(
         mut storage: &mut dyn Storage,
-        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, BaseCurrencies>)>,
+        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, TestLpn>)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
             MarketAlarms::new(storage.deref_mut())

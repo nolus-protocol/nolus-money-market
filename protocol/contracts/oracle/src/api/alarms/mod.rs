@@ -1,8 +1,8 @@
 use std::result::Result as StdResult;
 
 use currencies::LeaseGroup;
-use currency::Group;
-use finance::price::dto::PriceDTO;
+use currency::{Currency, Group};
+use finance::price::base::BasePrice;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -11,8 +11,6 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::BaseCurrencies;
-
 mod unchecked;
 
 pub type AlarmCurrencies = LeaseGroup;
@@ -20,10 +18,11 @@ pub type AlarmCurrencies = LeaseGroup;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg {
-    AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrencies>,
-    },
+pub enum ExecuteMsg<Lpn>
+where
+    Lpn: Currency,
+{
+    AddPriceAlarm { alarm: Alarm<AlarmCurrencies, Lpn> },
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -36,26 +35,26 @@ pub enum Error {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm<G, LpnG>")]
+#[serde(try_from = "unchecked::Alarm<G, Lpn>")]
 /// `G` and `LpnG` should not overlap
-pub struct Alarm<G, LpnG>
+pub struct Alarm<G, Lpn>
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
 {
-    below: PriceDTO<G, LpnG>,
-    above: Option<PriceDTO<G, LpnG>>,
+    below: BasePrice<G, Lpn>,
+    above: Option<BasePrice<G, Lpn>>,
 }
 
-impl<G, LpnG> Alarm<G, LpnG>
+impl<G, Lpn> Alarm<G, Lpn>
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
 {
     // TODO take Price<C, Q>-es instead
-    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, LpnG>
+    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn>
     where
-        P: Into<PriceDTO<G, LpnG>>,
+        P: Into<BasePrice<G, Lpn>>,
     {
         let below = below.into();
         let above_or_equal = above_or_equal.map(Into::into);
@@ -69,9 +68,7 @@ where
 
     fn invariant_held(&self) -> StdResult<(), AlarmError> {
         if let Some(above_or_equal) = &self.above {
-            if self.below.base().ticker() != above_or_equal.base().ticker()
-                || self.below.quote().ticker() != above_or_equal.quote().ticker()
-            {
+            if self.below.base_ticker() != above_or_equal.base_ticker() {
                 Err(AlarmError(
                     "Mismatch of above alarm and below alarm currencies",
                 ))?
@@ -86,12 +83,12 @@ where
     }
 }
 
-impl<G, LpnG> From<Alarm<G, LpnG>> for (PriceDTO<G, LpnG>, Option<PriceDTO<G, LpnG>>)
+impl<G, Lpn> From<Alarm<G, Lpn>> for (BasePrice<G, Lpn>, Option<BasePrice<G, Lpn>>)
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
 {
-    fn from(value: Alarm<G, LpnG>) -> Self {
+    fn from(value: Alarm<G, Lpn>) -> Self {
         (value.below, value.above)
     }
 }
@@ -116,12 +113,7 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use crate::api::BaseCurrencies;
-
-    use super::{Alarm, AlarmCurrencies};
-
-    type AssetG = AlarmCurrencies;
-    type LpnG = BaseCurrencies;
+    use super::{Alarm, AlarmCurrencies as AssetG};
 
     #[test]
     fn below_price_ok() {
@@ -243,10 +235,10 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err<G, LpnG>(r: Result<Alarm<G, LpnG>, StdError>, msg: &str)
+    fn assert_err<G, Lpn>(r: Result<Alarm<G, Lpn>, StdError>, msg: &str)
     where
         G: Group + Debug,
-        LpnG: Group + Debug,
+        Lpn: Currency,
     {
         assert!(r.is_err());
         assert!(matches!(
@@ -258,7 +250,7 @@ mod test {
         ));
     }
 
-    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, LpnG>, StdError>
+    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, Lpn>, StdError>
     where
         C1: Currency + Serialize,
         Q1: Currency + Serialize,
@@ -269,7 +261,7 @@ mod test {
     fn from_both<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Price<C2, Q2>,
-    ) -> Result<Alarm<AssetG, LpnG>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn>, StdError>
     where
         C1: Currency,
         C2: Currency,
@@ -282,7 +274,7 @@ mod test {
     fn from_both_impl<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Option<Price<C2, Q2>>,
-    ) -> Result<Alarm<AssetG, LpnG>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn>, StdError>
     where
         C1: Currency,
         C2: Currency,
@@ -297,7 +289,7 @@ mod test {
     fn from_both_str_impl<Str1, Str2>(
         below: Str1,
         above: Option<Str2>,
-    ) -> Result<Alarm<AssetG, LpnG>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn>, StdError>
     where
         Str1: AsRef<str>,
         Str2: AsRef<str>,

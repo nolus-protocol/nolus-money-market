@@ -133,7 +133,7 @@ mod tests {
             let below_alarm = total_of(liability_alarm_on.of(asset)).is(due.total_due());
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<TestLpn> {
                     alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
@@ -191,7 +191,7 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<TestLpn> {
                     alarm: Alarm::new(exp_below, Some(exp_above)),
                 })
                 .unwrap(),

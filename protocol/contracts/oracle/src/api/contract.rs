@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::PaymentGroup;
+use currencies::{Lpn, PaymentGroup};
 use currency::SymbolOwned;
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
@@ -14,6 +14,7 @@ pub use super::alarms::Alarm;
 use super::{alarms::AlarmCurrencies, swap::SwapTarget, BaseCurrencies};
 
 pub type PriceCurrencies = PaymentGroup;
+pub(crate) type BaseCurrency = Lpn;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -36,7 +37,7 @@ pub enum ExecuteMsg {
         prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrencies>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrency>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms { max_count: AlarmsCount },
