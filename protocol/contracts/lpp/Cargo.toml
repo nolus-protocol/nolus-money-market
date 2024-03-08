@@ -17,7 +17,7 @@ astroport = ["contract", "currencies/astroport"]
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
 
-contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies"]
+contract = ["stub", "sdk/contract", "dep:versioning", "dep:currencies"]
 stub = []
 testing = ["currency/testing"]
 
@@ -28,11 +28,8 @@ currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
 platform = { workspace = true }
-sdk = { workspace = true }
+sdk = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true }
-
-# Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

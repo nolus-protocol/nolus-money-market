@@ -707,7 +707,6 @@ name = "lease"
 version = "0.9.2"
 dependencies = [
  "access-control",
- "cosmwasm-std",
  "currencies",
  "currency",
  "dex",
@@ -733,7 +732,6 @@ name = "leaser"
 version = "0.7.1"
 dependencies = [
  "access-control",
- "cosmwasm-std",
  "currencies",
  "currency",
  "finance",
@@ -759,7 +757,6 @@ name = "lpp"
 version = "0.4.4"
 dependencies = [
  "access-control",
- "cosmwasm-std",
  "currencies",
  "currency",
  "finance",
@@ -860,7 +857,6 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 name = "oracle"
 version = "0.5.12"
 dependencies = [
- "cosmwasm-std",
  "currencies",
  "currency",
  "finance",
@@ -974,7 +970,6 @@ name = "profit"
 version = "0.6.1"
 dependencies = [
  "access-control",
- "cosmwasm-std",
  "currencies",
  "currency",
  "dex",
@@ -1100,6 +1095,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "reserve"
+version = "0.1.0"
+dependencies = [
+ "access-control",
+ "currencies",
+ "currency",
+ "finance",
+ "platform",
+ "schema",
+ "sdk",
+ "serde",
+ "thiserror",
+ "versioning",
 ]
 
 [[package]]

@@ -11,18 +11,15 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-contract = ["stub", "dep:cosmwasm-std", "dep:versioning"]
+contract = ["stub", "sdk/contract", "dep:versioning"]
 stub = []
 testing = []
 
 [dependencies]
 platform = { workspace = true }
-sdk = { workspace = true, features = ["contract"] }
+sdk = { workspace = true }
 time-oracle = { workspace = true }
 versioning = { workspace = true, optional = true }
-
-# Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

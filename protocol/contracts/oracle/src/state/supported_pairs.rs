@@ -184,7 +184,7 @@ mod tests {
 
     use currencies::test::StableC1;
     use currency::Currency;
-    use sdk::cosmwasm_std::testing;
+    use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
     use super::*;

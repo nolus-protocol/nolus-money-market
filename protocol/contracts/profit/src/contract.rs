@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
-use cosmwasm_std::QuerierWrapper;
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -9,7 +8,9 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{
+        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+    },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;

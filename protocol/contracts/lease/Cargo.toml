@@ -24,7 +24,6 @@ osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble
 contract = [
     "skel",
     "sdk/contract",
-    "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "dep:versioning",
 ]
@@ -55,12 +54,9 @@ lpp-platform = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
-sdk = { workspace = true }
+sdk = { workspace = true, optional = true }
 swap = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true }
-
-# Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true, optional = true }
 
 enum_dispatch = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }

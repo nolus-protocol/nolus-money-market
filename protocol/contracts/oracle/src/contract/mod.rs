@@ -179,7 +179,7 @@ mod tests {
     };
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent, price};
-    use sdk::cosmwasm_std::{from_json, testing::mock_env};
+    use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
         api::{swap::SwapTarget, Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg},
@@ -200,7 +200,7 @@ mod tests {
         let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: Config = from_json(res).unwrap();
+        let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             Config {
                 base_asset: StableC1::TICKER.into(),
@@ -220,7 +220,7 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let value: Vec<SwapLeg> = from_json(res).unwrap();
+        let value: Vec<SwapLeg> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
             from: PaymentC5::TICKER.into(),
@@ -243,8 +243,10 @@ mod tests {
             from: from.into(),
             to: to.into(),
         };
-        let query_api =
-            from_json::<QueryMsgApi>(&cosmwasm_std::to_json_vec(&query_impl).unwrap()).unwrap();
+        let query_api = cosmwasm_std::from_json::<QueryMsgApi>(
+            &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
+        )
+        .unwrap();
         assert_eq!(
             QueryMsgApi::SwapPath {
                 from: from.into(),
@@ -265,8 +267,10 @@ mod tests {
         let query_impl = ExecuteMsg::AddPriceAlarm {
             alarm: alarm.clone(),
         };
-        let query_api =
-            from_json::<ExecuteMsgApi>(&cosmwasm_std::to_json_vec(&query_impl).unwrap()).unwrap();
+        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi>(
+            &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
+        )
+        .unwrap();
         assert_eq!(ExecuteMsgApi::AddPriceAlarm { alarm }, query_api);
     }
 }
