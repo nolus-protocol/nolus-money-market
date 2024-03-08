@@ -67,11 +67,16 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             .store(self.deps.storage)
             .map_err(ContractError::StoreConfig)?;
 
-        SupportedPairs::<C>::new(self.msg.swap_tree.into_tree())?
-            .validate_tickers()?
-            .save(self.deps.storage)?;
-
-        Ok(())
+        self.msg
+            .swap_tree
+            .try_into()
+            .map_err(Into::into)
+            .and_then(SupportedPairs::<C>::new)
+            .and_then(|supported_pairs| {
+                supported_pairs
+                    .validate_tickers()
+                    .and_then(|supported_pairs| supported_pairs.save(self.deps.storage))
+            })
     }
 }
 

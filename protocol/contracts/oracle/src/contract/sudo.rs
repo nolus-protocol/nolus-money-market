@@ -35,9 +35,15 @@ impl<'a> AnyVisitor for SudoWithOracleBase<'a> {
         OracleBase: Currency + DeserializeOwned,
     {
         match self.msg {
-            SudoMsg::SwapTree { tree } => SupportedPairs::<OracleBase>::new(tree.into_tree())?
-                .validate_tickers()?
-                .save(self.deps.storage),
+            SudoMsg::SwapTree { tree } => tree
+                .try_into()
+                .map_err(Into::into)
+                .and_then(SupportedPairs::<OracleBase>::new)
+                .and_then(|supported_pairs| {
+                    supported_pairs
+                        .validate_tickers()
+                        .and_then(|supported_pairs| supported_pairs.save(self.deps.storage))
+                }),
             _ => unreachable!(),
         }
     }

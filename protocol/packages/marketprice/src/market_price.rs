@@ -77,9 +77,9 @@ where
         G: Group,
         QuoteC: Currency + DeserializeOwned,
         QuoteG: Group,
-        Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
+        Iter: Iterator<Item = &'a SymbolSlice>,
     {
-        let mut root_to_leaf = leaf_to_root.rev();
+        let mut root_to_leaf = leaf_to_root.collect::<Vec<_>>().into_iter().rev();
         let _root = root_to_leaf.next();
         debug_assert_eq!(_root, Some(QuoteC::TICKER));
         PriceCollect::do_collect(

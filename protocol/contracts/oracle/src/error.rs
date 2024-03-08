@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Addr, StdError};
 //TODO migrate to the same type defined at oracle::result
 pub type Result<T> = StdResult<T, ContractError>;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[Oracle] Failed to initialize versioning module! Cause: {0}")]
     InitializeVersioning(StdError),
@@ -55,11 +55,14 @@ pub enum ContractError {
     #[error("[Oracle] {0}")]
     AlarmError(#[from] AlarmError),
 
-    #[error("[Oracle] {0}")]
+    #[error("[Oracle] [Currency] {0}")]
     Currency(#[from] currency::error::Error),
 
-    #[error("[Oracle] {0}")]
+    #[error("[Oracle] [Finance] {0}")]
     Finance(#[from] finance::error::Error),
+
+    #[error("[Oracle] [Tree] {0}")]
+    Tree(#[from] tree::error::Error),
 
     #[error("[Oracle] Unsupported denom pairs")]
     UnsupportedDenomPairs {},
@@ -82,10 +85,10 @@ pub enum ContractError {
     #[error("[Oracle] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
 
-    #[error("[Oracle] {0}")]
+    #[error("[Oracle] [Platform] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("[Oracle][Base='{base}'] Unsupported currency '{unsupported}'")]
+    #[error(r#"[Oracle, Base="{base}"] Unsupported currency "{unsupported}""#)]
     UnsupportedCurrency {
         base: SymbolOwned,
         unsupported: SymbolOwned,

@@ -7,7 +7,7 @@ use currency::{
     AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
-use tree::{FindBy as _, NodeRef};
+use tree::Node;
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
@@ -38,8 +38,10 @@ where
         }
 
         // check for duplicated nodes
-        let mut supported_currencies: Vec<&SymbolOwned> =
-            tree.iter().map(|node| &node.value().target).collect();
+        let mut supported_currencies: Vec<&SymbolOwned> = tree
+            .depth_first_values_iter()
+            .map(|swap| &swap.target)
+            .collect();
 
         supported_currencies.sort();
 
@@ -70,8 +72,8 @@ where
             }
         }
 
-        for swap in self.tree.iter() {
-            Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, TickerChecker)?;
+        for swap in self.tree.depth_first_values_iter() {
+            Tickers.visit_any::<PaymentGroup, _>(&swap.target, TickerChecker)?;
         }
 
         Ok(self)
@@ -92,7 +94,7 @@ where
     pub fn load_path(
         &self,
         query: &SymbolSlice,
-    ) -> Result<impl Iterator<Item = &SymbolSlice> + DoubleEndedIterator + '_, ContractError> {
+    ) -> Result<impl Iterator<Item = &SymbolSlice> + '_, ContractError> {
         self.internal_load_path(query)
             .map(|iter| iter.map(|node| node.value().target.as_str()))
     }
@@ -141,9 +143,10 @@ where
 
     pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
         self.tree
-            .iter()
-            .filter_map(|node: NodeRef<'_, SwapTarget>| {
-                let parent: NodeRef<'_, SwapTarget> = node.parent()?;
+            .root()
+            .depth_first_nodes_iter()
+            .filter_map(|node| {
+                let parent = node.parent()?;
 
                 let SwapTarget {
                     pool_id,
@@ -167,13 +170,18 @@ where
     fn internal_load_path(
         &self,
         query: &SymbolSlice,
-    ) -> Result<
-        impl Iterator<Item = NodeRef<'_, SwapTarget>> + DoubleEndedIterator + '_,
-        ContractError,
-    > {
+    ) -> Result<impl Iterator<Item = Node<'_, SwapTarget>> + '_, ContractError> {
         self.tree
-            .find_by(|target| target.target == query)
-            .map(|node| std::iter::once(node).chain(node.parents_iter()))
+            .depth_first_nodes_iter()
+            .find(|target| target.value().target == query)
+            .map(Some)
+            .map(|mut node| {
+                std::iter::from_fn(move || {
+                    let parent = node.as_ref().and_then(Node::parent);
+
+                    std::mem::replace(&mut node, parent)
+                })
+            })
             .ok_or_else(|| error::unsupported_currency::<B>(query))
     }
 }

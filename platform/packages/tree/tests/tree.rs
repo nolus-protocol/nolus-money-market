@@ -1,108 +1,210 @@
-use sdk::cosmwasm_std;
-use tree::{FindBy, HumanReadableTree, Tree};
+use std::fmt::Debug;
 
-mod serde {
-    use super::*;
+use serde::Deserialize;
 
-    #[test]
-    fn only_root() {
-        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5}]"#).unwrap();
+use tree::{HumanReadableTree, Tree};
 
-        assert_eq!(*tree.root().value(), 5);
-    }
+const CORRECT_TREE_JSON: &str = r#"{
+    "root": 0,
+    "parent_indexes": [0, 1, 2, 1, 4, 4, 6, 7, 4, 0, 10],
+    "branches_and_leafs": [2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12]
+}"#;
 
-    #[test]
-    fn with_2_levels() {
-        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":0,"value":3},{"parent":0,"value":6}]"#).unwrap();
+fn deserialize_tree<'r, T>(json: &'r str) -> Tree<T>
+where
+    T: Deserialize<'r>,
+{
+    serde_json::from_str(json).unwrap()
+}
 
-        assert_eq!(*tree.root().value(), 5);
+#[test]
+fn check_correct_tree() {
+    let tree: Tree<u32> = deserialize_tree(CORRECT_TREE_JSON);
 
-        for expected_value in 3..=6 {
-            assert_eq!(
-                *tree
-                    .find_by(move |&value| value == expected_value)
-                    .unwrap()
-                    .value(),
-                expected_value
-            );
-        }
-    }
+    tree.check_tree();
+}
 
-    #[test]
-    fn with_3_levels() {
-        let tree: Tree<u32> = cosmwasm_std::from_json(r#"[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":1,"value":6},{"parent":0,"value":3},{"parent":1,"value":7}]"#).unwrap();
+#[test]
+#[should_panic = "Nodes can only be defined directly under the node they belong to! Expected: 3, got: 2"]
+fn check_incorrect_tree_indirect() {
+    const TREE_JSON: &str = r#"{
+        "root": 0,
+        "parent_indexes": [0, 1, 1, 2],
+        "branches_and_leafs": [1, 2, 3, 4]
+    }"#;
 
-        for (parent_value, expected_value) in [
-            (None, 5),
-            (Some(5), 4),
-            (Some(4), 6),
-            (Some(5), 3),
-            (Some(4), 7),
-        ] {
-            let node = tree.find_by(move |&value| value == expected_value).unwrap();
+    let tree: Tree<u32> = deserialize_tree(TREE_JSON);
 
-            assert_eq!(node.parent().map(|parent| *parent.value()), parent_value);
-            assert_eq!(*node.value(), expected_value);
-        }
-    }
+    tree.check_tree();
+}
 
-    #[test]
-    fn human_readable() {
-        let original: HumanReadableTree<u32> = cosmwasm_std::from_json(
-            r#"{"value":5,"children":[{"value":4,"children":[{"value":6},{"value":7}]},{"value":3}]}"#,
-        )
-            .unwrap();
+#[test]
+#[should_panic = "Nodes can only belong to nodes on the left-side of them! Expected: <=0, got: 1"]
+fn check_incorrect_tree_first_belongs_to_self() {
+    const TREE_JSON: &str = r#"{
+        "root": 0,
+        "parent_indexes": [1],
+        "branches_and_leafs": [1]
+    }"#;
 
-        let transformed_back: HumanReadableTree<u32> =
-            original.clone().into_tree().into_human_readable();
+    let tree: Tree<u32> = deserialize_tree(TREE_JSON);
 
-        assert_eq!(transformed_back, original);
-    }
+    tree.check_tree();
+}
 
-    #[test]
-    fn parent_iter() {
-        let tree: Tree<u32> = cosmwasm_std::from_json::<HumanReadableTree<u32>>(
-            r#"{"value":5,"children":[{"value":4,"children":[{"value":6},{"value":7}]},{"value":3}]}"#,
-        )
-            .unwrap()
-            .into_tree();
+#[test]
+#[should_panic = "Nodes can only belong to nodes on the left-side of them! Expected: <=1, got: 2"]
+fn check_incorrect_tree_second_belongs_to_self() {
+    const TREE_JSON: &str = r#"{
+        "root": 0,
+        "parent_indexes": [0, 2],
+        "branches_and_leafs": [1, 2]
+    }"#;
+
+    let tree: Tree<u32> = deserialize_tree(TREE_JSON);
+
+    tree.check_tree();
+}
+
+#[test]
+#[should_panic = "Nodes can only belong to nodes on the left-side of them! Expected: <=0, got: 2"]
+fn check_incorrect_tree_belongs_to_undefined_right() {
+    const TREE_JSON: &str = r#"{
+        "root": 0,
+        "parent_indexes": [2],
+        "branches_and_leafs": [1]
+    }"#;
+
+    let tree: Tree<u32> = deserialize_tree(TREE_JSON);
+
+    tree.check_tree();
+}
+
+#[test]
+#[should_panic = "Nodes can only belong to nodes on the left-side of them! Expected: <=0, got: 2"]
+fn check_incorrect_tree_belongs_to_right() {
+    const TREE_JSON: &str = r#"{
+        "root": 0,
+        "parent_indexes": [2, 0],
+        "branches_and_leafs": [1, 2]
+    }"#;
+
+    let tree: Tree<u32> = deserialize_tree(TREE_JSON);
+
+    tree.check_tree();
+}
+
+#[test]
+fn root_direct_children() {
+    let tree: Tree<u32> = deserialize_tree(CORRECT_TREE_JSON);
+
+    let collected_via_nodes_iter = tree
+        .direct_children()
+        .map(|node| *node.value())
+        .collect::<Vec<_>>();
+
+    assert_eq!(collected_via_nodes_iter, &[2, 9]);
+}
+
+#[test]
+fn childs_direct_children() {
+    let tree: Tree<u32> = deserialize_tree(CORRECT_TREE_JSON);
+
+    let collected_via_nodes_iter = tree
+        .direct_children()
+        .nth(0)
+        .unwrap()
+        .direct_children()
+        .map(|node| *node.value())
+        .collect::<Vec<_>>();
+
+    assert_eq!(collected_via_nodes_iter, &[1, 3]);
+}
+
+#[test]
+fn root_depth_first_iters() {
+    let tree: Tree<u32> = deserialize_tree(CORRECT_TREE_JSON);
+
+    let collected_via_nodes_iter = tree
+        .depth_first_nodes_iter()
+        .map(|node| *node.value())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        collected_via_nodes_iter,
+        tree.depth_first_values_iter().copied().collect::<Vec<_>>()
+    );
+
+    assert_eq!(
+        collected_via_nodes_iter,
+        &[0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12]
+    );
+}
+
+#[test]
+fn child_node_depth_first_iters() {
+    fn test_fn<T>(tree: &Tree<T>, nth_direct_child: usize, expected_values: &[T])
+    where
+        T: Debug + Copy + Eq,
+    {
+        let node = tree.direct_children().nth(nth_direct_child).unwrap();
+
+        let collected_via_nodes_iter = node
+            .depth_first_nodes_iter()
+            .map(|node| *node.value())
+            .collect::<Vec<_>>();
 
         assert_eq!(
-            tree.find_by(|&v| v == 4)
-                .unwrap()
-                .parents_iter()
-                .map(|node| *node.value())
-                .collect::<Vec<u32>>(),
-            vec![5]
+            collected_via_nodes_iter,
+            node.depth_first_values_iter().copied().collect::<Vec<_>>()
         );
 
-        assert_eq!(
-            tree.find_by(|&v| v == 4)
-                .unwrap()
-                .parents_iter()
-                .rev()
-                .map(|node| *node.value())
-                .collect::<Vec<u32>>(),
-            vec![5]
-        );
-
-        assert_eq!(
-            tree.find_by(|&v| v == 7)
-                .unwrap()
-                .parents_iter()
-                .map(|node| *node.value())
-                .collect::<Vec<u32>>(),
-            vec![4, 5]
-        );
-
-        assert_eq!(
-            tree.find_by(|&v| v == 7)
-                .unwrap()
-                .parents_iter()
-                .rev()
-                .map(|node| *node.value())
-                .collect::<Vec<u32>>(),
-            vec![5, 4]
-        );
+        assert_eq!(collected_via_nodes_iter, expected_values);
     }
+
+    let tree: Tree<u32> = deserialize_tree(CORRECT_TREE_JSON);
+
+    test_fn(&tree, 0, &[2, 1, 4, 3, 6, 5, 8, 7, 10]);
+
+    test_fn(&tree, 1, &[9, 12]);
+}
+
+#[test]
+fn from_human_readable_tree() {
+    const EXPECTED_TREE: &str = r#"{
+        "root": 0,
+        "parent_indexes": [0, 1, 2, 1, 0, 5, 6],
+        "branches_and_leafs": [1, 2, 3, 4, 5, 6, 7]
+    }"#;
+
+    let tree: HumanReadableTree<u32> = HumanReadableTree::Branch {
+        value: 0,
+        children: vec![
+            HumanReadableTree::Branch {
+                value: 1,
+                children: vec![
+                    HumanReadableTree::Branch {
+                        value: 2,
+                        children: vec![HumanReadableTree::Leaf { value: 3 }].into_boxed_slice(),
+                    },
+                    HumanReadableTree::Leaf { value: 4 },
+                ]
+                .into_boxed_slice(),
+            },
+            HumanReadableTree::Branch {
+                value: 5,
+                children: vec![HumanReadableTree::Branch {
+                    value: 6,
+                    children: vec![HumanReadableTree::Leaf { value: 7 }].into_boxed_slice(),
+                }]
+                .into_boxed_slice(),
+            },
+        ]
+        .into_boxed_slice(),
+    };
+
+    assert_eq!(
+        Tree::try_from(tree).unwrap(),
+        deserialize_tree(EXPECTED_TREE)
+    );
 }
