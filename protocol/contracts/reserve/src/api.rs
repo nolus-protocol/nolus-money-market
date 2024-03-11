@@ -1,5 +1,6 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 use currency::{Currency, SymbolOwned};
+use platform::contract::CodeId;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
@@ -7,8 +8,6 @@ use sdk::{
     cosmwasm_std::Uint64,
     schemars::{self, JsonSchema},
 };
-
-use crate::Config;
 
 pub(crate) type LpnCoin = CoinDTO<LpnCurrencies>;
 
@@ -46,15 +45,15 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
-    pub lpn_ticker: SymbolOwned,
-    pub lease_code_id: Uint64,
+    lpn_ticker: SymbolOwned,
+    lease_code_id: Uint64,
 }
 
-impl From<Config> for ConfigResponse {
-    fn from(cfg: Config) -> Self {
+impl ConfigResponse {
+    pub fn new(lease: CodeId) -> Self {
         Self {
             lpn_ticker: LpnCurrency::TICKER.into(),
-            lease_code_id: cfg.lease_code_id().into(),
+            lease_code_id: lease.into(),
         }
     }
 }
