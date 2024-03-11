@@ -17,7 +17,7 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{ConfigResponse, ExecuteMsg, InstantiateMsg, LpnCurrency, MigrateMsg, QueryMsg},
-    error::{ContractError, ContractResult},
+    error::{Error, Result},
     state::Config,
 };
 
@@ -32,16 +32,16 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     new_reserve: InstantiateMsg,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse> {
     deps.api
         .addr_validate(new_reserve.lease_code_admin.as_str())
-        .map_err(Into::<ContractError>::into)
-        .and_then(|_| {
+        .map_err(Error::from)
+        .and_then(|lease_code_admin| {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
                 crate::access_control::LEASE_CODE_ADMIN_KEY,
             )
-            .grant_to(&new_reserve.lease_code_admin)
+            .grant_to(&lease_code_admin)
             .map_err(Into::into)
         })
         .and_then(|()| versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(Into::into))
@@ -51,7 +51,7 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, __env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
         .or_else(|err| platform_error::log(err, deps.api))
@@ -63,7 +63,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse> {
     match msg {
         ExecuteMsg::NewLeaseCode {
             code_id: new_code_id,
@@ -83,7 +83,7 @@ pub fn execute(
             Config::load(deps.storage)
                 .and_then(|config| {
                     contract::validate_code_id(deps.querier, &lease, config.lease_code_id())
-                        .map_err(ContractError::from)
+                        .map_err(Error::from)
                 })
                 .and_then(|()| amount.try_into().map_err(Into::into))
                 .and_then(|amount: Coin<LpnCurrency>| {
@@ -92,12 +92,10 @@ pub fn execute(
                         .map_err(Into::into)
                         .and_then(|balance| {
                             if balance < amount {
-                                Err(ContractError::InsufficientBalance)
+                                Err(Error::InsufficientBalance)
                             } else {
                                 bank.send(amount, &lease);
-                                let msg: Batch = bank.into();
-
-                                Ok(msg.into())
+                                Ok(Batch::from(bank).into())
                             }
                         })
                 })
@@ -108,10 +106,10 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => Config::load(deps.storage)
-            .map(Into::<ConfigResponse>::into)
+            .map(ConfigResponse::from)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into))
             .or_else(|err| platform_error::log(err, deps.api)),
     }

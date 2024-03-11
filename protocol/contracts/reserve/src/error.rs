@@ -3,7 +3,7 @@ use thiserror::Error;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum ContractError {
+pub enum Error {
     #[error("[Reserve] [Std] {0}")]
     Std(#[from] StdError),
 
@@ -20,7 +20,7 @@ pub enum ContractError {
     InsufficientBalance,
 
     #[error("[Reserve][Stub] No response received from the Reserve contract")]
-    NoResponseStubError,
+    NoResponseStub,
 }
 
-pub type ContractResult<T> = std::result::Result<T, ContractError>;
+pub type Result<T> = std::result::Result<T, Error>;

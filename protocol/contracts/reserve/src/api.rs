@@ -1,23 +1,22 @@
-use currencies::{Lpn, Lpns};
+pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 use currency::{Currency, SymbolOwned};
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
 use sdk::{
-    cosmwasm_std::{Addr, Uint64},
+    cosmwasm_std::Uint64,
     schemars::{self, JsonSchema},
 };
 
 use crate::Config;
 
-pub(crate) type LpnCurrencies = Lpns;
-pub(crate) type LpnCurrency = Lpn;
-pub type LpnCoin = CoinDTO<LpnCurrencies>;
+pub(crate) type LpnCoin = CoinDTO<LpnCurrencies>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lease_code_admin: Addr,
+    /// Unchecked address of the user that can change the lease code Id
+    pub lease_code_admin: String,
     pub lease_code_id: Uint64,
 }
 
@@ -41,7 +40,7 @@ pub enum SudoMsg {}
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Return a `ConfigResponse`
+    /// Return a [ConfigResponse]
     Config(),
 }
 
