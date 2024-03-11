@@ -38,9 +38,9 @@ impl Config {
         storage: &mut dyn Storage,
         lease_code_id: CodeId,
     ) -> ContractResult<()> {
-        Self::update_field(storage, |config| Self {
+        Self::update_field(storage, |_config| Self {
             lease_code_id,
-            ..config
+            // ..config
         })
     }
 

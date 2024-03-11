@@ -111,7 +111,7 @@ pub fn execute(
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config() => Config::load(deps.storage)
-            .map(|config| Into::<ConfigResponse>::into(config))
+            .map( Into::<ConfigResponse>::into)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into))
             .or_else(|err| platform_error::log(err, deps.api)),
     }
