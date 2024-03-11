@@ -34,7 +34,7 @@ osmosis = [
     "dep:serde",
 ]
 
-testing = ["finance/testing", "dex/testing"]
+testing = ["finance/testing", "dep:serde", "dex/testing"]
 
 [dependencies]
 currency = { workspace = true, optional = true }

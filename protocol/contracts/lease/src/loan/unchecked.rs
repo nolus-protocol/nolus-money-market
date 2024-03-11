@@ -1,4 +1,3 @@
-use cosmwasm_std::Timestamp;
 use finance::{
     duration::Duration,
     interest::InterestPeriod,
@@ -6,6 +5,7 @@ use finance::{
 };
 use lpp::stub::LppRef;
 use profit::stub::ProfitRef;
+use sdk::cosmwasm_std::Timestamp;
 use serde::Deserialize;
 
 use crate::api::{open::InterestPaymentSpec, LpnCurrencies};
@@ -68,11 +68,11 @@ impl From<LoanDTO> for LastVersionLoanDTO {
 #[cfg(test)]
 mod test_two_versions {
 
-    use cosmwasm_std::Timestamp;
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent};
     use lpp::stub::LppRef;
     use profit::stub::ProfitRef;
+    use sdk::cosmwasm_std::Timestamp;
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 
     use crate::loan::{tests::Lpn, LoanDTO};

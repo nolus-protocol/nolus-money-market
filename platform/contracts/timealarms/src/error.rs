@@ -12,8 +12,7 @@ pub enum ContractError {
 
     #[error("[TimeAlarms] Unauthorized")]
     Unauthorized {},
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+
     #[error("[TimeAlarms] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
 

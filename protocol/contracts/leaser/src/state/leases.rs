@@ -1,7 +1,7 @@
 use std::collections::{hash_set::IntoIter, HashSet};
 
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, Order, StdResult, Storage},
     cw_storage_plus::{Bound, Item, Map},
 };
 
@@ -74,7 +74,7 @@ impl Leases {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
         Self::CUSTOMER_LEASES
             .prefix(())
-            .range(storage, start_bound, None, cosmwasm_std::Order::Ascending)
+            .range(storage, start_bound, None, Order::Ascending)
             .map(|record| {
                 record
                     .map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
