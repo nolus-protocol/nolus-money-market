@@ -23,18 +23,18 @@ jobs:
       matrix:
         working_directory: [ "protocol" ]
         net: [ "dev", "test", "main" ]
-        protocol: [ "astroport", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble" ]
+        protocol: [ "neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble" ]
         include:
           - working_directory: "platform"
           - protocol: "osmosis-osmosis-usdc_axelar"
             working_directory: "tests"
           - protocol: "osmosis-osmosis-usdc_noble"
             working_directory: "tests"
-          # - protocol: "astroport" # TODO Add `astroport`
+          # - protocol: "neutron-astroport-usdc_axelar" # TODO Add `neutron-astroport-usdc_axelar`
           #   working_directory: "tests"
     name: "Code Coverage Protocol [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"
     with:
       target_net: "${{ matrix.net }}"
       target_protocol: "${{ matrix.protocol }}"
-      protocols_list: "astroport,osmosis"
+      protocols_list: "neutron-astroport-usdc_axelar,osmosis-osmosis-usdc_axelar,osmosis-osmosis-usdc_noble"
       working_directory: "${{ matrix.working_directory }}"
