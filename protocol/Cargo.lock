@@ -1107,6 +1107,7 @@ name = "reserve"
 version = "0.1.0"
 dependencies = [
  "access-control",
+ "cosmwasm-std",
  "currencies",
  "currency",
  "finance",

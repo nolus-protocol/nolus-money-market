@@ -1,0 +1,56 @@
+[package]
+name = "reserve"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+net_dev = ["contract", "currencies/net_dev"]
+net_test = ["contract", "currencies/net_test"]
+net_main = ["contract", "currencies/net_main"]
+
+astroport = ["contract", "currencies/astroport"]
+osmosis-osmosis-usdc_axelar = [
+    "contract",
+    "currencies/osmosis-osmosis-usdc_axelar",
+]
+osmosis-osmosis-usdc_noble = [
+    "contract",
+    "currencies/osmosis-osmosis-usdc_noble",
+]
+
+contract = [
+    "sdk/contract",
+    "dep:access-control",
+    "dep:currency",
+    "dep:cosmwasm-std",
+    "dep:platform",
+    "dep:versioning",
+]
+# stub = [
+#     # "dep:platform",
+#      "dep:thiserror"]
+
+[dependencies]
+access-control = { workspace = true, optional = true }
+currencies = { workspace = true }
+currency = { workspace = true, optional = true }
+finance = { workspace = true }
+platform = { workspace = true, optional = true }
+sdk = { workspace = true, optional = true }
+versioning = { workspace = true, optional = true }
+
+# Required as a dependency by `entry_point` attribute macro
+cosmwasm-std = { workspace = true, optional = true }
+
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+schema = { workspace = true }
+sdk = { workspace = true, features = ["testing"] }
+
