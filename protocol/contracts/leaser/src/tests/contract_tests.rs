@@ -12,13 +12,13 @@ use lease::api::{
     open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
     LpnCoin,
 };
-use platform::contract::CodeId;
+use platform::contract::Code;
 
 use sdk::{
     cosmwasm_std::{
         coins, from_json,
         testing::{mock_env, mock_info},
-        to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+        to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, WasmMsg,
     },
     schemars::{self, JsonSchema},
     testing::mock_deps_with_contracts,
@@ -42,9 +42,9 @@ type TheCurrency = StableC1;
 const DENOM: SymbolStatic = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
-fn leaser_instantiate_msg(lease_code_id: CodeId, lpp: Addr) -> crate::msg::InstantiateMsg {
+fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
-        lease_code_id: Uint64::new(lease_code_id),
+        lease_code,
         lpp,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_position_spec: PositionSpecDTO::new(
@@ -78,7 +78,7 @@ fn customer() -> MessageInfo {
 
 fn setup_test_case(deps: DepsMut<'_>) {
     let lpp_addr = Addr::unchecked(LPP_ADDR);
-    let msg = leaser_instantiate_msg(1, lpp_addr);
+    let msg = leaser_instantiate_msg(Code::unchecked(1), lpp_addr);
 
     let resp = instantiate(deps, mock_env(), owner(), msg).unwrap();
     assert_eq!(1, resp.messages.len());
@@ -105,7 +105,8 @@ fn proper_initialization() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     let lpp_addr = Addr::unchecked(LPP_ADDR);
-    let msg = leaser_instantiate_msg(1, lpp_addr.clone());
+    let lease_code = Code::unchecked(1);
+    let msg = leaser_instantiate_msg(lease_code, lpp_addr.clone());
 
     let res = instantiate(deps.as_mut(), mock_env(), owner(), msg).unwrap();
     assert_eq!(1, res.messages.len());
@@ -114,7 +115,7 @@ fn proper_initialization() {
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_response: ConfigResponse = from_json(res).unwrap();
     let config = config_response.config;
-    assert_eq!(1, config.lease_code_id);
+    assert_eq!(lease_code, config.lease_code);
     assert_eq!(lpp_addr, config.lpp);
 }
 

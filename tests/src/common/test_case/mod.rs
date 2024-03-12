@@ -1,7 +1,7 @@
 use currencies::Lpns;
 use currency::{Currency, SymbolSlice};
 use finance::percent::bound::BoundToHundredPercent;
-use platform::contract::CodeId;
+use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
@@ -101,11 +101,11 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
             custom_message_receiver,
         );
 
-        let lease_code_id: CodeId = LeaseInstantiator::store(&mut app);
+        let lease_code: Code = LeaseInstantiator::store(&mut app);
 
         Self {
             app,
-            address_book: AddressBook::new(lease_code_id),
+            address_book: AddressBook::new(lease_code),
         }
     }
 }
@@ -133,7 +133,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury>
     {
         LeaseInstantiator::instantiate::<D>(
             &mut self.app,
-            self.address_book.lease_code_id(),
+            self.address_book.lease_code(),
             InstantiatorAddresses {
                 lpp: self.address_book.lpp().clone(),
                 time_alarms: self.address_book.time_alarms().clone(),

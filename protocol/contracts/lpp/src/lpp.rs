@@ -159,7 +159,7 @@ where
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
-        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code_id().into())
+        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code())
             .map_err(ContractError::from)
     }
 
@@ -323,10 +323,10 @@ mod test {
         zero::Zero,
     };
     use lpp_platform::NLpn;
-    use platform::coin_legacy;
+    use platform::{coin_legacy, contract::Code};
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},
-        Addr, Coin as CwCoin, DepsMut, Timestamp, Uint64,
+        Addr, Coin as CwCoin, DepsMut, Timestamp,
     };
 
     use crate::{
@@ -350,7 +350,7 @@ mod test {
         let balance_mock = coin_cw(10_000_000);
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let env = testing::mock_env();
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
         let admin = Addr::unchecked("admin");
 
         grant_admin_access(deps.as_mut(), &admin);
@@ -391,7 +391,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
 
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
 
@@ -474,7 +474,7 @@ mod test {
         let admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
 
@@ -573,7 +573,7 @@ mod test {
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
@@ -607,7 +607,7 @@ mod test {
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
@@ -641,7 +641,7 @@ mod test {
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
@@ -697,7 +697,7 @@ mod test {
         let env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
@@ -750,7 +750,7 @@ mod test {
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
-        let lease_code_id = Uint64::new(123);
+        let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
@@ -902,6 +902,7 @@ mod test {
             percent::{bound::BoundToHundredPercent, Percent},
             zero::Zero,
         };
+        use platform::contract::Code;
         use sdk::cosmwasm_std::{
             testing::{mock_env, MockQuerier},
             Env, QuerierWrapper, Timestamp,
@@ -932,7 +933,7 @@ mod test {
             let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
                 config: Config::new(
                     TheCurrency::TICKER.into(),
-                    0xDEADC0DE_u64.into(),
+                    Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),
                     min_utilization,

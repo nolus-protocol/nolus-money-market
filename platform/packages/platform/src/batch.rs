@@ -10,7 +10,7 @@ use sdk::{
 };
 
 pub use crate::emit::{Emit, Emitter};
-use crate::{coin_legacy::to_cosmwasm_impl, contract::CodeId, result::Result};
+use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, result::Result};
 
 pub type ReplyId = u64;
 
@@ -115,7 +115,7 @@ impl Batch {
 
     pub fn schedule_instantiate_wasm_reply_on_success<M>(
         &mut self,
-        code_id: CodeId,
+        code: Code,
         msg: &M,
         funds: Option<Vec<CoinCw>>,
         label: String,
@@ -125,7 +125,7 @@ impl Batch {
     where
         M: Serialize + ?Sized,
     {
-        Self::wasm_init_msg(code_id, msg, funds, label, admin)
+        Self::wasm_init_msg(code, msg, funds, label, admin)
             .map(|wasm_msg| self.schedule_reply_on_success(wasm_msg, reply_id))
     }
 
@@ -133,13 +133,12 @@ impl Batch {
         &mut self,
         addr: Addr,
         msg: &M,
-        new_code_id: CodeId,
+        new_code: Code,
     ) -> Result<()>
     where
         M: Serialize + ?Sized,
     {
-        Self::wasm_migrate_msg(addr, msg, new_code_id)
-            .map(|wasm_msg| self.schedule_no_reply(wasm_msg))
+        Self::wasm_migrate_msg(addr, msg, new_code).map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
 
     pub fn merge(mut self, mut other: Batch) -> Self {
@@ -186,7 +185,7 @@ impl Batch {
     }
 
     fn wasm_init_msg<M>(
-        code_id: CodeId,
+        code: Code,
         msg: &M,
         funds: Option<Vec<CoinCw>>,
         label: String,
@@ -198,7 +197,7 @@ impl Batch {
         to_json_binary(msg)
             .map(|msg| WasmMsg::Instantiate {
                 admin: admin.map(Addr::into_string),
-                code_id,
+                code_id: code.into(),
                 funds: funds.unwrap_or_default(),
                 label,
                 msg,
@@ -206,14 +205,14 @@ impl Batch {
             .map_err(Into::into)
     }
 
-    fn wasm_migrate_msg<M>(addr: Addr, msg: &M, new_code_id: CodeId) -> Result<WasmMsg>
+    fn wasm_migrate_msg<M>(addr: Addr, msg: &M, new_code: Code) -> Result<WasmMsg>
     where
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
             .map(|msg| WasmMsg::Migrate {
                 contract_addr: addr.into_string(),
-                new_code_id,
+                new_code_id: new_code.into(),
                 msg,
             })
             .map_err(Into::into)

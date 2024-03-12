@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
-    Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
-    WasmQuery,
+    CodeInfoResponse, ContractInfoResponse, ContractResult, Empty, GovMsg, HexBinary, IbcMsg,
+    IbcQuery, OwnedDeps, SystemError, SystemResult, WasmQuery,
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
@@ -57,10 +57,9 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
         WasmQuery::ContractInfo { contract_addr }
             if contracts.contains(&contract_addr.as_str()) =>
         {
-            SystemResult::Ok(ContractResult::Ok(Binary(Vec::from(
-                br#"{"code_id":0,"creator":"","admin":null,"pinned":false,"ibc_port":null}"#
-                    as &[u8],
-            ))))
+            SystemResult::Ok(ContractResult::Ok(
+                cosmwasm_std::to_json_binary(&ContractInfoResponse::default()).unwrap(),
+            ))
         }
         WasmQuery::Smart { contract_addr, .. }
         | WasmQuery::Raw { contract_addr, .. }
@@ -69,6 +68,14 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
                 addr: contract_addr.clone(),
             })
         }
+        WasmQuery::CodeInfo { code_id } => SystemResult::Ok(ContractResult::Ok(
+            cosmwasm_std::to_json_binary(&CodeInfoResponse::new(
+                *code_id,
+                "".into(),
+                HexBinary::from_hex("1f4e209a").unwrap(),
+            ))
+            .unwrap(),
+        )),
         _ => unimplemented!(),
     });
 

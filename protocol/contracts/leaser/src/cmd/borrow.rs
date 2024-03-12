@@ -27,7 +27,7 @@ impl Borrow {
                 let mut batch = Batch::default();
                 batch
                     .schedule_instantiate_wasm_reply_on_success(
-                        config.lease_code_id,
+                        config.lease_code,
                         &Self::open_lease_msg(customer, config, currency, max_ltd, finalizer),
                         Some(amount),
                         "lease".into(),

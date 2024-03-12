@@ -5,7 +5,8 @@ use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
     batch::Batch,
-    contract, error as platform_error,
+    contract::{self, Code},
+    error as platform_error,
     message::Response as PlatformResponse,
     response,
 };
@@ -45,7 +46,10 @@ pub fn instantiate(
             .map_err(Into::into)
         })
         .and_then(|()| versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(Into::into))
-        .and_then(|()| Config::from(new_reserve).store(deps.storage))
+        .and_then(|()| {
+            Code::try_new(new_reserve.lease_code_id.into(), &deps.querier).map_err(Into::into)
+        })
+        .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
         .map(|()| response::empty_response())
         .or_else(|err| platform_error::log(err, deps.api))
 }
@@ -65,24 +69,21 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     match msg {
-        ExecuteMsg::NewLeaseCode {
-            code_id: new_code_id,
-        } => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
-            )
-            .check(&info.sender)?;
-
-            Config::update_lease_code(deps.storage, new_code_id.into())
-                .map(|()| PlatformResponse::default())
-        }
+        ExecuteMsg::NewLeaseCode { code } => SingleUserAccess::new(
+            deps.storage.deref_mut(),
+            crate::access_control::LEASE_CODE_ADMIN_KEY,
+        )
+        .check(&info.sender)
+        .map_err(Into::into)
+        .and_then(|()| {
+            Config::update_lease_code(deps.storage, code).map(|()| PlatformResponse::default())
+        }),
         ExecuteMsg::CoverLiquidationLosses { amount } => {
             let lease = info.sender;
 
             Config::load(deps.storage)
                 .and_then(|config| {
-                    contract::validate_code_id(deps.querier, &lease, config.lease_code_id())
+                    contract::validate_code_id(deps.querier, &lease, config.lease_code())
                         .map_err(Error::from)
                 })
                 .and_then(|()| amount.try_into().map_err(Into::into))

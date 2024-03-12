@@ -9,7 +9,7 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
-    cosmwasm_std::{self, Addr, Coin as CwCoin, Uint64},
+    cosmwasm_std::{self, Addr, Coin as CwCoin},
     cw_multi_test::{next_block, AppResponse},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -298,7 +298,7 @@ where
 
         let leaser_addr = LeaserInstantiator::instantiate(
             &mut test_case.app,
-            test_case.address_book.lease_code_id(),
+            test_case.address_book.lease_code(),
             test_case.address_book.lpp().clone(),
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.oracle().clone(),
@@ -374,7 +374,7 @@ where
             _lpn,
         } = self;
 
-        let lease_code_id: Uint64 = Uint64::new(test_case.address_book.lease_code_id());
+        let lease_code = test_case.address_book.lease_code();
 
         let borrow_rate = InterestRate::new(
             base_interest_rate,
@@ -383,11 +383,11 @@ where
         )
         .expect("Couldn't construct interest rate value!");
 
-        let lpp_addr: Addr = if let Some(endpoints) = endpoints {
+        let lpp: Addr = if let Some(endpoints) = endpoints {
             LppInstantiator::instantiate::<Lpn>(
                 &mut test_case.app,
                 Box::new(endpoints),
-                lease_code_id,
+                lease_code,
                 init_balance,
                 borrow_rate,
                 min_utilization,
@@ -395,20 +395,19 @@ where
         } else {
             LppInstantiator::instantiate_default::<Lpn>(
                 &mut test_case.app,
-                lease_code_id,
+                lease_code,
                 init_balance,
                 borrow_rate,
                 min_utilization,
             )
-        }
-        .0;
+        };
 
         test_case.app.update_block(next_block);
 
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                address_book: test_case.address_book.with_lpp(lpp_addr),
+                address_book: test_case.address_book.with_lpp(lpp),
             },
             _lpn,
         }

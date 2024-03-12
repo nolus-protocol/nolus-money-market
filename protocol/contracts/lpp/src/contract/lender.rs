@@ -133,7 +133,7 @@ mod test {
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
     };
-    use platform::coin_legacy;
+    use platform::{coin_legacy, contract::Code};
     use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Storage};
 
     use crate::{borrow::InterestRate, state::Config};
@@ -156,7 +156,7 @@ mod test {
             storage,
             Config::new(
                 TheCurrency::TICKER.into(),
-                0xDEADC0DE_u64.into(),
+                Code::unchecked(0xDEADC0DE_u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,
                     UTILIZATION_OPTIMAL,

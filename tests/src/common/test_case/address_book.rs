@@ -1,4 +1,4 @@
-use platform::contract::CodeId;
+use platform::contract::Code;
 use sdk::cosmwasm_std::Addr;
 
 pub(crate) struct AddressBook<
@@ -20,11 +20,11 @@ pub(crate) struct AddressBook<
     lpp_addr: Lpp,
     oracle_addr: Oracle,
     time_alarms_addr: TimeAlarms,
-    lease_code_id: CodeId,
+    lease_code: Code,
 }
 
 impl AddressBook<(), (), (), (), (), (), (), ()> {
-    pub(super) const fn new(lease_code_id: CodeId) -> Self {
+    pub(super) const fn new(lease_code: Code) -> Self {
         Self {
             protocols_registry: (),
             dispatcher_addr: (),
@@ -35,7 +35,7 @@ impl AddressBook<(), (), (), (), (), (), (), ()> {
             lpp_addr: (),
             oracle_addr: (),
             time_alarms_addr: (),
-            lease_code_id,
+            lease_code,
         }
     }
 }
@@ -57,7 +57,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -88,7 +88,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -119,7 +119,7 @@ impl<ProtocolsRegistry, Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -151,7 +151,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Leaser, Lpp, Oracle, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -186,7 +186,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -225,7 +225,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms
             lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -256,7 +256,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
             lpp_addr: self.lpp_addr,
             oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -287,7 +287,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
             lpp_addr: self.lpp_addr,
             oracle_addr: self.oracle_addr,
             time_alarms_addr,
-            lease_code_id: self.lease_code_id,
+            lease_code: self.lease_code,
         }
     }
 }
@@ -303,7 +303,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
 impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     AddressBook<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 {
-    pub const fn lease_code_id(&self) -> CodeId {
-        self.lease_code_id
+    pub const fn lease_code(&self) -> Code {
+        self.lease_code
     }
 }

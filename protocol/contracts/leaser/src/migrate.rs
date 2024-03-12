@@ -1,5 +1,5 @@
 use lease::api::MigrateMsg;
-use platform::{batch::Batch, contract::CodeId};
+use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
 
 use crate::{msg::MaxLeases, result::ContractResult};
@@ -23,7 +23,7 @@ pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// Consumes the customers iterator to the next customer or error.
 pub fn migrate_leases<I, LI, MsgFactory>(
     mut customers: I,
-    lease_code_id: CodeId,
+    lease_code: Code,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
@@ -32,7 +32,7 @@ where
     LI: ExactSizeIterator<Item = Addr>,
     MsgFactory: Fn(Addr) -> MigrateMsg,
 {
-    let mut msgs = MigrateBatch::new(lease_code_id, max_leases);
+    let mut msgs = MigrateBatch::new(lease_code, max_leases);
     customers
         .find_map(|maybe_customer| match maybe_customer {
             Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
@@ -64,14 +64,14 @@ impl MigrationResult {
 }
 
 struct MigrateBatch {
-    new_code_id: CodeId,
+    new_code: Code,
     leases_left: MaxLeases,
     msgs: Batch,
 }
 impl MigrateBatch {
-    fn new(new_code_id: CodeId, max_leases: MaxLeases) -> Self {
+    fn new(new_code: Code, max_leases: MaxLeases) -> Self {
         Self {
-            new_code_id,
+            new_code,
             leases_left: max_leases,
             msgs: Default::default(),
         }
@@ -98,7 +98,7 @@ impl MigrateBatch {
                             .schedule_migrate_wasm_no_reply(
                                 lease,
                                 &migrate_msg(customer.customer.clone()),
-                                self.new_code_id,
+                                self.new_code,
                             )
                             .map(|()| None)
                             .map_err(Into::into)
@@ -123,7 +123,7 @@ mod test {
     use std::vec::IntoIter;
 
     use lease::api::MigrateMsg;
-    use platform::contract::CodeId;
+    use platform::contract::Code;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -147,7 +147,7 @@ mod test {
     #[test]
     fn no_leases() {
         use std::array::IntoIter;
-        let new_code: CodeId = 242;
+        let new_code = Code::unchecked(242);
         let no_leases: Vec<Customer<IntoIter<Addr, 0>>> = vec![];
         assert_eq!(
             Ok(MigrationResult::default()),
@@ -157,7 +157,7 @@ mod test {
 
     #[test]
     fn more_than_max_leases() {
-        let new_code: CodeId = 242;
+        let new_code = Code::unchecked(242);
         let lease1 = Addr::unchecked(LEASE1);
         let lease2 = Addr::unchecked(LEASE21);
         let lease3 = Addr::unchecked(LEASE22);
@@ -182,7 +182,7 @@ mod test {
 
     #[test]
     fn paging() {
-        let new_code = 242;
+        let new_code = Code::unchecked(242);
         let lease1 = Addr::unchecked(LEASE1);
         let lease21 = Addr::unchecked(LEASE21);
         let lease22 = Addr::unchecked(LEASE22);
@@ -304,7 +304,7 @@ mod test {
 
     #[test]
     fn err_leases() {
-        let new_code = 242;
+        let new_code = Code::unchecked(242);
         let lease1 = Addr::unchecked("lease11");
         let lease2 = Addr::unchecked("lease12");
         let lease3 = Addr::unchecked("lease13");
@@ -328,7 +328,7 @@ mod test {
         mut exp: MigrationResult,
         lease_addr: Addr,
         customer: Addr,
-        new_code: CodeId,
+        new_code: Code,
     ) -> MigrationResult {
         exp.msgs
             .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg()(customer), new_code)

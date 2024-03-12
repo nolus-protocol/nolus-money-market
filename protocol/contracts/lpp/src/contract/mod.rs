@@ -176,14 +176,16 @@ pub fn execute(
 ) -> Result<CwResponse> {
     // no currency context variants
     match msg {
-        ExecuteMsg::NewLeaseCode { lease_code_id } => {
+        ExecuteMsg::NewLeaseCode {
+            lease_code: new_lease_code,
+        } => {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
                 crate::access_control::LEASE_CODE_ADMIN_KEY,
             )
             .check(&info.sender)?;
 
-            Config::update_lease_code(deps.storage, lease_code_id)
+            Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
                 .map(response::response_only_messages)
         }
