@@ -28,59 +28,54 @@ impl<T> HumanReadableTree<T> {
     }
 
     pub fn from_tree(mut tree: Tree<T>) -> Self {
-        Self {
-            root: {
-                let root_index = Tree::<T>::ROOT_INDEX.into();
+        let root_index = Tree::<T>::ROOT_INDEX.into();
 
-                let mut child_nodes: BTreeMap<usize, Vec<HrtNode<T>>> = BTreeMap::new();
+        let mut child_nodes: BTreeMap<usize, Vec<HrtNode<T>>> = BTreeMap::new();
 
-                let mut indexes_mapping = (0..tree.nodes.len()).collect::<Vec<usize>>();
+        let mut indexes_mapping = (0..tree.nodes.len()).collect::<Vec<usize>>();
 
-                while let Some((node, index_mapping)) = tree
-                    .nodes
-                    .iter()
-                    .enumerate()
-                    .filter(|&(index, _)| index != root_index)
-                    .max_by_key(|(_, node)| node.parent_index())
-                    .map(|(index, _)| index)
-                    .map(|index| (tree.nodes.remove(index), indexes_mapping.remove(index)))
-                {
-                    let parent_index = node.parent_index().into();
+        while let Some((node, index_mapping)) = tree
+            .nodes
+            .iter()
+            .enumerate()
+            .filter(|&(index, _)| index != root_index)
+            .max_by_key(|(_, node)| node.parent_index())
+            .map(|(index, _)| index)
+            .map(|index| (tree.nodes.remove(index), indexes_mapping.remove(index)))
+        {
+            let parent_index = node.parent_index().into();
 
-                    let node = {
-                        let value = node.into_value();
+            let node = Self::convert_node_to_hrt(&mut child_nodes, node, index_mapping);
 
-                        if let Some(mut children) = child_nodes.remove(&index_mapping) {
-                            children.reverse();
+            match child_nodes.entry(parent_index) {
+                Entry::Vacant(entry) => _ = entry.insert(vec![node]),
+                Entry::Occupied(entry) => entry.into_mut().push(node),
+            }
+        }
 
-                            HrtNode::Branch { value, children }
-                        } else {
-                            HrtNode::Leaf { value }
-                        }
-                    };
+        let root =
+            Self::convert_node_to_hrt(&mut child_nodes, tree.nodes.remove(root_index), root_index);
 
-                    match child_nodes.entry(parent_index) {
-                        Entry::Vacant(entry) => _ = entry.insert(vec![node]),
-                        Entry::Occupied(entry) => entry.into_mut().push(node),
-                    }
-                }
+        debug_assert_eq!(indexes_mapping, [root_index]);
 
-                let value = tree.nodes.remove(root_index).into_value();
+        debug_assert!(child_nodes.is_empty());
 
-                let result = if let Some(mut children) = child_nodes.remove(&root_index) {
-                    children.reverse();
+        Self { root }
+    }
 
-                    HrtNode::Branch { value, children }
-                } else {
-                    HrtNode::Leaf { value }
-                };
+    fn convert_node_to_hrt(
+        child_nodes: &mut BTreeMap<usize, Vec<HrtNode<T>>>,
+        node: Node<T>,
+        index_mapping: usize,
+    ) -> HrtNode<T> {
+        let value = node.into_value();
 
-                debug_assert_eq!(indexes_mapping, [root_index]);
+        if let Some(mut children) = child_nodes.remove(&index_mapping) {
+            children.reverse();
 
-                debug_assert!(child_nodes.is_empty());
-
-                result
-            },
+            HrtNode::Branch { value, children }
+        } else {
+            HrtNode::Leaf { value }
         }
     }
 }
