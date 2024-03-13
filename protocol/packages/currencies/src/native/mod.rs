@@ -1,6 +1,6 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-#[cfg(feature = "astroport")]
+#[cfg(feature = "neutron-astroport-usdc_axelar")]
 use self::astroport as impl_mod;
 #[cfg(any(
     feature = "osmosis-osmosis-usdc_axelar",
@@ -8,7 +8,7 @@ use self::astroport as impl_mod;
 ))]
 use self::osmosis as impl_mod;
 
-#[cfg(feature = "astroport")]
+#[cfg(feature = "neutron-astroport-usdc_axelar")]
 pub(crate) mod astroport;
 #[cfg(any(
     feature = "osmosis-osmosis-usdc_axelar",

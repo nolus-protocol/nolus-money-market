@@ -13,9 +13,11 @@ net_dev = ["contract", "currencies/net_dev", "swap/test"]
 net_test = ["contract", "currencies/net_test", "swap/test"]
 net_main = ["contract", "currencies/net_main", "swap/main"]
 
-astroport = [
+neutron-astroport-usdc_axelar = [
+    "dep:dex",
+    "dep:swap",
     "contract",
-    "currencies/astroport",
+    "currencies/neutron-astroport-usdc_axelar",
     "swap/astroport",
 ]
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar", "swap/osmosis"]

@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-#[cfg(feature = "astroport")]
-pub use self::astroport::UsdcAxelar as Lpn;
+#[cfg(feature = "neutron-astroport-usdc_axelar")]
+pub use self::neutron_astroport_usdc_axelar::UsdcAxelar as Lpn;
 #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 pub use self::osmosis_osmosis_usdc_axelar::Usdc as Lpn;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]
 pub use self::osmosis_osmosis_usdc_noble::UsdcNoble as Lpn;
 
-#[cfg(feature = "astroport")]
-mod astroport;
+#[cfg(feature = "neutron-astroport-usdc_axelar")]
+mod neutron_astroport_usdc_axelar;
 #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 mod osmosis_osmosis_usdc_axelar;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]

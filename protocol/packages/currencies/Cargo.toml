@@ -13,7 +13,7 @@ net_dev = []
 net_test = []
 net_main = []
 
-astroport = []
+neutron-astroport-usdc_axelar = []
 osmosis-osmosis-usdc_axelar = []
 osmosis-osmosis-usdc_noble = []
 

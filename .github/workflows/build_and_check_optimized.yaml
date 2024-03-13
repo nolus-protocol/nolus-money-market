@@ -34,7 +34,7 @@ jobs:
       matrix:
         working_directory: [ "protocol" ]
         net: [ "dev", "test", "main" ]
-        protocol: [ "astroport", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble" ]
+        protocol: [ "neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble" ]
         include:
           - working_directory: "platform"
     name: "Building contracts [${{ matrix.working_directory }}; ${{ matrix.net }}; ${{ matrix.protocol }}]"

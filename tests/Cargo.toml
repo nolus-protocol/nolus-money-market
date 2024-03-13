@@ -8,7 +8,7 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-astroport = ["lease/astroport", "profit/astroport"]
+neutron-astroport-usdc_axelar = ["lease/neutron-astroport-usdc_axelar", "profit/neutron-astroport-usdc_axelar"]
 osmosis-osmosis-usdc_axelar = ["lease/osmosis-osmosis-usdc_axelar", "profit/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["lease/osmosis-osmosis-usdc_noble", "profit/osmosis-osmosis-usdc_noble"]
 
