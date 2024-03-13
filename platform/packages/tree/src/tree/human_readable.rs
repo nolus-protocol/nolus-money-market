@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::btree_map::{BTreeMap, Entry};
 
 use serde::{Deserialize, Serialize};
 
@@ -30,96 +30,58 @@ impl<T> HumanReadableTree<T> {
     pub fn from_tree(mut tree: Tree<T>) -> Self {
         Self {
             root: {
-                let mut child_nodes: BTreeMap<NodeIndex, Vec<HrtNode<T>>> = BTreeMap::new();
+                let root_index = Tree::<T>::ROOT_INDEX.into();
 
-                while let Some((start_index, node)) = Self::find_deepest(&tree) {
-                    let parent_index: NodeIndex = node.parent_index();
+                let mut child_nodes: BTreeMap<usize, Vec<HrtNode<T>>> = BTreeMap::new();
 
-                    let end_index: NodeIndex =
-                        Self::find_last_child(&tree, start_index, parent_index);
+                let mut indexes_mapping = (0..tree.nodes.len()).collect::<Vec<usize>>();
 
-                    let children: Vec<HrtNode<T>> =
-                        Self::drain_nodes(&mut tree, &mut child_nodes, start_index, end_index);
+                while let Some((node, index_mapping)) = tree
+                    .nodes
+                    .iter()
+                    .enumerate()
+                    .filter(|&(index, _)| index != root_index)
+                    .max_by_key(|(_, node)| node.parent_index())
+                    .map(|(index, _)| index)
+                    .map(|index| (tree.nodes.remove(index), indexes_mapping.remove(index)))
+                {
+                    let parent_index = node.parent_index().into();
 
-                    let result: Option<Vec<HrtNode<T>>> =
-                        child_nodes.insert(parent_index, children);
+                    let node = {
+                        let value = node.into_value();
 
-                    debug_assert!(result.is_none());
+                        if let Some(mut children) = child_nodes.remove(&index_mapping) {
+                            children.reverse();
+
+                            HrtNode::Branch { value, children }
+                        } else {
+                            HrtNode::Leaf { value }
+                        }
+                    };
+
+                    match child_nodes.entry(parent_index) {
+                        Entry::Vacant(entry) => _ = entry.insert(vec![node]),
+                        Entry::Occupied(entry) => entry.into_mut().push(node),
+                    }
                 }
 
-                let value: T = tree.nodes.remove(Tree::<T>::ROOT_INDEX.into()).into_value();
+                let value = tree.nodes.remove(root_index).into_value();
 
-                let result: HrtNode<T> =
-                    if let Some(children) = child_nodes.remove(&Tree::<T>::ROOT_PARENT) {
-                        HrtNode::Branch { value, children }
-                    } else {
-                        HrtNode::Leaf { value }
-                    };
+                let result = if let Some(mut children) = child_nodes.remove(&root_index) {
+                    children.reverse();
+
+                    HrtNode::Branch { value, children }
+                } else {
+                    HrtNode::Leaf { value }
+                };
+
+                debug_assert_eq!(indexes_mapping, [root_index]);
 
                 debug_assert!(child_nodes.is_empty());
 
                 result
             },
         }
-    }
-
-    fn enumerated_rev_iter(
-        tree: &Tree<T>,
-        start_index: NodeIndex,
-    ) -> impl Iterator<Item = (NodeIndex, &Node<T>)> + '_ {
-        tree.nodes[usize::from(start_index)..].iter().rev().map({
-            let mut index: NodeIndex = tree.node_index_len();
-
-            move |node| {
-                index -= 1;
-
-                (index, node)
-            }
-        })
-    }
-
-    fn find_deepest(tree: &Tree<T>) -> Option<(NodeIndex, &Node<T>)> {
-        Self::enumerated_rev_iter(tree, 1)
-            .max_by_key(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index())
-    }
-
-    fn find_last_child(
-        tree: &Tree<T>,
-        start_index: NodeIndex,
-        parent_index: NodeIndex,
-    ) -> NodeIndex {
-        Self::enumerated_rev_iter(tree, start_index)
-            .find(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index() == parent_index)
-            .expect("Subtree should contain at least the first found element!")
-            .0
-    }
-
-    fn drain_nodes(
-        tree: &mut Tree<T>,
-        child_nodes: &mut BTreeMap<NodeIndex, Vec<HrtNode<T>>>,
-        start_index: NodeIndex,
-        end_index: NodeIndex,
-    ) -> Vec<HrtNode<T>> {
-        tree.nodes
-            .drain(dbg!(usize::from(start_index)..=usize::from(end_index)))
-            .map({
-                let mut index: NodeIndex = start_index;
-
-                move |node: Node<T>| {
-                    let value: T = node.into_value();
-
-                    let children: Option<Vec<HrtNode<T>>> = child_nodes.remove(&index);
-
-                    index += 1;
-
-                    if let Some(children) = children {
-                        HrtNode::Branch { value, children }
-                    } else {
-                        HrtNode::Leaf { value }
-                    }
-                }
-            })
-            .collect()
     }
 }
 
