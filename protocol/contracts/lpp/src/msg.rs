@@ -37,7 +37,7 @@ where
     Lpns: Group,
 {
     NewLeaseCode {
-        /// This is an internal system API and we use [Code]
+        // This is an internal system API and we use [Code]
         lease_code: Code,
     },
 

@@ -17,7 +17,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(lease_code: Code) -> Self {
+    pub const fn new(lease_code: Code) -> Self {
         Self { lease_code }
     }
 

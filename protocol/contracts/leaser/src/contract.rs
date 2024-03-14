@@ -198,8 +198,8 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
     Leaser::new(deps)
         .config()
         .map(|config| config.config.lease_code)
-        .and_then(|lease_code_id| {
-            contract::validate_code_id(deps.querier, &lease, lease_code_id).map_err(Into::into)
+        .and_then(|lease_code| {
+            contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
         })
         .map(|()| lease)
 }

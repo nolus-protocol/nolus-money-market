@@ -28,6 +28,7 @@ pub mod loan;
 pub struct LppRef<Lpns> {
     addr: Addr,
     #[serde(alias = "currency")]
+    // TODO remove once all occurences of `LppRef` instances got migrated
     lpn: SymbolOwned,
     #[serde(skip)]
     _lpns: PhantomData<Lpns>,

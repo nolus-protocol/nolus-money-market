@@ -1,3 +1,5 @@
+use std::mem;
+
 use sdk::{
     cosmwasm_std::{Addr, CodeInfoResponse, ContractInfoResponse, QuerierWrapper, WasmQuery},
     schemars::{self, JsonSchema},
@@ -9,8 +11,7 @@ use crate::{error::Error, result::Result};
 pub type CodeId = u64;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[serde(transparent)]
+#[serde(deny_unknown_fields, rename_all = "snake_case", transparent)]
 /// A valid Cosmwasm code that may be stored and transferred
 /// Not indended to be used in external APIs since there is no way to integrate validation on deserialization!
 /// Instead, use [CodeId] in APIs and [Code::try_new] to validate the input.
@@ -20,9 +21,8 @@ pub struct Code {
 
 impl Code {
     pub fn try_new(id: CodeId, querier: &QuerierWrapper<'_>) -> Result<Self> {
-        let raw = WasmQuery::CodeInfo { code_id: id }.into();
         querier
-            .query(&raw)
+            .query(&WasmQuery::CodeInfo { code_id: id }.into())
             .map_err(Error::from)
             .map(|resp: CodeInfoResponse| Self { id: resp.code_id })
     }
@@ -40,7 +40,7 @@ impl From<Code> for CodeId {
 }
 
 pub fn validate_addr(querier: QuerierWrapper<'_>, contract_address: &Addr) -> Result<()> {
-    query_info(querier, contract_address).map(|_| ())
+    query_info(querier, contract_address).map(mem::drop)
 }
 
 pub fn validate_code_id(

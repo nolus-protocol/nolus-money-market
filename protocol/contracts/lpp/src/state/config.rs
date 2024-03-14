@@ -12,6 +12,7 @@ use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
 pub struct Config {
     lpn_ticker: String,
     #[serde(alias = "lease_code_id")]
+    // TODO remove once a new release with this change is deployed
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: BoundToHundredPercent,

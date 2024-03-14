@@ -16,6 +16,7 @@ use crate::{msg::InstantiateMsg, result::ContractResult};
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Config {
     #[serde(alias = "lease_code_id")]
+    // TODO remove once a new release with this change is deployed
     pub lease_code: Code,
     pub lpp: Addr,
     pub profit: Addr,
@@ -61,11 +62,13 @@ impl Config {
         lease_due_period: Duration,
     ) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |mut c| -> ContractResult<Config> {
-                c.lease_interest_rate_margin = lease_interest_rate_margin;
-                c.lease_position_spec = lease_position_spec;
-                c.lease_due_period = lease_due_period;
-                Ok(c)
+            .update(storage, |c| -> ContractResult<Config> {
+                Ok(Self {
+                    lease_interest_rate_margin,
+                    lease_position_spec,
+                    lease_due_period,
+                    ..c
+                })
             })
             .map(|_| ())
             .map_err(Into::into)
@@ -73,9 +76,11 @@ impl Config {
 
     pub fn update_lease_code(storage: &mut dyn Storage, new_code: Code) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |mut c| -> ContractResult<Config> {
-                c.lease_code = new_code;
-                Ok(c)
+            .update(storage, |c| -> ContractResult<Config> {
+                Ok(Self {
+                    lease_code: new_code,
+                    ..c
+                })
             })
             .map(|_| ())
             .map_err(Into::into)

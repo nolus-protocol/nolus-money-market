@@ -69,16 +69,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     match msg {
-        ExecuteMsg::NewLeaseCode { code } => SingleUserAccess::new(
+        ExecuteMsg::NewLeaseCode(code) => SingleUserAccess::new(
             deps.storage.deref_mut(),
             crate::access_control::LEASE_CODE_ADMIN_KEY,
         )
         .check(&info.sender)
         .map_err(Into::into)
-        .and_then(|()| {
-            Config::update_lease_code(deps.storage, code).map(|()| PlatformResponse::default())
-        }),
-        ExecuteMsg::CoverLiquidationLosses { amount } => {
+        .and_then(|()| Config::update_lease_code(deps.storage, code))
+        .map(|()| PlatformResponse::default()),
+        ExecuteMsg::CoverLiquidationLosses(amount) => {
             let lease = info.sender;
 
             Config::load(deps.storage)
