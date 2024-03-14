@@ -1,3 +1,5 @@
+use std::str;
+
 const PACKAGE_NAME: &[u8] = env!("CARGO_PKG_NAME").as_bytes();
 
 const CARGO_SUBCOMMAND_PREFIX: &[u8] = b"cargo-";
@@ -35,7 +37,7 @@ const SUBCOMMAND_NAME_ARRAY: [u8; SUBCOMMAND_NAME_LENGTH] = {
 };
 
 pub(crate) const CARGO_SUBCOMMAND_NAME: &str = {
-    if let Ok(s) = std::str::from_utf8(&SUBCOMMAND_NAME_ARRAY) {
+    if let Ok(s) = str::from_utf8(&SUBCOMMAND_NAME_ARRAY) {
         s
     } else {
         unreachable!()

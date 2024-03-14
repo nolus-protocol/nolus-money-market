@@ -1,0 +1,10 @@
+[package]
+name = "cargo-each"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+cargo_metadata = { workspace = true }
+clap = { workspace = true, features = ["env"] }
+serde = { workspace = true }
