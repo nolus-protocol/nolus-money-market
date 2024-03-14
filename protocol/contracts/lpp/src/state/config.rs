@@ -10,7 +10,6 @@ use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::{
     borrow::InterestRate,
-    contract::LpnCurrency,
     error::{ContractError, Result},
     msg::InstantiateMsg,
 };
@@ -28,8 +27,11 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn try_new(msg: InstantiateMsg, lease_code: Code) -> Result<Self> {
-        if msg.lpn_ticker == LpnCurrency::TICKER {
+    pub fn try_new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Result<Self>
+    where
+        Lpn: Currency,
+    {
+        if msg.lpn_ticker == Lpn::TICKER {
             Ok(Self {
                 lpn_ticker: msg.lpn_ticker,
                 lease_code,
@@ -44,15 +46,16 @@ impl Config {
     }
 
     #[cfg(test)]
-    pub fn new(
-        lpn_ticker: String,
+    pub fn new_unchecked<Lpn>(
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> Self {
-        assert_eq!(&lpn_ticker, LpnCurrency::TICKER);
+    ) -> Self
+    where
+        Lpn: Currency,
+    {
         Self {
-            lpn_ticker,
+            lpn_ticker: Lpn::TICKER.into(),
             lease_code,
             borrow_rate,
             min_utilization,

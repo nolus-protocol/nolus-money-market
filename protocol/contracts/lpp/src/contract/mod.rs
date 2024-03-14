@@ -3,9 +3,10 @@ use std::ops::DerefMut as _;
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
-use currencies::{Lpn, Lpns};
+use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -27,8 +28,6 @@ mod rewards;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
-pub(crate) type LpnCurrencies = Lpns;
-pub(crate) type LpnCurrency = Lpn;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -51,7 +50,7 @@ impl<'a> InstantiateWithLpn<'a> {
 
         Code::try_new(self.msg.lease_code, &self.deps.querier)
             .map_err(Into::into)
-            .and_then(|lease_code| Config::try_new(self.msg, lease_code))
+            .and_then(|lease_code| Config::try_new::<LpnCurrency>(self.msg, lease_code))
             .and_then(|cfg| LiquidityPool::<Lpn>::store(self.deps.storage, cfg))
     }
 
@@ -281,6 +280,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
+        QueryMsg::Lpn() => to_json_binary(&LpnCurrency::TICKER).map_err(Into::into),
         QueryMsg::Balance { address } => {
             to_json_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
         }

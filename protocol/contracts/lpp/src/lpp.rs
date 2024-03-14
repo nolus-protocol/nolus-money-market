@@ -314,7 +314,6 @@ where
 mod test {
     use access_control::ContractOwnerAccess;
     use currencies::{test::StableC1, Lpns};
-    use currency::Currency;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -355,8 +354,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -395,8 +393,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -478,8 +475,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -576,8 +572,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -610,8 +605,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -644,8 +638,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -700,8 +693,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -753,8 +745,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            TheCurrency::TICKER.into(),
+        Config::new_unchecked::<TheCurrency>(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -896,7 +887,6 @@ mod test {
     }
 
     mod min_utilization {
-        use currency::Currency as _;
         use finance::{
             coin::{Amount, Coin},
             percent::{bound::BoundToHundredPercent, Percent},
@@ -931,8 +921,7 @@ mod test {
                 .unwrap();
 
             let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
-                config: Config::new(
-                    TheCurrency::TICKER.into(),
+                config: Config::new_unchecked::<TheCurrency>(
                     Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),

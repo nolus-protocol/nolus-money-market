@@ -11,8 +11,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{ContractError, Result},
-    msg::{LoanResponse, QueryLoanResponse, QueryMsg},
-    state::Config,
+    msg::{LoanResponse, LpnResponse, QueryLoanResponse, QueryMsg},
 };
 
 use self::{
@@ -39,14 +38,12 @@ where
     Lpns: Group + Serialize,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Config())?;
+        let lpn: LpnResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())?;
 
-        let lpn = resp.lpn_ticker();
-
-        currency::validate::<Lpns>(lpn)
+        currency::validate::<Lpns>(&lpn)
             .map(|()| Self {
                 addr,
-                lpn: lpn.into(),
+                lpn,
                 _lpns: PhantomData,
             })
             .map_err(Into::into)

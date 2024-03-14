@@ -128,7 +128,6 @@ mod test {
 
     use access_control::ContractOwnerAccess;
     use currencies::test::StableC1;
-    use currency::Currency;
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
@@ -154,8 +153,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             storage,
-            Config::new(
-                TheCurrency::TICKER.into(),
+            Config::new_unchecked::<TheCurrency>(
                 Code::unchecked(0xDEADC0DE_u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,

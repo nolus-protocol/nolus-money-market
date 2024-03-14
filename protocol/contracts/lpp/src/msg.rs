@@ -1,6 +1,7 @@
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
+pub use currency::SymbolOwned as LpnResponse;
 use currency::{Currency, Group, NlsPlatform, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
@@ -80,6 +81,8 @@ where
     Lpns: Group,
 {
     Config(),
+    /// Return [LpnResponse]
+    Lpn(),
     Quote {
         amount: CoinDTO<Lpns>,
     },
