@@ -18,6 +18,8 @@ use crate::{
 
 pub mod base;
 pub mod dto;
+mod with_price;
+pub mod with_quote;
 
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where

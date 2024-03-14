@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::{Lpn, PaymentGroup};
+use currencies::{LeaseGroup, Lpn, PaymentGroup};
 use currency::SymbolOwned;
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
@@ -11,10 +11,11 @@ use sdk::{
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
-use super::{alarms::AlarmCurrencies, swap::SwapTarget, BaseCurrencies};
+use super::{swap::SwapTarget, BaseCurrencyGroup};
 
 pub type PriceCurrencies = PaymentGroup;
 pub(crate) type BaseCurrency = Lpn;
+pub(crate) type AlarmCurrencies = LeaseGroup;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

@@ -1,6 +1,5 @@
 use std::result::Result as StdResult;
 
-use currencies::LeaseGroup;
 use currency::{Currency, Group};
 use finance::price::base::BasePrice;
 use serde::{Deserialize, Serialize};
@@ -13,16 +12,15 @@ use sdk::{
 
 mod unchecked;
 
-pub type AlarmCurrencies = LeaseGroup;
-
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg<Lpn>
+pub enum ExecuteMsg<G, Lpn>
 where
+    G: Group,
     Lpn: Currency,
 {
-    AddPriceAlarm { alarm: Alarm<AlarmCurrencies, Lpn> },
+    AddPriceAlarm { alarm: Alarm<G, Lpn> },
 }
 
 pub type Result<T> = StdResult<T, Error>;

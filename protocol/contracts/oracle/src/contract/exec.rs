@@ -48,9 +48,10 @@ pub fn do_executute(
         ExecuteMsg::AddPriceAlarm { alarm } => {
             contract::validate_addr(deps.querier, &sender)?;
 
-            MarketAlarms::new(deps.storage)
-                .try_add_price_alarm::<BaseCurrency, _>(sender, alarm)
-                .map(|()| Default::default())
+                MarketAlarms::new(self.deps.storage)
+                    .try_add_price_alarm(self.sender, alarm)
+                    .map(|()| Default::default())
+            }
         }
     }
 }

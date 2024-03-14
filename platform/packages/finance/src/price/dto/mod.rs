@@ -13,7 +13,6 @@ use crate::{
 
 mod unchecked;
 pub mod with_price;
-pub mod with_quote;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(

@@ -270,10 +270,13 @@ mod tests {
         let query_impl = ExecuteMsg::AddPriceAlarm {
             alarm: alarm.clone(),
         };
-        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<StableC1>>(
+        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<LeaseGroup, StableC1>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
         )
         .unwrap();
-        assert_eq!(ExecuteMsgApi::AddPriceAlarm::<StableC1> { alarm }, query_api);
+        assert_eq!(
+            ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, StableC1> { alarm },
+            query_api
+        );
     }
 }
