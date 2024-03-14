@@ -1,3 +1,5 @@
+use std::mem;
+
 use cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
@@ -62,15 +64,15 @@ impl Config {
         lease_due_period: Duration,
     ) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |c| -> ContractResult<Config> {
-                Ok(Self {
+            .update(storage, |c| {
+                ContractResult::Ok(Self {
                     lease_interest_rate_margin,
                     lease_position_spec,
                     lease_due_period,
                     ..c
                 })
             })
-            .map(|_| ())
+            .map(mem::drop)
             .map_err(Into::into)
     }
 
@@ -82,7 +84,7 @@ impl Config {
                     ..c
                 })
             })
-            .map(|_| ())
+            .map(mem::drop)
             .map_err(Into::into)
     }
 }

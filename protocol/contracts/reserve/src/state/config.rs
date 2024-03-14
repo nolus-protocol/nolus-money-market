@@ -1,3 +1,5 @@
+use std::mem;
+
 use serde::{Deserialize, Serialize};
 
 use platform::contract::Code;
@@ -36,7 +38,7 @@ impl Config {
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
             .update(storage, |_config: Self| Ok(Self::new(lease_code)))
-            .map(|_| ())
+            .map(mem::drop)
     }
 }
 

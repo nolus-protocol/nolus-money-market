@@ -1,3 +1,5 @@
+use std::mem;
+
 use platform::contract::Code;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -97,7 +99,7 @@ impl Config {
     {
         Self::STORAGE
             .update(storage, |config: Self| Ok(f(config)))
-            .map(|_| ())
+            .map(mem::drop)
     }
 }
 
