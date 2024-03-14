@@ -8,7 +8,7 @@ use crate::{
     price,
 };
 
-use super::{PriceDTO, WithQuote};
+use super::{base::BasePrice, dto::WithQuote};
 
 struct BaseCVisitor<'a, G, QuoteC, Cmd>
 where
@@ -42,25 +42,23 @@ where
 }
 
 #[track_caller]
-pub fn execute<G, QuoteC, QuoteG, Cmd>(
-    price: &PriceDTO<G, QuoteG>,
+pub fn execute<G, QuoteC, Cmd>(
+    price: &BasePrice<G, QuoteC>,
     cmd: Cmd,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     G: Group,
     QuoteC: Currency,
-    QuoteG: Group,
     Cmd: WithQuote<QuoteC>,
     Error: Into<Cmd::Error>,
 {
     //TODO use CoinDTO::with_coin instead
     Tickers
         .visit_any::<G, _>(
-            &price.amount.ticker().clone(),
+            price.base_ticker(),
             BaseCVisitor {
-                base_dto: &price.amount,
-                quote: Coin::<QuoteC>::try_from(&price.amount_quote)
-                    .expect("Got different currency in visitor!"),
+                base_dto: &price.amount(),
+                quote: price.amount_quote(),
                 cmd,
             },
         )

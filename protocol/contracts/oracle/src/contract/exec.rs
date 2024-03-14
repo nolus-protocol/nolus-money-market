@@ -81,7 +81,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 contract::validate_addr(self.deps.querier, &self.sender)?;
 
                 MarketAlarms::new(self.deps.storage)
-                    .try_add_price_alarm::<BaseC, _>(self.sender, alarm)
+                    .try_add_price_alarm(self.sender, alarm)
                     .map(|()| Default::default())
             }
         }

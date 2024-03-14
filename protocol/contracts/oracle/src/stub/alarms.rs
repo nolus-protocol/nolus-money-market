@@ -10,7 +10,7 @@ use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
 pub trait PriceAlarms<AlarmCurrencies, BaseCurrency>
 where
-    BaseCurrency: Currency + Serialize,
+    BaseCurrency: Currency,
     AlarmCurrencies: Group,
     Self: Into<Batch> + Sized,
 {
@@ -24,7 +24,7 @@ pub trait AsAlarms {
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
         OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group;
+        AlarmCurrencies: Group + Serialize;
 }
 
 impl AsAlarms for OracleRef {
@@ -33,7 +33,7 @@ impl AsAlarms for OracleRef {
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
         OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group,
+        AlarmCurrencies: Group + Serialize,
     {
         self.check_base::<OracleBase>();
 
@@ -61,13 +61,13 @@ impl<'a, OracleBase, AlarmCurrencies> PriceAlarms<AlarmCurrencies, OracleBase>
     for AlarmsStub<'a, OracleBase>
 where
     OracleBase: Currency + Serialize,
-    AlarmCurrencies: Group,
+    AlarmCurrencies: Group + Serialize,
 {
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, OracleBase>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),
-                &ExecuteMsg::AddPriceAlarm::<OracleBase> { alarm },
+                &ExecuteMsg::AddPriceAlarm { alarm },
                 vec![],
             )
             .map_err(Error::StubAddAlarm)?,

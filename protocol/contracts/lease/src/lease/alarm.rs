@@ -50,7 +50,7 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait,
+        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, Lpn>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
@@ -70,6 +70,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use currencies::LeaseGroup;
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -133,7 +134,7 @@ mod tests {
             let below_alarm = total_of(liability_alarm_on.of(asset)).is(due.total_due());
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm::<TestLpn> {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn> {
                     alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
@@ -191,7 +192,7 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm::<TestLpn> {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn> {
                     alarm: Alarm::new(exp_below, Some(exp_above)),
                 })
                 .unwrap(),

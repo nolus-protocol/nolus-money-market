@@ -187,6 +187,7 @@ mod test_normalized_price_not_found {
 
     type BaseCurrency = StableC;
     type BaseGroup = Lpns;
+    type AlarmCurrencies = PaymentGroup;
 
     type NlsCoin = Coin<NativeC>;
     type UsdcCoin = Coin<StableC>;
@@ -249,9 +250,9 @@ mod test_normalized_price_not_found {
             MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, _>(
+            .try_add_price_alarm::<BaseCurrency>(
                 Addr::unchecked("1"),
-                Alarm::<_, BaseGroup>::new(
+                Alarm::<AlarmCurrencies, BaseCurrency>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
                     Some(price::total_of(PRICE_BASE).is(PRICE_QUOTE)),
                 ),
