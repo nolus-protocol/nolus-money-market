@@ -5,7 +5,10 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "@agnostic"], include-rest = true }
+]
 
 [dependencies]
 sdk = { workspace = true, features = ["cosmos", "storage"] }

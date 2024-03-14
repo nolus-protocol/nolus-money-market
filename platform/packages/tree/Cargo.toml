@@ -5,6 +5,11 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "@agnostic"], include-rest = true }
+]
+
 [features]
 schema = ["sdk/schema"]
 testing = []
