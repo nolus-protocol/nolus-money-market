@@ -11,7 +11,7 @@ combinations = [
 ]
 
 [features]
-schema = ["sdk/schema"]
+schema = ["dep:sdk", "sdk/schema"]
 testing = []
 
 [dependencies]

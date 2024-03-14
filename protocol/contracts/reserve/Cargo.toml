@@ -37,10 +37,12 @@ contract = [
     "dep:currency",
     "dep:cosmwasm-std",
     "dep:platform",
+    "dep:sdk",
     "dep:versioning",
 ]
 # stub = [
 #     # "dep:platform",
+#      "dep:sdk",
 #      "dep:thiserror"]
 
 [dependencies]
