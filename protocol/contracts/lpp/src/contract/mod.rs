@@ -6,7 +6,7 @@ use access_control::SingleUserAccess;
 use currencies::{Lpn, Lpns};
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
-use platform::{message::Response as PlatformResponse, response};
+use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
@@ -49,8 +49,9 @@ impl<'a> InstantiateWithLpn<'a> {
         )
         .grant_to(&self.msg.lease_code_admin)?;
 
-        self.msg
-            .try_into()
+        Code::try_new(self.msg.lease_code, &self.deps.querier)
+            .map_err(Into::into)
+            .and_then(|lease_code| Config::try_new(self.msg, lease_code))
             .and_then(|cfg| LiquidityPool::<Lpn>::store(self.deps.storage, cfg))
     }
 

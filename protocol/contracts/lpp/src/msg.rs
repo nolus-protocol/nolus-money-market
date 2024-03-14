@@ -1,4 +1,4 @@
-use platform::contract::Code;
+use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, NlsPlatform, SymbolOwned};
@@ -21,6 +21,7 @@ use crate::{borrow::InterestRate, loan::Loan};
 pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
+    pub lease_code: CodeId,
     pub borrow_rate: InterestRate,
     pub min_utilization: BoundToHundredPercent,
 }

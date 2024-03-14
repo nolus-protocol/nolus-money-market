@@ -3,7 +3,6 @@ use std::ops::{Deref, DerefMut};
 use access_control::ContractOwnerAccess;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
-    batch::Batch,
     contract::{self, Code},
     error as platform_error,
     message::Response as MessageResponse,
@@ -49,9 +48,8 @@ pub fn instantiate(
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     Config::try_new(msg, &deps.querier)
-        .and_then(|config| config.store(deps.storage).map(|()| config))
-        .and_then(|config| leaser::update_lpp(deps.storage, config.lease_code, Batch::default()))
-        .map(response::response_only_messages)
+        .and_then(|config| config.store(deps.storage))
+        .map(|()| response::empty_response())
         .or_else(|err| platform_error::log(err, deps.api))
 }
 

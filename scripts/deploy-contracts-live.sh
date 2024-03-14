@@ -141,7 +141,7 @@ deploy_contracts() {
   local -r lease_code_id=$(_store_code "$nolus_net" "$chain_id" "$nolus_home_dir" "$store_code_privileged_wallet_key" "$wasm_path/lease.wasm"  "$leaser_expected_address")
 
   # upload and instantiate LPP
-  local -r lpp_init_msg='{"lpn_ticker":"'"$protocol_currency"'","lease_code_admin":"'"$leaser_expected_address"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":0}'
+  local -r lpp_init_msg='{"lpn_ticker":"'"$protocol_currency"'","lease_code_admin":"'"$leaser_expected_address"'","lease_code":"'"$lease_code_id"'","borrow_rate":{"base_interest_rate":100,"utilization_optimal":750,"addon_optimal_interest_rate":20},"min_utilization":0}'
   local -r lpp_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir"  "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/lpp.wasm" "$lpp_init_msg" "$protocol-lpp" "$protocol")
 
   # upload and instantiate Oracle

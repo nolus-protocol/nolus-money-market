@@ -1,11 +1,11 @@
 use std::mem;
 
-use platform::contract::{Code, CodeId};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
+use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::{
@@ -27,6 +27,21 @@ pub struct Config {
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
+
+    pub fn try_new(msg: InstantiateMsg, lease_code: Code) -> Result<Self> {
+        if msg.lpn_ticker == LpnCurrency::TICKER {
+            Ok(Self {
+                lpn_ticker: msg.lpn_ticker,
+                lease_code,
+                borrow_rate: msg.borrow_rate,
+                min_utilization: msg.min_utilization,
+            })
+        } else {
+            Err(ContractError::InvalidConfigParameter(
+                "The LPN ticker does not match the LPN this contract is compiled with",
+            ))
+        }
+    }
 
     #[cfg(test)]
     pub fn new(
@@ -106,24 +121,5 @@ impl Config {
         Self::STORAGE
             .update(storage, |config: Self| Ok(f(config)))
             .map(mem::drop)
-    }
-}
-
-impl TryFrom<InstantiateMsg> for Config {
-    type Error = ContractError;
-
-    fn try_from(msg: InstantiateMsg) -> Result<Self> {
-        if msg.lpn_ticker == LpnCurrency::TICKER {
-            Ok(Self {
-                lpn_ticker: msg.lpn_ticker,
-                lease_code: Code::unchecked(CodeId::default()),
-                borrow_rate: msg.borrow_rate,
-                min_utilization: msg.min_utilization,
-            })
-        } else {
-            Err(ContractError::InvalidConfigParameter(
-                "The LPN ticker does not match the LPN this contract is compiled with",
-            ))
-        }
     }
 }

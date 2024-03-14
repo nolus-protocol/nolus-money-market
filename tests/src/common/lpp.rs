@@ -13,7 +13,6 @@ use lpp::{
 use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
-    cw_multi_test::AppResponse,
     testing::CwContract,
 };
 
@@ -71,32 +70,21 @@ impl Instantiator {
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_admin: lease_code_admin.clone(),
+            lease_code: lease_code.into(),
             borrow_rate,
             min_utilization,
         };
 
-        let lpp = app
-            .instantiate(
-                lpp_id,
-                Addr::unchecked(ADMIN),
-                &msg,
-                init_balance,
-                "lpp",
-                None,
-            )
-            .unwrap()
-            .unwrap_response();
-        let _: AppResponse = app
-            .execute(
-                lease_code_admin,
-                lpp.clone(),
-                &LppExecuteMsg::NewLeaseCode { lease_code },
-                &[],
-            )
-            .unwrap()
-            .unwrap_response();
-
-        lpp
+        app.instantiate(
+            lpp_id,
+            Addr::unchecked(ADMIN),
+            &msg,
+            init_balance,
+            "lpp",
+            None,
+        )
+        .unwrap()
+        .unwrap_response()
     }
 }
 

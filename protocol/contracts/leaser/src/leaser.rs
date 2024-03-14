@@ -113,14 +113,6 @@ where
     })
 }
 
-pub(super) fn update_lpp(
-    storage: &dyn Storage,
-    new_code_id: Code,
-    mut batch: Batch,
-) -> ContractResult<Batch> {
-    update_lpp_impl(storage, new_code_id, &mut batch).map(|()| batch)
-}
-
 fn update_lpp_impl(storage: &dyn Storage, new_code: Code, batch: &mut Batch) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp;
     let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
