@@ -38,7 +38,7 @@ tree = { path = "../platform/packages/tree", default-features = false }
 versioning = { path = "../platform/packages/versioning", default-features = false }
 
 # General
-base64 = { version = "0.21", default-features = false }
+base64 = { version = "0.22", default-features = false }
 serde = { version = "1", default-features = false }
 postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
