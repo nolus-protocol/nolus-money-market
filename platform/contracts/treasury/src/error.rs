@@ -1,4 +1,3 @@
-use semver::Error as SemverError;
 use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
@@ -16,10 +15,4 @@ pub enum ContractError {
 
     #[error("[Treasury] Rewards dispatcher is not configured")]
     NotConfigured {},
-}
-
-impl From<SemverError> for ContractError {
-    fn from(_: SemverError) -> Self {
-        ContractError::Std(StdError::invalid_utf8("semver err"))
-    }
 }

@@ -60,7 +60,6 @@ currency = { workspace = true }
 dex = { workspace = true, optional = true, features = ["impl"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
-lpp-platform = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }

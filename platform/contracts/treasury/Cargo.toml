@@ -30,7 +30,6 @@ cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-semver = "1"
 
 [dev-dependencies]
 schema = { workspace = true }
