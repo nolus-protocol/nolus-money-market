@@ -73,7 +73,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use base64::{engine::general_purpose, Engine};
+    use base64::{engine::general_purpose, Engine as _};
 
     use sdk::cosmos_sdk_proto::Any;
 
