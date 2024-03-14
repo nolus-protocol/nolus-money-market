@@ -1548,7 +1548,6 @@ dependencies = [
  "finance",
  "platform",
  "sdk",
- "semver",
  "serde",
  "thiserror",
  "versioning",

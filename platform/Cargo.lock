@@ -1195,7 +1195,6 @@ dependencies = [
  "platform",
  "schema",
  "sdk",
- "semver",
  "serde",
  "thiserror",
  "versioning",
@@ -1233,7 +1232,6 @@ version = "0.0.1"
 dependencies = [
  "sdk",
  "serde",
- "serde_json",
 ]
 
 [[package]]
