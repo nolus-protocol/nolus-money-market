@@ -772,7 +772,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -797,7 +797,7 @@ checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
 
 [[package]]
 name = "lpp"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "platform"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "currency",
  "finance",

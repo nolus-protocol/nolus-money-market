@@ -1,6 +1,6 @@
 use std::mem;
 
-use platform::contract::Code;
+use platform::contract::{Code, CodeId};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
@@ -8,13 +8,18 @@ use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
+use crate::{
+    borrow::InterestRate,
+    contract::LpnCurrency,
+    error::{ContractError, Result},
+    msg::InstantiateMsg,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     lpn_ticker: String,
     #[serde(alias = "lease_code_id")]
-    // TODO remove once a new release with this change is deployed
+    // TODO remove the alias once a new release with this change is deployed
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: BoundToHundredPercent,
@@ -24,12 +29,13 @@ impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
     #[cfg(test)]
-    pub const fn new(
+    pub fn new(
         lpn_ticker: String,
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
     ) -> Self {
+        assert_eq!(&lpn_ticker, LpnCurrency::TICKER);
         Self {
             lpn_ticker,
             lease_code,
@@ -103,15 +109,21 @@ impl Config {
     }
 }
 
-impl From<InstantiateMsg> for Config {
-    fn from(msg: InstantiateMsg) -> Self {
-        // 0 is a non-existing code id
-        // TODO provide the lease code on instantiation
-        Self {
-            lpn_ticker: msg.lpn_ticker,
-            lease_code: Code::unchecked(u64::default()),
-            borrow_rate: msg.borrow_rate,
-            min_utilization: msg.min_utilization,
+impl TryFrom<InstantiateMsg> for Config {
+    type Error = ContractError;
+
+    fn try_from(msg: InstantiateMsg) -> Result<Self> {
+        if msg.lpn_ticker == LpnCurrency::TICKER {
+            Ok(Self {
+                lpn_ticker: msg.lpn_ticker,
+                lease_code: Code::unchecked(CodeId::default()),
+                borrow_rate: msg.borrow_rate,
+                min_utilization: msg.min_utilization,
+            })
+        } else {
+            Err(ContractError::InvalidConfigParameter(
+                "The LPN ticker does not match the LPN this contract is compiled with",
+            ))
         }
     }
 }

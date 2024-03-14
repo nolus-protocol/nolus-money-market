@@ -356,7 +356,7 @@ mod test {
         grant_admin_access(deps.as_mut(), &admin);
 
         Config::new(
-            balance_mock.denom.clone(),
+            TheCurrency::TICKER.into(),
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -396,7 +396,7 @@ mod test {
         grant_admin_access(deps.as_mut(), &admin);
 
         Config::new(
-            balance_mock.denom,
+            TheCurrency::TICKER.into(),
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -754,7 +754,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
         Config::new(
-            TheCurrency::BANK_SYMBOL.into(),
+            TheCurrency::TICKER.into(),
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,

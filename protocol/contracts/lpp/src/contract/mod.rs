@@ -3,7 +3,8 @@ use std::ops::DerefMut as _;
 use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
-use currencies::Lpns;
+use currencies::{Lpn, Lpns};
+
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{message::Response as PlatformResponse, response};
 use sdk::{
@@ -27,6 +28,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 pub(crate) type LpnCurrencies = Lpns;
+pub(crate) type LpnCurrency = Lpn;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -47,7 +49,9 @@ impl<'a> InstantiateWithLpn<'a> {
         )
         .grant_to(&self.msg.lease_code_admin)?;
 
-        LiquidityPool::<Lpn>::store(self.deps.storage, self.msg.into())
+        self.msg
+            .try_into()
+            .and_then(|cfg| LiquidityPool::<Lpn>::store(self.deps.storage, cfg))
     }
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
