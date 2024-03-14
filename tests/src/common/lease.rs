@@ -11,7 +11,7 @@ use lease::{
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
-use platform::{coin_legacy::to_cosmwasm, contract::CodeId};
+use platform::{coin_legacy::to_cosmwasm, contract::Code};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
@@ -32,7 +32,7 @@ use super::{
 pub(crate) struct Instantiator;
 
 impl Instantiator {
-    pub fn store(app: &mut App) -> CodeId {
+    pub fn store(app: &mut App) -> Code {
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
@@ -43,7 +43,7 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate<D>(
         app: &mut App,
-        code_id: CodeId,
+        code: Code,
         addresses: InstantiatorAddresses,
         lease_config: InitConfig<'_, D>,
         config: InstantiatorConfig,
@@ -62,7 +62,7 @@ impl Instantiator {
 
         let mut response: ResponseWithInterChainMsgs<'_, Addr> = app
             .instantiate(
-                code_id,
+                code,
                 Addr::unchecked(ADMIN),
                 &msg,
                 &[to_cosmwasm(lease_config.downpayment)],

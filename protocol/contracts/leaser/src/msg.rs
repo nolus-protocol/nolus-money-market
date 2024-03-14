@@ -1,3 +1,4 @@
+use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
@@ -17,7 +18,7 @@ pub use crate::state::config::Config;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lease_code_id: Uint64,
+    pub lease_code: Code,
     pub lpp: Addr,
     pub profit: Addr,
     pub time_alarms: Addr,
@@ -58,6 +59,7 @@ pub enum ExecuteMsg {
     /// a continuation key with the same event and the procedure continues until
     /// no key is provided and 'wasm-migrate-leases.status=done'.
     MigrateLeases {
+        /// Since this is an external system API we should not use [Code].
         new_code_id: Uint64,
         max_leases: MaxLeases,
     },

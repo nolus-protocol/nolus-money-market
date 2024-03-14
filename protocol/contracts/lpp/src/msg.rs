@@ -1,3 +1,4 @@
+use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, NlsPlatform, SymbolOwned};
@@ -8,7 +9,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, Uint128, Uint64},
+    cosmwasm_std::{Addr, Uint128},
     schemars::{self, JsonSchema},
 };
 
@@ -36,7 +37,8 @@ where
     Lpns: Group,
 {
     NewLeaseCode {
-        lease_code_id: Uint64,
+        // This is an internal system API and we use [Code]
+        lease_code: Code,
     },
 
     OpenLoan {

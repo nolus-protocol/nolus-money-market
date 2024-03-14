@@ -14,7 +14,7 @@ storage = ["dep:cw-storage-plus"]
 testing = [
     "dep:anyhow",
     "dep:cosmwasm-schema",
-    "dep:cw-multi-test",
+    "cw-multi-test/cosmwasm_1_2",
     "dep:data-encoding",
     "dep:serde",
     "dep:thiserror",

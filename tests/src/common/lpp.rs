@@ -10,9 +10,9 @@ use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-use platform::contract::CodeId;
+use platform::contract::Code;
 use sdk::{
-    cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
+    cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
     cw_multi_test::AppResponse,
     testing::CwContract,
 };
@@ -28,11 +28,11 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate_default<Lpn>(
         app: &mut App,
-        lease_code_id: Uint64,
+        lease_code: Code,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> (Addr, CodeId)
+    ) -> Addr
     where
         Lpn: Currency,
     {
@@ -47,7 +47,7 @@ impl Instantiator {
         Self::instantiate::<Lpn>(
             app,
             Box::new(endpoints),
-            lease_code_id,
+            lease_code,
             init_balance,
             borrow_rate,
             min_utilization,
@@ -58,11 +58,11 @@ impl Instantiator {
     pub fn instantiate<Lpn>(
         app: &mut App,
         endpoints: Box<CwContract>,
-        lease_code_id: Uint64,
+        lease_code: Code,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> (Addr, CodeId)
+    ) -> Addr
     where
         Lpn: Currency,
     {
@@ -90,13 +90,13 @@ impl Instantiator {
             .execute(
                 lease_code_admin,
                 lpp.clone(),
-                &LppExecuteMsg::NewLeaseCode { lease_code_id },
+                &LppExecuteMsg::NewLeaseCode { lease_code },
                 &[],
             )
             .unwrap()
             .unwrap_response();
 
-        (lpp, lpp_id)
+        lpp
     }
 }
 

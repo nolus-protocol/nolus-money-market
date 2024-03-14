@@ -11,8 +11,8 @@ use leaser::{
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
     query, reply, sudo,
 };
-use platform::contract::CodeId;
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::Code;
+use sdk::cosmwasm_std::Addr;
 
 use super::{
     test_case::{app::App, TestCase},
@@ -62,7 +62,7 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(
         app: &mut App,
-        lease_code_id: CodeId,
+        lease_code: Code,
         lpp: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
@@ -76,7 +76,7 @@ impl Instantiator {
         let code_id = app.store_code(Box::new(endpoints));
 
         let msg = InstantiateMsg {
-            lease_code_id: Uint64::new(lease_code_id),
+            lease_code,
             lpp,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),

@@ -1,3 +1,5 @@
+use std::mem;
+
 use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
@@ -102,7 +104,7 @@ where
 
                     Ok::<_, ContractError>(loaded_loan)
                 })
-                .map(|_| ())
+                .map(mem::drop)
         }
     }
 

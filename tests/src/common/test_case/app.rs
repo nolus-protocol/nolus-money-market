@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 use finance::duration::Duration;
-use platform::contract::CodeId;
+use platform::contract::Code;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, InterChainMsg},
     cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper},
@@ -28,8 +28,8 @@ impl App {
     }
 
     #[must_use]
-    pub fn store_code(&mut self, code: Box<dyn CwContract<InterChainMsg, Empty>>) -> CodeId {
-        self.app.store_code(code)
+    pub fn store_code(&mut self, code: Box<dyn CwContract<InterChainMsg, Empty>>) -> Code {
+        Code::unchecked(self.app.store_code(code))
     }
 
     pub fn time_shift(&mut self, duration: Duration) {
@@ -61,7 +61,7 @@ impl App {
 
     pub fn instantiate<'r, T, U>(
         &'r mut self,
-        code_id: CodeId,
+        code: Code,
         sender: Addr,
         init_msg: &T,
         send_funds: &[CwCoin],
@@ -73,7 +73,7 @@ impl App {
         U: Into<String>,
     {
         self.with_mock_app(|app: &mut MockApp| {
-            app.instantiate_contract(code_id, sender, init_msg, send_funds, label, admin)
+            app.instantiate_contract(code.into(), sender, init_msg, send_funds, label, admin)
         })
     }
 

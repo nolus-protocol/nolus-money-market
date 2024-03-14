@@ -1,29 +1,30 @@
+use std::mem;
+
 use serde::{Deserialize, Serialize};
 
-use platform::contract::CodeId;
+use platform::contract::Code;
 use sdk::{
     cosmwasm_std::Storage,
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
 
-use crate::{api::InstantiateMsg, error::Result};
+use crate::error::Result;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 pub struct Config {
-    lease_code_id: CodeId,
+    lease_code: Code,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    #[cfg(test)]
-    pub const fn new(lease_code_id: CodeId) -> Self {
-        Self { lease_code_id }
+    pub const fn new(lease_code: Code) -> Self {
+        Self { lease_code }
     }
 
-    pub const fn lease_code_id(&self) -> CodeId {
-        self.lease_code_id
+    pub const fn lease_code(&self) -> Code {
+        self.lease_code
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
@@ -34,40 +35,32 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code_id: CodeId) -> Result<()> {
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
-            .update(storage, |_config: Self| Ok(Self { lease_code_id }))
-            .map(|_| ())
-    }
-}
-
-impl From<InstantiateMsg> for Config {
-    fn from(msg: InstantiateMsg) -> Self {
-        Self {
-            lease_code_id: msg.lease_code_id.into(),
-        }
+            .update(storage, |_config: Self| Ok(Self::new(lease_code)))
+            .map(mem::drop)
     }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{testing::MockStorage, Storage};
-    use platform::contract::CodeId;
+    use platform::contract::{Code, CodeId};
 
     use crate::Config;
 
     #[test]
     fn store_load() {
-        let lease_code_id = 12;
+        let lease_code = Code::unchecked(12);
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(lease_code_id).store(&mut store));
-        assert_lease_code_id(lease_code_id, &store);
+        assert_eq!(Ok(()), Config::new(lease_code).store(&mut store));
+        assert_lease_code_id(lease_code, &store);
     }
 
     #[test]
     fn update_load() {
-        let lease_code_id = 28;
-        let new_lease_code_id = lease_code_id + 10;
+        let lease_code_id = Code::unchecked(28);
+        let new_lease_code_id = Code::unchecked(CodeId::from(lease_code_id) + 10);
         let mut store = MockStorage::new();
         assert_eq!(Ok(()), Config::new(lease_code_id).store(&mut store));
         assert_eq!(
@@ -77,7 +70,7 @@ mod test {
         assert_lease_code_id(new_lease_code_id, &store);
     }
 
-    fn assert_lease_code_id(lease_code_id: CodeId, store: &dyn Storage) {
-        assert_eq!(lease_code_id, Config::load(store).unwrap().lease_code_id())
+    fn assert_lease_code_id(lease_code: Code, store: &dyn Storage) {
+        assert_eq!(lease_code, Config::load(store).unwrap().lease_code())
     }
 }

@@ -1,3 +1,5 @@
+use std::mem;
+
 use currency::SymbolOwned;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -34,7 +36,7 @@ impl Config {
                 c.price_config = price_config;
                 Ok(c)
             })
-            .map(|_| ())
+            .map(mem::drop)
             .map_err(ContractError::UpdateConfig)
     }
 }

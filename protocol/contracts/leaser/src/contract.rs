@@ -3,8 +3,11 @@ use std::ops::{Deref, DerefMut};
 use access_control::ContractOwnerAccess;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
-    batch::Batch, contract, error as platform_error, message::Response as MessageResponse, reply,
-    response,
+    batch::Batch,
+    contract::{self, Code},
+    error as platform_error,
+    message::Response as MessageResponse,
+    reply, response,
 };
 use sdk::{
     cosmwasm_ext::Response,
@@ -45,10 +48,9 @@ pub fn instantiate(
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
-    let lease_code = msg.lease_code_id;
-    Config::new(msg).store(deps.storage)?;
-
-    leaser::update_lpp(deps.storage, lease_code.into(), Batch::default())
+    Config::try_new(msg, &deps.querier)
+        .and_then(|config| config.store(deps.storage).map(|()| config))
+        .and_then(|config| leaser::update_lpp(deps.storage, config.lease_code, Batch::default()))
         .map(response::response_only_messages)
         .or_else(|err| platform_error::log(err, deps.api))
 }
@@ -100,13 +102,9 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(move |()| {
-                leaser::try_migrate_leases(
-                    deps.storage,
-                    new_code_id.into(),
-                    max_leases,
-                    migrate_msg(),
-                )
+            .and_then(|()| Code::try_new(new_code_id.into(), &deps.querier).map_err(Into::into))
+            .and_then(move |new_lease_code| {
+                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg())
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
@@ -199,9 +197,9 @@ fn validate_customer(
 fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
     Leaser::new(deps)
         .config()
-        .map(|config| config.config.lease_code_id)
-        .and_then(|lease_code_id| {
-            contract::validate_code_id(deps.querier, &lease, lease_code_id).map_err(Into::into)
+        .map(|config| config.config.lease_code)
+        .and_then(|lease_code| {
+            contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
         })
         .map(|()| lease)
 }

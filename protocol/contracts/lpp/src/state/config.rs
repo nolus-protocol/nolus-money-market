@@ -1,19 +1,21 @@
+use std::mem;
+
+use platform::contract::Code;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::Currency;
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
-use sdk::{
-    cosmwasm_std::{Storage, Uint64},
-    cw_storage_plus::Item,
-};
+use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     lpn_ticker: String,
-    lease_code_id: Uint64,
+    #[serde(alias = "lease_code_id")]
+    // TODO remove once a new release with this change is deployed
+    lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: BoundToHundredPercent,
 }
@@ -24,13 +26,13 @@ impl Config {
     #[cfg(test)]
     pub const fn new(
         lpn_ticker: String,
-        lease_code_id: Uint64,
+        lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
     ) -> Self {
         Self {
             lpn_ticker,
-            lease_code_id,
+            lease_code,
             borrow_rate,
             min_utilization,
         }
@@ -40,8 +42,8 @@ impl Config {
         &self.lpn_ticker
     }
 
-    pub const fn lease_code_id(&self) -> Uint64 {
-        self.lease_code_id
+    pub const fn lease_code(&self) -> Code {
+        self.lease_code
     }
 
     pub const fn borrow_rate(&self) -> &InterestRate {
@@ -67,9 +69,9 @@ impl Config {
         Price::identity()
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code_id: Uint64) -> Result<()> {
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::update_field(storage, |config| Self {
-            lease_code_id,
+            lease_code,
             ..config
         })
     }
@@ -97,16 +99,17 @@ impl Config {
     {
         Self::STORAGE
             .update(storage, |config: Self| Ok(f(config)))
-            .map(|_| ())
+            .map(mem::drop)
     }
 }
 
 impl From<InstantiateMsg> for Config {
     fn from(msg: InstantiateMsg) -> Self {
         // 0 is a non-existing code id
+        // TODO provide the lease code on instantiation
         Self {
             lpn_ticker: msg.lpn_ticker,
-            lease_code_id: Uint64::zero(),
+            lease_code: Code::unchecked(u64::default()),
             borrow_rate: msg.borrow_rate,
             min_utilization: msg.min_utilization,
         }

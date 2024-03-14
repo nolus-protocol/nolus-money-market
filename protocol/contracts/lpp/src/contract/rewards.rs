@@ -79,7 +79,7 @@ mod test {
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
     };
-    use platform::coin_legacy;
+    use platform::{coin_legacy, contract::Code};
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
         Coin as CwCoin,
@@ -112,7 +112,7 @@ mod test {
             deps.as_mut().storage,
             Config::new(
                 TheCurrency::TICKER.into(),
-                1000u64.into(),
+                Code::unchecked(1000u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,
                     UTILIZATION_OPTIMAL,

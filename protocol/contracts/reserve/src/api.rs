@@ -1,6 +1,6 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 use currency::{Currency, SymbolOwned};
-use platform::contract::CodeId;
+use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
@@ -26,9 +26,10 @@ pub struct MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    NewLeaseCode { code_id: Uint64 },
+    // This is an internal system API and we use [Code]
+    NewLeaseCode(Code),
 
-    CoverLiquidationLosses { amount: LpnCoin },
+    CoverLiquidationLosses(LpnCoin),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -50,10 +51,10 @@ pub struct ConfigResponse {
 }
 
 impl ConfigResponse {
-    pub fn new(lease: CodeId) -> Self {
+    pub fn new(lease: Code) -> Self {
         Self {
             lpn_ticker: LpnCurrency::TICKER.into(),
-            lease_code_id: lease.into(),
+            lease_code_id: CodeId::from(lease).into(),
         }
     }
 }

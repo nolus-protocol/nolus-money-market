@@ -354,7 +354,7 @@ fn deposit_and_withdraw() {
     // loans should not change asserts for lender2, the default loan
     let _: Addr = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
-        test_case.address_book.lease_code_id(),
+        test_case.address_book.lease_code(),
         LeaseInstantiatorAddresses {
             lpp: test_case.address_book.lpp().clone(),
             time_alarms: test_case.address_book.time_alarms().clone(),
@@ -645,7 +645,7 @@ fn loan_open_and_repay() {
     // borrow
     let loan_addr1 = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
-        test_case.address_book.lease_code_id(),
+        test_case.address_book.lease_code(),
         lease_addresses.clone(),
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
         LeaseInstantiatorConfig {
@@ -705,7 +705,7 @@ fn loan_open_and_repay() {
     // borrow 2
     let loan_addr2 = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
-        test_case.address_book.lease_code_id(),
+        test_case.address_book.lease_code(),
         lease_addresses,
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
         LeaseInstantiatorConfig {
@@ -1002,7 +1002,7 @@ fn compare_lpp_states() {
     // borrow
     let loan_addr1 = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
-        test_case.address_book.lease_code_id(),
+        test_case.address_book.lease_code(),
         LeaseInstantiatorAddresses {
             lpp: test_case.address_book.lpp().clone(),
             time_alarms: test_case.address_book.time_alarms().clone(),
@@ -1067,7 +1067,7 @@ fn compare_lpp_states() {
     // borrow 2
     let loan_addr2 = LeaseInstantiator::instantiate::<Lpn>(
         &mut test_case.app,
-        test_case.address_book.lease_code_id(),
+        test_case.address_book.lease_code(),
         LeaseInstantiatorAddresses {
             lpp: test_case.address_book.lpp().clone(),
             time_alarms: test_case.address_book.time_alarms().clone(),
