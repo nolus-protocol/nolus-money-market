@@ -53,4 +53,4 @@ platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-serde_json = "1"
+serde_json = { workspace = true }
