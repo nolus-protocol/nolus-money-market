@@ -1,5 +1,6 @@
 [workspace]
-members = ["packages/*", "contracts/*", "tests"]
+members = ["**/src/.."]
+exclude = ["target/**"]
 
 resolver = "2"
 
