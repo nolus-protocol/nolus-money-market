@@ -17,10 +17,10 @@ pub(crate) struct Parser {
     #[arg(
         global = true,
         short,
-        long = "group",
-        help = "Select only packages containing all groups."
+        long = "tag",
+        help = "Select only packages containing all tags."
     )]
-    groups: Vec<String>,
+    tags: Vec<String>,
     #[arg(global = true, long, visible_alias = "gha-log")]
     github_actions_logging: bool,
     #[command(subcommand)]
@@ -34,7 +34,7 @@ impl Parser {
             manifest_path,
             workspace,
             package,
-            groups,
+            tags,
             github_actions_logging,
             subcommand:
                 CommandCallType::CargoCall(subcommand) | CommandCallType::DirectCall(subcommand),
@@ -45,7 +45,7 @@ impl Parser {
             manifest_path,
             workspace,
             package,
-            groups,
+            tags,
             github_actions_logging,
             subcommand.process(),
         )
@@ -100,7 +100,7 @@ pub(crate) struct Arguments {
     pub cargo_path: PathBuf,
     pub manifest_path: Option<PathBuf>,
     pub mode: Mode,
-    pub groups: Vec<String>,
+    pub tags: Vec<String>,
     pub github_actions_logging: bool,
     pub subcommand: SubcommandArguments,
 }
@@ -111,7 +111,7 @@ impl Arguments {
         manifest_path: Option<PathBuf>,
         workspace: bool,
         package: Option<String>,
-        groups: Vec<String>,
+        tags: Vec<String>,
         github_actions_logging: bool,
         subcommand: SubcommandArguments,
     ) -> Self {
@@ -122,7 +122,7 @@ impl Arguments {
                 .then_some(Mode::Workspace)
                 .or_else(|| package.map(Mode::Package))
                 .unwrap_or(Mode::Subdirectories),
-            groups,
+            tags,
             github_actions_logging,
             subcommand,
         }

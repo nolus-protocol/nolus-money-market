@@ -1,13 +1,14 @@
-use std::{collections::BTreeSet, iter};
+use std::iter;
 
 use anyhow::{Context, Result};
 use cargo_metadata::Package;
 
 use crate::{
     check,
-    config::{Combination, Config, Set},
+    config::{Combination, Config, FeatureGroup},
     either_iter::EitherIter,
     iter_or_else_iter::IterOrElseIter,
+    subcommands::Tags,
 };
 
 #[cfg(test)]
@@ -16,18 +17,18 @@ mod tests;
 pub(crate) fn package_combinations<'r>(
     package: &'r Package,
     maybe_config: Option<&'r Config<'r>>,
-    groups: Option<&'r BTreeSet<&'r str>>,
+    tags: Tags<'r>,
 ) -> Result<impl Iterator<Item = String> + 'r> {
     if let Some(config) = maybe_config {
         check::configuration(package, config)
             .context("Configuration checks failed!")
             .map(move |()| {
                 Some(EitherIter::Left(configured_package_combinations(
-                    package, config, groups,
+                    package, config, tags,
                 )))
             })
     } else {
-        Ok(if groups.is_none() {
+        Ok(if tags.is_none() {
             Some(EitherIter::Right(build_combinations(
                 package.features.keys().map(String::as_str),
             )))
@@ -47,25 +48,23 @@ pub(crate) fn package_combinations<'r>(
 fn configured_package_combinations<'r>(
     package: &'r Package,
     config: &'r Config<'r>,
-    groups: Option<&'r BTreeSet<&'r str>>,
+    tags: Tags<'r>,
 ) -> impl Iterator<Item = String> + 'r {
     let combinations = config.combinations.iter();
 
     let mut includes_empty = false;
 
-    let iter = if let Some(groups) = groups {
-        EitherIter::Left(
-            combinations.filter(move |combination| combination.groups.is_superset(groups)),
-        )
+    let iter = if let Some(tags) = tags {
+        EitherIter::Left(combinations.filter(move |combination| combination.tags.is_superset(tags)))
     } else {
         EitherIter::Right(combinations)
     }
     .flat_map(move |combination| {
         includes_empty = includes_empty | combination.always_on.is_empty()
             && !combination
-                .sets
+                .feature_groups
                 .iter()
-                .any(|set| config.sets[set].at_least_one);
+                .any(|feature_group| config.feature_groups[feature_group].at_least_one);
 
         package_combination_variants(package, config, combination)
     });
@@ -114,17 +113,18 @@ fn combination_sets_variants<'r>(
     combination: &'r Combination<'r>,
 ) -> impl Iterator<Item = String> + 'r {
     combination
-        .sets
+        .feature_groups
         .iter()
-        .map(move |set| &config.sets[set])
-        .filter(move |set| {
-            set.mutually_exclusive && set.members.is_disjoint(&combination.always_on)
+        .map(move |feature_group| &config.feature_groups[feature_group])
+        .filter(move |feature_group| {
+            feature_group.mutually_exclusive
+                && feature_group.members.is_disjoint(&combination.always_on)
         })
-        .map(move |set| {
-            (!set.at_least_one)
+        .map(move |feature_group| {
+            (!feature_group.at_least_one)
                 .then(String::new)
                 .into_iter()
-                .chain(from_set_members(set).map(String::from))
+                .chain(from_group_members(feature_group).map(String::from))
         })
         .fold(
             Box::new(non_exclusive_sets_variants(config, combination))
@@ -150,14 +150,14 @@ fn required_non_exclusive_sets_variants<'r>(
     combination: &'r Combination<'r>,
 ) -> impl Iterator<Item = String> + 'r {
     let mut combination_variants = combination
-        .sets
+        .feature_groups
         .iter()
-        .map(|set| &config.sets[set])
-        .filter(|set| !set.mutually_exclusive && set.at_least_one)
-        .map(|set| {
-            build_combinations_with_at_least_one(from_set_members_disjoint_from_always_on(
+        .map(|feature_group| &config.feature_groups[feature_group])
+        .filter(|feature_group| !feature_group.mutually_exclusive && feature_group.at_least_one)
+        .map(|feature_group| {
+            build_combinations_with_at_least_one(from_group_members_disjoint_from_always_on(
                 combination,
-                set,
+                feature_group,
             ))
         });
 
@@ -179,11 +179,13 @@ fn optional_non_exclusive_sets_variants<'r>(
 ) -> impl Iterator<Item = String> + Clone + 'r {
     build_combinations(
         combination
-            .sets
+            .feature_groups
             .iter()
-            .map(|set| &config.sets[set])
-            .filter(|set| !(set.mutually_exclusive || set.at_least_one))
-            .flat_map(|set| set.members.iter())
+            .map(|feature_group| &config.feature_groups[feature_group])
+            .filter(|feature_group| {
+                !(feature_group.mutually_exclusive || feature_group.at_least_one)
+            })
+            .flat_map(|feature_group| feature_group.members.iter())
             .copied(),
     )
 }
@@ -200,23 +202,26 @@ fn combination_left_over_features<'r>(
             .map(String::as_str)
             .filter(|feature| {
                 !(combination.always_on.contains(feature)
-                    || combination
-                        .sets
-                        .iter()
-                        .any(|set| config.sets[set].members.contains(feature)))
+                    || combination.feature_groups.iter().any(|feature_group| {
+                        config.feature_groups[feature_group]
+                            .members
+                            .contains(feature)
+                    }))
             }),
     )
 }
 
-fn from_set_members_disjoint_from_always_on<'r>(
+fn from_group_members_disjoint_from_always_on<'r>(
     combination: &'r Combination<'r>,
-    set: &'r Set<'r>,
+    feature_group: &'r FeatureGroup<'r>,
 ) -> impl Iterator<Item = &'r str> + Clone + 'r {
-    from_set_members(set).filter(|member| !combination.always_on.contains(member))
+    from_group_members(feature_group).filter(|member| !combination.always_on.contains(member))
 }
 
-fn from_set_members<'r>(set: &'r Set<'r>) -> impl Iterator<Item = &'r str> + Clone + 'r {
-    set.members.iter().copied()
+fn from_group_members<'r>(
+    feature_group: &'r FeatureGroup<'r>,
+) -> impl Iterator<Item = &'r str> + Clone + 'r {
+    feature_group.members.iter().copied()
 }
 
 fn cross_join<'r, LeftIter, RightIter>(

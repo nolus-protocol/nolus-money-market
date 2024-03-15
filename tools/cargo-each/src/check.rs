@@ -8,7 +8,7 @@ pub(crate) fn configuration(package: &Package, config: &Config<'_>) -> Result<()
 }
 
 fn sets(package: &Package, config: &Config<'_>) -> Result<()> {
-    config.sets.iter().try_for_each(|(name, set)| {
+    config.feature_groups.iter().try_for_each(|(name, set)| {
         if set.members.is_empty() {
             Err(anyhow!(
                 r#"Package "{}"'s configuration's set "{}" is empty!"#,
@@ -39,13 +39,13 @@ fn sets(package: &Package, config: &Config<'_>) -> Result<()> {
 
 fn combinations(package: &Package, config: &Config<'_>) -> Result<()> {
     config.combinations.iter().try_for_each(|combination| {
-        if let Some(set) = combination.sets.iter().find(|&set| !config.sets.contains_key(set)) {
+        if let Some(set) = combination.feature_groups.iter().find(|&set| !config.feature_groups.contains_key(set)) {
             Err(anyhow!(
                 r#"Package "{}"'s configuration contains combinations referring to undefined set "{}"!"#,
                 package.name,
                 set,
             ))
-        } else if let Some(set) = combination.sets.iter().map(|set| (set, &config.sets[set]))
+        } else if let Some(set) = combination.feature_groups.iter().map(|set| (set, &config.feature_groups[set]))
             .find_map(|(name, set)| {
                 if set.at_least_one && set.members.len() == 1 && !set.members
                     .is_disjoint(&combination.always_on) {

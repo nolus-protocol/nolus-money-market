@@ -7,28 +7,28 @@ use serde::{Deserialize, Deserializer};
 #[derive(Debug)]
 pub(crate) struct Config<'r> {
     pub combinations: Vec<Combination<'r>>,
-    pub sets: BTreeMap<&'r str, Set<'r>>,
+    pub feature_groups: BTreeMap<&'r str, FeatureGroup<'r>>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", untagged, deny_unknown_fields)]
 pub(crate) enum IdentOrList<'r> {
     Ident(#[serde(borrow)] &'r str),
-    List(#[serde(borrow, deserialize_with = "deserialize_set")] BTreeSet<&'r str>),
+    List(#[serde(borrow, deserialize_with = "deserialize_btree_set")] BTreeSet<&'r str>),
 }
 
 #[derive(Debug)]
 pub(crate) struct Combination<'r> {
-    pub groups: BTreeSet<&'r str>,
-    pub sets: BTreeSet<&'r str>,
+    pub tags: BTreeSet<&'r str>,
+    pub feature_groups: BTreeSet<&'r str>,
     pub always_on: BTreeSet<&'r str>,
     pub include_rest: bool,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
-pub(crate) struct Set<'r> {
-    #[serde(borrow, deserialize_with = "deserialize_set", default)]
+pub(crate) struct FeatureGroup<'r> {
+    #[serde(borrow, deserialize_with = "deserialize_btree_set", default)]
     pub members: BTreeSet<&'r str>,
     pub at_least_one: bool,
     pub mutually_exclusive: bool,
@@ -40,7 +40,7 @@ struct GenericConfig<'r> {
     #[serde(borrow)]
     combinations: Vec<GenericCombination<'r>>,
     #[serde(borrow, default)]
-    sets: BTreeMap<&'r str, Set<'r>>,
+    feature_groups: BTreeMap<&'r str, FeatureGroup<'r>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,16 +48,16 @@ struct GenericConfig<'r> {
 struct GenericCombination<'r> {
     #[serde(borrow, default)]
     generics: BTreeMap<&'r str, IdentOrList<'r>>,
-    #[serde(borrow, deserialize_with = "deserialize_set", default)]
-    groups: BTreeSet<&'r str>,
-    #[serde(borrow, deserialize_with = "deserialize_set", default)]
-    sets: BTreeSet<&'r str>,
-    #[serde(borrow, deserialize_with = "deserialize_set", default)]
+    #[serde(borrow, deserialize_with = "deserialize_btree_set", default)]
+    tags: BTreeSet<&'r str>,
+    #[serde(borrow, deserialize_with = "deserialize_btree_set", default)]
+    feature_groups: BTreeSet<&'r str>,
+    #[serde(borrow, deserialize_with = "deserialize_btree_set", default)]
     always_on: BTreeSet<&'r str>,
     include_rest: bool,
 }
 
-fn deserialize_set<'r, 'de: 'r, D>(deserializer: D) -> Result<BTreeSet<&'r str>, D::Error>
+fn deserialize_btree_set<'r, 'de: 'r, D>(deserializer: D) -> Result<BTreeSet<&'r str>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -96,18 +96,18 @@ fn try_resolve_config_generics<'r>(
         .try_for_each(
             |GenericCombination {
                  generics,
-                 groups,
-                 sets,
+                 tags,
+                 feature_groups,
                  always_on,
                  include_rest,
              }| {
-                construct_generic_mappings(package, &config.sets, generics)
+                construct_generic_mappings(package, &config.feature_groups, generics)
                     .context("Error occurred while constructing generic parameter mappings!")
                     .map(|generics_mappings| {
                         combinations.extend(generics_mappings.into_iter().map(|replacements| {
                             replace_generics(
-                                &groups,
-                                &sets,
+                                &tags,
+                                &feature_groups,
                                 &always_on,
                                 include_rest,
                                 &replacements,
@@ -118,7 +118,7 @@ fn try_resolve_config_generics<'r>(
         )
         .map(|()| Config {
             combinations,
-            sets: config.sets,
+            feature_groups: config.feature_groups,
         })
 }
 
@@ -130,13 +130,13 @@ fn collect_non_generic_combinations<'r>(config: &GenericConfig<'r>) -> Vec<Combi
         .map(
             |&GenericCombination {
                  generics: _,
-                 ref groups,
-                 ref sets,
+                 ref tags,
+                 ref feature_groups,
                  ref always_on,
                  include_rest,
              }| Combination {
-                groups: groups.clone(),
-                sets: sets.clone(),
+                tags: tags.clone(),
+                feature_groups: feature_groups.clone(),
                 always_on: always_on.clone(),
                 include_rest,
             },
@@ -146,17 +146,17 @@ fn collect_non_generic_combinations<'r>(config: &GenericConfig<'r>) -> Vec<Combi
 
 fn construct_generic_mappings<'r>(
     package: &'r Package,
-    sets: &BTreeMap<&'r str, Set<'r>>,
+    feature_groups: &BTreeMap<&'r str, FeatureGroup<'r>>,
     generics: BTreeMap<&'r str, IdentOrList<'r>>,
 ) -> Result<Vec<BTreeMap<&'r str, &'r str>>> {
     let mut generics_mappings: Vec<BTreeMap<&str, &str>> = Vec::new();
 
     for (placeholder, ref replacements) in generics {
         let generics = match replacements {
-            IdentOrList::Ident(set) => {
-                sets.get(set).map(|set| &set.members).ok_or_else(
+            IdentOrList::Ident(feature_group) => {
+                feature_groups.get(feature_group).map(|feature_group| &feature_group.members).ok_or_else(
                     #[cold]
-                    || anyhow!(r#"Combination is generic over set "{set}", but package "{}" doesn't define such!"#, package.name)
+                    || anyhow!(r#"Combination is generic over set "{feature_group}", but package "{}" doesn't define such!"#, package.name)
                 )?
             }
             IdentOrList::List(replacements) => replacements,
@@ -183,20 +183,25 @@ fn construct_generic_mappings<'r>(
 }
 
 fn replace_generics<'r>(
-    groups: &BTreeSet<&'r str>,
-    sets: &BTreeSet<&'r str>,
+    tags: &BTreeSet<&'r str>,
+    feature_groups: &BTreeSet<&'r str>,
     always_on: &BTreeSet<&'r str>,
     include_rest: bool,
     replacements: &BTreeMap<&'r str, &'r str>,
 ) -> Combination<'r> {
     Combination {
-        groups: groups
+        tags: tags
             .iter()
-            .map(|&group| replacements.get(group).copied().unwrap_or(group))
+            .map(|&tag| replacements.get(tag).copied().unwrap_or(tag))
             .collect(),
-        sets: sets
+        feature_groups: feature_groups
             .iter()
-            .map(|&set| replacements.get(set).copied().unwrap_or(set))
+            .map(|&feature_group| {
+                replacements
+                    .get(feature_group)
+                    .copied()
+                    .unwrap_or(feature_group)
+            })
             .collect(),
         always_on: always_on
             .iter()
