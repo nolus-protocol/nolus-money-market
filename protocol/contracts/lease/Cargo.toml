@@ -5,6 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-and-skel"], always-on = ["$net", "$protocol"], include-rest = true, generics = { "$net" = "net", "$protocol" = "protocol" } }
+]
+feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true }, contract-and-skel = { members = ["contract", "skel"], at-least-one = false, mutually-exclusive = true } }
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -53,7 +60,6 @@ currency = { workspace = true }
 dex = { workspace = true, optional = true, features = ["impl"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
-lpp-platform = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true, features = ["stub_alarms"] }
 oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }

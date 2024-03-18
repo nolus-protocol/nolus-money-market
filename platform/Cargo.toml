@@ -1,5 +1,6 @@
 [workspace]
-members = ["packages/*", "contracts/*", "tests"]
+members = ["**/src/.."]
+exclude = ["target/**"]
 
 resolver = "2"
 
@@ -32,6 +33,7 @@ versioning = { path = "packages/versioning", default-features = false }
 anyhow = "1"
 base64 = { version = "0.22", default-features = false }
 data-encoding = "2.5.0"
+gcd = "2.3.0"
 serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 

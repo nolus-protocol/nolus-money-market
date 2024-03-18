@@ -5,6 +5,14 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-or-stub"], always-on = ["$net", "$protocol"], include-rest = true, generics = { "$net" = "net", "$protocol" = "protocol" } }
+]
+# TODO add "stub" when feature is added
+feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true }, contract-or-stub = { members = ["contract"], at-least-one = false, mutually-exclusive = true } }
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -29,10 +37,12 @@ contract = [
     "dep:currency",
     "dep:cosmwasm-std",
     "dep:platform",
+    "dep:sdk",
     "dep:versioning",
 ]
 # stub = [
 #     # "dep:platform",
+#      "dep:sdk",
 #      "dep:thiserror"]
 
 [dependencies]

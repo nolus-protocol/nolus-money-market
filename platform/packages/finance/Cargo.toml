@@ -5,6 +5,11 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "@agnostic"], include-rest = true }
+]
+
 [features]
 testing = []
 
@@ -12,7 +17,7 @@ testing = []
 currency = { workspace = true }
 sdk = { workspace = true, features = ["cosmos", "schema"] }
 
-gcd = "2.1"
+gcd = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 

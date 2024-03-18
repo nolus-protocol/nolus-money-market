@@ -720,7 +720,6 @@ dependencies = [
  "enum_dispatch",
  "finance",
  "lpp",
- "lpp-platform",
  "oracle",
  "oracle-platform",
  "platform",

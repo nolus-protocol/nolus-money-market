@@ -5,7 +5,11 @@ edition = "2021"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 license = "Apache-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "net_main", "$protocol"], feature-groups = ["protocol"], always-on = ["$protocol"], include-rest = true, generics = { "$protocol" = "protocol" } }
+]
+feature-groups = { protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true } }
 
 [features]
 neutron-astroport-usdc_axelar = ["lease/neutron-astroport-usdc_axelar", "profit/neutron-astroport-usdc_axelar"]

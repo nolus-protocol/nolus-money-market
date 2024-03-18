@@ -5,7 +5,12 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
+    { tags = ["ci", "@agnostic"], feature-groups = ["contract-and-stub"], include-rest = true }
+]
+feature-groups = { contract-and-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true } }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
