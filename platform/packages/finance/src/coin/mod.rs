@@ -23,9 +23,7 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C>
 where
     C: ?Sized,
@@ -40,10 +38,7 @@ where
     C: ?Sized,
 {
     fn clone(&self) -> Self {
-        Self {
-            amount: self.amount.clone(),
-            ticker: self.ticker.clone(),
-        }
+        *self
     }
 }
 
