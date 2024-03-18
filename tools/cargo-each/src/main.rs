@@ -6,7 +6,7 @@ use clap::Parser as _;
 
 use crate::subcommands::{Arguments, Parser, SubcommandArguments};
 
-use self::{pipe::Pipe as _, subcommands::Groups};
+use self::{pipe::Pipe as _, subcommands::Tags};
 
 mod check;
 mod combinations_iter;
@@ -23,7 +23,7 @@ fn main() -> Result<()> {
         cargo_path,
         manifest_path,
         mode,
-        groups,
+        tags: groups,
         github_actions_logging,
         subcommand: subcommand_args,
     } = arguments.process();
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     let groups: BTreeSet<&str> = groups.iter().map(String::as_str).collect();
 
-    let groups: Groups<'_> = (!groups.is_empty()).then_some(&groups);
+    let groups: Tags<'_> = (!groups.is_empty()).then_some(&groups);
 
     let current_dir = current_dir().context("Error occurred while resolving current directory!")?;
 

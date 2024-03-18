@@ -11,7 +11,7 @@ use crate::{
     combinations_iter, config::deserialize_config_if_any, either_iter::EitherIter, pipe::Pipe as _,
 };
 
-use super::{get_packages_iter, Groups, Mode};
+use super::{get_packages_iter, Mode, Tags};
 
 pub(crate) struct Arguments {
     pub(super) exact: bool,
@@ -27,7 +27,7 @@ pub(crate) fn subcommand(
     metadata: &Metadata,
     current_dir: PathBuf,
     mode: Mode,
-    groups: Groups<'_>,
+    groups: Tags<'_>,
     github_actions_logging: bool,
     Arguments {
         exact,
@@ -65,7 +65,7 @@ pub(crate) fn subcommand(
 }
 
 fn execute_for_package<'r, ExecuteCommandFunctor>(
-    groups: Groups<'_>,
+    tags: Tags<'_>,
     github_actions_logging: bool,
     exact: bool,
     execute_command_functor: ExecuteCommandFunctor,
@@ -77,7 +77,7 @@ where
     let maybe_config = deserialize_config_if_any(package)?;
 
     let mut features_combinations =
-        combinations_iter::package_combinations(package, maybe_config.as_ref(), groups)
+        combinations_iter::package_combinations(package, maybe_config.as_ref(), tags)
             .context("Error occurred while constructing combinations!")?;
 
     let mut features_combinations = if exact {

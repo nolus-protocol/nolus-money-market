@@ -15,7 +15,7 @@ mod args;
 mod list;
 mod run;
 
-pub(crate) type Groups<'r> = Option<&'r BTreeSet<&'r str>>;
+pub(crate) type Tags<'r> = Option<&'r BTreeSet<&'r str>>;
 
 pub(crate) enum Mode {
     Subdirectories,

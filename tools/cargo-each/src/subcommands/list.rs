@@ -5,7 +5,7 @@ use cargo_metadata::{Metadata, Package};
 
 use crate::{combinations_iter, config::deserialize_config_if_any};
 
-use super::{get_packages_iter, Groups, Mode};
+use super::{get_packages_iter, Mode, Tags};
 
 pub(crate) struct Arguments {}
 
@@ -13,7 +13,7 @@ pub(crate) fn subcommand(
     metadata: &Metadata,
     current_dir: PathBuf,
     mode: Mode,
-    groups: Groups<'_>,
+    groups: Tags<'_>,
     github_actions_logging: bool,
     Arguments {}: Arguments,
 ) -> Result<()> {
@@ -23,7 +23,7 @@ pub(crate) fn subcommand(
 }
 
 fn list_for_package(
-    groups: Groups<'_>,
+    groups: Tags<'_>,
     github_actions_logging: bool,
     package: &Package,
 ) -> Result<()> {
