@@ -24,7 +24,7 @@ pub type Amount = u128;
 pub type NonZeroAmount = NonZeroU128;
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+    PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
 )]
 pub struct Coin<C>
 where
@@ -34,6 +34,20 @@ where
     #[serde(skip)]
     ticker: PhantomData<C>,
 }
+
+impl<C> Clone for Coin<C>
+where
+    C: ?Sized,
+{
+    fn clone(&self) -> Self {
+        Self {
+            amount: self.amount.clone(),
+            ticker: self.ticker.clone(),
+        }
+    }
+}
+
+impl<C> Copy for Coin<C> where C: ?Sized {}
 
 impl<C> Coin<C>
 where

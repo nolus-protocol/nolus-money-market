@@ -12,18 +12,18 @@ use crate::{
 
 use super::repayable::Emitter;
 
-pub(crate) struct Close<'a, ProfitSender, ChangeSender, EmitterT> {
+pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
     payment: LpnCoin,
-    now: &'a Timestamp,
+    now: Timestamp,
     profit: ProfitSender,
     change: ChangeSender,
     emitter_fn: EmitterT,
 }
 
-impl<'a, ProfitSender, ChangeSender, EmitterT> Close<'a, ProfitSender, ChangeSender, EmitterT> {
+impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
     pub fn new(
         payment: LpnCoin,
-        now: &'a Timestamp,
+        now: Timestamp,
         profit: ProfitSender,
         change: ChangeSender,
         emitter_fn: EmitterT,
@@ -38,8 +38,7 @@ impl<'a, ProfitSender, ChangeSender, EmitterT> Close<'a, ProfitSender, ChangeSen
     }
 }
 
-impl<'a, ProfitSender, ChangeSender, EmitterT> WithLease
-    for Close<'a, ProfitSender, ChangeSender, EmitterT>
+impl<ProfitSender, ChangeSender, EmitterT> WithLease for Close<ProfitSender, ChangeSender, EmitterT>
 where
     ProfitSender: FixedAddressSender,
     ChangeSender: FixedAddressSender,

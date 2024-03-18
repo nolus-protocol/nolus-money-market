@@ -95,7 +95,7 @@ where
             lease
                 .lease
                 .execute(
-                    FullCloseCmd::new(amount, &env.block.time, profit, change, emitter_fn),
+                    FullCloseCmd::new(amount, env.block.time, profit, change, emitter_fn),
                     querier,
                 )
                 .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))

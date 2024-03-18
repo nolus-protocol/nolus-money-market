@@ -18,3 +18,16 @@ where
     pub due_interest: Coin<Lpn>,
     pub validity: Timestamp,
 }
+
+impl<Asset, Lpn> State<Asset, Lpn>
+where
+    Lpn: ?Sized,
+{
+    pub fn total_due(&self) -> Coin<Lpn> {
+        self.principal_due
+            + self.overdue_margin
+            + self.overdue_interest
+            + self.due_margin
+            + self.due_interest
+    }
+}

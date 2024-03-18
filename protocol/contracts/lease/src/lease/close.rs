@@ -64,7 +64,7 @@ where
     pub(crate) fn close_full<Profit, Change>(
         mut self,
         payment: Coin<Lpn>,
-        now: &Timestamp,
+        now: Timestamp,
         mut profit: Profit,
         mut change_recipient: Change,
     ) -> ContractResult<FullRepayReceipt<Lpn>>
@@ -72,8 +72,12 @@ where
         Profit: FixedAddressSender,
         Change: FixedAddressSender,
     {
-        // TODO [issue #92] debug_assert!(payment >= self.state().total_due())
-        let receipt = self.repay(payment, now, &mut profit).and_then(|receipt| {
+        let total_due = self.state(now).total_due();
+        if total_due > payment {
+            // TODO [issue #92] request the diff from the Protocol reserve
+        }
+        let receipt = self.repay(payment, &now, &mut profit).and_then(|receipt| {
+            // TODO assert!(receipt.close())
             if receipt.close() {
                 Ok(receipt)
             } else {
