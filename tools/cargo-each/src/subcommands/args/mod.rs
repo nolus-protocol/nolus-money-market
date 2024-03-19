@@ -57,13 +57,15 @@ enum Subcommand {
     List {},
     Run {
         #[arg(
-            short,
+            short = '1',
             long,
             help = "Indicates at most one combination will be selected."
         )]
         exact: bool,
-        #[arg(short, long)]
+        #[arg(short = 'x', long)]
         external_command: bool,
+        #[arg(long, visible_alias = "debug")]
+        print_command: bool,
         #[arg(long)]
         pass_package_manifest: bool,
         #[arg(long)]
@@ -80,6 +82,7 @@ impl Subcommand {
             Subcommand::Run {
                 exact,
                 external_command,
+                print_command,
                 pass_package_manifest,
                 pass_package_name,
                 subcommand,
@@ -87,6 +90,7 @@ impl Subcommand {
             } => SubcommandArguments::Run(RunArguments {
                 exact,
                 external_command,
+                print_command,
                 pass_package_manifest,
                 pass_package_name,
                 subcommand,
