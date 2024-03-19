@@ -55,12 +55,23 @@ cosmwasm-std = { version = "1.5", default-features = false }
 astroport = { version = "2.9", default-features = false }
 osmosis-std = { version = "0.22", default-features = false }
 
+[profile.dev_no_debug_assertions]
+inherits = "dev"
+debug-assertions = false
+
 [profile.release]
-opt-level = "s"
 debug = false
+debug-assertions = false
+opt-level = "s"
 strip = "symbols"
 rpath = false
 lto = true
-debug-assertions = false
 panic = "abort"
 overflow-checks = true
+
+[profile.test_nets_release]
+inherits = "release"
+debug-assertions = true
+
+[profile.production_nets_release]
+inherits = "release"

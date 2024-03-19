@@ -9,3 +9,13 @@ anyhow = "1"
 cargo_metadata = "0.18.1"
 clap = { version = "4.5", features = ["derive", "unicode"] }
 serde = "1"
+
+[profile.dev_no_debug_assertions]
+inherits = "dev"
+debug-assertions = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true
