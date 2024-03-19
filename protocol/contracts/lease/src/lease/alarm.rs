@@ -12,7 +12,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     error::ContractResult,
-    finance::{LpnCurrencies, LpnCurrency, LpnCoin},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
 };
 

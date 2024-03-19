@@ -10,16 +10,15 @@ use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Reply, Timestamp
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{
-        open::NewLeaseContract, query::StateResponse as QueryStateResponse, DownpaymentCoin,
-    },
+    api::{open::NewLeaseContract, query::StateResponse as QueryStateResponse, DownpaymentCoin},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         finalize::FinalizerRef,
         state::{Handler, Response},
     },
     error::ContractResult,
-    event::Type, finance::LppRef,
+    event::Type,
+    finance::LppRef,
 };
 
 use super::buy_asset::DexState;
@@ -28,12 +27,7 @@ use super::buy_asset::DexState;
 pub(crate) struct RequestLoan {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
-    deps: (
-        LppRef,
-        OracleRef,
-        TimeAlarmsRef,
-        FinalizerRef,
-    ),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
 }
 
 impl RequestLoan {
@@ -42,8 +36,7 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lpp =
-            LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
 
         let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");

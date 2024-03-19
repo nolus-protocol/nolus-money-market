@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency, LpnCoin},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
     loan::RepayReceipt,
 };

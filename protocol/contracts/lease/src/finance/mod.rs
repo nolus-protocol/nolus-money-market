@@ -1,5 +1,8 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
-use finance::{coin::{Coin, CoinDTO}, price::Price as GenericPrice};
+use finance::{
+    coin::{Coin, CoinDTO},
+    price::Price as GenericPrice,
+};
 use lpp::stub::LppRef as LppGenericRef;
 
 pub type LpnCoin = Coin<LpnCurrency>;
