@@ -1,69 +1,89 @@
-#!/bin/bash
+#!/bin/sh
+
+set -e
 
 RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
-cd '/code/' || exit
+cd "/code/"
 
-if ! test "${CHECK_DEPENDENCIES_UPDATED}" = 'false'
+for signal in EXIT HUP INT QUIT TERM
+do
+  trap "rm -rf \"/target/\"*" "$signal"
+done
+
+rust_version="$(cat "/rust-version")"
+
+if [ "${CHECK_DEPENDENCIES_UPDATED}" != "false" ]
 then
-  cargo update --locked
-
-  if ! test $? -eq 0
-  then
-      echo '[ERROR] `Cargo.lock` file is either missing or is out-of-date!'
-
-      exit 1
-  fi
+  cargo "+${rust_version}" update --locked
 fi
 
 rm -rf "/target/"*
 
-rm -rf '/artifacts/'*
+rm -rf "/artifacts/"*
 
-rm -rf '/temp-artifacts/'*
+rm -rf "/temp-artifacts/"*
 
-for contract in $(echo '/code/contracts/'* | sed 's/ /\n/g' | sort)
+if [ -z "${NETWORK}" ]
+then
+  echo "[ERROR] Environment variant \"NETWORK\", indicating filter group, \
+isn't set!"
+
+  exit 1
+fi
+
+if [ -z "${PROTOCOL}" ]
+then
+  echo "[ERROR] Environment variant \"PROTOCOL\", indicating filter group, \
+isn't set!"
+
+  exit 1
+fi
+
+if [ -z "${PROFILE}" ]
+then
+  echo "[ERROR] Environment variant \"PROFILE\", indicating filter group, \
+isn't set!"
+
+  exit 1
+fi
+
+cargo "+${rust_version}" -- each --tag "build" --tag "${NETWORK}" \
+  --tag "${PROTOCOL}" run --exact -- build --profile "${PROFILE}" --lib \
+  --locked --target "wasm32-unknown-unknown" --target-dir "/target/"
+
+output_directory="/target/wasm32-unknown-unknown/${PROFILE}/"
+
+file_count="$(
+  find "${output_directory}" -type f -name "*.wasm" -exec "printf" "." ";" \
+    | wc -c | tr -d "\\n"
+)"
+
+if [ "${file_count}" -eq 0 ]
+then
+  echo "Build produced no output!"
+
+  exit 1
+fi
+
+for wasm_path in $(find "${output_directory}" -maxdepth 1 -name "*.wasm" | sort)
 do
-    cd "${contract}" || exit 1
+  wasm_name="$(basename "${wasm_path}")"
 
-    contract_pkgid="$(cargo pkgid)"
-    contract_pkgid="${contract_pkgid##*/}"
-    contract_pkgid_filter_at="${contract_pkgid%%@*}"
-    if test "${contract_pkgid}" = "${contract_pkgid_filter_at}"
-    then
-        contract_pkgid="${contract_pkgid%%#*}"
-    else
-        contract_pkgid="${contract_pkgid_filter_at##*#}"
-    fi
-    unset 'contract_pkgid_filter_at'
+  echo "Optimizing: ${wasm_name}"
 
-    pkg_features="${contract_pkgid}_features"
+  wasm-opt -Os --signext-lowering -o "/temp-artifacts/${wasm_name}" \
+    "${wasm_path}"
 
-    cargo build --release --lib --locked --target 'wasm32-unknown-unknown' --target-dir '/target/' --features "$(cargo features intersection "${features},${!pkg_features}")"
-
-    if ! test $? -eq 0
-    then
-        echo "[ERROR] Cargo exitted with non-zero status code while being ran against \"${contract_pkgid}\"!"
-
-        exit 1
-    fi
-
-    wasm-opt -Os --signext-lowering -o "/temp-artifacts/${contract_pkgid}.wasm" "/target/wasm32-unknown-unknown/release/${contract_pkgid}.wasm"
-
-    if ! test $? -eq 0
-    then
-        echo "[ERROR] \"wasm-opt\" exitted with non-zero status code while being ran against \"${contract_pkgid}\"!"
-
-        exit 1
-    fi
+  echo "Finished optimizing: ${wasm_name}"
 done
 
-mv -t '/artifacts/' '/temp-artifacts/'*'.wasm'
+cp -t "/artifacts/" "/rust-version"
 
-echo
+cp -t "/artifacts/" "/binaryen-version"
 
-echo 'Checksums:'
+mv -t "/artifacts/" "/temp-artifacts/"*".wasm"
 
-sha256sum -- '/artifacts/'*'.wasm' | tee '/artifacts/checksums.txt'
+printf "\nChecksums:\n"
 
-rm -rf '/target/'*
+sha256sum -- "/artifacts/"*".wasm" | tee "/artifacts/checksums.txt"

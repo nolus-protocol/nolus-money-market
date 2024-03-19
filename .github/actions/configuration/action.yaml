@@ -1,0 +1,271 @@
+name: "Configuration"
+description: "Action for exporting configurations which should be used by the
+  rest of the workflows and actions."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+runs:
+  using: composite
+  steps:
+    - name: "Export configurations"
+      id: "configuration"
+      shell: "sh"
+      env:
+        # The format of the build combinations JSON is:
+        # {
+        #   "platform": [
+        #     {
+        #       "profile": "<optimized build profile>",
+        #       "max_wasm_file_size": "<non-prefixed size as defined by GNU `find`>"
+        #     },
+        #     ...
+        #   ],
+        #   "protocol": {
+        #     "<network>": {
+        #       "profile": "<optimized build profile>",
+        #       "max_wasm_file_size": "<non-prefixed size as defined by GNU "find">",
+        #       "protocols": [
+        #         "<protocol>",
+        #         ...
+        #       ]
+        #     },
+        #     ...
+        #   },
+        #   "tests": {
+        #     "<network>": [
+        #       "<protocol>",
+        #       ...
+        #     ],
+        #     ...
+        #   }
+        # }
+        ########################## START OF EDIT HERE ##########################
+        stable_rust_version: '1.75'
+        nightly_rust_version: 'nightly-2024-02-05'
+        dev_profile_without_debug_assertions: 'dev_no_debug_assertions'
+        build_combinations_json: |-
+          {
+            "platform": [
+              {
+                "profile": "test_nets_release",
+                "max_wasm_file_size": "5M"
+              },
+              {
+                "profile": "production_nets_release",
+                "max_wasm_file_size": "5M"
+              }
+            ],
+            "protocol": {
+              "net_dev": {
+                "profile": "production_nets_release",
+                "max_wasm_file_size": "5M",
+                "protocols": [
+                  "neutron-astroport-usdc_axelar",
+                  "osmosis-osmosis-usdc_axelar",
+                  "osmosis-osmosis-usdc_noble"
+                ]
+              },
+              "net_test": {
+                "profile": "production_nets_release",
+                "max_wasm_file_size": "5M",
+                "protocols": [
+                  "neutron-astroport-usdc_axelar",
+                  "osmosis-osmosis-usdc_axelar",
+                  "osmosis-osmosis-usdc_noble"
+                ]
+              },
+              "net_main": {
+                "profile": "production_nets_release",
+                "max_wasm_file_size": "5M",
+                "protocols": [
+                  "neutron-astroport-usdc_axelar",
+                  "osmosis-osmosis-usdc_axelar",
+                  "osmosis-osmosis-usdc_noble"
+                ]
+              }
+            },
+            "tests": {
+              "net_main": [
+                "neutron-astroport-usdc_axelar",
+                "osmosis-osmosis-usdc_axelar",
+                "osmosis-osmosis-usdc_noble"
+              ]
+            }
+          }
+        available_wasm_capabilities: "cosmwasm_1_1,cosmwasm_1_2,iterator,\
+          neutron,staking,stargate"
+        ########################### END OF EDIT HERE ###########################
+      run: |-
+        test_err() {
+          if [ "${?}" -ne 0 ]
+          then
+            echo "${1}"
+
+            exit 1
+          fi
+        }
+
+        build_combinations_json="$(echo "${build_combinations_json}" | jq -c)"
+
+        test_err "Failed to compact \"build_combinations_json\"!"
+
+        unused_deps_matrix_json="$(
+          echo "${build_combinations_json}" \
+            | jq -c '{
+                "include": (
+                  [
+                    {
+                      "working-directory": [
+                        "platform",
+                        "protocol",
+                        "tools"
+                      ][],
+                      "network": "@agnostic",
+                      "protocol": "@agnostic"
+                    }
+                  ] + [
+                    .protocol
+                      | to_entries[]
+                      | {
+                          "working-directory": "protocol",
+                          "network": .key,
+                          "protocol": .value.protocols[]
+                        }
+                  ]
+                )
+              }'
+        )"
+
+        test_err "Failed to construct \"unused_deps_matrix_json\"!"
+
+        packages_tests_matrix_json="$(
+          echo "${build_combinations_json}" \
+            | jq -c --argjson unused_deps_matrix "${unused_deps_matrix_json}" '{
+                "include": (
+                  $unused_deps_matrix.include + [
+                    .tests
+                      | to_entries[]
+                      | {
+                          "working-directory": "tests",
+                          "network": .key,
+                          "protocol": .value[]
+                        }
+                  ]
+                )
+              }'
+        )"
+
+        test_err "Failed to construct \"packages_tests_matrix_json\"!"
+
+        linting_matrix_json="$(
+          echo "${packages_tests_matrix_json}" \
+            | jq -c --arg dev_without_debug_assertions \
+                "${dev_profile_without_debug_assertions}" \
+                '{
+                  "include": [
+                    .include[] + {
+                      "profile": ["dev", $dev_without_debug_assertions][]
+                    }
+                  ]
+                }'
+        )"
+
+        test_err "Failed to construct \"linting_matrix_json\"!"
+
+        build_optimized_matrix_json="$(
+          echo "${build_combinations_json}" \
+            | jq -c '{
+                "include": (
+                  [
+                    {
+                      "working-directory": "platform",
+                      "network": "@agnostic",
+                      "protocol": "@agnostic"
+                    } + (
+                      .platform[]
+                        | {
+                            "profile": .profile,
+                            "max-wasm-file-size": .max_wasm_file_size
+                          }
+                    )
+                  ] + [
+                    .protocol
+                      | to_entries[]
+                      | {
+                          "working-directory": "protocol",
+                          "network": .key,
+                          "profile": .value.profile,
+                          "max-wasm-file-size": .value.max_wasm_file_size,
+                          "protocol": .value.protocols[]
+                        }
+                  ]
+                )
+              }'
+        )"
+
+        test_err "Failed to construct \"build_optimized_matrix_json\"!"
+
+        networks_and_protocols_json="$(
+          echo "${build_combinations_json}" \
+            | jq -c '[.protocol | to_entries[] | { (.key): .value.protocols }]'
+        )"
+
+        test_err "Failed to construct \"networks_and_protocols_json\"!"
+
+        echo "stable-rust-version<<EOF
+        ${stable_rust_version}
+        EOF
+        nightly-rust-version<<EOF
+        ${nightly_rust_version}
+        EOF
+        linting-matrix-json<<EOF
+        ${linting_matrix_json}
+        EOF
+        unused-deps-matrix-json<<EOF
+        ${unused_deps_matrix_json}
+        EOF
+        packages-tests-matrix-json<<EOF
+        ${packages_tests_matrix_json}
+        EOF
+        build-optimized-matrix-json<<EOF
+        ${build_optimized_matrix_json}
+        EOF
+        available-wasm-capabilities<<EOF
+        ${available_wasm_capabilities}
+        EOF
+        networks-and-protocols-json<<EOF
+        ${networks_and_protocols_json}
+        EOF" >> "${GITHUB_OUTPUT}"
+
+outputs:
+  stable-rust-version:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.stable-rust-version }}
+  nightly-rust-version:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.nightly-rust-version }}
+  linting-matrix-json:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.linting-matrix-json }}
+  unused-deps-matrix-json:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.unused-deps-matrix-json }}
+  packages-tests-matrix-json:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.packages-tests-matrix-json }}
+  build-optimized-matrix-json:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.build-optimized-matrix-json }}
+  available-wasm-capabilities:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.available-wasm-capabilities }}
+  networks-and-protocols-json:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.networks-and-protocols-json }}

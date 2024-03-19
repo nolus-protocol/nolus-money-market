@@ -1,0 +1,233 @@
+name: "Install tool"
+description: "Action for installing a tool, or restoring it from cache if such
+  exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+inputs:
+  no-fetching:
+    description: "Indicates whether to restore tool from cache or just create
+      such cache if it doesn't already exist."
+    required: true
+  fail-on-cache-miss:
+    description: "Indicates whether the action should fail in case the cache is
+      not already available."
+    required: true
+  tool:
+    description: "The name of the package, if the package is not locally
+      sourced, or it's directory, if it's locally sourced. The installed binary
+      is required to have the same name as the package, or directory in the case
+      of locally sourced ones."
+    required: true
+  local:
+    description: "Indicates whether the package is locally sourced. When set
+      \"true\", it is required for the used stable Rust toolchain to be
+      available."
+    required: true
+  rust-version:
+    description: "Indicates the Rust toolchain to be used when installing the
+      tool. Required when used in combination with local."
+    required: false
+  tools-deps-restored:
+    description: "Indicates whether the dependencies of the \"tools\" workspace
+      are already restored from the caches. If set to \"false\", the action will
+      fail on a cache miss during restoration from the caches."
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: 'Check inputs'
+      shell: "sh"
+      env:
+        fail_on_cache_miss: |-
+          ${{ inputs.fail-on-cache-miss }}
+        local: |-
+          ${{ inputs.local }}
+        rust_version: |-
+          ${{ inputs.rust-version }}
+        tools_deps_restored: |-
+          ${{ inputs.tools-deps-restored }}
+      run: |-
+        error_code='0'
+
+        if '[' "${local}" = 'false' -a -n "${rust_version}" ]
+        then
+          echo "\"rust-version\" must not be set when \"local\" is set to \
+        \"false\"!"
+
+          error_code='1'
+        fi
+
+        if '[' "${local}" = 'false' -a -n "${tools_deps_restored}" ]
+        then
+          echo "\"tools-deps-restored\" must not be set when \"local\" is set \
+        to \"false\"!"
+
+          error_code='1'
+        fi
+
+        if '[' "${local}" = 'true' -a -z "${rust_version}" ]
+        then
+          echo "Setting \"rust-version\" is required when \"local\" is set to \
+        \"true\"!"
+
+          error_code='1'
+        fi
+
+        if '[' "${fail_on_cache_miss}" = 'false' -a "${local}" = 'true' -a -z \
+          "${tools_deps_restored}" ]
+        then
+          echo "Setting \"tools-deps-restored\" is required when \"local\" is \
+        set to \"true\" and \"fail-on-cache-miss\" is set to \"false\"!"
+
+          error_code='1'
+        fi
+
+        if '[' "${fail_on_cache_miss}" = 'true' -a "${local}" = 'true' -a -n \
+          "${tools_deps_restored}" ]
+        then
+          echo "\"tools-deps-restored\" must not be set when \
+        \"fail-on-cache-miss\" is set to \"true\" and \"local\" is set to \
+        \"true\"!"
+
+          error_code='1'
+        fi
+
+        exit "${error_code}"
+    ##################### START OF CRATES.IO TOOL  [PT. 1] #####################
+    - id: 'crates-io-tool-key'
+      if: |-
+        inputs.local != 'true'
+      shell: "sh"
+      env:
+        tool: |-
+          ${{ inputs.tool }}
+      run: |
+        version="$(
+          curl --silent "https://crates.io/api/v1/crates/${tool}" \
+            | jq .crate.max_stable_version \
+            | sed -E 's/^"([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)"$/\1/g'
+        )"
+
+        echo "key=tool-${tool}-${version}" >> "${GITHUB_OUTPUT}"
+    - id: "crates-io-tool-restore"
+      if: |-
+        inputs.local != 'true'
+      uses: "actions/cache/restore@v4"
+      with:
+        key: |-
+          ${{ steps.crates-io-tool-key.outputs.key }}
+        path: |-
+          ${{ format('~/.cargo/bin/{0}', inputs.tool) }}
+        fail-on-cache-miss: |-
+          ${{ inputs.fail-on-cache-miss }}
+        lookup-only: |-
+          ${{ inputs.no-fetching }}
+    ###################### END OF CRATES.IO TOOL  [PT. 1] ######################
+    ####################### START OF LOCAL TOOL  [PT. 1] #######################
+    - id: 'local-tool-key'
+      if: |-
+        inputs.local == 'true'
+      shell: "sh"
+      env:
+        tool: |-
+          ${{ inputs.tool }}
+        hash: |
+          ${{ hashFiles(
+            './.cargo/**',
+            './tools/Cargo.toml',
+            './tools/Cargo.lock',
+            format('./tools/{0}/**', inputs.tool)
+          ) }}
+      run: |-
+        echo "key<<EOF
+        tool-${tool}-${hash}
+        EOF" >> "${GITHUB_OUTPUT}"
+    - id: 'local-tool-restore'
+      if: |-
+        inputs.local == 'true'
+      uses: 'actions/cache/restore@v4'
+      with:
+        key: |-
+          ${{ steps.local-tool-key.outputs.key }}
+        path: |-
+          ${{ format('~/.cargo/bin/{0}', inputs.tool) }}
+        fail-on-cache-miss: |-
+          ${{ inputs.fail-on-cache-miss }}
+        lookup-only: |-
+          ${{ inputs.no-fetching }}
+    ######################## END OF LOCAL TOOL  [PT. 1] ########################
+    ######################### START OF SET PERMISSIONS #########################
+    - if: |-
+        inputs.no-fetching != 'true'
+          && (
+            (
+              steps.crates-io-tool-restore.conclusion == 'success'
+                && steps.crates-io-tool-restore.outputs.cache-hit == 'true'
+            )
+              || (
+                steps.local-tool-restore.conclusion == 'success'
+                  && steps.local-tool-restore.outputs.cache-hit == 'true'
+              )
+          )
+      shell: "sh"
+      env:
+        tool: |-
+          ${{ inputs.tool }}
+      run: |-
+        chmod a+x ~/.cargo/bin/"${tool}"
+    ########################## END OF SET PERMISSIONS ##########################
+    ##################### START OF CRATES.IO TOOL  [PT. 2] #####################
+    - if: |-
+        steps.crates-io-tool-restore.conclusion == 'success'
+          && steps.crates-io-tool-restore.outputs.cache-hit != 'true'
+      shell: "sh"
+      env:
+        tool: |-
+          ${{ inputs.tool }}
+      run: |-
+        cargo +stable install --force "${tool}"
+    - if: |-
+        steps.crates-io-tool-restore.conclusion == 'success'
+          && steps.crates-io-tool-restore.outputs.cache-hit != 'true'
+      uses: "actions/cache/save@v4"
+      with:
+        key: |-
+          ${{ steps.crates-io-tool-key.outputs.key }}
+        path: |-
+          ${{ format('~/.cargo/bin/{0}', inputs.tool) }}
+    ###################### END OF CRATES.IO TOOL  [PT. 2] ######################
+    ####################### START OF LOCAL TOOL  [PT. 2] #######################
+    - if: |-
+        inputs.tools-deps-restored != 'true'
+          && steps.local-tool-restore.conclusion == 'success'
+          && steps.local-tool-restore.outputs.cache-hit != 'true'
+      uses: "./.github/actions/cache-rust"
+      with:
+        cache-cargo: "true"
+        working-directory: "tools"
+        cache-rust-stable: "false"
+        cache-rust-nightly: "false"
+        lookup-only: "false"
+        fail-on-cache-miss: "true"
+    - if: |-
+        steps.local-tool-restore.conclusion == 'success'
+          && steps.local-tool-restore.outputs.cache-hit != 'true'
+      shell: "sh"
+      env:
+        rust_version: |-
+          ${{ inputs.rust-version }}
+        tool: |-
+          ${{ inputs.tool }}
+      run: |-
+        cargo "+${rust_version}" install --force --path "./tools/${tool}"
+    - if: |
+        steps.local-tool-restore.conclusion == 'success'
+          && steps.local-tool-restore.outputs.cache-hit != 'true'
+      uses: "actions/cache/save@v4"
+      with:
+        key: |-
+          ${{ steps.local-tool-key.outputs.key }}
+        path: |-
+          ${{ format('~/.cargo/bin/{0}', inputs.tool) }}
+    ######################## END OF LOCAL TOOL  [PT. 2] ########################

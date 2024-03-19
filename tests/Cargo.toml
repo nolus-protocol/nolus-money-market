@@ -43,12 +43,6 @@ anyhow = "1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 
-[profile.release]
-opt-level = "s"
-debug = false
-strip = "symbols"
-rpath = false
-lto = true
+[profile.dev_no_debug_assertions]
+inherits = "dev"
 debug-assertions = false
-panic = "abort"
-overflow-checks = true
