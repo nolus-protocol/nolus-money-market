@@ -1,7 +1,7 @@
 use finance::{coin::Coin, duration::Duration, percent::Percent};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::api::LpnCoin;
+use crate::finance::LpnCoin;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct State<Asset>

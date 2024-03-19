@@ -12,10 +12,11 @@ use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
     api::{
-        open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies, LpnCoin, LpnCoinDTO,
-        LpnCurrencies, LpnCurrency,
+        open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies, LpnCoinDTO, LpnCurrencies,
+        LpnCurrency,
     },
     error::ContractError,
+    finance::LpnCoin,
     position::Spec as PositionSpec,
 };
 

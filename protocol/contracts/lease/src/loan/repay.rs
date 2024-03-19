@@ -1,4 +1,4 @@
-use crate::api::LpnCoin;
+use crate::finance::LpnCoin;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Receipt {

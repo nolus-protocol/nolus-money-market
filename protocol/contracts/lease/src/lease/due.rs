@@ -1,7 +1,7 @@
 use finance::{duration::Duration, interest};
 
 use crate::{
-    api::LpnCoin,
+    finance::LpnCoin,
     loan::State,
     position::{DueTrait, OverdueCollection},
 };

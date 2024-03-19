@@ -10,9 +10,8 @@ use finance::{
 };
 
 use crate::{
-    api::LpnCoin,
     error::{ContractError, ContractResult},
-    finance::Price,
+    finance::{LpnCoin, Price},
     position::{Cause, Debt, Liquidation},
 };
 
@@ -394,7 +393,7 @@ mod test_debt {
     };
 
     use crate::{
-        api::LpnCoin,
+        finance::LpnCoin,
         position::{Cause, Debt, DueTrait, OverdueCollection},
     };
 
@@ -1187,7 +1186,7 @@ mod test_validate_close {
         price::{self, Price},
     };
 
-    use crate::{api::LpnCoin, error::ContractError, position::Spec};
+    use crate::{error::ContractError, finance::LpnCoin, position::Spec};
 
     type TestCurrency = PaymentC3;
     type TestLpn = StableC1;

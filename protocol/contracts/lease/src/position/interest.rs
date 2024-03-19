@@ -1,6 +1,6 @@
 use finance::{coin::Coin, duration::Duration, zero::Zero};
 
-use crate::api::LpnCoin;
+use crate::finance::LpnCoin;
 
 /// Represent the due of a position
 pub trait Due {

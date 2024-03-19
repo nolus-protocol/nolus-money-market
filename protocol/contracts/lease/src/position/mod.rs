@@ -4,9 +4,9 @@ use finance::{
 };
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::LeaseCoin,
     error::{ContractError, ContractResult},
-    finance::Price,
+    finance::{LpnCoin, Price},
 };
 
 pub use dto::PositionDTO;

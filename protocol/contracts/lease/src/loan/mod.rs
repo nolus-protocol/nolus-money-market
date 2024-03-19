@@ -12,8 +12,9 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LpnCoin, LpnCurrencies, LpnCurrency},
+    api::{LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
+    finance::LpnCoin,
 };
 
 pub(crate) use self::repay::Receipt as RepayReceipt;
@@ -254,7 +255,7 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::api::{LpnCoin, LpnCurrencies};
+    use crate::{api::LpnCurrencies, finance::LpnCoin};
 
     use super::{Loan, LppRef};
 
@@ -285,7 +286,7 @@ mod tests {
         use sdk::cosmwasm_std::Timestamp;
 
         use crate::{
-            api::LpnCoin,
+            finance::LpnCoin,
             loan::{
                 repay::Receipt as RepayReceipt,
                 tests::{create_loan_custom, profit_stub, PROFIT_ADDR},
