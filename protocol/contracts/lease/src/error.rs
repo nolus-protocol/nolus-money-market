@@ -13,7 +13,7 @@ use profit::stub::Error as ProfitError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::api::{LpnCoin, PaymentCoin};
+use crate::api::{LpnCoinDTO, PaymentCoin};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -60,16 +60,16 @@ pub enum ContractError {
     InsufficientLiquidation(),
 
     #[error("[Lease] The asset amount should worth at least {0}")]
-    InsufficientAssetAmount(LpnCoin),
+    InsufficientAssetAmount(LpnCoinDTO),
 
     #[error("[Lease] The transaction amount should worth at least {0}")]
-    InsufficientTransactionAmount(LpnCoin),
+    InsufficientTransactionAmount(LpnCoinDTO),
 
     #[error("[Lease] The position close amount should worth at least {0}")]
-    PositionCloseAmountTooSmall(LpnCoin),
+    PositionCloseAmountTooSmall(LpnCoinDTO),
 
     #[error("[Lease] The position past this close should worth at least {0}")]
-    PositionCloseAmountTooBig(LpnCoin),
+    PositionCloseAmountTooBig(LpnCoinDTO),
 
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),
