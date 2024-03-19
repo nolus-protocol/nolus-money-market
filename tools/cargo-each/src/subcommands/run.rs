@@ -16,6 +16,7 @@ use super::{get_packages_iter, Mode, Tags};
 pub(crate) struct Arguments {
     pub(super) exact: bool,
     pub(super) external_command: bool,
+    pub(super) print_command: bool,
     pub(super) pass_package_manifest: bool,
     pub(super) pass_package_name: bool,
     pub(super) subcommand: OsString,
@@ -32,6 +33,7 @@ pub(crate) fn subcommand(
     Arguments {
         exact,
         external_command,
+        print_command,
         pass_package_manifest,
         pass_package_name,
         subcommand,
@@ -44,6 +46,7 @@ pub(crate) fn subcommand(
         } else {
             CommandType::CargoSubcommand { cargo_path }
         },
+        print_command,
         pass_package_manifest,
         pass_package_name,
         subcommand,
@@ -159,6 +162,7 @@ enum CommandType {
 
 fn execute_command_builder(
     command_type: CommandType,
+    print_command: bool,
     pass_package_manifest: bool,
     pass_package_name: bool,
     subcommand: OsString,
@@ -183,6 +187,7 @@ fn execute_command_builder(
                             execute_command(
                                 build_base()
                                     .pipe_mut(|command| _ = command.current_dir(working_directory)),
+                                print_command,
                                 pass_package_manifest.then_some(manifest_path),
                                 pass_package_name.then_some(package),
                                 is_external_command,
@@ -198,6 +203,7 @@ fn execute_command_builder(
 
 fn execute_command(
     mut command: Command,
+    print_command: bool,
     package_manifest: Option<&Path>,
     package_name: Option<&str>,
     is_external_command: bool,
@@ -214,6 +220,23 @@ fn execute_command(
         })
         .args(["--features", features])
         .pipe_if(!is_external_command, |command| command.args(extra_args))
+        .pipe_if(print_command, |command| {
+            print!("\t");
+
+            if let Some(path) = command.get_current_dir() {
+                print!("{path:?} ");
+            }
+
+            print!(">>> {}", command.get_program().to_string_lossy());
+
+            command
+                .get_args()
+                .for_each(|arg| print!(" {}", arg.to_string_lossy()));
+
+            println!();
+
+            command
+        })
         .status()
         .context("Failed to execute command!")
 }

@@ -64,6 +64,8 @@ enum Subcommand {
         exact: bool,
         #[arg(short, long)]
         external_command: bool,
+        #[arg(long, visible_alias = "debug")]
+        print_command: bool,
         #[arg(long)]
         pass_package_manifest: bool,
         #[arg(long)]
@@ -80,6 +82,7 @@ impl Subcommand {
             Subcommand::Run {
                 exact,
                 external_command,
+                print_command,
                 pass_package_manifest,
                 pass_package_name,
                 subcommand,
@@ -87,6 +90,7 @@ impl Subcommand {
             } => SubcommandArguments::Run(RunArguments {
                 exact,
                 external_command,
+                print_command,
                 pass_package_manifest,
                 pass_package_name,
                 subcommand,
