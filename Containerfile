@@ -2,15 +2,13 @@ ARG rust_ver
 
 FROM docker.io/library/rust:${rust_ver}
 
-ENV features=""
-
-ENV CHECK_DEPENDENCIES_UPDATED="true"
+LABEL rust_ver="${rust_ver}"
 
 ARG check_container_dependencies_updated="true"
 
-ARG binaryen_ver="version_116"
+ARG binaryen_ver="version_117"
 
-RUN ["rustup", "target", "add", "wasm32-unknown-unknown"]
+ENV CHECK_DEPENDENCIES_UPDATED="true"
 
 VOLUME ["/artifacts"]
 
@@ -18,15 +16,25 @@ VOLUME ["/code"]
 
 VOLUME ["/platform"]
 
-WORKDIR "/"
+RUN ["apt-get", "update"]
+
+RUN ["apt-get", "install", "-y", "coreutils", "sed", "tar", "wget"]
+
+RUN "rustup" "default" | "sed" "s/ (default)[[:space:]]\{0,\}//" \
+  > "/rust-version"
+
+RUN "echo" "${binaryen_ver}" | "tr" "-d" "\n" > "/binaryen-version"
+
+RUN ["rustup", "target", "add", "wasm32-unknown-unknown"]
 
 ADD "./tools/" "/tools/"
 
 WORKDIR "/tools/"
 
-RUN "test" "'${check_container_dependencies_updated}'" "=" "'false'" || "cargo" "update" "--locked"
+RUN "[" "${check_container_dependencies_updated}" "=" "false" "]" || \
+  "cargo" "update" "--locked"
 
-RUN ["cargo", "install", "--path", "/tools/cargo-features/"]
+RUN "cargo" "+$(cat "/rust-version")" "install" "--path" "/tools/cargo-each/"
 
 WORKDIR "/"
 
@@ -36,11 +44,8 @@ RUN ["mkdir", "/binaryen/"]
 
 WORKDIR "/binaryen/"
 
-RUN ["apt-get", "update"]
-
-RUN ["apt-get", "install", "-y", "coreutils", "sed", "tar", "wget"]
-
-RUN "wget" "-O" "binaryen.tar.gz" "https://github.com/WebAssembly/binaryen/releases/download/${binaryen_ver}/binaryen-${binaryen_ver}-x86_64-linux.tar.gz"
+RUN "wget" "-O" "binaryen.tar.gz" "https://github.com/WebAssembly/binaryen/\
+releases/download/${binaryen_ver}/binaryen-${binaryen_ver}-x86_64-linux.tar.gz"
 
 RUN ["tar", "-xf", "binaryen.tar.gz"]
 
@@ -60,4 +65,4 @@ RUN ["mkdir", "/target/"]
 
 RUN ["mkdir", "/temp-artifacts/"]
 
-CMD ["bash", "/build/build.sh"]
+CMD ["sh", "/build/build.sh"]
