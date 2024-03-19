@@ -6,13 +6,12 @@ use crate::{
 };
 
 impl StateResponse {
-    pub fn opened_from<Asset, Lpn>(
-        open_lease: State<Asset, Lpn>,
+    pub fn opened_from<Asset>(
+        open_lease: State<Asset>,
         in_progress: Option<opened::OngoingTrx>,
     ) -> Self
     where
         Asset: Currency,
-        Lpn: Currency,
     {
         Self::Opened {
             amount: open_lease.amount.into(),

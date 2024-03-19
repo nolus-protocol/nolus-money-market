@@ -1,21 +1,18 @@
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use finance::{
     coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
 };
 use lpp::{
     loan::RepayShares,
-    stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
+    stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef as LppGenericRef},
 };
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::LpnCurrencies,
+    api::{LpnCoin, LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
 };
 
@@ -26,6 +23,8 @@ mod repay;
 mod state;
 mod unchecked;
 
+type LppRef = LppGenericRef<LpnCurrency, LpnCurrencies>;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 #[serde(
@@ -34,7 +33,7 @@ mod unchecked;
     try_from = "unchecked::LoanDTO"
 )]
 pub(crate) struct LoanDTO {
-    lpp: LppRef<LpnCurrencies>,
+    lpp: LppRef,
     profit: ProfitRef,
     due_period: Duration,
     margin_interest: Percent,
@@ -46,7 +45,7 @@ impl LoanDTO {
         self.margin_interest
     }
 
-    pub(crate) fn lpp(&self) -> &LppRef<LpnCurrencies> {
+    pub(crate) fn lpp(&self) -> &LppRef {
         &self.lpp
     }
 
@@ -56,22 +55,20 @@ impl LoanDTO {
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Loan<Lpn, LppLoan> {
-    _lpn: PhantomData<Lpn>,
+pub struct Loan<LppLoan> {
     lpp_loan: LppLoan,
     due_period: Duration,
     margin_interest: Percent,
     margin_paid_by: Timestamp, // only this one should vary!
 }
 
-impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
+impl<LppLoan> Loan<LppLoan>
 where
-    Lpn: Currency,
-    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
 {
     pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
-        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef<LpnCurrencies>>| {
+        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| {
             (
                 LoanDTO {
                     lpp: lpp_batch.lpp_ref,
@@ -86,19 +83,17 @@ where
     }
 
     pub(super) fn try_into_messages(self) -> ContractResult<Batch> {
-        Self::try_loan_into(self.lpp_loan)
-            .map(|lpp_batch: LppBatch<LppRef<LpnCurrencies>>| lpp_batch.batch)
+        Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| lpp_batch.batch)
     }
 
-    fn try_loan_into(loan: LppLoan) -> ContractResult<LppBatch<LppRef<LpnCurrencies>>> {
+    fn try_loan_into(loan: LppLoan) -> ContractResult<LppBatch<LppRef>> {
         loan.try_into().map_err(Into::<ContractError>::into)
     }
 }
 
-impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
+impl<LppLoan> Loan<LppLoan>
 where
-    Lpn: Currency,
-    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
 {
     pub(super) fn new(
         lpp_loan: LppLoan,
@@ -107,7 +102,6 @@ where
         due_period: Duration,
     ) -> Self {
         Self {
-            _lpn: PhantomData,
             lpp_loan,
             due_period,
             margin_interest: annual_margin_interest,
@@ -117,7 +111,6 @@ where
 
     pub(super) fn from_dto(dto: LoanDTO, lpp_loan: LppLoan) -> Self {
         Self {
-            _lpn: PhantomData,
             lpp_loan,
             due_period: dto.due_period,
             margin_interest: dto.margin_interest,
@@ -130,10 +123,10 @@ where
     /// The time intervals are always open-ended!
     pub(crate) fn repay<Profit>(
         &mut self,
-        payment: Coin<Lpn>,
+        payment: LpnCoin,
         by: &Timestamp,
         profit: &mut Profit,
-    ) -> ContractResult<RepayReceipt<Lpn>>
+    ) -> ContractResult<RepayReceipt>
     where
         Profit: FixedAddressSender,
     {
@@ -181,7 +174,7 @@ where
         Ok(receipt)
     }
 
-    pub(crate) fn state(&self, now: &Timestamp) -> State<Lpn> {
+    pub(crate) fn state(&self, now: &Timestamp) -> State {
         self.debug_check_start_due_before(now, "in the past. Now is ");
 
         let due_period_margin = Period::from_till(self.margin_paid_by, now);
@@ -212,7 +205,7 @@ where
         }
     }
 
-    fn repay_margin(&mut self, principal_due: Coin<Lpn>, margin_paid: Coin<Lpn>, by: &Timestamp) {
+    fn repay_margin(&mut self, principal_due: LpnCoin, margin_paid: LpnCoin, by: &Timestamp) {
         let (margin_paid_for, margin_payment_change) = interest::pay(
             self.margin_interest,
             principal_due,
@@ -223,7 +216,7 @@ where
         self.margin_paid_by += margin_paid_for;
     }
 
-    fn repay_loan(&mut self, interest_paid: Coin<Lpn>, principal_paid: Coin<Lpn>, by: &Timestamp) {
+    fn repay_loan(&mut self, interest_paid: LpnCoin, principal_paid: LpnCoin, by: &Timestamp) {
         let RepayShares {
             interest,
             principal,
@@ -250,20 +243,20 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use currencies::test::StableC1;
-    use finance::{coin::Coin, duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent};
     use lpp::{
         error::{ContractError as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
-        stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
+        stub::{loan::LppLoan as LppLoanTrait, LppBatch},
     };
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::api::LpnCurrencies;
+    use crate::api::{LpnCoin, LpnCurrencies};
 
-    use super::Loan;
+    use super::{Loan, LppRef};
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(50);
     const LOAN_INTEREST_RATE: Percent = Percent::from_permille(500);
@@ -291,10 +284,13 @@ mod tests {
         };
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::loan::{
-            repay::Receipt as RepayReceipt,
-            tests::{create_loan_custom, profit_stub, PROFIT_ADDR},
-            Loan, Overdue, State,
+        use crate::{
+            api::LpnCoin,
+            loan::{
+                repay::Receipt as RepayReceipt,
+                tests::{create_loan_custom, profit_stub, PROFIT_ADDR},
+                Loan, Overdue, State,
+            },
         };
 
         use super::{
@@ -477,7 +473,7 @@ mod tests {
                     },
                 ),
                 receipt(principal, 0, 0, 0, payment, 0, 0),
-                Duration::YEAR.into_slice_per_ratio::<Coin<Lpn>>(payment.into(), due_margin.into()),
+                Duration::YEAR.into_slice_per_ratio::<LpnCoin>(payment.into(), due_margin.into()),
                 &now,
             );
         }
@@ -664,7 +660,7 @@ mod tests {
             let overdue_interest = overdue_period.annualized_slice_of(due_interest);
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
             let due_period_paid =
-                Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio::<Coin<Lpn>>(
+                Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio::<LpnCoin>(
                     (overdue_margin + due_margin_payment).into(),
                     (overdue_margin + due_margin).into(),
                 ) - overdue_period;
@@ -948,14 +944,14 @@ mod tests {
 
         #[track_caller]
         fn repay<P>(
-            loan: &mut Loan<Lpn, LppLoanLocal>,
+            loan: &mut Loan<LppLoanLocal>,
             payment: P,
-            before_state: State<Lpn>,
-            exp_receipt: RepayReceipt<Lpn>,
+            before_state: State,
+            exp_receipt: RepayReceipt,
             exp_due_period_paid: Duration,
             now: &Timestamp,
         ) where
-            P: Into<Coin<Lpn>> + Copy + ?Sized,
+            P: Into<LpnCoin> + Copy + ?Sized,
         {
             let mut profit = profit_stub();
 
@@ -984,11 +980,11 @@ mod tests {
             )
         }
 
-        fn after_state<Lpn>(
-            before_state: State<Lpn>,
+        fn after_state(
+            before_state: State,
             exp_due_period_paid: Duration,
-            exp_receipt: RepayReceipt<Lpn>,
-        ) -> State<Lpn>
+            exp_receipt: RepayReceipt,
+        ) -> State
         where
             Lpn: Currency,
         {
@@ -1025,10 +1021,10 @@ mod tests {
             principal: P,
             due_margin_interest: P,
             due_interest: P,
-            overdue: Overdue<Lpn>,
-        ) -> State<Lpn>
+            overdue: Overdue,
+        ) -> State
         where
-            P: Into<Coin<Lpn>>,
+            P: Into<LpnCoin>,
         {
             state_custom_percents(
                 LOAN_INTEREST_RATE,
@@ -1046,10 +1042,10 @@ mod tests {
             principal: P,
             due_margin_interest: P,
             due_interest: P,
-            overdue: Overdue<Lpn>,
-        ) -> State<Lpn>
+            overdue: Overdue,
+        ) -> State
         where
-            P: Into<Coin<Lpn>>,
+            P: Into<LpnCoin>,
         {
             State {
                 annual_interest,
@@ -1069,9 +1065,9 @@ mod tests {
             paid_due_margin: P,
             paid_due_interest: P,
             change: P,
-        ) -> RepayReceipt<Lpn>
+        ) -> RepayReceipt
         where
-            P: Into<Coin<Lpn>>,
+            P: Into<LpnCoin>,
         {
             RepayReceipt::new(
                 paid_overdue_interest.into(),
@@ -1201,15 +1197,15 @@ mod tests {
     }
 
     impl LppLoanTrait<Lpn, LpnCurrencies> for LppLoanLocal {
-        fn principal_due(&self) -> Coin<Lpn> {
+        fn principal_due(&self) -> LpnCoin {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+        fn interest_due(&self, by: &Timestamp) -> LpnCoin {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> RepayShares<Lpn> {
             self.loan.repay(by, repayment)
         }
 
@@ -1218,14 +1214,14 @@ mod tests {
         }
     }
 
-    impl TryFrom<LppLoanLocal> for LppBatch<LppRef<LpnCurrencies>> {
+    impl TryFrom<LppLoanLocal> for LppBatch<LppRef> {
         type Error = LppError;
         fn try_from(_: LppLoanLocal) -> LppResult<Self> {
             unreachable!()
         }
     }
 
-    fn create_loan(loan: LoanResponse<Lpn>) -> Loan<Lpn, LppLoanLocal> {
+    fn create_loan(loan: LoanResponse<Lpn>) -> Loan<LppLoanLocal> {
         create_loan_custom(MARGIN_INTEREST_RATE, loan, LEASE_START, Duration::YEAR)
     }
 
@@ -1234,7 +1230,7 @@ mod tests {
         loan: LoanResponse<Lpn>,
         due_start: Timestamp,
         due_period: Duration,
-    ) -> Loan<Lpn, LppLoanLocal> {
+    ) -> Loan<LppLoanLocal> {
         Loan::new(
             LppLoanLocal::new(loan),
             due_start,

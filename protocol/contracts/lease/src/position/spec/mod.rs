@@ -6,11 +6,13 @@ use finance::{
     duration::Duration,
     liability::Liability,
     percent::Percent,
-    price::{self, Price},
+    price::{self},
 };
 
 use crate::{
+    api::LpnCoin,
     error::{ContractError, ContractResult},
+    finance::Price,
     position::{Cause, Debt, Liquidation},
 };
 
@@ -19,20 +21,14 @@ use super::{interest::OverdueCollection, DueTrait};
 mod dto;
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Spec<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct Spec {
     liability: Liability,
-    min_asset: Coin<Lpn>,
-    min_transaction: Coin<Lpn>,
+    min_asset: LpnCoin,
+    min_transaction: LpnCoin,
 }
 
-impl<Lpn> Spec<Lpn>
-where
-    Lpn: Currency,
-{
-    pub fn new(liability: Liability, min_asset: Coin<Lpn>, min_transaction: Coin<Lpn>) -> Self {
+impl Spec {
+    pub fn new(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
         let obj = Self {
             liability,
             min_asset,
@@ -49,9 +45,9 @@ where
     /// is less than the minimum asset amount.
     pub fn calc_borrow_amount(
         &self,
-        downpayment: Coin<Lpn>,
+        downpayment: LpnCoin,
         may_max_ltd: Option<Percent>,
-    ) -> ContractResult<Coin<Lpn>> {
+    ) -> ContractResult<LpnCoin> {
         let one = Price::identity();
 
         if !self.valid_transaction(downpayment, one) {
@@ -76,7 +72,7 @@ where
 
     pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
     where
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         self.overdue_collection(due).start_in()
     }
@@ -85,11 +81,11 @@ where
         &self,
         asset: Coin<Asset>,
         due: &Due,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> Debt<Asset>
     where
         Asset: Currency,
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         let total_due = price::total(due.total_due(), asset_in_lpns.inv());
 
@@ -109,7 +105,7 @@ where
     pub fn validate_payment<PaymentC>(
         &self,
         payment: Coin<PaymentC>,
-        payment_currency_in_lpns: Price<PaymentC, Lpn>,
+        payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
         PaymentC: Currency,
@@ -135,7 +131,7 @@ where
         &self,
         asset: Coin<Asset>,
         close_amount: Coin<Asset>,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> ContractResult<()>
     where
         Asset: Currency,
@@ -173,7 +169,7 @@ where
     fn valid_transaction<TransactionC>(
         &self,
         amount: Coin<TransactionC>,
-        transaction_currency_in_lpn: Price<TransactionC, Lpn>,
+        transaction_currency_in_lpn: Price<TransactionC>,
     ) -> bool
     where
         TransactionC: Currency,
@@ -186,7 +182,7 @@ where
     fn valid_asset<TransactionC>(
         &self,
         asset_amount: Coin<TransactionC>,
-        transaction_currency_in_lpn: Price<TransactionC, Lpn>,
+        transaction_currency_in_lpn: Price<TransactionC>,
     ) -> bool
     where
         TransactionC: Currency,
@@ -200,7 +196,7 @@ where
         &self,
         asset: Coin<Asset>,
         total_due: Coin<Asset>,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
@@ -221,11 +217,11 @@ where
         &self,
         asset: Coin<Asset>,
         due: &Due,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         let collectable = self.overdue_collection(due).amount();
         debug_assert!(collectable <= due.total_due());
@@ -238,7 +234,7 @@ where
         asset: Coin<Asset>,
         cause: Cause,
         liquidation: Coin<Asset>,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
@@ -260,7 +256,7 @@ where
     fn no_liquidation<Asset, Due>(&self, due: &Due, ltv: Percent) -> Debt<Asset>
     where
         Asset: Currency,
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         debug_assert!(ltv < self.liability.max());
         if due.total_due().is_zero() {
@@ -275,9 +271,9 @@ where
         }
     }
 
-    fn overdue_collection<Due>(&self, due: &Due) -> OverdueCollection<Lpn>
+    fn overdue_collection<Due>(&self, due: &Due) -> OverdueCollection
     where
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         due.overdue_collection(self.min_transaction)
     }
@@ -364,7 +360,7 @@ mod test_calc_borrow {
         assert_eq!(coin_lpn(975), borrow_3.unwrap());
     }
 
-    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec<TestLpn>
+    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec
     where
         LpnAmount: Into<Coin<TestLpn>>,
     {
@@ -397,7 +393,10 @@ mod test_debt {
         price::{self, Price},
     };
 
-    use crate::position::{Cause, Debt, DueTrait, OverdueCollection};
+    use crate::{
+        api::LpnCoin,
+        position::{Cause, Debt, DueTrait, OverdueCollection},
+    };
 
     use super::Spec;
 
@@ -406,16 +405,16 @@ mod test_debt {
 
     const RECALC_IN: Duration = Duration::from_hours(1);
     struct TestDue {
-        total_due: Coin<TestLpn>,
-        overdue: Coin<TestLpn>,
+        total_due: LpnCoin,
+        overdue: LpnCoin,
     }
-    impl DueTrait<TestLpn> for TestDue {
-        fn total_due(&self) -> Coin<TestLpn> {
+    impl DueTrait for TestDue {
+        fn total_due(&self) -> LpnCoin {
             self.total_due
         }
 
         #[track_caller]
-        fn overdue_collection(&self, min_amount: Coin<TestLpn>) -> OverdueCollection<TestLpn> {
+        fn overdue_collection(&self, min_amount: LpnCoin) -> OverdueCollection {
             if self.overdue.is_zero() || self.overdue < min_amount {
                 OverdueCollection::StartIn(Duration::from_days(5))
             } else {
@@ -1063,21 +1062,21 @@ mod test_debt {
         }
     }
 
-    fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
+    fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
         spec_with_max(warn + STEP + STEP + STEP, min_asset, min_transaction)
     }
 
-    fn spec_with_second<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
+    fn spec_with_second<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
         spec_with_max(warn + STEP + STEP, min_asset, min_transaction)
     }
 
-    fn spec_with_third<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
+    fn spec_with_third<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
@@ -1085,7 +1084,7 @@ mod test_debt {
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-    fn spec_with_max<Lpn>(max: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
+    fn spec_with_max<Lpn>(max: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
@@ -1149,7 +1148,7 @@ mod test_validate_payment {
         assert!(result_4.is_ok());
     }
 
-    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec<TestLpn>
+    fn spec<LpnAmount>(min_asset: LpnAmount, min_transaction: LpnAmount) -> Spec
     where
         LpnAmount: Into<Coin<TestLpn>>,
     {
@@ -1188,7 +1187,7 @@ mod test_validate_close {
         price::{self, Price},
     };
 
-    use crate::{error::ContractError, position::Spec};
+    use crate::{api::LpnCoin, error::ContractError, position::Spec};
 
     type TestCurrency = PaymentC3;
     type TestLpn = StableC1;
@@ -1265,9 +1264,9 @@ mod test_validate_close {
         assert!(result_2.is_ok());
     }
 
-    fn spec<Lpn>(min_asset: Lpn, min_transaction: Lpn) -> Spec<TestLpn>
+    fn spec<Lpn>(min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
-        Lpn: Into<Coin<TestLpn>>,
+        Lpn: Into<LpnCoin>,
     {
         let liability = Liability::new(
             Percent::from_percent(65),
@@ -1278,7 +1277,7 @@ mod test_validate_close {
             Percent::from_percent(80),
             Duration::from_hours(1),
         );
-        Spec::<TestLpn>::new(liability, min_asset.into(), min_transaction.into())
+        Spec::new(liability, min_asset.into(), min_transaction.into())
     }
 
     fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>

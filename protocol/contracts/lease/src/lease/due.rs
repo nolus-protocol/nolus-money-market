@@ -1,20 +1,17 @@
-use currency::Currency;
-use finance::{coin::Coin, duration::Duration, interest};
+use finance::{duration::Duration, interest};
 
 use crate::{
+    api::LpnCoin,
     loan::State,
     position::{DueTrait, OverdueCollection},
 };
 
-impl<Lpn> DueTrait<Lpn> for State<Lpn>
-where
-    Lpn: Currency,
-{
-    fn total_due(&self) -> Coin<Lpn> {
+impl DueTrait for State {
+    fn total_due(&self) -> LpnCoin {
         self.principal_due + self.total_due_interest()
     }
 
-    fn overdue_collection(&self, min_amount: Coin<Lpn>) -> OverdueCollection<Lpn> {
+    fn overdue_collection(&self, min_amount: LpnCoin) -> OverdueCollection {
         let total_due_interest = self.total_due_interest();
         let time_to_accrue_min_amount = if total_due_interest >= min_amount {
             Duration::default()
@@ -41,11 +38,8 @@ where
     }
 }
 
-impl<Lpn> State<Lpn>
-where
-    Lpn: Currency,
-{
-    fn total_due_interest(&self) -> Coin<Lpn> {
+impl State {
+    fn total_due_interest(&self) -> LpnCoin {
         self.due_interest
             + self.due_margin_interest
             + self.overdue.interest()
@@ -58,7 +52,6 @@ mod test {
     use finance::{coin::Coin, duration::Duration, interest, percent::Percent, zero::Zero};
 
     use crate::{
-        lease::tests::TestLpn,
         loan::{Overdue, State},
         position::DueTrait,
     };
@@ -75,7 +68,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::StartIn(till_due_end),
+            overdue: Overdue::StartIn(till_due_end),
         };
         let overdue_collection =
             s.overdue_collection(due_interest + due_margin_interest - 1.into());
@@ -106,7 +99,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::StartIn(till_due_end),
+            overdue: Overdue::StartIn(till_due_end),
         };
         let overdue_collection =
             s.overdue_collection(due_interest + due_margin_interest + delta_to_due_end - 1.into());
@@ -146,7 +139,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::Accrued {
+            overdue: Overdue::Accrued {
                 interest: overdue_interest,
                 margin: overdue_margin_interest,
             },
@@ -175,7 +168,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::Accrued {
+            overdue: Overdue::Accrued {
                 interest: overdue_interest,
                 margin: overdue_margin_interest,
             },
@@ -203,7 +196,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::StartIn(overdue_start_in),
+            overdue: Overdue::StartIn(overdue_start_in),
         };
         let overdue_collection = s.overdue_collection(100.into());
         assert_eq!(Duration::MAX, overdue_collection.start_in());
@@ -227,7 +220,7 @@ mod test {
             principal_due,
             due_interest,
             due_margin_interest,
-            overdue: Overdue::<TestLpn>::Accrued {
+            overdue: Overdue::Accrued {
                 interest: overdue_interest,
                 margin: overdue_margin_interest,
             },

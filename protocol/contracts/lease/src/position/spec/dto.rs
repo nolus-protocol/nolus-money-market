@@ -1,16 +1,11 @@
-use currency::Currency;
-
 use crate::{
     api::open::PositionSpecDTO,
     error::{ContractError, ContractResult},
     position::Spec,
 };
 
-impl<Lpn> From<Spec<Lpn>> for PositionSpecDTO
-where
-    Lpn: Currency,
-{
-    fn from(spec: Spec<Lpn>) -> Self {
+impl From<Spec> for PositionSpecDTO {
+    fn from(spec: Spec) -> Self {
         PositionSpecDTO::new_internal(
             spec.liability,
             spec.min_asset.into(),
@@ -19,10 +14,7 @@ where
     }
 }
 
-impl<Lpn> TryFrom<PositionSpecDTO> for Spec<Lpn>
-where
-    Lpn: Currency,
-{
+impl TryFrom<PositionSpecDTO> for Spec {
     type Error = ContractError;
 
     fn try_from(dto: PositionSpecDTO) -> ContractResult<Self> {

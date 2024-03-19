@@ -7,39 +7,32 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::LpnCurrencies,
+    api::{LpnCoin, LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
     lease::Lease,
     loan::RepayReceipt,
 };
 
-pub(crate) struct FullRepayReceipt<Lpn>
-where
-    Lpn: Currency,
-{
-    receipt: RepayReceipt<Lpn>,
+pub(crate) struct FullRepayReceipt {
+    receipt: RepayReceipt,
     messages: Batch,
 }
 
-impl<Lpn> FullRepayReceipt<Lpn>
-where
-    Lpn: Currency,
-{
-    fn new(receipt: RepayReceipt<Lpn>, messages: Batch) -> Self {
+impl FullRepayReceipt {
+    fn new(receipt: RepayReceipt, messages: Batch) -> Self {
         debug_assert!(receipt.close());
         Self { receipt, messages }
     }
 
-    pub(crate) fn decompose(self) -> (RepayReceipt<Lpn>, Batch) {
+    pub(crate) fn decompose(self) -> (RepayReceipt, Batch) {
         (self.receipt, self.messages)
     }
 }
 
-impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
+impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
-    Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
     Asset: Currency,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
@@ -50,10 +43,10 @@ where
     pub(crate) fn close_partial<Profit>(
         &mut self,
         asset: Coin<Asset>,
-        payment: Coin<Lpn>,
+        payment: LpnCoin,
         now: &Timestamp,
         profit: &mut Profit,
-    ) -> ContractResult<RepayReceipt<Lpn>>
+    ) -> ContractResult<RepayReceipt>
     where
         Profit: FixedAddressSender,
     {
@@ -63,11 +56,11 @@ where
 
     pub(crate) fn close_full<Profit, Change>(
         mut self,
-        payment: Coin<Lpn>,
+        payment: LpnCoin,
         now: Timestamp,
         mut profit: Profit,
         mut change_recipient: Change,
-    ) -> ContractResult<FullRepayReceipt<Lpn>>
+    ) -> ContractResult<FullRepayReceipt>
     where
         Profit: FixedAddressSender,
         Change: FixedAddressSender,

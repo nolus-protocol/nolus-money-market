@@ -1,7 +1,5 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{Currency, Group};
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
@@ -19,7 +17,7 @@ pub trait LppLoan<Lpn, Lpns>
 where
     Lpn: Currency,
     Lpns: Group,
-    Self: TryInto<LppBatch<LppRef<Lpns>>, Error = ContractError>,
+    Self: TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = ContractError>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
@@ -32,16 +30,16 @@ where
     fn annual_interest_rate(&self) -> Percent;
 }
 
-pub trait WithLppLoan<Lpns>
+pub trait WithLppLoan<Lpn, Lpns>
 where
+    Lpn: Currency,
     Lpns: Group,
 {
     type Output;
     type Error;
 
-    fn exec<Lpn, Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
+    fn exec<Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Loan: LppLoan<Lpn, Lpns>;
 }
 
@@ -49,7 +47,7 @@ pub(super) struct LppLoanImpl<Lpn, Lpns>
 where
     Lpn: Currency,
 {
-    lpp_ref: LppRef<Lpns>,
+    lpp_ref: LppRef<Lpn, Lpns>,
     lpn: PhantomData<Lpn>,
     loan: Loan<Lpn>,
     repayment: Coin<Lpn>,
@@ -57,10 +55,10 @@ where
 
 impl<Lpn, Lpns> LppLoanImpl<Lpn, Lpns>
 where
-    Lpn: Currency + DeserializeOwned,
+    Lpn: Currency,
     Lpns: Group,
 {
-    pub(super) fn new(lpp_ref: LppRef<Lpns>, loan: Loan<Lpn>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>, loan: Loan<Lpn>) -> Self {
         Self {
             lpp_ref,
             lpn: PhantomData,
@@ -72,7 +70,7 @@ where
 impl<Lpn, Lpns> LppLoan<Lpn, Lpns> for LppLoanImpl<Lpn, Lpns>
 where
     Lpn: Currency,
-    Lpns: Group + Serialize,
+    Lpns: Group,
 {
     fn principal_due(&self) -> Coin<Lpn> {
         self.loan.principal_due
@@ -92,10 +90,10 @@ where
     }
 }
 
-impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpns>>
+impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>>
 where
     Lpn: Currency,
-    Lpns: Group + Serialize,
+    Lpns: Group,
 {
     type Error = ContractError;
 
@@ -132,7 +130,7 @@ mod test {
 
     #[test]
     fn try_from_no_payments() {
-        let lpp_ref = LppRef::unchecked::<_, StableC1>("lpp_address");
+        let lpp_ref = LppRef::<StableC1, _>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(10);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
@@ -143,7 +141,7 @@ mod test {
             },
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
-        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<StableC1, Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
@@ -151,7 +149,7 @@ mod test {
 
     #[test]
     fn try_from_a_few_payments() {
-        let lpp_ref = LppRef::unchecked::<_, StableC1>("lpp_address");
+        let lpp_ref = LppRef::<StableC1, _>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(0);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
@@ -165,7 +163,7 @@ mod test {
         let payment2 = 4.into();
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
-        let batch: LppBatch<LppRef<Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<StableC1, Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         {

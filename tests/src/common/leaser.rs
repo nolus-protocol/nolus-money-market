@@ -4,7 +4,7 @@ use currency::Currency;
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{
     open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-    LpnCoin,
+    LpnCoinDTO,
 };
 use leaser::{
     execute, instantiate,
@@ -43,11 +43,11 @@ impl Instantiator {
         )
     }
 
-    pub fn min_asset() -> LpnCoin {
+    pub fn min_asset() -> LpnCoinDTO {
         super::lpn_coin(200)
     }
 
-    pub fn min_transaction() -> LpnCoin {
+    pub fn min_transaction() -> LpnCoinDTO {
         super::lpn_coin(50)
     }
 

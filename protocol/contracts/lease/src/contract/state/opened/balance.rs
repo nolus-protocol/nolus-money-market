@@ -3,7 +3,7 @@ use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    api::{LpnCoin, LpnCurrencies},
+    api::{LpnCoinDTO, LpnCurrencies},
     error::{ContractError, ContractResult},
 };
 
@@ -11,7 +11,7 @@ pub(super) fn balance(
     account: &Addr,
     currency: &SymbolSlice,
     querier: QuerierWrapper<'_>,
-) -> ContractResult<LpnCoin> {
+) -> ContractResult<LpnCoinDTO> {
     Tickers.visit_any::<LpnCurrencies, _>(currency, CheckBalance { account, querier })
 }
 
@@ -20,7 +20,7 @@ struct CheckBalance<'a> {
     querier: QuerierWrapper<'a>,
 }
 impl<'a> AnyVisitor for CheckBalance<'a> {
-    type Output = LpnCoin;
+    type Output = LpnCoinDTO;
     type Error = ContractError;
 
     fn on<C>(self) -> AnyVisitorResult<Self>

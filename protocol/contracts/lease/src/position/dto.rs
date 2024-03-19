@@ -22,10 +22,9 @@ impl PositionDTO {
     }
 }
 
-impl<Asset, Lpn> TryFrom<PositionDTO> for Position<Asset, Lpn>
+impl<Asset> TryFrom<PositionDTO> for Position<Asset>
 where
     Asset: Currency,
-    Lpn: Currency,
 {
     type Error = ContractError;
 
@@ -34,12 +33,11 @@ where
     }
 }
 
-impl<Asset, Lpn> From<Position<Asset, Lpn>> for PositionDTO
+impl<Asset> From<Position<Asset>> for PositionDTO
 where
     Asset: Currency,
-    Lpn: Currency,
 {
-    fn from(value: Position<Asset, Lpn>) -> Self {
+    fn from(value: Position<Asset>) -> Self {
         Self {
             amount: value.amount.into(),
             spec: value.spec.into(),

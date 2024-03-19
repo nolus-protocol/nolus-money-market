@@ -5,7 +5,7 @@ use platform::{bank::FixedAddressSender, message::Response as MessageResponse};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LpnCoin, LpnCurrencies},
+    api::{LpnCoinDTO, LpnCurrencies, LpnCurrency},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -13,7 +13,7 @@ use crate::{
 use super::repayable::Emitter;
 
 pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
-    payment: LpnCoin,
+    payment: LpnCoinDTO,
     now: Timestamp,
     profit: ProfitSender,
     change: ChangeSender,
@@ -22,7 +22,7 @@ pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
 
 impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
     pub fn new(
-        payment: LpnCoin,
+        payment: LpnCoinDTO,
         now: Timestamp,
         profit: ProfitSender,
         change: ChangeSender,
@@ -48,15 +48,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Oracle>(
+    fn exec<Asset, Lpp, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Oracle>,
+        lease: Lease<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Asset: Currency,
-        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
         let lease_addr = lease.addr().clone();
 

@@ -6,7 +6,7 @@ use platform::bank;
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
-    api::{LeasePaymentCurrencies, LpnCurrencies, PaymentCoin},
+    api::{LeasePaymentCurrencies, LpnCurrencies, LpnCurrency, PaymentCoin},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -26,31 +26,32 @@ impl WithLease for ObtainPayment {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, LppLoan, Oracle>(
+    fn exec<Asset, LppLoan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, LppLoan, Oracle>,
+        lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
-        bank::may_received::<LeasePaymentCurrencies, _>(&self.cw_amount, RepaymentHandler { lease })
-            .ok_or_else(ContractError::NoPaymentError)?
+        bank::may_received::<LeasePaymentCurrencies, _>(
+            &self.cw_amount,
+            RepaymentHandler::<_, _, _> { lease },
+        )
+        .ok_or_else(ContractError::NoPaymentError)?
     }
 }
 
-struct RepaymentHandler<Lpn, Asset, LppLoan, Oracle> {
-    lease: Lease<Lpn, Asset, LppLoan, Oracle>,
+struct RepaymentHandler<Asset, LppLoan, Oracle> {
+    lease: Lease<Asset, LppLoan, Oracle>,
 }
 
-impl<Lpn, Asset, LppLoan, Oracle> WithCoin for RepaymentHandler<Lpn, Asset, LppLoan, Oracle>
+impl<Asset, LppLoan, Oracle> WithCoin for RepaymentHandler<Asset, LppLoan, Oracle>
 where
-    Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
 {
     type Output = PaymentCoin;
 

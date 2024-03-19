@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
@@ -13,7 +11,10 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies, LpnCoin, LpnCurrencies},
+    api::{
+        open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies, LpnCoin, LpnCoinDTO,
+        LpnCurrencies, LpnCurrency,
+    },
     error::ContractError,
     position::Spec as PositionSpec,
 };
@@ -44,21 +45,19 @@ impl<'a> OpenLoanReq<'a> {
     }
 }
 
-impl<'a> WithLppLender<LpnCurrencies> for OpenLoanReq<'a> {
+impl<'a> WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'a> {
     type Output = OpenLoanReqResult;
 
     type Error = ContractError;
 
-    fn exec<Lpn, LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
-        LppLender: LppLenderTrait<Lpn, LpnCurrencies>,
+        LppLender: LppLenderTrait<LpnCurrency, LpnCurrencies>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received::<LeasePaymentCurrencies, _>(
             &self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
-                _lpn: PhantomData::<Lpn> {},
                 querier: self.querier,
             },
         )
@@ -78,16 +77,12 @@ impl<'a> WithLppLender<LpnCurrencies> for OpenLoanReq<'a> {
     }
 }
 
-struct DownpaymentHandler<'a, Lpn> {
+struct DownpaymentHandler<'a> {
     oracle: OracleRef,
-    _lpn: PhantomData<Lpn>,
     querier: QuerierWrapper<'a>,
 }
-impl<'a, Lpn> WithCoin for DownpaymentHandler<'a, Lpn>
-where
-    Lpn: Currency,
-{
-    type Output = (DownpaymentCoin, Coin<Lpn>);
+impl<'a> WithCoin for DownpaymentHandler<'a> {
+    type Output = (DownpaymentCoin, LpnCoin);
 
     type Error = ContractError;
 
@@ -95,11 +90,12 @@ where
     where
         C: Currency,
     {
-        let downpayment_lpn = convert::to_base::<Lpn, LpnCurrencies, C, LeasePaymentCurrencies>(
-            self.oracle.clone(),
-            in_amount,
-            self.querier,
-        )?;
+        let downpayment_lpn = convert::to_base::<
+            LpnCurrency,
+            LpnCurrencies,
+            C,
+            LeasePaymentCurrencies,
+        >(self.oracle.clone(), in_amount, self.querier)?;
 
         let downpayment = in_amount.into();
 
@@ -122,15 +118,14 @@ impl OpenLoanResp {
     }
 }
 
-impl WithLppLender<LpnCurrencies> for OpenLoanResp {
+impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanResp {
     type Output = OpenLoanRespResult;
 
     type Error = ContractError;
 
-    fn exec<Lpn, LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
+    fn exec<LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
-        LppLender: LppLenderTrait<Lpn, LpnCurrencies>,
+        LppLender: LppLenderTrait<LpnCurrency, LpnCurrencies>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
 
@@ -152,6 +147,6 @@ impl WithLppLender<LpnCurrencies> for OpenLoanResp {
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
-    pub(in crate::contract) principal: LpnCoin,
+    pub(in crate::contract) principal: LpnCoinDTO,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

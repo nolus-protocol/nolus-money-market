@@ -1,7 +1,7 @@
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::LpnCoin,
+    api::LpnCoinDTO,
     contract::{state::Response, Lease},
     error::ContractResult,
 };
@@ -18,7 +18,7 @@ pub(super) trait Repayable {
     fn try_repay(
         &self,
         lease: Lease,
-        amount: LpnCoin,
+        amount: LpnCoinDTO,
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response>;

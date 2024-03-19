@@ -10,13 +10,14 @@ use platform::contract::Code;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
+use crate::finance::LpnCurrency;
 use crate::{
     cmd::Quote,
+    finance::LpnCurrencies,
     migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
-    LpnCurrencies,
 };
 
 pub struct Leaser<'a> {
@@ -43,7 +44,7 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::<LpnCurrencies>::try_new(config.lpp, self.deps.querier)?;
+        let lpp = LppRef::<LpnCurrency, LpnCurrencies>::try_new(config.lpp, self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
 

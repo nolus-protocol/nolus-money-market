@@ -1,29 +1,22 @@
-use currency::Currency;
 use finance::{
     coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
-use crate::api::LpnCurrencies;
+use crate::api::{LpnCoin, LpnCurrencies, LpnCurrency};
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
-pub struct State<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct State {
     pub annual_interest: Percent,
     pub annual_interest_margin: Percent,
-    pub principal_due: Coin<Lpn>,
-    pub due_interest: Coin<Lpn>,
-    pub due_margin_interest: Coin<Lpn>,
-    pub overdue: Overdue<Lpn>,
+    pub principal_due: LpnCoin,
+    pub due_interest: LpnCoin,
+    pub due_margin_interest: LpnCoin,
+    pub overdue: Overdue,
 }
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
-pub enum Overdue<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub enum Overdue {
     /// No overdue interest yet
     ///
     /// The period specifies in how much time the overdue will start.
@@ -34,16 +27,10 @@ where
     /// The accrued interest so far is overdue
     ///
     /// The amounts accrued since the overdue period has started.
-    Accrued {
-        interest: Coin<Lpn>,
-        margin: Coin<Lpn>,
-    },
+    Accrued { interest: LpnCoin, margin: LpnCoin },
 }
 
-impl<Lpn> Overdue<Lpn>
-where
-    Lpn: Currency,
-{
+impl Overdue {
     pub fn new<LppLoan>(
         due_period_margin: &Period,
         max_due: Duration,
@@ -51,7 +38,7 @@ where
         lpp_loan: &LppLoan,
     ) -> Self
     where
-        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     {
         if due_period_margin.length() < max_due {
             Self::StartIn(max_due - due_period_margin.length())
@@ -86,7 +73,7 @@ where
         }
     }
 
-    pub fn interest(&self) -> Coin<Lpn> {
+    pub fn interest(&self) -> LpnCoin {
         match self {
             Self::StartIn(_) => Coin::ZERO,
             Self::Accrued {
@@ -96,7 +83,7 @@ where
         }
     }
 
-    pub fn margin(&self) -> Coin<Lpn> {
+    pub fn margin(&self) -> LpnCoin {
         match self {
             Self::StartIn(_) => Coin::ZERO,
             Self::Accrued {

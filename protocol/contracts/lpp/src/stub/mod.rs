@@ -1,11 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-use currency::{
-    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned,
-    SymbolSlice, Tickers,
-};
+use currency::{error::CmdError, Currency, Group, SymbolSlice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -24,29 +21,29 @@ pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct LppRef<Lpns> {
+pub struct LppRef<Lpn, Lpns> {
     addr: Addr,
-    #[serde(alias = "currency")]
-    // TODO remove once all occurences of `LppRef` instances got migrated
-    lpn: SymbolOwned,
+    #[serde(skip)]
+    _lpn: PhantomData<Lpn>,
     #[serde(skip)]
     _lpns: PhantomData<Lpns>,
 }
 
-impl<Lpns> LppRef<Lpns>
+impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpns: Group + Serialize,
+    Lpn: Currency,
+    Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        let lpn: LpnResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())?;
-
-        currency::validate::<Lpns>(&lpn)
-            .map(|()| Self {
+        querier
+            .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
+            .map_err(ContractError::from)
+            .and_then(|lpn| currency::validate_ticker::<Lpn>(lpn).map_err(Into::into))
+            .map(|_lpn: LpnResponse| Self {
                 addr,
-                lpn,
+                _lpn: PhantomData,
                 _lpns: PhantomData,
             })
-            .map_err(Into::into)
     }
 
     pub fn addr(&self) -> &Addr {
@@ -54,7 +51,7 @@ where
     }
 
     pub fn lpn(&self) -> &SymbolSlice {
-        &self.lpn
+        Lpn::TICKER
     }
 
     pub fn execute_loan<Cmd>(
@@ -64,49 +61,12 @@ where
         querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLoan<Lpns>,
+        Cmd: WithLppLoan<Lpn, Lpns>,
         ContractError: Into<Cmd::Error>,
     {
-        struct CurrencyVisitor<'a, Cmd, Lpns, Lease> {
-            cmd: Cmd,
-            lpp_ref: LppRef<Lpns>,
-            lease: Lease,
-            querier: QuerierWrapper<'a>,
-        }
-
-        impl<'a, Cmd, Lpns, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lpns, Lease>
-        where
-            Cmd: WithLppLoan<Lpns>,
-            ContractError: Into<Cmd::Error>,
-            Lpns: Group + Serialize,
-            Lease: Into<Addr>,
-        {
-            type Output = Cmd::Output;
-            type Error = CmdError<Cmd::Error, ContractError>;
-
-            fn on<Lpn>(self) -> AnyVisitorResult<Self>
-            where
-                Lpn: Currency + Serialize + DeserializeOwned,
-            {
-                self.lpp_ref
-                    .into_loan::<Lpn>(self.lease, self.querier)
-                    .map_err(CmdError::from_api_err)
-                    .and_then(|lpp_loan| {
-                        self.cmd.exec(lpp_loan).map_err(CmdError::from_customer_err)
-                    })
-            }
-        }
-
-        Tickers
-            .visit_any::<Lpns, _>(
-                &self.lpn.clone(),
-                CurrencyVisitor {
-                    cmd,
-                    lpp_ref: self,
-                    lease,
-                    querier,
-                },
-            )
+        self.into_loan(lease, querier)
+            .map_err(CmdError::from_api_err)
+            .and_then(|lpp_loan| cmd.exec(lpp_loan).map_err(CmdError::from_customer_err))
             .map_err(CmdError::into_customer_err)
     }
 
@@ -116,57 +76,19 @@ where
         querier: QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLender<Lpns>,
+        Cmd: WithLppLender<Lpn, Lpns>,
         ContractError: Into<Cmd::Error>,
     {
-        struct CurrencyVisitor<'a, Cmd, Lpns> {
-            cmd: Cmd,
-            lpp_ref: LppRef<Lpns>,
-            querier: QuerierWrapper<'a>,
-        }
-
-        impl<'a, Cmd, Lpns> AnyVisitor for CurrencyVisitor<'a, Cmd, Lpns>
-        where
-            Cmd: WithLppLender<Lpns>,
-            Lpns: Group + Serialize,
-        {
-            type Output = Cmd::Output;
-            type Error = CmdError<Cmd::Error, ContractError>;
-
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Currency + Serialize + DeserializeOwned,
-            {
-                self.cmd
-                    .exec(self.lpp_ref.into_lender::<C>(self.querier))
-                    .map_err(CmdError::from_customer_err)
-            }
-        }
-
-        Tickers
-            .visit_any::<Lpns, _>(
-                &self.lpn.clone(),
-                CurrencyVisitor {
-                    cmd,
-                    lpp_ref: self,
-                    querier,
-                },
-            )
-            .map_err(CmdError::into_customer_err)
+        cmd.exec(self.into_lender(querier))
     }
 
-    fn into_loan<Lpn>(
-        self,
-        lease: impl Into<Addr>,
-        querier: QuerierWrapper<'_>,
-    ) -> Result<LppLoanImpl<Lpn, Lpns>>
+    fn into_loan<A>(self, lease: A, querier: QuerierWrapper<'_>) -> Result<LppLoanImpl<Lpn, Lpns>>
     where
-        Lpn: Currency + DeserializeOwned,
-        Lpns: Group + Serialize,
+        A: Into<Addr>,
     {
         querier
             .query_wasm_smart(
-                self.addr(),
+                self.addr().clone(),
                 &QueryMsg::<Lpns>::Loan {
                     lease_addr: lease.into(),
                 },
@@ -176,7 +98,7 @@ where
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
-    fn into_lender<Lpn>(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns>
+    fn into_lender(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns>
     where
         Lpn: Currency,
         Lpns: Group,
@@ -186,18 +108,18 @@ where
 }
 
 #[cfg(any(test, feature = "testing"))]
-impl<Lpns> LppRef<Lpns>
+impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
+    Lpn: Currency,
     Lpns: Group,
 {
-    pub fn unchecked<A, Lpn>(addr: A) -> Self
+    pub fn unchecked<A>(addr: A) -> Self
     where
         A: Into<String>,
-        Lpn: Currency,
     {
         Self {
             addr: Addr::unchecked(addr),
-            lpn: Lpn::TICKER.into(),
+            _lpn: PhantomData,
             _lpns: PhantomData,
         }
     }

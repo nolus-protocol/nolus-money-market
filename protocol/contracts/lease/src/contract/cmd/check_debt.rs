@@ -9,23 +9,22 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, LpnCurrencies},
+    api::{LeaseCoin, LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
     position::{Cause, Liquidation},
 };
 
-pub(crate) fn check_debt<Lpn, Asset, Lpp, Oracle>(
-    lease: &LeaseDO<Lpn, Asset, Lpp, Oracle>,
+pub(crate) fn check_debt<Asset, Lpp, Oracle>(
+    lease: &LeaseDO<Asset, Lpp, Oracle>,
     when: &Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
 ) -> ContractResult<DebtStatusDTO>
 where
-    Lpn: Currency,
     Asset: Currency,
-    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
 {
     lease
         .check_debt(when, time_alarms, price_alarms)
@@ -116,15 +115,14 @@ impl<'a> WithLease for Cmd<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Loan, Oracle>(
+    fn exec<Asset, Loan, Oracle>(
         self,
-        lease: LeaseDO<Lpn, Asset, Loan, Oracle>,
+        lease: LeaseDO<Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Asset: Currency,
-        Loan: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
         check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
     }

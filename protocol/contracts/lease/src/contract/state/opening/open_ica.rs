@@ -15,7 +15,7 @@ use crate::{
     api::{
         open::NewLeaseContract,
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies,
+        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies, LpnCurrency,
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,
@@ -29,7 +29,7 @@ pub(crate) struct OpenIcaAccount {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (
-        LppRef<LpnCurrencies>,
+        LppRef<LpnCurrency, LpnCurrencies>,
         OracleRef,
         TimeAlarmsRef,
         FinalizerRef,
@@ -43,7 +43,7 @@ impl OpenIcaAccount {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (
-            LppRef<LpnCurrencies>,
+            LppRef<LpnCurrency, LpnCurrencies>,
             OracleRef,
             TimeAlarmsRef,
             FinalizerRef,

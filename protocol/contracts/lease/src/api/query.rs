@@ -6,7 +6,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
+use super::{DownpaymentCoin, LeaseCoin, LpnCoinDTO};
 
 #[derive(Deserialize, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]
@@ -22,7 +22,7 @@ pub struct StateQuery {}
 pub enum StateResponse {
     Opening {
         downpayment: DownpaymentCoin,
-        loan: LpnCoin,
+        loan: LpnCoinDTO,
         loan_interest_rate: Percent,
         in_progress: opening::OngoingTrx,
     },
@@ -30,12 +30,12 @@ pub enum StateResponse {
         amount: LeaseCoin,
         loan_interest_rate: Percent,
         margin_interest_rate: Percent,
-        principal_due: LpnCoin,
-        overdue_margin: LpnCoin,
-        overdue_interest: LpnCoin,
+        principal_due: LpnCoinDTO,
+        overdue_margin: LpnCoinDTO,
+        overdue_interest: LpnCoinDTO,
         overdue_collect_in: Duration,
-        due_margin: LpnCoin,
-        due_interest: LpnCoin,
+        due_margin: LpnCoinDTO,
+        due_interest: LpnCoinDTO,
         validity: Timestamp,
         in_progress: Option<opened::OngoingTrx>,
     },

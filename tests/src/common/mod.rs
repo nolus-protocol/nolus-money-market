@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use ::lease::api::LpnCoin;
+use ::lease::api::LpnCoinDTO;
 use currencies::test::{NativeC, StableC1};
 use currency::Currency;
 use finance::{
@@ -76,7 +76,7 @@ where
     cwcoin::<Native, A>(amount)
 }
 
-pub fn lpn_coin(amount: Amount) -> LpnCoin {
+pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
     Coin::<Lpn>::new(amount).into()
 }
 

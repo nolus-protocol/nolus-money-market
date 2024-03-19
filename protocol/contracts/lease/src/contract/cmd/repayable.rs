@@ -1,5 +1,4 @@
 use currency::Currency;
-use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use platform::{
@@ -11,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LpnCoin, LpnCurrencies},
+    api::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency},
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
@@ -21,25 +20,22 @@ use crate::{
 use super::{check_debt, LiquidationStatus};
 
 pub(crate) trait RepayFn {
-    fn do_repay<Lpn, Asset, Lpp, Oracle, Profit>(
+    fn do_repay<Asset, Lpp, Oracle, Profit>(
         self,
-        lease: &mut LeaseDO<Lpn, Asset, Lpp, Oracle>,
-        amount: Coin<Lpn>,
+        lease: &mut LeaseDO<Asset, Lpp, Oracle>,
+        amount: LpnCoin,
         now: &Timestamp,
         profit: &mut Profit,
-    ) -> ContractResult<RepayReceipt<Lpn>>
+    ) -> ContractResult<RepayReceipt>
     where
-        Lpn: Currency,
-        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
         Asset: Currency,
         Profit: FixedAddressSender;
 }
 
 pub(crate) trait Emitter {
-    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> PlatformEmitter
-    where
-        Lpn: Currency;
+    fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> PlatformEmitter;
 }
 
 pub(crate) struct Repay<'a, RepayableT, EmitterT>
@@ -48,7 +44,7 @@ where
     EmitterT: Emitter,
 {
     repay_fn: RepayableT,
-    amount: LpnCoin,
+    amount: LpnCoinDTO,
     now: &'a Timestamp,
     emitter_fn: EmitterT,
     profit: ProfitRef,
@@ -63,7 +59,7 @@ where
 {
     pub fn new(
         repay_fn: RepayableT,
-        amount: LpnCoin,
+        amount: LpnCoinDTO,
         now: &'a Timestamp,
         emitter_fn: EmitterT,
         profit: ProfitRef,
@@ -110,15 +106,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Oracle>(
+    fn exec<Asset, Lpp, Oracle>(
         self,
-        mut lease: LeaseDO<Lpn, Asset, Lpp, Oracle>,
+        mut lease: LeaseDO<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Asset: Currency,
-        Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
         let amount = self.amount.try_into()?;
         let mut profit_sender = self.profit.clone().into_stub();

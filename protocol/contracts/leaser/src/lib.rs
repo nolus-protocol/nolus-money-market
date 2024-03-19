@@ -1,5 +1,3 @@
-use currencies::Lpns;
-
 pub use self::{
     contract::{execute, instantiate, migrate, query, reply, sudo},
     error::ContractError,
@@ -8,6 +6,7 @@ pub use self::{
 mod cmd;
 mod contract;
 pub mod error;
+mod finance;
 mod leaser;
 mod migrate;
 pub mod msg;
@@ -16,5 +15,3 @@ mod state;
 
 #[cfg(test)]
 mod tests;
-
-pub(crate) type LpnCurrencies = Lpns;

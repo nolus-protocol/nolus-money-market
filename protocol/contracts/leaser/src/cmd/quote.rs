@@ -13,7 +13,11 @@ use lpp::{
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
-use crate::{msg::QuoteResponse, ContractError, LpnCurrencies};
+use crate::{
+    finance::{LpnCurrencies, LpnCurrency},
+    msg::QuoteResponse,
+    ContractError,
+};
 
 pub struct Quote<'r> {
     querier: QuerierWrapper<'r>,
@@ -47,26 +51,26 @@ impl<'r> Quote<'r> {
     }
 }
 
-impl<'r> WithLppLender<LpnCurrencies> for Quote<'r> {
+impl<'r> WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'r> {
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    fn exec<Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
-        Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+        Lpp: LppLenderTrait<LpnCurrency, LpnCurrencies>,
     {
-        self.oracle.execute_as_oracle::<Lpn, LpnCurrencies, _>(
-            QuoteStage2 {
-                downpayment: self.downpayment,
-                lease_asset: self.lease_asset,
-                lpp_quote: LppQuote::new(lpp)?,
-                liability: self.liability,
-                lease_interest_rate_margin: self.lease_interest_rate_margin,
-                max_ltd: self.max_ltd,
-            },
-            self.querier,
-        )
+        self.oracle
+            .execute_as_oracle::<LpnCurrency, LpnCurrencies, _>(
+                QuoteStage2 {
+                    downpayment: self.downpayment,
+                    lease_asset: self.lease_asset,
+                    lpp_quote: LppQuote::new(lpp)?,
+                    liability: self.liability,
+                    lease_interest_rate_margin: self.lease_interest_rate_margin,
+                    max_ltd: self.max_ltd,
+                },
+                self.querier,
+            )
     }
 }
 

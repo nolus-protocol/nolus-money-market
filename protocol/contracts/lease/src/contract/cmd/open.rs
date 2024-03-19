@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseForm, LeaseCoin, LpnCurrencies},
+    api::{open::NewLeaseForm, LeaseCoin, LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
@@ -25,7 +25,7 @@ pub(crate) fn open_lease(
     now: &Timestamp,
     amount: LeaseCoin,
     querier: QuerierWrapper<'_>,
-    deps: (LppRef<LpnCurrencies>, OracleRef, TimeAlarmsRef),
+    deps: (LppRef<LpnCurrency, LpnCurrencies>, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
@@ -70,11 +70,11 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     where
         Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
-        let lease = PositionSpec::<Lpn>::try_from(self.form.position_spec)
-            .and_then(|spec| Position::<Asset, Lpn>::try_from(self.amount, spec))
+        let lease = PositionSpec::try_from(self.form.position_spec)
+            .and_then(|spec| Position::<Asset>::try_from(self.amount, spec))
             .map(|position| {
                 let loan = Loan::new(
                     lpp_loan,
@@ -82,7 +82,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
                     self.form.loan.annual_margin_interest,
                     self.form.loan.due_period,
                 );
-                Lease::<_, Asset, _, _>::new(
+                Lease::<Asset, _, _>::new(
                     self.lease_addr,
                     self.form.customer,
                     position,

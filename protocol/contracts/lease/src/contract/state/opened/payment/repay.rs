@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::{
         query::opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin, LpnCoin,
+        LeaseCoin, LpnCoinDTO,
     },
     contract::{
         cmd::{LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
@@ -72,7 +72,7 @@ where
     fn try_repay(
         &self,
         lease: Lease,
-        amount: LpnCoin,
+        amount: LpnCoinDTO,
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response> {

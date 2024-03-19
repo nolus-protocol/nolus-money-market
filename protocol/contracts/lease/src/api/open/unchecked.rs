@@ -3,7 +3,7 @@ use serde::Deserialize;
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::cosmwasm_std::Addr;
 
-use crate::{api::LpnCoin, error::ContractError};
+use crate::{api::LpnCoinDTO, error::ContractError};
 
 use super::{
     InterestPaymentSpec as ValidatedInterestPaymentSpec, LoanForm as LastVersionLoanForm,
@@ -80,8 +80,8 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(super) struct PositionSpecDTO {
     liability: Liability,
-    min_asset: LpnCoin,
-    min_transaction: LpnCoin,
+    min_asset: LpnCoinDTO,
+    min_transaction: LpnCoinDTO,
 }
 
 impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {

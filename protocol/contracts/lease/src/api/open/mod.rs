@@ -13,7 +13,7 @@ use sdk::{
 #[cfg(feature = "skel")]
 use crate::{error::ContractError, error::ContractResult};
 
-use super::LpnCoin;
+use super::LpnCoinDTO;
 
 #[cfg(feature = "skel")]
 mod unchecked;
@@ -132,10 +132,10 @@ pub struct PositionSpecDTO {
     pub liability: Liability,
     ///  The minimum amount that a lease asset should be evaluated past any
     ///  partial liquidation or close. If not, a full liquidation is performed
-    pub min_asset: LpnCoin,
+    pub min_asset: LpnCoinDTO,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
-    pub min_transaction: LpnCoin,
+    pub min_transaction: LpnCoinDTO,
 }
 
 #[cfg(feature = "skel")]
@@ -143,8 +143,8 @@ impl PositionSpecDTO {
     #[cfg(any(test, feature = "contract", feature = "testing"))]
     pub(crate) fn new_internal(
         liability: Liability,
-        min_asset: LpnCoin,
-        min_transaction: LpnCoin,
+        min_asset: LpnCoinDTO,
+        min_transaction: LpnCoinDTO,
     ) -> Self {
         let obj = Self {
             liability,
@@ -156,7 +156,7 @@ impl PositionSpecDTO {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn new(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
+    pub fn new(liability: Liability, min_asset: LpnCoinDTO, min_transaction: LpnCoinDTO) -> Self {
         let obj = Self::new_internal(liability, min_asset, min_transaction);
         obj.invariant_held()
             .expect("PositionSpecDTO invariant to be held");

@@ -5,7 +5,7 @@ use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
     open::{ConnectionParams, PositionSpecDTO},
-    DownpaymentCoin, LeaseCoin, LpnCoin,
+    DownpaymentCoin, LeaseCoin, LpnCoinDTO,
 };
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
@@ -110,7 +110,7 @@ pub struct ConfigResponse {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct QuoteResponse {
     pub total: LeaseCoin,
-    pub borrow: LpnCoin,
+    pub borrow: LpnCoinDTO,
     pub annual_interest_rate: Percent,
     pub annual_interest_rate_margin: Percent,
 }

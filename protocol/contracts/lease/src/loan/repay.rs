@@ -1,32 +1,25 @@
-use currency::Currency;
-use finance::coin::Coin;
+use crate::api::LpnCoin;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct Receipt<C>
-where
-    C: ?Sized,
-{
-    overdue_margin_paid: Coin<C>,
-    overdue_interest_paid: Coin<C>,
-    due_margin_paid: Coin<C>,
-    due_interest_paid: Coin<C>,
-    principal_paid: Coin<C>,
-    change: Coin<C>,
+pub(crate) struct Receipt {
+    overdue_margin_paid: LpnCoin,
+    overdue_interest_paid: LpnCoin,
+    due_margin_paid: LpnCoin,
+    due_interest_paid: LpnCoin,
+    principal_paid: LpnCoin,
+    change: LpnCoin,
     close: bool,
 }
 
-impl<C> Receipt<C>
-where
-    C: Currency,
-{
+impl Receipt {
     pub fn new(
-        overdue_interest: Coin<C>,
-        overdue_margin: Coin<C>,
-        due_interest: Coin<C>,
-        due_margin: Coin<C>,
-        principal_due: Coin<C>,
-        principal_paid: Coin<C>,
-        change: Coin<C>,
+        overdue_interest: LpnCoin,
+        overdue_margin: LpnCoin,
+        due_interest: LpnCoin,
+        due_margin: LpnCoin,
+        principal_due: LpnCoin,
+        principal_paid: LpnCoin,
+        change: LpnCoin,
     ) -> Self {
         debug_assert!(
             principal_paid <= principal_due,
@@ -44,27 +37,27 @@ where
         }
     }
 
-    pub fn overdue_margin_paid(&self) -> Coin<C> {
+    pub fn overdue_margin_paid(&self) -> LpnCoin {
         self.overdue_margin_paid
     }
 
-    pub fn overdue_interest_paid(&self) -> Coin<C> {
+    pub fn overdue_interest_paid(&self) -> LpnCoin {
         self.overdue_interest_paid
     }
 
-    pub fn due_margin_paid(&self) -> Coin<C> {
+    pub fn due_margin_paid(&self) -> LpnCoin {
         self.due_margin_paid
     }
 
-    pub fn due_interest_paid(&self) -> Coin<C> {
+    pub fn due_interest_paid(&self) -> LpnCoin {
         self.due_interest_paid
     }
 
-    pub fn principal_paid(&self) -> Coin<C> {
+    pub fn principal_paid(&self) -> LpnCoin {
         self.principal_paid
     }
 
-    pub fn change(&self) -> Coin<C> {
+    pub fn change(&self) -> LpnCoin {
         self.change
     }
 
@@ -72,7 +65,7 @@ where
         self.close
     }
 
-    pub fn total(&self) -> Coin<C> {
+    pub fn total(&self) -> LpnCoin {
         self.overdue_margin_paid
             + self.overdue_interest_paid
             + self.due_margin_paid
@@ -84,16 +77,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currency::test::SuperGroupTestC1;
     use finance::{coin::Coin, zero::Zero};
 
     use crate::loan::RepayReceipt;
 
-    type BorrowC = SuperGroupTestC1;
-
     #[test]
     fn pay_principal_full() {
-        let principal = Coin::<BorrowC>::new(10);
+        let principal = Coin::new(10);
 
         let receipt = RepayReceipt::new(
             Coin::ZERO,
@@ -114,7 +104,7 @@ mod tests {
     #[test]
     #[should_panic = "Payment exceeds principal!"]
     fn pay_principal_overpaid() {
-        let principal = Coin::<BorrowC>::new(10);
+        let principal = Coin::new(10);
 
         RepayReceipt::new(
             Coin::ZERO,

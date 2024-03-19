@@ -8,7 +8,7 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use serde::Deserialize;
 
-use crate::api::{open::InterestPaymentSpec, LpnCurrencies};
+use crate::api::{open::InterestPaymentSpec, LpnCurrencies, LpnCurrency};
 
 use super::LoanDTO as LastVersionLoanDTO;
 
@@ -16,7 +16,7 @@ use super::LoanDTO as LastVersionLoanDTO;
 /// TODO clean-up the v0.4.2 support once all leases have gone through this migration
 #[derive(Deserialize)]
 pub(super) struct LoanDTO {
-    lpp: LppRef<LpnCurrencies>,
+    lpp: LppRef<LpnCurrency, LpnCurrencies>,
     profit: ProfitRef,
     // v0.5.0 fields follow
     #[serde(default)]
@@ -114,7 +114,7 @@ mod test_two_versions {
 
     fn loan_v5_0() -> LoanDTO {
         LoanDTO {
-            lpp: LppRef::unchecked::<_, Lpn>(LPP_ADDR),
+            lpp: LppRef::unchecked(LPP_ADDR),
             profit: ProfitRef::unchecked::<_>(PROFIT_ADDR),
             due_period: DUE_PERIOD,
             margin_interest: MARGIN_INTEREST,

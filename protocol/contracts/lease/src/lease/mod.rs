@@ -7,7 +7,8 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LpnCurrencies,
+    //TODO move them to the domain layer
+    api::{LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
     loan::Loan,
     position::Position,
@@ -31,11 +32,11 @@ pub(crate) mod with_lease_paid;
 // the others could be provided on demand when certain operation is being performed
 // then review the methods that take `&mut self` whether could be transformed into `&self`
 // and those that take `self` into `&mut self` or `&self`
-pub struct Lease<Lpn, Asset, Lpp, Oracle> {
+pub struct Lease<Asset, Lpp, Oracle> {
     addr: Addr,
     customer: Addr,
-    position: Position<Asset, Lpn>,
-    loan: Loan<Lpn, Lpp>,
+    position: Position<Asset>,
+    loan: Loan<Lpp>,
     oracle: Oracle,
 }
 
@@ -45,27 +46,26 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle> {
+impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
     pub(crate) fn addr(&self) -> &Addr {
         &self.addr
     }
 }
 
-impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
+impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
 {
     pub(super) fn new(
         addr: Addr,
         customer: Addr,
-        position: Position<Asset, Lpn>,
-        loan: Loan<Lpn, LppLoan>,
+        position: Position<Asset>,
+        loan: Loan<LppLoan>,
         oracle: Oracle,
     ) -> Self {
-        debug_assert!(!currency::equal::<Lpn, Asset>());
+        debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
         Self {
@@ -88,7 +88,7 @@ where
         )
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
+    pub(crate) fn state(&self, now: Timestamp) -> State<Asset> {
         let loan = self.loan.state(&now);
         let overdue_collect_in = self.position.overdue_collection_in(&loan);
 
@@ -107,13 +107,12 @@ where
     }
 }
 
-impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
+impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Lpn: Currency,
     Asset: Currency,
-    LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
-    Oracle: OracleTrait<Lpn>,
+    Oracle: OracleTrait<LpnCurrency>,
 {
     pub(super) fn try_into_dto(
         self,
@@ -181,8 +180,7 @@ mod tests {
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
     pub(super) type TestLpn = StableC1;
     pub(super) type TestCurrency = PaymentC7;
-    pub(super) type TestLease =
-        Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+    pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where
@@ -234,7 +232,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<LpnCurrencies>>
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>>
     where
         Lpn: Currency,
     {
@@ -242,7 +240,7 @@ mod tests {
 
         fn try_from(_: LppLoanLocal<Lpn>) -> LppResult<Self> {
             Ok(Self {
-                lpp_ref: LppRef::unchecked::<_, TestLpn>(Addr::unchecked("test_lpp")),
+                lpp_ref: LppRef::<Lpn, _>::unchecked(Addr::unchecked("test_lpp")),
                 batch: Batch::default(),
             })
         }
@@ -316,7 +314,7 @@ mod tests {
             Percent::from_percent(80),
             RECHECK_TIME,
         );
-        let position_spec = PositionSpec::<TestLpn>::new(
+        let position_spec = PositionSpec::new(
             liability,
             Coin::<TestLpn>::new(15_000_000),
             Coin::<TestLpn>::new(10_000),
@@ -324,7 +322,7 @@ mod tests {
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            Position::<TestCurrency, TestLpn>::new(amount, position_spec),
+            Position::<TestCurrency>::new(amount, position_spec),
             loan,
             oracle,
         )

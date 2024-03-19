@@ -1,7 +1,7 @@
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::LpnCoin,
+    api::LpnCoinDTO,
     contract::{cmd::RepayLeaseFn, state::Response, Lease},
     error::ContractResult,
 };
@@ -15,7 +15,7 @@ pub mod buy_lpn;
 
 pub(super) fn repay(
     lease: Lease,
-    amount: LpnCoin,
+    amount: LpnCoinDTO,
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {

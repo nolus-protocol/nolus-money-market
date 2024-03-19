@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::{
     api::{
         query::{opened::OngoingTrx, StateResponse},
-        LpnCurrencies,
+        LpnCurrencies, LpnCurrency,
     },
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
@@ -28,15 +28,14 @@ impl WithLease for LeaseState {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, LppLoan, Oracle>(
+    fn exec<Asset, LppLoan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, LppLoan, Oracle>,
+        lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Asset: Currency,
-        LppLoan: LppLoanTrait<Lpn, LpnCurrencies>,
-        Oracle: OracleTrait<Lpn>,
+        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LpnCurrency>,
     {
         Ok(StateResponse::opened_from(
             lease.state(self.now),

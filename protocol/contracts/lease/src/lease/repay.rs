@@ -6,17 +6,16 @@ use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LeasePaymentCurrencies, LpnCurrencies},
+    api::{LeasePaymentCurrencies, LpnCoin, LpnCurrencies, LpnCurrency},
     error::ContractResult,
     lease::Lease,
     loan::RepayReceipt,
 };
 
-impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
+impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
-    Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
     Asset: Currency,
 {
     pub(crate) fn validate_repay<PaymentC>(&self, payment: Coin<PaymentC>) -> ContractResult<()>
@@ -31,10 +30,10 @@ where
 
     pub(crate) fn repay<Profit>(
         &mut self,
-        payment: Coin<Lpn>,
+        payment: LpnCoin,
         now: &Timestamp,
         profit: &mut Profit,
-    ) -> ContractResult<RepayReceipt<Lpn>>
+    ) -> ContractResult<RepayReceipt>
     where
         Profit: FixedAddressSender,
     {

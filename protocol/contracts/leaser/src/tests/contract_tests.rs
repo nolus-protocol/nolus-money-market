@@ -10,7 +10,7 @@ use finance::{
 };
 use lease::api::{
     open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
-    LpnCoin,
+    LpnCoinDTO,
 };
 use platform::contract::Code;
 
@@ -239,6 +239,6 @@ fn test_open_lease_with_max_ltd() {
     open_lease_with(Some(Percent::from_percent(5)));
 }
 
-fn lpn_coin(amount: Amount) -> LpnCoin {
+fn lpn_coin(amount: Amount) -> LpnCoinDTO {
     Coin::<TheCurrency>::from(amount).into()
 }

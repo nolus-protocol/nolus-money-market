@@ -50,6 +50,17 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
+pub fn validate_ticker<C>(ticker: SymbolOwned) -> Result<SymbolOwned>
+where
+    C: Currency,
+{
+    if C::TICKER == ticker {
+        Ok(ticker)
+    } else {
+        Err(Error::unexpected_symbol::<_, Tickers, C>(ticker))
+    }
+}
+
 pub fn validate_member<C, G>() -> Result<()>
 where
     C: Currency,

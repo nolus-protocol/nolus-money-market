@@ -1,5 +1,5 @@
 use currency::Currency;
-use finance::{coin::Coin, duration::Duration, liability::Zone};
+use finance::{duration::Duration, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::{
     api::alarms::Alarm,
@@ -10,13 +10,16 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{api::LpnCurrencies, error::ContractResult, lease::Lease};
+use crate::{
+    api::{LpnCoin, LpnCurrencies, LpnCurrency},
+    error::ContractResult,
+    lease::Lease,
+};
 
-impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
+impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
-    Lpn: Currency,
-    Lpp: LppLoanTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<LpnCurrency>,
     Asset: Currency,
 {
     pub(super) fn reschedule(
@@ -24,7 +27,7 @@ where
         now: &Timestamp,
         recheck_in: Duration,
         liquidation_zone: &Zone,
-        total_due: Coin<Lpn>,
+        total_due: LpnCoin,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
@@ -34,7 +37,7 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms::<Lpn>();
+                let mut price_alarms = price_alarms.as_alarms::<LpnCurrency>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -43,13 +46,13 @@ where
     fn reschedule_price_alarm<PriceAlarms>(
         &self,
         liquidation_zone: &Zone,
-        total_due: Coin<Lpn>,
+        total_due: LpnCoin,
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
         PriceAlarms: PriceAlarmsTrait,
     {
-        debug_assert!(!currency::equal::<Lpn, Asset>());
+        debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
 
         let below = self.position.price_at(liquidation_zone.high(), total_due)?;

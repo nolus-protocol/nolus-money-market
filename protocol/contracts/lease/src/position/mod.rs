@@ -1,15 +1,12 @@
 use currency::Currency;
 use finance::{
-    coin::Coin,
-    duration::Duration,
-    fraction::Fraction,
-    liability::Level,
-    price::{total_of, Price},
+    coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
 
 use crate::{
-    api::LeaseCoin,
+    api::{LeaseCoin, LpnCoin},
     error::{ContractError, ContractResult},
+    finance::Price,
 };
 
 pub use dto::PositionDTO;
@@ -23,23 +20,22 @@ mod spec;
 mod status;
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Position<Asset, Lpn> {
+pub struct Position<Asset> {
     amount: Coin<Asset>,
-    spec: Spec<Lpn>,
+    spec: Spec,
 }
 
-impl<Asset, Lpn> Position<Asset, Lpn>
+impl<Asset> Position<Asset>
 where
     Asset: Currency,
-    Lpn: Currency,
 {
-    fn new_internal(amount: Coin<Asset>, spec: Spec<Lpn>) -> Self {
+    fn new_internal(amount: Coin<Asset>, spec: Spec) -> Self {
         let obj = Self { amount, spec };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
     }
 
-    pub fn try_from(amount: LeaseCoin, spec: Spec<Lpn>) -> ContractResult<Self> {
+    pub fn try_from(amount: LeaseCoin, spec: Spec) -> ContractResult<Self> {
         amount
             .try_into()
             .map_err(Into::into)
@@ -47,7 +43,7 @@ where
     }
 
     #[cfg(test)]
-    pub fn new(amount: Coin<Asset>, spec: Spec<Lpn>) -> Self {
+    pub fn new(amount: Coin<Asset>, spec: Spec) -> Self {
         Self::new_internal(amount, spec)
     }
 
@@ -70,14 +66,14 @@ where
     /// If it is already enough to be collected then return zero.
     pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
     where
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         self.spec.overdue_collection_in(due)
     }
 
-    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset, Lpn>) -> Debt<Asset>
+    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Debt<Asset>
     where
-        Due: DueTrait<Lpn>,
+        Due: DueTrait,
     {
         self.spec.debt(self.amount, due, asset_in_lpns)
     }
@@ -88,7 +84,7 @@ where
     pub fn validate_payment<PaymentC>(
         &self,
         payment: Coin<PaymentC>,
-        payment_currency_in_lpns: Price<PaymentC, Lpn>,
+        payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
         PaymentC: Currency,
@@ -108,7 +104,7 @@ where
     pub fn validate_close_amount(
         &self,
         close_amount: Coin<Asset>,
-        asset_in_lpns: Price<Asset, Lpn>,
+        asset_in_lpns: Price<Asset>,
     ) -> ContractResult<()> {
         self.spec
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
@@ -118,8 +114,8 @@ where
     pub(crate) fn price_at(
         &self,
         level: Level,
-        total_due: Coin<Lpn>,
-    ) -> ContractResult<Price<Asset, Lpn>> {
+        total_due: LpnCoin,
+    ) -> ContractResult<Price<Asset>> {
         debug_assert!(!total_due.is_zero());
         debug_assert!(!level.ltv().is_zero());
 

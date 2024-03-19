@@ -1,4 +1,3 @@
-use currency::Currency;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
@@ -18,10 +17,7 @@ impl<'liq, 'env> LiquidationEmitter<'liq, 'env> {
     }
 }
 impl<'liq, 'env> RepayEmitter for LiquidationEmitter<'liq, 'env> {
-    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
-    where
-        Lpn: Currency,
-    {
+    fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> Emitter {
         let emitter = emit_payment_int(Type::Liquidation, self.env, lease, receipt);
         emit_liquidation_cause(emitter, self.cause).emit_coin_dto("amount", &self.amount)
     }
@@ -38,24 +34,18 @@ impl<'env> PositionCloseEmitter<'env> {
     }
 }
 impl<'env> RepayEmitter for PositionCloseEmitter<'env> {
-    fn emit<Lpn>(self, lease: &Addr, receipt: &RepayReceipt<Lpn>) -> Emitter
-    where
-        Lpn: Currency,
-    {
+    fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> Emitter {
         let emitter = emit_payment_int(Type::ClosePosition, self.env, lease, receipt);
         emitter.emit_coin_dto("amount", &self.amount)
     }
 }
 
-pub(super) fn emit_payment_int<Lpn>(
+pub(super) fn emit_payment_int(
     event_type: Type,
     env: &Env,
     lease: &Addr,
-    receipt: &RepayReceipt<Lpn>,
-) -> Emitter
-where
-    Lpn: Currency,
-{
+    receipt: &RepayReceipt,
+) -> Emitter {
     Emitter::of_type(event_type)
         .emit_tx_info(env)
         .emit("to", lease)

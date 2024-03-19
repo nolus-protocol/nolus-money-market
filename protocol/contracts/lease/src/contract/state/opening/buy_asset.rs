@@ -19,7 +19,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies, LpnCurrencies,
+        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies, LpnCurrencies, LpnCurrency,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -54,7 +54,7 @@ pub(in crate::contract::state::opening) fn start(
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (
-        LppRef<LpnCurrencies>,
+        LppRef<LpnCurrency, LpnCurrencies>,
         OracleRef,
         TimeAlarmsRef,
         FinalizerRef,
@@ -79,7 +79,7 @@ pub(crate) struct BuyAsset {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (
-        LppRef<LpnCurrencies>,
+        LppRef<LpnCurrency, LpnCurrencies>,
         OracleRef,
         TimeAlarmsRef,
         FinalizerRef,
@@ -94,7 +94,7 @@ impl BuyAsset {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (
-            LppRef<LpnCurrencies>,
+            LppRef<LpnCurrency, LpnCurrencies>,
             OracleRef,
             TimeAlarmsRef,
             FinalizerRef,

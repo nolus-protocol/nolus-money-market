@@ -14,7 +14,7 @@ use crate::error::{ContractError, Result};
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
 pub struct Loan<Lpn>
 where
     Lpn: ?Sized,

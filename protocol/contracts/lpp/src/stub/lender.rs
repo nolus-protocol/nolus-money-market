@@ -1,7 +1,5 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{Currency, Group};
 use finance::coin::Coin;
 use platform::{
@@ -21,7 +19,7 @@ pub trait LppLender<Lpn, Lpns>
 where
     Lpn: Currency,
     Lpns: Group,
-    Self: Into<LppBatch<LppRef<Lpns>>>,
+    Self: Into<LppBatch<LppRef<Lpn, Lpns>>>,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
@@ -29,21 +27,21 @@ where
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
 }
 
-pub trait WithLppLender<Lpns>
+pub trait WithLppLender<Lpn, Lpns>
 where
+    Lpn: Currency,
     Lpns: Group,
 {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> StdResult<Self::Output, Self::Error>
+    fn exec<Lpp>(self, lpp: Lpp) -> StdResult<Self::Output, Self::Error>
     where
-        Lpn: Currency,
         Lpp: LppLender<Lpn, Lpns>;
 }
 
 pub(super) struct LppLenderStub<'a, Lpn, Lpns> {
-    lpp_ref: LppRef<Lpns>,
+    lpp_ref: LppRef<Lpn, Lpns>,
     lpn: PhantomData<Lpn>,
     querier: QuerierWrapper<'a>,
     batch: Batch,
@@ -56,7 +54,7 @@ where
 {
     const OPEN_LOAN_REQ_ID: ReplyId = 0;
 
-    pub(super) fn new(lpp_ref: LppRef<Lpns>, querier: QuerierWrapper<'a>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>, querier: QuerierWrapper<'a>) -> Self {
         Self {
             lpp_ref,
             lpn: PhantomData,
@@ -72,8 +70,8 @@ where
 
 impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpn: Currency + DeserializeOwned,
-    Lpns: Group + Serialize,
+    Lpn: Currency,
+    Lpns: Group,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
@@ -105,7 +103,7 @@ where
     }
 }
 
-impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpns>> {
+impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>> {
     fn from(stub: LppLenderStub<'a, Lpn, Lpns>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
@@ -119,7 +117,6 @@ mod test {
     use std::marker::PhantomData;
 
     use currencies::{test::StableC1, Lpns};
-    use currency::Currency;
     use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{
@@ -136,7 +133,7 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            lpn: ToOwned::to_owned(StableC1::TICKER),
+            _lpn: PhantomData::<StableC1>,
             _lpns: PhantomData::<Lpns>,
         };
         let borrow_amount = Coin::<StableC1>::new(10);
