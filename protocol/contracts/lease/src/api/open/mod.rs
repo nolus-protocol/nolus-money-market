@@ -10,10 +10,9 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+use crate::finance::LpnCoinDTO;
 #[cfg(feature = "skel")]
 use crate::{error::ContractError, error::ContractResult};
-
-use super::LpnCoinDTO;
 
 #[cfg(feature = "skel")]
 mod unchecked;

@@ -7,9 +7,9 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LpnCurrencies, LpnCurrency},
+    api::LeaseAssetCurrencies,
     error::ContractResult,
-    finance::Price,
+    finance::{LpnCurrencies, LpnCurrency, Price},
     position::{Debt, DueTrait, Liquidation},
 };
 

@@ -6,13 +6,14 @@ use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse, DownpaymentCoin, LpnCurrencies},
+    api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
     contract::{
         cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
         Lease,
     },
     error::{ContractError, ContractResult},
+    finance::LpnCurrencies,
 };
 
 use super::{

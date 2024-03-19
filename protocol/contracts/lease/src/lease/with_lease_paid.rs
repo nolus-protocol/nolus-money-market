@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 
-use crate::api::{LeaseAssetCurrencies, LpnCurrencies};
+use crate::{api::LeaseAssetCurrencies, finance::LpnCurrencies};
 
 use super::LeaseDTO;
 

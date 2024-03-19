@@ -6,8 +6,9 @@ use platform::bank;
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
-    api::{LeasePaymentCurrencies, LpnCurrencies, LpnCurrency, PaymentCoin},
+    api::{LeasePaymentCurrencies, PaymentCoin},
     error::ContractError,
+    finance::{LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, Lease},
 };
 

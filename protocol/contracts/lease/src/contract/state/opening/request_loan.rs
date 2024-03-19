@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use lpp::stub::LppRef;
 use oracle_platform::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -13,7 +12,6 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         open::NewLeaseContract, query::StateResponse as QueryStateResponse, DownpaymentCoin,
-        LpnCurrencies, LpnCurrency,
     },
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
@@ -21,7 +19,7 @@ use crate::{
         state::{Handler, Response},
     },
     error::ContractResult,
-    event::Type,
+    event::Type, finance::LppRef,
 };
 
 use super::buy_asset::DexState;
@@ -31,7 +29,7 @@ pub(crate) struct RequestLoan {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     deps: (
-        LppRef<LpnCurrency, LpnCurrencies>,
+        LppRef,
         OracleRef,
         TimeAlarmsRef,
         FinalizerRef,
@@ -45,7 +43,7 @@ impl RequestLoan {
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
         let lpp =
-            LppRef::<LpnCurrency, LpnCurrencies>::try_new(spec.form.loan.lpp.clone(), querier)?;
+            LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
 
         let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");

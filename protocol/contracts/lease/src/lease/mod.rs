@@ -7,9 +7,8 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    //TODO move them to the domain layer
-    api::{LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
+    finance::{LpnCurrencies, LpnCurrency},
     loan::Loan,
     position::Position,
 };
@@ -161,7 +160,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        api::LpnCurrencies,
+        finance::LpnCurrencies,
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };

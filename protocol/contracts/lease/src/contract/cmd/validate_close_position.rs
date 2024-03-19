@@ -2,8 +2,9 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
-    api::{position::PartialClose, LpnCurrencies, LpnCurrency},
+    api::position::PartialClose,
     error::ContractError,
+    finance::{LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, Lease},
 };
 

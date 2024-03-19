@@ -3,10 +3,7 @@ use finance::{
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
-use crate::{
-    api::{LpnCurrencies, LpnCurrency},
-    finance::LpnCoin,
-};
+use crate::finance::{LpnCoin, LpnCurrencies, LpnCurrency};
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State {

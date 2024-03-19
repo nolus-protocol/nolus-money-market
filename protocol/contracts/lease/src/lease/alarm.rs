@@ -11,9 +11,8 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LpnCurrencies, LpnCurrency},
     error::ContractResult,
-    finance::LpnCoin,
+    finance::{LpnCurrencies, LpnCurrency, LpnCoin},
     lease::Lease,
 };
 

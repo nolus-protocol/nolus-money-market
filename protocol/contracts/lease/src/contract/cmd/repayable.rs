@@ -10,10 +10,9 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LpnCoinDTO, LpnCurrencies, LpnCurrency},
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
-    finance::LpnCoin,
+    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     loan::RepayReceipt,
 };

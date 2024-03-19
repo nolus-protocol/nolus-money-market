@@ -3,8 +3,8 @@ use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    api::{LpnCoinDTO, LpnCurrencies},
     error::{ContractError, ContractResult},
+    finance::{LpnCoinDTO, LpnCurrencies},
 };
 
 pub(super) fn balance(

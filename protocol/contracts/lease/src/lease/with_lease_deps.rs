@@ -3,14 +3,14 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
-use lpp::stub::{
-    loan::{LppLoan as LppLoanTrait, WithLppLoan},
-    LppRef,
-};
+use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::api::{LeaseAssetCurrencies, LpnCurrencies, LpnCurrency};
+use crate::{
+    api::LeaseAssetCurrencies,
+    finance::{LpnCurrencies, LpnCurrency, LppRef},
+};
 
 pub trait WithLeaseDeps {
     type Output;
@@ -32,7 +32,7 @@ pub fn execute<Cmd>(
     cmd: Cmd,
     lease_addr: Addr,
     asset: &SymbolSlice,
-    lpp: LppRef<LpnCurrency, LpnCurrencies>,
+    lpp: LppRef,
     oracle: OracleRef,
     querier: QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
@@ -57,7 +57,7 @@ where
 struct FactoryStage1<'r, Cmd> {
     cmd: Cmd,
     lease_addr: Addr,
-    lpp: LppRef<LpnCurrency, LpnCurrencies>,
+    lpp: LppRef,
     oracle: OracleRef,
     querier: QuerierWrapper<'r>,
 }

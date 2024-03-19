@@ -1,9 +1,9 @@
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::LpnCoinDTO,
     contract::{state::Response, Lease},
     error::ContractResult,
+    finance::LpnCoinDTO,
 };
 
 pub(in crate::contract::state) use self::{

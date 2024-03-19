@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::{
         query::opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin, LpnCoinDTO,
+        LeaseCoin,
     },
     contract::{
         cmd::{LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
@@ -21,6 +21,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::LpnCoinDTO,
 };
 
 use super::Repayable;

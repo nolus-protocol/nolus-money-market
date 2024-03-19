@@ -1,13 +1,14 @@
 use currency::Currency;
-use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseForm, LeaseCoin, LpnCurrencies, LpnCurrency},
+    api::{open::NewLeaseForm, LeaseCoin},
     error::{ContractError, ContractResult},
+    finance::{LpnCurrencies, LpnCurrency, LppRef},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
         IntoDTOResult, Lease,
@@ -25,7 +26,7 @@ pub(crate) fn open_lease(
     now: &Timestamp,
     amount: LeaseCoin,
     querier: QuerierWrapper<'_>,
-    deps: (LppRef<LpnCurrency, LpnCurrencies>, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);

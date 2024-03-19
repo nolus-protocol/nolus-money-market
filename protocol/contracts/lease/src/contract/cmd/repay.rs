@@ -5,9 +5,8 @@ use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LpnCurrencies, LpnCurrency},
     error::ContractResult,
-    finance::LpnCoin,
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
     loan::RepayReceipt,
 };

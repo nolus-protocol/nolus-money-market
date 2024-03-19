@@ -4,11 +4,9 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{
-        query::{opened::OngoingTrx, StateResponse},
-        LpnCurrencies, LpnCurrency,
-    },
+    api::query::{opened::OngoingTrx, StateResponse},
     error::ContractError,
+    finance::{LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, Lease},
 };
 

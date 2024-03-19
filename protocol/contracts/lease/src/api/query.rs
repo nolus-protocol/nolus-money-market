@@ -6,7 +6,9 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::{DownpaymentCoin, LeaseCoin, LpnCoinDTO};
+use crate::finance::LpnCoinDTO;
+
+use super::{DownpaymentCoin, LeaseCoin};
 
 #[derive(Deserialize, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]

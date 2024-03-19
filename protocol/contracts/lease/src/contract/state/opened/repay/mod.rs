@@ -1,9 +1,9 @@
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::LpnCoinDTO,
     contract::{cmd::RepayLeaseFn, state::Response, Lease},
     error::ContractResult,
+    finance::LpnCoinDTO,
 };
 
 use super::{

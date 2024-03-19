@@ -7,9 +7,8 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LpnCurrencies, LpnCurrency},
     error::{ContractError, ContractResult},
-    finance::LpnCoin,
+    finance::{LpnCurrencies, LpnCurrency, LpnCoin},
     lease::Lease,
     loan::RepayReceipt,
 };

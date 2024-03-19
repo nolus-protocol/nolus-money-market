@@ -2,7 +2,7 @@ use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
-use crate::api::{LpnCurrencies, LpnCurrency};
+use crate::finance::{LpnCurrencies, LpnCurrency};
 
 use super::Lease;
 

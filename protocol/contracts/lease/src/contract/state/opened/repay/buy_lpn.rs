@@ -16,7 +16,7 @@ use crate::{
             opened::{OngoingTrx, RepayTrx},
             StateResponse as QueryStateResponse,
         },
-        LeasePaymentCurrencies, LpnCurrencies, PaymentCoin,
+        LeasePaymentCurrencies, PaymentCoin,
     },
     contract::{
         state::{
@@ -28,6 +28,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::LpnCurrencies,
 };
 
 pub(super) type StartState = StartLocalLocalState<

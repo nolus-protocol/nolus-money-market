@@ -13,7 +13,7 @@ use profit::stub::Error as ProfitError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::api::{LpnCoinDTO, PaymentCoin};
+use crate::{api::PaymentCoin, finance::LpnCoinDTO};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

@@ -5,7 +5,6 @@ use dex::{
     Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
     TimeAlarm, TransferOut,
 };
-use lpp::stub::LppRef;
 use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
@@ -15,10 +14,11 @@ use crate::{
     api::{
         open::NewLeaseContract,
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeasePaymentCurrencies, LpnCurrencies, LpnCurrency,
+        DownpaymentCoin, LeasePaymentCurrencies,
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,
+    finance::LppRef,
 };
 
 use super::buy_asset::{BuyAsset, DexState};
@@ -28,12 +28,7 @@ pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (
-        LppRef<LpnCurrency, LpnCurrencies>,
-        OracleRef,
-        TimeAlarmsRef,
-        FinalizerRef,
-    ),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 }
 
@@ -42,12 +37,7 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (
-            LppRef<LpnCurrency, LpnCurrencies>,
-            OracleRef,
-            TimeAlarmsRef,
-            FinalizerRef,
-        ),
+        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

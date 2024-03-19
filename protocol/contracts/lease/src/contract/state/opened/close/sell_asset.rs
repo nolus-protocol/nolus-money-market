@@ -11,10 +11,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{
-        query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
-        LpnCurrencies,
-    },
+    api::query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
     contract::{
         state::{
             opened::{self, payment::Repayable},
@@ -24,6 +21,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::LpnCurrencies,
 };
 
 use super::Closable;

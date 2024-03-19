@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LpnCurrencies, LpnCurrency},
+    finance::{LpnCurrencies, LpnCurrency},
     loan::LoanDTO,
     position::PositionDTO,
 };

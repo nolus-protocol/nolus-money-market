@@ -6,7 +6,6 @@ use dex::{
     SwapTask, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use lpp::stub::LppRef;
 use oracle_platform::OracleRef;
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
@@ -19,7 +18,7 @@ use crate::{
     api::{
         open::{NewLeaseContract, NewLeaseForm},
         query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
-        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies, LpnCurrencies, LpnCurrency,
+        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
     },
     contract::{
         cmd::{self, OpenLoanRespResult},
@@ -33,6 +32,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::LppRef,
     lease::IntoDTOResult,
 };
 
@@ -53,12 +53,7 @@ pub(in crate::contract::state::opening) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (
-        LppRef<LpnCurrency, LpnCurrencies>,
-        OracleRef,
-        TimeAlarmsRef,
-        FinalizerRef,
-    ),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
@@ -78,12 +73,7 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (
-        LppRef<LpnCurrency, LpnCurrencies>,
-        OracleRef,
-        TimeAlarmsRef,
-        FinalizerRef,
-    ),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
     start_opening_at: Timestamp,
 }
 
@@ -93,12 +83,7 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (
-            LppRef<LpnCurrency, LpnCurrencies>,
-            OracleRef,
-            TimeAlarmsRef,
-            FinalizerRef,
-        ),
+        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {
