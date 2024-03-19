@@ -57,12 +57,12 @@ enum Subcommand {
     List {},
     Run {
         #[arg(
-            short,
+            short = '1',
             long,
             help = "Indicates at most one combination will be selected."
         )]
         exact: bool,
-        #[arg(short, long)]
+        #[arg(short = 'x', long)]
         external_command: bool,
         #[arg(long, visible_alias = "debug")]
         print_command: bool,
