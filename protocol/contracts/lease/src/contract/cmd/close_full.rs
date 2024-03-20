@@ -21,9 +21,7 @@ pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
     emitter_fn: EmitterT,
 }
 
-impl<ProfitSender, ChangeSender, EmitterT>
-    Close<ProfitSender, ChangeSender, EmitterT>
-{
+impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
     pub fn new(
         payment: LpnCoinDTO,
         now: Timestamp,
@@ -43,8 +41,7 @@ impl<ProfitSender, ChangeSender, EmitterT>
     }
 }
 
-impl<ProfitSender, ChangeSender, EmitterT> WithLease
-    for Close<ProfitSender,ChangeSender, EmitterT>
+impl<ProfitSender, ChangeSender, EmitterT> WithLease for Close<ProfitSender, ChangeSender, EmitterT>
 where
     ProfitSender: FixedAddressSender,
     ChangeSender: FixedAddressSender,
@@ -69,7 +66,13 @@ where
             .try_into()
             .map_err(Into::into)
             .and_then(|payment| {
-                lease.close_full(payment, self.now, self.profit, self.reserve.into_reserve(), self.change)
+                lease.close_full(
+                    payment,
+                    self.now,
+                    self.profit,
+                    self.reserve.into_reserve(),
+                    self.change,
+                )
             })
             .map(|result| {
                 let (receipt, messages) = result.decompose();

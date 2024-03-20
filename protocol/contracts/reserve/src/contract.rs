@@ -102,7 +102,9 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::Config() => Config::load(deps.storage)
             .map(ConfigResponse::from)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),
-        QueryMsg::ReserveLpn() => cosmwasm_std::to_json_binary(&LpnCurrency::TICKER).map_err(Into::into),
+        QueryMsg::ReserveLpn() => {
+            cosmwasm_std::to_json_binary(&LpnCurrency::TICKER).map_err(Into::into)
+        }
     }
     .map_err(Into::into)
     .or_else(|err| platform_error::log(err, deps.api))

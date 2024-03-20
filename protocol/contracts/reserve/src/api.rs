@@ -1,6 +1,6 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
-use currency::{Currency, SymbolOwned};
 pub(crate) use currency::SymbolOwned as LpnQueryResponse;
+use currency::{Currency, SymbolOwned};
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
