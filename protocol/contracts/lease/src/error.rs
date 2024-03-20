@@ -10,6 +10,7 @@ use oracle::api::alarms::Error as OracleAlarmError;
 use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
+use reserve::error::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
@@ -50,14 +51,14 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     DexError(#[from] DexError),
 
+    #[error("[Lease] {0}")]
+    ReserveError(#[from] ReserveError),
+
     #[error("[Lease] No payment sent")]
     NoPaymentError(),
 
     #[error("[Lease] Insufficient payment amount {0}")]
     InsufficientPayment(PaymentCoin),
-
-    #[error("[Lease] Insufficient liquidation amount")]
-    InsufficientLiquidation(),
 
     #[error("[Lease] The asset amount should worth at least {0}")]
     InsufficientAssetAmount(LpnCoinDTO),

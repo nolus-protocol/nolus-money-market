@@ -4,6 +4,7 @@ use currency::Currency;
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
+use reserve::stub::Reserve as ReserveTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
@@ -54,39 +55,45 @@ where
         self.repay(payment, now, profit)
     }
 
-    pub(crate) fn close_full<Profit, Change>(
+    pub(crate) fn close_full<Profit, Reserve, Change>(
         mut self,
         payment: LpnCoin,
         now: Timestamp,
         mut profit: Profit,
+        mut reserve: Reserve,
         mut change_recipient: Change,
     ) -> ContractResult<FullRepayReceipt>
     where
         Profit: FixedAddressSender,
         Change: FixedAddressSender,
+        Reserve: ReserveTrait<LpnCurrency>,
+        ContractError: From<Reserve::Error>,
     {
         let total_due = self.state(now).total_due();
-        if total_due > payment {
-            // TODO [issue #92] request the diff from the Protocol reserve
-        }
-        let receipt = self.repay(payment, &now, &mut profit).and_then(|receipt| {
-            // TODO assert!(receipt.close())
-            if receipt.close() {
-                Ok(receipt)
-            } else {
-                Err(ContractError::InsufficientLiquidation()) //issue #92
-            }
-        })?;
+        let payment = if total_due > payment {
+            reserve.cover_liquidation_losses(total_due - payment);
+            total_due
+        } else {
+            payment
+        };
+        let receipt = self.repay(payment, &now, &mut profit)?;
+        debug_assert!(receipt.close());
 
         change_recipient.send(receipt.change());
 
-        self.try_into_messages().map(|lease_messages| {
-            FullRepayReceipt::new(
-                receipt,
-                lease_messages
-                    .merge(profit.into())
-                    .merge(change_recipient.into()),
-            )
-        })
+        reserve
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|reserve_messages| {
+                self.try_into_messages().map(|lease_messages| {
+                    FullRepayReceipt::new(
+                        receipt,
+                        reserve_messages
+                            .merge(lease_messages) // these should go *after* any reserve messages as to allow for covering losses
+                            .merge(profit.into())
+                            .merge(change_recipient.into()),
+                    )
+                })
+            })
     }
 }

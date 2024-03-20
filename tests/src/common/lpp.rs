@@ -16,7 +16,9 @@ use sdk::{
     testing::CwContract,
 };
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{
+    leaser::Instantiator as LeaserInstantiator, test_case::app::App, CwContractWrapper, ADMIN,
+};
 
 pub type LppExecuteMsg = ExecuteMsg<Lpns>;
 pub type LppQueryMsg = QueryMsg<Lpns>;
@@ -66,7 +68,7 @@ impl Instantiator {
         Lpn: Currency,
     {
         let lpp_id = app.store_code(endpoints);
-        let lease_code_admin = Addr::unchecked("contract5");
+        let lease_code_admin = LeaserInstantiator::expected_addr();
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_admin: lease_code_admin.clone(),

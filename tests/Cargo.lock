@@ -689,6 +689,7 @@ dependencies = [
  "oracle",
  "platform",
  "profit",
+ "reserve",
  "rewards_dispatcher",
  "sdk",
  "serde",
@@ -762,6 +763,7 @@ dependencies = [
  "oracle-platform",
  "platform",
  "profit",
+ "reserve",
  "sdk",
  "serde",
  "swap",
@@ -1133,6 +1135,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "reserve"
+version = "0.1.0"
+dependencies = [
+ "access-control",
+ "cosmwasm-std",
+ "currencies",
+ "currency",
+ "finance",
+ "platform",
+ "sdk",
+ "serde",
+ "thiserror",
+ "versioning",
 ]
 
 [[package]]

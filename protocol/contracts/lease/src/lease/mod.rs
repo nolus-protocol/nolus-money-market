@@ -8,7 +8,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency},
+    finance::{LpnCurrencies, LpnCurrency, ReserveRef},
     loan::Loan,
     position::Position,
 };
@@ -27,7 +27,7 @@ pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;
 
-// TODO look into reducing the type parameters to Lpn and Asset only!
+// TODO look into reducing the type parameters to Lpp and Asset only!
 // the others could be provided on demand when certain operation is being performed
 // then review the methods that take `&mut self` whether could be transformed into `&self`
 // and those that take `self` into `&mut self` or `&self`
@@ -117,6 +117,7 @@ where
         self,
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
+        reserve: ReserveRef,
     ) -> ContractResult<IntoDTOResult> {
         let (loan_dto, loan_batch) = self.loan.try_into_dto(profit)?;
 
@@ -128,6 +129,7 @@ where
                 loan_dto,
                 time_alarms,
                 self.oracle.into(),
+                reserve,
             ),
             batch: loan_batch,
         })

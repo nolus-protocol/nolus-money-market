@@ -22,12 +22,13 @@ use crate::common::{
     oracle::Instantiator as OracleInstantiator,
     profit::Instantiator as ProfitInstantiator,
     protocols::{Instantiator as ProtocolsInstantiator, Registry},
+    reserve::Instantiator as ReserveInstantiator,
     test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
     timealarms::Instantiator as TimeAlarmsInstantiator,
     treasury::Instantiator as TreasuryInstantiator,
 };
 
-pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), (), ()>;
+pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), (), (), ()>;
 
 pub(crate) struct Builder<
     Lpn,
@@ -35,13 +36,23 @@ pub(crate) struct Builder<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Leaser,
     Lpp,
     Oracle,
     TimeAlarms,
 > {
-    test_case:
-        TestCase<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    test_case: TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >,
     _lpn: PhantomData<Lpn>,
 }
 
@@ -61,28 +72,60 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >
+    Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >
 where
     Lpn: Currency,
 {
     pub fn into_generic(
         self,
-    ) -> TestCase<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    {
+    ) -> TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    > {
         self.test_case
     }
 }
 
-impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    Builder<Lpn, (), Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<Lpn, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<Lpn, (), Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
 where
     Lpn: Currency,
 {
     pub fn init_protocols_registry(
         self,
         registry: Registry,
-    ) -> Builder<Lpn, Addr, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    ) -> Builder<Lpn, Addr, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
+    {
         let Self {
             mut test_case,
             _lpn,
@@ -105,14 +148,14 @@ where
     }
 }
 
-impl<Lpn, Profit, Leaser, Lpp, Oracle>
-    Builder<Lpn, Addr, (), Addr, Profit, Leaser, Lpp, Oracle, Addr>
+impl<Lpn, Profit, Reserve, Leaser, Lpp, Oracle>
+    Builder<Lpn, Addr, (), Addr, Profit, Reserve, Leaser, Lpp, Oracle, Addr>
 where
     Lpn: Currency,
 {
     pub fn init_dispatcher(
         self,
-    ) -> Builder<Lpn, Addr, Addr, Addr, Profit, Leaser, Lpp, Oracle, Addr> {
+    ) -> Builder<Lpn, Addr, Addr, Addr, Profit, Reserve, Leaser, Lpp, Oracle, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -151,31 +194,72 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, (), Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<Lpn, ProtocolsRegistry, Dispatcher, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        (),
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >
 where
     Lpn: Currency,
 {
     pub fn init_treasury_without_dispatcher(
         self,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    {
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Addr,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    > {
         self.init_treasury(TreasuryInstantiator::new_with_no_dispatcher())
     }
 
     pub fn init_treasury_with_dispatcher(
         self,
         rewards_dispatcher: Addr,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    {
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Addr,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    > {
         self.init_treasury(TreasuryInstantiator::new(rewards_dispatcher))
     }
 
     fn init_treasury(
         self,
         treasury: TreasuryInstantiator,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    {
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Addr,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    > {
         let Self {
             mut test_case,
             _lpn,
@@ -195,15 +279,16 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Leaser, Lpp>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>
+impl<Lpn, ProtocolsRegistry, Dispatcher, Reserve, Leaser, Lpp>
+    Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, (), Reserve, Leaser, Lpp, Addr, Addr>
 where
     Lpn: Currency,
 {
     pub fn init_profit(
         self,
         cadence_hours: CadenceHours,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
+    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Addr, Addr, Reserve, Leaser, Lpp, Addr, Addr>
+    {
         let Self {
             mut test_case,
             _lpn,
@@ -237,7 +322,17 @@ where
     }
 
     fn test_config(
-        test_case: &mut TestCase<ProtocolsRegistry, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        test_case: &mut TestCase<
+            ProtocolsRegistry,
+            Dispatcher,
+            Addr,
+            (),
+            Reserve,
+            Leaser,
+            Lpp,
+            Addr,
+            Addr,
+        >,
         profit_addr: Addr,
         cadence_hours: CadenceHours,
     ) {
@@ -253,7 +348,17 @@ where
     }
 
     fn send_open_ica_response(
-        test_case: &mut TestCase<ProtocolsRegistry, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        test_case: &mut TestCase<
+            ProtocolsRegistry,
+            Dispatcher,
+            Addr,
+            (),
+            Reserve,
+            Leaser,
+            Lpp,
+            Addr,
+            Addr,
+        >,
         profit_addr: Addr,
     ) {
         let ica_addr: Addr = TestCase::ica_addr(profit_addr.as_str(), TestCase::PROFIT_ICA_ID);
@@ -283,14 +388,67 @@ where
     }
 }
 
+impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        (),
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >
+where
+    Lpn: Currency,
+{
+    pub fn init_reserve(
+        self,
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Addr,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    > {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
+
+        let reserve_addr = ReserveInstantiator::instantiate(
+            &mut test_case.app,
+            test_case.address_book.lease_code(),
+        );
+
+        test_case.app.update_block(next_block);
+
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                address_book: test_case.address_book.with_reserve(reserve_addr),
+            },
+            _lpn,
+        }
+    }
+}
+
 impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Addr, (), Addr, Addr, Addr>
+    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, (), Addr, Addr, Addr>
 where
     Lpn: Currency,
 {
     pub fn init_leaser(
         self,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
+    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr, Addr>
+    {
         let Self {
             mut test_case,
             _lpn,
@@ -303,6 +461,7 @@ where
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.oracle().clone(),
             test_case.address_book.profit().clone(),
+            test_case.address_book.reserve().clone(),
         );
 
         test_case.app.update_block(next_block);
@@ -317,8 +476,19 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, (), Oracle, TimeAlarms>
+impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
+    Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        (),
+        Oracle,
+        TimeAlarms,
+    >
 where
     Lpn: Currency,
 {
@@ -335,6 +505,7 @@ where
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Addr,
         Oracle,
@@ -364,6 +535,7 @@ where
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Addr,
         Oracle,
@@ -414,16 +586,37 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, (), TimeAlarms>
+impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
+    Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        (),
+        TimeAlarms,
+    >
 where
     Lpn: Currency,
 {
     pub fn init_oracle(
         self,
         custom_wrapper: OptionalOracleWrapper,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>
-    {
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    > {
         let Self {
             mut test_case,
             _lpn,
@@ -447,15 +640,25 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
-    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, ()>
+impl<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>
+    Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, ()>
 where
     Lpn: Currency,
 {
     pub fn init_time_alarms(
         self,
-    ) -> Builder<Lpn, ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>
-    {
+    ) -> Builder<
+        Lpn,
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    > {
         let Self {
             mut test_case,
             _lpn,

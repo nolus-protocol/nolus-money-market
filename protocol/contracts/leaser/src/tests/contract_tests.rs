@@ -36,6 +36,7 @@ const LPP_ADDR: &str = "test";
 const TIMEALARMS_ADDR: &str = "timealarms";
 const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
+const RESERVE_ADDR: &str = "reserve";
 
 type TheCurrency = StableC1;
 
@@ -46,7 +47,10 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
     crate::msg::InstantiateMsg {
         lease_code,
         lpp,
-        lease_interest_rate_margin: MARGIN_INTEREST_RATE,
+        profit: Addr::unchecked(PROFIT_ADDR),
+        reserve: Addr::unchecked(RESERVE_ADDR),
+        time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
+        market_price_oracle: Addr::unchecked(ORACLE_ADDR),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),
@@ -60,10 +64,8 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
             lpn_coin(1000),
             lpn_coin(10),
         ),
+        lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
-        time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
-        market_price_oracle: Addr::unchecked(ORACLE_ADDR),
-        profit: Addr::unchecked(PROFIT_ADDR),
         dex: dex_params(),
     }
 }

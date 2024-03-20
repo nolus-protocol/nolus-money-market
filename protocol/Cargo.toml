@@ -16,6 +16,7 @@ leaser = { path = "contracts/leaser", default-features = false }
 lpp = { path = "contracts/lpp", default-features = false }
 oracle = { path = "contracts/oracle", default-features = false }
 profit = { path = "contracts/profit", default-features = false }
+reserve = { path = "contracts/reserve", default-features = false }
 
 # Own Packages
 currencies = { path = "packages/currencies", default-features = false }

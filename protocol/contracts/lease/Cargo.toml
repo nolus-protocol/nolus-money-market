@@ -45,6 +45,7 @@ skel = [
     "dep:oracle-platform",
     "dep:platform",
     "dep:profit",
+    "dep:reserve",
     "dep:timealarms",
     "dep:thiserror",
 ]
@@ -53,6 +54,7 @@ testing = ["currencies/testing", "currency/testing", "finance/testing", "lpp/tes
 [dependencies]
 access-control = { workspace = true, optional = true }
 profit = { workspace = true, optional = true, features = ["stub"] }
+reserve = { workspace = true, optional = true, features = ["stub"] }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 
 currencies = { workspace = true }

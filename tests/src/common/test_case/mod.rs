@@ -56,6 +56,7 @@ pub(crate) struct TestCase<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Leaser,
     Lpp,
     Oracle,
@@ -67,6 +68,7 @@ pub(crate) struct TestCase<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Oracle,
@@ -74,7 +76,7 @@ pub(crate) struct TestCase<
     >,
 }
 
-impl TestCase<(), (), (), (), (), (), (), ()> {
+impl TestCase<(), (), (), (), (), (), (), (), ()> {
     pub const DEX_CONNECTION_ID: &'static str = "connection-0";
 
     pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
@@ -110,8 +112,18 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
     }
 }
 
-impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
-    TestCase<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
+    TestCase<
+        ProtocolsRegistry,
+        Dispatcher,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        TimeAlarms,
+    >
 {
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         let _: AppResponse = self
@@ -125,7 +137,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeA
 }
 
 impl<ProtocolsRegistry, Dispatcher, Treasury>
-    TestCase<ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr>
+    TestCase<ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr, Addr>
 {
     pub fn open_lease<D>(&mut self, lease_currency: &SymbolSlice) -> Addr
     where
@@ -139,6 +151,7 @@ impl<ProtocolsRegistry, Dispatcher, Treasury>
                 time_alarms: self.address_book.time_alarms().clone(),
                 oracle: self.address_book.oracle().clone(),
                 profit: self.address_book.profit().clone(),
+                reserve: self.address_book.reserve().clone(),
                 finalizer: self.address_book.leaser().clone(),
             },
             InitConfig::new(lease_currency, 1000.into(), None),

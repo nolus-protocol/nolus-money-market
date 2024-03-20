@@ -2,7 +2,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{error::CmdError, Currency, Group, SymbolSlice};
+use currency::{self,error::CmdError, Currency, Group, SymbolSlice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 

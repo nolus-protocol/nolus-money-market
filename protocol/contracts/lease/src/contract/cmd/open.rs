@@ -8,7 +8,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{open::NewLeaseForm, LeaseCoin},
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency, LppRef},
+    finance::{LpnCurrencies, LpnCurrency, LppRef, ReserveRef},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
         IntoDTOResult, Lease,
@@ -31,12 +31,14 @@ pub(crate) fn open_lease(
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
 
-    let profit = ProfitRef::new(form.loan.profit.clone(), querier)?;
+    let profit = ProfitRef::new(form.loan.profit.clone(), &querier)?;
+    let reserve = ReserveRef::try_new(form.reserve.clone(), &querier)?;
 
     let cmd = LeaseFactory {
         form,
         lease_addr: lease_addr.clone(),
         profit,
+        reserve,
         time_alarms: deps.2,
         price_alarms: deps.1.clone(),
         start_at,
@@ -52,6 +54,7 @@ struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
     profit: ProfitRef,
+    reserve: ReserveRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
@@ -107,7 +110,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         };
 
         lease
-            .try_into_dto(self.profit, self.time_alarms)
+            .try_into_dto(self.profit, self.time_alarms, self.reserve)
             .map(|mut dto| {
                 dto.batch = dto.batch.merge(alarms);
                 dto

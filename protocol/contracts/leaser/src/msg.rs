@@ -21,6 +21,7 @@ pub struct InstantiateMsg {
     pub lease_code: Code,
     pub lpp: Addr,
     pub profit: Addr,
+    pub reserve: Addr,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub lease_position_spec: PositionSpecDTO,

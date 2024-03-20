@@ -206,7 +206,7 @@ fn test_lease_serde() {
         cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase<(), (), (), (), (), (), (), Addr> {
+fn test_case() -> TestCase<(), (), (), (), (), (), (), (), Addr> {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
         10_000_000_000_000_000_000_000_000_000,
         Lpn::BANK_SYMBOL,
@@ -221,12 +221,13 @@ fn test_case() -> TestCase<(), (), (), (), (), (), (), Addr> {
     test_case
 }
 
-fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Oracle,
@@ -251,12 +252,13 @@ fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracl
         .unwrap_response();
 }
 
-fn dispatch<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+fn dispatch<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Oracle,

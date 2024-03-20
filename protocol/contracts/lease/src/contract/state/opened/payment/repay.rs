@@ -80,6 +80,7 @@ where
         let profit = lease.lease.loan.profit().clone();
         let price_alarms = lease.lease.oracle.clone();
         let time_alarms = lease.lease.time_alarms.clone();
+        let reserve = lease.lease.reserve.clone();
         let (
             lease,
             RepayResult {
@@ -94,8 +95,8 @@ where
                 &env.block.time,
                 self.0.emitter_fn(env),
                 profit,
-                time_alarms,
-                price_alarms,
+                (time_alarms, price_alarms),
+                reserve,
             ),
             querier,
         )?;

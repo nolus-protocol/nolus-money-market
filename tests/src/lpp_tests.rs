@@ -187,6 +187,7 @@ fn open_loan_no_liquidity() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -240,6 +241,7 @@ fn deposit_and_withdraw() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -360,6 +362,7 @@ fn deposit_and_withdraw() {
             time_alarms: test_case.address_book.time_alarms().clone(),
             oracle: test_case.address_book.oracle().clone(),
             profit: test_case.address_book.profit().clone(),
+            reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan.into(), None),
@@ -582,6 +585,7 @@ fn loan_open_and_repay() {
     .init_oracle(None)
     .init_treasury_without_dispatcher()
     .init_profit(24)
+    .init_reserve()
     .init_leaser()
     .into_generic();
 
@@ -594,6 +598,7 @@ fn loan_open_and_repay() {
         time_alarms: test_case.address_book.time_alarms().clone(),
         oracle: test_case.address_book.oracle().clone(),
         profit: test_case.address_book.profit().clone(),
+        reserve: test_case.address_book.reserve().clone(),
         finalizer: test_case.address_book.leaser().clone(),
     };
 
@@ -947,6 +952,7 @@ fn compare_lpp_states() {
     .init_oracle(None)
     .init_treasury_without_dispatcher()
     .init_profit(24)
+    .init_reserve()
     .init_leaser()
     .into_generic();
 
@@ -1008,6 +1014,7 @@ fn compare_lpp_states() {
             time_alarms: test_case.address_book.time_alarms().clone(),
             oracle: test_case.address_book.oracle().clone(),
             profit: test_case.address_book.profit().clone(),
+            reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
@@ -1073,6 +1080,7 @@ fn compare_lpp_states() {
             time_alarms: test_case.address_book.time_alarms().clone(),
             oracle: test_case.address_book.oracle().clone(),
             profit: test_case.address_book.profit().clone(),
+            reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),

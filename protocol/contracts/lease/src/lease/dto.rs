@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    finance::{LpnCurrencies, LpnCurrency},
+    finance::{LpnCurrencies, LpnCurrency, ReserveRef},
     loan::LoanDTO,
     position::PositionDTO,
 };
@@ -28,6 +28,7 @@ pub struct LeaseDTO {
     pub(crate) loan: LoanDTO,
     pub(crate) time_alarms: TimeAlarmsRef,
     pub(crate) oracle: OracleRef,
+    pub(crate) reserve: ReserveRef,
 }
 
 impl LeaseDTO {
@@ -38,6 +39,7 @@ impl LeaseDTO {
         loan: LoanDTO,
         time_alarms: TimeAlarmsRef,
         oracle: OracleRef,
+        reserve: ReserveRef,
     ) -> Self {
         Self {
             addr,
@@ -46,6 +48,7 @@ impl LeaseDTO {
             loan,
             time_alarms,
             oracle,
+            reserve,
         }
     }
 

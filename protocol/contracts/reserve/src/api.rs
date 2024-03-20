@@ -1,5 +1,6 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 use currency::{Currency, SymbolOwned};
+pub(crate) use currency::SymbolOwned as LpnQueryResponse;
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +41,8 @@ pub enum SudoMsg {}
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
+    /// Return a [LpnQueryResponse] of the Lpn this reserve holds
+    ReserveLpn(), // the name contains the contract name to help distinguish from simmilar queries to other contracts
     /// Return a [ConfigResponse]
     Config(),
 }

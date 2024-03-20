@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     error::ContractError,
-    finance::{LpnCoinDTO, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoinDTO, LpnCurrencies, LpnCurrency, ReserveRef},
     lease::{with_lease::WithLease, Lease},
 };
 
@@ -16,15 +16,19 @@ pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
     payment: LpnCoinDTO,
     now: Timestamp,
     profit: ProfitSender,
+    reserve: ReserveRef,
     change: ChangeSender,
     emitter_fn: EmitterT,
 }
 
-impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
+impl<ProfitSender, ChangeSender, EmitterT>
+    Close<ProfitSender, ChangeSender, EmitterT>
+{
     pub fn new(
         payment: LpnCoinDTO,
         now: Timestamp,
         profit: ProfitSender,
+        reserve: ReserveRef,
         change: ChangeSender,
         emitter_fn: EmitterT,
     ) -> Self {
@@ -32,13 +36,15 @@ impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, Emi
             payment,
             now,
             profit,
+            reserve,
             change,
             emitter_fn,
         }
     }
 }
 
-impl<ProfitSender, ChangeSender, EmitterT> WithLease for Close<ProfitSender, ChangeSender, EmitterT>
+impl<ProfitSender, ChangeSender, EmitterT> WithLease
+    for Close<ProfitSender,ChangeSender, EmitterT>
 where
     ProfitSender: FixedAddressSender,
     ChangeSender: FixedAddressSender,
@@ -59,13 +65,12 @@ where
     {
         let lease_addr = lease.addr().clone();
 
-        // TODO [issue #92] request the needed amount from the Liquidation Fund
-        // this holds true for both use cases - full liquidation and full close
-        // make sure the message goes out before the liquidation messages.
         self.payment
             .try_into()
             .map_err(Into::into)
-            .and_then(|payment| lease.close_full(payment, self.now, self.profit, self.change))
+            .and_then(|payment| {
+                lease.close_full(payment, self.now, self.profit, self.reserve.into_reserve(), self.change)
+            })
             .map(|result| {
                 let (receipt, messages) = result.decompose();
                 MessageResponse::messages_with_events(

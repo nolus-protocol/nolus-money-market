@@ -59,6 +59,7 @@ pub mod lpp;
 pub mod oracle;
 pub mod profit;
 pub mod protocols;
+pub mod reserve;
 pub mod swap;
 pub mod test_case;
 pub mod timealarms;

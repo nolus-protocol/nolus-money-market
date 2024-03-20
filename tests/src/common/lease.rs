@@ -106,6 +106,7 @@ impl Instantiator {
                     annual_margin_interest: config.annual_margin_interest,
                     due_period: config.lease_due_period,
                 },
+                reserve: addresses.reserve,
                 time_alarms: addresses.time_alarms,
                 market_price_oracle: addresses.oracle,
             },
@@ -187,6 +188,7 @@ pub struct InstantiatorAddresses {
     pub time_alarms: Addr,
     pub oracle: Addr,
     pub profit: Addr,
+    pub reserve: Addr,
     pub finalizer: Addr,
 }
 

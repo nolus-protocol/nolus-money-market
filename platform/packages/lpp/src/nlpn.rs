@@ -8,7 +8,7 @@ use sdk::schemars::{self, JsonSchema};
 )]
 pub struct NLpn;
 impl Currency for NLpn {
-    // should not be visible
+    // TODO the Currency abstraction has since evolved. Remove this impl.
     const TICKER: SymbolStatic = "NLpn";
     const BANK_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
     const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";

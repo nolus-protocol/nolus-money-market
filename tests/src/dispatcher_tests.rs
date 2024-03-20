@@ -19,7 +19,7 @@ use crate::common::{
 
 type Lpn = StableC1;
 
-type DispatcherTestCase = TestCase<Addr, Addr, Addr, (), (), Addr, Addr, Addr>;
+type DispatcherTestCase = TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr, Addr>;
 
 #[test]
 fn on_alarm_zero_reward() {

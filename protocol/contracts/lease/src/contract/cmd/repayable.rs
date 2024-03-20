@@ -12,7 +12,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, ReserveRef},
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     loan::RepayReceipt,
 };
@@ -48,8 +48,8 @@ where
     now: &'a Timestamp,
     emitter_fn: EmitterT,
     profit: ProfitRef,
-    time_alarms: TimeAlarmsRef,
-    price_alarms: OracleRef,
+    alarms: (TimeAlarmsRef, OracleRef),
+    reserve: ReserveRef,
 }
 
 impl<'a, RepayableT, EmitterT> Repay<'a, RepayableT, EmitterT>
@@ -63,8 +63,8 @@ where
         now: &'a Timestamp,
         emitter_fn: EmitterT,
         profit: ProfitRef,
-        time_alarms: TimeAlarmsRef,
-        price_alarms: OracleRef,
+        alarms: (TimeAlarmsRef, OracleRef),
+        reserve: ReserveRef,
     ) -> Self {
         Self {
             repay_fn,
@@ -72,8 +72,8 @@ where
             now,
             emitter_fn,
             profit,
-            time_alarms,
-            price_alarms,
+            alarms,
+            reserve,
         }
     }
 }
@@ -124,25 +124,27 @@ where
         let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
         let liquidation =
-            check_debt::check_debt(&lease, self.now, &self.time_alarms, &self.price_alarms)?;
+            check_debt::check_debt(&lease, self.now, &self.alarms.0, &self.alarms.1)?;
 
-        lease.try_into_dto(self.profit, self.time_alarms).map(
-            |IntoDTOResult {
-                 lease,
-                 batch: messages,
-             }| {
-                RepayLeaseResult {
-                    lease,
-                    result: RepayResult {
-                        response: MessageResponse::messages_with_events(
-                            messages.merge(profit_sender.into()),
-                            events,
-                        ),
-                        loan_paid: receipt.close(),
-                        liquidation,
-                    },
-                }
-            },
-        )
+        lease
+            .try_into_dto(self.profit, self.alarms.0, self.reserve)
+            .map(
+                |IntoDTOResult {
+                     lease,
+                     batch: messages,
+                 }| {
+                    RepayLeaseResult {
+                        lease,
+                        result: RepayResult {
+                            response: MessageResponse::messages_with_events(
+                                messages.merge(profit_sender.into()),
+                                events,
+                            ),
+                            loan_paid: receipt.close(),
+                            liquidation,
+                        },
+                    }
+                },
+            )
     }
 }

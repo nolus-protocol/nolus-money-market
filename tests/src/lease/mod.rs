@@ -37,7 +37,7 @@ type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);
 
-pub(super) type LeaseTestCase = TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr>;
+pub(super) type LeaseTestCase = TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
 
 pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
@@ -55,6 +55,7 @@ pub(super) fn feed_price<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Leaser,
     Lpp,
     TimeAlarms,
@@ -64,6 +65,7 @@ pub(super) fn feed_price<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Addr,
@@ -81,7 +83,7 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
@@ -106,6 +108,7 @@ where
     .init_oracle(None)
     .init_treasury_without_dispatcher()
     .init_profit(24)
+    .init_reserve()
     .init_leaser()
     .into_generic();
 
@@ -134,6 +137,7 @@ pub(super) fn open_lease<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -144,6 +148,7 @@ pub(super) fn open_lease<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -165,6 +170,7 @@ pub(super) fn try_init_lease<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -175,6 +181,7 @@ pub(super) fn try_init_lease<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -216,6 +223,7 @@ pub(super) fn complete_init_lease<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -226,6 +234,7 @@ pub(super) fn complete_init_lease<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -259,6 +268,7 @@ pub(super) fn quote_borrow<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -268,6 +278,7 @@ pub(super) fn quote_borrow<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -283,6 +294,7 @@ pub(super) fn quote_query<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -293,6 +305,7 @@ pub(super) fn quote_query<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -316,6 +329,7 @@ pub(super) fn state_query<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Leaser,
     Lpp,
     Oracle,
@@ -326,6 +340,7 @@ pub(super) fn state_query<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Oracle,
@@ -345,6 +360,7 @@ pub(super) fn expected_open_state<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -357,6 +373,7 @@ pub(super) fn expected_open_state<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -429,6 +446,7 @@ pub(super) fn expected_newly_opened_state<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Lpp,
     Oracle,
     TimeAlarms,
@@ -440,6 +458,7 @@ pub(super) fn expected_newly_opened_state<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,
@@ -466,6 +485,7 @@ pub(super) fn block_time<
     Dispatcher,
     Treasury,
     Profit,
+    Reserve,
     Leaser,
     Lpp,
     Oracle,
@@ -476,6 +496,7 @@ pub(super) fn block_time<
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Oracle,

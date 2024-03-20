@@ -59,6 +59,10 @@ impl Instantiator {
         )
     }
 
+    pub fn expected_addr() -> Addr {
+        Addr::unchecked("contract5")
+    }
+
     #[track_caller]
     pub fn instantiate(
         app: &mut App,
@@ -67,6 +71,7 @@ impl Instantiator {
         time_alarms: Addr,
         market_price_oracle: Addr,
         profit: Addr,
+        reserve: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
@@ -78,12 +83,13 @@ impl Instantiator {
         let msg = InstantiateMsg {
             lease_code,
             lpp,
+            profit,
+            reserve,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
             time_alarms,
             market_price_oracle,
-            profit,
             dex: ConnectionParams {
                 connection_id: TestCase::DEX_CONNECTION_ID.into(),
                 transfer_channel: Ics20Channel {

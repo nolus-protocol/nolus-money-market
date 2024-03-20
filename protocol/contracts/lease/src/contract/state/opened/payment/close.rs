@@ -91,12 +91,13 @@ where
 
         lease.finalizer.notify(customer).and_then(|finalizer_msgs| {
             let profit = self.0.profit_sender(&lease);
+            let reserve = lease.lease.reserve.clone();
             let change = self.0.change_sender(&lease);
             let emitter_fn = self.0.emitter_fn(&lease, env);
             lease
                 .lease
                 .execute(
-                    FullCloseCmd::new(amount, env.block.time, profit, change, emitter_fn),
+                    FullCloseCmd::new(amount, env.block.time, profit, reserve, change, emitter_fn),
                     querier,
                 )
                 .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))

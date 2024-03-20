@@ -47,6 +47,8 @@ pub struct NewLeaseForm {
     pub position_spec: PositionSpecDTO,
     /// Loan parameters
     pub loan: LoanForm,
+    /// The Reserve contract that would cover losses
+    pub reserve: Addr,
     /// The time alarms contract the lease uses to get time notifications
     pub time_alarms: Addr,
     /// The oracle contract that sends market price alerts to the lease

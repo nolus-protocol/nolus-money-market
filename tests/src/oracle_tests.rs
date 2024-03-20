@@ -55,7 +55,7 @@ where
     coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr> {
+fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
     TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
         .init_lpp_with_funds(
             None,
@@ -72,6 +72,7 @@ fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr> {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic()
 }
@@ -248,7 +249,7 @@ fn overwrite_alarm_and_dispatch() {
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract6"),
+        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract7"),
     );
 
     platform::tests::assert_event(
@@ -262,12 +263,13 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease<ProtocolsRegistry, Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+fn open_lease<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Addr,
         Lpp,
         Oracle,

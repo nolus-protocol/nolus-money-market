@@ -59,6 +59,7 @@ impl Borrow {
                     annual_margin_interest: config.lease_interest_rate_margin,
                     due_period: config.lease_due_period,
                 },
+                reserve: config.reserve,
                 time_alarms: config.time_alarms,
                 market_price_oracle: config.market_price_oracle,
             },

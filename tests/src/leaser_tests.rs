@@ -75,6 +75,7 @@ fn open_lease_not_in_lease_currency() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -128,6 +129,7 @@ fn open_multiple_loans() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -214,6 +216,7 @@ fn test_quote() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -311,6 +314,7 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
     .init_oracle(None)
     .init_treasury_without_dispatcher()
     .init_profit(24)
+    .init_reserve()
     .init_leaser()
     .into_generic();
 
@@ -398,6 +402,7 @@ fn test_quote_fixed_rate() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -433,12 +438,22 @@ fn test_quote_fixed_rate() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
 }
 
-fn setup_feeder<ProtocolsRegistry, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+fn setup_feeder<
+    ProtocolsRegistry,
+    Dispatcher,
+    Treasury,
+    Profit,
+    Reserve,
+    Leaser,
+    Lpp,
+    TimeAlarms,
+>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Dispatcher,
         Treasury,
         Profit,
+        Reserve,
         Leaser,
         Lpp,
         Addr,
@@ -492,6 +507,7 @@ fn open_loans_lpp_fails() {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 
@@ -551,6 +567,7 @@ where
     .init_oracle(None)
     .init_treasury_without_dispatcher()
     .init_profit(24)
+    .init_reserve()
     .init_leaser()
     .into_generic();
 
@@ -561,8 +578,9 @@ where
     // 2 => oracle
     // 3 => treasury
     // 4 => profit
-    let leaser_addr: Addr = test_case.address_book.leaser().clone(); // 5 => leaser
-    let lease_addr: Addr = Addr::unchecked("contract6"); // 6 => lease
+    // 5 => reserve
+    let leaser_addr: Addr = test_case.address_book.leaser().clone(); // 6 => leaser
+    let lease_addr: Addr = Addr::unchecked("contract7"); // 7 => lease
 
     if feed_prices {
         oracle_mod::add_feeder(&mut test_case, user_addr.clone());
@@ -655,6 +673,7 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
         .init_oracle(None)
         .init_treasury_without_dispatcher()
         .init_profit(24)
+        .init_reserve()
         .init_leaser()
         .into_generic();
 

@@ -1,6 +1,8 @@
 use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
+use cosmwasm_std::{Addr, QuerierWrapper};
+use currency::Currency;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
@@ -79,25 +81,14 @@ pub fn execute(
         .map(|()| PlatformResponse::default()),
         ExecuteMsg::CoverLiquidationLosses(amount) => {
             let lease = info.sender;
-
             Config::load(deps.storage)
                 .and_then(|config| {
                     contract::validate_code_id(deps.querier, &lease, config.lease_code())
                         .map_err(Error::from)
                 })
                 .and_then(|()| amount.try_into().map_err(Into::into))
-                .and_then(|amount: Coin<LpnCurrency>| {
-                    let mut bank = bank::account(&env.contract.address, deps.querier);
-                    bank.balance::<LpnCurrency>()
-                        .map_err(Into::into)
-                        .and_then(|balance| {
-                            if balance < amount {
-                                Err(Error::InsufficientBalance)
-                            } else {
-                                bank.send(amount, &lease);
-                                Ok(Batch::from(bank).into())
-                            }
-                        })
+                .and_then(|losses| {
+                    do_cover_losses(&lease, losses, &env.contract.address, deps.querier)
                 })
         }
     }
@@ -110,7 +101,28 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => Config::load(deps.storage)
             .map(ConfigResponse::from)
-            .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into))
-            .or_else(|err| platform_error::log(err, deps.api)),
+            .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),
+        QueryMsg::ReserveLpn() => cosmwasm_std::to_json_binary(&LpnCurrency::TICKER).map_err(Into::into),
     }
+    .map_err(Into::into)
+    .or_else(|err| platform_error::log(err, deps.api))
+}
+
+fn do_cover_losses(
+    lease: &Addr,
+    amount: Coin<LpnCurrency>,
+    this_contract: &Addr,
+    querier: QuerierWrapper<'_>,
+) -> Result<PlatformResponse> {
+    let mut bank = bank::account(this_contract, querier);
+    bank.balance::<LpnCurrency>()
+        .map_err(Into::into)
+        .and_then(|balance| {
+            if balance < amount {
+                Err(Error::InsufficientBalance)
+            } else {
+                bank.send(amount, lease);
+                Ok(Batch::from(bank).into())
+            }
+        })
 }
