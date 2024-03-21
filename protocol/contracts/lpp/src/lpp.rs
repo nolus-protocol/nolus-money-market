@@ -313,7 +313,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currencies::{test::StableC1, Lpns};
+    use currencies::{test::StableC, Lpns};
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -337,7 +337,7 @@ mod test {
 
     use super::LiquidityPool;
 
-    type TheCurrency = StableC1;
+    type TheCurrency = StableC;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

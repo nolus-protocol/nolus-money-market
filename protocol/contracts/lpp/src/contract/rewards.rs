@@ -74,7 +74,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currencies::test::StableC1;
+    use currencies::test::StableC;
     use finance::{
         coin::Coin,
         percent::{bound::BoundToHundredPercent, Percent},
@@ -89,7 +89,7 @@ mod test {
 
     use super::*;
 
-    type TheCurrency = StableC1;
+    type TheCurrency = StableC;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);

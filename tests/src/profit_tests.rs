@@ -1,6 +1,6 @@
 use std::slice;
 
-use currencies::test::StableC1;
+use currencies::test::StableC;
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -55,7 +55,7 @@ where
 
 #[test]
 fn update_config() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
 
     const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
     const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
@@ -101,7 +101,7 @@ fn update_config() {
 
 #[test]
 fn update_config_unauthorized() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
 
     const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
     const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
@@ -126,7 +126,7 @@ fn update_config_unauthorized() {
 
 #[test]
 fn on_alarm_from_unknown() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
     let user_addr: Addr = Addr::unchecked(USER);
 
     let mut test_case = test_case::<Lpn>();
@@ -162,7 +162,7 @@ fn on_alarm_from_unknown() {
 
 #[test]
 fn on_alarm_zero_balance() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = test_case::<Lpn>();
@@ -544,7 +544,7 @@ fn on_time_alarm_do_transfers<Lpn>(
 
 #[test]
 fn on_alarm_native_only_transfer() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
 
     let native_profit = 1000.into();
 
@@ -553,7 +553,7 @@ fn on_alarm_native_only_transfer() {
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
 
     let lpn_profit = 500.into();
     let swapped_lpn_profit = 250.into();
@@ -563,7 +563,7 @@ fn on_alarm_foreign_only_transfer() {
 
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
 
     let native_profit = 1000.into();
     let lpn_profit = 500.into();
@@ -574,7 +574,7 @@ fn on_alarm_native_and_foreign_transfer() {
 
 #[test]
 fn integration_with_time_alarms() {
-    type Lpn = StableC1;
+    type Lpn = StableC;
     const CADENCE_HOURS: CadenceHours = 2;
 
     let mut test_case = test_case_with::<Lpn>(CADENCE_HOURS, None);

@@ -1,6 +1,6 @@
 use std::array::from_fn;
 
-use currencies::test::{NativeC, StableC1};
+use currencies::test::{NativeC, StableC};
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
@@ -188,7 +188,7 @@ mod mock_lease {
     }
 }
 
-type Lpn = StableC1;
+type Lpn = StableC;
 
 #[test]
 fn test_lease_serde() {

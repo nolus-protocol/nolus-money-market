@@ -174,7 +174,7 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 #[cfg(test)]
 mod tests {
     use currencies::{
-        test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC1},
+        test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC},
         PaymentGroup,
     };
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
@@ -197,7 +197,7 @@ mod tests {
             Config::new(
                 24,
                 Addr::unchecked("DEADCODE"),
-                OracleRef::unchecked::<_, StableC1>("DEADCODE"),
+                OracleRef::unchecked::<_, StableC>("DEADCODE"),
                 TimeAlarmsRef::unchecked("DEADCODE"),
             ),
             Account::unchecked(
@@ -264,7 +264,7 @@ mod tests {
     fn stop_on_first() {
         let buy_back: BuyBack = buy_back_instance(vec![
             Coin::<PaymentC3>::new(100).into(),
-            Coin::<StableC1>::new(200).into(),
+            Coin::<StableC>::new(200).into(),
         ]);
 
         assert_eq!(

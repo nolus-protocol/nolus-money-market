@@ -117,7 +117,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::StableC1;
+    use currencies::test::StableC;
     use finance::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, zero::Zero,
     };
@@ -128,13 +128,13 @@ mod test {
     #[test]
     fn interest() {
         let l = Loan {
-            principal_due: Coin::<StableC1>::from(100),
+            principal_due: Coin::<StableC>::from(100),
             annual_interest_rate: Percent::from_percent(50),
             interest_paid: Timestamp::from_nanos(200),
         };
 
         assert_eq!(
-            Coin::<StableC1>::from(50),
+            Coin::<StableC>::from(50),
             l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 
@@ -144,7 +144,7 @@ mod test {
 
     #[test]
     fn repay_no_interest() {
-        let principal_at_start = Coin::<StableC1>::from(500);
+        let principal_at_start = Coin::<StableC>::from(500);
         let interest = Percent::from_percent(50);
         let start_at = Timestamp::from_nanos(200);
         let interest_paid = start_at;
@@ -175,7 +175,7 @@ mod test {
 
     #[test]
     fn repay_interest_only() {
-        let principal_start = Coin::<StableC1>::from(500);
+        let principal_start = Coin::<StableC>::from(500);
         let interest = Percent::from_percent(50);
         let mut l = Loan {
             principal_due: principal_start,
@@ -205,7 +205,7 @@ mod test {
 
     #[test]
     fn repay_all() {
-        let principal_start = Coin::<StableC1>::from(50000000000);
+        let principal_start = Coin::<StableC>::from(50000000000);
         let interest = Percent::from_percent(50);
         let mut l = Loan {
             principal_due: principal_start,
@@ -236,7 +236,7 @@ mod test {
     }
 
     mod persistence {
-        use currencies::test::StableC1;
+        use currencies::test::StableC;
         use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
         use sdk::cosmwasm_std::{testing, Addr, Timestamp};
 
@@ -250,7 +250,7 @@ mod test {
 
             let addr = Addr::unchecked("leaser");
             let loan = Loan {
-                principal_due: Coin::<StableC1>::new(1000),
+                principal_due: Coin::<StableC>::new(1000),
                 annual_interest_rate: Percent::from_percent(20),
                 interest_paid: time,
             };
@@ -259,11 +259,11 @@ mod test {
             let result = Loan::open(deps.as_mut().storage, addr.clone(), &loan);
             assert_eq!(result, Err(ContractError::LoanExists {}));
 
-            let mut loan: Loan<StableC1> =
+            let mut loan: Loan<StableC> =
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-            let interest: Coin<StableC1> = loan.interest_due(&time);
+            let interest: Coin<StableC> = loan.interest_due(&time);
             assert_eq!(interest, 100u128.into());
 
             // partial repay
@@ -275,7 +275,7 @@ mod test {
             assert_eq!(loan.principal_due, 500u128.into());
             Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
 
-            let mut loan: Loan<StableC1> =
+            let mut loan: Loan<StableC> =
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             // repay with excess, should close the loan
@@ -287,7 +287,7 @@ mod test {
             Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
 
             // is it cleaned up?
-            let is_none = Loan::<StableC1>::query(deps.as_ref().storage, addr)
+            let is_none = Loan::<StableC>::query(deps.as_ref().storage, addr)
                 .expect("should query loan")
                 .is_none();
             assert!(is_none);

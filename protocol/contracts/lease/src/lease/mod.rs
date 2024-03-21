@@ -146,7 +146,7 @@ mod tests {
 
     use serde::{Deserialize, Serialize};
 
-    use currencies::test::{PaymentC7, StableC1};
+    use currencies::test::{PaymentC7, StableC};
     use currency::Currency;
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
@@ -179,7 +179,7 @@ mod tests {
     pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
-    pub(super) type TestLpn = StableC1;
+    pub(super) type TestLpn = StableC;
     pub(super) type TestCurrency = PaymentC7;
     pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 

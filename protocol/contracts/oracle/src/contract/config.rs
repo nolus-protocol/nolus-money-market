@@ -8,7 +8,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 
 #[cfg(test)]
 mod tests {
-    use currencies::test::{PaymentC3, PaymentC6, StableC1};
+    use currencies::test::{PaymentC3, PaymentC6, StableC};
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
@@ -27,10 +27,10 @@ mod tests {
     fn configure() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            StableC1::TICKER.to_string(),
+            StableC::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER)),
+            swap_tree!({ base: StableC::TICKER }, (1, PaymentC3::TICKER)),
         );
         let (mut deps, _info) = setup_test(msg);
 
@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(
             value,
             Config {
-                base_asset: StableC1::TICKER.into(),
+                base_asset: StableC::TICKER.into(),
                 price_config: PriceConfig::new(
                     Percent::from_percent(44),
                     Duration::from_secs(5),
@@ -75,7 +75,7 @@ mod tests {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree =
-            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC6::TICKER));
+            swap_tree!({ base: StableC::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC6::TICKER));
 
         let res = sudo(
             deps.as_mut(),
@@ -98,14 +98,14 @@ mod tests {
                 from: PaymentC3::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: StableC1::TICKER.into(),
+                    target: StableC::TICKER.into(),
                 },
             },
             SwapLeg {
                 from: PaymentC6::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: StableC1::TICKER.into(),
+                    target: StableC::TICKER.into(),
                 },
             },
         ];
@@ -120,7 +120,7 @@ mod tests {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree =
-            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC3::TICKER));
+            swap_tree!({ base: StableC::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC3::TICKER));
 
         let Response {
             messages,

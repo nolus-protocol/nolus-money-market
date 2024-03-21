@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, NativeC, StableC1};
+use currencies::test::{LeaseC1, NativeC, StableC};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -36,7 +36,7 @@ use crate::common::{
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = StableC1;
+type Lpn = StableC;
 type LeaseCurrency = LeaseC1;
 
 fn general_interest_rate(

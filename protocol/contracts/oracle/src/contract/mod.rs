@@ -174,7 +174,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 #[cfg(test)]
 mod tests {
     use currencies::{
-        test::{LeaseC1, PaymentC1, PaymentC5, StableC1},
+        test::{LeaseC1, PaymentC1, PaymentC5, StableC},
         LeaseGroup, Lpns,
     };
     use currency::Currency;
@@ -192,10 +192,10 @@ mod tests {
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            StableC1::TICKER.to_string(),
+            StableC::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: StableC1::TICKER }, (1, PaymentC5::TICKER)),
+            swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -203,7 +203,7 @@ mod tests {
         let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             Config {
-                base_asset: StableC1::TICKER.into(),
+                base_asset: StableC::TICKER.into(),
                 price_config: PriceConfig::new(
                     Percent::from_percent(50),
                     Duration::from_secs(60),
@@ -226,7 +226,7 @@ mod tests {
             from: PaymentC5::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
-                target: StableC1::TICKER.into(),
+                target: StableC::TICKER.into(),
             },
         }];
 
@@ -238,7 +238,7 @@ mod tests {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
         let from = PaymentC1::TICKER;
-        let to = StableC1::TICKER;
+        let to = StableC::TICKER;
         let query_impl = QueryMsg::SwapPath {
             from: from.into(),
             to: to.into(),
@@ -261,7 +261,7 @@ mod tests {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
         let alarm = Alarm::<LeaseGroup, Lpns>::new(
-            price::total_of::<LeaseC1>(10.into()).is::<StableC1>(1.into()),
+            price::total_of::<LeaseC1>(10.into()).is::<StableC>(1.into()),
             Some(price::total_of(7.into()).is(1.into())),
         );
         let query_impl = ExecuteMsg::AddPriceAlarm {

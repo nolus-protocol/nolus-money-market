@@ -280,7 +280,7 @@ impl Spec {
 
 #[cfg(test)]
 mod test_calc_borrow {
-    use currencies::test::StableC1;
+    use currencies::test::StableC;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -292,7 +292,7 @@ mod test_calc_borrow {
 
     use super::Spec;
 
-    type TestLpn = StableC1;
+    type TestLpn = StableC;
 
     #[test]
     fn downpayment_less_than_min() {
@@ -383,7 +383,7 @@ mod test_calc_borrow {
 #[cfg(test)]
 mod test_debt {
 
-    use currencies::test::{PaymentC3, StableC1};
+    use currencies::test::{PaymentC3, StableC};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -400,7 +400,7 @@ mod test_debt {
     use super::Spec;
 
     type TestCurrency = PaymentC3;
-    type TestLpn = StableC1;
+    type TestLpn = StableC;
 
     const RECALC_IN: Duration = Duration::from_hours(1);
     struct TestDue {
@@ -1111,7 +1111,7 @@ mod test_debt {
 
 #[cfg(test)]
 mod test_validate_payment {
-    use currencies::test::{LeaseC1, StableC1};
+    use currencies::test::{LeaseC1, StableC};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -1124,7 +1124,7 @@ mod test_validate_payment {
 
     use super::Spec;
 
-    type TestLpn = StableC1;
+    type TestLpn = StableC;
     type TestPaymentC = LeaseC1;
 
     #[test]
@@ -1177,7 +1177,7 @@ mod test_validate_payment {
 
 #[cfg(test)]
 mod test_validate_close {
-    use currencies::test::{PaymentC3, StableC1};
+    use currencies::test::{PaymentC3, StableC};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -1189,7 +1189,7 @@ mod test_validate_close {
     use crate::{error::ContractError, finance::LpnCoin, position::Spec};
 
     type TestCurrency = PaymentC3;
-    type TestLpn = StableC1;
+    type TestLpn = StableC;
 
     #[test]
     fn too_small_amount() {

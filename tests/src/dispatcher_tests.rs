@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, StableC1};
+use currencies::test::{NativeC, StableC};
 use currency::{Currency, NlsPlatform};
 use finance::coin::{Amount, Coin};
 use platform::coin_legacy;
@@ -17,7 +17,7 @@ use crate::common::{
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = StableC1;
+type Lpn = StableC;
 
 type DispatcherTestCase = TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr, Addr>;
 

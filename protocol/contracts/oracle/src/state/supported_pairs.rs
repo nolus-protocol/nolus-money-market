@@ -182,14 +182,14 @@ where
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::StableC1;
+    use currencies::test::StableC;
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
     use super::*;
 
-    type TheCurrency = StableC1;
+    type TheCurrency = StableC;
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         let base = TheCurrency::TICKER;
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<StableC1>::new(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::<StableC>::new(tree.into_tree()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_load_path() {
-        let tree = SupportedPairs::<StableC1>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::new(test_case().into_tree()).unwrap();
 
         let resp: Vec<_> = tree.load_path("token5").unwrap().collect();
         assert_eq!(
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_load_swap_path() {
-        let tree = SupportedPairs::<StableC1>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::new(test_case().into_tree()).unwrap();
 
         assert!(tree.load_swap_path("token5", "token5").unwrap().is_empty());
 
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree = SupportedPairs::<StableC1>::new(paths.into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::new(paths.into_tree()).unwrap();
 
         fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
             a.from.cmp(&b.from)
