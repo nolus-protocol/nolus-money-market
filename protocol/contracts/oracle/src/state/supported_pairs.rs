@@ -230,7 +230,7 @@ impl AnyVisitor for CurrencyVisitor {
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::StableC;
+    use currencies::test::{LeaseC1, LeaseC2, NativeC, StableC};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
@@ -443,5 +443,44 @@ mod tests {
         expected.sort_by(leg_cmp);
 
         assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn currencies() {
+        let listed_currencies: Vec<_> = SupportedPairs::<StableC>::new(
+            cosmwasm_std::from_json::<HumanReadableTree<_>>(format!(
+                r#"{{
+                    "value":[0,{0:?}],
+                    "children":[
+                        {{
+                            "value":[1,{1:?}],
+                            "children":[
+                                {{"value":[2,{2:?}]}}
+                            ]
+                        }},
+                        {{"value":[3,{3:?}]}}
+                    ]
+                }}"#,
+                <StableC as Currency>::TICKER,
+                <LeaseC1 as Currency>::TICKER,
+                <NativeC as Currency>::TICKER,
+                <LeaseC2 as Currency>::TICKER,
+            ))
+            .unwrap()
+            .into_tree(),
+        )
+        .unwrap()
+        .currencies()
+        .collect();
+
+        assert_eq!(
+            listed_currencies.as_slice(),
+            &[
+                api::Currency::new::<StableC>(api::CurrencyGroup::Lpn),
+                api::Currency::new::<LeaseC1>(api::CurrencyGroup::Lease),
+                api::Currency::new::<NativeC>(api::CurrencyGroup::Native),
+                api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),
+            ]
+        );
     }
 }
