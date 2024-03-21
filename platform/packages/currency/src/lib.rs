@@ -40,6 +40,12 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
 
     /// Symbol at the Dex network
     const DEX_SYMBOL: SymbolStatic;
+
+    /// Exponent on which the whole unit was raised to get the currency's base
+    /// unit represented by the trait.
+    ///
+    /// Example: `(10 ^ DECIMAL_DIGITS) uUSDC = 1 USDC`
+    const DECIMAL_DIGITS: u8;
 }
 
 pub fn equal<C1, C2>() -> bool

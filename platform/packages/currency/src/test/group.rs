@@ -64,60 +64,90 @@ mod impl_ {
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC1;
+
     impl Currency for TestC1 {
         const TICKER: SymbolStatic = "ticker#1";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#1";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC2;
+
     impl Currency for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#2";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC3;
+
     impl Currency for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#3";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC4;
+
     impl Currency for TestC4 {
         const TICKER: SymbolStatic = "ticker#4";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#4";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC5;
+
     impl Currency for TestC5 {
         const TICKER: SymbolStatic = "ticker#5";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#5";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC6;
+
     impl Currency for TestC6 {
         const TICKER: SymbolStatic = "ticker#6";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#6";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(
@@ -126,7 +156,11 @@ mod impl_ {
     pub struct TestC10;
     impl Currency for TestC10 {
         const TICKER: SymbolStatic = "ticker#10";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#10";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 }

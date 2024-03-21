@@ -24,4 +24,4 @@ define_symbol! {
         },
     }
 }
-define_currency!(Usdc, USDC);
+define_currency!(Usdc, USDC, 6);

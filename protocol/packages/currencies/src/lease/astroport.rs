@@ -32,7 +32,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Atom, ATOM);
+define_currency!(Atom, ATOM, 6);
 
 define_symbol! {
     ST_ATOM {
@@ -50,7 +50,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StAtom, ST_ATOM);
+define_currency!(StAtom, ST_ATOM, 6);
 
 define_symbol! {
     NTRN {
@@ -71,7 +71,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Ntrn, NTRN);
+define_currency!(Ntrn, NTRN, 6);
 
 define_symbol! {
     DYDX {
@@ -89,7 +89,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Dydx, DYDX);
+define_currency!(Dydx, DYDX, 18);
 
 define_symbol! {
     TIA {
@@ -107,7 +107,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Tia, TIA);
+define_currency!(Tia, TIA, 6);
 
 define_symbol! {
     ST_TIA {
@@ -125,7 +125,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StTia, ST_TIA);
+define_currency!(StTia, ST_TIA, 6);
 
 define_symbol! {
     STK_ATOM {
@@ -143,7 +143,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StkAtom, STK_ATOM);
+define_currency!(StkAtom, STK_ATOM, 6);
 
 #[cfg(feature = "testing")]
 mod testing_currencies {
@@ -159,7 +159,7 @@ mod testing_currencies {
             },
         }
     }
-    define_currency!(TestC1, TEST_C1);
+    define_currency!(TestC1, TEST_C1, 6);
 }
 
 pub(super) fn maybe_visit<M, V>(

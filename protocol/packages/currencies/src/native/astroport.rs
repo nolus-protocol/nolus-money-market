@@ -21,4 +21,4 @@ define_symbol! {
         },
     }
 }
-define_currency!(Nls, NLS);
+define_currency!(Nls, NLS, 6);

@@ -296,8 +296,12 @@ mod test {
     struct QuoteQuoteCurrency {}
     impl Currency for QuoteQuoteCurrency {
         const TICKER: SymbolStatic = "mycutecoin";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/dcnqweuio2938fh2f";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/cme72hr2";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;

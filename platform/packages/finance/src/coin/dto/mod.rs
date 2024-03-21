@@ -249,8 +249,12 @@ mod test {
 
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
+
         const BANK_SYMBOL: SymbolStatic = "ibc/1";
+
         const DEX_SYMBOL: SymbolStatic = "ibc/2";
+
+        const DECIMAL_DIGITS: u8 = 0;
     }
 
     #[derive(PartialEq)]
