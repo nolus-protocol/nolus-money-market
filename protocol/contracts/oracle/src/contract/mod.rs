@@ -174,7 +174,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 #[cfg(test)]
 mod tests {
     use currencies::{
-        test::{LeaseC1, PaymentC1, PaymentC5, StableC1},
+        test::{LeaseC1, PaymentC1, PaymentC5, StableC},
         LeaseGroup,
     };
     use currency::Currency;
@@ -260,19 +260,19 @@ mod tests {
     fn impl_add_price_alarm() {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
-        let alarm = Alarm::<LeaseGroup, StableC1>::new(
-            price::total_of::<LeaseC1>(10.into()).is::<StableC1>(1.into()),
+        let alarm = Alarm::<LeaseGroup, StableC>::new(
+            price::total_of::<LeaseC1>(10.into()).is::<StableC>(1.into()),
             Some(price::total_of(7.into()).is(1.into())),
         );
         let query_impl = ExecuteMsg::AddPriceAlarm {
             alarm: alarm.clone(),
         };
-        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<LeaseGroup, StableC1>>(
+        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<LeaseGroup, StableC>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
         )
         .unwrap();
         assert_eq!(
-            ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, StableC1> { alarm },
+            ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, StableC> { alarm },
             query_api
         );
     }

@@ -166,7 +166,7 @@ where
 mod test_normalized_price_not_found {
     use currencies::{
         test::{NativeC, StableC},
-        Lpns,
+        Lpns, PaymentGroup,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
