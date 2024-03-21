@@ -6,7 +6,7 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
-use self::only::PaymentOnlyGroup;
+pub use self::only::PaymentOnlyGroup;
 
 mod only;
 mod osmosis_tests;

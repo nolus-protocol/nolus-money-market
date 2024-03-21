@@ -8,6 +8,11 @@ compile_error!("No protocol selected!");
 #[cfg(not(any(feature = "net_dev", feature = "net_test", feature = "net_main")))]
 compile_error!("No net selected!");
 
+pub use lease::LeaseGroup;
+pub use lpn::{Lpn, Lpns};
+pub use native::{Native, Nls};
+pub use payment::{PaymentGroup, PaymentOnlyGroup};
+
 mod currency_macro;
 mod lease;
 mod lpn;
@@ -20,8 +25,3 @@ pub mod test;
 
 #[cfg(test)]
 mod test_impl;
-
-pub use lease::LeaseGroup;
-pub use lpn::{Lpn, Lpns};
-pub use native::{Native, Nls};
-pub use payment::PaymentGroup;
