@@ -92,6 +92,7 @@ fn protocols_repo_query(
                     lpp: addr("contract0"),
                     oracle: addr("contract1"),
                     profit: addr("DEADCODE"),
+                    reserve: addr("DEADCODE"),
                 },
             })
         }

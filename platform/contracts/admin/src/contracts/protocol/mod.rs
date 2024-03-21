@@ -15,6 +15,7 @@ pub struct ProtocolTemplate<T> {
     pub lpp: T,
     pub oracle: T,
     pub profit: T,
+    pub reserve: T,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
