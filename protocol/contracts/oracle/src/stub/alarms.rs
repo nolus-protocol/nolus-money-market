@@ -4,7 +4,6 @@ use currency::{Currency, Group};
 use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
-use serde::Serialize;
 
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
@@ -23,8 +22,8 @@ pub trait AsAlarms {
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group + Serialize;
+        OracleBase: Currency,
+        AlarmCurrencies: Group;
 }
 
 impl AsAlarms for OracleRef {
@@ -32,8 +31,8 @@ impl AsAlarms for OracleRef {
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group + Serialize,
+        OracleBase: Currency,
+        AlarmCurrencies: Group,
     {
         self.check_base::<OracleBase>();
 
@@ -60,8 +59,8 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
 impl<'a, OracleBase, AlarmCurrencies> PriceAlarms<AlarmCurrencies, OracleBase>
     for AlarmsStub<'a, OracleBase>
 where
-    OracleBase: Currency + Serialize,
-    AlarmCurrencies: Group + Serialize,
+    OracleBase: Currency,
+    AlarmCurrencies: Group,
 {
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, OracleBase>) -> Result<()> {
         self.batch.schedule_execute_no_reply(

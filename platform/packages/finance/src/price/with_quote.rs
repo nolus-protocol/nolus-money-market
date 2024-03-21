@@ -57,7 +57,7 @@ where
         .visit_any::<G, _>(
             price.base_ticker(),
             BaseCVisitor {
-                base_dto: &price.amount(),
+                base_dto: price.amount(),
                 quote: price.amount_quote(),
                 cmd,
             },
