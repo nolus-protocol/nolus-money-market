@@ -76,8 +76,10 @@ pub enum QueryMsg {
     Price {
         currency: SymbolOwned,
     },
-    // returns a list of supported denom pairs
+    /// Lists configured swap pairs
     SupportedCurrencyPairs {},
+    /// Lists configured currencies
+    Currencies {},
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
     /// Returns `oracle::api::swap::SwapPath`
@@ -112,6 +114,44 @@ pub enum ExecuteAlarmMsg {
 pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
+
+pub type CurrenciesResponse = Vec<Currency>;
+
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct Currency {
+    pub ticker: String,
+    pub bank_symbol: String,
+    pub dex_symbol: String,
+    pub decimal_digits: u8,
+    pub group: CurrencyGroup,
+}
+
+impl Currency {
+    pub fn new<C>(group: CurrencyGroup) -> Self
+    where
+        C: currency::Currency,
+    {
+        Self {
+            ticker: C::TICKER.into(),
+            bank_symbol: C::BANK_SYMBOL.into(),
+            dex_symbol: C::DEX_SYMBOL.into(),
+            decimal_digits: C::DECIMAL_DIGITS,
+            group,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum CurrencyGroup {
+    Native,
+    Lpn,
+    Lease,
+    PaymentOnly,
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
