@@ -1,5 +1,5 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
-pub(crate) use currency::SymbolOwned as LpnQueryResponse;
+pub use currency::SymbolOwned as LpnQueryResponse;
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +47,7 @@ pub enum QueryMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 pub struct ConfigResponse {
     lease_code_id: Uint64,
 }
