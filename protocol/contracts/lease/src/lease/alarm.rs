@@ -11,6 +11,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::ContractResult,
     finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
@@ -37,7 +38,8 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms();
+                let mut price_alarms =
+                    price_alarms.as_alarms::<LpnCurrency, LeaseAssetCurrencies>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -50,7 +52,7 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, Lpn>,
+        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrency>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());

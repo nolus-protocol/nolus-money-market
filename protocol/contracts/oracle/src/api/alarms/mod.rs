@@ -2,7 +2,6 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
-use currencies::LeaseGroup;
 use currency::{Currency, Group};
 use finance::price::base::BasePrice;
 use thiserror::Error;
@@ -14,20 +13,19 @@ use sdk::{
 
 mod unchecked;
 
-pub type AlarmCurrencies = LeaseGroup;
-
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
-    bound(serialize = "Alarm<AlarmCurrencies, Lpn>: Serialize")
+    bound(serialize = "Alarm<G, Lpn>: Serialize")
 )]
-pub enum ExecuteMsg<Lpn>
+pub enum ExecuteMsg<G, Lpn>
 where
+    G: Group,
     Lpn: Currency,
 {
-    AddPriceAlarm { alarm: Alarm<AlarmCurrencies, Lpn> },
+    AddPriceAlarm { alarm: Alarm<G, Lpn> },
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -121,7 +119,9 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use super::{Alarm, AlarmCurrencies as AssetG};
+    use crate::api::AlarmCurrencies as AssetG;
+
+    use super::Alarm;
 
     #[test]
     fn below_price_ok() {

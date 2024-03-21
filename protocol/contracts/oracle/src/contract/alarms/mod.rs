@@ -157,7 +157,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC5, PaymentC6, PaymentC7, StableC1};
+    use currencies::test::{PaymentC5, PaymentC6, PaymentC7, StableC as TestLpn};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
@@ -166,8 +166,6 @@ mod test {
     };
 
     use super::*;
-
-    type TestLpn = StableC1;
 
     fn alarm_dto<C>(
         below: (u128, u128),
