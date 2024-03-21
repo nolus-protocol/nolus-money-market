@@ -130,8 +130,7 @@ fn deliver_alarm() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
     setup_receiver(&mut deps.querier);
 
-    let current_price =
-        price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC>::new(23451));
+    let current_price = price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC>::new(23451));
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.into()],
     };
