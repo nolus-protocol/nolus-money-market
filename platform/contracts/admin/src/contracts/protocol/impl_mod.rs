@@ -28,6 +28,8 @@ impl ProtocolTemplate<Addr> {
         maybe_migrate_contract(batch, self.oracle, migration_msgs.oracle);
 
         maybe_migrate_contract(batch, self.profit, migration_msgs.profit);
+
+        maybe_migrate_contract(batch, self.reserve, migration_msgs.reserve);
     }
 
     pub(in crate::contracts) fn post_migration_execute(
@@ -42,6 +44,8 @@ impl ProtocolTemplate<Addr> {
         maybe_execute_contract(batch, self.oracle, migration_msgs.oracle);
 
         maybe_execute_contract(batch, self.profit, migration_msgs.profit);
+
+        maybe_execute_contract(batch, self.reserve, migration_msgs.reserve);
     }
 }
 
@@ -50,26 +54,36 @@ impl<T> ProtocolTemplate<BTreeMap<String, T>> {
         &mut self,
         protocol: String,
     ) -> Result<ProtocolTemplate<T>> {
-        if let Some((leaser, lpp, oracle, profit)) =
-            self.leaser.remove(&protocol).and_then(|leaser: T| {
-                self.lpp.remove(&protocol).and_then(|lpp: T| {
-                    self.oracle.remove(&protocol).and_then(|oracle: T| {
-                        self.profit
-                            .remove(&protocol)
-                            .map(|profit: T| (leaser, lpp, oracle, profit))
+        self.leaser
+            .remove(&protocol)
+            .and_then(|leaser| self.lpp.remove(&protocol).map(|lpp| (leaser, lpp)))
+            .and_then(|contracts| {
+                self.oracle
+                    .remove(&protocol)
+                    .map(|oracle| (contracts, oracle))
+            })
+            .and_then(|contracts| {
+                self.profit
+                    .remove(&protocol)
+                    .map(|profit| (contracts, profit))
+            })
+            .and_then(|contracts| {
+                self.reserve
+                    .remove(&protocol)
+                    .map(|reserve| (contracts, reserve))
+            })
+            .map_or_else(
+                || Err(Error::MissingProtocol(protocol)),
+                |((((leaser, lpp), oracle), profit), reserve)| {
+                    Ok(ProtocolTemplate {
+                        leaser,
+                        lpp,
+                        oracle,
+                        profit,
+                        reserve,
                     })
-                })
-            })
-        {
-            Ok(ProtocolTemplate {
-                leaser,
-                lpp,
-                oracle,
-                profit,
-            })
-        } else {
-            Err(Error::MissingProtocol(protocol))
-        }
+                },
+            )
     }
 }
 
@@ -82,13 +96,12 @@ where
     type Error = T::Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> ::std::result::Result<(), Self::Error> {
-        self.leaser.validate(ctx)?;
-
-        self.lpp.validate(ctx)?;
-
-        self.oracle.validate(ctx)?;
-
-        self.profit.validate(ctx)
+        self.leaser
+            .validate(ctx)
+            .and_then(|()| self.lpp.validate(ctx))
+            .and_then(|()| self.oracle.validate(ctx))
+            .and_then(|()| self.profit.validate(ctx))
+            .and_then(|()| self.reserve.validate(ctx))
     }
 }
 
