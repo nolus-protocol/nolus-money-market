@@ -152,12 +152,16 @@ deploy_contracts() {
   local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'"$treasury_contract_address"'","oracle":"'"$oracle_contract_address"'","timealarms":"'"$timealarms_contract_address"'","dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
   local -r profit_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/profit.wasm" "$profit_init_msg" "$protocol-profit" "$protocol")
 
+  # upload and instantiate Reserve
+  local -r reserve_init_msg='{"lease_code_admin":"'"$leaser_expected_address"'","lease_code_id":"'"$lease_code_id"'"}'
+  local -r reserve_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/reserve.wasm" "$reserve_init_msg" "$protocol-reserve" "$protocol")
+
   # instantiate Leaser
-  local -r leaser_init_msg='{"lease_code_id":"'"$lease_code_id"'","lpp":"'"$lpp_contract_address"'","profit":"'"$profit_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"150","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"10","ticker":"'"$protocol_currency"'"}},"lease_interest_rate_margin":30,"lease_due_period":5184000000000000,"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
-  local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address" )
+  local -r leaser_init_msg='{"lease_code_id":"'"$lease_code_id"'","lpp":"'"$lpp_contract_address"'","profit":"'"$profit_contract_address"'","reserve":"'"$reserve_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","lease_position_spec":{"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"min_asset":{"amount":"150","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"10","ticker":"'"$protocol_currency"'"}},"lease_interest_rate_margin":30,"lease_due_period":5184000000000000,"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
+  local -r leaser_contract_address=$(_instantiate "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address")
 
   # register the protocol
-  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$protocol"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'"}}}}'
+  local -r add_protocol_set_exec_msg='{"register_protocol":{"name":"'"$protocol"'","protocol":{"network":"'"$network"'","contracts":{"leaser":"'"$leaser_contract_address"'","lpp":"'"$lpp_contract_address"'","oracle":"'"$oracle_contract_address"'","profit":"'"$profit_contract_address"'","reserve":"'"$reserve_contract_address"'"}}}}'
   run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$add_protocol_set_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes
 }
 
