@@ -1,6 +1,5 @@
 pub(crate) use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 pub(crate) use currency::SymbolOwned as LpnQueryResponse;
-use currency::{Currency, SymbolOwned};
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
@@ -49,14 +48,12 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
-    lpn_ticker: SymbolOwned,
     lease_code_id: Uint64,
 }
 
 impl ConfigResponse {
     pub fn new(lease: Code) -> Self {
         Self {
-            lpn_ticker: LpnCurrency::TICKER.into(),
             lease_code_id: CodeId::from(lease).into(),
         }
     }
