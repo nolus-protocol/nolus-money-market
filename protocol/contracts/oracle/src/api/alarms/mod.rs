@@ -1,8 +1,10 @@
 use std::result::Result as StdResult;
 
+use serde::{Deserialize, Serialize};
+
+use currencies::LeaseGroup;
 use currency::{Currency, Group};
 use finance::price::base::BasePrice;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use sdk::{
@@ -12,15 +14,20 @@ use sdk::{
 
 mod unchecked;
 
+pub type AlarmCurrencies = LeaseGroup;
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg<G, Lpn>
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "Alarm<AlarmCurrencies, Lpn>: Serialize")
+)]
+pub enum ExecuteMsg<Lpn>
 where
-    G: Group,
     Lpn: Currency,
 {
-    AddPriceAlarm { alarm: Alarm<G, Lpn> },
+    AddPriceAlarm { alarm: Alarm<AlarmCurrencies, Lpn> },
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -33,7 +40,10 @@ pub enum Error {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm<G, Lpn>")]
+#[serde(
+    try_from = "unchecked::Alarm<G, Lpn>",
+    bound(serialize = "BasePrice<G, Lpn>: Serialize")
+)]
 /// `G` and `LpnG` should not overlap
 pub struct Alarm<G, Lpn>
 where
@@ -107,7 +117,7 @@ mod test {
     use currency::{Currency, Group};
     use finance::{
         coin::{Coin, CoinDTO},
-        price::{self, dto::PriceDTO, Price},
+        price::{self, base::BasePrice, Price},
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
@@ -194,7 +204,7 @@ mod test {
         );
         assert_err(
             from_both(below, below_extra.inv()),
-            "pretending to be ticker of a currency pertaining to the lpns group",
+            "above alarm and below alarm currencies",
         );
     }
 
@@ -317,8 +327,8 @@ mod test {
         C: Currency,
         Q: Currency,
     {
-        let price_dto = PriceDTO::<PaymentGroup, PaymentGroup>::from(price);
-        alarm_half_to_json_str(price_type, &as_json(&price_dto))
+        let base_price = BasePrice::<PaymentGroup, Q>::from(price);
+        alarm_half_to_json_str(price_type, &as_json(&base_price))
     }
 
     fn alarm_half_coins_to_json<C, Q>(

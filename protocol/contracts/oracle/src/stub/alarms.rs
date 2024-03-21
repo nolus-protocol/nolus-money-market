@@ -27,8 +27,8 @@ pub trait AsAlarms {
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group + Serialize;
+        OracleBase: Currency,
+        AlarmCurrencies: Group;
 }
 
 impl AsAlarms for OracleRef {
@@ -36,8 +36,8 @@ impl AsAlarms for OracleRef {
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency + Serialize,
-        AlarmCurrencies: Group + Serialize,
+        OracleBase: Currency,
+        AlarmCurrencies: Group,
     {
         self.check_base::<OracleBase>();
 
@@ -62,8 +62,8 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
 impl<'a, OracleBase, AlarmCurrencies> PriceAlarms<AlarmCurrencies, OracleBase>
     for AlarmsStub<'a, OracleBase>
 where
-    OracleBase: Currency + Serialize,
-    AlarmCurrencies: Group + Serialize,
+    OracleBase: Currency,
+    AlarmCurrencies: Group,
 {
     type BaseC = OracleBase;
     
