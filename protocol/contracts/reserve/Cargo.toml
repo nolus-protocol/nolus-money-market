@@ -63,7 +63,7 @@ osmosis-osmosis-usdc_noble = [
     "currencies/osmosis-osmosis-usdc_noble",
 ]
 
-contract = ["sdk/contract", "dep:cosmwasm-std", "dep:versioning"]
+contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning"]
 stub = ["dep:thiserror"]
 testing = []
 
