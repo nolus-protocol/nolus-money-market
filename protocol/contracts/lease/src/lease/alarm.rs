@@ -39,7 +39,7 @@ where
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
                 let mut price_alarms =
-                    price_alarms.as_alarms::<LpnCurrency, LeaseAssetCurrencies>();
+                    price_alarms.as_alarms::<LeaseAssetCurrencies, LpnCurrency>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
