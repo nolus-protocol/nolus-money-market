@@ -14,7 +14,7 @@ pub type CodeId = u64;
 #[serde(deny_unknown_fields, rename_all = "snake_case", transparent)]
 /// A valid Cosmwasm code that may be stored and transferred
 /// Not indended to be used in external APIs since there is no way to integrate validation on deserialization!
-/// Instead, use [CodeId] in APIs and [Code::try_new] to validate the input.
+/// Instead, use [CodeId], or Uint64, in APIs and [Code::try_new] to validate the input.
 pub struct Code {
     id: CodeId,
 }

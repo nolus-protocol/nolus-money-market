@@ -1,4 +1,4 @@
-use platform::contract::{Code, CodeId};
+use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
 pub use currency::SymbolOwned as LpnResponse;
@@ -10,7 +10,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, Uint128},
+    cosmwasm_std::{Addr, Uint128, Uint64},
     schemars::{self, JsonSchema},
 };
 
@@ -22,7 +22,8 @@ use crate::{borrow::InterestRate, loan::Loan};
 pub struct InstantiateMsg {
     pub lpn_ticker: SymbolOwned,
     pub lease_code_admin: Addr,
-    pub lease_code: CodeId,
+    // Since this is an external system API we should not use [Code].
+    pub lease_code: Uint64,
     pub borrow_rate: InterestRate,
     pub min_utilization: BoundToHundredPercent,
 }

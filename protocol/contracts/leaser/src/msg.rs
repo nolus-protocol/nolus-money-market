@@ -60,7 +60,7 @@ pub enum ExecuteMsg {
     /// a continuation key with the same event and the procedure continues until
     /// no key is provided and 'wasm-migrate-leases.status=done'.
     MigrateLeases {
-        /// Since this is an external system API we should not use [Code].
+        // Since this is an external system API we should not use [Code].
         new_code_id: Uint64,
         max_leases: MaxLeases,
     },
