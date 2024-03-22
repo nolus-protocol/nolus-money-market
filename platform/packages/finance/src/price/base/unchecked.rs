@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::Group;
 use serde::Deserialize;
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::price::base::BasePrice as ValidatedBasePrice;
 pub(super) struct BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: ?Sized,
 {
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
@@ -23,7 +23,7 @@ where
 impl<BaseG, QuoteC> TryFrom<BasePrice<BaseG, QuoteC>> for ValidatedBasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: ?Sized,
 {
     type Error = Error;
 
