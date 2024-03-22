@@ -15,20 +15,34 @@ pub enum Error {
     Platform(#[from] platform::error::Error),
     #[error("No data in migration response!")]
     NoMigrationResponseData {},
-    #[error("Contract returned wrong release string! \"{reported}\" was returned, but \"{expected}\" was expected!")]
+    #[error(
+        "Contract returned wrong release string! \"{reported}\" was returned, \
+        but \"{expected}\" was expected!"
+    )]
     WrongRelease { reported: String, expected: String },
-    #[error("Contract returned wrong address! Expected \"{expected}\", but got \"{reported}\"!")]
+    #[error(
+        "Contract returned wrong address! Expected \"{expected}\", but got \
+        \"{reported}\"!"
+    )]
     DifferentInstantiatedAddress { reported: Addr, expected: Addr },
-    #[error("Contract returned wrong code id! Expected \"{expected}\", but got \"{reported}\"!")]
+    #[error(
+        "Contract returned wrong code id! Expected \"{expected}\", but got \
+        \"{reported}\"!"
+    )]
     DifferentInstantiatedCodeId { reported: CodeId, expected: CodeId },
-    #[error("Protocol not mentioned under either migration messages, or post-migration execution messages! Protocol's friendly name: {0}")]
+    #[error(
+        "Protocol not mentioned under either migration messages, or \
+        post-migration execution messages! Protocol's friendly name: {0}"
+    )]
     MissingProtocol(String),
     #[error(
-        "Protocol set of contracts already exists for this protocol name! Protocol's friendly name: {0}"
+        "Protocol set of contracts already exists for this protocol name! \
+        Protocol's friendly name: {0}"
     )]
     ProtocolSetAlreadyExists(String),
     #[error(
-        "No protocol set of contracts exists for this protocol name! Protocol's friendly name: {0}"
+        "No protocol set of contracts exists for this protocol name! \
+        Protocol's friendly name: {0}"
     )]
     UnknownProtocol(String),
 }
