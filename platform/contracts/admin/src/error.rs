@@ -24,7 +24,7 @@ pub enum Error {
     #[error("Protocol not mentioned under either migration messages, or post-migration execution messages! Protocol's friendly name: {0}")]
     MissingProtocol(String),
     #[error(
-        "Protocol set of contracts already exists for this protocl name! Protocol's friendly name: {0}"
+        "Protocol set of contracts already exists for this protocol name! Protocol's friendly name: {0}"
     )]
     ProtocolSetAlreadyExists(String),
     #[error(
