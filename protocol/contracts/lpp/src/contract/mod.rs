@@ -1,11 +1,7 @@
 use std::ops::DerefMut as _;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use access_control::SingleUserAccess;
 use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
-
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
@@ -30,53 +26,9 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-struct InstantiateWithLpn<'a> {
-    deps: DepsMut<'a>,
-    msg: InstantiateMsg,
-}
-
-impl<'a> InstantiateWithLpn<'a> {
-    // could be moved directly to on<LPN>()
-    fn do_work<Lpn>(mut self) -> Result<()>
-    where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
-    {
-        versioning::initialize(self.deps.storage, CONTRACT_VERSION)?;
-
-        SingleUserAccess::new(
-            self.deps.storage.deref_mut(),
-            crate::access_control::LEASE_CODE_ADMIN_KEY,
-        )
-        .grant_to(&self.msg.lease_code_admin)?;
-
-        Code::try_new(self.msg.lease_code.into(), &self.deps.querier)
-            .map_err(Into::into)
-            .and_then(|lease_code| Config::try_new::<LpnCurrency>(self.msg, lease_code))
-            .and_then(|cfg| LiquidityPool::<Lpn>::store(self.deps.storage, cfg))
-    }
-
-    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
-        let context = Self { deps, msg };
-
-        Tickers.visit_any::<LpnCurrencies, _>(&context.msg.lpn_ticker.clone(), context)
-    }
-}
-
-impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
-    type Output = ();
-    type Error = ContractError;
-
-    fn on<Lpn>(self) -> AnyVisitorResult<Self>
-    where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        self.do_work::<Lpn>()
-    }
-}
-
 #[entry_point]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    mut deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -85,7 +37,19 @@ pub fn instantiate(
     currency::validate::<LpnCurrencies>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    InstantiateWithLpn::cmd(deps, msg).map(|()| response::empty_response())
+    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
+
+    SingleUserAccess::new(
+        deps.storage.deref_mut(),
+        crate::access_control::LEASE_CODE_ADMIN_KEY,
+    )
+    .grant_to(&msg.lease_code_admin)?;
+
+    Code::try_new(msg.lease_code.into(), &deps.querier)
+        .map_err(Into::into)
+        .and_then(|lease_code| Config::try_new::<LpnCurrency>(msg, lease_code))
+        .and_then(|cfg| LiquidityPool::<LpnCurrency>::store(deps.storage, cfg))
+        .map(|()| response::empty_response())
 }
 
 #[entry_point]
