@@ -163,12 +163,12 @@ fn do_cover_losses(
     test_case.app.execute(sender, reserve, &msg, &[])
 }
 
-fn set_new_lease_code<'a>(
-    app: &'a mut App,
+fn set_new_lease_code(
+    app: &mut App,
     reserve: Addr,
     sender: Addr,
     new_lease_code: Code,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'a, AppResponse>> {
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
     let msg = reserve::api::ExecuteMsg::NewLeaseCode(new_lease_code);
     app.execute(sender, reserve.clone(), &msg, &[])
 }
