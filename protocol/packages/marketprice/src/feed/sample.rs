@@ -141,7 +141,7 @@ mod test {
         let start_from = Timestamp::from_seconds(150);
         let t1 = Timestamp::from_seconds(200);
         let p1 = price(1, 12000);
-        let obs = vec![Observation::new(feeder1(), t1, p1)];
+        let obs = [Observation::new(feeder1(), t1, p1)];
 
         let mut samples =
             sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
