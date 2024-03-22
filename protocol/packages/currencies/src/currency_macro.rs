@@ -8,7 +8,8 @@ pub use currency::{Currency, SymbolStatic};
 macro_rules! define_currency {
     (
         $ident:ident,
-        $ticker:path $(,)?
+        $ticker:path,
+        $decimal_digits:literal $(,)?
     ) => {
         #[derive(
             Debug,
@@ -32,6 +33,8 @@ macro_rules! define_currency {
             const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
 
             const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
+
+            const DECIMAL_DIGITS: u8 = $decimal_digits;
         }
     };
 }

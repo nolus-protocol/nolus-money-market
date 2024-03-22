@@ -8,7 +8,7 @@ license.workspace = true
 [package.metadata.cargo-each]
 combinations = [
     { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = true, generics = { "$net" = "net", "$protocol" = "protocol", "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } }
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol", "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } }
 ]
 
 [package.metadata.cargo-each.feature-groups.net]

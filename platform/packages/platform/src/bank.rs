@@ -466,8 +466,12 @@ mod test {
         struct MyNiceCurrency {}
         impl Currency for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";
+
             const DEX_SYMBOL: SymbolStatic = "dex3rdf";
+
             const TICKER: SymbolStatic = "ticedc";
+
+            const DECIMAL_DIGITS: u8 = 0;
         }
         let in_coin_2 = coin_legacy::to_cosmwasm(Coin::<MyNiceCurrency>::new(AMOUNT));
 

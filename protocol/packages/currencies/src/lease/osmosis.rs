@@ -54,7 +54,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Atom, ATOM);
+define_currency!(Atom, ATOM, 6);
 
 define_symbol! {
     ST_ATOM {
@@ -78,7 +78,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StAtom, ST_ATOM);
+define_currency!(StAtom, ST_ATOM, 6);
 
 define_symbol! {
     OSMO {
@@ -94,7 +94,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Osmo, OSMO);
+define_currency!(Osmo, OSMO, 6);
 
 define_symbol! {
     ST_OSMO {
@@ -118,7 +118,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StOsmo, ST_OSMO);
+define_currency!(StOsmo, ST_OSMO, 6);
 
 define_symbol! {
     WETH {
@@ -146,7 +146,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Weth, WETH);
+define_currency!(Weth, WETH, 18);
 
 define_symbol! {
     WBTC {
@@ -174,7 +174,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Wbtc, WBTC);
+define_currency!(Wbtc, WBTC, 8);
 
 define_symbol! {
     AKT {
@@ -198,7 +198,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Akt, AKT);
+define_currency!(Akt, AKT, 6);
 
 define_symbol! {
     AXL {
@@ -226,7 +226,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Axl, AXL);
+define_currency!(Axl, AXL, 6);
 
 define_symbol! {
     Q_ATOM {
@@ -250,7 +250,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(QAtom, Q_ATOM);
+define_currency!(QAtom, Q_ATOM, 6);
 
 define_symbol! {
     STK_ATOM {
@@ -274,7 +274,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StkAtom, STK_ATOM);
+define_currency!(StkAtom, STK_ATOM, 6);
 
 define_symbol! {
     STRD {
@@ -298,7 +298,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Strd, STRD);
+define_currency!(Strd, STRD, 6);
 
 define_symbol! {
     INJ {
@@ -322,7 +322,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Inj, INJ);
+define_currency!(Inj, INJ, 18);
 
 define_symbol! {
     SCRT {
@@ -346,7 +346,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Secret, SCRT);
+define_currency!(Secret, SCRT, 6);
 
 define_symbol! {
     STARS {
@@ -370,7 +370,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Stars, STARS);
+define_currency!(Stars, STARS, 6);
 
 define_symbol! {
     CRO {
@@ -394,7 +394,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Cro, CRO);
+define_currency!(Cro, CRO, 8);
 
 define_symbol! {
     JUNO {
@@ -418,7 +418,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Juno, JUNO);
+define_currency!(Juno, JUNO, 6);
 
 define_symbol! {
     EVMOS {
@@ -442,7 +442,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Evmos, EVMOS);
+define_currency!(Evmos, EVMOS, 18);
 
 define_symbol! {
     MARS {
@@ -466,7 +466,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Mars, MARS);
+define_currency!(Mars, MARS, 6);
 
 define_symbol! {
     TIA {
@@ -490,7 +490,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Tia, TIA);
+define_currency!(Tia, TIA, 6);
 
 define_symbol! {
     ST_TIA {
@@ -514,7 +514,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(StTia, ST_TIA);
+define_currency!(StTia, ST_TIA, 6);
 
 define_symbol! {
     JKL {
@@ -538,7 +538,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Jkl, JKL);
+define_currency!(Jkl, JKL, 6);
 
 define_symbol! {
     MILK_TIA {
@@ -559,7 +559,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(MilkTia, MILK_TIA);
+define_currency!(MilkTia, MILK_TIA, 6);
 
 define_symbol! {
     LVN {
@@ -580,7 +580,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Lvn, LVN);
+define_currency!(Lvn, LVN, 6);
 
 define_symbol! {
     QSR {
@@ -604,7 +604,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Qsr, QSR);
+define_currency!(Qsr, QSR, 6);
 
 define_symbol! {
     PICA {
@@ -628,7 +628,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Pica, PICA);
+define_currency!(Pica, PICA, 12);
 
 define_symbol! {
     DYM {
@@ -652,7 +652,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Dym, DYM);
+define_currency!(Dym, DYM, 18);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,

@@ -24,4 +24,4 @@ define_symbol! {
         },
     }
 }
-define_currency!(UsdcAxelar, USDC_AXELAR);
+define_currency!(UsdcAxelar, USDC_AXELAR, 6);

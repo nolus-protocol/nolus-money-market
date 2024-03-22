@@ -25,7 +25,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(UsdcAxelar, USDC_AXELAR);
+define_currency!(UsdcAxelar, USDC_AXELAR, 6);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,

@@ -25,7 +25,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(UsdcNoble, USDC_NOBLE);
+define_currency!(UsdcNoble, USDC_NOBLE, 6);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,

@@ -13,17 +13,23 @@ use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSli
 /// - LP rewards
 /// - Relayers' tips
 pub struct NlsPlatform;
+
 impl Currency for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
+
     const BANK_SYMBOL: SymbolStatic = "unls";
+
     // TODO Define trait PlatformCurrency as a super trait of Currency and
     // merge NlsPlatform and Nls
     const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
+
+    const DECIMAL_DIGITS: u8 = 6;
 }
 
 #[derive(Deserialize, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Native {}
+
 impl Group for Native {
     const DESCR: &'static str = "native";
 

@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currencies::PaymentGroup;
 use currency::{
@@ -10,7 +10,7 @@ use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
-    api::{swap::SwapTarget, SwapLeg},
+    api::{self, swap::SwapTarget, SwapLeg},
     error::{self, ContractError},
     result::ContractResult,
 };
@@ -18,7 +18,7 @@ use crate::{
 type Tree = tree::Tree<SwapTarget>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
-pub struct SupportedPairs<B> {
+pub(crate) struct SupportedPairs<B> {
     tree: Tree,
     _type: PhantomData<B>,
 }
@@ -62,10 +62,7 @@ where
             type Output = ();
             type Error = ContractError;
 
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Currency + Serialize + DeserializeOwned + 'static,
-            {
+            fn on<C>(self) -> AnyVisitorResult<Self> {
                 Ok(())
             }
         }
@@ -160,6 +157,42 @@ where
             })
     }
 
+    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
+        self.tree.iter().map(|node| {
+            if let Ok(currency) = currency::Tickers
+                .maybe_visit_any::<currencies::Native, _>(
+                    &node.value().target,
+                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Native),
+                )
+                .or_else(|_| {
+                    Tickers.maybe_visit_any::<currencies::Lpns, _>(
+                        &node.value().target,
+                        crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lpn),
+                    )
+                })
+                .or_else(|_| {
+                    Tickers.maybe_visit_any::<currencies::LeaseGroup, _>(
+                        &node.value().target,
+                        crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lease),
+                    )
+                })
+                .or_else(|_| {
+                    Tickers.maybe_visit_any::<currencies::PaymentOnlyGroup, _>(
+                        &node.value().target,
+                        crate::state::supported_pairs::CurrencyVisitor(
+                            api::CurrencyGroup::PaymentOnly,
+                        ),
+                    )
+                })
+                .map(platform::never::safe_unwrap)
+            {
+                currency
+            } else {
+                unreachable!("Groups didn't cover all available currencies!")
+            }
+        })
+    }
+
     pub fn query_swap_tree(self) -> Tree {
         self.tree
     }
@@ -178,11 +211,26 @@ where
     }
 }
 
+struct CurrencyVisitor(api::CurrencyGroup);
+
+impl AnyVisitor for CurrencyVisitor {
+    type Output = api::Currency;
+
+    type Error = platform::never::Never;
+
+    fn on<C>(self) -> AnyVisitorResult<Self>
+    where
+        C: Currency,
+    {
+        Ok(api::Currency::new::<C>(self.0))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::StableC;
+    use currencies::test::{LeaseC1, LeaseC2, NativeC, StableC};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
@@ -280,7 +328,7 @@ mod tests {
                 "token5".to_string(),
                 "token1".to_string(),
                 "token2".to_string(),
-                TheCurrency::TICKER.to_string()
+                TheCurrency::TICKER.to_string(),
             ]
         );
     }
@@ -395,5 +443,44 @@ mod tests {
         expected.sort_by(leg_cmp);
 
         assert_eq!(response, expected);
+    }
+
+    #[test]
+    fn currencies() {
+        let listed_currencies: Vec<_> = SupportedPairs::<StableC>::new(
+            cosmwasm_std::from_json::<HumanReadableTree<_>>(format!(
+                r#"{{
+                    "value":[0,{0:?}],
+                    "children":[
+                        {{
+                            "value":[1,{1:?}],
+                            "children":[
+                                {{"value":[2,{2:?}]}}
+                            ]
+                        }},
+                        {{"value":[3,{3:?}]}}
+                    ]
+                }}"#,
+                <StableC as Currency>::TICKER,
+                <LeaseC1 as Currency>::TICKER,
+                <NativeC as Currency>::TICKER,
+                <LeaseC2 as Currency>::TICKER,
+            ))
+            .unwrap()
+            .into_tree(),
+        )
+        .unwrap()
+        .currencies()
+        .collect();
+
+        assert_eq!(
+            listed_currencies.as_slice(),
+            &[
+                api::Currency::new::<StableC>(api::CurrencyGroup::Lpn),
+                api::Currency::new::<LeaseC1>(api::CurrencyGroup::Lease),
+                api::Currency::new::<NativeC>(api::CurrencyGroup::Native),
+                api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),
+            ]
+        );
     }
 }

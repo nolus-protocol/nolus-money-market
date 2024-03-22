@@ -45,6 +45,11 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .swap_pairs_df()
                     .collect::<Vec<_>>(),
             ),
+            QueryMsg::Currencies {} => to_json_binary(
+                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                    .currencies()
+                    .collect::<Vec<_>>(),
+            ),
             QueryMsg::Price { currency } => to_json_binary(
                 &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,
