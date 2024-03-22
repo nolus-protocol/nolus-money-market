@@ -11,12 +11,12 @@ use swap::testing::SwapRequest;
 
 use crate::{
     common::{
-        self, ibc,
+        self, cwcoin, ibc,
         leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{response::ResponseWithInterChainMsgs, TestCase},
         CwCoin, ADMIN, USER,
     },
-    lease::{self as lease_mod, LeaseTestCase},
+    lease::{self as lease_mod, LeaseTestCase, LpnCurrency},
 };
 
 use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
@@ -74,10 +74,17 @@ fn full_liquidation() {
 
     let lease_addr: Addr = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
+    let reserve: Addr = test_case.address_book.reserve().clone();
+
     let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
 
     let lease_amount: Amount = 2857142857142;
     let borrowed_amount: Amount = 1857142857142;
+    let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
+    test_case.send_funds_from_admin(
+        reserve.clone(),
+        &[cwcoin::<LpnCurrency, _>(borrowed_amount - liq_outcome)],
+    );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
     let mut response: ResponseWithInterChainMsgs<'_, ()> = deliver_new_price(
@@ -104,7 +111,7 @@ fn full_liquidation() {
         |amount: u128, _, _| {
             assert_eq!(amount, lease_amount);
 
-            amount
+            liq_outcome
         },
     )
     .ignore_response();
@@ -119,7 +126,7 @@ fn full_liquidation() {
 
     assert_eq!(
         transfer_amount,
-        to_cosmwasm_on_dex(LpnCoin::new(lease_amount))
+        to_cosmwasm_on_dex(LpnCoin::new(liq_outcome))
     );
 
     let response: AppResponse = ibc::do_transfer(
@@ -133,8 +140,13 @@ fn full_liquidation() {
 
     response.assert_event(
         &Event::new("wasm-ls-liquidation")
-            .add_attribute("payment-amount", lease_amount.to_string())
+            .add_attribute("payment-amount", borrowed_amount.to_string())
             .add_attribute("loan-close", "true"),
+    );
+    assert!(
+        platform::bank::balance::<LpnCurrency>(&reserve, test_case.app.query())
+            .unwrap()
+            .is_zero()
     );
 
     assert_eq!(
