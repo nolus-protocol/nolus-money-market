@@ -23,7 +23,7 @@ mod unchecked;
 pub struct BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: ?Sized,
 {
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
@@ -32,7 +32,7 @@ where
 impl<BaseG, QuoteC> BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: ?Sized,
 {
     fn new(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
         let res: Self = Self {
@@ -52,10 +52,7 @@ where
         &self.amount
     }
 
-    pub(crate) fn amount_quote(&self) -> Coin<QuoteC>
-    where
-        QuoteC: Currency,
-    {
+    pub(crate) fn amount_quote(&self) -> Coin<QuoteC> {
         self.amount_quote
     }
 
