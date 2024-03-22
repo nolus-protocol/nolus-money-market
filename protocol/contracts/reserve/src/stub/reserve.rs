@@ -44,10 +44,9 @@ where
         let mut batch = Batch::default();
         if let Some(losses) = stub.amount {
             batch
-                .schedule_execute_wasm_no_reply(
+                .schedule_execute_wasm_no_reply_no_funds(
                     stub.ref_.into(),
                     &ExecuteMsg::CoverLiquidationLosses(losses.into()),
-                    Some(losses),
                 )
                 .map_err(Into::into)
                 .map(|()| batch)
