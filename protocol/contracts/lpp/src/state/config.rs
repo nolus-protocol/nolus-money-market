@@ -14,6 +14,8 @@ use crate::{
     msg::InstantiateMsg,
 };
 
+pub(crate) use migration::migrate;
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     lease_code: Code,
@@ -36,7 +38,7 @@ impl Config {
             })
         } else {
             Err(ContractError::InvalidConfigParameter(
-                "The LPN ticker does not match the LPN this contract is compiled with",
+                "The LPN ticker does not match the LPN this contract is compiled with".into(),
             ))
         }
     }
@@ -119,5 +121,72 @@ impl Config {
         Self::STORAGE
             .update(storage, |config: Self| Ok(f(config)))
             .map(mem::drop)
+    }
+}
+
+mod migration {
+    use std::str;
+
+    use currency::Currency;
+    use serde::{Deserialize, Serialize, Serializer};
+
+    use finance::percent::bound::BoundToHundredPercent;
+    use platform::contract::Code;
+    use sdk::{
+        cosmwasm_std::{Storage, Uint64},
+        cw_storage_plus::Item,
+    };
+
+    use crate::{
+        borrow::InterestRate,
+        error::{ContractError, Result as ContractResult},
+    };
+
+    use super::Config;
+
+    #[derive(Deserialize)]
+    struct OldConfig {
+        lpn_ticker: String,
+        lease_code_id: Uint64,
+        borrow_rate: InterestRate,
+        min_utilization: BoundToHundredPercent,
+    }
+
+    impl Serialize for OldConfig {
+        fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            unimplemented!("Required by `cw_storage_plus::Item::load`'s trait bounds.")
+        }
+    }
+
+    pub(crate) fn migrate<Lpn>(storage: &mut dyn Storage) -> ContractResult<()>
+    where
+        Lpn: Currency,
+    {
+        let old_store: Item<'static, OldConfig> =
+            Item::new(str::from_utf8(Config::STORAGE.as_slice()).expect("valid storage key "));
+        old_store
+            .load(storage)
+            .map_err(Into::into)
+            .and_then(|old_cfg: OldConfig| {
+                if old_cfg.lpn_ticker == Config::lpn_ticker::<Lpn>() {
+                    Ok(Config {
+                        lease_code: Code::unchecked(old_cfg.lease_code_id.into()),
+                        borrow_rate: old_cfg.borrow_rate,
+                        min_utilization: old_cfg.min_utilization,
+                    })
+                } else {
+                    let err_msg = format!(
+                        "The configured LPN \"{loaded_ticker}\" does not match \
+                            the statically set one \"{static_ticker}\"",
+                        loaded_ticker = old_cfg.lpn_ticker,
+                        static_ticker = Config::lpn_ticker::<Lpn>(),
+                    );
+                    Err(ContractError::InvalidConfigParameter(err_msg))
+                }
+            })
+            .and_then(|config: Config| config.store(storage))
     }
 }

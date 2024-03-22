@@ -34,7 +34,7 @@ currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
-# TODO remove the testing feature once initialize the Lease code on instanciation
+# TODO remove the testing feature once the storage migration v1 -> v2 is over
 platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true }
 versioning = { workspace = true, optional = true }

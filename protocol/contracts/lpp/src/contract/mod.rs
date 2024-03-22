@@ -18,14 +18,15 @@ use crate::{
     error::{ContractError, Result},
     lpp::LiquidityPool,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
-    state::Config,
+    state::{self, Config},
 };
 
 mod borrow;
 mod lender;
 mod rewards;
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -89,8 +90,13 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        state::migrate::<LpnCurrency>,
+        Into::into,
+    )
+    .and_then(response::response)
 }
 
 #[entry_point]
