@@ -2,6 +2,7 @@ use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::{Addr, QuerierWrapper};
+use currencies::Lpn as LpnCurrency;
 use currency::Currency;
 use finance::coin::Coin;
 use platform::{
@@ -19,7 +20,7 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{ConfigResponse, ExecuteMsg, InstantiateMsg, LpnCurrency, MigrateMsg, QueryMsg},
+    api::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     error::{Error, Result},
     state::Config,
 };
