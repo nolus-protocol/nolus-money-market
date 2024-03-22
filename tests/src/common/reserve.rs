@@ -21,7 +21,7 @@ impl Instantiator {
 
         let msg = InstantiateMsg {
             lease_code_admin,
-            lease_code_id: CodeId::from(lease_code).into(),
+            lease_code: CodeId::from(lease_code).into(),
         };
 
         app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "reserve", None)

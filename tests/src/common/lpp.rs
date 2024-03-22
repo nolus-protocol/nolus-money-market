@@ -10,7 +10,7 @@ use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-use platform::contract::Code;
+use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
     testing::CwContract,
@@ -72,7 +72,7 @@ impl Instantiator {
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_admin: lease_code_admin.clone(),
-            lease_code: lease_code.into(),
+            lease_code: CodeId::from(lease_code).into(),
             borrow_rate,
             min_utilization,
         };
