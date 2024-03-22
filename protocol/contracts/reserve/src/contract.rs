@@ -50,7 +50,7 @@ pub fn instantiate(
         })
         .and_then(|()| versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(Into::into))
         .and_then(|()| {
-            Code::try_new(new_reserve.lease_code_id.into(), &deps.querier).map_err(Into::into)
+            Code::try_new(new_reserve.lease_code.into(), &deps.querier).map_err(Into::into)
         })
         .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
         .map(|()| response::empty_response())

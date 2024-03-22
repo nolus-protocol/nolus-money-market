@@ -16,7 +16,8 @@ pub(crate) type LpnCoin = CoinDTO<LpnCurrencies>;
 pub struct InstantiateMsg {
     /// Unchecked address of the user that can change the lease code Id
     pub lease_code_admin: String,
-    pub lease_code_id: Uint64,
+    // Since this is an external system API we should not use [Code].
+    pub lease_code: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
