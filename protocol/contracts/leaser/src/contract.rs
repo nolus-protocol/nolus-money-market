@@ -23,11 +23,11 @@ use crate::{
     leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::{config::Config, leases::Leases},
+    state::{self, config::Config, leases::Leases},
 };
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -57,11 +57,16 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { reserve }: MigrateMsg,
 ) -> ContractResult<Response> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
-        .or_else(|err| platform_error::log(err, deps.api))
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage| state::config::migrate(storage, reserve),
+        Into::into,
+    )
+    .and_then(response::response)
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]

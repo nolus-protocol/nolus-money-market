@@ -32,7 +32,9 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub reserve: Addr,
+}
 
 pub type MaxLeases = u32;
 

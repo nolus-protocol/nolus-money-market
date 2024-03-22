@@ -35,7 +35,8 @@ access-control = { workspace = true }
 currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
-platform = { workspace = true }
+# TODO remove the testing feature once the storage migration v1 -> v2 is over
+platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }
 
