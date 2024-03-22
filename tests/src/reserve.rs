@@ -152,12 +152,12 @@ fn cover_losses_ok(
         .unwrap_response()
 }
 
-fn do_cover_losses<'a>(
+fn do_cover_losses(
     losses: Amount,
-    test_case: &'a mut LeaseTestCase,
+    test_case: &mut LeaseTestCase,
     sender: Addr,
     reserve: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'a, AppResponse>> {
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
     let msg = reserve::api::ExecuteMsg::CoverLiquidationLosses(Coin::<Lpn>::new(losses).into());
 
     test_case.app.execute(sender, reserve, &msg, &[])
