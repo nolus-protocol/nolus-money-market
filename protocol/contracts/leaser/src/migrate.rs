@@ -360,6 +360,8 @@ mod test {
     }
 
     fn migrate_msg() -> impl Fn(Addr) -> MigrateMsg {
-        |_customer| MigrateMsg {}
+        |_customer| MigrateMsg {
+            reserve: Addr::unchecked("RESERVE_ADDR"),
+        }
     }
 }
