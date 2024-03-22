@@ -93,81 +93,6 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Resul
         .and_then(response::response)
 }
 
-struct ExecuteWithLpn<'a> {
-    deps: DepsMut<'a>,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg<LpnCurrencies>,
-}
-
-impl<'a> ExecuteWithLpn<'a> {
-    fn do_work<Lpn>(self) -> Result<CwResponse>
-    where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
-    {
-        match self.msg {
-            ExecuteMsg::OpenLoan { amount } => amount
-                .try_into()
-                .map_err(Into::into)
-                .and_then(|amount_lpn| {
-                    borrow::try_open_loan::<Lpn>(self.deps, self.env, self.info, amount_lpn)
-                })
-                .and_then(|(loan_resp, message_response)| {
-                    response::response_with_messages::<_, _, ContractError>(
-                        loan_resp,
-                        message_response,
-                    )
-                }),
-            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<Lpn>(
-                self.deps, self.env, self.info,
-            )
-            .and_then(|(excess_amount, message_response)| {
-                response::response_with_messages::<_, _, ContractError>(
-                    excess_amount,
-                    message_response,
-                )
-            }),
-            ExecuteMsg::Deposit() => lender::try_deposit::<Lpn>(self.deps, self.env, self.info)
-                .map(response::response_only_messages),
-            ExecuteMsg::Burn { amount } => {
-                lender::try_withdraw::<Lpn>(self.deps, self.env, self.info, amount)
-                    .map(response::response_only_messages)
-            }
-            _ => {
-                unreachable!()
-            } // should be done already
-        }
-    }
-
-    pub fn cmd(
-        deps: DepsMut<'a>,
-        env: Env,
-        info: MessageInfo,
-        msg: ExecuteMsg<LpnCurrencies>,
-    ) -> Result<CwResponse> {
-        let context = Self {
-            deps,
-            env,
-            info,
-            msg,
-        };
-
-        context.do_work::<LpnCurrency>()
-    }
-}
-
-impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
-    type Output = CwResponse;
-    type Error = ContractError;
-
-    fn on<Lpn>(self) -> AnyVisitorResult<Self>
-    where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        self.do_work::<Lpn>()
-    }
-}
-
 #[entry_point]
 pub fn execute(
     mut deps: DepsMut<'_>,
@@ -175,7 +100,6 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg<LpnCurrencies>,
 ) -> Result<CwResponse> {
-    // no currency context variants
     match msg {
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
@@ -197,7 +121,27 @@ pub fn execute(
             rewards::try_claim_rewards(deps, env, info, other_recipient)
                 .map(response::response_only_messages)
         }
-        _ => ExecuteWithLpn::cmd(deps, env, info, msg),
+        ExecuteMsg::OpenLoan { amount } => amount
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|amount_lpn| {
+                borrow::try_open_loan::<LpnCurrency>(deps, env, info, amount_lpn)
+            })
+            .and_then(|(loan_resp, message_response)| {
+                response::response_with_messages::<_, _, ContractError>(loan_resp, message_response)
+            }),
+        ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<LpnCurrency>(deps, env, info).and_then(
+            |(excess_amount, message_response)| {
+                response::response_with_messages::<_, _, ContractError>(
+                    excess_amount,
+                    message_response,
+                )
+            },
+        ),
+        ExecuteMsg::Deposit() => lender::try_deposit::<LpnCurrency>(deps, env, info)
+            .map(response::response_only_messages),
+        ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
+            .map(response::response_only_messages),
     }
 }
 
@@ -216,69 +160,33 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     .map(response::response_only_messages)
 }
 
-struct QueryWithLpn<'a> {
-    deps: Deps<'a>,
-    env: Env,
-    msg: QueryMsg<LpnCurrencies>,
-}
-
-impl<'a> QueryWithLpn<'a> {
-    fn do_work<Lpn>(self) -> Result<Binary>
-    where
-        Lpn: 'static + Currency + Serialize + DeserializeOwned,
-    {
-        let res = match self.msg {
-            QueryMsg::Quote { amount } => {
-                let quote = amount.try_into()?;
-
-                to_json_binary(&borrow::query_quote::<Lpn>(&self.deps, &self.env, quote)?)
-            }
-            QueryMsg::Loan { lease_addr } => {
-                to_json_binary(&borrow::query_loan::<Lpn>(self.deps.storage, lease_addr)?)
-            }
-            QueryMsg::LppBalance() => {
-                to_json_binary(&rewards::query_lpp_balance::<Lpn>(self.deps, self.env)?)
-            }
-            QueryMsg::Price() => {
-                to_json_binary(&lender::query_ntoken_price::<Lpn>(self.deps, self.env)?)
-            }
-            QueryMsg::DepositCapacity() => {
-                to_json_binary(&lender::deposit_capacity::<Lpn>(self.deps, self.env)?)
-            }
-            _ => unreachable!("Variants should have been exhausted!"),
-        }?;
-
-        Ok(res)
-    }
-
-    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
-        (Self { deps, env, msg }).do_work::<LpnCurrency>()
-    }
-}
-
-impl<'a> AnyVisitor for QueryWithLpn<'a> {
-    type Output = Binary;
-    type Error = ContractError;
-
-    fn on<Lpn>(self) -> AnyVisitorResult<Self>
-    where
-        Lpn: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        self.do_work::<Lpn>()
-    }
-}
-
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
-        QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
-        QueryMsg::Lpn() => to_json_binary(&Config::lpn_ticker::<LpnCurrency>()).map_err(Into::into),
+        QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?),
+        QueryMsg::Lpn() => to_json_binary(&Config::lpn_ticker::<LpnCurrency>()),
         QueryMsg::Balance { address } => {
-            to_json_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
+            to_json_binary(&lender::query_balance(deps.storage, address)?)
         }
         QueryMsg::Rewards { address } => {
-            to_json_binary(&rewards::query_rewards(deps.storage, address)?).map_err(Into::into)
+            to_json_binary(&rewards::query_rewards(deps.storage, address)?)
         }
-        _ => QueryWithLpn::cmd(deps, env, msg),
+        QueryMsg::Quote { amount } => {
+            let quote = amount.try_into()?;
+
+            to_json_binary(&borrow::query_quote::<LpnCurrency>(&deps, &env, quote)?)
+        }
+        QueryMsg::Loan { lease_addr } => to_json_binary(&borrow::query_loan::<LpnCurrency>(
+            deps.storage,
+            lease_addr,
+        )?),
+        QueryMsg::LppBalance() => {
+            to_json_binary(&rewards::query_lpp_balance::<LpnCurrency>(deps, env)?)
+        }
+        QueryMsg::Price() => to_json_binary(&lender::query_ntoken_price::<LpnCurrency>(deps, env)?),
+        QueryMsg::DepositCapacity() => {
+            to_json_binary(&lender::deposit_capacity::<LpnCurrency>(deps, env)?)
+        }
     }
+    .map_err(Into::into)
 }

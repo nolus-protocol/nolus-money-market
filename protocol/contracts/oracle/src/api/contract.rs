@@ -97,6 +97,7 @@ pub enum QueryMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Config {
+    // TODO get rid of it since it knows, at compile time, the Lpn currency
     pub base_asset: SymbolOwned,
     pub price_config: PriceConfig,
 }
