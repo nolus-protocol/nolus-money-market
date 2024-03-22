@@ -105,7 +105,6 @@ impl<'a> ExecuteWithLpn<'a> {
     where
         Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
-        // currency context variants
         match self.msg {
             ExecuteMsg::OpenLoan { amount } => amount
                 .try_into()
@@ -153,9 +152,7 @@ impl<'a> ExecuteWithLpn<'a> {
             msg,
         };
 
-        let config = Config::load(context.deps.storage)?;
-
-        Tickers.visit_any::<LpnCurrencies, _>(config.lpn_ticker(), context)
+        context.do_work::<LpnCurrency>()
     }
 }
 
@@ -230,7 +227,6 @@ impl<'a> QueryWithLpn<'a> {
     where
         Lpn: 'static + Currency + Serialize + DeserializeOwned,
     {
-        // currency context variants
         let res = match self.msg {
             QueryMsg::Quote { amount } => {
                 let quote = amount.try_into()?;
@@ -256,11 +252,7 @@ impl<'a> QueryWithLpn<'a> {
     }
 
     pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
-        let context = Self { deps, env, msg };
-
-        let config = Config::load(context.deps.storage)?;
-
-        Tickers.visit_any::<LpnCurrencies, _>(config.lpn_ticker(), context)
+        (Self { deps, env, msg }).do_work::<LpnCurrency>()
     }
 }
 
@@ -280,7 +272,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?).map_err(Into::into),
-        QueryMsg::Lpn() => to_json_binary(&LpnCurrency::TICKER).map_err(Into::into),
+        QueryMsg::Lpn() => to_json_binary(&Config::lpn_ticker::<LpnCurrency>()).map_err(Into::into),
         QueryMsg::Balance { address } => {
             to_json_binary(&lender::query_balance(deps.storage, address)?).map_err(Into::into)
         }

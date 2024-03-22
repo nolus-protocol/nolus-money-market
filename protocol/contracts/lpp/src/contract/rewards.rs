@@ -110,7 +110,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            Config::new_unchecked::<TheCurrency>(
+            Config::new_unchecked(
                 Code::unchecked(1000u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,

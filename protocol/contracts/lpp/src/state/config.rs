@@ -2,7 +2,7 @@ use std::mem;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::Currency;
+use currency::{Currency, SymbolSlice};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
@@ -16,9 +16,6 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
-    lpn_ticker: String,
-    #[serde(alias = "lease_code_id")]
-    // TODO remove the alias once a new release with this change is deployed
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: BoundToHundredPercent,
@@ -31,9 +28,8 @@ impl Config {
     where
         Lpn: Currency,
     {
-        if msg.lpn_ticker == Lpn::TICKER {
+        if msg.lpn_ticker == Self::lpn_ticker::<Lpn>() {
             Ok(Self {
-                lpn_ticker: msg.lpn_ticker,
                 lease_code,
                 borrow_rate: msg.borrow_rate,
                 min_utilization: msg.min_utilization,
@@ -46,24 +42,23 @@ impl Config {
     }
 
     #[cfg(test)]
-    pub fn new_unchecked<Lpn>(
+    pub fn new_unchecked(
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
-    ) -> Self
-    where
-        Lpn: Currency,
-    {
+    ) -> Self {
         Self {
-            lpn_ticker: Lpn::TICKER.into(),
             lease_code,
             borrow_rate,
             min_utilization,
         }
     }
 
-    pub fn lpn_ticker(&self) -> &str {
-        &self.lpn_ticker
+    pub fn lpn_ticker<Lpn>() -> &'static SymbolSlice
+    where
+        Lpn: Currency,
+    {
+        Lpn::TICKER
     }
 
     pub const fn lease_code(&self) -> Code {

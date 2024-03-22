@@ -354,7 +354,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -393,7 +393,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -475,7 +475,7 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -572,7 +572,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -605,7 +605,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -638,7 +638,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -693,7 +693,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -745,7 +745,7 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new_unchecked::<TheCurrency>(
+        Config::new_unchecked(
             lease_code_id,
             InterestRate::new(
                 BASE_INTEREST_RATE,
@@ -921,7 +921,7 @@ mod test {
                 .unwrap();
 
             let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
-                config: Config::new_unchecked::<TheCurrency>(
+                config: Config::new_unchecked(
                     Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),
