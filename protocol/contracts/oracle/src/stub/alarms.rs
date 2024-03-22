@@ -12,8 +12,8 @@ use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
 pub trait PriceAlarms<AlarmCurrencies, BaseCurrency>
 where
-    BaseCurrency: Currency,
     AlarmCurrencies: Group,
+    BaseCurrency: Currency,
     Self: Into<Batch> + Sized,
 {
     type BaseC;
@@ -23,21 +23,21 @@ where
 }
 
 pub trait AsAlarms {
-    fn as_alarms<OracleBase, AlarmCurrencies>(
+    fn as_alarms<AlarmCurrencies, OracleBase>(
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency,
-        AlarmCurrencies: Group;
+        AlarmCurrencies: Group,
+        OracleBase: Currency;
 }
 
 impl AsAlarms for OracleRef {
-    fn as_alarms<OracleBase, AlarmCurrencies>(
+    fn as_alarms<AlarmCurrencies, OracleBase>(
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
     where
-        OracleBase: Currency,
         AlarmCurrencies: Group,
+        OracleBase: Currency,
     {
         self.check_base::<OracleBase>();
 
@@ -59,11 +59,11 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     }
 }
 
-impl<'a, OracleBase, AlarmCurrencies> PriceAlarms<AlarmCurrencies, OracleBase>
+impl<'a, AlarmCurrencies, OracleBase> PriceAlarms<AlarmCurrencies, OracleBase>
     for AlarmsStub<'a, OracleBase>
 where
-    OracleBase: Currency,
     AlarmCurrencies: Group,
+    OracleBase: Currency,
 {
     type BaseC = OracleBase;
     
