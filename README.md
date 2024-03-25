@@ -1,171 +1,179 @@
 # Nolus Money Market
-
-<br /><p align="center"><img alt="nolus-money-market-logo" src="docs/money-market-logo.svg" width="100"/></p><br />
-
+<p align="center">
+<img alt="nolus-money-market-logo" src="docs/money-market-logo.svg" width="100" />
+</p>
 Implementation of the core business logic as CosmWasm contracts.
 
-## Recommended user workspace
+# Prerequisites
+* OCI-compatible (Open Container Initiative) container engine, e.g. Docker CE,
+  Podman, Nerdctl, etc.  
+  For simplicity, Docker CLI will be assumed, but it can be easily aliased for
+  Podman and Nerdctl as they are CLI-compatible for the most part.
 
-### Setup
-
+# Developer setup
 1. Install the Rust Toolchain Installer
-
-    * follow the instructions on [https://rustup.rs/](https://rustup.rs/), or
-    * **[preferred]** install through your system's package manager, e.g. on ArchLinux use `sudo pacman -S rustup`
-
-2. Install the `wasm32` target
-
+   * follow the instructions on [https://rustup.rs/](https://rustup.rs/), or
+   * **[preferred]** install through your system's package manager, e.g.
+    on ArchLinux use `sudo pacman -S rustup`
+2. Install the stable Rust toolchain
    ```sh
-   rustup target install wasm32-unknown-unknown
+   rustup toolchain install --profile=default --target=wasm32-unknown-unknown stable
    ```
-
-3. Install the Rust linter
-
+3. Install the nightly Rust toolchain  
+   Selected profile is left at the developer's discretion.
    ```sh
-   rustup component add clippy
+   rustup toolchain install nightly-2024-02-05
    ```
-
-4. Install a set of handy tools
-
+4. \[Optional\] Install a set of handy tools
    ```sh
    cargo install cargo-edit cargo-workspaces cargo-expand
    ```
 
-### Build
-
-The build is controlled with a few environment variables:
-
-* `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `NET_NAME` - sets the targeted network; possible values are:
-  * `dev`
-  * `test`
-  * `main`
-* `PROTOCOL_NAME` - sets the targeted protocol
-
-#### Workspaces
-
-Th project is separated into three workspaces:
-
+# Workspaces
+The project is separated into three workspaces:
 * `platform` - Network- and protocol-agnostic contracts and packages
 * `protocol` - Network- and protocol-specific contracts and packages
-* `tests` - integration tests
+* `tests` - Blackbox integration tests
+* `tests` - Tools used within the project
 
-In the instructions below this value is stored in *WORKSPACE_DIR_NAME*.
+From now on the instructions will assume the workspace name is stored in
+`WORKSPACE_DIR_NAME`.
 
-#### A non-optimized version
+Building in the following workspaces requires setting the `RELEASE_VERSION`
+environment variable:
+* `platform/contracts`
+* `protocol/contracts`
+* `tests`
+* And possibly packages from `*/packages` subdirectories which might be
+  referencing contracts directly or indirectly.
 
-The command below builds a contract if ran from the contract directory,
-or builds the contracts of the workspace from within which it is ran:
+The `RELEASE_VERSION` environment variable gives the built contracts an
+arbitrary string by which the pack of contracts is distinguished from others.
 
-```sh
-RELEASE_VERSION='dev-release' NET_NAME='dev' PROTOCOL_NAME='osmosis-osmosis-usdc_axelar' cargo build --features "net_${$NET_NAME},${PROTOCOL_NAME}" --target=wasm32-unknown-unknown
-```
-
-One way to avoid having to set those environment variables is to
-set them in the editor/IDE's configuration.
-
-An example one for VSCode/VSCodium, located at `.vscode/settings.json`, is shown here:
-
+## \[Optional\] Additional developer setup
+One way to avoid having to set the environment variables is to set it in the
+editor/IDE's configuration.  
+An example one for VSCode/VSCodium, located at `.vscode/settings.json`,
+is shown here:
 ```json
 {
   "rust-analyzer.cargo.extraEnv": {
-    "RELEASE_VERSION": "local",
+    "RELEASE_VERSION": "dev"
   },
   "terminal.integrated.env.linux": {
-    "RELEASE_VERSION": "local",
+    "RELEASE_VERSION": "dev"
   },
   "terminal.integrated.env.osx": {
-    "RELEASE_VERSION": "local",
+    "RELEASE_VERSION": "dev"
   },
   "terminal.integrated.env.windows": {
-    "RELEASE_VERSION": "local",
-  },
+    "RELEASE_VERSION": "dev"
+  }
 }
 ```
 
-#### An optimized version
+# Development
+## Required project tooling
+* `crates.io/crates/cargo-audit`
+  * Used for auditing dependencies.
+  * Installation: `cargo install cargo-audit`
+* `crates.io/crates/cargo-udeps`
+  * Used for checking for unused dependencies.
+  * Installation: `cargo install cargo-udeps`
+* `crates.io/crates/cosmwasm-check`
+  * Used for checking compiled WebAssembly binary artifacts.
+  * Installation: `cargo install cosmwasm-check`
+* `./tools/cargo-each`
+  * Used for proxying commands, both `cargo` subcommands and external ones.
+  * Installation: `cargo install --path ./tools/cargo-each`
 
-##### Container image
-
-First, the image for building the contracts needs to be built. This happens by
-running the command shown here:
-
-```sh
-docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.75"
-```
-
-Do note that the command is an example one and the Rust version, denoted by the
-`rust_ver` build argument, should match the one set in the `rust-toolchain.toml`
-file, located at the root of the project!
-
-##### Running container image
-
-The command shown below builds an optimized and verifiable version of
-each set of contracts, depending on their workspace (indicated by
-`WORKSPACE_DIR_NAME`), the targeted protocol (indicated by `PROTOCOL`) and targeted network
-(indicated by `NET`):
-
-* ```sh
-  export WORKSPACE_DIR_NAME='platform'
-  ```
-
-  OR
-
+## Development
+During development, to run checks & the linter, the following templates should
+be used:
+* Basic version
   ```sh
-  export WORKSPACE_DIR_NAME='protocol'
+  cargo -- each --manifest-path "./${WORKSPACE_DIR_NAME}/Cargo.toml" run --tag ci -- <...>
   ```
-
-* ```sh
-  export NET='dev'
-  export PROTOCOL='osmosis-osmosis-usdc_axelar'
-  export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
-  ```
-
+* Shorthand version:
   ```sh
-  mkdir -p "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/" && \
-    docker run --rm -v "$(pwd)/platform/:/platform/:ro" \
-    -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/:ro" \
-    -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/:rw" \
-    --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-    --env "features=contract$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)" \
-    wasm-optimizer
+  cargo each --manifest-path "./${WORKSPACE_DIR_NAME}/Cargo.toml" run -t ci -- <...>
+  ```
+* Version printing the command to be executed:
+  ```sh
+  cargo each --manifest-path "./${WORKSPACE_DIR_NAME}/Cargo.toml" run --tag ci --print-command -- <...>
+  ```
+* Version executing non-Cargo command:
+  ```sh
+  cargo each --manifest-path "./${WORKSPACE_DIR_NAME}/Cargo.toml" run --external-command --tag ci -- <...>
   ```
 
-**NOTE:** As one might set those environment variables in the settings
-of their editor/IDE, those environment variables still must be provided
-as arguments to the `docker run` command.
-Exception to this should be the `platform` workspace, as it strives to
-be agnostic to the targeted network and protocol.
+These templates can be mixed in order to get the desired combination of
+features. `<...>` is left as a placeholder for the actual command.
 
-**NOTE:** Builds are reproducable *as long as* all environment variables
-passed to the container are the exact same. If it is desired to build
-a verification copy of the contracts, one must set the `RELEASE_VERSION`
-environment variable to the one used to build the original instead.
+Valid replacements for the `<...>` placeholder are:
+* `check`
+  * Runs `cargo check` with each configured features combination.
+* `./lint.sh --profile "${PROFILE}" --not-as-workspace`
+  * `--external-command` has to be set
+  * Runs the linter with each configured features combination while also setting
+  which profile, chosen through the `PROFILE` environment variable, should be
+  used.
+* `test`
+  * Runs `cargo test` with each configured features combination.
 
-### Test
-
-Run the following in a package directory or any workspace.
-
+# Release
+## Builder-&-optimizer container image
+To build the container image the following command should be used:
 ```sh
-cargo test --features "net_${NET},${PROTOCOL}" --all-targets
+docker build --pull --file "Containerfile" --tag "wasm-optimizer:${RUST_VERSION}" --build-arg "rust_ver=${RUST_VERSION}" .
 ```
 
-### Lint
+In the command, the desired version of the [`docker.io/library/rust`](https://hub.docker.com/_/rust) image
+is set via the `RUST_VERSION` environment variable. It can be substituted with
+`latest`.  
+Instructions from here on will reference that environment variable.
 
-Run the following in the `platform` workspace.
+## Running the container
+Running the container requires binding the target workspace as `/code/` within
+the container itself.  
+When the target workspace is `./protocol`, `./platform` needs to be bound to the
+container too, under `/platform/`.
 
+The output produced by the container is stored under a path declared as a
+volume. That means that when not bound, the container engine will create an
+anonymous one.  
+While it is possible to copy the artifacts out of the volume later, it is
+recommended that a well-known volume or a host directory is bound.  
+Instructions from now on will assume that a host directory shall be bound.
+
+Due to the nature of the container engines, the output artifacts directory has
+to be created before running the container. It can be any arbitrary directory of
+the user's choosing.
+
+**BEWARE:** The output artifacts directory is always cleaned before starting the
+compilation of the contracts. Make sure to always use a different directory for
+the different targets, if keeping the ones already existing in the directory is
+required.
+
+As noted before, the `RELEASE_VERSION` environment variable is required in order
+to proceed with the compilation. Automated release builds will use the output of
+Git's `describe` command and concatenate it with the current date and time, with
+precision in minutes, as follows: `$(git describe)-$(date -Iminute)`.
+
+The container is created with the following command:
 ```sh
-./lint.sh
+docker container create --volume "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/:ro" --volume "${ARTIFACTS_SUBDIR}/:/artifacts/:rw" --env "RELEASE_VERSION=${RELEASE_VERSION}" "wasm-optimizer:${RUST_VERSION}"
 ```
+As noted before, when the target workspace is `./protocol`, `./platform` needs to
+also be bound. This happens by adding an additional `--volume` flag as
+follows:  
+`--volume "$(pwd)/platform/:/platform/:ro"`
 
-Run the following in the `protocol` and `tests` workspaces.
+Additionally, a name can be specified via adding the `--name` flag followed by
+the chosen name.
 
-```sh
-./lint.sh "net_${NET},${PROTOCOL}"
-```
-
-### New contracts - genesis
-
+# Managing contracts
+## New contracts - genesis
 Contract addresses are dependent on the order in which they are deployed in the script.
 
 When adding a new contract, and it needs to be deployed with the genesis:
@@ -286,12 +294,12 @@ cargo upgrade --workspace cw-storage-plus
 
 [Ref](https://github.com/CosmWasm/rust-optimizer#mono-repos)
 
-### VSCode
+### VSCode/VSCodium
 
 Add Rust support by installing `rust-analyzer` extension
 
 1. Press `Ctrl+Shift+P`
-2. Execute `ext install matklad.rust-analyzer`
+2. Execute `ext install rust-lang.rust-analyzer`
 
 Add syntax highlighting for TOML files
 
