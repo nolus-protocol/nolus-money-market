@@ -1,9 +1,11 @@
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
+use serde::{Deserialize, Serialize};
 
-use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
+use dex::{Account, ConnectionParams, Contract, DexConnectable, IcaConnectee};
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+
+use crate::msg::ConfigResponse;
 
 use super::{idle::Idle, Config, ConfigManagement, IcaConnector, State};
 
@@ -14,9 +16,6 @@ pub(super) struct OpenIca {
 }
 
 impl OpenIca {
-    const QUERY_ERROR: &'static str =
-        "Configuration querying is not supported while opening interchain account!";
-
     pub fn new(config: Config, connection: ConnectionParams) -> Self {
         Self {
             config,
@@ -40,14 +39,20 @@ impl DexConnectable for OpenIca {
     }
 }
 
+impl Contract for OpenIca {
+    type StateResponse = ConfigResponse;
+
+    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> Self::StateResponse {
+        ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        }
+    }
+}
+
 impl Display for OpenIca {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("Idle"))
     }
 }
 
-impl ConfigManagement for IcaConnector {
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::unsupported_operation(OpenIca::QUERY_ERROR))
-    }
-}
+impl ConfigManagement for IcaConnector {}

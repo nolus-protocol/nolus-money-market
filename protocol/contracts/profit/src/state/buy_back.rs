@@ -5,20 +5,19 @@ use serde::{Deserialize, Serialize};
 use currencies::{Native, Nls, PaymentGroup};
 use currency::{Currency, SymbolSlice};
 use dex::{
-    Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
-    SwapTask,
+    Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
+    StateLocalOut, SwapTask,
 };
 use finance::coin::{Coin, CoinDTO};
 use oracle_platform::OracleRef;
 use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
-    never::Never,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
+use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
     idle::Idle,
@@ -35,9 +34,6 @@ pub(super) struct BuyBack {
 }
 
 impl BuyBack {
-    const QUERY_ERROR: &'static str =
-        "Configuration querying is not supported while performing buy back!";
-
     /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
     /// is closed, best action is to verify the pinkie-promise
     /// to not pass in [native currencies](Native) via a debug
@@ -69,7 +65,7 @@ impl BuyBack {
 impl SwapTask for BuyBack {
     type OutG = Native;
     type Label = String;
-    type StateResponse = Never;
+    type StateResponse = ConfigResponse;
     type Result = ContractResult<DexResponse<State>>;
 
     fn label(&self) -> Self::Label {
@@ -137,6 +133,16 @@ impl SwapTask for BuyBack {
     }
 }
 
+impl<DexState> ContractInSwap<DexState> for BuyBack {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> <Self as SwapTask>::StateResponse {
+        ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        }
+    }
+}
+
 impl ConfigManagement
     for StateLocalOut<
         BuyBack,
@@ -146,9 +152,6 @@ impl ConfigManagement
         ForwardToDexEntryContinue,
     >
 {
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Err(ContractError::unsupported_operation(BuyBack::QUERY_ERROR))
-    }
 }
 
 trait TryFind

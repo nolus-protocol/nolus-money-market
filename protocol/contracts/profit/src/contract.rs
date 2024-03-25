@@ -209,9 +209,13 @@ where
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_json_binary(&Profit::query_config(deps.storage)?),
+        QueryMsg::Config {} => to_json_binary(&Profit::query_config(
+            deps.storage,
+            env.block.time,
+            deps.querier,
+        )?),
     }
     .map_err(Into::into)
 }
