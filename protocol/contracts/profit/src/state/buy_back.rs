@@ -3,7 +3,7 @@ use std::slice::Iter as SliceIter;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
-use currency::{never::Never, Currency, SymbolSlice};
+use currency::{Currency, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
     StateLocalOut, SwapTask,
