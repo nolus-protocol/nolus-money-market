@@ -171,15 +171,19 @@ impl SwapTask for BuyAsset {
     }
 }
 
-impl ContractInSwap<TransferOutState, BuyAssetStateResponse> for BuyAsset {
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> BuyAssetStateResponse {
+impl ContractInSwap<TransferOutState> for BuyAsset {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
         self.state(in_progress_fn)
     }
 }
 
-impl ContractInSwap<SwapState, BuyAssetStateResponse> for BuyAsset {
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> BuyAssetStateResponse {
+impl ContractInSwap<SwapState> for BuyAsset {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
         self.state(in_progress_fn)
     }

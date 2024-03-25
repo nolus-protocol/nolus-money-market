@@ -203,7 +203,8 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Contract
     for TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: ContractInSwap<TransferOutState, <SwapTask as SwapTaskT>::StateResponse> + SwapTaskT,
+    SwapTask: SwapTaskT
+        + ContractInSwap<TransferOutState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 

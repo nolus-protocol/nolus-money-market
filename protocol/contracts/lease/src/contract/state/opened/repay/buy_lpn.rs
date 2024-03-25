@@ -50,8 +50,6 @@ pub(in crate::contract::state) fn start(lease: Lease, payment: PaymentCoin) -> S
     dex::start_local_local(BuyLpn::new(lease, payment))
 }
 
-type BuyLpnStateResponse = <BuyLpn as SwapTask>::StateResponse;
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct BuyLpn {
     lease: Lease,
@@ -121,11 +119,13 @@ impl SwapTask for BuyLpn {
     }
 }
 
-impl<DexState> ContractInSwap<DexState, BuyLpnStateResponse> for BuyLpn
+impl<DexState> ContractInSwap<DexState> for BuyLpn
 where
     DexState: InProgressTrx,
 {
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> BuyLpnStateResponse {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.query(DexState::trx_in_progress(), now, querier)
     }
 }

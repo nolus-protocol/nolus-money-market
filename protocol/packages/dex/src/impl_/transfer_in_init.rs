@@ -157,8 +157,8 @@ where
 
 impl<SwapTask, SEnum> Contract for TransferInInit<SwapTask, SEnum>
 where
-    SwapTask:
-        SwapTaskT + ContractInSwap<TransferInInitState, <SwapTask as SwapTaskT>::StateResponse>,
+    SwapTask: SwapTaskT
+        + ContractInSwap<TransferInInitState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
