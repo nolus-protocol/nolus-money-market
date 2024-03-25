@@ -12,7 +12,7 @@ use lease::api::{
     open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
     LpnCoinDTO,
 };
-use platform::contract::Code;
+use platform::contract::{Code, CodeId};
 
 use sdk::{
     cosmwasm_std::{
@@ -45,7 +45,7 @@ const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
-        lease_code,
+        lease_code: CodeId::from(lease_code).into(),
         lpp,
         profit: Addr::unchecked(PROFIT_ADDR),
         reserve: Addr::unchecked(RESERVE_ADDR),

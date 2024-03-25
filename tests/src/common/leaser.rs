@@ -11,7 +11,7 @@ use leaser::{
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
     query, reply, sudo,
 };
-use platform::contract::Code;
+use platform::contract::{Code, CodeId};
 use sdk::cosmwasm_std::Addr;
 
 use super::{
@@ -81,7 +81,7 @@ impl Instantiator {
         let code_id = app.store_code(Box::new(endpoints));
 
         let msg = InstantiateMsg {
-            lease_code,
+            lease_code: CodeId::from(lease_code).into(),
             lpp,
             profit,
             reserve,

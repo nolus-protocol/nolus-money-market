@@ -1,4 +1,3 @@
-use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolOwned;
@@ -18,7 +17,7 @@ pub use crate::state::config::Config;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lease_code: Code,
+    pub lease_code: Uint64,
     pub lpp: Addr,
     pub profit: Addr,
     pub reserve: Addr,
