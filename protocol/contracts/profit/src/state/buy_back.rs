@@ -3,7 +3,7 @@ use std::slice::Iter as SliceIter;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
-use currency::{Currency, SymbolSlice};
+use currency::{never::Never, Currency, SymbolSlice};
 use dex::{
     Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
     StateLocalOut, SwapTask,
@@ -180,9 +180,9 @@ mod tests {
         test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC},
         PaymentGroup,
     };
+    use currency::never::Never;
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
-    use platform::never::Never;
 
     use super::BuyBack;
 

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currencies::PaymentGroup;
 use currency::{
+    never::{self, Never},
     AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
@@ -184,7 +185,7 @@ where
                         ),
                     )
                 })
-                .map(platform::never::safe_unwrap)
+                .map(never::safe_unwrap)
             {
                 currency
             } else {
@@ -216,7 +217,7 @@ struct CurrencyVisitor(api::CurrencyGroup);
 impl AnyVisitor for CurrencyVisitor {
     type Output = api::Currency;
 
-    type Error = platform::never::Never;
+    type Error = Never;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
