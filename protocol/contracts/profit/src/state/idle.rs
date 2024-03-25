@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, Group};
 use dex::{
-    Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
-    StartLocalLocalState,
+    Account, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as DexResult, StartLocalLocalState,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
@@ -130,6 +130,16 @@ impl Enterable for Idle {
     }
 }
 
+impl Contract for Idle {
+    type StateResponse = ConfigResponse;
+
+    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> Self::StateResponse {
+        ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        }
+    }
+}
+
 impl ConfigManagement for Idle {
     fn try_update_config(
         self,
@@ -145,12 +155,6 @@ impl ConfigManagement for Idle {
                 next_state: Self { config, ..self },
             })
             .map_err(Into::into)
-    }
-
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        Ok(ConfigResponse {
-            cadence_hours: self.config.cadence_hours(),
-        })
     }
 }
 

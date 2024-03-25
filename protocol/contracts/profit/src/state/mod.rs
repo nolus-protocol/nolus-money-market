@@ -4,8 +4,8 @@ use currencies::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
-    StateLocalOut,
+    ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
+    Result as DexResult, StateLocalOut,
 };
 use platform::{
     batch::Batch,
@@ -54,8 +54,6 @@ where
             "Configuration changes are not allowed in this state!",
         ))
     }
-
-    fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -94,14 +92,6 @@ impl ConfigManagement for State {
             StateEnum::BuyBack(buy_back) => buy_back
                 .try_update_config(now, cadence_hours)
                 .map(state_machine::from),
-        }
-    }
-
-    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
-        match &self.0 {
-            StateEnum::OpenIca(ica) => ica.try_query_config(),
-            StateEnum::Idle(idle) => idle.try_query_config(),
-            StateEnum::BuyBack(buy_back) => buy_back.try_query_config(),
         }
     }
 }
@@ -157,6 +147,18 @@ impl
         >,
     ) -> Self {
         Self(StateEnum::BuyBack(value))
+    }
+}
+
+impl Contract for State {
+    type StateResponse = ConfigResponse;
+
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
+        match self.0 {
+            StateEnum::OpenIca(open_ica) => open_ica.state(now, querier),
+            StateEnum::Idle(idle) => idle.state(now, querier),
+            StateEnum::BuyBack(buy_back) => buy_back.state(now, querier),
+        }
     }
 }
 

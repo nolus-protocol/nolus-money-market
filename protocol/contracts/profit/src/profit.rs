@@ -1,17 +1,14 @@
 use currencies::Nls;
+use dex::Contract;
 use finance::coin::Coin;
 use platform::{
     bank::BankAccount,
     batch::{Emit as _, Emitter},
     message::Response as PlatformResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, Storage};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
 
-use crate::{
-    msg::ConfigResponse,
-    result::ContractResult,
-    state::{ConfigManagement as _, State},
-};
+use crate::{msg::ConfigResponse, result::ContractResult, state::State};
 
 pub struct Profit;
 
@@ -43,7 +40,11 @@ impl Profit {
         }
     }
 
-    pub fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
-        State::load(storage).and_then(|state: State| state.try_query_config())
+    pub fn query_config(
+        storage: &dyn Storage,
+        now: Timestamp,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<ConfigResponse> {
+        State::load(storage).map(|state: State| state.state(now, querier))
     }
 }
