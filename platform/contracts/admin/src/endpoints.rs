@@ -46,11 +46,13 @@ pub fn instantiate(
     state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
 }
 
+#[cfg(feature = "migrate")]
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
     env: Env,
     MigrateMsg {
+        reserve_contracts,
         migrate_contracts:
             MigrateContracts {
                 release,
@@ -62,6 +64,9 @@ pub fn migrate(
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
         |reported_label| {
             check_release_label(reported_label.clone(), release.clone())
+                .and_then(|()| {
+                    crate::state::migrate(deps.storage, deps.api, deps.querier, reserve_contracts)
+                })
                 .and_then(|()| {
                     crate::contracts::migrate(
                         deps.storage,

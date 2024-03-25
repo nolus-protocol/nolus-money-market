@@ -1,3 +1,6 @@
+#[cfg(feature = "migrate")]
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use platform::contract::CodeId;
@@ -19,9 +22,11 @@ pub struct InstantiateMsg {
     pub contracts: ContractsGroupedByProtocol,
 }
 
+#[cfg(feature = "migrate")]
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateMsg {
+    pub reserve_contracts: BTreeMap<String, String>,
     pub migrate_contracts: MigrateContracts,
 }
 
