@@ -769,13 +769,18 @@ mod impl_contract {
         for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         SwapTask: SwapTaskT
-            + ContractInSwap<TransferOutState, <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<SwapState, <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<TransferInInitState, <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<TransferInFinishState, <SwapTask as SwapTaskT>::StateResponse>,
+            + ContractInSwap<TransferOutState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>
+            + ContractInSwap<SwapState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>
+            + ContractInSwap<
+                TransferInInitState,
+                StateResponse = <SwapTask as SwapTaskT>::StateResponse,
+            > + ContractInSwap<
+                TransferInFinishState,
+                StateResponse = <SwapTask as SwapTaskT>::StateResponse,
+            >,
         ForwardToInnerMsg: ForwardToInner,
     {
-        type StateResponse = SwapTask::StateResponse;
+        type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
         fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
             match self {

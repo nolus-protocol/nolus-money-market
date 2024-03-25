@@ -294,7 +294,8 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Contract
     for SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: ContractInSwap<SwapState, <SwapTask as SwapTaskT>::StateResponse> + SwapTaskT,
+    SwapTask: SwapTaskT
+        + ContractInSwap<SwapState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 

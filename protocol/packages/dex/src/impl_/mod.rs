@@ -118,11 +118,13 @@ pub struct TransferInFinishState {}
 /// Contract in a swap state
 ///
 /// The states are `TransferOutState`, `SwapState`, `TransferInInitState`, and `TransferInFinishState`
-pub trait ContractInSwap<State, StateResponse>
+pub trait ContractInSwap<State>
 where
     Self: Sized,
 {
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> StateResponse;
+    type StateResponse;
+
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse;
 }
 
 /// The message that the integrating module should propagate to `Handler::on_inner`

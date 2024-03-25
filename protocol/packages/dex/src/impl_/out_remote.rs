@@ -670,12 +670,12 @@ mod impl_contract {
             ForwardToInnerContinueMsg,
         >
     where
-        OpenIca: Contract<StateResponse = SwapTask::StateResponse>,
-        SwapTask: SwapTaskT
-            + ContractInSwap<TransferOutState, <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<SwapState, <SwapTask as SwapTaskT>::StateResponse>,
+        OpenIca: Contract,
+        SwapTask: SwapTaskT<StateResponse = OpenIca::StateResponse>
+            + ContractInSwap<TransferOutState, StateResponse = OpenIca::StateResponse>
+            + ContractInSwap<SwapState, StateResponse = OpenIca::StateResponse>,
     {
-        type StateResponse = SwapTask::StateResponse;
+        type StateResponse = OpenIca::StateResponse;
 
         fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
             match self {
