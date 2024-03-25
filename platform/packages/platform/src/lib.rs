@@ -8,7 +8,6 @@ mod emit;
 pub mod error;
 pub mod ica;
 pub mod message;
-pub mod never;
 pub mod reply;
 pub mod response;
 pub mod result;

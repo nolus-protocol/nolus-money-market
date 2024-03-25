@@ -20,6 +20,7 @@ mod from_symbol;
 mod from_symbol_any;
 mod group;
 mod matcher;
+pub mod never;
 mod nls;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;

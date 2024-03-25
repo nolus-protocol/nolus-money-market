@@ -6,12 +6,14 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::Group;
+use currency::{
+    never::{self, Never},
+    Group,
+};
 use finance::{coin::CoinDTO, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
     message::Response as MessageResponse,
-    never::{self, Never},
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 

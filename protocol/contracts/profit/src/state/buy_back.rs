@@ -180,9 +180,9 @@ mod tests {
         test::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC},
         PaymentGroup,
     };
+    use currency::never::Never;
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
-    use platform::never::Never;
 
     use super::BuyBack;
 

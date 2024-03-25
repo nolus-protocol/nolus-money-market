@@ -36,12 +36,12 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
+        never::{self, Never},
         test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1},
         Group,
     };
 
     use finance::coin::{Amount, Coin, CoinDTO};
-    use platform::never::{self, Never};
 
     use crate::impl_::swap_task::{CoinVisitor, IterNext, IterState};
 
