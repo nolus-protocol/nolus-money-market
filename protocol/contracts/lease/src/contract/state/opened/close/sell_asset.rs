@@ -26,8 +26,6 @@ use crate::{
 
 use super::Closable;
 
-type SellAssetStateResponse<RepayableT> = <SellAsset<RepayableT> as SwapTask>::StateResponse;
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset<RepayableT> {
     lease: Lease,
@@ -102,17 +100,14 @@ where
     }
 }
 
-impl<DexState, RepayableT> ContractInSwap<DexState, SellAssetStateResponse<RepayableT>>
-    for SellAsset<RepayableT>
+impl<DexState, RepayableT> ContractInSwap<DexState> for SellAsset<RepayableT>
 where
     DexState: InProgressTrx,
     RepayableT: Closable + Repayable,
 {
-    fn state(
-        self,
-        now: Timestamp,
-        querier: QuerierWrapper<'_>,
-    ) -> SellAssetStateResponse<RepayableT> {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.query(DexState::trx_in_progress(), now, querier)
     }
 }

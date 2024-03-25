@@ -57,8 +57,6 @@ pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
     StartState::new(transfer, amount_in)
 }
 
-type TransferInState = <TransferIn as SwapTask>::StateResponse;
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct TransferIn {
     lease: Lease,
@@ -144,11 +142,13 @@ impl SwapTask for TransferIn {
     }
 }
 
-impl<DexState> ContractInSwap<DexState, TransferInState> for TransferIn
+impl<DexState> ContractInSwap<DexState> for TransferIn
 where
     DexState: InProgressTrx,
 {
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> TransferInState {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
         self.state(DexState::trx_in_progress())
     }
 }
