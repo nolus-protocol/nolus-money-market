@@ -28,11 +28,6 @@ where
     type Error = Error;
 
     fn try_from(value: BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
-        let res = Self {
-            amount: value.amount,
-            amount_quote: value.amount_quote,
-        };
-        res.invariant_held()?;
-        Ok(res)
+        ValidatedBasePrice::new_checked(value.amount, value.amount_quote)
     }
 }

@@ -34,11 +34,13 @@ where
     BaseG: Group,
     QuoteC: ?Sized,
 {
-    fn new(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
-        let res: Self = Self {
-            amount,
-            amount_quote,
-        };
+    fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
+        let res = Self::new_raw(amount, amount_quote);
+        res.invariant_held().map(|_| res)
+    }
+
+    fn new_unchecked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
+        let res = Self::new_raw(amount, amount_quote);
 
         debug_assert_eq!(Ok(()), res.invariant_held());
         res
@@ -54,6 +56,13 @@ where
 
     pub(crate) fn amount_quote(&self) -> Coin<QuoteC> {
         self.amount_quote
+    }
+
+    fn new_raw(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
+        Self {
+            amount,
+            amount_quote,
+        }
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
@@ -77,7 +86,7 @@ where
     QuoteC: Currency,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
-        Self::new(price.amount.into(), price.amount_quote)
+        Self::new_unchecked(price.amount.into(), price.amount_quote)
     }
 }
 
@@ -90,7 +99,10 @@ where
     type Error = Error;
 
     fn try_from(value: &BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
-        Ok(super::total_of((&value.amount).try_into()?).is(value.amount_quote))
+        (&value.amount)
+            .try_into()
+            .map(|amount| super::total_of(amount).is(value.amount_quote))
+            .map_err(Into::into)
     }
 }
 
@@ -158,7 +170,7 @@ mod test_invariant {
         new_invalid(
             Coin::<SuperGroupTestC1>::new(0),
             Coin::<SuperGroupTestC2>::new(3),
-        );
+        )
     }
 
     #[test]
@@ -201,7 +213,9 @@ mod test_invariant {
         BaseC: Currency,
         QuoteC: Currency,
     {
-        let _base_price = BasePrice::<SuperGroup, QuoteC>::new(amount.into(), amount_quote);
+        let _base_price: BasePrice<SuperGroup, QuoteC> =
+            BasePrice::new_unchecked(amount.into(), amount_quote);
+
         #[cfg(not(debug_assertions))]
         {
             _base_price
