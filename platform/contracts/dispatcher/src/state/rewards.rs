@@ -39,14 +39,10 @@ mod test {
     fn calculate_ok() {
         let apr = Percent::from_percent(20);
         let period = Duration::from_days(1);
-        let lpp_tvls: Vec<Coin<Usd>> = vec![25_000.into(), 8_000.into()];
-        let oracles = vec![DummyOracle::with_price(2), DummyOracle::with_price(3)];
+        let lpp_tvls = [Coin::<Usd>::new(25_000), 8_000.into()];
+        let oracles = [DummyOracle::with_price(2), DummyOracle::with_price(3)];
 
-        let mut rewards = super::calculate(
-            apr,
-            period,
-            lpp_tvls.clone().into_iter().zip(oracles.iter()),
-        );
+        let mut rewards = super::calculate(apr, period, lpp_tvls.into_iter().zip(oracles.iter()));
         assert_eq!(
             Some(Ok(reward(apr, lpp_tvls[0], &oracles[0]))),
             rewards.next()
@@ -62,14 +58,10 @@ mod test {
     fn calculate_no_price() {
         let apr = Percent::from_percent(20);
         let period = Duration::from_days(1);
-        let lpp_tvls: Vec<Coin<Usd>> = vec![25_000.into(), 8_000.into()];
-        let oracles = vec![DummyOracle::with_price(2), DummyOracle::failing()];
+        let lpp_tvls = [Coin::<Usd>::new(25_000), 8_000.into()];
+        let oracles = [DummyOracle::with_price(2), DummyOracle::failing()];
 
-        let mut rewards = super::calculate(
-            apr,
-            period,
-            lpp_tvls.clone().into_iter().zip(oracles.iter()),
-        );
+        let mut rewards = super::calculate(apr, period, lpp_tvls.into_iter().zip(oracles.iter()));
         assert_eq!(
             Some(Ok(reward(apr, lpp_tvls[0], &oracles[0]))),
             rewards.next()
