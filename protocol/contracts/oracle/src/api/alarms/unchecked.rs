@@ -1,28 +1,28 @@
-use currency::Group;
-use finance::price::dto::PriceDTO;
+use currency::{Currency, Group};
+use finance::price::base::BasePrice;
 use serde::Deserialize;
 
 use super::{Alarm as ValidatedAlarm, AlarmError};
 
 /// Brings invariant checking as a step in deserializing an Alarm
 #[derive(Deserialize)]
-pub(super) struct Alarm<G, LpnG>
+pub(super) struct Alarm<G, Lpn>
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
 {
-    below: PriceDTO<G, LpnG>,
-    above: Option<PriceDTO<G, LpnG>>,
+    below: BasePrice<G, Lpn>,
+    above: Option<BasePrice<G, Lpn>>,
 }
 
-impl<G, LpnG> TryFrom<Alarm<G, LpnG>> for ValidatedAlarm<G, LpnG>
+impl<G, Lpn> TryFrom<Alarm<G, Lpn>> for ValidatedAlarm<G, Lpn>
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
 {
     type Error = AlarmError;
 
-    fn try_from(dto: Alarm<G, LpnG>) -> Result<Self, Self::Error> {
+    fn try_from(dto: Alarm<G, Lpn>) -> Result<Self, Self::Error> {
         let res = Self {
             below: dto.below,
             above: dto.above,

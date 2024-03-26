@@ -11,6 +11,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::ContractResult,
     finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
@@ -37,7 +38,8 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms::<LpnCurrency>();
+                let mut price_alarms =
+                    price_alarms.as_alarms::<LeaseAssetCurrencies, LpnCurrency>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -50,7 +52,7 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait,
+        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrency>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
@@ -70,6 +72,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use currencies::LeaseGroup;
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -133,7 +136,7 @@ mod tests {
             let below_alarm = total_of(liability_alarm_on.of(asset)).is(due.total_due());
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn> {
                     alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
@@ -191,7 +194,7 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn> {
                     alarm: Alarm::new(exp_below, Some(exp_above)),
                 })
                 .unwrap(),

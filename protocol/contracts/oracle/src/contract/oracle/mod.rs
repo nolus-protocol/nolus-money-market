@@ -165,8 +165,8 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currencies::{
-        test::{NativeC, StableC},
-        Lpns,
+        test::{NativeC, StableC as BaseCurrency},
+        Lpns as BaseGroup, PaymentGroup as AlarmCurrencies,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
@@ -185,11 +185,8 @@ mod test_normalized_price_not_found {
 
     use super::{feed::Feeds, feeder::Feeders, Oracle};
 
-    type BaseCurrency = StableC;
-    type BaseGroup = Lpns;
-
     type NlsCoin = Coin<NativeC>;
-    type UsdcCoin = Coin<StableC>;
+    type UsdcCoin = Coin<BaseCurrency>;
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
 
@@ -236,7 +233,7 @@ mod test_normalized_price_not_found {
             .unwrap();
 
         SupportedPairs::<BaseCurrency>::new(
-            swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER)).into_tree(),
+            swap_tree!({ base: BaseCurrency::TICKER }, (1, NativeC::TICKER)).into_tree(),
         )
         .unwrap()
         .save(storage)
@@ -249,9 +246,9 @@ mod test_normalized_price_not_found {
             MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, _>(
+            .try_add_price_alarm::<BaseCurrency>(
                 Addr::unchecked("1"),
-                Alarm::<_, BaseGroup>::new(
+                Alarm::<AlarmCurrencies, BaseCurrency>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
                     Some(price::total_of(PRICE_BASE).is(PRICE_QUOTE)),
                 ),
