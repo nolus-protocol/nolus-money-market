@@ -4,4 +4,5 @@
 /.dockerignore
 **/rust-toolchain
 **/rust-toolchain.toml
+**/clippy.toml
 **/rustfmt.toml
