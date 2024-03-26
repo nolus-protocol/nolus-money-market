@@ -15,11 +15,7 @@ mod unchecked;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "snake_case",
-    bound(serialize = "Alarm<G, Lpn>: Serialize")
-)]
+#[serde(deny_unknown_fields, rename_all = "snake_case", bound(serialize = ""))]
 pub enum ExecuteMsg<G, Lpn>
 where
     G: Group,
@@ -38,11 +34,7 @@ pub enum Error {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(
-    try_from = "unchecked::Alarm<G, Lpn>",
-    bound(serialize = "BasePrice<G, Lpn>: Serialize")
-)]
-/// `G` and `LpnG` should not overlap
+#[serde(try_from = "unchecked::Alarm<G, Lpn>", bound(serialize = ""))]
 pub struct Alarm<G, Lpn>
 where
     G: Group,

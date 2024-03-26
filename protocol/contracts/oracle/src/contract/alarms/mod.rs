@@ -144,7 +144,7 @@ where
         C: Currency,
     {
         self.above_or_equal
-            .map(|base_price| Price::<C, BaseC>::try_from(&base_price))
+            .map(|base_price| Price::try_from(&base_price))
             .transpose()
             .map_err(Into::into)
             .and_then(|above_or_equal: Option<Price<C, BaseC>>| {
