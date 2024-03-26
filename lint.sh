@@ -63,7 +63,11 @@ fi
 # -D warnings is set so we allow 'deprecated' lints to tolerate them
 # remove '-A deprecated' to find out if we use any
 
+# TODO discuss options about `clippy::large_enum_variant`
 # shellcheck disable=SC2086
-cargo clippy ${workspace} --profile ${profile} --all-targets --features "${features}" -- -D warnings -D future-incompatible \
+cargo clippy ${workspace} --profile ${profile} --all-targets \
+  --features "${features}" -- -D warnings -D future-incompatible \
   -D nonstandard-style -D rust-2018-compatibility -D rust-2018-idioms \
-  -D rust-2021-compatibility -D unused -D clippy::all
+  -D rust-2021-compatibility -D unused -D clippy::all \
+  -D clippy::unwrap_used -D clippy::unwrap_in_result \
+  -A clippy::large_enum_variant
