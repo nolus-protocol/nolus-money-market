@@ -133,6 +133,7 @@ pub mod testing {
 
     pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
+            #[allow(clippy::unwrap_used)]
             to_json_binary(&{
                 let mut response = ContractInfoResponse::default();
 

@@ -45,6 +45,7 @@ impl Active {
         event::emit_lease_opened(env, &self.lease.lease, loan, downpayment)
     }
 
+    #[allow(clippy::unwrap_in_result)]
     fn try_repay(
         self,
         querier: QuerierWrapper<'_>,

@@ -31,6 +31,7 @@ pub(crate) struct RequestLoan {
 }
 
 impl RequestLoan {
+    #[allow(clippy::unwrap_in_result)]
     pub fn new(
         querier: QuerierWrapper<'_>,
         info: MessageInfo,

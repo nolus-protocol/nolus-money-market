@@ -1,4 +1,5 @@
 #![cfg(all(test, not(target_arch = "wasm32")))]
+#![allow(clippy::unwrap_used)]
 
 mod common;
 mod dispatcher_tests;

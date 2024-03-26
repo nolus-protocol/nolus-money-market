@@ -32,6 +32,7 @@ impl Config {
         samples_number: u16,
         discount_factor: Percent,
     ) -> Self {
+        #[allow(clippy::unwrap_used)]
         Self::new_private(min_feeders, sample_period, samples_number, discount_factor).unwrap()
     }
 

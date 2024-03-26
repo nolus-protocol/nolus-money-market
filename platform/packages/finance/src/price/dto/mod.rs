@@ -115,6 +115,7 @@ where
     G: Group,
     QuoteG: Group,
 {
+    #[allow(clippy::unwrap_in_result)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         struct Comparator<'a, G, QuoteG>
         where
