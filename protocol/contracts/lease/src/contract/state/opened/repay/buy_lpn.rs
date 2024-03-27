@@ -46,7 +46,7 @@ pub(crate) type DexState = dex::StateLocalOut<
     ForwardToDexEntryContinue,
 >;
 
-pub(in crate::contract::state) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
+pub(in super::super) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
     dex::start_local_local(BuyLpn::new(lease, payment))
 }
 
@@ -59,6 +59,10 @@ pub(crate) struct BuyLpn {
 impl BuyLpn {
     fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
+    }
+
+    pub(super) fn migrate_to(lease: Lease, payment: PaymentCoin) -> Self {
+        Self::new(lease, payment)
     }
 
     fn query(

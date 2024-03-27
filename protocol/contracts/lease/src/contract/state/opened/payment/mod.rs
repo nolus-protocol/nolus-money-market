@@ -6,7 +6,7 @@ use crate::{
     finance::LpnCoinDTO,
 };
 
-pub(in crate::contract::state) use self::{
+pub(in super::super) use self::{
     close::{Close, CloseAlgo},
     repay::{Repay, RepayAlgo},
 };

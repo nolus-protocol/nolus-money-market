@@ -47,6 +47,8 @@ pub struct NewLeaseForm {
     pub position_spec: PositionSpecDTO,
     /// Loan parameters
     pub loan: LoanForm,
+    // TODO[all Addr contract parameters passed on opening] migrate to using their respective *Ref-s
+    // Although being external for the contract, this API is internal for the system.
     /// The Reserve contract that would cover losses
     pub reserve: Addr,
     /// The time alarms contract the lease uses to get time notifications
@@ -136,6 +138,9 @@ pub struct PositionSpecDTO {
     pub min_asset: LpnCoinDTO,
     /// The minimum amount to liquidate or close. Any attempt to liquidate a smaller
     /// amount would be postponed until the amount goes above this limit
+    // TODO remove past v0.6.0 migration. Necessary to migrate nolus1suz0vsqe8c8anckaer98awhqs8r4hu7wsm8a49acdl39x6ylfypsqywxwh and
+    // nolus15hc8hwpp79lvuwu6eyplqn8lxxetpnga7gfqh2l5wdws8p2lg72q89r37p. Query their state to make sure they have been migrated.
+    #[serde(alias = "min_sell_asset")]
     pub min_transaction: LpnCoinDTO,
 }
 

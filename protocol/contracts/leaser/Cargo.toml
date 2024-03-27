@@ -30,13 +30,13 @@ testing = ["currency/testing", "lease/testing"]
 lease = { workspace = true, features = ["skel"] }
 lpp = { workspace = true }
 oracle-platform = { workspace = true }
+reserve = { workspace = true, features = ["stub"] }
 
 access-control = { workspace = true }
 currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
-# TODO remove the testing feature once the storage migration v1 -> v2 is over
-platform = { workspace = true, features = ["testing"] }
+platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }
 
@@ -51,6 +51,7 @@ lease = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
+reserve = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

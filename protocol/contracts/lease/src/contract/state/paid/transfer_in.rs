@@ -43,7 +43,7 @@ pub(super) type StartState = StartTransferInState<
     ForwardToDexEntry,
     ForwardToDexEntryContinue,
 >;
-pub(in crate::contract::state) type DexState = dex::StateLocalOut<
+pub(in super::super) type DexState = dex::StateLocalOut<
     TransferIn,
     LeasePaymentCurrencies,
     SwapClient,
@@ -51,7 +51,7 @@ pub(in crate::contract::state) type DexState = dex::StateLocalOut<
     ForwardToDexEntryContinue,
 >;
 
-pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
+pub(in super::super) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);
     let amount_in = transfer.amount().clone();
     StartState::new(transfer, amount_in)
@@ -63,7 +63,7 @@ pub(crate) struct TransferIn {
 }
 
 impl TransferIn {
-    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
+    pub(in super::super) fn new(lease: Lease) -> Self {
         Self { lease }
     }
 

@@ -1,13 +1,14 @@
 use std::mem;
 
-use cosmwasm_std::QuerierWrapper;
+use currency::Currency;
 use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, percent::Percent};
 use lease::api::open::{ConnectionParams, PositionSpecDTO};
 use platform::contract::Code;
+use reserve::stub::Ref as ReserveRef;
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{Addr, QuerierWrapper, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -87,6 +88,16 @@ impl Config {
             })
             .map(mem::drop)
             .map_err(Into::into)
+    }
+
+    pub(crate) fn reserve<Lpn>(
+        &self,
+        querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<ReserveRef<Lpn>>
+    where
+        Lpn: Currency,
+    {
+        ReserveRef::try_new(self.reserve.clone(), querier).map_err(Into::into)
     }
 }
 

@@ -12,6 +12,7 @@ use super::{
 };
 
 pub mod buy_lpn;
+pub mod v8;
 
 pub(super) fn repay(
     lease: Lease,

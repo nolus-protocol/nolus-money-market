@@ -12,7 +12,7 @@ use super::ClosePositionTask;
 pub mod full;
 pub mod partial;
 
-pub(in crate::contract::state::opened) fn start(
+pub(in super::super) fn start(
     close: PositionClose,
     lease: Lease,
     env: &Env,
