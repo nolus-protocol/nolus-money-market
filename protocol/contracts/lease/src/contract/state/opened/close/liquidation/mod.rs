@@ -11,7 +11,7 @@ use super::ClosePositionTask;
 pub mod full;
 pub mod partial;
 
-pub(in crate::contract::state::opened) fn start(
+pub(in super::super) fn start(
     lease: Lease,
     liquidation: LiquidationDTO,
     curr_request_response: MessageResponse,

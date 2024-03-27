@@ -32,11 +32,11 @@ pub struct Active {
 }
 
 impl Active {
-    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
+    pub(in super::super) fn new(lease: Lease) -> Self {
         Self { lease }
     }
 
-    pub(in crate::contract::state) fn emit_opened(
+    pub(in super::super) fn emit_opened(
         &self,
         env: &Env,
         downpayment: DownpaymentCoin,

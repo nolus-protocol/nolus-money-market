@@ -18,7 +18,7 @@ pub struct Active {
 }
 
 impl Active {
-    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
+    pub(in super::super) fn new(lease: Lease) -> Self {
         Self { lease }
     }
 }

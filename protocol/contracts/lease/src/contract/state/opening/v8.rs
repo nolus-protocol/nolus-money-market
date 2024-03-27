@@ -32,7 +32,7 @@ use crate::{
 
 use super::{buy_asset::BuyAsset as BuyAsset_v9, open_ica::OpenIcaAccount as OpenIcaAccount_v9};
 
-pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
+pub(in super::super) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
     BuyAsset,
     LeasePaymentCurrencies,

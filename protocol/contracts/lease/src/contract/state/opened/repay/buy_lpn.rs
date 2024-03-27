@@ -46,7 +46,7 @@ pub(crate) type DexState = dex::StateLocalOut<
     ForwardToDexEntryContinue,
 >;
 
-pub(in crate::contract::state) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
+pub(in super::super) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
     dex::start_local_local(BuyLpn::new(lease, payment))
 }
 

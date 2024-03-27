@@ -40,7 +40,7 @@ use super::open_ica::OpenIcaAccount;
 
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
-pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
+pub(in super::super) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
     BuyAsset,
     LeasePaymentCurrencies,
@@ -49,7 +49,7 @@ pub(in crate::contract::state) type DexState = dex::StateRemoteOut<
     ForwardToDexEntryContinue,
 >;
 
-pub(in crate::contract::state::opening) fn start(
+pub(in super::super::opening) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,

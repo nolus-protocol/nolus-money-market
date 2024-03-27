@@ -33,7 +33,7 @@ pub(crate) struct SellAsset<RepayableT> {
 }
 
 impl<RepayableT> SellAsset<RepayableT> {
-    pub(in crate::contract::state) fn new(lease: Lease, repayable: RepayableT) -> Self {
+    pub(in super::super) fn new(lease: Lease, repayable: RepayableT) -> Self {
         Self { lease, repayable }
     }
 }

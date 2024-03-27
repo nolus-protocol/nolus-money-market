@@ -20,7 +20,7 @@ use crate::{
 };
 
 type Spec = PartialLiquidationDTO;
-pub(in crate::contract::state::opened::close) type RepayableImpl = Repay<Spec>;
+pub(in super::super) type RepayableImpl = Repay<Spec>;
 pub(crate) type Task = close::Task<RepayableImpl>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
 
