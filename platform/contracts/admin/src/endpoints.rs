@@ -22,8 +22,9 @@ use crate::{
 };
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+#[cfg(feature = "migrate")]
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -61,24 +62,25 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
-        |reported_label| {
-            check_release_label(reported_label.clone(), release.clone())
-                .and_then(|()| {
-                    crate::state::migrate(deps.storage, deps.api, deps.querier, reserve_contracts)
-                })
-                .and_then(|()| {
-                    crate::contracts::migrate(
-                        deps.storage,
-                        env.contract.address,
-                        release,
-                        migration_spec,
-                        post_migration_execute,
-                    )
-                })
-                .and_then(|messages| response::response_with_messages(reported_label, messages))
-        },
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage| crate::state::migrate(storage, deps.api, deps.querier, reserve_contracts),
+        Into::into,
     )
+    .and_then(|(reported_label, ())| {
+        check_release_label(reported_label.clone(), release.clone())
+            .and_then(|()| {
+                crate::contracts::migrate(
+                    deps.storage,
+                    env.contract.address,
+                    release,
+                    migration_spec,
+                    post_migration_execute,
+                )
+            })
+            .and_then(|messages| response::response_with_messages(reported_label, messages))
+    })
 }
 
 #[entry_point]
