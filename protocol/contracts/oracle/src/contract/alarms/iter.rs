@@ -68,6 +68,7 @@ where
             .transpose()
     }
 
+    #[allow(clippy::unwrap_in_result)]
     fn next_alarm(&mut self) -> Option<ContractResult<Addr>> {
         debug_assert!(self.alarm_iter.is_some());
         self.alarm_iter

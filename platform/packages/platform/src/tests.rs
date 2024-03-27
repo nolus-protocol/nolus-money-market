@@ -31,5 +31,6 @@ pub fn parse_resp<Resp>(resp: &Option<Binary>) -> Option<Resp>
 where
     Resp: DeserializeOwned,
 {
+    #[allow(clippy::unwrap_used)]
     resp.as_ref().map(|data| from_json(data).unwrap())
 }

@@ -107,12 +107,12 @@ mod test {
         let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
         let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
         let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
-        let lpps = vec![
+        let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::with_tvl(lpp1_tvl),
             DummyLpp::with_tvl(lpp2_tvl),
         ];
-        let oracles = vec![
+        let oracles = [
             DummyOracle::with_price(2),
             DummyOracle::with_price(3),
             DummyOracle::with_price(1),
@@ -156,12 +156,12 @@ mod test {
         let scale = RewardScale::new(apr);
         let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
         let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
-        let lpps = vec![
+        let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::failing(),
             DummyLpp::with_tvl(lpp2_tvl),
         ];
-        let oracles = vec![
+        let oracles = [
             DummyOracle::with_price(2),
             DummyOracle::with_price(3),
             DummyOracle::with_price(1),
@@ -179,12 +179,12 @@ mod test {
         let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
         let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
         let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
-        let lpps = vec![
+        let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::with_tvl(lpp1_tvl),
             DummyLpp::with_tvl(lpp2_tvl),
         ];
-        let oracles = vec![
+        let oracles = [
             DummyOracle::with_price(2),
             DummyOracle::with_price(3),
             DummyOracle::failing(),

@@ -58,6 +58,7 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
             if contracts.contains(&contract_addr.as_str()) =>
         {
             SystemResult::Ok(ContractResult::Ok(
+                #[allow(clippy::unwrap_used)]
                 cosmwasm_std::to_json_binary(&ContractInfoResponse::default()).unwrap(),
             ))
         }
@@ -69,6 +70,7 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
             })
         }
         WasmQuery::CodeInfo { code_id } => SystemResult::Ok(ContractResult::Ok(
+            #[allow(clippy::unwrap_used)]
             cosmwasm_std::to_json_binary(&CodeInfoResponse::new(
                 *code_id,
                 "".into(),
@@ -116,6 +118,7 @@ mod custom_msg {
 
         type SudoT = Empty;
 
+        #[allow(clippy::unwrap_in_result)]
         fn execute<ExecC, QueryC>(
             &self,
             _api: &dyn Api,
@@ -129,6 +132,7 @@ mod custom_msg {
             ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
+            #[allow(clippy::unwrap_used)]
             self.message_sender
                 .send(msg)
                 .expect("Receiver closed but message had to be sent!");

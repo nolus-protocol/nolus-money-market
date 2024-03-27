@@ -30,6 +30,7 @@ where
     type Error = CmdError<Cmd::Error, Error>;
 
     #[track_caller]
+    #[allow(clippy::unwrap_in_result)]
     fn on<BaseC>(self) -> AnyVisitorResult<Self>
     where
         BaseC: Currency,

@@ -110,6 +110,7 @@ impl Ratio<Units> for Rational<Percent> {
 
 impl Display for Percent {
     #[track_caller]
+    #[allow(clippy::unwrap_in_result)]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
         let fractional = (self.0)
