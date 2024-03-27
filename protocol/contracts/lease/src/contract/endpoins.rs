@@ -17,10 +17,14 @@ use crate::{
     error::ContractResult,
 };
 
-use super::state::{self, Response, State};
+use super::state::{
+    self,
+    v8::{Migrate, State as State_v8},
+    Response, State,
+};
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 7;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 8;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -50,10 +54,19 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, __env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
-        .or_else(|err| platform_error::log(err, deps.api))
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg { reserve }: MigrateMsg,
+) -> ContractResult<CwResponse> {
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+        deps.storage,
+        CONTRACT_VERSION,
+        |storage| migrate_lease(storage, |lease| Ok(lease.into_last_version(reserve))),
+        Into::into,
+    )
+    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
+    .or_else(|err| platform_error::log(err, deps.api))
 }
 
 #[entry_point]
@@ -102,6 +115,21 @@ where
     ProcFn: FnOnce(State) -> ContractResult<Response>,
 {
     state::load(storage).and_then(process_fn).and_then(
+        |Response {
+             response,
+             next_state,
+         }| state::save(storage, &next_state).map(|()| response),
+    )
+}
+
+fn migrate_lease<ProcFn>(
+    storage: &mut dyn Storage,
+    process_fn: ProcFn,
+) -> ContractResult<MessageResponse>
+where
+    ProcFn: FnOnce(State_v8) -> ContractResult<Response>,
+{
+    state::load_v8(storage).and_then(process_fn).and_then(
         |Response {
              response,
              next_state,

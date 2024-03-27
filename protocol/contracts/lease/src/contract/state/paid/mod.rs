@@ -10,6 +10,7 @@ use super::{Handler, Response};
 use self::transfer_in::DexState;
 
 pub mod transfer_in;
+pub mod v8;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {

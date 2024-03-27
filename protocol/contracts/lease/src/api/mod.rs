@@ -7,6 +7,8 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+use crate::finance::ReserveRef;
+
 use self::position::PositionClose;
 
 pub mod open;
@@ -25,7 +27,7 @@ pub type LpnCoinDTO = crate::finance::LpnCoinDTO;
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {
-    pub reserve: Addr,
+    pub reserve: ReserveRef,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]

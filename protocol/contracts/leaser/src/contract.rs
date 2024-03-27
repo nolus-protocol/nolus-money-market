@@ -8,6 +8,7 @@ use platform::{
     message::Response as MessageResponse,
     reply, response,
 };
+use reserve::stub::Ref as ReserveRef; // TODO switch to using the one from the lease API
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
@@ -20,6 +21,7 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 use crate::{
     cmd::Borrow,
     error::ContractError,
+    finance::LpnCurrency,
     leaser::{self, Leaser},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
@@ -216,16 +218,16 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
         .map(|()| lease)
 }
 
-fn migrate_msg(reserve: Addr) -> impl Fn(Addr) -> LeaseMigrateMsg {
+fn migrate_msg(reserve: ReserveRef<LpnCurrency>) -> impl Fn(Addr) -> LeaseMigrateMsg {
     move |_customer| LeaseMigrateMsg {
         reserve: reserve.clone(),
     }
 }
 
-fn load_reserve(deps: Deps<'_>) -> ContractResult<Addr> {
+fn load_reserve(deps: Deps<'_>) -> ContractResult<ReserveRef<LpnCurrency>> {
     Leaser::new(deps)
         .config()
-        .map(|ConfigResponse { config }| config.reserve)
+        .and_then(|ConfigResponse { config }| config.reserve(&deps.querier))
 }
 
 fn finalizer(env: Env) -> Addr {

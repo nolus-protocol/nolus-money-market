@@ -20,13 +20,7 @@ net_dev = ["contract", "currencies/net_dev", "swap/test"]
 net_test = ["contract", "currencies/net_test", "swap/test"]
 net_main = ["contract", "currencies/net_main", "swap/main"]
 
-neutron-astroport-usdc_axelar = [
-    "dep:dex",
-    "dep:swap",
-    "contract",
-    "currencies/neutron-astroport-usdc_axelar",
-    "swap/astroport",
-]
+neutron-astroport-usdc_axelar = ["contract", "currencies/neutron-astroport-usdc_axelar", "swap/astroport"]
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar", "swap/osmosis"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble", "swap/osmosis"]
 
@@ -59,7 +53,7 @@ timealarms = { workspace = true, optional = true, features = ["stub"] }
 
 currencies = { workspace = true }
 currency = { workspace = true }
-dex = { workspace = true, optional = true, features = ["impl"] }
+dex = { workspace = true, optional = true, features = ["impl", "migration"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 oracle = { workspace = true, optional = true, features = ["stub_alarms"] }

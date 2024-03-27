@@ -40,6 +40,14 @@ where
             })
     }
 
+    #[cfg(feature = "testing")]
+    pub fn unchecked(contract: Addr) -> Self {
+        Self {
+            contract,
+            _lpns: PhantomData,
+        }
+    }
+
     pub fn into_reserve(self) -> impl Reserve<Lpn> {
         Impl::new(self)
     }

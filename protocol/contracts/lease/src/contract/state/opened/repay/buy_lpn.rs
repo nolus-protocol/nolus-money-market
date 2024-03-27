@@ -61,6 +61,10 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
+    pub(super) fn migrate_to(lease: Lease, payment: PaymentCoin) -> Self {
+        Self::new(lease, payment)
+    }
+
     fn query(
         self,
         in_progress: RepayTrx,

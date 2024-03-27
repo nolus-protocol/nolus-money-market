@@ -22,7 +22,8 @@ use crate::{
 };
 
 type Spec = FullLiquidationDTO;
-pub(super) type RepayableImpl = Close<Spec>;
+pub(in crate::contract::state::opened::close) type RepayableImpl = Close<Spec>;
+pub(crate) type Task = close::Task<RepayableImpl>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
 
 impl IntoRepayable for Spec {
