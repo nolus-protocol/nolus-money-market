@@ -118,21 +118,26 @@ where
         .map_err(map_error)
 }
 
+pub struct FullUpdateOutput<MigrateStorageOutput> {
+    pub release_label: ReleaseLabel,
+    pub storage_migration_output: MigrateStorageOutput,
+}
+
 pub fn update_software_and_storage<
     const FROM_STORAGE_VERSION: VersionSegment,
     ContractError,
     MigrateStorageFunctor,
-    MigrateStorageFunctorResponse,
+    StorageMigrationOutput,
     MapErrorFunctor,
 >(
     storage: &mut dyn Storage,
     new: Version,
     migrate_storage: MigrateStorageFunctor,
     map_error: MapErrorFunctor,
-) -> Result<(ReleaseLabel, MigrateStorageFunctorResponse), ContractError>
+) -> Result<FullUpdateOutput<StorageMigrationOutput>, ContractError>
 where
     MigrateStorageFunctor:
-        FnOnce(&mut dyn Storage) -> Result<MigrateStorageFunctorResponse, ContractError>,
+        FnOnce(&mut dyn Storage) -> Result<StorageMigrationOutput, ContractError>,
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
@@ -142,7 +147,10 @@ where
         .and_then(|()| save_version(storage, &new))
         .map_err(map_error)
         .and_then(|()| migrate_storage(storage))
-        .map(|response| (release::label(), response))
+        .map(|storage_migration_output| FullUpdateOutput {
+            release_label: release::label(),
+            storage_migration_output,
+        })
 }
 
 fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {
