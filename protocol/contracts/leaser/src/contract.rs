@@ -67,7 +67,7 @@ pub fn migrate(
         |storage| state::config::migrate(storage, reserve),
         Into::into,
     )
-    .and_then(response::response)
+    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
