@@ -111,7 +111,7 @@ mod test {
             cmd.on::<PaymentC4, TheCurrency>(),
             Ok(Some(tests::base_price::<PaymentC4>(1, 1)))
         );
-        assert_eq!(cmd.stack, vec![tests::base_price::<PaymentC4>(1, 1)]);
+        assert_eq!(cmd.stack, [tests::base_price::<PaymentC4>(1, 1)]);
 
         // child
         assert_eq!(
@@ -120,7 +120,7 @@ mod test {
         );
         assert_eq!(
             cmd.stack,
-            vec![
+            [
                 tests::base_price::<PaymentC4>(1, 1),
                 tests::base_price::<PaymentC5>(2, 1)
             ]

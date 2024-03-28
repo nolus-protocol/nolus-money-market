@@ -333,7 +333,7 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv2"]);
+        assert_eq!(sent, ["recv2"]);
     }
 
     #[test]
@@ -350,7 +350,7 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv2", "recv1"]);
+        assert_eq!(sent, ["recv2", "recv1"]);
     }
 
     #[test]
@@ -386,7 +386,7 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv2"]);
+        assert_eq!(sent, ["recv2"]);
     }
 
     #[test]
@@ -405,7 +405,7 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv1", "recv2"]);
+        assert_eq!(sent, ["recv1", "recv2"]);
     }
 
     #[test]
@@ -429,7 +429,7 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
+        assert_eq!(sent, ["recv1", "recv2", "recv4"]);
     }
 
     #[test]
@@ -455,6 +455,6 @@ mod test {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        assert_eq!(sent, vec!["recv2", "recv5"]);
+        assert_eq!(sent, ["recv2", "recv5"]);
     }
 }

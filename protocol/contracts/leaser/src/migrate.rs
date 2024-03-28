@@ -163,12 +163,9 @@ mod test {
         let lease2 = Addr::unchecked(LEASE21);
         let lease3 = Addr::unchecked(LEASE22);
         let customer_addr1 = Addr::unchecked(CUSTOMER_ADDR1);
-        let cust1 = Customer::from(
-            customer_addr1.clone(),
-            vec![lease1, lease2, lease3].into_iter(),
-        );
+        let cust1 = Customer::from(customer_addr1.clone(), [lease1, lease2, lease3].into_iter());
 
-        let customers = vec![Ok(cust1)];
+        let customers = [Ok(cust1)];
         {
             let exp = MigrationResult {
                 next_customer: Some(customer_addr1),
@@ -311,11 +308,11 @@ mod test {
         let lease3 = Addr::unchecked("lease13");
         let cust1 = Customer::from(
             Addr::unchecked("customer1"),
-            vec![lease1, lease2, lease3].into_iter(),
+            [lease1, lease2, lease3].into_iter(),
         );
         let err = "testing error";
 
-        let customers = vec![
+        let customers = [
             Ok(cust1),
             Err(ContractError::ParseError { err: err.into() }),
         ];
