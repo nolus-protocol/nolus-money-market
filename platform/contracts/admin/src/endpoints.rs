@@ -7,7 +7,9 @@ use sdk::{
         Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
+use versioning::{
+    package_version, version, FullUpdateOutput, ReleaseLabel, SemVer, Version, VersionSegment,
+};
 
 use crate::{
     contracts::Protocol,
@@ -68,19 +70,24 @@ pub fn migrate(
         |storage| crate::state::migrate(storage, deps.api, deps.querier, reserve_contracts),
         Into::into,
     )
-    .and_then(|(reported_label, ())| {
-        check_release_label(reported_label.clone(), release.clone())
-            .and_then(|()| {
-                crate::contracts::migrate(
-                    deps.storage,
-                    env.contract.address,
-                    release,
-                    migration_spec,
-                    post_migration_execute,
-                )
-            })
-            .and_then(|messages| response::response_with_messages(reported_label, messages))
-    })
+    .and_then(
+        |FullUpdateOutput {
+             release_label: reported_label,
+             storage_migration_output: (),
+         }| {
+            check_release_label(reported_label.clone(), release.clone())
+                .and_then(|()| {
+                    crate::contracts::migrate(
+                        deps.storage,
+                        env.contract.address,
+                        release,
+                        migration_spec,
+                        post_migration_execute,
+                    )
+                })
+                .and_then(|messages| response::response_with_messages(reported_label, messages))
+        },
+    )
 }
 
 #[entry_point]

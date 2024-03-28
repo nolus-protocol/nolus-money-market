@@ -16,7 +16,7 @@ use sdk::{
         QuerierWrapper, Reply,
     },
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -67,7 +67,12 @@ pub fn migrate(
         |storage| state::config::migrate(storage, reserve),
         Into::into,
     )
-    .and_then(|(release_label, _resp)| response::response(release_label))
+    .and_then(
+        |FullUpdateOutput {
+             release_label,
+             storage_migration_output: (),
+         }| response::response(release_label),
+    )
     .or_else(|err| platform_error::log(err, deps.api))
 }
 
