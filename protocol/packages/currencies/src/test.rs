@@ -1,7 +1,5 @@
 #[cfg(feature = "neutron-astroport-usdc_axelar")]
-use crate::lease::astroport::{
-    Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, TestC1 as LC5,
-};
+use crate::lease::astroport::{Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, Tia as LC5};
 #[cfg(any(
     feature = "osmosis-osmosis-usdc_axelar",
     feature = "osmosis-osmosis-usdc_noble"

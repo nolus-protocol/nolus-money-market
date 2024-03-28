@@ -1,7 +1,5 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars;
-#[cfg(feature = "testing")]
-pub use testing_currencies::*;
 
 use crate::{define_currency, define_symbol};
 
@@ -145,22 +143,59 @@ define_symbol! {
 }
 define_currency!(StkAtom, STK_ATOM, 6);
 
-#[cfg(feature = "testing")]
-mod testing_currencies {
-    use sdk::schemars;
-
-    use crate::{define_currency, define_symbol};
-
-    define_symbol! {
-        TEST_C1 {
-            ["net_dev", "net_test", "net_main"]: {
-                bank: "ibc/test_currency_1",
-                dex: "ibc/test_currency_1_dex",
-            },
-        }
+define_symbol! {
+    NEWT {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt
+            bank: "ibc/NA_NEWT",
+            // full ibc route: transfer/channel-?/stk/uatom
+            dex: "ibc/NA_NEWT_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt
+            bank: "ibc/B474BAE18361B48F4D59B8DB429EE494355E030EE50DE6A8CBE9AE5631DEAF50",
+            // full ibc route: factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt
+            dex: "factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt",
+        },
     }
-    define_currency!(TestC1, TEST_C1, 6);
 }
+define_currency!(Newt, NEWT, 6);
+
+define_symbol! {
+    ECLIP {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
+            bank: "ibc/NA_ECLIP",
+            // full ibc route: factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
+            dex: "ibc/NA_ECLIP_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
+            bank: "ibc/D30D1FB08459ED7108DE569DA30224F0CB96CFA940BC1F412CF5D763F080DB33",
+            // full ibc route: factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
+            dex: "factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip",
+        },
+    }
+}
+define_currency!(Eclip, ECLIP, 6);
+
+define_symbol! {
+    WST_ETH {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-?/transfer/channel-?/stk/uatom
+            bank: "ibc/NA_WST_ETH",
+            // full ibc route: factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH
+            dex: "ibc/NA_WST_ETH_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-3839/factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH
+            bank: "ibc/237D015A64364977C849C6784BA9093D88306C21CE2A7B8C1422BA2E40633353",
+            // full ibc route: factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH
+            dex: "factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH",
+        },
+    }
+}
+define_currency!(WstEth, WST_ETH, 18);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
@@ -172,34 +207,16 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    let result = maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
+    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Dydx, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Tia, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, StTia, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor));
-
-    #[cfg(not(feature = "testing"))]
-    {
-        result
-    }
-    #[cfg(feature = "testing")]
-    result.or_else(|visitor| maybe_visit_test_currencies(matcher, symbol, visitor))
-}
-
-#[cfg(feature = "testing")]
-fn maybe_visit_test_currencies<M, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
-where
-    M: Matcher + ?Sized,
-    V: AnyVisitor,
-{
-    use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, TestC1, _>(matcher, symbol, visitor)
+        .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Newt, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Eclip, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, WstEth, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -225,6 +242,9 @@ mod test {
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StkAtom, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Newt, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Eclip, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<WstEth, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
