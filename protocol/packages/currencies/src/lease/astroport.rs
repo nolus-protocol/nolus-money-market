@@ -231,7 +231,7 @@ mod test {
         {lease::LeaseGroup, lpn::Lpn, native::Nls},
     };
 
-    use super::{Atom, Dydx, Ntrn, StAtom, StTia, StkAtom, Tia};
+    use super::{Atom, Dydx, Eclip, Newt, Ntrn, StAtom, StTia, StkAtom, Tia, WstEth};
 
     #[test]
     fn maybe_visit_on_ticker() {

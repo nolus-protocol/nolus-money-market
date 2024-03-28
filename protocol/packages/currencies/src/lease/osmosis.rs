@@ -654,6 +654,30 @@ define_symbol! {
 }
 define_currency!(Dym, DYM, 18);
 
+define_symbol! {
+    CUDOS {
+        ["net_dev"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-???/acudos
+            bank: "ibc/NA_CUDOS",
+            // full ibc route: transfer/channel-???/acudos
+            dex: "ibc/NA_CUDOS_DEX",
+        },
+        ["net_test"]: {
+            // full ibc route: transfer/channel-1993/transfer/channel-???/acudos
+            bank: "ibc/NA_CUDOS",
+            // full ibc route: transfer/channel-???/acudos
+            dex: "ibc/NA_CUDOS_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-298/acudos
+            bank: "ibc/BB9810E7FE8836311126F15BE0B20E7463189751840F8C3FEF3AC8F87D8AB7C8",
+            // full ibc route: transfer/channel-298/acudos
+            dex: "ibc/E09ED39F390EC51FA9F3F69BEA08B5BBE6A48B3057B2B1C3467FAAE9E58B021B",
+        },
+    }
+}
+define_currency!(Cudos, CUDOS, 18);
+
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
     symbol: &SymbolSlice,
@@ -690,6 +714,7 @@ where
         .or_else(|visitor| maybe_visit::<_, Qsr, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor))
 }
 
 #[cfg(test)]
@@ -704,7 +729,7 @@ mod test {
         {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
     };
 
-    use super::{Atom, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -718,6 +743,7 @@ mod test {
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Lvn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Cudos, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
