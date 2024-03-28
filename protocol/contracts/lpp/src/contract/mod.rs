@@ -60,7 +60,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Resul
         state::migrate::<LpnCurrency>,
         Into::into,
     )
-    .and_then(response::response)
+    .and_then(|(release_label, _resp)| response::response(release_label))
 }
 
 #[entry_point]
