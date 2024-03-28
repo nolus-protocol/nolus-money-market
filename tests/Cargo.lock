@@ -785,6 +785,7 @@ dependencies = [
  "lpp",
  "oracle-platform",
  "platform",
+ "reserve",
  "sdk",
  "serde",
  "thiserror",
