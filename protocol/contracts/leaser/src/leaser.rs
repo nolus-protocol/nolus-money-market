@@ -3,11 +3,14 @@ use std::collections::HashSet;
 use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
-use lpp::{msg::ExecuteMsg, stub::LppRef};
+use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use oracle_platform::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
-use platform::contract::Code;
-use platform::message::Response as MessageResponse;
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    contract::Code,
+    message::Response as MessageResponse,
+};
+use reserve::api::ExecuteMsg as ReserveExecuteMsg;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
 use crate::finance::LpnCurrency;
@@ -91,7 +94,7 @@ where
 
     let leases = Leases::iter(storage, None);
     migrate::migrate_leases(leases, new_lease, max_leases, migrate_msg)
-        .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_lease, msgs)))
+        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
         })
@@ -114,18 +117,26 @@ where
     })
 }
 
-fn update_lpp_impl(
+fn update_remote_refs(
     storage: &dyn Storage,
     new_lease: Code,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let lpp = Config::load(storage)?.lpp;
-    let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
-        lease_code: new_lease,
-    };
-    batch
-        .schedule_execute_wasm_no_reply_no_funds(lpp, &lpp_update_code)
-        .map_err(Into::into)
+    let cfg = Config::load(storage)?;
+    {
+        let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
+            lease_code: new_lease,
+        };
+        batch
+            .schedule_execute_wasm_no_reply_no_funds(cfg.lpp, &update_msg)
+            .map_err(Into::into)
+    }
+    .and_then(|()| {
+        let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
+        batch
+            .schedule_execute_wasm_no_reply_no_funds(cfg.reserve, &update_msg)
+            .map_err(Into::into)
+    })
 }
 
 fn emit_status(next_customer: Option<Addr>) -> Emitter {
