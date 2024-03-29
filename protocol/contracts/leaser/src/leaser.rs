@@ -80,18 +80,18 @@ pub(super) fn try_configure(
 
 pub(super) fn try_migrate_leases<MsgFactory>(
     storage: &mut dyn Storage,
-    new_code: Code,
+    new_lease: Code,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
     MsgFactory: Fn(Addr) -> MigrateMsg,
 {
-    Config::update_lease_code(storage, new_code)?;
+    Config::update_lease_code(storage, new_lease)?;
 
     let leases = Leases::iter(storage, None);
-    migrate::migrate_leases(leases, new_code, max_leases, migrate_msg)
-        .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_code, msgs)))
+    migrate::migrate_leases(leases, new_lease, max_leases, migrate_msg)
+        .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_lease, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
         })
@@ -114,10 +114,14 @@ where
     })
 }
 
-fn update_lpp_impl(storage: &dyn Storage, new_code: Code, batch: &mut Batch) -> ContractResult<()> {
+fn update_lpp_impl(
+    storage: &dyn Storage,
+    new_lease: Code,
+    batch: &mut Batch,
+) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp;
     let lpp_update_code = ExecuteMsg::<LpnCurrencies>::NewLeaseCode {
-        lease_code: new_code,
+        lease_code: new_lease,
     };
     batch
         .schedule_execute_wasm_no_reply_no_funds(lpp, &lpp_update_code)
