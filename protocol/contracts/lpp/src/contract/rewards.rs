@@ -49,7 +49,7 @@ pub(super) fn try_claim_rewards(
     }
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
-    bank.send(reward, &recipient);
+    bank.send(reward, recipient);
     let batch: Batch = bank.into();
 
     Ok(batch.into())

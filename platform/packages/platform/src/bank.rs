@@ -31,7 +31,7 @@ pub trait BankAccount
 where
     Self: BankAccountView + Into<Batch>,
 {
-    fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    fn send<C>(&mut self, amount: Coin<C>, to: Addr)
     where
         C: Currency;
 }
@@ -79,7 +79,6 @@ where
 
 pub struct BankView<'a> {
     account: &'a Addr,
-    //TODO use ref type
     querier: QuerierWrapper<'a>,
 }
 
@@ -128,14 +127,16 @@ impl<View> BankStub<View>
 where
     View: BankAccountView,
 {
-    pub fn new(view: View) -> Self {
-        //TODO may bring a lot of confusion if used with a view of a not-the-host-contract account
-        // check out if there are use cases to view other account balances
-        // if not, refactor to limit the View instances to be created only on the host contract
+    fn new(view: View) -> Self {
         Self {
             view,
             batch: Batch::default(),
         }
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn with_view(view: View) -> Self {
+        Self::new(view)
     }
 }
 
@@ -176,7 +177,7 @@ where
     Self: BankAccountView + Into<Batch>,
     View: BankAccountView,
 {
-    fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    fn send<C>(&mut self, amount: Coin<C>, to: Addr)
     where
         C: Currency,
     {
@@ -216,7 +217,7 @@ where
     }
 }
 
-fn bank_send_impl<C>(batch: &mut Batch, to: &Addr, amount: &[Coin<C>])
+fn bank_send_impl<C>(batch: &mut Batch, to: Addr, amount: &[Coin<C>])
 where
     C: Currency,
 {
@@ -230,7 +231,7 @@ where
     )
 }
 
-fn bank_send_cosmwasm(batch: &mut Batch, to: &Addr, amount: Vec<CwCoin>) {
+fn bank_send_cosmwasm(batch: &mut Batch, to: Addr, amount: Vec<CwCoin>) {
     batch.schedule_execute_no_reply(BankMsg::Send {
         amount,
         to_address: to.into(),
@@ -270,7 +271,7 @@ impl From<LazySenderStub> for Batch {
         let mut batch = Batch::default();
 
         if !stub.amounts.is_empty() {
-            bank_send_cosmwasm(&mut batch, &stub.receiver, stub.amounts);
+            bank_send_cosmwasm(&mut batch, stub.receiver, stub.amounts);
         }
 
         batch
@@ -336,13 +337,14 @@ where
     }
 }
 
-// TODO get rid of the `bank_send*` fn-s. Use FixedAddressSender instead
+/// Send a single coin to a recepient
 #[cfg(feature = "testing")]
-pub fn bank_send<C>(mut batch: Batch, to: &str, amount: Coin<C>) -> Batch
+pub fn bank_send<C>(to: Addr, amount: Coin<C>) -> Batch
 where
     C: Currency,
 {
-    bank_send_impl(&mut batch, &Addr::unchecked(to), &[amount]);
+    let mut batch = Batch::default();
+    bank_send_impl(&mut batch, to, &[amount]);
     batch
 }
 

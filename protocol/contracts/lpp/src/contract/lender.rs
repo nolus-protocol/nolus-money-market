@@ -82,11 +82,11 @@ where
         .withdraw(deps.storage, amount_nlpn)?;
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
-    bank.send(payment_lpn, &lender_addr);
+    bank.send(payment_lpn, lender_addr.clone());
 
     if let Some(reward) = maybe_reward {
         if !reward.is_zero() {
-            bank.send(reward, &lender_addr);
+            bank.send(reward, lender_addr.clone());
         }
     }
 

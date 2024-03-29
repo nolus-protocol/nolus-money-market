@@ -59,7 +59,7 @@ impl Idle {
         self.enter(env.block.time, querier)
             .map(PlatformResponse::messages_only)
             .map(|state_response: PlatformResponse| {
-                Profit::transfer_nls(account, self.config.treasury(), nls, env)
+                Profit::transfer_nls(account, self.config.treasury().clone(), nls, env)
                     .merge_with(state_response)
             })
             .map_err(Into::into)

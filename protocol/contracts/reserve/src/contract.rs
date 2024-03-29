@@ -89,7 +89,7 @@ pub fn execute(
                 })
                 .and_then(|()| amount.try_into().map_err(Into::into))
                 .and_then(|losses| {
-                    do_cover_losses(&lease, losses, &env.contract.address, deps.querier)
+                    do_cover_losses(lease, losses, &env.contract.address, deps.querier)
                 })
         }
     }
@@ -112,7 +112,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
 }
 
 fn do_cover_losses(
-    lease: &Addr,
+    lease: Addr,
     amount: Coin<LpnCurrency>,
     this_contract: &Addr,
     querier: QuerierWrapper<'_>,

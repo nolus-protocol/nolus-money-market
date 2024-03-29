@@ -38,10 +38,10 @@ where
         let surplus = lease_account.balance::<Lpn>()?;
 
         if !surplus.is_zero() {
-            lease_account.send(surplus, &self.customer);
+            lease_account.send(surplus, self.customer.clone());
         }
 
-        lease_account.send(self.amount, &self.customer);
+        lease_account.send(self.amount, self.customer);
 
         Ok(lease_account.into())
     }
@@ -58,8 +58,10 @@ mod tests {
         zero::Zero,
     };
     use platform::{
-        bank::{self, Aggregate, BalancesResult, BankAccountView, BankStub},
-        batch::Batch,
+        bank::{
+            self, Aggregate, BalancesResult, BankAccountView, BankStub, FixedAddressSender,
+            LazySenderStub,
+        },
         result::Result as PlatformResult,
     };
     use sdk::cosmwasm_std::Addr;
@@ -130,27 +132,27 @@ mod tests {
     fn close_no_surplus() {
         let lease_amount = 10.into();
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
-        let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
+        let lease_account = BankStub::with_view(MockBankView::only_balance(lease_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(
             res,
-            bank::bank_send(Batch::default(), CUSTOMER, lease_amount)
+            bank::bank_send(Addr::unchecked(CUSTOMER), lease_amount)
         );
     }
 
     #[test]
     fn close_with_surplus() {
+        let customer = Addr::unchecked(CUSTOMER);
         let lease_amount = 10.into();
         let surplus_amount = 2.into();
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
-        let lease_account = BankStub::new(MockBankView::new(lease_amount, surplus_amount));
+        let lease_account = BankStub::with_view(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, {
-            bank::bank_send(
-                bank::bank_send(Batch::default(), CUSTOMER, surplus_amount),
-                CUSTOMER,
-                lease_amount,
-            )
+            let mut sender = LazySenderStub::new(customer);
+            sender.send(surplus_amount);
+            sender.send(lease_amount);
+            sender.into()
         });
     }
 }

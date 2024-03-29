@@ -97,7 +97,7 @@ where
     SingleUserAccess::new(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)
         .check(&sender)?;
 
-    account.send(amount, &sender);
+    account.send(amount, sender);
 
     Ok(())
 }

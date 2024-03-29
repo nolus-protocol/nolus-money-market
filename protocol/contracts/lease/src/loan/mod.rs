@@ -282,7 +282,7 @@ mod tests {
             batch::Batch,
             result::Result as PlatformResult,
         };
-        use sdk::cosmwasm_std::Timestamp;
+        use sdk::cosmwasm_std::{Addr, Timestamp};
 
         use crate::{
             finance::LpnCoin,
@@ -971,7 +971,7 @@ mod tests {
                     let margin_paid =
                         exp_receipt.overdue_margin_paid() + exp_receipt.due_margin_paid();
                     if margin_paid != Coin::default() {
-                        bank::bank_send(Batch::default(), PROFIT_ADDR, margin_paid)
+                        bank::bank_send(Addr::unchecked(PROFIT_ADDR), margin_paid)
                     } else {
                         Batch::default()
                     }

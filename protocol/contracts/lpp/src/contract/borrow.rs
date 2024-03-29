@@ -32,7 +32,7 @@ where
     let loan = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
-    bank.send(amount, &lease_addr);
+    bank.send(amount, lease_addr);
 
     let messages: Batch = bank.into();
 
@@ -58,7 +58,7 @@ where
         Batch::default()
     } else {
         let mut bank = bank::account(&env.contract.address, deps.querier);
-        bank.send(excess_received, &lease_addr);
+        bank.send(excess_received, lease_addr);
         bank.into()
     };
     Ok((excess_received, batch.into()))
