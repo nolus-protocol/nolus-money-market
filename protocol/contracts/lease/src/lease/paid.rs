@@ -62,6 +62,7 @@ mod tests {
             self, Aggregate, BalancesResult, BankAccountView, BankStub, FixedAddressSender,
             LazySenderStub,
         },
+        batch::Batch,
         result::Result as PlatformResult,
     };
     use sdk::cosmwasm_std::Addr;
@@ -149,10 +150,16 @@ mod tests {
         let lease_account = BankStub::with_view(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, {
-            let mut sender = LazySenderStub::new(customer);
-            sender.send(surplus_amount);
-            sender.send(lease_amount);
-            sender.into()
+            {
+                let mut sender = LazySenderStub::new(customer.clone());
+                sender.send(surplus_amount);
+                Batch::from(sender)
+            }
+            .merge({
+                let mut sender = LazySenderStub::new(customer);
+                sender.send(lease_amount);
+                sender.into()
+            })
         });
     }
 }
