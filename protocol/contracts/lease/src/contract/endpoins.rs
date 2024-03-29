@@ -7,7 +7,7 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -65,7 +65,12 @@ pub fn migrate(
         |storage| migrate_lease(storage, |lease| Ok(lease.into_last_version(reserve))),
         Into::into,
     )
-    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
+    .and_then(
+        |FullUpdateOutput {
+             release_label,
+             storage_migration_output,
+         }| response::response_with_messages(release_label, storage_migration_output),
+    )
     .or_else(|err| platform_error::log(err, deps.api))
 }
 

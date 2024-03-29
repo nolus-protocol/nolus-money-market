@@ -8,7 +8,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
@@ -60,7 +60,12 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Resul
         state::migrate::<LpnCurrency>,
         Into::into,
     )
-    .and_then(|(release_label, _resp)| response::response(release_label))
+    .and_then(
+        |FullUpdateOutput {
+             release_label,
+             storage_migration_output: (),
+         }| response::response(release_label),
+    )
 }
 
 #[entry_point]
