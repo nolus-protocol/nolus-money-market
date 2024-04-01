@@ -15,6 +15,9 @@ inputs:
   protocol:
     description: ""
     required: true
+  profile:
+    description: ""
+    required: true
 
 runs:
   using: composite
@@ -51,6 +54,8 @@ runs:
           ${{ inputs.network }}
         protocol: |-
           ${{ inputs.protocol }}
+        profile: |-
+          ${{ inputs.profile }}
       run: |
         cargo "+${rust_version}" -- each run --print-command \
           --github-actions-logging --tag ci --tag "${network}" \

@@ -41,7 +41,8 @@ runs:
         ########################## START OF EDIT HERE ##########################
         stable_rust_version: '1.77'
         nightly_rust_version: 'nightly-2024-03-31'
-        dev_profile_without_debug_assertions: 'dev_no_debug_assertions'
+        dev_profile_with_debug_assertions: 'ci_dev'
+        dev_profile_without_debug_assertions: 'ci_dev_no_debug_assertions'
         build_combinations_json: |-
           {
             "platform": [
@@ -158,12 +159,17 @@ runs:
 
         linting_matrix_json="$(
           echo "${packages_tests_matrix_json}" \
-            | jq -c --arg dev_without_debug_assertions \
+            | jq -c --arg dev_with_debug_assertions \
+                "${dev_profile_with_debug_assertions}" \
+                --arg dev_without_debug_assertions \
                 "${dev_profile_without_debug_assertions}" \
                 '{
                   "include": [
                     .include[] + {
-                      "profile": ["dev", $dev_without_debug_assertions][]
+                      "profile": [
+                        $dev_with_debug_assertions,
+                        $dev_without_debug_assertions
+                      ][]
                     }
                   ]
                 }'
@@ -217,6 +223,12 @@ runs:
         nightly-rust-version<<EOF
         ${nightly_rust_version}
         EOF
+        dev-profile-with-debug-assertions<<EOF
+        ${dev_profile_with_debug_assertions}
+        EOF
+        dev-profile-without-debug-assertions<<EOF
+        ${dev_profile_without_debug_assertions}
+        EOF
         linting-matrix-json<<EOF
         ${linting_matrix_json}
         EOF
@@ -245,6 +257,14 @@ outputs:
     description: ''
     value: |-
       ${{ steps.configuration.outputs.nightly-rust-version }}
+  dev-profile-with-debug-assertions:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.dev-profile-with-debug-assertions }}
+  dev-profile-without-debug-assertions:
+    description: ''
+    value: |-
+      ${{ steps.configuration.outputs.dev-profile-without-debug-assertions }}
   linting-matrix-json:
     description: ''
     value: |-
