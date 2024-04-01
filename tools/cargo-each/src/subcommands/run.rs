@@ -170,35 +170,26 @@ fn execute_command_builder(
 ) -> Result<impl for<'r> Fn(&'r Path, &'r str, &'r str) -> Result<ExitStatus>> {
     resolve_subcommand(&command_type, subcommand)
         .context("Failed to resolve subcommand!")
-        .map(
-            |ResolveSubcommandOutput {
-                 is_external_command,
-                 subcommand,
-             }| {
-                let build_base = move || match command_type {
-                    CommandType::CargoSubcommand { ref cargo_path } => Command::new(cargo_path)
-                        .pipe_mut(|command| _ = command.arg(subcommand.as_os_str())),
-                    CommandType::ExternalCommand => Command::new(subcommand.as_os_str()),
-                };
+        .map(|ResolveSubcommandOutput { subcommand }| {
+            let build_base = move || match command_type {
+                CommandType::CargoSubcommand { ref cargo_path } => Command::new(cargo_path)
+                    .pipe_mut(|command| _ = command.arg(subcommand.as_os_str())),
+                CommandType::ExternalCommand => Command::new(subcommand.as_os_str()),
+            };
 
-                move |manifest_path: &Path, package: &str, features: &str| {
-                    directory_from_manifest_path(manifest_path).and_then(
-                        |working_directory: &Path| {
-                            execute_command(
-                                build_base()
-                                    .pipe_mut(|command| _ = command.current_dir(working_directory)),
-                                print_command,
-                                pass_package_manifest.then_some(manifest_path),
-                                pass_package_name.then_some(package),
-                                is_external_command,
-                                &extra_args,
-                                features,
-                            )
-                        },
+            move |manifest_path: &Path, package: &str, features: &str| {
+                directory_from_manifest_path(manifest_path).and_then(|working_directory: &Path| {
+                    execute_command(
+                        build_base().pipe_mut(|command| _ = command.current_dir(working_directory)),
+                        print_command,
+                        pass_package_manifest.then_some(manifest_path),
+                        pass_package_name.then_some(package),
+                        &extra_args,
+                        features,
                     )
-                }
-            },
-        )
+                })
+            }
+        })
 }
 
 fn execute_command(
@@ -206,12 +197,11 @@ fn execute_command(
     print_command: bool,
     package_manifest: Option<&Path>,
     package_name: Option<&str>,
-    is_external_command: bool,
     extra_args: &[OsString],
     features: &str,
 ) -> Result<ExitStatus> {
-    (&mut command)
-        .pipe_if(is_external_command, |command| command.args(extra_args))
+    command
+        .args(extra_args)
         .pipe_if_some(package_manifest, |command, package_manifest| {
             command.arg("--manifest-path").arg(package_manifest)
         })
@@ -219,7 +209,6 @@ fn execute_command(
             command.args(["--package", package_name])
         })
         .args(["--features", features])
-        .pipe_if(!is_external_command, |command| command.args(extra_args))
         .pipe_if(print_command, |command| {
             print!("\t");
 
@@ -227,11 +216,9 @@ fn execute_command(
                 print!("{path:?} ");
             }
 
-            print!(">>> {}", command.get_program().to_string_lossy());
+            print!(">>> {:?}", command.get_program());
 
-            command
-                .get_args()
-                .for_each(|arg| print!(" {}", arg.to_string_lossy()));
+            command.get_args().for_each(|arg| print!(" {:?}", arg));
 
             println!();
 
@@ -252,7 +239,6 @@ fn directory_from_manifest_path(manifest_path: &Path) -> Result<&Path> {
 }
 
 struct ResolveSubcommandOutput {
-    is_external_command: bool,
     subcommand: OsString,
 }
 
@@ -260,9 +246,7 @@ fn resolve_subcommand(
     command_type: &CommandType,
     mut subcommand: OsString,
 ) -> Result<ResolveSubcommandOutput> {
-    let is_external_command = matches!(command_type, CommandType::ExternalCommand);
-
-    if is_external_command {
+    if matches!(command_type, CommandType::ExternalCommand) {
         let subcommand_as_path = Path::new(&subcommand);
 
         if subcommand_as_path
@@ -276,8 +260,5 @@ fn resolve_subcommand(
         }
     };
 
-    Ok(ResolveSubcommandOutput {
-        is_external_command,
-        subcommand,
-    })
+    Ok(ResolveSubcommandOutput { subcommand })
 }
