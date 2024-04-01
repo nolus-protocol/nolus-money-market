@@ -33,13 +33,3 @@ cosmwasm-std = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
-
-[dev-dependencies]
-currency = { workspace = true, features = ["testing"] }
-lpp-platform = { workspace = true, features = ["testing"] }
-oracle-platform = { workspace = true, features = ["testing"] }
-
-schema = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, default-features = false, features = ["testing"] }

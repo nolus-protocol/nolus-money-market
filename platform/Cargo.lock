@@ -808,7 +808,6 @@ dependencies = [
  "lpp-platform",
  "oracle-platform",
  "platform",
- "schema",
  "sdk",
  "serde",
  "thiserror",
