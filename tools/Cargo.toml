@@ -10,8 +10,17 @@ cargo_metadata = "0.18.1"
 clap = { version = "4.5", features = ["derive", "unicode"] }
 serde = "1"
 
-[profile.dev_no_debug_assertions]
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.ci_dev]
 inherits = "dev"
+debug = false
+incremental = false
+panic = "abort"
+
+[profile.ci_dev_no_debug_assertions]
+inherits = "ci_dev"
 debug-assertions = false
 
 [profile.release]

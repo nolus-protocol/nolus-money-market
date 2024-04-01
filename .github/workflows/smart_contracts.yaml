@@ -57,6 +57,10 @@ jobs:
         ${{ steps.configuration.outputs.stable-rust-version }}
       nightly-rust-version: |-
         ${{ steps.configuration.outputs.nightly-rust-version }}
+      dev-profile-with-debug-assertions: |-
+        ${{ steps.configuration.outputs.dev-profile-with-debug-assertions }}
+      dev-profile-without-debug-assertions: |-
+        ${{ steps.configuration.outputs.dev-profile-without-debug-assertions }}
       linting-matrix-json: |-
         ${{ steps.configuration.outputs.linting-matrix-json }}
       unused-deps-matrix-json: |-
@@ -81,6 +85,7 @@ jobs:
         tool:
           # Add necessary tooling
           - "cargo-audit"
+          - "cargo-nextest"
           - "cargo-udeps"
           - "cosmwasm-check"
     ### GitHub Actions escaped string
@@ -438,6 +443,8 @@ jobs:
             ${{ matrix.network }}
           protocol: |-
             ${{ matrix.protocol }}
+          profile: |-
+            ${{ needs.configuration.outputs.dev-profile-with-debug-assertions }}
   build_optimizer_image:
     runs-on: "ubuntu-latest"
     needs:
