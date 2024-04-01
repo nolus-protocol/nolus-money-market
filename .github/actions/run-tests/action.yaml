@@ -34,6 +34,13 @@ runs:
         cache-rust-nightly: "false"
         no-fetching: "false"
         fail-on-cache-miss: "true"
+    - name: "Restore \"cargo-nextest\""
+      uses: "./.github/actions/install-tool"
+      with:
+        no-fetching: "false"
+        fail-on-cache-miss: "true"
+        tool: "cargo-nextest"
+        local: "false"
     - name: "Restore \"cargo-each\""
       uses: "./.github/actions/install-tool"
       with:
@@ -59,6 +66,7 @@ runs:
       run: |
         cargo "+${rust_version}" -- each run --print-command \
           --github-actions-logging --tag ci --tag "${network}" \
-          --tag "${protocol}" -- test --all-targets
+          --tag "${protocol}" -- nextest run --all-targets \
+          --cargo-profile "${profile}"
       working-directory: |-
         ${{ inputs.working-directory }}

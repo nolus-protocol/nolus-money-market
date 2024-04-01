@@ -85,6 +85,7 @@ jobs:
         tool:
           # Add necessary tooling
           - "cargo-audit"
+          - "cargo-nextest"
           - "cargo-udeps"
           - "cosmwasm-check"
     ### GitHub Actions escaped string
