@@ -44,6 +44,15 @@ anyhow = "1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 
-[profile.dev_no_debug_assertions]
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.ci_dev]
 inherits = "dev"
+debug = false
+incremental = false
+panic = "abort"
+
+[profile.ci_dev_no_debug_assertions]
+inherits = "ci_dev"
 debug-assertions = false

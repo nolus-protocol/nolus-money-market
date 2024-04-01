@@ -52,11 +52,21 @@ cosmos-sdk-proto = { version = "0.20", default-features = false }
 prost = { version = "0.12", default-features = false }
 neutron-sdk = { version = "0.8", default-features = false }
 
-[profile.dev_no_debug_assertions]
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.ci_dev]
 inherits = "dev"
+debug = false
+incremental = false
+panic = "abort"
+
+[profile.ci_dev_no_debug_assertions]
+inherits = "ci_dev"
 debug-assertions = false
 
 [profile.release]
+build-override = { opt-level = 3 }
 debug = false
 debug-assertions = false
 opt-level = "s"
