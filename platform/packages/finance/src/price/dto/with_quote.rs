@@ -1,5 +1,5 @@
 use currency::{
-    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
+    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
 };
 
 use crate::{

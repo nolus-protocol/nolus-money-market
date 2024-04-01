@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 #[cfg(any(test, feature = "testing"))]
 use currency::DexSymbols;
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
+    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
     SingleVisitor, Symbol, Symbols,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
