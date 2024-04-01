@@ -1,1 +1,1 @@
-pub(crate) static REWARDS_DISPATCHER_NAMESPACE: &str = "contract_rewards_dispatcher";
+pub(crate) static TIMEALARMS_NAMESPACE: &str = "contract_timealarms";

@@ -52,20 +52,9 @@ fn state_closed() {
     heal::heal_unsupported(&mut test_case, lease_addr);
 }
 
-fn close<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
-    TimeAlarms,
->(
+fn close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -102,20 +91,9 @@ fn close<
     .unwrap_response()
 }
 
-fn send_close<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
-    TimeAlarms,
->(
+fn send_close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,

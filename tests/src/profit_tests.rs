@@ -20,6 +20,7 @@ use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
     self, cwcoin, cwcoin_dex, ibc,
+    protocols::Registry,
     swap::DexDenom,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs, TestCase,
@@ -30,7 +31,7 @@ use crate::common::{
 fn test_case_with<Lpn>(
     cadence_hours: CadenceHours,
     custom_reserve: Option<&[CwCoin]>,
-) -> TestCase<(), (), Addr, Addr, (), (), (), Addr, Addr>
+) -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
     Lpn: Currency,
 {
@@ -39,14 +40,15 @@ where
             TestCaseBuilder::<Lpn>::new,
             TestCaseBuilder::<Lpn>::with_reserve,
         )
-        .init_treasury_without_dispatcher()
         .init_time_alarms()
         .init_oracle(None)
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(cadence_hours)
         .into_generic()
 }
 
-fn test_case<Lpn>() -> TestCase<(), (), Addr, Addr, (), (), (), Addr, Addr>
+fn test_case<Lpn>() -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
     Lpn: Currency,
 {
@@ -190,7 +192,6 @@ struct InitTreasuryBalancesResult<Lpn> {
 fn init_treasury_balances<
     Lpn,
     ProtocolsRegistry,
-    Dispatcher,
     Profit,
     Reserve,
     Leaser,
@@ -198,17 +199,7 @@ fn init_treasury_balances<
     Oracle,
     TimeAlarms,
 >(
-    test_case: &TestCase<
-        ProtocolsRegistry,
-        Dispatcher,
-        Addr,
-        Profit,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        TimeAlarms,
-    >,
+    test_case: &TestCase<ProtocolsRegistry, Addr, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>,
 ) -> InitTreasuryBalancesResult<Lpn>
 where
     Lpn: Currency,
@@ -225,18 +216,8 @@ struct SendAlarmAndMaybeSwapResult {
     has_swap: bool,
 }
 
-fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Dispatcher, Reserve, Leaser, Lpp, Oracle>(
-    test_case: &mut TestCase<
-        ProtocolsRegistry,
-        Dispatcher,
-        Addr,
-        Addr,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        Addr,
-    >,
+fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, Addr>,
     lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Native>)>,
 ) -> SendAlarmAndMaybeSwapResult
 where
@@ -341,18 +322,8 @@ fn total_native_profit(
     (native_profit + lpn_profit_swap_out).saturating_sub(::profit::profit::Profit::IBC_FEE_RESERVE)
 }
 
-fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Reserve, Leaser, Lpp, Oracle>(
-    test_case: &TestCase<
-        ProtocolsRegistry,
-        Dispatcher,
-        Addr,
-        Addr,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        Addr,
-    >,
+fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
+    test_case: &TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, Addr>,
     alarm_result: SendAlarmAndMaybeSwapResult,
     total_native_profit: Coin<Native>,
 ) {
@@ -440,18 +411,8 @@ fn expect_transfer_events<ProtocolsRegistry, Dispatcher, Reserve, Leaser, Lpp, O
     );
 }
 
-fn expect_balances<Lpn, ProtocolsRegistry, Dispatcher, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
-    test_case: TestCase<
-        ProtocolsRegistry,
-        Dispatcher,
-        Addr,
-        Addr,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        TimeAlarms,
-    >,
+fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, TimeAlarms>,
     init_treasury_native_balance: Coin<Native>,
     total_native_profit: Coin<Native>,
     init_treasury_lpn_balance: Coin<Lpn>,

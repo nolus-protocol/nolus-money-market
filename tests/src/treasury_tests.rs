@@ -1,12 +1,11 @@
 use currencies::test::{NativeC, StableC};
 use currency::{Currency, NlsPlatform};
 use finance::coin::{Amount, Coin};
-use platform::coin_legacy;
-use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
     cw_multi_test::{AppResponse, ContractWrapper},
 };
+use treasury::msg::ConfigResponse;
 
 use crate::common::{
     cwcoin,
@@ -19,7 +18,7 @@ use crate::common::{
 
 type Lpn = StableC;
 
-type DispatcherTestCase = TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr, Addr>;
+type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
 
 #[test]
 fn on_alarm_zero_reward() {
@@ -32,17 +31,20 @@ fn on_alarm_zero_reward() {
         &[cwcoin::<Lpn, _>(500)],
     );
 
-    let err = test_case
+    let treasury_balance_before: Coin<NlsPlatform> = treasury_balance(&test_case);
+    let resp = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
-            test_case.address_book.dispatcher().clone(),
-            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
+            test_case.address_book.treasury().clone(),
+            &treasury::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap_err();
-    let root_err = err.root_cause().downcast_ref::<ContractError>();
-    assert!(matches!(root_err, Some(&ContractError::ZeroReward {})));
+        .unwrap()
+        .unwrap_response();
+
+    assert_eq!(None, resp.data);
+    assert_eq!(treasury_balance_before, treasury_balance(&test_case));
 }
 
 #[test]
@@ -65,76 +67,20 @@ fn test_config() {
     let response: AppResponse = test_case
         .app
         .sudo(
-            test_case.address_book.dispatcher().clone(),
-            &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
+            test_case.address_book.treasury().clone(),
+            &treasury::msg::SudoMsg::Config { cadence_hours: 30 },
         )
         .unwrap()
         .unwrap_response();
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract5"),]
+        &[Event::new("sudo").add_attribute("_contract_address", "contract4"),]
     );
 
     let resp = query_config(&test_case);
     assert_eq!(resp.cadence_hours, 30);
 }
-
-// TODO: moved from contract tests, should be implemented as integration test
-// #[test]
-// fn dispatch_with_valid_period() {
-//     // let lpp_stub = LppLocalStubUnreachable {};
-
-//     let native_denom = Nls::SYMBOL;
-//     let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
-//     do_instantiate(deps.as_mut());
-
-//     let mut env = mock_env();
-//     env.block = BlockInfo {
-//         height: 12_345,
-//         time: env.block.time + Duration::from_days(100),
-//         chain_id: "cosmos-testnet-14002".to_string(),
-//     };
-
-//     let alarm_msg = ExecuteMsg::Alarm {
-//         time: env.block.time,
-//     };
-
-//     let res = execute(
-//         deps.as_mut(),
-//         env.clone(),
-//         mock_info("timealarms", &[]),
-//         alarm_msg,
-//     )
-//     .unwrap();
-//     assert_eq!(res.messages.len(), 3);
-//     assert_eq!(
-//         res.messages,
-//         vec![
-//             SubMsg::new(WasmMsg::Execute {
-//                 contract_addr: "treasury".to_string(),
-//                 msg: to_json_binary(&treasury::msg::ExecuteMsg::SendRewards {
-//                     amount: Coin::<Nls>::new(44386002),
-//                 })
-//                 .unwrap(),
-//                 funds: vec![],
-//             }),
-//             SubMsg::new(WasmMsg::Execute {
-//                 contract_addr: "lpp".to_string(),
-//                 msg: to_json_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
-//                 funds: coins(44386002, native_denom),
-//             }),
-//             SubMsg::new(WasmMsg::Execute {
-//                 contract_addr: "timealarms".to_string(),
-//                 msg: to_json_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-//                     time: env.block.time.plus_seconds(10 * 60 * 60),
-//                 })
-//                 .unwrap(),
-//                 funds: vec![],
-//             })
-//         ]
-//     );
-// }
 
 fn new_test_case(registry: Registry) -> DispatcherTestCase {
     TestCaseBuilder::<Lpn>::new()
@@ -162,24 +108,21 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
             .with_sudo(oracle::contract::sudo),
         ))
         .init_protocols_registry(registry)
-        .init_treasury_with_dispatcher(Addr::unchecked("contract5"))
         .init_time_alarms()
-        .init_dispatcher()
+        .init_treasury()
         .into_generic()
 }
 
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
-    const REWARD: Coin<NlsPlatform> = Coin::new(11);
+    const REWARD: Coin<NlsPlatform> = Coin::new(4);
     let lender = Addr::unchecked(USER);
 
     let mut test_case = new_test_case(registry);
 
+    let treasury = test_case.address_book.treasury().clone();
     test_case
-        .send_funds_from_admin(
-            test_case.address_book.time_alarms().clone(),
-            &[cwcoin::<Lpn, _>(500)],
-        )
-        .send_funds_from_admin(lender.clone(), &[cwcoin::<Lpn, _>(500)]);
+        .send_funds_from_admin(lender.clone(), &[cwcoin::<Lpn, _>(500)])
+        .send_funds_from_admin(treasury, &[cwcoin::<NlsPlatform, _>(123)]);
 
     assert!(lpp_balance(&test_case).is_zero());
 
@@ -191,7 +134,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
             lender.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Deposit {},
-            &[cwcoin::<Lpn, _>(100)],
+            &[cwcoin::<Lpn, _>(500)],
         )
         .unwrap()
         .ignore_response()
@@ -201,8 +144,8 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
-            test_case.address_book.dispatcher().clone(),
-            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
+            test_case.address_book.treasury().clone(),
+            &treasury::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
         .unwrap()
@@ -227,7 +170,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
         .unwrap();
 
     assert_eq!(resp.rewards, rewards_total);
-    check_events(&test_case, &res.events, protocols_nb, REWARD, rewards_total);
+    check_events(&test_case, &res.events, protocols_nb, REWARD);
 }
 
 fn check_events(
@@ -235,31 +178,30 @@ fn check_events(
     events: &Vec<Event>,
     protocols_nb: usize,
     exp_reward: Coin<NlsPlatform>,
-    exp_reward_total: Coin<NlsPlatform>,
 ) {
-    assert_eq!(events.len(), 4 + protocols_nb * 2, "{:?}", events);
+    assert_eq!(events.len(), 2 + protocols_nb * 2, "{:?}", events);
 
     let mut event_index = 0;
     {
-        let dispatcher_exec = &events[event_index];
+        let dispatch_exec = &events[event_index];
         event_index += 1;
-        assert_eq!(dispatcher_exec.ty, "execute");
+        assert_eq!(dispatch_exec.ty, "execute");
         assert_eq!(
-            dispatcher_exec.attributes,
-            [("_contract_address", test_case.address_book.dispatcher())]
+            dispatch_exec.attributes,
+            [("_contract_address", test_case.address_book.treasury())]
         );
     }
 
     (0..protocols_nb).for_each(|_| {
-        let dispatcher_exec = &events[event_index];
+        let dispatch_exec = &events[event_index];
         event_index += 1;
-        assert_eq!(dispatcher_exec.ty.as_str(), "wasm-tr-rewards");
+        assert_eq!(dispatch_exec.ty.as_str(), "wasm-tr-rewards");
         assert_eq!(
-            dispatcher_exec.attributes,
+            dispatch_exec.attributes,
             [
                 (
                     "_contract_address",
-                    test_case.address_book.dispatcher().as_str()
+                    test_case.address_book.treasury().as_str()
                 ),
                 ("height", &test_case.app.block_info().height.to_string()),
                 ("at", &test_case.app.block_info().time.nanos().to_string()),
@@ -273,33 +215,6 @@ fn check_events(
             ]
         );
     });
-
-    {
-        let treasury_exec = &events[event_index];
-        event_index += 1;
-        assert_eq!(treasury_exec.ty.as_str(), "execute");
-        assert_eq!(
-            treasury_exec.attributes,
-            [("_contract_address", test_case.address_book.treasury())]
-        );
-    }
-
-    {
-        let treasury_exec = &events[event_index];
-        event_index += 1;
-        assert_eq!(treasury_exec.ty.as_str(), "transfer");
-        assert_eq!(
-            treasury_exec.attributes,
-            [
-                ("recipient", test_case.address_book.dispatcher().as_str()),
-                ("sender", test_case.address_book.treasury().as_str()),
-                (
-                    "amount",
-                    &coin_legacy::to_cosmwasm(exp_reward_total).to_string()
-                ),
-            ]
-        );
-    }
 
     {
         (0..protocols_nb).for_each(|_| {
@@ -326,8 +241,8 @@ fn query_config(test_case: &DispatcherTestCase) -> ConfigResponse {
         .app
         .query()
         .query_wasm_smart(
-            test_case.address_book.dispatcher().clone(),
-            &rewards_dispatcher::msg::QueryMsg::Config {},
+            test_case.address_book.treasury().clone(),
+            &treasury::msg::QueryMsg::Config {},
         )
         .unwrap()
 }

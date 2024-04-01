@@ -53,7 +53,6 @@ type OptionalOracleWrapper = Option<
 #[must_use]
 pub(crate) struct TestCase<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -63,20 +62,11 @@ pub(crate) struct TestCase<
     TimeAlarms,
 > {
     pub app: App,
-    pub address_book: AddressBook<
-        ProtocolsRegistry,
-        Dispatcher,
-        Treasury,
-        Profit,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        TimeAlarms,
-    >,
+    pub address_book:
+        AddressBook<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>,
 }
 
-impl TestCase<(), (), (), (), (), (), (), (), ()> {
+impl TestCase<(), (), (), (), (), (), (), ()> {
     pub const DEX_CONNECTION_ID: &'static str = "connection-0";
 
     pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
@@ -112,18 +102,8 @@ impl TestCase<(), (), (), (), (), (), (), (), ()> {
     }
 }
 
-impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
-    TestCase<
-        ProtocolsRegistry,
-        Dispatcher,
-        Treasury,
-        Profit,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        TimeAlarms,
-    >
+impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
+    TestCase<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
 {
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         let _: AppResponse = self
@@ -136,8 +116,8 @@ impl<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Orac
     }
 }
 
-impl<ProtocolsRegistry, Dispatcher, Treasury>
-    TestCase<ProtocolsRegistry, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr, Addr>
+impl<ProtocolsRegistry, Treasury>
+    TestCase<ProtocolsRegistry, Treasury, Addr, Addr, Addr, Addr, Addr, Addr>
 {
     pub fn open_lease<D>(&mut self, lease_currency: &SymbolSlice) -> Addr
     where

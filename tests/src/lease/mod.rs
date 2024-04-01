@@ -14,6 +14,7 @@ use sdk::cosmwasm_std::{coin, Addr, Timestamp};
 use crate::common::{
     self, cwcoin, cwcoin_dex,
     leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
+    protocols::Registry,
     test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -37,7 +38,7 @@ type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);
 
-pub(super) type LeaseTestCase = TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
+pub(super) type LeaseTestCase = TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
 
 pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
@@ -50,19 +51,9 @@ where
     Price::identity()
 }
 
-pub(super) fn feed_price<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    TimeAlarms,
->(
+pub(super) fn feed_price<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -83,7 +74,7 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
@@ -106,7 +97,8 @@ where
     )
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::SingleProtocol)
+    .init_treasury()
     .init_profit(24)
     .init_reserve()
     .init_leaser()
@@ -134,7 +126,6 @@ pub(super) fn calculate_interest(
 
 pub(super) fn open_lease<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -145,7 +136,6 @@ pub(super) fn open_lease<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -167,7 +157,6 @@ where
 
 pub(super) fn try_init_lease<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -178,7 +167,6 @@ pub(super) fn try_init_lease<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -220,7 +208,6 @@ where
 
 pub(super) fn complete_init_lease<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -231,7 +218,6 @@ pub(super) fn complete_init_lease<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -265,7 +251,6 @@ pub(super) fn complete_init_lease<
 
 pub(super) fn quote_borrow<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -275,7 +260,6 @@ pub(super) fn quote_borrow<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -291,7 +275,6 @@ pub(super) fn quote_borrow<
 
 pub(super) fn quote_query<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -302,7 +285,6 @@ pub(super) fn quote_query<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -326,7 +308,6 @@ where
 
 pub(super) fn state_query<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -337,7 +318,6 @@ pub(super) fn state_query<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -357,7 +337,6 @@ pub(super) fn state_query<
 
 pub(super) fn expected_open_state<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -370,7 +349,6 @@ pub(super) fn expected_open_state<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -443,7 +421,6 @@ where
 
 pub(super) fn expected_newly_opened_state<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -455,7 +432,6 @@ pub(super) fn expected_newly_opened_state<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -482,7 +458,6 @@ where
 
 pub(super) fn block_time<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -493,7 +468,6 @@ pub(super) fn block_time<
 >(
     test_case: &TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,

@@ -42,7 +42,6 @@ fn active_state() {
 
 pub(super) fn heal_no_inconsistency<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -53,7 +52,6 @@ pub(super) fn heal_no_inconsistency<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -71,7 +69,6 @@ pub(super) fn heal_no_inconsistency<
 
 pub(super) fn heal_unsupported<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -82,7 +79,6 @@ pub(super) fn heal_unsupported<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -101,20 +97,9 @@ pub(super) fn heal_unsupported<
     );
 }
 
-fn try_heal<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
-    TimeAlarms,
->(
+fn try_heal<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -130,20 +115,9 @@ fn try_heal<
         .execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
 }
 
-fn heal_ok<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
-    TimeAlarms,
->(
+fn heal_ok<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,

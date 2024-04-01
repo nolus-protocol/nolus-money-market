@@ -5,7 +5,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::{reward_scale::RewardScale, CadenceHours};
+use treasury::state::{reward_scale::RewardScale, CadenceHours};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

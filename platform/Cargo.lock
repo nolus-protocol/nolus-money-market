@@ -798,7 +798,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.5.5"
+version = "0.6.0"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1186,17 +1186,21 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "access-control",
+ "admin_contract",
  "cosmwasm-std",
  "currency",
  "finance",
+ "lpp-platform",
+ "oracle-platform",
  "platform",
  "schema",
  "sdk",
  "serde",
  "thiserror",
+ "timealarms",
  "versioning",
 ]
 

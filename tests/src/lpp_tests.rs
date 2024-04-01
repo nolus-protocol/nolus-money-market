@@ -32,6 +32,7 @@ use crate::common::{
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
     lpp::{LppExecuteMsg, LppQueryMsg},
+    protocols::Registry,
     test_case::{app::App, builder::BlankBuilder as TestCaseBuilder, TestCase},
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
@@ -153,7 +154,8 @@ fn open_loan_unauthorized_contract_id() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .into_generic();
 
@@ -185,7 +187,8 @@ fn open_loan_no_liquidity() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -239,7 +242,8 @@ fn deposit_and_withdraw() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -583,7 +587,8 @@ fn loan_open_and_repay() {
     )
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_treasury()
     .init_profit(24)
     .init_reserve()
     .init_leaser()
@@ -950,7 +955,8 @@ fn compare_lpp_states() {
     )
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_treasury()
     .init_profit(24)
     .init_reserve()
     .init_leaser()

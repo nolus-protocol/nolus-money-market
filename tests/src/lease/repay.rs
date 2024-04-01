@@ -179,7 +179,7 @@ fn full_repay_with_max_ltd() {
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
         due_margin: LpnCoin::ZERO.into(),
         due_interest: LpnCoin::ZERO.into(),
-        validity: Timestamp::from_nanos(1537237454879305533),
+        validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
     let query_result = super::state_query(&test_case, lease_address.as_str());
@@ -257,19 +257,9 @@ fn full_repay_with_excess() {
     );
 }
 
-pub(crate) fn repay<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
->(
+pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -333,7 +323,6 @@ pub(crate) fn repay<
 
 fn send_payment_and_transfer<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -344,7 +333,6 @@ fn send_payment_and_transfer<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,

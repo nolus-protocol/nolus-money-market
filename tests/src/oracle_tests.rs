@@ -34,6 +34,7 @@ use tree::HumanReadableTree;
 
 use crate::common::{
     leaser as leaser_mod, oracle as oracle_mod,
+    protocols::Registry,
     test_case::{
         app::App,
         builder::BlankBuilder as TestCaseBuilder,
@@ -55,7 +56,7 @@ where
     coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
+fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
     TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
         .init_lpp_with_funds(
             None,
@@ -70,7 +71,8 @@ fn create_test_case() -> TestCase<(), (), Addr, Addr, Addr, Addr, Addr, Addr, Ad
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -249,7 +251,7 @@ fn overwrite_alarm_and_dispatch() {
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract7"),
+        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract8"),
     );
 
     platform::tests::assert_event(
@@ -263,10 +265,9 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>(
+fn open_lease<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,

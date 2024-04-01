@@ -24,9 +24,8 @@ lpp = { path = "../protocol/contracts/lpp", features = ["net_main", "contract", 
 oracle = { path = "../protocol/contracts/oracle", features = ["net_main", "contract", "testing"] }
 profit = { path = "../protocol/contracts/profit", features = ["net_main", "contract", "testing"] }
 reserve = { path = "../protocol/contracts/reserve", features = ["net_main", "contract", "testing"] }
-rewards_dispatcher = { path = "../platform/contracts/dispatcher", features = [] }
 timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
-treasury = { path = "../platform/contracts/treasury", features = ["contract"] }
+treasury = { path = "../platform/contracts/treasury" }
 
 access-control = { path = "../platform/packages/access-control" }
 currencies = { path = "../protocol/packages/currencies", features = ["testing"] }

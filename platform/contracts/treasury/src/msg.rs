@@ -1,30 +1,50 @@
 use serde::{Deserialize, Serialize};
 
-use currency::NlsPlatform;
-use finance::coin::Coin;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct InstantiateMsg {
-    pub rewards_dispatcher: Addr,
-}
+use crate::state::{reward_scale::RewardScale, CadenceHours};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct InstantiateMsg {
+    pub cadence_hours: CadenceHours,
+    pub protocols_registry: Addr,
+    pub timealarms: Addr,
+    pub treasury: Addr, // TODO remove it
+    pub tvl_to_apr: RewardScale,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    SendRewards { amount: Coin<NlsPlatform> },
+    TimeAlarm {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    ConfigureRewardTransfer { rewards_dispatcher: Addr },
+    Config { cadence_hours: CadenceHours },
+    Rewards { tvl_to_apr: RewardScale },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum QueryMsg {
+    Config {},
+    CalculateRewards {},
+}
+
+// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct ConfigResponse {
+    pub cadence_hours: CadenceHours,
+}
+
+pub type RewardScaleResponse = RewardScale;

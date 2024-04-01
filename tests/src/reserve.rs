@@ -22,7 +22,7 @@ use crate::{
 
 use super::lease;
 
-type ReserveTest = TestCase<(), (), (), (), Addr, (), (), (), ()>;
+type ReserveTest = TestCase<(), (), (), Addr, (), (), (), ()>;
 
 #[test]
 fn instantiate() {

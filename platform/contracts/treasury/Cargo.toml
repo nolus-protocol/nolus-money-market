@@ -1,35 +1,42 @@
 [package]
 name = "treasury"
-version = "0.3.2"
+version = "0.4.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
+    { tags = ["build", "@agnostic"], include-rest = true },
     { tags = ["ci", "@agnostic"], include-rest = true }
 ]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-contract = ["dep:cosmwasm-std", "dep:versioning"]
-
 [dependencies]
+admin_contract = { workspace = true }
+lpp-platform = { workspace = true }
+oracle-platform = { workspace = true, features = ["unchecked-base-currency"] }
+timealarms = { workspace = true, features = ["stub"] }
+
 access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
-versioning = { workspace = true, optional = true }
+versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true, optional = true }
+cosmwasm-std = { workspace = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+currency = { workspace = true, features = ["testing"] }
+lpp-platform = { workspace = true, features = ["testing"] }
+oracle-platform = { workspace = true, features = ["testing"] }
+
 schema = { workspace = true }
+sdk = { workspace = true, default-features = false, features = ["testing"] }

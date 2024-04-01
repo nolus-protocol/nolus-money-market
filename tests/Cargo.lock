@@ -690,7 +690,6 @@ dependencies = [
  "platform",
  "profit",
  "reserve",
- "rewards_dispatcher",
  "sdk",
  "serde",
  "swap",
@@ -1155,26 +1154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rewards_dispatcher"
-version = "0.5.5"
-dependencies = [
- "access-control",
- "admin_contract",
- "cosmwasm-std",
- "currency",
- "finance",
- "lpp-platform",
- "oracle-platform",
- "platform",
- "sdk",
- "serde",
- "thiserror",
- "timealarms",
- "treasury",
- "versioning",
-]
-
-[[package]]
 name = "rfc6979"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1559,16 +1538,20 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "access-control",
+ "admin_contract",
  "cosmwasm-std",
  "currency",
  "finance",
+ "lpp-platform",
+ "oracle-platform",
  "platform",
  "sdk",
  "serde",
  "thiserror",
+ "timealarms",
  "versioning",
 ]
 

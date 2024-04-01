@@ -1,47 +1,52 @@
-use currency::Currency;
+use finance::percent::Percent;
 use sdk::cosmwasm_std::Addr;
-use treasury::msg::InstantiateMsg;
+use treasury::{
+    msg::InstantiateMsg,
+    state::reward_scale::{Bar, RewardScale, TotalValueLocked},
+};
 
-use super::{cwcoin, dummy_query, native_cwcoin, test_case::app::App, CwContractWrapper, ADMIN};
+use super::{test_case::app::App, CwContractWrapper, ADMIN};
 
-pub(crate) struct Instantiator {
-    rewards_dispatcher: Addr,
-}
+#[derive(Default)]
+pub(crate) struct Instantiator;
 
 impl Instantiator {
-    pub fn new(rewards_dispatcher: Addr) -> Self {
-        Self { rewards_dispatcher }
-    }
-
-    pub fn new_with_no_dispatcher() -> Self {
-        Self::new(Addr::unchecked("DEADCODE"))
-    }
-
     #[track_caller]
-    pub fn instantiate<Lpn>(self, app: &mut App) -> Addr
-    where
-        Lpn: Currency,
-    {
+    pub fn instantiate(app: &mut App, protocols_registry: Addr, timealarms: Addr) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(
             treasury::contract::execute,
             treasury::contract::instantiate,
-            dummy_query,
+            treasury::contract::query,
         )
         .with_sudo(treasury::contract::sudo);
 
         let code_id = app.store_code(Box::new(endpoints));
 
         let msg = InstantiateMsg {
-            rewards_dispatcher: self.rewards_dispatcher,
+            cadence_hours: 10,
+            protocols_registry,
+            timealarms,
+            treasury: Addr::unchecked("DEADCODE"),
+            tvl_to_apr: RewardScale::try_from(vec![
+                Bar {
+                    tvl: Default::default(),
+                    apr: Percent::from_permille(10),
+                },
+                Bar {
+                    tvl: TotalValueLocked::new(1000),
+                    apr: Percent::from_permille(10),
+                },
+            ])
+            .unwrap(),
         };
 
         app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &[cwcoin::<Lpn, _>(1000), native_cwcoin(1000)],
-            "treasury",
+            &[],
+            "dispatcher",
             None,
         )
         .unwrap()

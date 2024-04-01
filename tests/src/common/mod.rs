@@ -51,7 +51,6 @@ type CwContractWrapper<
     MigrErr,       // migrate err
 >;
 
-pub mod dispatcher;
 pub mod ibc;
 pub mod lease;
 pub mod leaser;
@@ -125,7 +124,7 @@ pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin
     let mock_start_block = BlockInfo {
         height: 12_345,
         time: return_time,
-        chain_id: "cosmos-testnet-14002".to_string(),
+        chain_id: "nolus-testnet-14002".to_string(),
     };
 
     let mut funds = vec![native_cwcoin(100000)];

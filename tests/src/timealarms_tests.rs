@@ -12,6 +12,7 @@ use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
     cwcoin,
+    protocols::Registry,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     ADMIN,
 };
@@ -206,7 +207,7 @@ fn test_lease_serde() {
         cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase<(), (), (), (), (), (), (), (), Addr> {
+fn test_case() -> TestCase<(), (), (), (), (), (), (), Addr> {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
         10_000_000_000_000_000_000_000_000_000,
         Lpn::BANK_SYMBOL,
@@ -221,10 +222,9 @@ fn test_case() -> TestCase<(), (), (), (), (), (), (), (), Addr> {
     test_case
 }
 
-fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+fn add_alarm<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -252,10 +252,9 @@ fn add_alarm<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, L
         .unwrap_response();
 }
 
-fn dispatch<ProtocolsRegistry, Dispatcher, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+fn dispatch<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -555,7 +554,8 @@ fn test_profit_alarms() {
     ])
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_treasury()
     .init_profit(1)
     .into_generic();
 

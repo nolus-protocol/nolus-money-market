@@ -15,6 +15,7 @@ use crate::common::{
     cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod,
     lpp::{self as lpp_mod, LppExecuteMsg},
     oracle as oracle_mod,
+    protocols::Registry,
     test_case::{
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
@@ -73,7 +74,8 @@ fn open_lease_not_in_lease_currency() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -127,7 +129,8 @@ fn open_multiple_loans() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -214,7 +217,8 @@ fn test_quote() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -312,7 +316,8 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
     )
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_treasury()
     .init_profit(24)
     .init_reserve()
     .init_leaser()
@@ -400,7 +405,8 @@ fn test_quote_fixed_rate() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -438,19 +444,9 @@ fn test_quote_fixed_rate() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
 }
 
-fn setup_feeder<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    TimeAlarms,
->(
+fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -505,7 +501,8 @@ fn open_loans_lpp_fails() {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()
@@ -565,7 +562,8 @@ where
     )
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury_without_dispatcher()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_treasury()
     .init_profit(24)
     .init_reserve()
     .init_leaser()
@@ -576,11 +574,12 @@ where
     // 0 => lpp
     // 1 => time alarms
     // 2 => oracle
-    // 3 => treasury
-    // 4 => profit
-    // 5 => reserve
-    let leaser_addr: Addr = test_case.address_book.leaser().clone(); // 6 => leaser
-    let lease_addr: Addr = Addr::unchecked("contract7"); // 7 => lease
+    // 3 => dummy protocols registry
+    // 4 => treasury
+    // 5 => profit
+    // 6 => reserve
+    let leaser_addr: Addr = test_case.address_book.leaser().clone(); // 7 => leaser
+    let lease_addr: Addr = Addr::unchecked("contract8"); // 8 => lease
 
     if feed_prices {
         oracle_mod::add_feeder(&mut test_case, user_addr.clone());
@@ -671,7 +670,8 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
         )
         .init_time_alarms()
         .init_oracle(None)
-        .init_treasury_without_dispatcher()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_treasury()
         .init_profit(24)
         .init_reserve()
         .init_leaser()

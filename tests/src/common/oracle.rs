@@ -98,19 +98,9 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
     }
 }
 
-pub(crate) fn add_feeder<
-    ProtocolsRegistry,
-    Dispatcher,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    TimeAlarms,
->(
+pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -144,7 +134,6 @@ pub(crate) fn add_feeder<
 
 pub(crate) fn feed_price_pair<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -156,7 +145,6 @@ pub(crate) fn feed_price_pair<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
@@ -193,7 +181,6 @@ where
 
 pub(crate) fn feed_price<
     ProtocolsRegistry,
-    Dispatcher,
     Treasury,
     Profit,
     Reserve,
@@ -205,7 +192,6 @@ pub(crate) fn feed_price<
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
-        Dispatcher,
         Treasury,
         Profit,
         Reserve,
