@@ -224,34 +224,32 @@ fn check_tree_tickers(
     stable_currency: &SymbolSlice,
 ) -> Result<(), ContractError> {
     if tree.root().value().target != base_currency {
-        return Err(ContractError::InvalidBaseCurrency(
+        Err(ContractError::InvalidBaseCurrency(
             tree.root().value().target.clone(),
             ToOwned::to_owned(base_currency),
-        ));
+        ))
+    } else {
+        // check for duplicated nodes
+        let mut supported_currencies: Vec<_> = tree
+            .iter()
+            .map(|node| node.value().target.as_ref())
+            .collect();
+
+        supported_currencies.sort();
+
+        if supported_currencies
+            .binary_search(&stable_currency)
+            .is_err()
+        {
+            Err(ContractError::StableCurrencyNotInTree {})
+        } else if (0..supported_currencies.len() - 1)
+            .any(|index| supported_currencies[index] == supported_currencies[index + 1])
+        {
+            Err(ContractError::DuplicatedNodes {})
+        } else {
+            Ok(())
+        }
     }
-
-    // check for duplicated nodes
-    let mut supported_currencies: Vec<_> = tree
-        .iter()
-        .map(|node| node.value().target.as_ref())
-        .collect();
-
-    supported_currencies.sort();
-
-    if supported_currencies
-        .binary_search(&stable_currency)
-        .is_err()
-    {
-        return Err(ContractError::StableCurrencyNotInTree {});
-    }
-
-    if (0..supported_currencies.len() - 1)
-        .any(|index| supported_currencies[index] == supported_currencies[index + 1])
-    {
-        return Err(ContractError::DuplicatedNodes {});
-    }
-
-    Ok(())
 }
 
 fn validate_tickers(tree: &Tree) -> Result<(), ContractError> {
