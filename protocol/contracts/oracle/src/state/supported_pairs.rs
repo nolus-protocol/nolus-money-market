@@ -328,14 +328,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_invalid_base() {
-        let tree = cosmwasm_std::from_json(&format!(
+        let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
-                "value": [0, "{lease1}"],
+                "value": [0, {lease1:?}],
                 "children": [
                     {{
-                        "value": [1, "{stable}"]
+                        "value": [1, {stable:?}]
                     }}
                 ]
             }}"#,
@@ -344,24 +343,29 @@ mod tests {
         ))
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::new(tree, StableC::TICKER.into()).unwrap();
+        assert_eq!(
+            SupportedPairs::<TheCurrency>::new(tree.into_tree(), StableC::TICKER.into()),
+            Err(ContractError::InvalidBaseCurrency(
+                LeaseC1::TICKER.into(),
+                StableC::TICKER.into()
+            ))
+        );
     }
 
     #[test]
-    #[should_panic]
     fn test_duplicated_nodes() {
-        let tree = cosmwasm_std::from_json(format!(
+        let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
-                "value": [0, "{base}"],
+                "value": [0, {base:?}],
                 "children":[
                     {{
-                        "value": [1, "{lease1}"]
+                        "value": [1, {lease1:?}]
                     }},
                     {{
-                        "value": [2, "{lease2}"],
+                        "value": [2, {lease2:?}],
                         "children": [
                             {{
-                                "value": [1, "{lease1}"]
+                                "value": [1, {lease1:?}]
                             }}
                         ]
                     }}
@@ -373,7 +377,10 @@ mod tests {
         ))
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::new(tree, TheCurrency::TICKER.into()).unwrap();
+        assert_eq!(
+            SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into()),
+            Err(ContractError::DuplicatedNodes {})
+        );
     }
 
     #[test]
