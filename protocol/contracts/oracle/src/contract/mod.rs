@@ -216,7 +216,7 @@ mod tests {
                     Duration::from_secs(60),
                     1,
                     Percent::from_percent(88),
-                )
+                ),
             },
             value
         );
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(
             QueryMsgApi::SwapPath {
                 from: from.into(),
-                to: to.into()
+                to: to.into(),
             },
             query_api
         );
