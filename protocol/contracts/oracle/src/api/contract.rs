@@ -21,6 +21,7 @@ pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub config: Config,
+    pub stable_currency: SymbolOwned,
     pub swap_tree: HumanReadableTree<SwapTarget>,
 }
 
@@ -46,10 +47,17 @@ pub enum ExecuteMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    RegisterFeeder { feeder_address: String },
-    RemoveFeeder { feeder_address: String },
+    RegisterFeeder {
+        feeder_address: String,
+    },
+    RemoveFeeder {
+        feeder_address: String,
+    },
     UpdateConfig(PriceConfig),
-    SwapTree { tree: HumanReadableTree<SwapTarget> },
+    SwapTree {
+        stable_currency: SymbolOwned,
+        tree: HumanReadableTree<SwapTarget>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
@@ -76,6 +84,8 @@ pub enum QueryMsg {
     Price {
         currency: SymbolOwned,
     },
+    /// Report back designated stable currency.
+    StableCurrency {},
     /// Lists configured swap pairs
     SupportedCurrencyPairs {},
     /// Lists configured currencies

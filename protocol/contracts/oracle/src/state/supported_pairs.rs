@@ -18,9 +18,11 @@ use crate::{
 
 type Tree = tree::Tree<SwapTarget>;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct SupportedPairs<B> {
     tree: Tree,
+    stable_currency: SymbolOwned,
+    #[serde(skip)]
     _type: PhantomData<B>,
 }
 
@@ -30,49 +32,14 @@ where
 {
     const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
 
-    pub fn new(tree: Tree) -> Result<Self, ContractError> {
-        if tree.root().value().target != B::TICKER {
-            return Err(ContractError::InvalidBaseCurrency(
-                tree.root().value().target.clone(),
-                ToOwned::to_owned(B::TICKER),
-            ));
-        }
-
-        // check for duplicated nodes
-        let mut supported_currencies: Vec<&SymbolOwned> =
-            tree.iter().map(|node| &node.value().target).collect();
-
-        supported_currencies.sort();
-
-        if (0..supported_currencies.len() - 1)
-            .any(|index| supported_currencies[index] == supported_currencies[index + 1])
-        {
-            return Err(ContractError::DuplicatedNodes {});
-        }
-
-        Ok(SupportedPairs {
-            tree,
-            _type: PhantomData,
-        })
-    }
-
-    pub fn validate_tickers(&self) -> Result<&Self, ContractError> {
-        struct TickerChecker;
-
-        impl AnyVisitor for TickerChecker {
-            type Output = ();
-            type Error = ContractError;
-
-            fn on<C>(self) -> AnyVisitorResult<Self> {
-                Ok(())
-            }
-        }
-
-        for swap in self.tree.iter() {
-            Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, TickerChecker)?;
-        }
-
-        Ok(self)
+    pub fn new(tree: Tree, stable_currency: SymbolOwned) -> Result<Self, ContractError> {
+        check_tree_tickers(&tree, B::TICKER, &stable_currency)
+            .and_then(|()| validate_tickers(&tree))
+            .map(|()| SupportedPairs {
+                tree,
+                stable_currency,
+                _type: PhantomData,
+            })
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
@@ -137,6 +104,10 @@ where
         Ok(path)
     }
 
+    pub fn stable_currency(&self) -> &SymbolSlice {
+        &self.stable_currency
+    }
+
     pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
         self.tree
             .iter()
@@ -198,6 +169,41 @@ where
         self.tree
     }
 
+    pub(crate) fn migrate(storage: &mut dyn Storage) -> ContractResult<()> {
+        #[derive(Serialize, Deserialize)]
+        struct SupportedPairs {
+            tree: Tree,
+        }
+
+        Item::<'_, SupportedPairs>::new("supported_pairs")
+            .load(storage)
+            .map_err(ContractError::LoadSupportedPairs)
+            .and_then(|SupportedPairs { tree }| {
+                Self::DB_ITEM
+                    .save(
+                        storage,
+                        &Self {
+                            tree,
+                            stable_currency: B::TICKER.into(),
+                            _type: PhantomData,
+                        },
+                    )
+                    .map_err(ContractError::StoreSupportedPairs)
+            })
+    }
+
+    #[cfg(test)]
+    fn with_non_validated_tickers(
+        tree: Tree,
+        stable_currency: SymbolOwned,
+    ) -> Result<Self, ContractError> {
+        check_tree_tickers(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
+            tree,
+            stable_currency,
+            _type: PhantomData,
+        })
+    }
+
     fn internal_load_path(
         &self,
         query: &SymbolSlice,
@@ -210,6 +216,59 @@ where
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
             .ok_or_else(|| error::unsupported_currency::<B>(query))
     }
+}
+
+fn check_tree_tickers(
+    tree: &Tree,
+    base_currency: &SymbolSlice,
+    stable_currency: &SymbolSlice,
+) -> Result<(), ContractError> {
+    if tree.root().value().target != base_currency {
+        return Err(ContractError::InvalidBaseCurrency(
+            tree.root().value().target.clone(),
+            ToOwned::to_owned(base_currency),
+        ));
+    }
+
+    // check for duplicated nodes
+    let mut supported_currencies: Vec<_> = tree
+        .iter()
+        .map(|node| node.value().target.as_ref())
+        .collect();
+
+    supported_currencies.sort();
+
+    if supported_currencies
+        .binary_search(&stable_currency)
+        .is_err()
+    {
+        return Err(ContractError::StableCurrencyNotInTree {});
+    }
+
+    if (0..supported_currencies.len() - 1)
+        .any(|index| supported_currencies[index] == supported_currencies[index + 1])
+    {
+        return Err(ContractError::DuplicatedNodes {});
+    }
+
+    Ok(())
+}
+
+fn validate_tickers(tree: &Tree) -> Result<(), ContractError> {
+    struct TickerChecker;
+
+    impl AnyVisitor for TickerChecker {
+        type Output = ();
+        type Error = ContractError;
+
+        fn on<C>(self) -> AnyVisitorResult<Self> {
+            Ok(())
+        }
+    }
+
+    tree.iter().try_for_each(|swap| {
+        Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, TickerChecker)
+    })
 }
 
 struct CurrencyVisitor(api::CurrencyGroup);

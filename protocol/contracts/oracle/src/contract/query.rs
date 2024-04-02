@@ -40,6 +40,9 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             Oracle<'storage, S, PriceCurrencies, BaseC, BaseCurrencyGroup>;
 
         match self.msg {
+            QueryMsg::StableCurrency {} => to_json_binary(
+                SupportedPairs::<OracleBase>::load(self.deps.storage)?.stable_currency(),
+            ),
             QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .swap_pairs_df()
