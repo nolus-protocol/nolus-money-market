@@ -26,19 +26,16 @@ where
     Oracles::Item: AsRef<Oracle>,
 {
     let lpps: Vec<_> = lpps.into_iter().collect();
-    RewardCalculator::new(lpps.iter(), scale)
-        .and_then(|calc| {
-            let rewards = calc.calculate(period, oracles);
-            build_lpp_rewards(lpps, rewards).unwrap_or_else(|| Ok(Default::default()))
-            // TODO stop calculating a total!
-        })
-        .map(|(_total, lpp_responses)| lpp_responses)
+    RewardCalculator::new(lpps.iter(), scale).and_then(|calc| {
+        let rewards = calc.calculate(period, oracles);
+        build_lpp_rewards(lpps, rewards).unwrap_or_else(|| Ok(Default::default()))
+    })
 }
 
 fn build_lpp_rewards<LppIter, RewardsIter>(
     lpps: LppIter,
     mut rewards: RewardsIter,
-) -> Option<ContractResult<(Coin<NlsPlatform>, MessageResponse)>>
+) -> Option<ContractResult<MessageResponse>>
 where
     LppIter: IntoIterator,
     LppIter::Item: LppTrait,
@@ -50,18 +47,10 @@ where
             rewards
                 .next()
                 .expect("Lpps match oracles")
-                .and_then(|reward| {
-                    lpp.ditribute_rewards(reward)
-                        .map(|response| (reward, response))
-                        .map_err(Into::into)
-                })
+                .and_then(|reward| lpp.ditribute_rewards(reward).map_err(Into::into))
         })
         .reduce(|resp1, resp2| {
-            resp1.and_then(|(reward1, lpp_resp1)| {
-                resp2.map(|(reward2, lpp_resp2)| {
-                    (reward1 + reward2, lpp_resp1.merge_with(lpp_resp2))
-                })
-            })
+            resp1.and_then(|lpp_resp1| resp2.map(|lpp_resp2| lpp_resp1.merge_with(lpp_resp2)))
         });
     debug_assert_eq!(rewards.next(), None);
     res
