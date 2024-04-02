@@ -17,8 +17,6 @@ pub(crate) struct Config {
     pub cadence_hours: CadenceHours,
     // Protocols registry
     pub protocols_registry: Addr,
-    // address to treasury contract //TODO remove!
-    pub treasury: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
     pub tvl_to_apr: RewardScale,
 }
@@ -29,14 +27,12 @@ impl Config {
     pub fn new(
         cadence_hours: CadenceHours,
         protocols_registry: Addr,
-        treasury: Addr,
         tvl_to_apr: RewardScale,
     ) -> Self {
         Config {
             cadence_hours,
             protocols_registry,
             tvl_to_apr,
-            treasury,
         }
     }
 

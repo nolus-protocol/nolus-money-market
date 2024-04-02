@@ -49,13 +49,7 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    Config::new(
-        msg.cadence_hours,
-        msg.protocols_registry,
-        msg.treasury,
-        msg.tvl_to_apr,
-    )
-    .store(deps.storage)?;
+    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr).store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     setup_alarm(
@@ -238,7 +232,6 @@ mod tests {
             cadence_hours: 10,
             protocols_registry: Addr::unchecked(PROTOCOLS_REGISTRY_ADDR),
             timealarms: Addr::unchecked(TIMEALARMS_ADDR),
-            treasury: Addr::unchecked(TREASURY_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: TotalValueLocked::new(0),

@@ -27,7 +27,6 @@ impl Instantiator {
             cadence_hours: 10,
             protocols_registry,
             timealarms,
-            treasury: Addr::unchecked("DEADCODE"),
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: Default::default(),

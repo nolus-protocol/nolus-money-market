@@ -13,7 +13,6 @@ pub struct InstantiateMsg {
     pub cadence_hours: CadenceHours,
     pub protocols_registry: Addr,
     pub timealarms: Addr,
-    pub treasury: Addr, // TODO remove it
     pub tvl_to_apr: RewardScale,
 }
 
