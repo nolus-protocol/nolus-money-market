@@ -233,21 +233,11 @@ fn check_tree(
         {
             Err(ContractError::DuplicatedNodes {})
         } else {
-            tree.iter().try_for_each(|swap| {
-                Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, EmptyVisitor)
-            })
+            tree.iter()
+                .map(|node| node.value().target.as_ref())
+                .try_for_each(currency::validate::<PaymentGroup>)
+                .map_err(Into::into)
         }
-    }
-}
-
-struct EmptyVisitor;
-
-impl AnyVisitor for EmptyVisitor {
-    type Output = ();
-    type Error = ContractError;
-
-    fn on<C>(self) -> AnyVisitorResult<Self> {
-        Ok(())
     }
 }
 
