@@ -19,7 +19,6 @@ admin_contract = { workspace = true }
 lpp-platform = { workspace = true }
 oracle-platform = { workspace = true, features = ["unchecked-base-currency"] }
 timealarms = { workspace = true, features = ["stub"] }
-treasury = { workspace = true }
 
 access-control = { workspace = true }
 currency = { workspace = true }

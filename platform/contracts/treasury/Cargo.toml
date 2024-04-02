@@ -14,9 +14,6 @@ combinations = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-contract = []
-
 [dependencies]
 admin_contract = { workspace = true }
 lpp-platform = { workspace = true }

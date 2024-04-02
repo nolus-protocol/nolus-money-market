@@ -1,21 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::Addr,
-    schemars::{self, JsonSchema},
-};
-
-use treasury::state::{reward_scale::RewardScale, CadenceHours};
+use sdk::schemars::{self, JsonSchema};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct InstantiateMsg {
-    pub cadence_hours: CadenceHours,
-    pub protocols_registry: Addr,
-    pub timealarms: Addr,
-    pub treasury: Addr,
-    pub tvl_to_apr: RewardScale,
-}
+pub struct InstantiateMsg {}
 
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}
@@ -27,11 +15,7 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum SudoMsg {
-    Config { cadence_hours: CadenceHours },
-    Rewards { tvl_to_apr: RewardScale },
-}
+pub enum SudoMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -39,12 +23,3 @@ pub enum QueryMsg {
     Config {},
     CalculateRewards {},
 }
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct ConfigResponse {
-    pub cadence_hours: CadenceHours,
-}
-
-pub type RewardScaleResponse = RewardScale;
