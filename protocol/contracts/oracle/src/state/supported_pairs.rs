@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_included_stable_currency() {
+    fn test_unknown_stable_currency() {
         let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
                 "value": [0, {base:?}],
