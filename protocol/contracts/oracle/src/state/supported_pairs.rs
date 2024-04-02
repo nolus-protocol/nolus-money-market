@@ -227,8 +227,9 @@ fn check_tree(
             .is_err()
         {
             Err(ContractError::StableCurrencyNotInTree {})
-        } else if (0..supported_currencies.len() - 1)
-            .any(|index| supported_currencies[index] == supported_currencies[index + 1])
+        } else if supported_currencies
+            .windows(2)
+            .any(|window| window[0] == window[1])
         {
             Err(ContractError::DuplicatedNodes {})
         } else {
