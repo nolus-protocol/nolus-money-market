@@ -15,14 +15,6 @@ combinations = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-admin_contract = { workspace = true }
-lpp-platform = { workspace = true }
-oracle-platform = { workspace = true, features = ["unchecked-base-currency"] }
-timealarms = { workspace = true, features = ["stub"] }
-
-access-control = { workspace = true }
-currency = { workspace = true }
-finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }

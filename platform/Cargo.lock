@@ -800,18 +800,11 @@ dependencies = [
 name = "rewards_dispatcher"
 version = "0.6.0"
 dependencies = [
- "access-control",
- "admin_contract",
  "cosmwasm-std",
- "currency",
- "finance",
- "lpp-platform",
- "oracle-platform",
  "platform",
  "sdk",
  "serde",
  "thiserror",
- "timealarms",
  "versioning",
 ]
 
