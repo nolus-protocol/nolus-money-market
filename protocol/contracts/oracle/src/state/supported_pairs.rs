@@ -33,13 +33,11 @@ where
     const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
 
     pub fn new(tree: Tree, stable_currency: SymbolOwned) -> Result<Self, ContractError> {
-        check_tree(&tree, B::TICKER, &stable_currency)
-            .and_then(|()| validate_tickers(&tree))
-            .map(|()| SupportedPairs {
-                tree,
-                stable_currency,
-                _type: PhantomData,
-            })
+        check_tree(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
+            tree,
+            stable_currency,
+            _type: PhantomData,
+        })
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
@@ -234,26 +232,22 @@ fn check_tree(
         {
             Err(ContractError::DuplicatedNodes {})
         } else {
-            Ok(())
+            tree.iter().try_for_each(|swap| {
+                Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, EmptyVisitor)
+            })
         }
     }
 }
 
-fn validate_tickers(tree: &Tree) -> Result<(), ContractError> {
-    struct TickerChecker;
+struct EmptyVisitor;
 
-    impl AnyVisitor for TickerChecker {
-        type Output = ();
-        type Error = ContractError;
+impl AnyVisitor for EmptyVisitor {
+    type Output = ();
+    type Error = ContractError;
 
-        fn on<C>(self) -> AnyVisitorResult<Self> {
-            Ok(())
-        }
+    fn on<C>(self) -> AnyVisitorResult<Self> {
+        Ok(())
     }
-
-    tree.iter().try_for_each(|swap| {
-        Tickers.visit_any::<PaymentGroup, _>(&swap.value().target, TickerChecker)
-    })
 }
 
 struct CurrencyVisitor(api::CurrencyGroup);
