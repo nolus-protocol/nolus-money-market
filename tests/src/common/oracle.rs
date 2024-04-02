@@ -58,6 +58,7 @@ impl Instantiator {
                     Percent::from_percent(75),
                 ),
             },
+            stable_currency: StableC::TICKER.into(),
             swap_tree: oracle::swap_tree!(
                 { base: StableC::TICKER },
                 (1, LeaseC2::TICKER),

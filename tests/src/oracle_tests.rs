@@ -430,7 +430,10 @@ fn test_swap_path() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &SudoMsg::SwapTree { tree: swap_tree() },
+            &SudoMsg::SwapTree {
+                stable_currency: StableC::TICKER.into(),
+                tree: swap_tree(),
+            },
         )
         .unwrap()
         .unwrap_response();
@@ -476,7 +479,10 @@ fn test_query_swap_tree() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &SudoMsg::SwapTree { tree: tree.clone() },
+            &SudoMsg::SwapTree {
+                stable_currency: StableC::TICKER.into(),
+                tree: tree.clone(),
+            },
         )
         .unwrap()
         .unwrap_response();

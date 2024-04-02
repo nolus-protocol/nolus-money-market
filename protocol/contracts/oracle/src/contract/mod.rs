@@ -202,6 +202,7 @@ mod tests {
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
+            StableC::TICKER.into(),
         );
         let (deps, _info) = setup_test(msg);
 

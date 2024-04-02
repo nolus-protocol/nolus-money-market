@@ -237,6 +237,7 @@ mod test_normalized_price_not_found {
 
         SupportedPairs::<BaseCurrency>::new(
             swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER)).into_tree(),
+            StableC::TICKER.into(),
         )
         .unwrap()
         .save(storage)

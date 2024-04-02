@@ -334,7 +334,11 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<StableC>::new(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::<StableC>::with_non_validated_tickers(
+            tree.into_tree(),
+            TheCurrency::TICKER.into(),
+        )
+        .unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -351,7 +355,7 @@ mod tests {
         )
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::new(tree).unwrap();
+        SupportedPairs::<TheCurrency>::with_non_validated_tickers(tree, "token1".into()).unwrap();
     }
 
     #[test]
@@ -374,12 +378,17 @@ mod tests {
         ))
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::new(tree).unwrap();
+        SupportedPairs::<TheCurrency>::with_non_validated_tickers(tree, TheCurrency::TICKER.into())
+            .unwrap();
     }
 
     #[test]
     fn test_load_path() {
-        let tree = SupportedPairs::<StableC>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
+            test_case().into_tree(),
+            TheCurrency::TICKER.into(),
+        )
+        .unwrap();
 
         let resp: Vec<_> = tree.load_path("token5").unwrap().collect();
         assert_eq!(
@@ -395,7 +404,11 @@ mod tests {
 
     #[test]
     fn test_load_swap_path() {
-        let tree = SupportedPairs::<StableC>::new(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
+            test_case().into_tree(),
+            TheCurrency::TICKER.into(),
+        )
+        .unwrap();
 
         assert!(tree.load_swap_path("token5", "token5").unwrap().is_empty());
 
@@ -447,7 +460,11 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree = SupportedPairs::<StableC>::new(paths.into_tree()).unwrap();
+        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
+            paths.into_tree(),
+            TheCurrency::TICKER.into(),
+        )
+        .unwrap();
 
         fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
             a.from.cmp(&b.from)
@@ -528,6 +545,7 @@ mod tests {
             ))
             .unwrap()
             .into_tree(),
+            TheCurrency::TICKER.into(),
         )
         .unwrap()
         .currencies()

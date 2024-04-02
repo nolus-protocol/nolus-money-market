@@ -221,7 +221,9 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
+            let tree =
+                SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into())
+                    .unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -271,7 +273,9 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
+            let tree =
+                SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into())
+                    .unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
