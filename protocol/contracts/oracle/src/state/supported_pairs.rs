@@ -220,7 +220,7 @@ fn check_tree(
             .map(|node| node.value().target.as_ref())
             .collect();
 
-        supported_currencies.sort();
+        supported_currencies.sort_unstable();
 
         if supported_currencies
             .binary_search(&stable_currency)
