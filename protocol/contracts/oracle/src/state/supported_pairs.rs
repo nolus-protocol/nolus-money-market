@@ -33,7 +33,7 @@ where
     const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
 
     pub fn new(tree: Tree, stable_currency: SymbolOwned) -> Result<Self, ContractError> {
-        check_tree_tickers(&tree, B::TICKER, &stable_currency)
+        check_tree(&tree, B::TICKER, &stable_currency)
             .and_then(|()| validate_tickers(&tree))
             .map(|()| SupportedPairs {
                 tree,
@@ -197,7 +197,7 @@ where
         tree: Tree,
         stable_currency: SymbolOwned,
     ) -> Result<Self, ContractError> {
-        check_tree_tickers(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
+        check_tree(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
             tree,
             stable_currency,
             _type: PhantomData,
@@ -218,7 +218,7 @@ where
     }
 }
 
-fn check_tree_tickers(
+fn check_tree(
     tree: &Tree,
     base_currency: &SymbolSlice,
     stable_currency: &SymbolSlice,
@@ -229,7 +229,6 @@ fn check_tree_tickers(
             ToOwned::to_owned(base_currency),
         ))
     } else {
-        // check for duplicated nodes
         let mut supported_currencies: Vec<_> = tree
             .iter()
             .map(|node| node.value().target.as_ref())
@@ -301,8 +300,7 @@ mod tests {
         let base = TheCurrency::TICKER;
 
         cosmwasm_std::from_json(format!(
-            r#"
-            {{
+            r#"{{
                 "value":[0,"{base}"],
                 "children":[
                     {{
