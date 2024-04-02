@@ -60,6 +60,7 @@ pub(crate) fn dummy_instantiate_msg(
     price_feed_period_secs: u32,
     expected_feeders: Percent,
     swap_tree: HumanReadableTree<SwapTarget>,
+    stable_currency: SymbolOwned,
 ) -> InstantiateMsg {
     InstantiateMsg {
         config: Config {
@@ -71,6 +72,7 @@ pub(crate) fn dummy_instantiate_msg(
                 Percent::from_percent(88),
             ),
         },
+        stable_currency,
         swap_tree,
     }
 }
@@ -111,6 +113,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
             cro = PaymentC6::TICKER,
         ))
         .unwrap(),
+        StableC::TICKER.into(),
     )
 }
 

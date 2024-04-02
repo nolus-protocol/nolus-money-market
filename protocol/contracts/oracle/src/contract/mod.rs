@@ -10,7 +10,7 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -31,11 +31,13 @@ use self::{
 mod alarms;
 mod config;
 pub mod exec;
+mod migrate;
 mod oracle;
 pub mod query;
 mod sudo;
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const FROM_CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -65,13 +67,11 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
         self.msg
             .config
             .store(self.deps.storage)
-            .map_err(ContractError::StoreConfig)?;
-
-        SupportedPairs::<C>::new(self.msg.swap_tree.into_tree())?
-            .validate_tickers()?
-            .save(self.deps.storage)?;
-
-        Ok(())
+            .map_err(ContractError::StoreConfig)
+            .and_then(|()| {
+                SupportedPairs::<C>::new(self.msg.swap_tree.into_tree(), self.msg.stable_currency)
+            })
+            .and_then(|supported_pairs| supported_pairs.save(self.deps.storage))
     }
 }
 
@@ -96,12 +96,18 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(
+    versioning::update_software_and_storage::<FROM_CONTRACT_STORAGE_VERSION, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
+        migrate::with_oracle_base,
         ContractError::UpdateSoftware,
     )
-    .and_then(response::response)
+    .and_then(
+        |FullUpdateOutput {
+             release_label,
+             storage_migration_output: (),
+         }| response::response(release_label),
+    )
 }
 
 #[entry_point]
@@ -196,6 +202,7 @@ mod tests {
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
+            StableC::TICKER.into(),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -209,7 +216,7 @@ mod tests {
                     Duration::from_secs(60),
                     1,
                     Percent::from_percent(88),
-                )
+                ),
             },
             value
         );
@@ -250,7 +257,7 @@ mod tests {
         assert_eq!(
             QueryMsgApi::SwapPath {
                 from: from.into(),
-                to: to.into()
+                to: to.into(),
             },
             query_api
         );

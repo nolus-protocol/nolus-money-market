@@ -73,6 +73,9 @@ pub enum ContractError {
     #[error("[Oracle] Invalid base currency ({0} != {1})")]
     InvalidBaseCurrency(SymbolOwned, SymbolOwned),
 
+    #[error("[Oracle] Specified stable currency is not in the currency tree")]
+    StableCurrencyNotInTree {},
+
     #[error("[Oracle] Duplicated nodes in the currency tree")]
     DuplicatedNodes {},
 
