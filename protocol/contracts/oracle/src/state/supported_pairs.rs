@@ -192,18 +192,6 @@ where
             })
     }
 
-    #[cfg(test)]
-    fn with_non_validated_tickers(
-        tree: Tree,
-        stable_currency: SymbolOwned,
-    ) -> Result<Self, ContractError> {
-        check_tree(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
-            tree,
-            stable_currency,
-            _type: PhantomData,
-        })
-    }
-
     fn internal_load_path(
         &self,
         query: &SymbolSlice,
@@ -287,7 +275,7 @@ impl AnyVisitor for CurrencyVisitor {
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::{LeaseC1, LeaseC2, NativeC, StableC};
+    use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, StableC};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
@@ -297,32 +285,37 @@ mod tests {
     type TheCurrency = StableC;
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
-        let base = TheCurrency::TICKER;
-
         cosmwasm_std::from_json(format!(
             r#"{{
                 "value":[0,"{base}"],
                 "children":[
                     {{
-                        "value":[4,"token4"],
+                        "value":[4,"{lease4}"],
                         "children":[
-                            {{"value":[3,"token3"]}}
+                            {{"value":[3,"{lease3}"]}}
                         ]
                     }},
                     {{
-                        "value":[2,"token2"],
+                        "value":[2,"{lease2}"],
                         "children":[
                             {{
-                                "value":[1,"token1"],
+                                "value":[1,"{lease1}"],
                                 "children":[
-                                    {{"value":[5,"token5"]}},
-                                    {{"value":[6,"token6"]}}
+                                    {{"value":[5,"{lease5}"]}},
+                                    {{"value":[6,"{native}"]}}
                                 ]
                             }}
                         ]
                     }}
                 ]
-            }}"#
+            }}"#,
+            base = TheCurrency::TICKER,
+            lease1 = LeaseC1::TICKER,
+            lease2 = LeaseC2::TICKER,
+            lease3 = LeaseC3::TICKER,
+            lease4 = LeaseC4::TICKER,
+            lease5 = LeaseC5::TICKER,
+            native = NativeC::TICKER,
         ))
         .unwrap()
     }
@@ -330,11 +323,8 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<StableC>::with_non_validated_tickers(
-            tree.into_tree(),
-            TheCurrency::TICKER.into(),
-        )
-        .unwrap();
+        let sp =
+            SupportedPairs::<StableC>::new(tree.into_tree(), TheCurrency::TICKER.into()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -346,12 +336,21 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_base() {
-        let tree = cosmwasm_std::from_json(
-            r#"{"value":[0,"invalid"],"children":[{"value":[1,"token1"]}]}"#,
-        )
+        let tree = cosmwasm_std::from_json(&format!(
+            r#"{{
+                "value": [0, "{lease1}"],
+                "children": [
+                    {{
+                        "value": [1, "{stable}"]
+                    }}
+                ]
+            }}"#,
+            lease1 = LeaseC1::TICKER,
+            stable = StableC::TICKER,
+        ))
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::with_non_validated_tickers(tree, "token1".into()).unwrap();
+        SupportedPairs::<TheCurrency>::new(tree, StableC::TICKER.into()).unwrap();
     }
 
     #[test]
@@ -359,64 +358,70 @@ mod tests {
     fn test_duplicated_nodes() {
         let tree = cosmwasm_std::from_json(format!(
             r#"{{
-                "value":[0,"{ticker}"],
+                "value": [0, "{base}"],
                 "children":[
-                    {{"value":[1,"token1"]}},
                     {{
-                        "value":[2,"token2"],
-                        "children":[
-                            {{"value":[1,"token1"]}}
+                        "value": [1, "{lease1}"]
+                    }},
+                    {{
+                        "value": [2, "{lease2}"],
+                        "children": [
+                            {{
+                                "value": [1, "{lease1}"]
+                            }}
                         ]
                     }}
                 ]
             }}"#,
-            ticker = TheCurrency::TICKER,
+            base = TheCurrency::TICKER,
+            lease1 = LeaseC1::TICKER,
+            lease2 = LeaseC2::TICKER,
         ))
         .unwrap();
 
-        SupportedPairs::<TheCurrency>::with_non_validated_tickers(tree, TheCurrency::TICKER.into())
-            .unwrap();
+        SupportedPairs::<TheCurrency>::new(tree, TheCurrency::TICKER.into()).unwrap();
     }
 
     #[test]
     fn test_load_path() {
-        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
-            test_case().into_tree(),
-            TheCurrency::TICKER.into(),
-        )
-        .unwrap();
+        let tree =
+            SupportedPairs::<StableC>::new(test_case().into_tree(), TheCurrency::TICKER.into())
+                .unwrap();
 
-        let resp: Vec<_> = tree.load_path("token5").unwrap().collect();
+        let resp: Vec<_> = tree.load_path(LeaseC5::TICKER).unwrap().collect();
         assert_eq!(
             resp,
             vec![
-                "token5".to_string(),
-                "token1".to_string(),
-                "token2".to_string(),
-                TheCurrency::TICKER.to_string(),
+                LeaseC5::TICKER,
+                LeaseC1::TICKER,
+                LeaseC2::TICKER,
+                TheCurrency::TICKER,
             ]
         );
     }
 
     #[test]
     fn test_load_swap_path() {
-        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
-            test_case().into_tree(),
-            TheCurrency::TICKER.into(),
-        )
-        .unwrap();
+        let tree =
+            SupportedPairs::<StableC>::new(test_case().into_tree(), TheCurrency::TICKER.into())
+                .unwrap();
 
-        assert!(tree.load_swap_path("token5", "token5").unwrap().is_empty());
+        assert!(tree
+            .load_swap_path(LeaseC5::TICKER, LeaseC5::TICKER)
+            .unwrap()
+            .is_empty());
 
-        let resp = tree.load_swap_path("token5", TheCurrency::TICKER).unwrap();
+        let resp = tree
+            .load_swap_path(LeaseC5::TICKER, TheCurrency::TICKER)
+            .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 5,
-                target: "token1".into(),
+                target: LeaseC1::TICKER.into(),
             },
             SwapTarget {
                 pool_id: 1,
-                target: "token2".into(),
+                target: LeaseC2::TICKER.into(),
             },
             SwapTarget {
                 pool_id: 2,
@@ -426,20 +431,24 @@ mod tests {
 
         assert_eq!(resp, expect);
 
-        let resp = tree.load_swap_path("token6", "token5").unwrap();
+        let resp = tree
+            .load_swap_path(NativeC::TICKER, LeaseC5::TICKER)
+            .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 6,
-                target: "token1".into(),
+                target: LeaseC1::TICKER.into(),
             },
             SwapTarget {
                 pool_id: 5,
-                target: "token5".into(),
+                target: LeaseC5::TICKER.into(),
             },
         ];
         assert_eq!(resp, expect);
 
-        let resp = tree.load_swap_path("token2", "token4").unwrap();
+        let resp = tree
+            .load_swap_path(LeaseC2::TICKER, LeaseC4::TICKER)
+            .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 2,
@@ -447,7 +456,7 @@ mod tests {
             },
             SwapTarget {
                 pool_id: 4,
-                target: "token4".into(),
+                target: LeaseC4::TICKER.into(),
             },
         ];
         assert_eq!(resp, expect);
@@ -456,11 +465,8 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree = SupportedPairs::<StableC>::with_non_validated_tickers(
-            paths.into_tree(),
-            TheCurrency::TICKER.into(),
-        )
-        .unwrap();
+        let tree =
+            SupportedPairs::<StableC>::new(paths.into_tree(), TheCurrency::TICKER.into()).unwrap();
 
         fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
             a.from.cmp(&b.from)
@@ -471,45 +477,45 @@ mod tests {
 
         let mut expected = vec![
             SwapLeg {
-                from: "token2".into(),
+                from: LeaseC2::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 2,
                     target: TheCurrency::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: "token4".into(),
+                from: LeaseC4::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 4,
                     target: TheCurrency::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: "token1".into(),
+                from: LeaseC1::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: "token2".into(),
+                    target: LeaseC2::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: "token6".into(),
+                from: NativeC::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 6,
-                    target: "token1".into(),
+                    target: LeaseC1::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: "token5".into(),
+                from: LeaseC5::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 5,
-                    target: "token1".into(),
+                    target: LeaseC1::TICKER.into(),
                 },
             },
             SwapLeg {
-                from: "token3".into(),
+                from: LeaseC3::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 3,
-                    target: "token4".into(),
+                    target: LeaseC4::TICKER.into(),
                 },
             },
         ];
@@ -534,10 +540,10 @@ mod tests {
                         {{"value":[3,{3:?}]}}
                     ]
                 }}"#,
-                <StableC as Currency>::TICKER,
-                <LeaseC1 as Currency>::TICKER,
-                <NativeC as Currency>::TICKER,
-                <LeaseC2 as Currency>::TICKER,
+                StableC::TICKER,
+                LeaseC1::TICKER,
+                NativeC::TICKER,
+                LeaseC2::TICKER,
             ))
             .unwrap()
             .into_tree(),
