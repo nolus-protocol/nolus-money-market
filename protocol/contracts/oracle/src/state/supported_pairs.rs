@@ -311,7 +311,7 @@ mod tests {
             lease5 = LeaseC5::TICKER,
             native = NativeC::TICKER,
         ))
-        .unwrap()
+        .expect("123")
     }
 
     #[test]
@@ -374,6 +374,28 @@ mod tests {
         .unwrap();
 
         SupportedPairs::<TheCurrency>::new(tree, TheCurrency::TICKER.into()).unwrap();
+    }
+
+    #[test]
+    fn test_not_included_stable_currency() {
+        let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
+            r#"{{
+                "value": [0, {base:?}],
+                "children":[
+                    {{
+                        "value": [1, {lease1:?}]
+                    }}
+                ]
+            }}"#,
+            base = TheCurrency::TICKER,
+            lease1 = LeaseC1::TICKER,
+        ))
+        .unwrap();
+
+        assert_eq!(
+            SupportedPairs::<TheCurrency>::new(tree.into_tree(), NativeC::TICKER.into()),
+            Err(ContractError::StableCurrencyNotInTree {})
+        );
     }
 
     #[test]
