@@ -1,3 +1,4 @@
+use currencies::Lpn;
 use serde::de::DeserializeOwned;
 
 use currency::{AnyVisitorPair, Currency, Group};
@@ -7,23 +8,21 @@ use crate::ContractError;
 
 use super::price_querier::PriceQuerier;
 
-pub struct LegCmd<PriceG, BaseC, Querier>
+pub struct LegCmd<PriceG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency,
     Querier: PriceQuerier,
 {
     price_querier: Querier,
-    stack: Vec<BasePrice<PriceG, BaseC>>,
+    stack: Vec<BasePrice<PriceG, Lpn>>,
 }
 
-impl<PriceG, BaseC, Querier> LegCmd<PriceG, BaseC, Querier>
+impl<PriceG, Querier> LegCmd<PriceG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency,
     Querier: PriceQuerier,
 {
-    pub fn new(price_querier: Querier, stack: Vec<BasePrice<PriceG, BaseC>>) -> Self {
+    pub fn new(price_querier: Querier, stack: Vec<BasePrice<PriceG, Lpn>>) -> Self {
         Self {
             price_querier,
             stack,
@@ -31,13 +30,12 @@ where
     }
 }
 
-impl<PriceG, BaseC, Querier> AnyVisitorPair for &mut LegCmd<PriceG, BaseC, Querier>
+impl<PriceG, Querier> AnyVisitorPair for &mut LegCmd<PriceG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
     Querier: PriceQuerier,
 {
-    type Output = Option<BasePrice<PriceG, BaseC>>;
+    type Output = Option<BasePrice<PriceG, Lpn>>;
     type Error = ContractError;
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
@@ -53,7 +51,7 @@ where
             .enumerate()
             .rev()
             .find_map(|(i, parent_bprice)| {
-                Price::<Q, BaseC>::try_from(parent_bprice)
+                Price::<Q, Lpn>::try_from(parent_bprice)
                     .ok()
                     .map(|parent_price| {
                         self.price_querier
@@ -71,7 +69,7 @@ where
         let idx_price = branch_price.map_or_else(
             || {
                 self.price_querier
-                    .price::<B, BaseC>()
+                    .price::<B, Lpn>()
                     .map(|res_price| res_price.map(|price| (0, price)))
             },
             |idx_price| Ok(Some(idx_price)),
@@ -103,7 +101,7 @@ mod test {
         feeds.add::<PaymentC1, TheCurrency>(2, 1);
         feeds.add::<PaymentC5, PaymentC4>(2, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![],
         };
@@ -139,7 +137,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, TheCurrency>(2, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
@@ -154,7 +152,7 @@ mod test {
         feeds.add::<PaymentC4, TheCurrency>(2, 1);
         feeds.add::<PaymentC3, PaymentC5>(3, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
@@ -170,7 +168,7 @@ mod test {
         feeds.add::<PaymentC3, PaymentC4>(3, 1);
         feeds.add::<PaymentC6, PaymentC4>(4, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![
                 tests::base_price::<PaymentC4>(2, 1),
@@ -197,7 +195,7 @@ mod test {
         feeds.add::<PaymentC4, TheCurrency>(2, 1);
         feeds.add::<PaymentC6, TheCurrency>(4, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };
@@ -214,7 +212,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC6, TheCurrency>(4, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![],
         };
@@ -231,7 +229,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, TheCurrency>(2, 1);
 
-        let mut cmd = LegCmd::<PriceGroup, TheCurrency, _> {
+        let mut cmd = LegCmd::<PriceGroup, _> {
             price_querier: feeds.clone(),
             stack: vec![tests::base_price::<PaymentC4>(2, 1)],
         };

@@ -1,5 +1,6 @@
 use std::{iter, ops::Deref};
 
+use currencies::Lpn;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
@@ -12,24 +13,22 @@ use crate::{contract::alarms::PriceResult, error::ContractError, result::Contrac
 type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
 type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
 
-pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+pub struct Iter<'storage, 'alarms, S, I, PriceG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG>>,
     PriceG: Group + Clone,
-    BaseC: Currency,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
     price_iter: I,
     alarm_iter: Option<AlarmIter<'alarms, PriceG>>,
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC> Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+impl<'storage, 'alarms, S, I, PriceG> Iter<'storage, 'alarms, S, I, PriceG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG>>,
     PriceG: Group + Clone,
-    BaseC: Currency,
 {
     pub fn new(
         alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -54,9 +53,9 @@ where
     fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms, PriceG>>> {
         self.price_iter
             .next()
-            .map(|price_result: PriceResult<PriceG, BaseC>| {
+            .map(|price_result: PriceResult<PriceG>| {
                 price_result.and_then(|ref price| {
-                    Tickers.visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC>>(
+                    Tickers.visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG>>(
                         price.base_ticker(),
                         Cmd {
                             alarms: self.alarms,
@@ -78,13 +77,11 @@ where
     }
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC> Iterator
-    for Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+impl<'storage, 'alarms, S, I, PriceG> Iterator for Iter<'storage, 'alarms, S, I, PriceG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG>>,
     PriceG: Group + Clone,
-    BaseC: Currency,
 {
     type Item = ContractResult<Addr>;
 
@@ -105,22 +102,19 @@ where
     }
 }
 
-struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
+struct Cmd<'storage, 'alarms, 'price, S, PriceG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
-    BaseC: Currency,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
-    price: &'price BasePrice<PriceG, BaseC>,
+    price: &'price BasePrice<PriceG, Lpn>,
 }
 
-impl<'storage, 'alarms, 'price, S, PriceG, BaseC> AnyVisitor
-    for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
+impl<'storage, 'alarms, 'price, S, PriceG> AnyVisitor for Cmd<'storage, 'alarms, 'price, S, PriceG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
-    BaseC: Currency,
 {
     type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;
@@ -129,8 +123,8 @@ where
     where
         C: Currency + Serialize + DeserializeOwned,
     {
-        Price::<C, BaseC>::try_from(self.price)
-            .map(|price: Price<C, BaseC>| {
+        Price::<C, Lpn>::try_from(self.price)
+            .map(|price: Price<C, Lpn>| {
                 self.alarms
                     .alarms(price)
                     .map::<ContractResult<Addr>, AlarmIterMapFn>(

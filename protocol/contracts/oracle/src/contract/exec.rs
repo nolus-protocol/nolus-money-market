@@ -61,7 +61,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     return Err(ContractError::UnknownFeeder {});
                 }
 
-                try_feed_prices::<PriceCurrencies, BaseC, PriceCurrencies>(
+                try_feed_prices::<PriceCurrencies>(
                     self.deps.storage,
                     self.env.block.time,
                     self.sender,
@@ -70,7 +70,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 .map(|()| Default::default())
             }
             ExecuteMsg::DispatchAlarms { max_count } => {
-                Oracle::<_, PriceCurrencies, BaseC, Lpns>::load(self.deps.storage)?
+                Oracle::<'_, _, PriceCurrencies>::load(self.deps.storage)?
                     .try_notify_alarms(self.env.block.time, max_count)
                     .and_then(|(total, resp)| {
                         response::response_with_messages(DispatchAlarmsResponse(total), resp)
@@ -80,14 +80,14 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 contract::validate_addr(self.deps.querier, &self.sender)?;
 
                 MarketAlarms::new(self.deps.storage)
-                    .try_add_price_alarm::<BaseC, _>(self.sender, alarm)
+                    .try_add_price_alarm(self.sender, alarm)
                     .map(|()| Default::default())
             }
         }
     }
 }
 
-fn try_feed_prices<G, BaseC, QuoteG>(
+fn try_feed_prices<G>(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender: Addr,
@@ -95,11 +95,9 @@ fn try_feed_prices<G, BaseC, QuoteG>(
 ) -> ContractResult<()>
 where
     G: Group,
-    BaseC: Currency + DeserializeOwned,
-    QuoteG: Group,
 {
     let config = Config::load(storage).map_err(ContractError::LoadConfig)?;
-    let oracle = Feeds::<G, BaseC, QuoteG>::with(config.price_config);
+    let oracle = Feeds::with(config.price_config);
 
     oracle
         .feed_prices(storage, block_time, &sender, &prices)

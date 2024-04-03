@@ -35,43 +35,42 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
-        type QueryOracle<'storage, S, BaseC> = Oracle<'storage, S, PriceCurrencies, BaseC, Lpns>;
+        type QueryOracle<'storage, S> = Oracle<'storage, S, PriceCurrencies>;
 
         match self.msg {
-            QueryMsg::StableCurrency {} => to_json_binary(
-                SupportedPairs::<OracleBase>::load(self.deps.storage)?.stable_currency(),
-            ),
+            QueryMsg::StableCurrency {} => {
+                to_json_binary(SupportedPairs::load(self.deps.storage)?.stable_currency())
+            }
             QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
-                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                &SupportedPairs::load(self.deps.storage)?
                     .swap_pairs_df()
                     .collect::<Vec<_>>(),
             ),
             QueryMsg::Currencies {} => to_json_binary(
-                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                &SupportedPairs::load(self.deps.storage)?
                     .currencies()
                     .collect::<Vec<_>>(),
             ),
             QueryMsg::Price { currency } => to_json_binary(
-                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<'_, _>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,
             ),
             QueryMsg::Prices {} => {
-                let prices = QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                let prices = QueryOracle::<'_, _>::load(self.deps.storage)?
                     .try_query_prices(self.env.block.time)?;
 
                 to_json_binary(&PricesResponse { prices })
             }
             QueryMsg::SwapPath { from, to } => to_json_binary(
-                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
-                    .load_swap_path(&from, &to)?,
+                &SupportedPairs::load(self.deps.storage)?.load_swap_path(&from, &to)?,
             ),
             QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse {
-                tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                tree: SupportedPairs::load(self.deps.storage)?
                     .query_swap_tree()
                     .into_human_readable(),
             }),
             QueryMsg::AlarmsStatus {} => to_json_binary(
-                &QueryOracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                &QueryOracle::<'_, _>::load(self.deps.storage)?
                     .try_query_alarms(self.env.block.time)?,
             ),
             _ => {

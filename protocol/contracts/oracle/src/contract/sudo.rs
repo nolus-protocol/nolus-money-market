@@ -38,7 +38,7 @@ impl<'a> AnyVisitor for SudoWithOracleBase<'a> {
             SudoMsg::SwapTree {
                 stable_currency,
                 tree,
-            } => SupportedPairs::<OracleBase>::new(tree.into_tree(), stable_currency)
+            } => SupportedPairs::new(tree.into_tree(), stable_currency)
                 .and_then(|supported_pairs| supported_pairs.save(self.deps.storage)),
             _ => unreachable!(),
         }

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
@@ -19,24 +19,18 @@ use crate::{
 type Tree = tree::Tree<SwapTarget>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SupportedPairs<B> {
+pub(crate) struct SupportedPairs {
     tree: Tree,
     stable_currency: SymbolOwned,
-    #[serde(skip)]
-    _type: PhantomData<B>,
 }
 
-impl<'a, B> SupportedPairs<B>
-where
-    B: Currency,
-{
-    const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
+impl SupportedPairs {
+    const DB_ITEM: Item<'static, Self> = Item::new("supported_pairs");
 
     pub fn new(tree: Tree, stable_currency: SymbolOwned) -> Result<Self, ContractError> {
-        check_tree(&tree, B::TICKER, &stable_currency).map(|()| SupportedPairs {
+        check_tree(&tree, &stable_currency).map(|()| Self {
             tree,
             stable_currency,
-            _type: PhantomData,
         })
     }
 
@@ -182,8 +176,7 @@ where
                         storage,
                         &Self {
                             tree,
-                            stable_currency: B::TICKER.into(),
-                            _type: PhantomData,
+                            stable_currency: currencies::Lpn::TICKER.into(),
                         },
                     )
                     .map_err(ContractError::StoreSupportedPairs)
@@ -200,19 +193,15 @@ where
         self.tree
             .find_by(|target| target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
-            .ok_or_else(|| error::unsupported_currency::<B>(query))
+            .ok_or_else(|| error::unsupported_currency(query))
     }
 }
 
-fn check_tree(
-    tree: &Tree,
-    base_currency: &SymbolSlice,
-    stable_currency: &SymbolSlice,
-) -> Result<(), ContractError> {
-    if tree.root().value().target != base_currency {
+fn check_tree(tree: &Tree, stable_currency: &SymbolSlice) -> Result<(), ContractError> {
+    if tree.root().value().target != currencies::Lpn::TICKER {
         Err(ContractError::InvalidBaseCurrency(
             tree.root().value().target.clone(),
-            ToOwned::to_owned(base_currency),
+            currencies::Lpn::TICKER.into(),
         ))
     } else {
         let mut supported_currencies: Vec<_> = tree
@@ -308,8 +297,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp =
-            SupportedPairs::<StableC>::new(tree.into_tree(), TheCurrency::TICKER.into()).unwrap();
+        let sp = SupportedPairs::new(tree.into_tree(), TheCurrency::TICKER.into()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -335,7 +323,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<TheCurrency>::new(tree.into_tree(), StableC::TICKER.into()),
+            SupportedPairs::new(tree.into_tree(), StableC::TICKER.into()),
             Err(ContractError::InvalidBaseCurrency(
                 LeaseC1::TICKER.into(),
                 StableC::TICKER.into()
@@ -369,7 +357,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into()),
+            SupportedPairs::new(tree.into_tree(), TheCurrency::TICKER.into()),
             Err(ContractError::DuplicatedNodes {})
         );
     }
@@ -391,7 +379,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<TheCurrency>::new(tree.into_tree(), NativeC::TICKER.into()),
+            SupportedPairs::new(tree.into_tree(), NativeC::TICKER.into()),
             Err(ContractError::StableCurrencyNotInTree {})
         );
     }
@@ -399,8 +387,7 @@ mod tests {
     #[test]
     fn test_load_path() {
         let tree =
-            SupportedPairs::<StableC>::new(test_case().into_tree(), TheCurrency::TICKER.into())
-                .unwrap();
+            SupportedPairs::new(test_case().into_tree(), TheCurrency::TICKER.into()).unwrap();
 
         let resp: Vec<_> = tree.load_path(LeaseC5::TICKER).unwrap().collect();
         assert_eq!(
@@ -417,8 +404,7 @@ mod tests {
     #[test]
     fn test_load_swap_path() {
         let tree =
-            SupportedPairs::<StableC>::new(test_case().into_tree(), TheCurrency::TICKER.into())
-                .unwrap();
+            SupportedPairs::new(test_case().into_tree(), TheCurrency::TICKER.into()).unwrap();
 
         assert!(tree
             .load_swap_path(LeaseC5::TICKER, LeaseC5::TICKER)
@@ -479,8 +465,7 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree =
-            SupportedPairs::<StableC>::new(paths.into_tree(), TheCurrency::TICKER.into()).unwrap();
+        let tree = SupportedPairs::new(paths.into_tree(), TheCurrency::TICKER.into()).unwrap();
 
         fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
             a.from.cmp(&b.from)
@@ -540,7 +525,7 @@ mod tests {
 
     #[test]
     fn currencies() {
-        let listed_currencies: Vec<_> = SupportedPairs::<StableC>::new(
+        let listed_currencies: Vec<_> = SupportedPairs::new(
             cosmwasm_std::from_json::<HumanReadableTree<_>>(format!(
                 r#"{{
                     "value":[0,{0:?}],

@@ -99,12 +99,9 @@ pub enum ContractError {
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError
-where
-    C: Currency,
-{
+pub(crate) fn unsupported_currency(unsupported: &SymbolSlice) -> ContractError {
     ContractError::UnsupportedCurrency {
-        base: C::TICKER.into(),
+        base: currencies::Lpn::TICKER.into(),
         unsupported: unsupported.into(),
     }
 }

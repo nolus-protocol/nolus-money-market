@@ -1,8 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
-use serde::de::DeserializeOwned;
-
-use currency::{Currency, Group, SymbolOwned};
+use currencies::{Lpn, Lpns};
+use currency::{Group, SymbolOwned};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
@@ -12,46 +11,41 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
     api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
-    contract::{alarms::MarketAlarms, oracle::feed::Feeds},
+    contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
 
-use self::feeder::Feeders;
+use self::{feed::Feeds, feeder::Feeders};
 
 pub mod feed;
 pub mod feeder;
 
-pub(crate) type PriceResult<PriceG, OracleBase> =
-    Result<BasePrice<PriceG, OracleBase>, ContractError>;
+pub(crate) type PriceResult<PriceG> = Result<BasePrice<PriceG, Lpn>, ContractError>;
 
-pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
+pub(crate) struct Oracle<'storage, S, PriceG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
-    BaseG: Group,
 {
     storage: S,
-    tree: SupportedPairs<BaseC>,
+    tree: SupportedPairs,
     feeders: usize,
-    feeds: Feeds<PriceG, BaseC, BaseG>,
+    feeds: Feeds<PriceG>,
 }
 
-impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
+impl<'storage, S, PriceG> Oracle<'storage, S, PriceG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group + Clone,
-    BaseC: Currency + DeserializeOwned,
-    BaseG: Group,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
         let tree = SupportedPairs::load(storage.deref())?;
         let feeders =
             Feeders::total_registered(storage.deref()).map_err(ContractError::LoadFeeders)?;
         let config = Config::load(storage.deref()).map_err(ContractError::LoadConfig)?;
-        let feeds = Feeds::<PriceG, BaseC, BaseG>::with(config.price_config);
+        let feeds = Feeds::<PriceG>::with(config.price_config);
 
         Ok(Self {
             storage,
@@ -65,41 +59,35 @@ where
         &self,
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
-        MarketAlarms::new(self.storage.deref())
-            .try_query_alarms::<_, BaseC>(self.calc_all_prices(block_time))
+        MarketAlarms::<'_, _, PriceG>::new(self.storage.deref())
+            .try_query_alarms(self.calc_all_prices(block_time))
             .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
     }
 
     pub(super) fn try_query_prices(
         &self,
         block_time: Timestamp,
-    ) -> Result<Vec<PriceDTO<PriceG, BaseG>>, ContractError> {
-        self.calc_all_prices(block_time).try_fold(
-            vec![],
-            |mut v: Vec<PriceDTO<PriceG, BaseG>>,
-             price: Result<BasePrice<PriceG, BaseC>, ContractError>| {
+    ) -> Result<Vec<PriceDTO<PriceG, Lpns>>, ContractError> {
+        self.calc_all_prices(block_time)
+            .try_fold(vec![], |mut v, price| {
                 price.map(|price| {
                     v.push(price.into());
 
                     v
                 })
-            },
-        )
+            })
     }
 
     pub(super) fn try_query_price(
         &self,
         at: Timestamp,
         currency: &SymbolOwned,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
+    ) -> Result<PriceDTO<PriceG, Lpns>, ContractError> {
         self.feeds
             .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
-    fn calc_all_prices(
-        &self,
-        at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + '_ {
+    fn calc_all_prices(&self, at: Timestamp) -> impl Iterator<Item = PriceResult<PriceG>> + '_ {
         self.feeds.all_prices_iter(
             self.storage.deref(),
             self.tree.swap_pairs_df(),
@@ -109,12 +97,10 @@ where
     }
 }
 
-impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
+impl<'storage, S, PriceG> Oracle<'storage, S, PriceG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     PriceG: Group + Clone,
-    BaseC: Currency + DeserializeOwned,
-    BaseG: Group,
 {
     const REPLY_ID: Id = 0;
     const EVENT_TYPE: &'static str = "pricealarm";
@@ -124,17 +110,16 @@ where
         block_time: Timestamp,
         max_count: u32,
     ) -> ContractResult<(u32, MessageResponse)> {
-        let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
+        let subscribers = MarketAlarms::<'_, _, PriceG>::new(self.storage.deref())
             .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))?
+            .notify_alarms_iter(self.calc_all_prices(block_time))?
             .take(max_count.try_into()?)
-            .collect::<ContractResult<Vec<Addr>>>()?;
+            .collect::<ContractResult<Vec<_>>>()?;
 
         #[cfg(debug_assertions)]
         Self::assert_unique_subscribers(&subscribers);
 
-        let mut alarms: MarketAlarms<'_, &mut (dyn Storage + 'storage), PriceG> =
-            MarketAlarms::new(self.storage.deref_mut());
+        let mut alarms = MarketAlarms::<'_, _, PriceG>::new(self.storage.deref_mut());
 
         subscribers
             .into_iter()
@@ -235,7 +220,7 @@ mod test_normalized_price_not_found {
             .store(storage)
             .unwrap();
 
-        SupportedPairs::<BaseCurrency>::new(
+        SupportedPairs::new(
             swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER)).into_tree(),
             StableC::TICKER.into(),
         )
@@ -250,7 +235,7 @@ mod test_normalized_price_not_found {
             MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, _>(
+            .try_add_price_alarm(
                 Addr::unchecked("1"),
                 Alarm::<_, BaseGroup>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
@@ -262,7 +247,7 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn feed_price(price_config: &PriceConfig, storage: &mut dyn Storage) {
-        Feeds::<PriceCurrencies, BaseCurrency, BaseGroup>::with(price_config.clone())
+        Feeds::<PriceCurrencies>::with(price_config.clone())
             .feed_prices(
                 storage,
                 NOW,
@@ -274,8 +259,7 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn dispatch(storage: &mut dyn Storage, expected_count: u32) {
-        let mut oracle: Oracle<'_, &mut dyn Storage, PriceCurrencies, BaseCurrency, BaseGroup> =
-            Oracle::load(storage).unwrap();
+        let mut oracle = Oracle::<'_, _, PriceCurrencies>::load(storage).unwrap();
 
         let alarms: u32 = oracle.try_notify_alarms(NOW, 16).unwrap().0;
 
@@ -284,8 +268,7 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn deliver(storage: &mut dyn Storage, count: u32) {
-        let mut alarms: MarketAlarms<'_, &mut dyn Storage, PriceCurrencies> =
-            MarketAlarms::new(storage);
+        let mut alarms = MarketAlarms::<'_, _, PriceCurrencies>::new(storage);
 
         for _ in 0..count {
             alarms.last_delivered().unwrap();

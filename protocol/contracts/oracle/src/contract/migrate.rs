@@ -29,6 +29,6 @@ impl<'a> AnyVisitor for MigrateWithOracleBase<'a> {
     where
         OracleBase: Currency + DeserializeOwned,
     {
-        SupportedPairs::<OracleBase>::migrate(self.storage)
+        SupportedPairs::migrate(self.storage)
     }
 }

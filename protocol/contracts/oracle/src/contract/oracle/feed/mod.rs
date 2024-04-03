@@ -1,8 +1,5 @@
-use std::marker::PhantomData;
-
-use serde::de::DeserializeOwned;
-
-use currency::{Currency, Group, SymbolOwned};
+use currencies::{Lpn, Lpns};
+use currency::{Group, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -13,30 +10,24 @@ use crate::{
     state::supported_pairs::SupportedPairs,
 };
 
-use self::{leg_cmd::LegCmd, price_querier::FedPrices};
-
 use super::PriceResult;
+
+use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 
 mod leg_cmd;
 mod price_querier;
 
-pub struct Feeds<PriceG, BaseC, BaseG> {
+pub struct Feeds<PriceG> {
     feeds: PriceFeeds<'static, PriceG>,
-    _base_c: PhantomData<BaseC>,
-    _base_g: PhantomData<BaseG>,
 }
 
-impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
+impl<PriceG> Feeds<PriceG>
 where
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
-    BaseG: Group,
 {
     pub(crate) fn with(config: Config) -> Self {
         Self {
             feeds: PriceFeeds::new("market_price", config),
-            _base_c: PhantomData,
-            _base_g: PhantomData,
         }
     }
 
@@ -47,7 +38,7 @@ where
         sender_raw: &Addr,
         prices: &[PriceDTO<PriceG, PriceG>],
     ) -> Result<(), ContractError> {
-        let tree = SupportedPairs::<BaseC>::load(storage)?;
+        let tree = SupportedPairs::load(storage)?;
         if prices.iter().any(|price| {
             !tree.swap_pairs_df().any(
                 |SwapLeg {
@@ -72,44 +63,41 @@ where
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + 'r
+    ) -> impl Iterator<Item = PriceResult<PriceG>> + 'r
     where
         'self_: 'r,
         'storage: 'r,
         I: Iterator<Item = SwapLeg> + 'r,
     {
-        let cmd: LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>> = LegCmd::new(
+        let cmd: LegCmd<PriceG, FedPrices<'_, PriceG>> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
 
         swap_pairs_df
-            .scan(
-                cmd,
-                |cmd: &mut LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>>, leg: SwapLeg| {
-                    Some(
-                        currency::visit_any_on_tickers::<PriceG, PriceG, _>(
-                            &leg.from,
-                            &leg.to.target,
-                            cmd,
-                        )
-                        .transpose(),
+            .scan(cmd, |cmd, leg| {
+                Some(
+                    currency::visit_any_on_tickers::<PriceG, PriceG, _>(
+                        &leg.from,
+                        &leg.to.target,
+                        cmd,
                     )
-                },
-            )
+                    .transpose(),
+                )
+            })
             .flatten()
     }
 
     pub fn calc_price(
         &self,
         storage: &dyn Storage,
-        tree: &SupportedPairs<BaseC>,
+        tree: &SupportedPairs,
         currency: &SymbolOwned,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
+    ) -> Result<PriceDTO<PriceG, Lpns>, ContractError> {
         self.feeds
-            .price::<BaseC, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
+            .price::<Lpn, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
             .map_err(Into::into)
     }
 }
@@ -118,8 +106,10 @@ where
 mod test {
     use std::collections::HashMap;
 
+    use serde::de::DeserializeOwned;
+
     use currencies::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7};
-    use currency::SymbolStatic;
+    use currency::{Currency, SymbolStatic};
     use finance::{
         coin::Amount,
         duration::Duration,
@@ -144,6 +134,7 @@ mod test {
     pub struct TestFeeds(
         pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, PriceCurrencies>>,
     );
+
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
@@ -212,7 +203,7 @@ mod test {
     mod all_prices_iter {
         use finance::price::base::BasePrice;
 
-        use crate::tests::{PriceGroup, TheStableGroup};
+        use crate::tests::PriceGroup;
 
         use super::*;
 
@@ -221,9 +212,7 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree =
-                SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into())
-                    .unwrap();
+            let tree = SupportedPairs::new(tree.into_tree(), TheCurrency::TICKER.into()).unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -233,7 +222,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceGroup, TheCurrency, TheStableGroup> = Feeds::with(config);
+            let oracle = Feeds::<PriceGroup>::with(config);
 
             oracle
                 .feed_prices(
@@ -273,9 +262,7 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree =
-                SupportedPairs::<TheCurrency>::new(tree.into_tree(), TheCurrency::TICKER.into())
-                    .unwrap();
+            let tree = SupportedPairs::new(tree.into_tree(), TheCurrency::TICKER.into()).unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -285,7 +272,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceGroup, TheCurrency, TheStableGroup> = Feeds::with(config);
+            let oracle = Feeds::<PriceGroup>::with(config);
 
             oracle
                 .feed_prices(

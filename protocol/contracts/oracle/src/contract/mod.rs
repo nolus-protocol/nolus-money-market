@@ -15,13 +15,13 @@ use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, Ve
 
 use crate::{
     api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
-    contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
 
 use self::{
+    alarms::MarketAlarms,
     config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
     query::QueryWithOracleBase, sudo::SudoWithOracleBase,
 };
@@ -67,7 +67,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             .store(self.deps.storage)
             .map_err(ContractError::StoreConfig)
             .and_then(|()| {
-                SupportedPairs::<C>::new(self.msg.swap_tree.into_tree(), self.msg.stable_currency)
+                SupportedPairs::new(self.msg.swap_tree.into_tree(), self.msg.stable_currency)
             })
             .and_then(|supported_pairs| supported_pairs.save(self.deps.storage))
     }
