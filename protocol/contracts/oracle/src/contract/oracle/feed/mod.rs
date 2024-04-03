@@ -1,5 +1,5 @@
 use currencies::{Lpn, Lpns};
-use currency::{Group, SymbolOwned};
+use currency::{Group, SymbolSlice};
 use finance::price::dto::PriceDTO;
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -92,7 +92,7 @@ where
         &self,
         storage: &dyn Storage,
         tree: &SupportedPairs,
-        currency: &SymbolOwned,
+        currency: &SymbolSlice,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<PriceDTO<PriceG, Lpns>, ContractError> {

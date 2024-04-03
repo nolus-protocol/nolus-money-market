@@ -7,8 +7,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-        SubMsgResult,
+        entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
@@ -25,15 +24,13 @@ use crate::{
 
 use self::{
     alarms::MarketAlarms,
-    config::query_config,
     oracle::{feed::Feeds, feeder::Feeders},
-    query::QueryWithOracleBase,
 };
 
 mod alarms;
 mod config;
 mod oracle;
-pub mod query;
+mod query;
 
 const FROM_CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -112,21 +109,18 @@ pub fn migrate(
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => {
-            to_json_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
-        }
-        QueryMsg::Config {} => {
-            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::ConvertToBinary)
-        }
-        QueryMsg::Feeders {} => Feeders::get(deps.storage)
-            .map_err(ContractError::LoadFeeders)
-            .and_then(|ref feeders| {
-                to_json_binary(feeders).map_err(ContractError::ConvertToBinary)
-            }),
-        QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
-            .map_err(ContractError::LoadFeeders)
-            .and_then(|ref f| to_json_binary(&f).map_err(ContractError::ConvertToBinary)),
-        _ => QueryWithOracleBase::cmd(deps, env, msg),
+        QueryMsg::ContractVersion {} => query::contract_version(),
+        QueryMsg::Config {} => query::config(deps.storage),
+        QueryMsg::SwapTree {} => query::swap_tree(deps.storage),
+        QueryMsg::Feeders {} => query::feeders(deps.storage),
+        QueryMsg::IsFeeder { address } => query::is_feeder(deps.storage, &address),
+        QueryMsg::Prices {} => query::prices(deps.storage, env.block.time),
+        QueryMsg::Price { currency } => query::price(deps.storage, env.block.time, &currency),
+        QueryMsg::StableCurrency {} => query::stable_currency(deps.storage),
+        QueryMsg::SupportedCurrencyPairs {} => query::supported_currency_pairs(deps.storage),
+        QueryMsg::Currencies {} => query::currencies(deps.storage),
+        QueryMsg::SwapPath { from, to } => query::swap_path(deps.storage, &from, &to),
+        QueryMsg::AlarmsStatus {} => query::alarms_status(deps.storage, env.block.time),
     }
 }
 

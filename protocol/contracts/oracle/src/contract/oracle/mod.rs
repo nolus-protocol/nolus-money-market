@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use currencies::{Lpn, Lpns};
-use currency::{Group, SymbolOwned};
+use currency::{Group, SymbolSlice};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
@@ -81,7 +81,7 @@ where
     pub(super) fn try_query_price(
         &self,
         at: Timestamp,
-        currency: &SymbolOwned,
+        currency: &SymbolSlice,
     ) -> Result<PriceDTO<PriceG, Lpns>, ContractError> {
         self.feeds
             .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)

@@ -1,82 +1,96 @@
-use serde::{de::DeserializeOwned, Serialize};
-
-use currencies::Lpns;
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
-use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
+use currency::SymbolSlice;
+use sdk::cosmwasm_std::{to_json_binary, Addr, Binary, Storage, Timestamp};
+use versioning::package_version;
 
 use crate::{
-    api::{Config, PriceCurrencies, PricesResponse, QueryMsg, SwapTreeResponse},
-    contract::oracle::Oracle,
+    api::{PriceCurrencies, PricesResponse, SwapTreeResponse},
+    error::ContractError,
+    result::ContractResult,
     state::supported_pairs::SupportedPairs,
-    ContractError,
 };
 
-pub struct QueryWithOracleBase<'a> {
-    deps: Deps<'a>,
-    env: Env,
-    msg: QueryMsg,
+use super::{config, oracle::feeder::Feeders, oracle::Oracle};
+
+pub fn contract_version() -> ContractResult<Binary> {
+    to_json_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
 }
 
-impl<'a> QueryWithOracleBase<'a> {
-    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-        let visitor = Self { deps, env, msg };
-
-        Config::load(visitor.deps.storage)
-            .map_err(ContractError::LoadConfig)
-            .and_then(|config| Tickers.visit_any::<Lpns, _>(&config.base_asset, visitor))
-    }
+pub fn config(storage: &dyn Storage) -> ContractResult<Binary> {
+    config::query_config(storage)
+        .and_then(|config| to_json_binary(&config).map_err(ContractError::ConvertToBinary))
 }
 
-impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
-    type Output = Binary;
-    type Error = ContractError;
+pub fn swap_tree(storage: &dyn Storage) -> ContractResult<Binary> {
+    SupportedPairs::load(storage)
+        .map(|supported_pairs| supported_pairs.query_swap_tree().into_human_readable())
+        .and_then(|tree| {
+            to_json_binary(&SwapTreeResponse { tree }).map_err(ContractError::ConvertToBinary)
+        })
+}
 
-    fn on<OracleBase>(self) -> AnyVisitorResult<Self>
-    where
-        OracleBase: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        type QueryOracle<'storage, S> = Oracle<'storage, S, PriceCurrencies>;
+pub fn feeders(storage: &dyn Storage) -> ContractResult<Binary> {
+    Feeders::get(storage)
+        .map_err(ContractError::LoadFeeders)
+        .and_then(|feeders| to_json_binary(&feeders).map_err(ContractError::ConvertToBinary))
+}
 
-        match self.msg {
-            QueryMsg::StableCurrency {} => {
-                to_json_binary(SupportedPairs::load(self.deps.storage)?.stable_currency())
-            }
-            QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
-                &SupportedPairs::load(self.deps.storage)?
-                    .swap_pairs_df()
-                    .collect::<Vec<_>>(),
-            ),
-            QueryMsg::Currencies {} => to_json_binary(
-                &SupportedPairs::load(self.deps.storage)?
-                    .currencies()
-                    .collect::<Vec<_>>(),
-            ),
-            QueryMsg::Price { currency } => to_json_binary(
-                &QueryOracle::<'_, _>::load(self.deps.storage)?
-                    .try_query_price(self.env.block.time, &currency)?,
-            ),
-            QueryMsg::Prices {} => {
-                let prices = QueryOracle::<'_, _>::load(self.deps.storage)?
-                    .try_query_prices(self.env.block.time)?;
+pub fn is_feeder(storage: &dyn Storage, address: &Addr) -> ContractResult<Binary> {
+    Feeders::is_feeder(storage, address)
+        .map_err(ContractError::LoadFeeders)
+        .and_then(|is_feeder| to_json_binary(&is_feeder).map_err(ContractError::ConvertToBinary))
+}
 
-                to_json_binary(&PricesResponse { prices })
-            }
-            QueryMsg::SwapPath { from, to } => to_json_binary(
-                &SupportedPairs::load(self.deps.storage)?.load_swap_path(&from, &to)?,
-            ),
-            QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse {
-                tree: SupportedPairs::load(self.deps.storage)?
-                    .query_swap_tree()
-                    .into_human_readable(),
-            }),
-            QueryMsg::AlarmsStatus {} => to_json_binary(
-                &QueryOracle::<'_, _>::load(self.deps.storage)?
-                    .try_query_alarms(self.env.block.time)?,
-            ),
-            _ => {
-                unreachable!() // should be done already
-            }
-        }
-        .map_err(ContractError::ConvertToBinary)
-    }
+pub fn prices(storage: &dyn Storage, now: Timestamp) -> ContractResult<Binary> {
+    Oracle::<'_, _, PriceCurrencies>::load(storage)
+        .and_then(|oracle| oracle.try_query_prices(now))
+        .map(|prices| PricesResponse { prices })
+        .and_then(|response| to_json_binary(&response).map_err(ContractError::ConvertToBinary))
+}
+
+pub fn price(
+    storage: &dyn Storage,
+    now: Timestamp,
+    currency: &SymbolSlice,
+) -> ContractResult<Binary> {
+    Oracle::<'_, _, PriceCurrencies>::load(storage)
+        .and_then(|oracle| oracle.try_query_price(now, currency))
+        .and_then(|price_dto| to_json_binary(&price_dto).map_err(ContractError::ConvertToBinary))
+}
+
+pub fn stable_currency(storage: &dyn Storage) -> ContractResult<Binary> {
+    SupportedPairs::load(storage).and_then(|supported_pairs| {
+        to_json_binary(supported_pairs.stable_currency()).map_err(ContractError::ConvertToBinary)
+    })
+}
+
+pub fn supported_currency_pairs(storage: &dyn Storage) -> ContractResult<Binary> {
+    SupportedPairs::load(storage)
+        .map(|supported_pairs| supported_pairs.swap_pairs_df().collect())
+        .and_then(|swap_pairs: Vec<_>| {
+            to_json_binary(&swap_pairs).map_err(ContractError::ConvertToBinary)
+        })
+}
+
+pub fn currencies(storage: &dyn Storage) -> ContractResult<Binary> {
+    SupportedPairs::load(storage)
+        .map(|supported_pairs| supported_pairs.currencies().collect())
+        .and_then(|currencies: Vec<_>| {
+            to_json_binary(&currencies).map_err(ContractError::ConvertToBinary)
+        })
+}
+
+pub fn swap_path(
+    storage: &dyn Storage,
+    from: &SymbolSlice,
+    to: &SymbolSlice,
+) -> ContractResult<Binary> {
+    SupportedPairs::load(storage)
+        .and_then(|supported_pairs| supported_pairs.load_swap_path(from, to))
+        .and_then(|swap_path| to_json_binary(&swap_path).map_err(ContractError::ConvertToBinary))
+}
+
+pub fn alarms_status(storage: &dyn Storage, now: Timestamp) -> ContractResult<Binary> {
+    Oracle::<'_, _, PriceCurrencies>::load(storage)
+        .and_then(|oracle| oracle.try_query_alarms(now))
+        .and_then(|response| to_json_binary(&response).map_err(ContractError::ConvertToBinary))
 }
