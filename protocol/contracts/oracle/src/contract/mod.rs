@@ -2,7 +2,7 @@ use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
-    response,
+    contract, response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -14,7 +14,10 @@ use sdk::{
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
+    api::{
+        Config, DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
+        QueryMsg, SudoMsg,
+    },
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
@@ -22,13 +25,14 @@ use crate::{
 
 use self::{
     alarms::MarketAlarms,
-    config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
-    query::QueryWithOracleBase, sudo::SudoWithOracleBase,
+    config::query_config,
+    oracle::{feed::Feeds, feeder::Feeders},
+    query::QueryWithOracleBase,
+    sudo::SudoWithOracleBase,
 };
 
 mod alarms;
 mod config;
-pub mod exec;
 mod migrate;
 mod oracle;
 pub mod query;
@@ -136,7 +140,37 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    ExecWithOracleBase::cmd(deps, env, msg, info.sender)
+    match msg {
+        ExecuteMsg::FeedPrices { prices } => Feeders::is_feeder(deps.storage, &info.sender)
+            .map_err(ContractError::LoadFeeders)
+            .and_then(|is_feeder| {
+                if is_feeder {
+                    Ok(())
+                } else {
+                    Err(ContractError::UnknownFeeder {})
+                }
+            })
+            .and_then(|()| Config::load(deps.storage).map_err(ContractError::LoadConfig))
+            .map(|Config { price_config, .. }| Feeds::with(price_config))
+            .and_then(|feeds| {
+                feeds.feed_prices(deps.storage, env.block.time, &info.sender, &prices)
+            })
+            .map(|()| Default::default()),
+        ExecuteMsg::DispatchAlarms { max_count } => {
+            self::oracle::Oracle::<'_, _, PriceCurrencies>::load(deps.storage)
+                .and_then(|mut oracle| oracle.try_notify_alarms(env.block.time, max_count))
+                .and_then(|(total, resp)| {
+                    response::response_with_messages(DispatchAlarmsResponse(total), resp)
+                })
+        }
+        ExecuteMsg::AddPriceAlarm { alarm } => {
+            contract::validate_addr(deps.querier, &info.sender)?;
+
+            MarketAlarms::new(deps.storage)
+                .try_add_price_alarm(info.sender, alarm)
+                .map(|()| Default::default())
+        }
+    }
 }
 
 #[entry_point]
