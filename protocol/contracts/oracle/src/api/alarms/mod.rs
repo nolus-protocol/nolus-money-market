@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currencies::LeaseGroup;
+use currencies::{LeaseGroup, Lpns};
 use currency::Group;
 use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,6 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::BaseCurrencyGroup;
-
 mod unchecked;
 
 pub type AlarmCurrencies = LeaseGroup;
@@ -21,9 +19,7 @@ pub type AlarmCurrencies = LeaseGroup;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>,
-    },
+    AddPriceAlarm { alarm: Alarm<AlarmCurrencies, Lpns> },
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -105,9 +101,10 @@ mod test {
     use serde::Serialize;
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
+    use super::{Alarm, AlarmCurrencies};
     use currencies::{
         test::{PaymentC5, PaymentC6, PaymentC7, StableC},
-        PaymentGroup,
+        Lpns, PaymentGroup,
     };
     use currency::{Currency, Group};
     use finance::{
@@ -116,12 +113,8 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use crate::api::BaseCurrencyGroup;
-
-    use super::{Alarm, AlarmCurrencies};
-
     type AssetG = AlarmCurrencies;
-    type LpnG = BaseCurrencyGroup;
+    type LpnG = Lpns;
 
     #[test]
     fn below_price_ok() {

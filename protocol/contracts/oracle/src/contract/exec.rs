@@ -1,7 +1,8 @@
-use finance::price::dto::PriceDTO;
 use serde::de::DeserializeOwned;
 
+use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
+use finance::price::dto::PriceDTO;
 use platform::{contract, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -9,7 +10,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{BaseCurrencyGroup, Config, DispatchAlarmsResponse, ExecuteMsg, PriceCurrencies},
+    api::{Config, DispatchAlarmsResponse, ExecuteMsg, PriceCurrencies},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,
@@ -40,9 +41,7 @@ impl<'a> ExecWithOracleBase<'a> {
 
         Config::load(visitor.deps.storage)
             .map_err(ContractError::LoadConfig)
-            .and_then(|config: Config| {
-                Tickers.visit_any::<BaseCurrencyGroup, _>(&config.base_asset, visitor)
-            })
+            .and_then(|config: Config| Tickers.visit_any::<Lpns, _>(&config.base_asset, visitor))
     }
 }
 
@@ -71,7 +70,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 .map(|()| Default::default())
             }
             ExecuteMsg::DispatchAlarms { max_count } => {
-                Oracle::<_, PriceCurrencies, BaseC, BaseCurrencyGroup>::load(self.deps.storage)?
+                Oracle::<_, PriceCurrencies, BaseC, Lpns>::load(self.deps.storage)?
                     .try_notify_alarms(self.env.block.time, max_count)
                     .and_then(|(total, resp)| {
                         response::response_with_messages(DispatchAlarmsResponse(total), resp)

@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
@@ -13,10 +14,7 @@ use sdk::{
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{
-        BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
-        QueryMsg, SudoMsg,
-    },
+    api::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg, SudoMsg},
     contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
@@ -52,7 +50,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        Tickers.visit_any::<BaseCurrencyGroup, _>(&context.msg.config.base_asset.clone(), context)
+        Tickers.visit_any::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 

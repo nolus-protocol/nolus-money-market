@@ -10,9 +10,9 @@ use sdk::cosmwasm_std::{Addr, Storage};
 
 use crate::{api::Alarm as AlarmDTO, error::ContractError, result::ContractResult};
 
-use self::iter::Iter as AlarmsIter;
-
 use super::oracle::PriceResult;
+
+use self::iter::Iter as AlarmsIter;
 
 mod iter;
 
@@ -162,11 +162,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC5, PaymentC6, PaymentC7};
+    use currencies::{
+        test::{PaymentC5, PaymentC6, PaymentC7},
+        Lpns,
+    };
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
-        api::{BaseCurrencyGroup, PriceCurrencies},
+        api::PriceCurrencies,
         tests::{self, TheCurrency as Base},
     };
 
@@ -175,7 +178,7 @@ mod test {
     fn alarm_dto<C>(
         below: (u128, u128),
         above: Option<(u128, u128)>,
-    ) -> AlarmDTO<PriceCurrencies, BaseCurrencyGroup>
+    ) -> AlarmDTO<PriceCurrencies, Lpns>
     where
         C: Currency,
     {
@@ -187,7 +190,7 @@ mod test {
 
     fn add_alarms<'a>(
         mut storage: &mut dyn Storage,
-        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, BaseCurrencyGroup>)>,
+        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, Lpns>)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
             MarketAlarms::new(storage.deref_mut())
@@ -220,7 +223,7 @@ mod test {
         let _ = MarketAlarms::new(&mut storage as &mut dyn Storage).try_add_price_alarm::<Base, _>(
             receiver,
             AlarmDTO::new(
-                tests::dto_price::<Base, BaseCurrencyGroup, PaymentC5, PriceCurrencies>(1, 20),
+                tests::dto_price::<Base, Lpns, PaymentC5, PriceCurrencies>(1, 20),
                 None,
             ),
         );

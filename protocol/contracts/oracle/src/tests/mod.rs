@@ -1,6 +1,6 @@
 use currencies::{
     test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC},
-    PaymentGroup,
+    Lpns, PaymentGroup,
 };
 use currency::{Currency, Group, SymbolOwned};
 use finance::{
@@ -21,7 +21,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
 };
 
@@ -32,7 +32,7 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC;
-pub(crate) type TheStableGroup = BaseCurrencyGroup;
+pub(crate) type TheStableGroup = Lpns;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
