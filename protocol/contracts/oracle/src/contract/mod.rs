@@ -28,7 +28,6 @@ use self::{
     config::query_config,
     oracle::{feed::Feeds, feeder::Feeders},
     query::QueryWithOracleBase,
-    sudo::SudoWithOracleBase,
 };
 
 mod alarms;
@@ -36,7 +35,6 @@ mod config;
 mod migrate;
 mod oracle;
 pub mod query;
-mod sudo;
 
 const FROM_CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -179,7 +177,11 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
-        _ => SudoWithOracleBase::cmd(deps, msg),
+        SudoMsg::SwapTree {
+            stable_currency,
+            tree,
+        } => SupportedPairs::new(tree.into_tree(), stable_currency)
+            .and_then(|supported_pairs| supported_pairs.save(deps.storage)),
     }
     .map(|()| response::empty_response())
 }
