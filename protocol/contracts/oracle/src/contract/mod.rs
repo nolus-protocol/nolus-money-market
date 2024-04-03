@@ -1,5 +1,3 @@
-use currencies::Lpns;
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use platform::{
     batch::{Emit, Emitter},
     contract, response,
@@ -37,40 +35,6 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
-struct InstantiateWithCurrency<'a> {
-    deps: DepsMut<'a>,
-    msg: InstantiateMsg,
-}
-
-impl<'a> InstantiateWithCurrency<'a> {
-    pub fn cmd(
-        deps: DepsMut<'a>,
-        msg: InstantiateMsg,
-    ) -> ContractResult<<Self as AnyVisitor>::Output> {
-        let context = Self { deps, msg };
-        Tickers.visit_any::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
-    }
-}
-
-impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
-    type Output = ();
-    type Error = ContractError;
-
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency,
-    {
-        self.msg
-            .config
-            .store(self.deps.storage)
-            .map_err(ContractError::StoreConfig)
-            .and_then(|()| {
-                SupportedPairs::new(self.msg.swap_tree.into_tree(), self.msg.stable_currency)
-            })
-            .and_then(|supported_pairs| supported_pairs.save(self.deps.storage))
-    }
-}
-
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut<'_>,
@@ -79,11 +43,15 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)
-        .map_err(ContractError::InitializeVersioning)?;
-
-    InstantiateWithCurrency::cmd(deps, msg)?;
-
-    Ok(response::empty_response())
+        .map_err(ContractError::InitializeVersioning)
+        .and_then(|()| {
+            msg.config
+                .store(deps.storage)
+                .map_err(ContractError::StoreConfig)
+        })
+        .and_then(|()| SupportedPairs::new(msg.swap_tree.into_tree(), msg.stable_currency))
+        .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+        .map(|()| response::empty_response())
 }
 
 #[entry_point]
