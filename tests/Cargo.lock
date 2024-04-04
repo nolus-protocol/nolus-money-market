@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.5.5"
+version = "0.5.6"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1546,7 +1546,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "cosmwasm-std",
  "platform",
@@ -1559,7 +1559,7 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
