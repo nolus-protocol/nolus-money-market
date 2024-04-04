@@ -7,7 +7,7 @@ use currency::Currency;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
-    batch::Batch,
+    batch::{Emit, Emitter},
     contract::{self, Code},
     error as platform_error,
     message::Response as PlatformResponse,
@@ -124,8 +124,12 @@ fn do_cover_losses(
             if balance < amount {
                 Err(Error::InsufficientBalance)
             } else {
-                bank.send(amount, lease);
-                Ok(Batch::from(bank).into())
+                bank.send(amount, lease.clone());
+                let emitter = Emitter::of_type("reserve-cover-loss")
+                    .emit("to", lease)
+                    .emit_coin("payment", amount);
+
+                Ok(PlatformResponse::messages_with_events(bank.into(), emitter))
             }
         })
 }
