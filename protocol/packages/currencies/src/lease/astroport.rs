@@ -11,8 +11,8 @@ use crate::{define_currency, define_symbol};
 define_symbol! {
     ATOM {
         ["net_dev"]: {
-            // full ibc route: transfer/channel-116/transfer/channel-1/uatom
-            bank: "ibc/59BA0C7FDC7C3CDA4C777EDEC5572C762B68DDCC9FD253BC12B6F5676395157E",
+            // full ibc route: transfer/channel-1/transfer/channel-1/uatom
+            bank: "ibc/B62610294777CD7D4567F7125B5D88DE95C6B7F7ED25430F3808F863202BC599",
             // full ibc route: transfer/channel-1/uatom
             dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
         },
