@@ -58,7 +58,6 @@ pub fn migrate(
             MigrateContracts {
                 release,
                 migration_spec,
-                post_migration_execute,
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
@@ -80,7 +79,6 @@ pub fn migrate(
                         env.contract.address,
                         release,
                         migration_spec,
-                        post_migration_execute,
                     )
                 })
                 .and_then(|messages| response::response_with_messages(reported_label, messages))
@@ -106,7 +104,7 @@ pub fn execute(
             ensure_sender_is_owner(deps.storage, &info.sender)?;
 
             ContractState::Instantiate {
-                expected_code_id: code_id,
+                expected_code_id: code_id.u64(),
                 expected_address,
             }
             .store(deps.storage)?;
@@ -116,7 +114,7 @@ pub fn execute(
             batch.schedule_execute_reply_on_success(
                 WasmMsg::Instantiate2 {
                     admin: Some(env.contract.address.into_string()),
-                    code_id,
+                    code_id: code_id.u64(),
                     label,
                     msg: Binary(message.into_bytes()),
                     funds: info.funds,
@@ -165,15 +163,10 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         SudoMsg::MigrateContracts(MigrateContracts {
             release,
             migration_spec,
-            post_migration_execute,
-        }) => crate::contracts::migrate(
-            deps.storage,
-            env.contract.address,
-            release,
-            migration_spec,
-            post_migration_execute,
-        )
-        .map(response::response_only_messages),
+        }) => {
+            crate::contracts::migrate(deps.storage, env.contract.address, release, migration_spec)
+                .map(response::response_only_messages)
+        }
     }
 }
 
@@ -202,7 +195,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::InstantiateAddress { code_id, protocol } => {
-            let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
+            let CodeInfoResponse { checksum, .. } =
+                deps.querier.query_wasm_code_info(code_id.u64())?;
 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 

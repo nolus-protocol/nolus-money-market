@@ -2,30 +2,39 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::Addr;
 
 use crate::{
-    contracts::{
-        impl_mod::{maybe_execute_contract, maybe_migrate_contract},
-        MigrationSpec,
-    },
+    contracts::{impl_mod::migrate_contract, MigrationSpec},
     validate::Validate,
 };
 
 use super::PlatformTemplate;
 
 impl PlatformTemplate<Addr> {
-    pub(in crate::contracts) fn migrate(self, batch: &mut Batch, migration_msgs: MigrationSpecs) {
-        maybe_migrate_contract(batch, self.dispatcher, migration_msgs.dispatcher);
-        maybe_migrate_contract(batch, self.timealarms, migration_msgs.timealarms);
-        maybe_migrate_contract(batch, self.treasury, migration_msgs.treasury);
-    }
-
-    pub(in crate::contracts) fn post_migration_execute(
+    pub(in crate::contracts) fn migrate(
         self,
-        batch: &mut Batch,
-        execution_msgs: PostMigrationExecutes,
+        migration_batch: &mut Batch,
+        post_migration_execute_batch: &mut Batch,
+        migration_msgs: PlatformTemplate<MigrationSpec>,
     ) {
-        maybe_execute_contract(batch, self.dispatcher, execution_msgs.dispatcher);
-        maybe_execute_contract(batch, self.timealarms, execution_msgs.timealarms);
-        maybe_execute_contract(batch, self.treasury, execution_msgs.treasury);
+        migrate_contract(
+            migration_batch,
+            post_migration_execute_batch,
+            self.dispatcher,
+            migration_msgs.dispatcher,
+        );
+
+        migrate_contract(
+            migration_batch,
+            post_migration_execute_batch,
+            self.timealarms,
+            migration_msgs.timealarms,
+        );
+
+        migrate_contract(
+            migration_batch,
+            post_migration_execute_batch,
+            self.treasury,
+            migration_msgs.treasury,
+        );
     }
 }
 
@@ -45,7 +54,3 @@ where
         self.treasury.validate(ctx)
     }
 }
-
-type MigrationSpecs = PlatformTemplate<Option<MigrationSpec>>;
-
-type PostMigrationExecutes = PlatformTemplate<Option<String>>;
