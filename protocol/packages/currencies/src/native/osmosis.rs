@@ -6,8 +6,8 @@ define_symbol! {
     NLS {
         ["net_dev"]: {
             bank: "unls",
-            // full ibc route: transfer/channel-109/unls
-            dex: "ibc/5E7589614F0B4B80D91923D15D8EB0972AAA6226F7566921F1D6A07EA0DB0D2C"
+            // full ibc route: transfer/channel-5733/unls
+            dex: "ibc/48D5F90242DD5B460E139E1CCB503B0F7E44625CE7566BE74644F4600F5B5218"
         },
         ["net_test"]: {
             bank: "unls",
