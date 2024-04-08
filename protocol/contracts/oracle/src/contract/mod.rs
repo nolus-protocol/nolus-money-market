@@ -30,7 +30,6 @@ use self::{
 mod alarms;
 mod config;
 pub mod exec;
-mod migrate;
 mod oracle;
 pub mod query;
 mod sudo;
@@ -69,7 +68,7 @@ pub fn migrate(
     versioning::update_software_and_storage::<FROM_CONTRACT_STORAGE_VERSION, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        migrate::with_oracle_base,
+        |storage| SupportedPairs::<BaseCurrency>::migrate(storage),
         ContractError::UpdateSoftware,
     )
     .and_then(
