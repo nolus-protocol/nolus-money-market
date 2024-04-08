@@ -30,27 +30,22 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate_default<BaseC>(app: &mut App) -> Addr
-    where
-        BaseC: Currency,
+    pub fn instantiate_default(app: &mut App) -> Addr
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
 
-        Self::instantiate::<BaseC>(app, Box::new(endpoints))
+        Self::instantiate(app, Box::new(endpoints))
     }
 
     #[track_caller]
-    pub fn instantiate<BaseC>(app: &mut App, endpoints: Box<CwContract>) -> Addr
-    where
-        BaseC: Currency,
+    pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr
     {
         let code_id = app.store_code(endpoints);
         let msg = InstantiateMsg {
             config: Config {
-                base_asset: BaseC::TICKER.into(),
                 price_config: PriceConfig::new(
                     Percent::from_percent(1),
                     Duration::from_secs(5),

@@ -11,7 +11,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
-use super::{alarms::AlarmCurrencies, swap::SwapTarget, BaseCurrencyGroup};
+use super::{alarms::AlarmCurrencies, swap::SwapTarget, BaseCurrencies};
 
 pub type PriceCurrencies = PaymentGroup;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
@@ -37,7 +37,7 @@ pub enum ExecuteMsg {
         prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrencies>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms { max_count: AlarmsCount },
@@ -84,7 +84,9 @@ pub enum QueryMsg {
     Price {
         currency: SymbolOwned,
     },
-    /// Report back designated stable currency.
+    /// Report the base currency as [SymbolOwned]
+    BaseCurrency {},
+    /// Report the designated stable currency as [SymbolOwned]
     StableCurrency {},
     /// Lists configured swap pairs
     SupportedCurrencyPairs {},
@@ -107,8 +109,6 @@ pub enum QueryMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Config {
-    // TODO get rid of it since it knows, at compile time, the Lpn currency
-    pub base_asset: SymbolOwned,
     pub price_config: PriceConfig,
 }
 
@@ -175,7 +175,7 @@ pub struct SwapTreeResponse {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PricesResponse {
-    pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencyGroup>>,
+    pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencies>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

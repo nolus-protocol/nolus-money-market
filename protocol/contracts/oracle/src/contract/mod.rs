@@ -14,8 +14,8 @@ use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, Ve
 
 use crate::{
     api::{
-        BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies,
-        QueryMsg, SudoMsg,
+        BaseCurrencies, BaseCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg,
+        PriceCurrencies, QueryMsg, SudoMsg,
     },
     contract::alarms::MarketAlarms,
     error::ContractError,
@@ -52,7 +52,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        Tickers.visit_any::<BaseCurrencyGroup, _>(&context.msg.config.base_asset.clone(), context)
+        Tickers.visit_any::<BaseCurrencies, _>(BaseCurrency::TICKER, context)
     }
 }
 
@@ -198,7 +198,6 @@ mod tests {
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            StableC::TICKER.to_string(),
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
@@ -210,7 +209,6 @@ mod tests {
         let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             Config {
-                base_asset: StableC::TICKER.into(),
                 price_config: PriceConfig::new(
                     Percent::from_percent(50),
                     Duration::from_secs(60),

@@ -21,7 +21,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, BaseCurrencyGroup, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{swap::SwapTarget, BaseCurrencies, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
 };
 
@@ -32,7 +32,7 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type PriceGroup = PaymentGroup;
 pub(crate) type TheCurrency = StableC;
-pub(crate) type TheStableGroup = BaseCurrencyGroup;
+pub(crate) type TheStableGroup = BaseCurrencies;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
@@ -56,7 +56,6 @@ where
 }
 
 pub(crate) fn dummy_instantiate_msg(
-    base_asset: SymbolOwned,
     price_feed_period_secs: u32,
     expected_feeders: Percent,
     swap_tree: HumanReadableTree<SwapTarget>,
@@ -64,7 +63,6 @@ pub(crate) fn dummy_instantiate_msg(
 ) -> InstantiateMsg {
     InstantiateMsg {
         config: Config {
-            base_asset,
             price_config: PriceConfig::new(
                 expected_feeders,
                 Duration::from_secs(price_feed_period_secs),
@@ -79,7 +77,6 @@ pub(crate) fn dummy_instantiate_msg(
 
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     dummy_instantiate_msg(
-        StableC::TICKER.to_string(),
         60,
         Percent::from_percent(50),
         sdk::cosmwasm_std::from_json(format!(

@@ -11,7 +11,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::BaseCurrencyGroup;
+use super::BaseCurrencies;
 
 mod unchecked;
 
@@ -22,7 +22,7 @@ pub type AlarmCurrencies = LeaseGroup;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrencies>,
     },
 }
 
@@ -116,12 +116,12 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use crate::api::BaseCurrencyGroup;
+    use crate::api::BaseCurrencies;
 
     use super::{Alarm, AlarmCurrencies};
 
     type AssetG = AlarmCurrencies;
-    type LpnG = BaseCurrencyGroup;
+    type LpnG = BaseCurrencies;
 
     #[test]
     fn below_price_ok() {

@@ -27,7 +27,6 @@ mod tests {
     fn configure() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
-            StableC::TICKER.into(),
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC3::TICKER)),
@@ -60,7 +59,6 @@ mod tests {
         assert_eq!(
             value,
             Config {
-                base_asset: StableC::TICKER.into(),
                 price_config: PriceConfig::new(
                     Percent::from_percent(44),
                     Duration::from_secs(5),

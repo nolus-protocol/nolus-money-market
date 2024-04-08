@@ -5,16 +5,12 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::Storage;
 
 use crate::{
-    api::Config, error::ContractError, result::ContractResult,
+    api::BaseCurrency, error::ContractError, result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
 
 pub(crate) fn with_oracle_base(storage: &mut dyn Storage) -> ContractResult<()> {
-    Config::load(storage)
-        .map_err(ContractError::LoadConfig)
-        .and_then(|Config { ref base_asset, .. }: Config| {
-            Tickers.visit_any::<Lpns, _>(base_asset, MigrateWithOracleBase { storage })
-        })
+    Tickers.visit_any::<Lpns, _>(BaseCurrency::TICKER, MigrateWithOracleBase { storage })
 }
 
 struct MigrateWithOracleBase<'a> {

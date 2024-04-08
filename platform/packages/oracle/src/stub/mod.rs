@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{self, Error, Result},
-    msg::{Config, QueryMsg},
+    msg::QueryMsg,
 };
 
 use self::impl_::{CheckedConverter, OracleStub};
@@ -68,9 +68,9 @@ impl OracleRef {
     // the dependencies to 'currencies' get obsolete.
     pub fn try_from(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         querier
-            .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
+            .query_wasm_smart(addr.clone(), &QueryMsg::BaseCurrency {})
             .map_err(Error::StubConfigQuery)
-            .map(|resp: Config| Self::new(addr, resp.base_asset))
+            .map(|resp: SymbolOwned| Self::new(addr, resp))
     }
 
     fn new(addr: Addr, base_currency: SymbolOwned) -> Self {

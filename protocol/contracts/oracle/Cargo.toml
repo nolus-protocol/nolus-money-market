@@ -1,6 +1,6 @@
 [package]
 name = "oracle"
-version = "0.5.15"
+version = "0.5.16"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true

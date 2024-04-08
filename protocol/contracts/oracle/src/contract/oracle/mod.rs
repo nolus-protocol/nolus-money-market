@@ -231,9 +231,7 @@ mod test_normalized_price_not_found {
         )
         .unwrap();
 
-        Config::new(String::from(BaseCurrency::TICKER), price_config.clone())
-            .store(storage)
-            .unwrap();
+        Config::new(price_config.clone()).store(storage).unwrap();
 
         SupportedPairs::<BaseCurrency>::new(
             swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER)).into_tree(),

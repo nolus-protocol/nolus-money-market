@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{wasm_execute, Addr};
 
 use crate::api::{
     alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
-    BaseCurrencyGroup,
+    BaseCurrencies,
 };
 
 pub trait PriceAlarms
@@ -15,7 +15,7 @@ where
     Self: Into<Batch> + Sized,
 {
     //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()>;
 }
 
 pub trait AsAlarms {
@@ -55,7 +55,7 @@ impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase>
 where
     OracleBase: Currency,
 {
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencyGroup>) -> Result<()> {
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),

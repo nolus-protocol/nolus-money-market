@@ -385,9 +385,9 @@ where
         } = self;
 
         let oracle_addr: Addr = if let Some(contract) = custom_wrapper {
-            OracleInstantiator::instantiate::<Lpn>(&mut test_case.app, Box::new(contract))
+            OracleInstantiator::instantiate(&mut test_case.app, Box::new(contract))
         } else {
-            OracleInstantiator::instantiate_default::<Lpn>(&mut test_case.app)
+            OracleInstantiator::instantiate_default(&mut test_case.app)
         };
 
         test_case.app.update_block(next_block);

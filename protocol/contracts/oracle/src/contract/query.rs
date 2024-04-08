@@ -4,7 +4,9 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
 use sdk::cosmwasm_std::{to_json_binary, Binary, Deps, Env};
 
 use crate::{
-    api::{BaseCurrencyGroup, Config, PriceCurrencies, PricesResponse, QueryMsg, SwapTreeResponse},
+    api::{
+        BaseCurrencies, BaseCurrency, PriceCurrencies, PricesResponse, QueryMsg, SwapTreeResponse,
+    },
     contract::oracle::Oracle,
     state::supported_pairs::SupportedPairs,
     ContractError,
@@ -20,11 +22,7 @@ impl<'a> QueryWithOracleBase<'a> {
     pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
         let visitor = Self { deps, env, msg };
 
-        Config::load(visitor.deps.storage)
-            .map_err(ContractError::LoadConfig)
-            .and_then(|config: Config| {
-                Tickers.visit_any::<BaseCurrencyGroup, _>(&config.base_asset, visitor)
-            })
+        Tickers.visit_any::<BaseCurrencies, _>(BaseCurrency::TICKER, visitor)
     }
 }
 
@@ -37,9 +35,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         type QueryOracle<'storage, S, BaseC> =
-            Oracle<'storage, S, PriceCurrencies, BaseC, BaseCurrencyGroup>;
+            Oracle<'storage, S, PriceCurrencies, BaseC, BaseCurrencies>;
 
         match self.msg {
+            QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::TICKER),
             QueryMsg::StableCurrency {} => to_json_binary(
                 SupportedPairs::<OracleBase>::load(self.deps.storage)?.stable_currency(),
             ),
