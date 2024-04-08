@@ -30,8 +30,7 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     #[track_caller]
-    pub fn instantiate_default(app: &mut App) -> Addr
-    {
+    pub fn instantiate_default(app: &mut App) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
@@ -41,8 +40,7 @@ impl Instantiator {
     }
 
     #[track_caller]
-    pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr
-    {
+    pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr {
         let code_id = app.store_code(endpoints);
         let msg = InstantiateMsg {
             config: Config {
