@@ -103,8 +103,10 @@ where
     Balance {
         address: Addr,
     },
-    /// Implementation of lpp_platform::msg::QueryMsg::LppBalance
+    /// Return the pool's total balance in Lpn [LppBalanceResponse]
     LppBalance(),
+    /// Implementation of lpp_platform::msg::QueryMsg::LppBalance
+    /// TODO
     Price(),
     DepositCapacity(),
 
@@ -133,6 +135,22 @@ pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct BalanceResponse {
     pub balance: Uint128,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
+pub struct LppBalanceResponse<Lpns>
+where
+    Lpns: Group,
+{
+    pub balance: CoinDTO<Lpns>,
+    pub total_principal_due: CoinDTO<Lpns>,
+    pub total_interest_due: CoinDTO<Lpns>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]

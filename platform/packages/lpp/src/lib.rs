@@ -1,4 +1,4 @@
-use currency::{Currency, Group, NlsPlatform};
+use currency::NlsPlatform;
 use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
@@ -38,14 +38,15 @@ where
     LppStub::new(lpp, querier, env)
 }
 
-pub fn into_usd<Lpn, Lpns>(amount: Coin<Lpn>) -> Coin<Usd>
-where
-    Lpn: Currency,
-    Lpns: Group,
-{
-    use finance::coin::Amount;
+// TODO review is needed
+// pub fn into_usd<Lpn, Lpns>(amount: Coin<Lpn>) -> Coin<Usd>
+// where
+//     Lpn: Currency,
+//     Lpns: Group,
+// {
+//     use finance::coin::Amount;
 
-    debug_assert_eq!(currency::validate_member::<Lpn, Lpns>(), Ok(()));
+//     debug_assert_eq!(currency::validate_member::<Lpn, Lpns>(), Ok(()));
 
-    Into::<Amount>::into(amount).into()
-}
+//     Into::<Amount>::into(amount).into()
+// }

@@ -9,14 +9,14 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
-use lpp_platform::{msg::LppBalanceResponse, NLpn};
+use lpp_platform::NLpn;
 use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
     error::{ContractError, Result},
     loan::Loan,
-    msg::PriceResponse,
+    msg::{LppBalanceResponse, PriceResponse},
     state::{Config, Deposit, Total},
 };
 
@@ -110,7 +110,11 @@ where
         }
     }
 
-    pub fn query_lpp_balance<Lpns>(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse>
+    pub fn query_lpp_balance<Lpns>(
+        &self,
+        deps: &Deps<'_>,
+        env: &Env,
+    ) -> Result<LppBalanceResponse<Lpns>>
     where
         Lpns: Group,
     {
@@ -120,13 +124,10 @@ where
 
         let total_interest_due = self.total.total_interest_due_by_now(&env.block.time);
 
-        let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
-
         Ok(LppBalanceResponse {
-            balance: lpp_platform::into_usd::<_, Lpns>(balance),
-            total_principal_due: lpp_platform::into_usd::<_, Lpns>(total_principal_due),
-            total_interest_due: lpp_platform::into_usd::<_, Lpns>(total_interest_due),
-            balance_nlpn,
+            balance: balance.into(),
+            total_principal_due: total_principal_due.into(),
+            total_interest_due: total_interest_due.into(),
         })
     }
 
@@ -823,9 +824,18 @@ mod test {
         let lpp_balance = lpp
             .query_lpp_balance::<Lpns>(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
-        assert_eq!(lpp_balance.balance, Coin::new(5_000_000));
-        assert_eq!(lpp_balance.total_principal_due, Coin::new(5_000_000));
-        assert_eq!(lpp_balance.total_interest_due, Coin::new(1_100_000));
+        assert_eq!(
+            lpp_balance.balance,
+            Coin::<TheCurrency>::new(5_000_000).into()
+        );
+        assert_eq!(
+            lpp_balance.total_principal_due,
+            Coin::<TheCurrency>::new(5_000_000).into()
+        );
+        assert_eq!(
+            lpp_balance.total_interest_due,
+            Coin::<TheCurrency>::new(1_100_000).into()
+        );
 
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
