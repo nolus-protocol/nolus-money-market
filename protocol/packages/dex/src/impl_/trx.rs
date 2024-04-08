@@ -15,7 +15,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
 use crate::{error::Result, swap::ExactAmountIn};
 
-pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_minutes(7); // less than the total amount of time 100 blocks take (a Hermes setting to look back for packets)
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<NlsPlatform> = Coin::new(1);
