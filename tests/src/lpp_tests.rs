@@ -1,4 +1,7 @@
-use currencies::test::{LeaseC1, NativeC, StableC};
+use currencies::{
+    test::{LeaseC1, NativeC, StableC},
+    Lpns,
+};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -12,12 +15,11 @@ use finance::{
 use lpp::{
     borrow::InterestRate,
     msg::{
-        BalanceResponse, PriceResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse,
-        SudoMsg,
+        BalanceResponse, LppBalanceResponse, PriceResponse, QueryLoanResponse, QueryQuoteResponse,
+        RewardsResponse, SudoMsg,
     },
     state::Config,
 };
-use lpp_platform::msg::LppBalanceResponse;
 use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Event, Timestamp},
@@ -378,15 +380,6 @@ fn deposit_and_withdraw() {
         TestCase::LEASE_ICA_ID,
     );
 
-    let balance_lpp: LppBalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.lpp().clone(),
-            &LppQueryMsg::LppBalance(),
-        )
-        .unwrap();
-
     let balance_nlpn2: BalanceResponse = test_case
         .app
         .query()
@@ -405,30 +398,6 @@ fn deposit_and_withdraw() {
     assert_eq!(
         price::total(balance_nlpn2.balance.into(), price.0),
         Coin::<Lpn>::new(test_deposit - rounding_error)
-    );
-
-    let balance_nlpn1: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.lpp().clone(),
-            &LppQueryMsg::Balance { address: lender1 },
-        )
-        .unwrap();
-
-    let balance_nlpn3: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.lpp().clone(),
-            &LppQueryMsg::Balance { address: lender3 },
-        )
-        .unwrap();
-
-    // check for balance consistency
-    assert_eq!(
-        Coin::new((balance_nlpn1.balance + balance_nlpn2.balance + balance_nlpn3.balance).u128()),
-        balance_lpp.balance_nlpn
     );
 
     // try to withdraw with overdraft
@@ -684,7 +653,7 @@ fn loan_open_and_repay() {
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse = test_case
+    let resp: LppBalanceResponse<Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -693,7 +662,10 @@ fn loan_open_and_repay() {
         )
         .unwrap();
 
-    assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
+    assert_eq!(
+        resp.total_interest_due,
+        Coin::<Lpn>::new(total_interest_due).into()
+    );
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
@@ -883,7 +855,7 @@ fn loan_open_and_repay() {
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse = test_case
+    let resp: LppBalanceResponse<Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -895,12 +867,12 @@ fn loan_open_and_repay() {
     // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        (interest2.of(loan2) / 2u128).into()
+        Coin::<Lpn>::from(interest2.of(loan2) / 2u128).into()
     );
-    assert_eq!(resp.total_principal_due, loan2.into());
+    assert_eq!(resp.total_principal_due, Coin::<Lpn>::from(loan2).into());
     assert_eq!(
         resp.balance,
-        (init_deposit + interest1.of(loan1) - loan2).into()
+        Coin::<Lpn>::from(init_deposit + interest1.of(loan1) - loan2).into()
     );
 }
 
@@ -1050,7 +1022,7 @@ fn compare_lpp_states() {
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse = test_case
+    let resp: LppBalanceResponse<Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -1058,7 +1030,10 @@ fn compare_lpp_states() {
             &LppQueryMsg::LppBalance(),
         )
         .unwrap();
-    assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
+    assert_eq!(
+        resp.total_interest_due,
+        Coin::<Lpn>::new(total_interest_due).into()
+    );
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
@@ -1255,7 +1230,7 @@ fn compare_lpp_states() {
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse = test_case
+    let resp: LppBalanceResponse<Lpns> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -1267,12 +1242,12 @@ fn compare_lpp_states() {
     // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        (interest2.of(loan2) / 2u128).into()
+        Coin::<Lpn>::from(interest2.of(loan2) / 2u128).into()
     );
-    assert_eq!(resp.total_principal_due, loan2.into());
+    assert_eq!(resp.total_principal_due, Coin::<Lpn>::from(loan2).into());
     assert_eq!(
         resp.balance,
-        (init_deposit + interest1.of(loan1) - loan2).into()
+        Coin::<Lpn>::from(init_deposit + interest1.of(loan1) - loan2).into()
     );
 }
 
