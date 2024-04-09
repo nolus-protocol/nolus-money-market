@@ -1,5 +1,7 @@
 use admin_contract::{
-    msg::{ProtocolContracts, ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg},
+    msg::{
+        Dex, Network, ProtocolContracts, ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg,
+    },
     result::Result as ContractResult,
 };
 use sdk::{
@@ -17,6 +19,7 @@ pub(crate) enum Registry {
     SingleProtocol,
     TwoProtocols,
 }
+
 impl From<Registry> for QueryFn {
     fn from(value: Registry) -> Self {
         match value {
@@ -26,6 +29,7 @@ impl From<Registry> for QueryFn {
         }
     }
 }
+
 pub(crate) struct Instantiator();
 
 impl Instantiator {
@@ -83,10 +87,12 @@ fn protocols_repo_query(
             &(0..protocols_nb).map(protocol_name).collect(),
         ),
         QueryMsg::Protocol(_) => {
-            const NET_NAME: &str = "dex_network";
+            const NETWORK: Network = Network::Osmosis;
+            const DEX: Dex = Dex::Osmosis;
 
             to_json_binary(&ProtocolQueryResponse {
-                network: NET_NAME.into(),
+                network: NETWORK,
+                dex: DEX,
                 contracts: ProtocolContracts {
                     leaser: addr("DEADCODE"),
                     lpp: addr("contract0"),
