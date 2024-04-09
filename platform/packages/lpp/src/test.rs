@@ -25,7 +25,7 @@ impl DummyLpp {
 }
 impl Lpp for DummyLpp {
     fn balance(&self) -> Result<CoinStable> {
-        self.0.clone().ok_or_else(|| {
+        self.0.ok_or_else(|| {
             Error::Std(StdError::GenericErr {
                 msg: "Test failing Lpp::balance()".into(),
             })
