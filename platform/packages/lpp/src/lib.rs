@@ -5,7 +5,6 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use stub::LppStub;
 
-use crate::msg::StableBalanceResponse;
 pub use crate::{
     nlpn::NLpn,
     stable::{CoinStable, Stable, StableCurrencyGroup},
@@ -25,7 +24,7 @@ where
 {
     /// Return the total value in the stable currency
     // TODO add ', oracle: OracleRef'
-    fn balance(&self) -> Result<StableBalanceResponse>;
+    fn balance(&self) -> Result<CoinStable>;
 
     /// Distributes a reward amount to an Lpp
     ///

@@ -1,6 +1,6 @@
 use currency::NlsPlatform;
 use finance::{coin::Coin, duration::Duration, percent::Percent};
-use lpp_platform::{msg::StableBalanceResponse, CoinStable, Lpp as LppTrait, Stable};
+use lpp_platform::{CoinStable, Lpp as LppTrait, Stable};
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
@@ -25,19 +25,7 @@ impl RewardCalculator {
         let tvls: ContractResult<Vec<CoinStable>> = lpps
             .into_iter()
             .map(|lpp| lpp.as_ref().balance())
-            .map(|may_resp| {
-                may_resp
-                    .map(
-                        |StableBalanceResponse {
-                             balance,
-                             total_principal_due,
-                             total_interest_due,
-                         }| {
-                            balance + total_principal_due + total_interest_due
-                        },
-                    )
-                    .map_err(Into::into)
-            })
+            .map(|may_resp| may_resp.map_err(Into::into))
             .collect();
         tvls.map(|tvls| Self {
             apr: scale.get_apr(tvls.iter().sum()),

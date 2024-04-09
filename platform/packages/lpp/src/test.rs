@@ -10,18 +10,13 @@ use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
     error::{Error, Result},
-    msg::StableBalanceResponse,
     CoinStable, Lpp,
 };
 
-pub struct DummyLpp(Option<StableBalanceResponse>);
+pub struct DummyLpp(Option<CoinStable>);
 impl DummyLpp {
     pub fn with_tvl(tvl: CoinStable) -> Self {
-        Self(Some(StableBalanceResponse {
-            balance: tvl,
-            total_principal_due: Default::default(),
-            total_interest_due: Default::default(),
-        }))
+        Self(Some(tvl))
     }
 
     pub fn failing() -> Self {
@@ -29,7 +24,7 @@ impl DummyLpp {
     }
 }
 impl Lpp for DummyLpp {
-    fn balance(&self) -> Result<StableBalanceResponse> {
+    fn balance(&self) -> Result<CoinStable> {
         self.0.clone().ok_or_else(|| {
             Error::Std(StdError::GenericErr {
                 msg: "Test failing Lpp::balance()".into(),

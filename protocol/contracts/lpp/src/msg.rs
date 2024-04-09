@@ -106,7 +106,9 @@ where
     /// Return the pool's total balance in Lpn [LppBalanceResponse]
     LppBalance(),
     /// Implementation of [lpp_platform::msg::QueryMsg::StableBalance]
-    StableBalance(),
+    StableBalance {
+        // oracle: OracleRef,
+    },
     Price(),
     DepositCapacity(),
 

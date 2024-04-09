@@ -10,12 +10,10 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
     error::{ContractError, Result},
-    lpp::LiquidityPool,
-    msg::{LppBalanceResponse, RewardsResponse},
+    lpp::{LiquidityPool, LppBalances},
+    msg::RewardsResponse,
     state::Deposit,
 };
-
-use super::LpnCurrencies;
 
 pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
@@ -54,15 +52,11 @@ pub(super) fn try_claim_rewards(
     Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<Lpn>(
-    deps: Deps<'_>,
-    env: Env,
-) -> Result<LppBalanceResponse<LpnCurrencies>>
+pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalances<Lpn>>
 where
     Lpn: 'static + Currency + DeserializeOwned + Serialize,
 {
-    LiquidityPool::<Lpn>::load(deps.storage)
-        .and_then(|lpp| lpp.query_lpp_balance::<LpnCurrencies>(&deps, &env))
+    LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {

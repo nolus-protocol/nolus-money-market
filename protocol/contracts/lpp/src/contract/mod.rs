@@ -1,19 +1,22 @@
 use std::ops::DerefMut as _;
 
+use finance::coin::CoinDTO;
+use serde::Serialize;
+
 use access_control::SingleUserAccess;
 use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
 
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
-    lpp::LiquidityPool,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    lpp::{LiquidityPool, LppBalances},
+    msg::{ExecuteMsg, InstantiateMsg, LppBalanceResponse, MigrateMsg, QueryMsg, SudoMsg},
     state::{self, Config},
 };
 
@@ -138,33 +141,54 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
-        QueryMsg::Config() => to_json_binary(&Config::load(deps.storage)?),
+        QueryMsg::Config() => Config::load(deps.storage).and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::Lpn() => to_json_binary(&Config::lpn_ticker::<LpnCurrency>()),
         QueryMsg::Balance { address } => {
-            to_json_binary(&lender::query_balance(deps.storage, address)?)
+            lender::query_balance(deps.storage, address).and_then(|ref resp| to_json_binary(resp))
         }
         QueryMsg::Rewards { address } => {
-            to_json_binary(&rewards::query_rewards(deps.storage, address)?)
+            rewards::query_rewards(deps.storage, address).and_then(|ref resp| to_json_binary(resp))
         }
-        QueryMsg::Quote { amount } => {
-            let quote = amount.try_into()?;
-
-            to_json_binary(&borrow::query_quote::<LpnCurrency>(&deps, &env, quote)?)
+        QueryMsg::Quote { amount } => amount
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|quote| borrow::query_quote::<LpnCurrency>(&deps, &env, quote))
+            .and_then(|ref resp| to_json_binary(resp)),
+        QueryMsg::Loan { lease_addr } => {
+            borrow::query_loan::<LpnCurrency>(deps.storage, lease_addr)
+                .and_then(|ref resp| to_json_binary(resp))
         }
-        QueryMsg::Loan { lease_addr } => to_json_binary(&borrow::query_loan::<LpnCurrency>(
-            deps.storage,
-            lease_addr,
-        )?),
-        QueryMsg::LppBalance() => {
-            to_json_binary(&rewards::query_lpp_balance::<LpnCurrency>(deps, env)?)
-        }
-        QueryMsg::StableBalance() => {
-            to_json_binary(&rewards::query_lpp_balance::<LpnCurrency>(deps, env)?)
-        }
-        QueryMsg::Price() => to_json_binary(&lender::query_ntoken_price::<LpnCurrency>(deps, env)?),
+        QueryMsg::LppBalance() => rewards::query_lpp_balance::<LpnCurrency>(deps, env)
+            .map(LppBalanceResponse::from)
+            .and_then(|ref resp| to_json_binary(resp)),
+        QueryMsg::StableBalance {} => rewards::query_lpp_balance::<LpnCurrency>(deps, env)
+            .map(|balance_lpn| {
+                balance_lpn.balance
+                    + balance_lpn.total_principal_due
+                    + balance_lpn.total_interest_due
+            })
+            .and_then(|total| to_json_binary(&CoinDTO::<LpnCurrencies>::from(total))),
+        QueryMsg::Price() => lender::query_ntoken_price::<LpnCurrency>(deps, env)
+            .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::DepositCapacity() => {
             to_json_binary(&lender::deposit_capacity::<LpnCurrency>(deps, env)?)
         }
     }
-    .map_err(Into::into)
+}
+
+impl From<LppBalances<LpnCurrency>> for LppBalanceResponse<LpnCurrencies> {
+    fn from(value: LppBalances<LpnCurrency>) -> Self {
+        Self {
+            balance: value.balance.into(),
+            total_principal_due: value.total_principal_due.into(),
+            total_interest_due: value.total_interest_due.into(),
+        }
+    }
+}
+
+fn to_json_binary<T>(data: &T) -> Result<Binary>
+where
+    T: Serialize + ?Sized,
+{
+    cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
 }

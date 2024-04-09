@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{Currency, Group};
+use currency::Currency;
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -16,9 +16,18 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Times
 use crate::{
     error::{ContractError, Result},
     loan::Loan,
-    msg::{LppBalanceResponse, PriceResponse},
+    msg::PriceResponse,
     state::{Config, Deposit, Total},
 };
+
+pub struct LppBalances<Lpn>
+where
+    Lpn: ?Sized,
+{
+    pub(crate) balance: Coin<Lpn>,
+    pub(crate) total_principal_due: Coin<Lpn>,
+    pub(crate) total_interest_due: Coin<Lpn>,
+}
 
 // TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
 // and LiquidityPool and Loan. The contract API implementation should depend on
@@ -110,24 +119,17 @@ where
         }
     }
 
-    pub fn query_lpp_balance<Lpns>(
-        &self,
-        deps: &Deps<'_>,
-        env: &Env,
-    ) -> Result<LppBalanceResponse<Lpns>>
-    where
-        Lpns: Group,
-    {
+    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalances<Lpn>> {
         let balance = self.balance(&env.contract.address, deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
 
         let total_interest_due = self.total.total_interest_due_by_now(&env.block.time);
 
-        Ok(LppBalanceResponse {
-            balance: balance.into(),
-            total_principal_due: total_principal_due.into(),
-            total_interest_due: total_interest_due.into(),
+        Ok(LppBalances {
+            balance,
+            total_principal_due,
+            total_interest_due,
         })
     }
 
@@ -314,7 +316,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currencies::{test::StableC, Lpns};
+    use currencies::test::StableC;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -822,7 +824,7 @@ mod test {
         assert_eq!(total_lpn, 11_100_000u128.into());
 
         let lpp_balance = lpp
-            .query_lpp_balance::<Lpns>(&deps.as_ref(), &env)
+            .query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
         assert_eq!(
             lpp_balance.balance,

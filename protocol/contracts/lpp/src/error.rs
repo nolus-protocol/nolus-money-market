@@ -7,6 +7,9 @@ pub enum ContractError {
     #[error("[Lpp] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[Lpp] Failed to convert query response to binary! Cause: {0}")]
+    ConvertToBinary(StdError),
+
     #[error("[Lpp] {0}")]
     Currency(#[from] currency::error::Error),
 

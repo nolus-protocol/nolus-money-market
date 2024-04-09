@@ -8,8 +8,8 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
     error::Result,
-    msg::{ExecuteMsg, QueryMsg, StableBalanceResponse},
-    Lpp,
+    msg::{ExecuteMsg, QueryMsg},
+    CoinStable, Lpp,
 };
 
 pub struct LppStub<'a> {
@@ -25,7 +25,7 @@ impl<'a> LppStub<'a> {
 }
 
 impl<'a> Lpp for LppStub<'a> {
-    fn balance(&self) -> Result<StableBalanceResponse> {
+    fn balance(&self) -> Result<CoinStable> {
         self.querier
             .query_wasm_smart(&self.lpp, &(QueryMsg::StableBalance {}))
             .map_err(Into::into)

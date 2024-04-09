@@ -3,7 +3,7 @@ use lpp::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, PriceResponse, QueryLoanResponse,
     QueryMsg, QueryQuoteResponse, RewardsResponse,
 };
-use lpp_platform::{msg::StableBalanceResponse, Stable};
+use lpp_platform::Stable;
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {
@@ -19,6 +19,5 @@ fn main() {
     export_schema(&schema_for!(QueryLoanResponse<Stable>), &out_dir);
     export_schema(&schema_for!(BalanceResponse), &out_dir);
     export_schema(&schema_for!(PriceResponse<Stable>), &out_dir);
-    export_schema(&schema_for!(StableBalanceResponse), &out_dir);
     export_schema(&schema_for!(RewardsResponse), &out_dir);
 }

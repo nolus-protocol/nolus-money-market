@@ -1,16 +1,13 @@
 use currencies::Lpns;
 use currency::Currency;
-use finance::{
-    coin::Coin,
-    percent::{bound::BoundToHundredPercent, Percent},
-};
+use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::{
     borrow::InterestRate,
     contract::sudo,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-use lpp_platform::msg::StableBalanceResponse;
+use lpp_platform::CoinStable;
 use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
@@ -97,11 +94,7 @@ pub(crate) fn mock_query(
     msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::LppBalance() => to_json_binary(&StableBalanceResponse {
-            balance: Coin::new(1000000000),
-            total_principal_due: Coin::new(1000000000),
-            total_interest_due: Coin::new(1000000000),
-        }),
+        QueryMsg::LppBalance() => to_json_binary(&CoinStable::new(1000000000)),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;
 
