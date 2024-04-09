@@ -1,7 +1,7 @@
 use currencies::Lpns;
 use lpp::msg::{
-    BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, PriceResponse,
-    QueryLoanResponse, QueryMsg, QueryQuoteResponse, RewardsResponse,
+    BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, PriceResponse, QueryLoanResponse,
+    QueryMsg, QueryQuoteResponse, RewardsResponse,
 };
 use lpp_platform::{msg::StableBalanceResponse, Stable};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
