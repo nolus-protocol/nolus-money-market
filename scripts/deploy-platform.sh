@@ -10,12 +10,11 @@ add_wasm_messages() {
 
   local -r TREASURY_ADDRESS=$(treasury_instance_addr)
   local -r TIMEALARMS_ADDRESS=$(timealarms_instance_addr)
-  local -r REWARDS_DISPATCHER_ADDRESS=$(rewards_dispatcher_instance_addr)
   local -r ADMIN_CONTRACT_ADDRESS=$(admin_contract_instance_addr)
 
   local id=0
 
-  local -r treasury_init_msg='{"rewards_dispatcher":"'"$REWARDS_DISPATCHER_ADDRESS"'"}'
+  local -r treasury_init_msg='{"cadence_hours":12,"protocols_registry":"'"$ADMIN_CONTRACT_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","tvl_to_apr":{"bars":[{"tvl":0,"apr":150},{"tvl":500,"apr":140},{"tvl":1000,"apr":130},{"tvl":2000,"apr":120},{"tvl":3000,"apr":110},{"tvl":4000,"apr":100},{"tvl":5000,"apr":90},{"tvl":7500,"apr":80},{"tvl":10000,"apr":70},{"tvl":15000,"apr":60},{"tvl":20000,"apr":50},{"tvl":25000,"apr":40},{"tvl":30000,"apr":30},{"tvl":40000,"apr":20}]}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "$treasury_init_tokens"  "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$treasury_init_msg"
@@ -24,12 +23,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$timealarms_init_msg"
 
-  local -r dispatcher_init_msg='{"cadence_hours":12,"protocols_registry":"'"$ADMIN_CONTRACT_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","treasury":"'"$TREASURY_ADDRESS"'","tvl_to_apr":{"bars":[{"tvl":0,"apr":150},{"tvl":500,"apr":140},{"tvl":1000,"apr":130},{"tvl":2000,"apr":120},{"tvl":3000,"apr":110},{"tvl":4000,"apr":100},{"tvl":5000,"apr":90},{"tvl":7500,"apr":80},{"tvl":10000,"apr":70},{"tvl":15000,"apr":60},{"tvl":20000,"apr":50},{"tvl":25000,"apr":40},{"tvl":30000,"apr":30},{"tvl":40000,"apr":20}]}}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" \
-    "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
-    "$dispatcher_init_msg"
-
-  local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"dispatcher":"'"${REWARDS_DISPATCHER_ADDRESS}"'","timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{}}}'
+  local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
     "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$admin_contract_init_msg"
@@ -51,12 +45,8 @@ timealarms_instance_addr() {
   echo "nolus1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqrr2r7y"
 }
 
-rewards_dispatcher_instance_addr() {
-  echo "nolus17p9rzwnnfxcjp32un9ug7yhhzgtkhvl9jfksztgw5uh69wac2pgsmc5xhq"
-}
-
 admin_contract_instance_addr() {
-  echo "nolus1ghd753shjuwexxywmgs4xz7x2q732vcnkm6h2pyv9s6ah3hylvrq8welhp"
+  echo "nolus17p9rzwnnfxcjp32un9ug7yhhzgtkhvl9jfksztgw5uh69wac2pgsmc5xhq"
 }
 
 _add_wasm_message() {
