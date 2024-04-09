@@ -1,3 +1,4 @@
+use currency::Currency;
 use platform::{
     batch::{Emit, Emitter},
     response,
@@ -5,18 +6,18 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-        SubMsgResult,
+        entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
     },
 };
+use serde::Serialize;
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
-        BaseCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceCurrencies, QueryMsg,
-        SudoMsg,
+        BaseCurrencies, BaseCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg,
+        PriceCurrencies, PricesResponse, QueryMsg, SudoMsg, SwapTreeResponse,
     },
-    contract::alarms::MarketAlarms,
+    contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
@@ -24,14 +25,13 @@ use crate::{
 
 use self::{
     config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
-    query::QueryWithOracleBase, sudo::SudoWithOracleBase,
+    sudo::SudoWithOracleBase,
 };
 
 mod alarms;
 mod config;
 pub mod exec;
 mod oracle;
-pub mod query;
 mod sudo;
 
 const FROM_CONTRACT_STORAGE_VERSION: VersionSegment = 0;
@@ -81,22 +81,51 @@ pub fn migrate(
 
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+    type QueryOracle<'storage, S> =
+        Oracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
+
     match msg {
-        QueryMsg::ContractVersion {} => {
-            to_json_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
-        }
-        QueryMsg::Config {} => {
-            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::ConvertToBinary)
-        }
+        QueryMsg::ContractVersion {} => to_json_binary(&package_version!()),
+        QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)
-            .and_then(|ref feeders| {
-                to_json_binary(feeders).map_err(ContractError::ConvertToBinary)
-            }),
+            .and_then(|ref feeders| to_json_binary(feeders)),
         QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
             .map_err(ContractError::LoadFeeders)
-            .and_then(|ref f| to_json_binary(&f).map_err(ContractError::ConvertToBinary)),
-        _ => QueryWithOracleBase::cmd(deps, env, msg),
+            .and_then(|ref f| to_json_binary(&f)),
+        QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::TICKER),
+        QueryMsg::StableCurrency {} => {
+            to_json_binary(SupportedPairs::<BaseCurrency>::load(deps.storage)?.stable_currency())
+        }
+        QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
+            &SupportedPairs::<BaseCurrency>::load(deps.storage)?
+                .swap_pairs_df()
+                .collect::<Vec<_>>(),
+        ),
+        QueryMsg::Currencies {} => to_json_binary(
+            &SupportedPairs::<BaseCurrency>::load(deps.storage)?
+                .currencies()
+                .collect::<Vec<_>>(),
+        ),
+        QueryMsg::Price { currency } => to_json_binary(
+            &QueryOracle::load(deps.storage)?.try_query_price(env.block.time, &currency)?,
+        ),
+        QueryMsg::Prices {} => {
+            let prices = QueryOracle::load(deps.storage)?.try_query_prices(env.block.time)?;
+
+            to_json_binary(&PricesResponse { prices })
+        }
+        QueryMsg::SwapPath { from, to } => to_json_binary(
+            &SupportedPairs::<BaseCurrency>::load(deps.storage)?.load_swap_path(&from, &to)?,
+        ),
+        QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse {
+            tree: SupportedPairs::<BaseCurrency>::load(deps.storage)?
+                .query_swap_tree()
+                .into_human_readable(),
+        }),
+        QueryMsg::AlarmsStatus {} => {
+            to_json_binary(&QueryOracle::load(deps.storage)?.try_query_alarms(env.block.time)?)
+        }
     }
 }
 
@@ -144,6 +173,13 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
         }),
     }
     .map(response::response_only_messages)
+}
+
+fn to_json_binary<T>(data: &T) -> ContractResult<Binary>
+where
+    T: Serialize + ?Sized,
+{
+    cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
 }
 
 #[cfg(test)]
