@@ -91,12 +91,10 @@ impl RewardScale {
         Ok(self)
     }
 
-    pub fn get_apr<StableC, Tvl>(&self, lpps_tvl: Tvl) -> Percent
+    pub fn get_apr<StableC>(&self, tvl_total: Coin<StableC>) -> Percent
     where
         StableC: Currency,
-        Tvl: Into<Coin<StableC>>,
     {
-        let tvl_total = lpps_tvl.into();
         self.bars[self
             .bars
             .partition_point(|bar| bar.tvl.as_coin::<StableC>() <= tvl_total)
@@ -196,7 +194,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            res.get_apr::<SuperGroupTestC1, _>(0),
+            res.get_apr::<SuperGroupTestC1>(0.into()),
             Percent::from_permille(6)
         );
         assert_eq!(

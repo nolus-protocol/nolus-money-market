@@ -9,11 +9,11 @@ use sdk::schemars::{self, JsonSchema};
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Usd;
+pub struct Stable;
 
-impl Currency for Usd {
+impl Currency for Stable {
     // should not be visible
-    const TICKER: SymbolStatic = "USD";
+    const TICKER: SymbolStatic = "STABLE";
 
     const BANK_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
 
@@ -22,18 +22,18 @@ impl Currency for Usd {
     const DECIMAL_DIGITS: u8 = 6;
 }
 
-pub type CoinUsd = Coin<Usd>;
+pub type CoinStable = Coin<Stable>;
 
 #[derive(PartialEq, Eq, Deserialize)]
-pub struct UsdGroup;
-impl Group for UsdGroup {
-    const DESCR: &'static str = "usd group";
+pub struct StableCurrencyGroup;
+impl Group for StableCurrencyGroup {
+    const DESCR: &'static str = "stable currency group";
 
     fn maybe_visit<M, V>(_matcher: &M, _symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        Ok(visitor.on::<Usd>())
+        Ok(visitor.on::<Stable>())
     }
 }

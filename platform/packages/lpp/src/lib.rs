@@ -5,25 +5,27 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use stub::LppStub;
 
-use crate::msg::LppBalanceResponse;
+use crate::msg::StableBalanceResponse;
 pub use crate::{
     nlpn::NLpn,
-    usd::{CoinUsd, Usd, UsdGroup},
+    stable::{CoinStable, Stable, StableCurrencyGroup},
 };
 
 pub mod error;
 pub mod msg;
 mod nlpn;
+mod stable;
 mod stub;
 #[cfg(feature = "testing")]
 pub mod test;
-mod usd;
 
 pub trait Lpp
 where
     Self: AsRef<Self>,
 {
-    fn balance(&self) -> Result<LppBalanceResponse>;
+    /// Return the total value in the stable currency
+    // TODO add ', oracle: OracleRef'
+    fn balance(&self) -> Result<StableBalanceResponse>;
 
     /// Distributes a reward amount to an Lpp
     ///

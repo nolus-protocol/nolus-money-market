@@ -5,7 +5,7 @@ use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
 use finance::{duration::Duration, percent::Percent};
-use lpp_platform::UsdGroup;
+use lpp_platform::StableCurrencyGroup;
 use platform::{batch::Batch, message::Response as MessageResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -155,7 +155,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
         });
 
         let oracles = protocols.iter().map(|protocol| {
-            oracle_platform::new_unchecked_base_currency_stub::<_, UsdGroup>(
+            oracle_platform::new_unchecked_base_currency_stub::<_, StableCurrencyGroup>(
                 protocol.contracts.oracle.clone(),
                 deps.querier,
             )

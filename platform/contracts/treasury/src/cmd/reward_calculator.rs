@@ -1,6 +1,6 @@
 use currency::NlsPlatform;
 use finance::{coin::Coin, duration::Duration, percent::Percent};
-use lpp_platform::{msg::LppBalanceResponse, CoinUsd, Lpp as LppTrait, Usd};
+use lpp_platform::{msg::StableBalanceResponse, CoinStable, Lpp as LppTrait, Stable};
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 #[cfg_attr(test, derive(Debug))]
 pub struct RewardCalculator {
     apr: Percent,
-    tvls: Vec<CoinUsd>,
+    tvls: Vec<CoinStable>,
 }
 
 impl RewardCalculator {
@@ -22,17 +22,16 @@ impl RewardCalculator {
         Lpps::Item: AsRef<Lpp>,
         Lpps::IntoIter: 'lpp,
     {
-        let tvls: ContractResult<Vec<CoinUsd>> = lpps
+        let tvls: ContractResult<Vec<CoinStable>> = lpps
             .into_iter()
             .map(|lpp| lpp.as_ref().balance())
             .map(|may_resp| {
                 may_resp
                     .map(
-                        |LppBalanceResponse {
+                        |StableBalanceResponse {
                              balance,
                              total_principal_due,
                              total_interest_due,
-                             ..
                          }| {
                             balance + total_principal_due + total_interest_due
                         },
@@ -41,7 +40,7 @@ impl RewardCalculator {
             })
             .collect();
         tvls.map(|tvls| Self {
-            apr: scale.get_apr::<Usd, CoinUsd>(tvls.iter().sum()),
+            apr: scale.get_apr(tvls.iter().sum()),
             tvls,
         })
     }
@@ -56,7 +55,7 @@ impl RewardCalculator {
         oracles: Oracles,
     ) -> impl Iterator<Item = ContractResult<Coin<NlsPlatform>>> + 'o
     where
-        Oracle: OracleTrait<Usd> + 'o,
+        Oracle: OracleTrait<Stable> + 'o,
         Oracles: IntoIterator,
         Oracles::Item: AsRef<Oracle>,
         Oracles::IntoIter: 'o,
@@ -69,7 +68,7 @@ impl RewardCalculator {
 mod tests {
     use currency::{NativePlatform, NlsPlatform};
     use finance::{duration::Duration, fraction::Fraction, percent::Percent, price};
-    use lpp_platform::{test::DummyLpp, CoinUsd};
+    use lpp_platform::{test::DummyLpp, CoinStable};
     use oracle_platform::{test::DummyOracle, Oracle};
 
     use crate::{
@@ -92,7 +91,7 @@ mod tests {
             }])
             .unwrap();
 
-        let lpp0_tvl: CoinUsd = TotalValueLocked::new(23).as_coin(); //23k USD
+        let lpp0_tvl: CoinStable = TotalValueLocked::new(23).as_coin(); //23k USD
         {
             let lpp1_tvl = tvl_total.as_coin() - lpp0_tvl - 1.into();
             let lpps = vec![DummyLpp::with_tvl(lpp0_tvl), DummyLpp::with_tvl(lpp1_tvl)];
@@ -110,7 +109,7 @@ mod tests {
         let bar0_apr = Percent::from_percent(20);
         let scale = RewardScale::new(bar0_apr);
 
-        let lpp0_tvl: CoinUsd = 23_000.into();
+        let lpp0_tvl: CoinStable = 23_000.into();
         let lpp1_tvl = 3_000.into();
         let lpps = vec![DummyLpp::with_tvl(lpp0_tvl), DummyLpp::with_tvl(lpp1_tvl)];
         let calc = RewardCalculator::new(lpps, &scale).unwrap();

@@ -10,6 +10,7 @@ use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
+use lpp_platform::msg::StableBalanceResponse;
 use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
@@ -96,11 +97,10 @@ pub(crate) fn mock_query(
     msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::LppBalance() => to_json_binary(&lpp_platform::msg::LppBalanceResponse {
+        QueryMsg::LppBalance() => to_json_binary(&StableBalanceResponse {
             balance: Coin::new(1000000000),
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),
-            balance_nlpn: Coin::new(1000000000),
         }),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;

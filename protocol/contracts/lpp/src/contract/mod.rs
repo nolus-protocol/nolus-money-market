@@ -158,6 +158,9 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
         QueryMsg::LppBalance() => {
             to_json_binary(&rewards::query_lpp_balance::<LpnCurrency>(deps, env)?)
         }
+        QueryMsg::StableBalance() => {
+            to_json_binary(&rewards::query_lpp_balance::<LpnCurrency>(deps, env)?)
+        }
         QueryMsg::Price() => to_json_binary(&lender::query_ntoken_price::<LpnCurrency>(deps, env)?),
         QueryMsg::DepositCapacity() => {
             to_json_binary(&lender::deposit_capacity::<LpnCurrency>(deps, env)?)

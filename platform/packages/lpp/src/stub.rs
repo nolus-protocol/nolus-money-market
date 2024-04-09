@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
     error::Result,
-    msg::{ExecuteMsg, LppBalanceResponse, QueryMsg},
+    msg::{ExecuteMsg, QueryMsg, StableBalanceResponse},
     Lpp,
 };
 
@@ -25,9 +25,9 @@ impl<'a> LppStub<'a> {
 }
 
 impl<'a> Lpp for LppStub<'a> {
-    fn balance(&self) -> Result<LppBalanceResponse> {
+    fn balance(&self) -> Result<StableBalanceResponse> {
         self.querier
-            .query_wasm_smart(&self.lpp, &(QueryMsg::LppBalance {}))
+            .query_wasm_smart(&self.lpp, &(QueryMsg::StableBalance {}))
             .map_err(Into::into)
     }
 

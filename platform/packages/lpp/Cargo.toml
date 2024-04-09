@@ -16,6 +16,7 @@ testing = []
 [dependencies]
 currency = { workspace = true }
 finance = { workspace = true }
+oracle-platform = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }
 

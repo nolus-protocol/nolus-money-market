@@ -1,6 +1,6 @@
 use currency::NlsPlatform;
 use finance::{coin::Coin, duration::Duration};
-use lpp_platform::{Lpp as LppTrait, Usd};
+use lpp_platform::{Lpp as LppTrait, Stable};
 use oracle_platform::Oracle as OracleTrait;
 use platform::message::Response as MessageResponse;
 
@@ -21,7 +21,7 @@ pub fn dispatch<Lpps, Oracle, Oracles>(
 where
     Lpps: IntoIterator,
     Lpps::Item: LppTrait,
-    Oracle: OracleTrait<Usd>,
+    Oracle: OracleTrait<Stable>,
     Oracles: IntoIterator,
     Oracles::Item: AsRef<Oracle>,
 {
@@ -59,7 +59,7 @@ where
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use lpp_platform::{test::DummyLpp, CoinUsd};
+    use lpp_platform::{test::DummyLpp, CoinStable};
     use oracle_platform::test::DummyOracle;
     use platform::response;
 
@@ -72,9 +72,9 @@ mod test {
     fn dispatch() {
         let apr = Percent::from_percent(12);
         let scale = RewardScale::new(apr);
-        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
-        let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
-        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpp0_tvl: CoinStable = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp1_tvl: CoinStable = TotalValueLocked::new(150).as_coin(); //150k USD
+        let lpp2_tvl: CoinStable = TotalValueLocked::new(200).as_coin(); //200k USD
         let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::with_tvl(lpp1_tvl),
@@ -97,8 +97,8 @@ mod test {
     fn balance_err() {
         let apr = Percent::from_percent(12);
         let scale = RewardScale::new(apr);
-        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
-        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpp0_tvl: CoinStable = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp2_tvl: CoinStable = TotalValueLocked::new(200).as_coin(); //200k USD
         let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::failing(),
@@ -118,9 +118,9 @@ mod test {
     fn oracle_err() {
         let apr = Percent::from_percent(12);
         let scale = RewardScale::new(apr);
-        let lpp0_tvl: CoinUsd = TotalValueLocked::new(50).as_coin(); //50k USD
-        let lpp1_tvl: CoinUsd = TotalValueLocked::new(150).as_coin(); //150k USD
-        let lpp2_tvl: CoinUsd = TotalValueLocked::new(200).as_coin(); //200k USD
+        let lpp0_tvl: CoinStable = TotalValueLocked::new(50).as_coin(); //50k USD
+        let lpp1_tvl: CoinStable = TotalValueLocked::new(150).as_coin(); //150k USD
+        let lpp2_tvl: CoinStable = TotalValueLocked::new(200).as_coin(); //200k USD
         let lpps = [
             DummyLpp::with_tvl(lpp0_tvl),
             DummyLpp::with_tvl(lpp1_tvl),

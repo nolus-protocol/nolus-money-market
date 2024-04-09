@@ -1,6 +1,9 @@
 use currencies::test::{NativeC, StableC};
 use currency::{Currency, NlsPlatform};
-use finance::coin::{Amount, Coin};
+use finance::{
+    coin::{Amount, Coin},
+    duration::Duration,
+};
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
     cw_multi_test::{AppResponse, ContractWrapper},
@@ -83,7 +86,7 @@ fn test_config() {
 }
 
 fn new_test_case(registry: Registry) -> DispatcherTestCase {
-    TestCaseBuilder::<Lpn>::new()
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -110,11 +113,13 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
         .init_protocols_registry(registry)
         .init_time_alarms()
         .init_treasury()
-        .into_generic()
+        .into_generic();
+    test_case.app.time_shift(Duration::YEAR);
+    test_case
 }
 
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
-    const REWARD: Coin<NlsPlatform> = Coin::new(4);
+    const REWARD: Coin<NlsPlatform> = Coin::new(37);
     let lender = Addr::unchecked(USER);
 
     let mut test_case = new_test_case(registry);
