@@ -1,21 +1,12 @@
-#[cfg(feature = "migrate")]
 use std::collections::BTreeMap;
 
-#[cfg(feature = "migrate")]
-use sdk::cosmwasm_std::{Api, QuerierWrapper, Storage};
+use sdk::cosmwasm_std::Storage;
 
-#[cfg(feature = "migrate")]
-use crate::result::Result;
+use crate::{contracts::Dex, result::Result};
 
 pub(crate) mod contract;
 pub(crate) mod contracts;
 
-#[cfg(feature = "migrate")]
-pub(crate) fn migrate(
-    storage: &mut dyn Storage,
-    api: &dyn Api,
-    querier: QuerierWrapper<'_>,
-    reserve_contracts: BTreeMap<String, String>,
-) -> Result<()> {
-    contracts::migrate_protocols(storage, api, querier, reserve_contracts)
+pub(crate) fn migrate(storage: &mut dyn Storage, dexes: BTreeMap<String, Dex>) -> Result<()> {
+    contracts::migrate_protocols(storage, dexes)
 }
