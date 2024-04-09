@@ -50,3 +50,29 @@ pub enum Dex {
     Astroport { router_address: String },
     Osmosis,
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_dex_serde() {
+        const ASTROPORT_ROUTER_ADDRESS: &str = "neutron0123456789ABCDEF";
+
+        assert_eq!(
+            sdk::cosmwasm_std::from_json(format!(
+                r#"{{
+                    "Astroport": {{
+                        "router_address": {ASTROPORT_ROUTER_ADDRESS:?}
+                    }}
+                }}"#
+            )),
+            Ok(super::Dex::Astroport {
+                router_address: ASTROPORT_ROUTER_ADDRESS.to_string()
+            })
+        );
+
+        assert_eq!(
+            sdk::cosmwasm_std::from_json(r#""Osmosis""#),
+            Ok(super::Dex::Osmosis {})
+        );
+    }
+}
