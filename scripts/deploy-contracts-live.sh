@@ -123,8 +123,9 @@ deploy_contracts() {
   local -r dex_channel_local="${11}"
   local -r dex_channel_remote="${12}"
   local -r protocol_currency="${13}"
-  local -r treasury_contract_address="${14}"
-  local -r timealarms_contract_address="${15}"
+  local -r stable_currency="${14}"
+  local -r treasury_contract_address="${15}"
+  local -r timealarms_contract_address="${16}"
   local swap_tree="${16}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
@@ -145,7 +146,7 @@ deploy_contracts() {
   local -r lpp_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir"  "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/lpp.wasm" "$lpp_init_msg" "$protocol-lpp" "$protocol")
 
   # upload and instantiate Oracle
-  local -r oracle_init_msg='{"config":{"base_asset":"'"$protocol_currency"'","price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"swap_tree":'"$swap_tree"'}'
+  local -r oracle_init_msg='{"config":{"price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"stable_currency":"'"$stable_currency"'","swap_tree":'"$swap_tree"'}'
   local -r oracle_contract_address=$(_deploy_contract "$nolus_net" "$chain_id" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/oracle.wasm" "$oracle_init_msg" "$protocol-oracle" "$protocol")
 
   # upload and instantiate Profit
