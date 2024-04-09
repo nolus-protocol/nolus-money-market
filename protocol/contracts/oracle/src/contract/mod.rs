@@ -23,10 +23,7 @@ use crate::{
     state::supported_pairs::SupportedPairs,
 };
 
-use self::{
-    config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
-    sudo::SudoWithOracleBase,
-};
+use self::{config::query_config, oracle::feeder::Feeders, sudo::SudoWithOracleBase};
 
 mod alarms;
 mod config;
@@ -136,7 +133,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    ExecWithOracleBase::cmd(deps, env, msg, info.sender)
+    exec::do_executute(deps, env, msg, info.sender)
 }
 
 #[entry_point]

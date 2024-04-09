@@ -1,7 +1,7 @@
 use finance::price::dto::PriceDTO;
 use serde::de::DeserializeOwned;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
+use currency::{Currency, Group};
 use platform::{contract, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -19,69 +19,42 @@ use crate::{
 
 use super::oracle::{feed::Feeds, feeder::Feeders};
 
-pub struct ExecWithOracleBase<'a> {
-    deps: DepsMut<'a>,
+pub fn do_executute(
+    deps: DepsMut<'_>,
     env: Env,
     msg: ExecuteMsg,
     sender: Addr,
-}
+) -> ContractResult<CwResponse> {
+    // type Output = CwResponse;
+    // type Error = ContractError;
 
-impl<'a> ExecWithOracleBase<'a> {
-    pub fn cmd(
-        deps: DepsMut<'a>,
-        env: Env,
-        msg: ExecuteMsg,
-        sender: Addr,
-    ) -> ContractResult<CwResponse> {
-        let visitor = Self {
-            deps,
-            env,
-            msg,
-            sender,
-        };
+    match msg {
+        ExecuteMsg::FeedPrices { prices } => {
+            if !Feeders::is_feeder(deps.storage, &sender).map_err(ContractError::LoadFeeders)? {
+                return Err(ContractError::UnknownFeeder {});
+            }
 
-        Tickers.visit_any::<BaseCurrencies, _>(BaseCurrency::TICKER, visitor)
-    }
-}
+            try_feed_prices::<PriceCurrencies, BaseCurrency, PriceCurrencies>(
+                deps.storage,
+                env.block.time,
+                sender,
+                prices,
+            )
+            .map(|()| Default::default())
+        }
+        ExecuteMsg::DispatchAlarms { max_count } => {
+            Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?
+                .try_notify_alarms(env.block.time, max_count)
+                .and_then(|(total, resp)| {
+                    response::response_with_messages(DispatchAlarmsResponse(total), resp)
+                })
+        }
+        ExecuteMsg::AddPriceAlarm { alarm } => {
+            contract::validate_addr(deps.querier, &sender)?;
 
-impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
-    type Output = CwResponse;
-    type Error = ContractError;
-
-    fn on<BaseC>(self) -> AnyVisitorResult<Self>
-    where
-        BaseC: Currency + DeserializeOwned,
-    {
-        match self.msg {
-            ExecuteMsg::FeedPrices { prices } => {
-                if !Feeders::is_feeder(self.deps.storage, &self.sender)
-                    .map_err(ContractError::LoadFeeders)?
-                {
-                    return Err(ContractError::UnknownFeeder {});
-                }
-
-                try_feed_prices::<PriceCurrencies, BaseC, PriceCurrencies>(
-                    self.deps.storage,
-                    self.env.block.time,
-                    self.sender,
-                    prices,
-                )
+            MarketAlarms::new(deps.storage)
+                .try_add_price_alarm::<BaseCurrency, _>(sender, alarm)
                 .map(|()| Default::default())
-            }
-            ExecuteMsg::DispatchAlarms { max_count } => {
-                Oracle::<_, PriceCurrencies, BaseC, BaseCurrencies>::load(self.deps.storage)?
-                    .try_notify_alarms(self.env.block.time, max_count)
-                    .and_then(|(total, resp)| {
-                        response::response_with_messages(DispatchAlarmsResponse(total), resp)
-                    })
-            }
-            ExecuteMsg::AddPriceAlarm { alarm } => {
-                contract::validate_addr(self.deps.querier, &self.sender)?;
-
-                MarketAlarms::new(self.deps.storage)
-                    .try_add_price_alarm::<BaseC, _>(self.sender, alarm)
-                    .map(|()| Default::default())
-            }
         }
     }
 }
