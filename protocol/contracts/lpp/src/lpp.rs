@@ -826,17 +826,14 @@ mod test {
         let lpp_balance = lpp
             .query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
-        assert_eq!(
-            lpp_balance.balance,
-            Coin::<TheCurrency>::new(5_000_000).into()
-        );
+        assert_eq!(lpp_balance.balance, Coin::<TheCurrency>::new(5_000_000));
         assert_eq!(
             lpp_balance.total_principal_due,
-            Coin::<TheCurrency>::new(5_000_000).into()
+            Coin::<TheCurrency>::new(5_000_000)
         );
         assert_eq!(
             lpp_balance.total_interest_due,
-            Coin::<TheCurrency>::new(1_100_000).into()
+            Coin::<TheCurrency>::new(1_100_000)
         );
 
         let price = lpp
