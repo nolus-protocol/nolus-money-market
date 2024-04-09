@@ -25,9 +25,6 @@ pub fn do_executute(
     msg: ExecuteMsg,
     sender: Addr,
 ) -> ContractResult<CwResponse> {
-    // type Output = CwResponse;
-    // type Error = ContractError;
-
     match msg {
         ExecuteMsg::FeedPrices { prices } => {
             if !Feeders::is_feeder(deps.storage, &sender).map_err(ContractError::LoadFeeders)? {
