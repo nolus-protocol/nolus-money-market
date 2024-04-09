@@ -596,7 +596,6 @@ version = "0.1.0"
 dependencies = [
  "currency",
  "finance",
- "oracle-platform",
  "platform",
  "sdk",
  "serde",
