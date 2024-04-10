@@ -84,8 +84,8 @@ where
     }
 }
 
-fn serialize_amount_quote<'a, S, QuoteC, QuoteG>(
-    amount: &'a Coin<QuoteC>,
+fn serialize_amount_quote<S, QuoteC, QuoteG>(
+    amount: &Coin<QuoteC>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
@@ -98,7 +98,7 @@ where
             serde::ser::Error::custom(format!("Amount quote serializaion failed: {:?}", err))
         })
         .and_then(|_| {
-            let coin_dto = CoinDTO::<QuoteG>::from(amount.clone());
+            let coin_dto = CoinDTO::<QuoteG>::from(*amount);
             coin_dto.serialize(serializer)
         })
 }
