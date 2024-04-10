@@ -17,13 +17,14 @@ where
         C: Currency;
 }
 
-pub fn execute<BaseG, QuoteC, Cmd>(
-    price: &BasePrice<BaseG, QuoteC>,
+pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
+    price: &BasePrice<BaseG, QuoteC, QuoteG>,
     cmd: Cmd,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     BaseG: Group,
     QuoteC: Currency,
+    QuoteG: Group,
     Cmd: WithPrice<QuoteC>,
     Error: Into<Cmd::Error>,
 {
@@ -32,20 +33,22 @@ where
         .map_err(CmdError::into_customer_err)
 }
 
-struct CurrencyResolve<'a, G, QuoteC, Cmd>
+struct CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
     QuoteC: Currency,
+    QuoteG: Group,
     Cmd: WithPrice<QuoteC>,
 {
-    price: &'a BasePrice<G, QuoteC>,
+    price: &'a BasePrice<G, QuoteC, QuoteG>,
     cmd: Cmd,
 }
 
-impl<'a, G, QuoteC, Cmd> AnyVisitor for CurrencyResolve<'a, G, QuoteC, Cmd>
+impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
     QuoteC: Currency,
+    QuoteG: Group,
     Cmd: WithPrice<QuoteC>,
     Error: Into<Cmd::Error>,
 {

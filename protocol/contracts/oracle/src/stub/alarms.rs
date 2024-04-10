@@ -10,34 +10,38 @@ use sdk::cosmwasm_std::{wasm_execute, Addr};
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
 
-pub trait PriceAlarms<AlarmCurrencies, BaseCurrency>
+pub trait PriceAlarms<AlarmCurrencies, BaseCurrency, OracleBaseG>
 where
     AlarmCurrencies: Group,
     BaseCurrency: Currency,
+    OracleBaseG: Group,
     Self: Into<Batch> + Sized,
 {
     type BaseC;
 
     //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrency>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrency, OracleBaseG>)
+        -> Result<()>;
 }
 
 pub trait AsAlarms {
-    fn as_alarms<AlarmCurrencies, OracleBase>(
+    fn as_alarms<AlarmCurrencies, OracleBase, OracleBaseG>(
         &self,
-    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
-    where
-        AlarmCurrencies: Group,
-        OracleBase: Currency;
-}
-
-impl AsAlarms for OracleRef {
-    fn as_alarms<AlarmCurrencies, OracleBase>(
-        &self,
-    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase>
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG>
     where
         AlarmCurrencies: Group,
         OracleBase: Currency,
+        OracleBaseG: Group;
+}
+
+impl AsAlarms for OracleRef {
+    fn as_alarms<AlarmCurrencies, OracleBase, OracleBaseG>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG>
+    where
+        AlarmCurrencies: Group,
+        OracleBase: Currency,
+        OracleBaseG: Group,
     {
         self.check_base::<OracleBase>();
 
@@ -59,11 +63,12 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     }
 }
 
-impl<'a, AlarmCurrencies, OracleBase> PriceAlarms<AlarmCurrencies, OracleBase>
-    for AlarmsStub<'a, OracleBase>
+impl<'a, AlarmCurrencies, OracleBase, OracleBaseG>
+    PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG> for AlarmsStub<'a, OracleBase>
 where
     AlarmCurrencies: Group,
     OracleBase: Currency,
+    OracleBaseG: Group,
 {
     type BaseC = OracleBase;
     

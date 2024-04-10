@@ -1,33 +1,39 @@
-use currency::Group;
 use serde::Deserialize;
 
-use crate::{
-    coin::{Coin, CoinDTO},
-    error::Error,
-};
+use currency::{Currency, Group};
+
+use crate::coin::Coin;
+use crate::{coin::CoinDTO, error::Error};
 
 use crate::price::base::BasePrice as ValidatedBasePrice;
 
 /// Brings invariant checking as a step in deserializing a BasePrice
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub(super) struct BasePrice<BaseG, QuoteC>
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
+pub(super) struct BasePrice<BaseG, QuoteG>
 where
     BaseG: Group,
-    QuoteC: ?Sized,
+    QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
-    amount_quote: Coin<QuoteC>,
+    amount_quote: CoinDTO<QuoteG>,
 }
 
-impl<BaseG, QuoteC> TryFrom<BasePrice<BaseG, QuoteC>> for ValidatedBasePrice<BaseG, QuoteC>
+impl<BaseG, QuoteG, QuoteC> TryFrom<BasePrice<BaseG, QuoteG>>
+    for ValidatedBasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: ?Sized,
+    QuoteC: Currency,
+    QuoteG: Group,
 {
     type Error = Error;
 
-    fn try_from(value: BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
-        ValidatedBasePrice::new_checked(value.amount, value.amount_quote)
+    fn try_from(value: BasePrice<BaseG, QuoteG>) -> Result<Self, Self::Error> {
+        Coin::<QuoteC>::try_from(value.amount_quote)
+            .and_then(|amount_quote| ValidatedBasePrice::new_checked(value.amount, amount_quote))
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::{LeaseGroup, Lpn, PaymentGroup};
+use currencies::{LeaseGroup, Lpn, Lpns, PaymentGroup};
 use currency::SymbolOwned;
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
@@ -38,7 +38,7 @@ pub enum ExecuteMsg {
         prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrency>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrency, Lpns>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms { max_count: AlarmsCount },

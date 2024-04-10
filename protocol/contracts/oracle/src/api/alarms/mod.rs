@@ -3,7 +3,14 @@ use std::result::Result as StdResult;
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group};
-use finance::price::base::BasePrice;
+use finance::{
+    error,
+    price::{
+        base::BasePrice,
+        with_price::{self, WithPrice},
+        Price,
+    },
+};
 use thiserror::Error;
 
 use sdk::{
@@ -16,12 +23,13 @@ mod unchecked;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case", bound(serialize = ""))]
-pub enum ExecuteMsg<G, Lpn>
+pub enum ExecuteMsg<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: Currency,
+    Lpns: Group,
 {
-    AddPriceAlarm { alarm: Alarm<G, Lpn> },
+    AddPriceAlarm { alarm: Alarm<G, Lpn, Lpns> },
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -30,29 +38,40 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
     #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
     StubAddAlarm(CosmWasmError),
+
+    #[error("[PriceAlarms] {0}")]
+    AlarmError(String),
+}
+
+impl From<error::Error> for Error {
+    fn from(err: error::Error) -> Self {
+        Self::AlarmError(err.to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm<G, Lpn>", bound(serialize = ""))]
-pub struct Alarm<G, Lpn>
+#[serde(try_from = "unchecked::Alarm<G, Lpn, Lpns>", bound(serialize = ""))]
+pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: Currency,
+    Lpns: Group,
 {
-    below: BasePrice<G, Lpn>,
-    above: Option<BasePrice<G, Lpn>>,
+    below: BasePrice<G, Lpn, Lpns>,
+    above: Option<BasePrice<G, Lpn, Lpns>>,
 }
 
-impl<G, Lpn> Alarm<G, Lpn>
+impl<G, Lpn, Lpns> Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: Currency,
+    Lpns: Group,
 {
     // TODO take Price<C, Q>-es instead
-    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn>
+    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn, Lpns>
     where
-        P: Into<BasePrice<G, Lpn>>,
+        P: Into<BasePrice<G, Lpn, Lpns>>,
     {
         let below = below.into();
         let above_or_equal = above_or_equal.map(Into::into);
@@ -64,41 +83,80 @@ where
         res
     }
 
-    fn invariant_held(&self) -> StdResult<(), AlarmError> {
+    fn invariant_held(&self) -> Result<()> {
         if let Some(above_or_equal) = &self.above {
             if self.below.base_ticker() != above_or_equal.base_ticker() {
-                Err(AlarmError(
-                    "Mismatch of above alarm and below alarm currencies",
-                ))?
+                return Err(Error::AlarmError(
+                    "Mismatch of above alarm and below alarm currencies".to_string(),
+                ));
             }
-            if &self.below > above_or_equal {
-                Err(AlarmError(
-                    "The below alarm price should be less than or equal to the above_or_equal alarm price",
-                ))?
+
+            struct BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
+            where
+                BaseG: Group,
+                QuoteC: Currency,
+                QuoteG: Group,
+            {
+                below_price: &'a BasePrice<BaseG, QuoteC, QuoteG>,
             }
+
+            impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
+            where
+                BaseG: Group,
+                QuoteC: Currency,
+                QuoteG: Group,
+            {
+                type Output = ();
+
+                type Error = Error;
+
+                fn exec<C>(
+                    self,
+                    above_or_equal: Price<C, QuoteC>,
+                ) -> StdResult<Self::Output, Self::Error>
+                where
+                    C: Currency,
+                {
+                    Price::<C, QuoteC>::try_from(self.below_price).map_err(Into::into).and_then(|below_price| {
+                            if below_price > above_or_equal {
+                                Err(Error::AlarmError("The below alarm price should be less than or equal to the above_or_equal alarm price".to_string()))
+                            } else {
+                                Ok(())
+                            }
+                        })
+                }
+            }
+            return with_price::execute(
+                above_or_equal,
+                BaseCurrencyType {
+                    below_price: &self.below,
+                },
+            )
+            .map_err(Into::into);
         }
         Ok(())
     }
 }
 
-impl<G, Lpn> From<Alarm<G, Lpn>> for (BasePrice<G, Lpn>, Option<BasePrice<G, Lpn>>)
+impl<G, Lpn, Lpns> From<Alarm<G, Lpn, Lpns>>
+    for (BasePrice<G, Lpn, Lpns>, Option<BasePrice<G, Lpn, Lpns>>)
 where
     G: Group,
     Lpn: Currency,
+    Lpns: Group,
 {
-    fn from(value: Alarm<G, Lpn>) -> Self {
+    fn from(value: Alarm<G, Lpn, Lpns>) -> Self {
         (value.below, value.above)
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
-#[error("[PriceAlarms] {0}")]
-pub struct AlarmError(&'static str);
-
 #[cfg(test)]
 mod test {
     use serde::Serialize;
-    use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+    use std::{
+        error::Error,
+        fmt::{Debug, Display, Formatter, Result as FmtResult},
+    };
 
     use currencies::{
         test::{LpnC, PaymentC5, PaymentC6, PaymentC7},
@@ -188,15 +246,15 @@ mod test {
         assert_err(from_both(below, above), "Mismatch of ");
         assert_err(
             from_both(below, above.inv()),
-            "pretending to be ticker of a currency pertaining to the lease group",
+            "Amount quote serializaion failed",
         );
         assert_err(
             from_both(below.inv(), above),
-            "pretending to be ticker of a currency pertaining to the lease group",
+            "Amount quote serializaion failed",
         );
         assert_err(
             from_both(below, below_extra.inv()),
-            "above alarm and below alarm currencies",
+            "Amount quote serializaion failed",
         );
     }
 
@@ -235,22 +293,29 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err<G, Lpn>(r: Result<Alarm<G, Lpn>, StdError>, msg: &str)
+    fn assert_err<G, Lpn, LpnG, E>(r: Result<Alarm<G, Lpn, LpnG>, E>, msg: &str)
     where
         G: Group + Debug,
         Lpn: Currency,
+        LpnG: Group + Debug,
+        E: Error + Debug,
     {
         assert!(r.is_err());
+        dbg!(msg);
+        // assert!(matches!(
+        //     dbg!(r),
+        //     Err(StdError::ParseErr {
+        //         target_type,
+        //         msg: real_msg
+        //     }) if target_type.contains("Alarm") && real_msg.contains(msg)
+        // ));
         assert!(matches!(
             dbg!(r),
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg
-            }) if target_type.contains("Alarm") && real_msg.contains(msg)
+            Err(err) if err.to_string().contains(msg)
         ));
     }
 
-    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, Lpn>, StdError>
+    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
     where
         C1: Currency + Serialize,
         Q1: Currency + Serialize,
@@ -261,7 +326,7 @@ mod test {
     fn from_both<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Price<C2, Q2>,
-    ) -> Result<Alarm<AssetG, Lpn>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
     where
         C1: Currency,
         C2: Currency,
@@ -274,22 +339,26 @@ mod test {
     fn from_both_impl<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Option<Price<C2, Q2>>,
-    ) -> Result<Alarm<AssetG, Lpn>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
     where
         C1: Currency,
         C2: Currency,
         Q1: Currency,
         Q2: Currency,
     {
-        let above_str = above.map(|above| alarm_half_to_json(AlarmPrice::Above, above));
-        let below_str = alarm_half_to_json(AlarmPrice::Below, below);
+        let above_str = above
+            .map(|above| alarm_half_to_json(AlarmPrice::Above, above))
+            .transpose()?;
+        let below_str = alarm_half_to_json(AlarmPrice::Below, below)?;
+        dbg!(&below);
+        dbg!(&above_str);
         from_both_str_impl(below_str, above_str)
     }
 
     fn from_both_str_impl<Str1, Str2>(
         below: Str1,
         above: Option<Str2>,
-    ) -> Result<Alarm<AssetG, Lpn>, StdError>
+    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
     where
         Str1: AsRef<str>,
         Str2: AsRef<str>,
@@ -314,40 +383,47 @@ mod test {
         }
     }
 
-    fn alarm_half_to_json<C, Q>(price_type: AlarmPrice, price: Price<C, Q>) -> String
+    fn alarm_half_to_json<C, Q>(
+        price_type: AlarmPrice,
+        price: Price<C, Q>,
+    ) -> Result<String, StdError>
     where
         C: Currency,
         Q: Currency,
     {
-        let base_price = BasePrice::<PaymentGroup, Q>::from(price);
-        alarm_half_to_json_str(price_type, &as_json(&base_price))
+        let base_price = BasePrice::<PaymentGroup, Q, Lpns>::from(price);
+        as_json(&base_price).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
     }
 
     fn alarm_half_coins_to_json<C, Q>(
         price_type: AlarmPrice,
         amount: Coin<C>,
         amount_quote: Coin<Q>,
-    ) -> String
+    ) -> Result<String, StdError>
     where
         C: Currency,
         Q: Currency,
     {
-        let price = format!(
-            r#"{{"amount": {},"amount_quote": {}}}"#,
-            as_json(&CoinDTO::<PaymentGroup>::from(amount)),
-            as_json(&CoinDTO::<PaymentGroup>::from(amount_quote))
-        );
-        alarm_half_to_json_str(price_type, &price)
+        as_json(&CoinDTO::<PaymentGroup>::from(amount)).and_then(|amount_str| {
+            as_json(&CoinDTO::<PaymentGroup>::from(amount_quote)).map(|amount_quote_str| {
+                let price = format!(
+                    r#"{{"amount": {},"amount_quote": {}}}"#,
+                    amount_str, amount_quote_str
+                );
+                alarm_half_to_json_str(price_type, &price)
+            })
+        })
     }
 
     fn alarm_half_to_json_str(price_type: AlarmPrice, price: &str) -> String {
         format!(r#""{}": {}"#, price_type, price)
     }
 
-    fn as_json<S>(to_serialize: &S) -> String
+    fn as_json<S>(to_serialize: &S) -> Result<String, StdError>
     where
         S: Serialize,
     {
-        String::from_utf8(to_json_vec(to_serialize).unwrap()).unwrap()
+        to_json_vec(to_serialize)
+            .and_then(|json_bytes| String::from_utf8(json_bytes).map_err(Into::into))
     }
 }

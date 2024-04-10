@@ -70,13 +70,13 @@ where
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + 'r
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'r
     where
         'self_: 'r,
         'storage: 'r,
         I: Iterator<Item = SwapLeg> + 'r,
     {
-        let cmd: LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>> = LegCmd::new(
+        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
@@ -84,7 +84,7 @@ where
         swap_pairs_df
             .scan(
                 cmd,
-                |cmd: &mut LegCmd<PriceG, BaseC, FedPrices<'_, PriceG>>, leg: SwapLeg| {
+                |cmd: &mut LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>>, leg: SwapLeg| {
                     Some(
                         currency::visit_any_on_tickers::<PriceG, PriceG, _>(
                             &leg.from,
@@ -252,7 +252,7 @@ mod test {
                 .flatten()
                 .collect();
 
-            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency>> = vec![
+            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency, TheStableGroup>> = vec![
                 tests::base_price::<PaymentC3>(1, 1),
                 tests::base_price::<PaymentC7>(1, 1),
                 tests::base_price::<PaymentC1>(2, 1),
@@ -297,7 +297,7 @@ mod test {
                 )
                 .unwrap();
 
-            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency>> = vec![
+            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency, TheStableGroup>> = vec![
                 tests::base_price::<PaymentC1>(2, 1),
                 tests::base_price::<PaymentC5>(2, 1),
                 tests::base_price::<PaymentC4>(2, 1),

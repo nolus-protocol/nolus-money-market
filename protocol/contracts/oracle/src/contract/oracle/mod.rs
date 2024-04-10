@@ -28,8 +28,8 @@ use self::feeder::Feeders;
 pub mod feed;
 pub mod feeder;
 
-pub(crate) type PriceResult<PriceG, OracleBase> =
-    Result<BasePrice<PriceG, OracleBase>, ContractError>;
+pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
+    Result<BasePrice<PriceG, OracleBase, OracleBaseG>, ContractError>;
 
 pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
@@ -70,7 +70,7 @@ where
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
         MarketAlarms::new(self.storage.deref())
-            .try_query_alarms::<_, BaseC>(self.calc_all_prices(block_time))
+            .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(block_time))
             .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
     }
 
@@ -81,7 +81,7 @@ where
         self.calc_all_prices(block_time).try_fold(
             vec![],
             |mut v: Vec<PriceDTO<PriceG, BaseG>>,
-             price: Result<BasePrice<PriceG, BaseC>, ContractError>| {
+             price: Result<BasePrice<PriceG, BaseC, BaseG>, ContractError>| {
                 price.map(|price| {
                     v.push(price.into());
 
@@ -148,7 +148,7 @@ where
     fn calc_all_prices(
         &self,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + '_ {
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + '_ {
         self.feeds.all_prices_iter(
             self.storage.deref(),
             self.tree.swap_pairs_df(),
@@ -175,7 +175,7 @@ where
     ) -> ContractResult<(u32, MessageResponse)> {
         let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
             .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))?
+            .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(block_time))?
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
@@ -299,9 +299,9 @@ mod test_normalized_price_not_found {
             MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency>(
+            .try_add_price_alarm::<BaseCurrency, BaseGroup>(
                 Addr::unchecked("1"),
-                Alarm::<AlarmCurrencies, BaseCurrency>::new(
+                Alarm::<AlarmCurrencies, BaseCurrency, BaseGroup>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
                     Some(price::total_of(PRICE_BASE).is(PRICE_QUOTE)),
                 ),

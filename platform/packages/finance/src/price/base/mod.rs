@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::marker::PhantomData;
 
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,6 @@ use currency::{Currency, Group, SymbolSlice};
 use crate::{
     coin::{Coin, CoinDTO},
     error::{Error, Result as FinanceResult},
-    price::{base::with_price::WithPrice, with_price},
 };
 
 use super::{dto::PriceDTO, Price};
@@ -17,22 +16,27 @@ mod unchecked;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
-    try_from = "unchecked::BasePrice<BaseG, QuoteC>",
-    bound(serialize = "")
+    try_from = "unchecked::BasePrice<BaseG, QuoteG>",
+    bound(serialize = "", deserialize = "")
 )]
-pub struct BasePrice<BaseG, QuoteC>
+pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: ?Sized,
+    QuoteC: Currency,
+    QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
+    #[serde(serialize_with = "serialize_amount_quote::<_, _, QuoteG>")]
     amount_quote: Coin<QuoteC>,
+    #[serde(skip)]
+    quote_group: PhantomData<QuoteG>,
 }
 
-impl<BaseG, QuoteC> BasePrice<BaseG, QuoteC>
+impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: ?Sized,
+    QuoteC: Currency,
+    QuoteG: Group,
 {
     fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
         let res = Self::new_raw(amount, amount_quote);
@@ -62,6 +66,7 @@ where
         Self {
             amount,
             amount_quote,
+            quote_group: PhantomData,
         }
     }
 
@@ -79,26 +84,47 @@ where
     }
 }
 
-impl<C, BaseG, QuoteC> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC>
+fn serialize_amount_quote<'a, S, QuoteC, QuoteG>(
+    amount: &'a Coin<QuoteC>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    QuoteC: Currency + ?Sized,
+    QuoteG: Group,
+{
+    currency::validate_member::<QuoteC, QuoteG>()
+        .map_err(|err| {
+            serde::ser::Error::custom(format!("Amount quote serializaion failed: {:?}", err))
+        })
+        .and_then(|_| {
+            let coin_dto = CoinDTO::<QuoteG>::from(amount.clone());
+            coin_dto.serialize(serializer)
+        })
+}
+
+impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
     C: Currency,
     BaseG: Group,
     QuoteC: Currency,
+    QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
         Self::new_unchecked(price.amount.into(), price.amount_quote)
     }
 }
 
-impl<C, BaseG, QuoteC> TryFrom<&BasePrice<BaseG, QuoteC>> for Price<C, QuoteC>
+impl<C, BaseG, QuoteC, QuoteG> TryFrom<&BasePrice<BaseG, QuoteC, QuoteG>> for Price<C, QuoteC>
 where
     C: Currency,
     BaseG: Group,
     QuoteC: Currency,
+    QuoteG: Group,
 {
     type Error = Error;
 
-    fn try_from(value: &BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
+    fn try_from(value: &BasePrice<BaseG, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
         (&value.amount)
             .try_into()
             .map(|amount| super::total_of(amount).is(value.amount_quote))
@@ -106,48 +132,14 @@ where
     }
 }
 
-impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC>> for PriceDTO<BaseG, QuoteG>
+impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC, QuoteG>> for PriceDTO<BaseG, QuoteG>
 where
     BaseG: Group,
     QuoteC: Currency,
     QuoteG: Group,
 {
-    fn from(price: BasePrice<BaseG, QuoteC>) -> Self {
+    fn from(price: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
         Self::new(price.amount, price.amount_quote.into())
-    }
-}
-
-impl<BaseG, QuoteC> PartialOrd for BasePrice<BaseG, QuoteC>
-where
-    BaseG: Group,
-    QuoteC: Currency,
-{
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        struct Comparator<'a, BaseG, QuoteC>
-        where
-            BaseG: Group,
-            QuoteC: Currency,
-        {
-            other: &'a BasePrice<BaseG, QuoteC>,
-        }
-
-        impl<'a, BaseG, QuoteC> WithPrice<QuoteC> for Comparator<'a, BaseG, QuoteC>
-        where
-            BaseG: Group,
-            QuoteC: Currency,
-        {
-            type Output = Option<Ordering>;
-            type Error = Error;
-
-            fn exec<C>(self, lhs: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-            {
-                Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
-            }
-        }
-        with_price::execute(self, Comparator { other })
-            .expect("The currencies of both prices should match")
     }
 }
 
@@ -181,7 +173,7 @@ mod test_invariant {
             SuperGroupTestC2::TICKER
         );
         assert_err(
-            load::<SuperGroup, SuperGroupTestC2>(&json.into_bytes()),
+            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
             "not be zero",
         );
     }
@@ -203,7 +195,7 @@ mod test_invariant {
             SuperGroupTestC2::TICKER
         );
         assert_err(
-            load::<SuperGroup, SuperGroupTestC2>(&json.into_bytes()),
+            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
             "not be zero",
         );
     }
@@ -213,7 +205,7 @@ mod test_invariant {
         BaseC: Currency,
         QuoteC: Currency,
     {
-        let _base_price: BasePrice<SuperGroup, QuoteC> =
+        let _base_price: BasePrice<SuperGroup, QuoteC, SuperGroup> =
             BasePrice::new_unchecked(amount.into(), amount_quote);
 
         #[cfg(not(debug_assertions))]
@@ -224,26 +216,29 @@ mod test_invariant {
         }
     }
 
-    fn load<G, QuoteC>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC>>
+    fn load<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>
     where
         G: Group + for<'a> Deserialize<'a>,
         QuoteC: Currency + for<'a> Deserialize<'a>,
+        QuoteG: Group + for<'a> Deserialize<'a>,
     {
-        load_with_group::<G, QuoteC>(json)
+        load_with_group::<G, QuoteC, QuoteG>(json)
     }
 
-    fn load_with_group<G, QuoteC>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC>>
+    fn load_with_group<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>
     where
         G: Group + for<'a> Deserialize<'a>,
         QuoteC: Currency + for<'a> Deserialize<'a>,
+        QuoteG: Group + for<'a> Deserialize<'a>,
     {
-        from_json::<BasePrice<G, QuoteC>>(json)
+        from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }
 
-    fn assert_err<BaseG, QuoteC>(r: Result<BasePrice<BaseG, QuoteC>, StdError>, msg: &str)
+    fn assert_err<BaseG, QuoteC, QuoteG>(r: StdResult<BasePrice<BaseG, QuoteC, QuoteG>>, msg: &str)
     where
         BaseG: Group,
         QuoteC: Currency,
+        QuoteG: Group,
     {
         assert!(matches!(
             r,
