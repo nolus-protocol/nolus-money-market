@@ -358,7 +358,7 @@ fn test_config_update() {
         .query()
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
-            &OracleQ::Price {
+            &OracleQ::BasePrice {
                 currency: BaseC::TICKER.into(),
             },
         )
@@ -392,7 +392,7 @@ fn test_config_update() {
 
     let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
         test_case.address_book.oracle().clone(),
-        &OracleQ::Price {
+        &OracleQ::BasePrice {
             currency: BaseC::TICKER.into(),
         },
     );

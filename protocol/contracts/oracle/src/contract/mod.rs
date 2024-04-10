@@ -103,8 +103,8 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                 .currencies()
                 .collect::<Vec<_>>(),
         ),
-        QueryMsg::Price { currency } => to_json_binary(
-            &QueryOracle::load(deps.storage)?.try_query_price(env.block.time, &currency)?,
+        QueryMsg::BasePrice { currency } => to_json_binary(
+            &QueryOracle::load(deps.storage)?.try_query_base_price(env.block.time, &currency)?,
         ),
         QueryMsg::Prices {} => {
             let prices = QueryOracle::load(deps.storage)?.try_query_prices(env.block.time)?;

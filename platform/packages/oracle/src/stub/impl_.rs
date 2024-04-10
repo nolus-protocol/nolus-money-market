@@ -102,7 +102,7 @@ where
             return Ok(Price::identity());
         }
 
-        let msg = QueryMsg::Price {
+        let msg = QueryMsg::BasePrice {
             currency: C::TICKER.to_string(),
         };
         self.querier

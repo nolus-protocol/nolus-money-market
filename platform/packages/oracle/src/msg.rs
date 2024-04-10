@@ -8,5 +8,5 @@ pub enum QueryMsg {
     /// Report the base currency as [SymbolOwned]
     BaseCurrency {},
     /// Provides the price of the currency against the base asset
-    Price { currency: SymbolOwned },
+    BasePrice { currency: SymbolOwned },
 }

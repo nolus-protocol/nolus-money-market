@@ -100,7 +100,7 @@ where
             .flatten()
     }
 
-    pub fn calc_price(
+    pub fn calc_base_price(
         &self,
         storage: &dyn Storage,
         tree: &SupportedPairs<BaseC>,

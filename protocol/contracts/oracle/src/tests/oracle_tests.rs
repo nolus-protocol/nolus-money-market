@@ -53,7 +53,7 @@ fn feed_direct_price() {
     let res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Price {
+        QueryMsg::BasePrice {
             currency: PaymentC4::TICKER.to_string(),
         },
     )
@@ -83,7 +83,7 @@ fn feed_indirect_price() {
     let res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Price {
+        QueryMsg::BasePrice {
             currency: PaymentC5::TICKER.to_string(),
         },
     )
@@ -104,7 +104,7 @@ fn query_prices_unsupported_denom() {
     query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Price {
+        QueryMsg::BasePrice {
             currency: "dummy".to_string(),
         },
     )
