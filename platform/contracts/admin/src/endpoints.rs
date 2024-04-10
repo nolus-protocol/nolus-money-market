@@ -24,9 +24,8 @@ use crate::{
 };
 
 // version info for migration info
-#[cfg(feature = "migrate")]
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -49,13 +48,12 @@ pub fn instantiate(
     state_contracts::store(deps.storage, contracts).map(|()| response::empty_response())
 }
 
-#[cfg(feature = "migrate")]
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
     env: Env,
     MigrateMsg {
-        reserve_contracts,
+        dexes,
         migrate_contracts:
             MigrateContracts {
                 release,
@@ -67,7 +65,7 @@ pub fn migrate(
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage| crate::state::migrate(storage, deps.api, deps.querier, reserve_contracts),
+        |storage| crate::state::migrate(storage, dexes),
         Into::into,
     )
     .and_then(
