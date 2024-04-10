@@ -87,13 +87,13 @@ where
         )
     }
 
-    pub(super) fn try_query_price(
+    pub(super) fn try_query_base_price(
         &self,
         at: Timestamp,
         currency: &SymbolOwned,
     ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
         self.feeds
-            .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
+            .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
     fn calc_all_prices(

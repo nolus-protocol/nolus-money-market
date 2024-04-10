@@ -80,8 +80,8 @@ pub enum QueryMsg {
     Prices {},
     /// Provides the price of the currency against the base asset
     ///
-    /// Implementation of oracle_platform::msg::QueryMsg::Price
-    Price {
+    /// Implementation of [`oracle_platform::msg::QueryMsg::BasePrice`]
+    BasePrice {
         currency: SymbolOwned,
     },
     /// Report the base currency as [SymbolOwned]
