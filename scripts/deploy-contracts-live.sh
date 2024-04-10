@@ -7,7 +7,7 @@ set -euxo pipefail
 # "$HOME/.nolus" "wasmAdmin" "storeCodePrivilegedUser" "nolus1gurgpv8savnfw66lckwzn4zk7fp394lpe667dhu7aw48u40lj6jsqxf8nd" \
 # "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "OSMOSIS" "OSMOSIS" \
 # "connection-0" "channel-0" "channel-2048" \
-# "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
+# "USDC" "USDC" "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz" \
 # "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl"  \
 # '{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}'
 
@@ -126,7 +126,7 @@ deploy_contracts() {
   local -r stable_currency="${14}"
   local -r treasury_contract_address="${15}"
   local -r timealarms_contract_address="${16}"
-  local swap_tree="${16}"
+  local swap_tree="${17}"
   swap_tree=$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')
 
   local protocol="${network}-${dex}-${protocol_currency}"
@@ -169,7 +169,7 @@ deploy_contracts() {
 if [ "$#" -ne 0 ]; then
   case "$1" in
     deploy_contracts)
-      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}"
+      deploy_contracts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}" "${18}"
       ;;
     *)
       echo "Unknown function: $1"
