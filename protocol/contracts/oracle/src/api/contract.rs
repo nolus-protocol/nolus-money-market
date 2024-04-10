@@ -11,7 +11,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
-use super::{swap::SwapTarget, BaseCurrencyGroup};
+use super::{swap::SwapTarget, BaseCurrencies};
 
 pub type PriceCurrencies = PaymentGroup;
 pub(crate) type BaseCurrency = Lpn;
