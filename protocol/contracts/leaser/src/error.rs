@@ -19,7 +19,7 @@ pub enum ContractError {
     Lpp(#[from] lpp::error::ContractError),
 
     #[error("[Leaser] {0}")]
-    OraclePlatform(#[from] oracle_platform::error::Error),
+    PriceOracle(#[from] oracle::stub::Error),
 
     #[error("[Leaser] {0}")]
     Platform(#[from] platform::error::Error),

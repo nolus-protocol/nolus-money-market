@@ -1,5 +1,5 @@
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle_platform::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 
 use crate::{
     api::position::PartialClose,

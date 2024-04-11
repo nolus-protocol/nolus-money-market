@@ -8,5 +8,6 @@ pub use contract::*;
 pub mod alarms;
 #[cfg(feature = "contract")]
 mod contract;
+pub mod price;
 #[cfg(feature = "stub_swap")]
 pub mod swap;

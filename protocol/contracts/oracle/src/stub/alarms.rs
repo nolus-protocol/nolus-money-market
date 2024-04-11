@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use currency::Currency;
-use oracle_platform::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
@@ -9,6 +8,8 @@ use crate::api::{
     alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
     BaseCurrencies,
 };
+
+use super::OracleRef;
 
 pub trait PriceAlarms
 where

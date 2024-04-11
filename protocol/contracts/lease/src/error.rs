@@ -7,7 +7,7 @@ use dex::Error as DexError;
 use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
 use oracle::api::alarms::Error as OracleAlarmError;
-use oracle_platform::error::Error as OraclePlatformError;
+use oracle::stub::Error as PriceOracleError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
 use reserve::error::Error as ReserveError;
@@ -43,7 +43,7 @@ pub enum ContractError {
     OracleAlarmError(#[from] OracleAlarmError),
 
     #[error("[Lease] {0}")]
-    OraclePlatformError(#[from] OraclePlatformError),
+    PriceOracleError(#[from] PriceOracleError),
 
     #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),

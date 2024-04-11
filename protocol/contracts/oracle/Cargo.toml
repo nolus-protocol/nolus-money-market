@@ -53,7 +53,7 @@ contract = [
     "dep:versioning",
 ]
 stub_alarms = ["dep:currencies"]
-stub_swap = ["dep:oracle-platform"]
+stub_swap = []
 testing = [
     "stub_alarms",
     "stub_swap",
@@ -66,7 +66,6 @@ currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true, optional = true  }
-oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 tree = { workspace = true, features = ["schema"] }

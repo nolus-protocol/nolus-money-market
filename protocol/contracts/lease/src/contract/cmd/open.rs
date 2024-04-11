@@ -1,6 +1,6 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle_platform::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;

@@ -20,7 +20,7 @@ pub enum Error {
     OracleSwapError(#[from] oracle::api::swap::Error),
 
     #[error("[Dex] {0}")]
-    OraclePlatformError(#[from] oracle_platform::error::Error),
+    PriceOracleError(#[from] oracle::stub::Error),
 
     #[error("[Dex] {0}")]
     TimeAlarmError(#[from] timealarms::error::ContractError),

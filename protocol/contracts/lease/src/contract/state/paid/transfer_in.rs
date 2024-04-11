@@ -6,7 +6,7 @@ use dex::{
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     bank,
     batch::{Emit, Emitter},

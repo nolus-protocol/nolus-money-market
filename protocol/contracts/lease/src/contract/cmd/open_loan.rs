@@ -6,7 +6,7 @@ use finance::{
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
-use oracle_platform::{convert, OracleRef};
+use oracle::stub::{convert, OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 

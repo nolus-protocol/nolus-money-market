@@ -1,4 +1,4 @@
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use serde::Deserialize;
 
 use sdk::cosmwasm_std::Addr;

@@ -6,12 +6,10 @@ authors.workspace = true
 license.workspace = true
 
 [package.metadata.cargo-each]
-combinations = [
-    { tags = ["ci", "@agnostic"], include-rest = true }
-]
+combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
 
 [features]
-impl = ["dep:oracle-platform", "dep:timealarms"]
+impl = ["dep:timealarms"]
 migration = []
 testing = []
 
@@ -19,7 +17,6 @@ testing = []
 currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["stub_swap"] }
-oracle-platform = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 

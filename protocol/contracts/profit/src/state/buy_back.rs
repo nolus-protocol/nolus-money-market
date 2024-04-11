@@ -9,7 +9,7 @@ use dex::{
     StateLocalOut, SwapTask,
 };
 use finance::coin::{Coin, CoinDTO};
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
@@ -188,7 +188,7 @@ mod tests {
 
     fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
         use dex::{Account, ConnectionParams, Ics20Channel};
-        use oracle_platform::OracleRef;
+        use oracle::stub::OracleRef;
         use platform::ica::HostAccount;
         use sdk::cosmwasm_std::Addr;
         use timealarms::stub::TimeAlarmsRef;

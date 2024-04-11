@@ -1,12 +1,10 @@
 use std::marker::PhantomData;
 
-use serde::Deserialize;
-
 use currency::{Currency, Group};
 use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::api::QueryMsg;
+use crate::api::price::QueryMsg;
 
 use super::{
     error::{Error, Result},
@@ -91,7 +89,7 @@ impl<'a, OracleBase, OracleBaseG, PriceConverterT> Oracle<OracleBase>
     for OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>
 where
     OracleBase: Currency,
-    OracleBaseG: Group + for<'de> Deserialize<'de>,
+    OracleBaseG: Group,
     PriceConverterT: PriceConverter,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>

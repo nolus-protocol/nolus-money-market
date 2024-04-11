@@ -78,14 +78,16 @@ pub enum QueryMsg {
     },
     /// Provides all supported prices
     Prices {},
-    /// Provides the price of the currency against the base asset
+    /// Report the base currency as [SymbolOwned]
     ///
-    /// Implementation of [`oracle_platform::msg::QueryMsg::BasePrice`]
+    /// Implementation of [crate::api::price::QueryMsg::BaseCurrency]
+    BaseCurrency {},
+    /// Provides the price of a currency against the base asset
+    ///
+    /// Implementation of [crate::api::price::QueryMsg::BasePrice]
     BasePrice {
         currency: SymbolOwned,
     },
-    /// Report the base currency as [SymbolOwned]
-    BaseCurrency {},
     /// Report the designated stable currency as [SymbolOwned]
     StableCurrency {},
     /// Lists configured swap pairs
@@ -95,7 +97,7 @@ pub enum QueryMsg {
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
     /// Returns `oracle::api::swap::SwapPath`
-    /// Implementation of oracle::api::swap::QueryMsg::SwapPath
+    /// Implementation of [crate::api::swap::QueryMsg::SwapPath]
     SwapPath {
         from: SymbolOwned,
         to: SymbolOwned,
@@ -104,7 +106,6 @@ pub enum QueryMsg {
     AlarmsStatus {},
 }
 
-/// Implementation of oracle_platform::msg::Config
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

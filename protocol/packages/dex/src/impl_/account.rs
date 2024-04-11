@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     batch::Batch as LocalBatch,
     ica::{self, HostAccount},

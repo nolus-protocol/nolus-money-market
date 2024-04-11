@@ -4,7 +4,7 @@ use currencies::LeaseGroup;
 use currency::{SymbolOwned, SymbolSlice};
 use dex::{Account, CoinVisitor, ConnectionParams, IterNext, IterState, MigrateSpec, SwapTask};
 use finance::{coin::CoinDTO, percent::Percent};
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 

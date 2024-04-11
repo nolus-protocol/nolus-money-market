@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
-use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -38,7 +38,7 @@ where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
-    oracle_platform::error::Error: Into<Cmd::Error>,
+    oracle::stub::Error: Into<Cmd::Error>,
 {
     Tickers.visit_any::<LeaseAssetCurrencies, _>(
         asset,
@@ -65,7 +65,7 @@ where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
-    oracle_platform::error::Error: Into<Cmd::Error>,
+    oracle::stub::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -98,7 +98,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: Currency,
     lpp::error::ContractError: Into<Cmd::Error>,
-    oracle_platform::error::Error: Into<Cmd::Error>,
+    oracle::stub::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

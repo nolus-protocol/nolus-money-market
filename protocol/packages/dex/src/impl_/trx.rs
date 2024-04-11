@@ -3,8 +3,7 @@ use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use oracle::stub::SwapPath;
-use oracle_platform::OracleRef;
+use oracle::stub::{OracleRef, SwapPath};
 use platform::{
     bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
     batch::Batch as LocalBatch,

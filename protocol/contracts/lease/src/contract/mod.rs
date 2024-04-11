@@ -50,7 +50,7 @@ impl Lease {
         Cmd::Error: From<lpp::error::ContractError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
-        oracle_platform::error::Error: Into<Cmd::Error>,
+        oracle::stub::Error: Into<Cmd::Error>,
     {
         self.lease.execute(cmd, querier).map(|result| {
             let (lease, other) = result.split_into();

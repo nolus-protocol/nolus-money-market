@@ -6,7 +6,7 @@ use dex::{
     SwapTask, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,

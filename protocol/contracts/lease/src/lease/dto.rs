@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle_platform::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -62,7 +62,7 @@ impl LeaseDTO {
         Cmd::Error: From<lpp::error::ContractError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
-        oracle_platform::error::Error: Into<Cmd::Error>,
+        oracle::stub::Error: Into<Cmd::Error>,
     {
         let lease = self.addr.clone();
         let asset = self.position.amount().ticker().clone();

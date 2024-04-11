@@ -8,7 +8,7 @@ use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
-use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{

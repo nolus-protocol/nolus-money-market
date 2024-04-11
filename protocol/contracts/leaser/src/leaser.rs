@@ -4,7 +4,7 @@ use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     contract::Code,

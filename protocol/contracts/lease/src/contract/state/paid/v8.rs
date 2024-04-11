@@ -4,7 +4,7 @@ use currencies::LeaseGroup;
 use currency::SymbolSlice;
 use dex::{Account, CoinVisitor, IterNext, IterState, SwapTask};
 use finance::coin::CoinDTO;
-use oracle_platform::OracleRef;
+use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
