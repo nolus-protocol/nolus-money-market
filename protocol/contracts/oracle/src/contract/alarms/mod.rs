@@ -280,7 +280,7 @@ mod test {
         let storage = MockStorage::new();
 
         let alarms = MarketAlarms::new(&storage as &dyn Storage);
-        let res = alarms.notify_alarms_iter::<_, _>(
+        let res = alarms.notify_alarms_iter::<_, _, Lpns>(
             [tests::base_price::<SuperGroupTestC1>(1, 25)]
                 .into_iter()
                 .map(Ok),
