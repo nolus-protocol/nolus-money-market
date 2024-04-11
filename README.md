@@ -95,8 +95,7 @@ docker build . -f "Containerfile" -t "wasm-optimizer" --build-arg "rust_ver=1.75
 ```
 
 Do note that the command is an example one and the Rust version, denoted by the
-`rust_ver` build argument, should match the one set in the `rust-toolchain.toml`
-file, located at the root of the project!
+`rust_ver` build argument.
 
 ##### Running container image
 
@@ -107,17 +106,20 @@ each set of contracts, depending on their workspace (indicated by
 
 * ```sh
   export WORKSPACE_DIR_NAME='platform'
+  export NET=@agnostic
+  export PROTOCOL=@agnostic
   ```
 
   OR
 
   ```sh
   export WORKSPACE_DIR_NAME='protocol'
+  export NET='net_dev'
+  export PROTOCOL='osmosis-osmosis-usdc_axelar'
   ```
 
 * ```sh
-  export NET='dev'
-  export PROTOCOL='osmosis-osmosis-usdc_axelar'
+  export PROFILE='release'
   export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
   ```
 
@@ -126,8 +128,11 @@ each set of contracts, depending on their workspace (indicated by
     docker run --rm -v "$(pwd)/platform/:/platform/:ro" \
     -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/:ro" \
     -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/:rw" \
-    --env "RELEASE_VERSION=`git describe`-`date -Iminute`" \
-    --env "features=contract$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)" \
+    --env "RELEASE_VERSION=${release_version}" \
+    --env "NETWORK=${NET}" \
+    --env "PROTOCOL=${PROTOCOL}" \
+    --env "PROFILE=${PROFILE}" \
+    --env "CHECK_DEPENDENCIES_UPDATED=false" \
     wasm-optimizer
   ```
 
@@ -147,7 +152,7 @@ environment variable to the one used to build the original instead.
 Run the following in a package directory or any workspace.
 
 ```sh
-cargo test --features "net_${NET},${PROTOCOL}" --all-targets
+cargo test --features "${NET},${PROTOCOL}" --all-targets
 ```
 
 ### Lint
@@ -161,7 +166,7 @@ Run the following in the `platform` workspace.
 Run the following in the `protocol` and `tests` workspaces.
 
 ```sh
-./lint.sh "net_${NET},${PROTOCOL}"
+./lint.sh "${NET},${PROTOCOL}"
 ```
 
 ### New contracts - genesis
