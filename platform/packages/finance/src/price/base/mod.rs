@@ -124,10 +124,10 @@ where
 {
     type Error = Error;
 
-    fn try_from(value: &BasePrice<BaseG, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
-        (&value.amount)
+    fn try_from(base: &BasePrice<BaseG, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
+        (&base.amount)
             .try_into()
-            .map(|amount| super::total_of(amount).is(value.amount_quote))
+            .map(|amount| super::total_of(amount).is(base.amount_quote))
             .map_err(Into::into)
     }
 }
@@ -138,8 +138,8 @@ where
     QuoteC: Currency,
     QuoteG: Group,
 {
-    fn from(price: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
-        Self::new(price.amount, price.amount_quote.into())
+    fn from(base: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
+        Self::new(base.amount, base.amount_quote.into())
     }
 }
 

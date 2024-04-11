@@ -1,5 +1,4 @@
 use currency::{error::CmdError, AnyVisitor, Currency, Group, GroupVisit, Tickers};
-use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{error::Error, price::Price};
 
@@ -57,7 +56,7 @@ where
 
     fn on<C>(self) -> currency::AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         self.price
             .try_into()
