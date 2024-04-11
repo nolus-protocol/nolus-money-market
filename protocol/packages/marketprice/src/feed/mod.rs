@@ -14,6 +14,7 @@ mod observation;
 mod sample;
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(bound(serialize = "", deserialize = ""))]
 pub struct PriceFeed<C, QuoteC>
 where
     C: Currency,

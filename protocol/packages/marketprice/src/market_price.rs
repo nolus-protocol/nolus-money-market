@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{
     self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned, SymbolSlice,
     Tickers,
@@ -75,7 +73,7 @@ where
     where
         'm: 'a,
         G: Group,
-        QuoteC: Currency + DeserializeOwned,
+        QuoteC: Currency,
         QuoteG: Group,
         Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
     {
@@ -99,8 +97,8 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
-        C: Currency + DeserializeOwned,
-        QuoteC: Currency + DeserializeOwned,
+        C: Currency,
+        QuoteC: Currency,
     {
         let feed_bin = self
             .storage
@@ -113,8 +111,8 @@ fn load_feed<BaseC, QuoteC>(
     feed_bin: Option<PriceFeedBin>,
 ) -> Result<PriceFeed<BaseC, QuoteC>, PriceFeedsError>
 where
-    BaseC: Currency + DeserializeOwned,
-    QuoteC: Currency + DeserializeOwned,
+    BaseC: Currency,
+    QuoteC: Currency,
 {
     feed_bin.map_or_else(
         || Ok(PriceFeed::<BaseC, QuoteC>::default()),
@@ -138,7 +136,7 @@ where
 impl<'a, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    C: Currency + DeserializeOwned,
+    C: Currency,
     QuoteC: Currency,
 {
     fn do_collect(
@@ -173,7 +171,7 @@ impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor
     for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    QuoteC: Currency + DeserializeOwned,
+    QuoteC: Currency,
     G: Group,
     QuoteQuoteC: Currency,
     QuoteG: Group,
@@ -183,7 +181,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         let next_price =
             self.feeds
@@ -225,8 +223,8 @@ where
 
         fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
         where
-            C: Currency + Serialize + DeserializeOwned,
-            QuoteC: Currency + Serialize + DeserializeOwned,
+            C: Currency,
+            QuoteC: Currency,
         {
             load_feed(self.feed_bin).and_then(|feed| {
                 let feed =

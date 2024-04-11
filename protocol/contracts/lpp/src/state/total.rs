@@ -1,6 +1,5 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -19,9 +18,10 @@ use sdk::{
 use crate::error::ContractError;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     total_principal_due: Coin<Lpn>,
     total_interest_due: Coin<Lpn>,
@@ -31,7 +31,7 @@ where
 
 impl<Lpn> Default for Total<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: ?Sized,
 {
     fn default() -> Self {
         Self::new()
@@ -40,7 +40,7 @@ where
 
 impl<Lpn> Total<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: ?Sized,
 {
     const STORAGE: Item<'static, Total<Lpn>> = Item::new("total");
 
@@ -124,7 +124,7 @@ where
 
 fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     const THOUSAND: Amount = 1000;
     Rational::new(Coin::ZERO, THOUSAND.into())

@@ -13,7 +13,7 @@ pub trait WithLeaseTypes {
     fn exec<Asset, Lpn>(self, lease_dto: LeaseDTO) -> Result<Self::Output, Self::Error>
     where
         Asset: Currency,
-        Lpn: Currency;
+        Lpn: ?Sized + Currency;
 }
 
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
@@ -71,7 +71,7 @@ where
 
     fn on<Lpn>(self) -> AnyVisitorResult<Self>
     where
-        Lpn: Currency,
+        Lpn: ?Sized + Currency,
     {
         self.cmd.exec::<Asset, Lpn>(self.lease_dto)
     }

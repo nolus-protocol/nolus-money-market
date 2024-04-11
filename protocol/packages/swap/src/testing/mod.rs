@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, ser::Serialize};
-
 use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
@@ -71,7 +69,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         Ok(Coin::<C>::new(self.amount).into())
     }

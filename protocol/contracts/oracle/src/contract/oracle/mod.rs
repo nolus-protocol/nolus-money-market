@@ -1,7 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use serde::de::DeserializeOwned;
-
 use currency::{Currency, Group, SymbolOwned};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use platform::{
@@ -30,7 +28,7 @@ pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     BaseG: Group,
 {
     storage: S,
@@ -43,7 +41,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group + Clone,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     BaseG: Group,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
@@ -113,7 +111,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     PriceG: Group + Clone,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     BaseG: Group,
 {
     const REPLY_ID: Id = 0;

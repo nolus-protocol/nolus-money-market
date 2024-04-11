@@ -4,9 +4,8 @@ use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
 use sdk::schemars::{self, JsonSchema};
 
@@ -27,7 +26,7 @@ where
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct RepayShares<Lpn>
 where
-    Lpn: 'static,
+    Lpn: 'static + ?Sized,
 {
     pub interest: Coin<Lpn>,
     pub principal: Coin<Lpn>,
@@ -36,7 +35,7 @@ where
 
 impl<Lpn> Loan<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
@@ -77,7 +76,7 @@ where
 
 impl<Lpn> Loan<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: ?Sized,
 {
     pub fn open(storage: &mut dyn Storage, addr: Addr, loan: &Self) -> Result<()> {
         if Self::STORAGE.has(storage, addr.clone()) {

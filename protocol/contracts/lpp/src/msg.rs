@@ -2,7 +2,7 @@ use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
 pub use currency::SymbolOwned as LpnResponse;
-use currency::{Currency, Group, NlsPlatform, SymbolOwned};
+use currency::{Group, NlsPlatform, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},
@@ -160,7 +160,7 @@ where
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PriceResponse<Lpn>(pub Price<NLpn, Lpn>)
 where
-    Lpn: 'static + Currency;
+    Lpn: 'static + ?Sized;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group};
 use sdk::schemars::{self, JsonSchema};
@@ -16,7 +16,10 @@ pub mod with_price;
 pub mod with_quote;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "unchecked::PriceDTO<G, QuoteG>")]
+#[serde(
+    try_from = "unchecked::PriceDTO<G, QuoteG>",
+    bound(serialize = "", deserialize = "")
+)]
 pub struct PriceDTO<G, QuoteG>
 where
     G: Group,
@@ -152,8 +155,8 @@ pub trait WithPrice {
 
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + Serialize + DeserializeOwned,
-        QuoteC: Currency + Serialize + DeserializeOwned;
+        C: Currency,
+        QuoteC: Currency;
 }
 
 pub trait WithBase<C>

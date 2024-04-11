@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use crate::{error::Error, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
 use super::{matcher::Tickers, Currency, Group};
@@ -16,7 +14,7 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + Serialize + DeserializeOwned;
+        C: 'static + Currency;
 }
 pub trait AnyVisitorPair {
     type Output;
@@ -24,8 +22,8 @@ pub trait AnyVisitorPair {
 
     fn on<C1, C2>(self) -> AnyVisitorPairResult<Self>
     where
-        C1: Currency + Serialize + DeserializeOwned,
-        C2: Currency + Serialize + DeserializeOwned;
+        C1: Currency,
+        C2: Currency;
 }
 
 pub trait GroupVisit: Matcher {
@@ -66,8 +64,6 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use serde::{de::DeserializeOwned, Serialize};
-
     use crate::{error::Error, matcher::Tickers, Currency, Group, SymbolSlice};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, GroupVisit};
@@ -105,7 +101,7 @@ mod impl_any_tickers {
 
         fn on<C1>(self) -> AnyVisitorResult<Self>
         where
-            C1: Currency + Serialize + DeserializeOwned,
+            C1: Currency,
         {
             Tickers.visit_any::<G2, _>(
                 self.ticker2,
@@ -127,7 +123,7 @@ mod impl_any_tickers {
     }
     impl<C1, V> AnyVisitor for SecondTickerVisitor<C1, V>
     where
-        C1: Currency + Serialize + DeserializeOwned,
+        C1: Currency,
         V: AnyVisitorPair,
     {
         type Output = <V as AnyVisitorPair>::Output;
@@ -135,7 +131,7 @@ mod impl_any_tickers {
 
         fn on<C2>(self) -> AnyVisitorResult<Self>
         where
-            C2: Currency + Serialize + DeserializeOwned,
+            C2: Currency,
         {
             self.visitor.on::<C1, C2>()
         }

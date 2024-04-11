@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign, Mul};
+use std::{
+    fmt::Debug,
+    ops::{Add, AddAssign, Mul},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -18,22 +21,22 @@ pub mod dto;
 
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
-    C: Currency,
+    C: ?Sized,
 {
     PriceBuilder(amount)
 }
 
 pub struct PriceBuilder<C>(Coin<C>)
 where
-    C: Currency;
+    C: 'static + ?Sized;
 
 impl<C> PriceBuilder<C>
 where
-    C: Currency,
+    C: 'static + ?Sized,
 {
     pub fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
     where
-        QuoteC: Currency,
+        QuoteC: 'static + ?Sized,
     {
         Price::new(self.0, to)
     }
@@ -50,6 +53,7 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 ///
 /// Not designed to be used in public APIs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(bound(serialize = "", deserialize = ""))]
 pub struct Price<C, QuoteC>
 where
     C: ?Sized,
@@ -61,8 +65,8 @@ where
 
 impl<C, QuoteC> Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
@@ -204,8 +208,8 @@ where
 
 impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: ?Sized + PartialEq,
+    QuoteC: ?Sized + PartialEq,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // a/b < c/d if and only if a * d < b * c
@@ -270,8 +274,8 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: ?Sized,
+    QuoteC: ?Sized,
 {
     let ratio_impl = Rational::new(of, price.amount);
     Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)

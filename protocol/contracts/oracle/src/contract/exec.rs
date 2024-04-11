@@ -1,5 +1,4 @@
 use finance::price::dto::PriceDTO;
-use serde::de::DeserializeOwned;
 
 use currency::{Currency, Group};
 use platform::{contract, response};
@@ -64,7 +63,7 @@ fn try_feed_prices<G, BaseC, QuoteG>(
 ) -> ContractResult<()>
 where
     G: Group,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     QuoteG: Group,
 {
     let config = Config::load(storage).map_err(ContractError::LoadConfig)?;

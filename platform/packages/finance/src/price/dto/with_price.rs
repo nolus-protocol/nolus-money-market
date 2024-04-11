@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::{error::CmdError, AnyVisitorPair, Currency, Group};
 
 use crate::error::Error;
@@ -46,8 +44,8 @@ where
 
     fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
     where
-        C1: Currency + Serialize + DeserializeOwned,
-        C2: Currency + Serialize + DeserializeOwned,
+        C1: Currency,
+        C2: Currency,
     {
         self.price
             .try_into()

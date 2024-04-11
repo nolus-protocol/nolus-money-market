@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::de::DeserializeOwned;
-
 use currency::{Currency, Group, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::{config::Config, market_price::PriceFeeds};
@@ -29,7 +27,7 @@ pub struct Feeds<PriceG, BaseC, BaseG> {
 impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
 where
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     BaseG: Group,
 {
     pub(crate) fn with(config: Config) -> Self {
@@ -160,8 +158,8 @@ mod test {
     impl PriceQuerier for TestFeeds {
         fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
         where
-            B: Currency + DeserializeOwned,
-            Q: Currency + DeserializeOwned,
+            B: Currency,
+            Q: Currency,
         {
             Ok(self
                 .0

@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
+use currency::Currency;
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -17,7 +17,10 @@ mod reserve;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct Ref<Lpn> {
+pub struct Ref<Lpn>
+where
+    Lpn: ?Sized,
+{
     contract: Addr,
     #[serde(skip)]
     _lpns: PhantomData<Lpn>,
@@ -25,7 +28,7 @@ pub struct Ref<Lpn> {
 
 impl<Lpn> Ref<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized + Currency,
 {
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         querier
@@ -53,7 +56,10 @@ where
     }
 }
 
-impl<Lpn> From<Ref<Lpn>> for Addr {
+impl<Lpn> From<Ref<Lpn>> for Addr
+where
+    Lpn: ?Sized,
+{
     fn from(value: Ref<Lpn>) -> Self {
         value.contract
     }

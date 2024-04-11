@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use currency::{AnyVisitorPair, Currency, Group};
 use finance::price::{base::BasePrice, Price};
 
@@ -34,7 +32,7 @@ where
 impl<PriceG, BaseC, Querier> AnyVisitorPair for &mut LegCmd<PriceG, BaseC, Querier>
 where
     PriceG: Group,
-    BaseC: Currency + DeserializeOwned,
+    BaseC: Currency,
     Querier: PriceQuerier,
 {
     type Output = Option<BasePrice<PriceG, BaseC>>;
@@ -42,8 +40,8 @@ where
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
     where
-        B: Currency + DeserializeOwned,
-        Q: Currency + DeserializeOwned,
+        B: Currency,
+        Q: Currency,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases

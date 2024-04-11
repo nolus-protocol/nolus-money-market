@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::de::DeserializeOwned;
-
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
 use oracle_platform::{Oracle as OracleTrait, OracleRef, WithOracle};
@@ -22,7 +20,7 @@ pub trait WithLeaseDeps {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LpnCurrency>;
@@ -74,7 +72,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency + DeserializeOwned,
+        C: 'static + Currency,
     {
         self.lpp.execute_loan(
             FactoryStage2 {

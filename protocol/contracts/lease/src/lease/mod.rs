@@ -186,7 +186,7 @@ mod tests {
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
     {
         LoanResponse {
             principal_due: Coin::from(100),
@@ -199,14 +199,14 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct LppLoanLocal<Lpn>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
     {
         loan: LoanResponse<Lpn>,
     }
 
     impl<Lpn> From<LoanResponse<Lpn>> for LppLoanLocal<Lpn>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
     {
         fn from(loan: LoanResponse<Lpn>) -> Self {
             Self { loan }
@@ -215,7 +215,7 @@ mod tests {
 
     impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
     {
         fn principal_due(&self) -> Coin<Lpn> {
             self.loan.principal_due
@@ -236,7 +236,7 @@ mod tests {
 
     impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
     {
         type Error = LppError;
 

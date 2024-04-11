@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Serialize;
 
 use currency::Currency;
 use platform::{
@@ -54,7 +54,7 @@ pub(super) fn try_claim_rewards(
 
 pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalances<Lpn>>
 where
-    Lpn: 'static + Currency + DeserializeOwned + Serialize,
+    Lpn: 'static + Currency + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
 }

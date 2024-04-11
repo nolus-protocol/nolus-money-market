@@ -294,7 +294,7 @@ mod tests {
         };
 
         use super::{
-            create_loan, Lpn, LppLoanLocal, LEASE_START, LOAN_INTEREST_RATE, MARGIN_INTEREST_RATE,
+            create_loan, LppLoanLocal, LEASE_START, LOAN_INTEREST_RATE, MARGIN_INTEREST_RATE,
         };
 
         #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -984,10 +984,7 @@ mod tests {
             before_state: State,
             exp_due_period_paid: Duration,
             exp_receipt: RepayReceipt,
-        ) -> State
-        where
-            Lpn: Currency,
-        {
+        ) -> State {
             let exp_overdue = if before_state.overdue.start_in() == Duration::default() {
                 let exp_interest =
                     before_state.overdue.interest() - exp_receipt.overdue_interest_paid();

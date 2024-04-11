@@ -21,7 +21,10 @@ pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct LppRef<Lpn, Lpns> {
+pub struct LppRef<Lpn, Lpns>
+where
+    Lpn: ?Sized,
+{
     addr: Addr,
     #[serde(skip)]
     _lpn: PhantomData<Lpn>,
@@ -31,7 +34,7 @@ pub struct LppRef<Lpn, Lpns> {
 
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: Currency,
+    Lpn: ?Sized + Currency,
     Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
@@ -46,12 +49,12 @@ where
             })
     }
 
-    pub fn addr(&self) -> &Addr {
-        &self.addr
-    }
-
     pub fn lpn(&self) -> &SymbolSlice {
         Lpn::TICKER
+    }
+
+    pub fn addr(&self) -> &Addr {
+        &self.addr
     }
 
     pub fn execute_loan<Cmd>(
@@ -98,11 +101,7 @@ where
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
-    fn into_lender(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns>
-    where
-        Lpn: Currency,
-        Lpns: Group,
-    {
+    fn into_lender(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns> {
         LppLenderStub::new(self, querier)
     }
 }
@@ -110,7 +109,7 @@ where
 #[cfg(any(test, feature = "testing"))]
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
     Lpns: Group,
 {
     pub fn unchecked<A>(addr: A) -> Self

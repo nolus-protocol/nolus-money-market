@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -34,14 +32,14 @@ where
 // Deposit and Loan which in turn may use LiquidityPool.
 pub struct NTokenPrice<Lpn>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + ?Sized,
 {
     price: Price<NLpn, Lpn>,
 }
 
 impl<Lpn> NTokenPrice<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + ?Sized + Copy,
 {
     pub fn get(&self) -> Price<NLpn, Lpn> {
         self.price
@@ -57,7 +55,7 @@ where
 
 impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpn: ?Sized,
 {
     fn from(nprice: NTokenPrice<Lpn>) -> Self {
         PriceResponse(nprice.price)
@@ -66,7 +64,7 @@ where
 
 pub(crate) struct LiquidityPool<Lpn>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     config: Config,
     total: Total<Lpn>,
@@ -74,7 +72,7 @@ where
 
 impl<Lpn> LiquidityPool<Lpn>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + ?Sized,
 {
     pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
         config
@@ -88,7 +86,12 @@ where
 
         Ok(LiquidityPool { config, total })
     }
+}
 
+impl<Lpn> LiquidityPool<Lpn>
+where
+    Lpn: 'static + ?Sized + Currency,
+{
     pub fn deposit_capacity(
         &self,
         querier: QuerierWrapper<'_>,
@@ -279,7 +282,7 @@ where
             .map(|balance: Coin<Lpn>| {
                 debug_assert!(
                     pending_deposit <= balance,
-                    "Pending deposit {{{pending_deposit}}} > Current Balance: {{{balance}}}!"
+                    "Pending deposit {{{pending_deposit:?}}} > Current Balance: {{{balance}}}!"
                 );
                 balance - pending_deposit
             })

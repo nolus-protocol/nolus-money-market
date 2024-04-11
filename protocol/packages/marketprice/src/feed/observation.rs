@@ -6,6 +6,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
+#[serde(bound(serialize = "", deserialize = ""))]
 pub struct Observation<C, QuoteC>
 where
     C: Currency,

@@ -1,6 +1,6 @@
 use std::mem;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{Currency, SymbolSlice};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
@@ -28,7 +28,7 @@ impl Config {
 
     pub fn try_new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Result<Self>
     where
-        Lpn: Currency,
+        Lpn: ?Sized + Currency,
     {
         if msg.lpn_ticker == Self::lpn_ticker::<Lpn>() {
             Ok(Self {
@@ -58,7 +58,7 @@ impl Config {
 
     pub fn lpn_ticker<Lpn>() -> &'static SymbolSlice
     where
-        Lpn: Currency,
+        Lpn: ?Sized + Currency,
     {
         Lpn::TICKER
     }
@@ -85,7 +85,7 @@ impl Config {
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
     where
-        Lpn: Currency + Serialize + DeserializeOwned,
+        Lpn: 'static + ?Sized,
     {
         Price::identity()
     }
@@ -163,7 +163,7 @@ mod migration {
 
     pub(crate) fn migrate<Lpn>(storage: &mut dyn Storage) -> ContractResult<()>
     where
-        Lpn: Currency,
+        Lpn: ?Sized + Currency,
     {
         let old_store: Item<'static, OldConfig> =
             Item::new(str::from_utf8(Config::STORAGE.as_slice()).expect("valid storage key "));

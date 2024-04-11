@@ -95,7 +95,7 @@ impl Config {
         querier: &QuerierWrapper<'_>,
     ) -> ContractResult<ReserveRef<Lpn>>
     where
-        Lpn: Currency,
+        Lpn: ?Sized + Currency,
     {
         ReserveRef::try_new(self.reserve.clone(), querier).map_err(Into::into)
     }

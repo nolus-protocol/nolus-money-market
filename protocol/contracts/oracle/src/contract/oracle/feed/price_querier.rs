@@ -1,5 +1,3 @@
-use serde::de::DeserializeOwned;
-
 use currency::{Currency, Group};
 use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
@@ -39,8 +37,8 @@ where
 pub trait PriceQuerier {
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
     where
-        B: Currency + DeserializeOwned,
-        Q: Currency + DeserializeOwned;
+        B: Currency,
+        Q: Currency;
 }
 
 impl<'a, G> PriceQuerier for FedPrices<'a, G>
@@ -49,8 +47,8 @@ where
 {
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
     where
-        B: Currency + DeserializeOwned,
-        Q: Currency + DeserializeOwned,
+        B: Currency,
+        Q: Currency,
     {
         let price = self
             .feeds

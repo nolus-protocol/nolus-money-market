@@ -72,7 +72,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency,
+        Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LpnCurrency>,

@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::Currency;
 use finance::coin::Coin;
 use platform::{
@@ -23,7 +21,7 @@ pub(super) fn try_open_loan<Lpn>(
     amount: Coin<Lpn>,
 ) -> Result<(LoanResponse<Lpn>, MessageResponse)>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency,
 {
     let lease_addr = info.sender;
     let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
@@ -45,7 +43,7 @@ pub(super) fn try_repay_loan<Lpn>(
     info: MessageInfo,
 ) -> Result<(Coin<Lpn>, MessageResponse)>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency,
 {
     let lease_addr = info.sender;
     let repay_amount = bank::received_one(info.funds)?;
@@ -70,7 +68,7 @@ pub(super) fn query_quote<Lpn>(
     quote: Coin<Lpn>,
 ) -> Result<QueryQuoteResponse>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency,
 {
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
@@ -82,7 +80,7 @@ where
 
 pub fn query_loan<Lpn>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse<Lpn>>
 where
-    Lpn: 'static + Currency + Serialize + DeserializeOwned,
+    Lpn: 'static + Currency,
 {
     Loan::query(storage, lease_addr)
 }

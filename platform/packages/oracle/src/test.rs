@@ -1,7 +1,5 @@
 #![cfg(feature = "testing")]
 
-use serde::Deserialize;
-
 use currency::{test::SuperGroupTestC1, Currency, Group};
 use finance::{
     coin::Amount,
@@ -32,7 +30,7 @@ where
     fn price_of<C, G>(&self) -> Result<Price<C, BaseC>>
     where
         C: Currency,
-        G: Group + for<'de> Deserialize<'de>,
+        G: Group,
     {
         self.0
             .map(|price| price::total_of(1.into()).is(price.into()))

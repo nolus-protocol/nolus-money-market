@@ -26,7 +26,7 @@ impl Fractionable<Units> for Percent {
 
 impl<C> Fractionable<Coin<C>> for Percent
 where
-    C: PartialEq,
+    C: ?Sized + PartialEq,
 {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self

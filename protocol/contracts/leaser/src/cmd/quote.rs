@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
@@ -74,7 +72,10 @@ impl<'r> WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'r> {
     }
 }
 
-pub struct LppQuote<Lpn, Lpp> {
+pub struct LppQuote<Lpn, Lpp>
+where
+    Lpn: ?Sized,
+{
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
 }
@@ -82,7 +83,7 @@ pub struct LppQuote<Lpn, Lpp> {
 impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Lpn: Currency,
+    Lpn: ?Sized,
 {
     pub fn new(lpp: Lpp) -> StdResult<LppQuote<Lpn, Lpp>> {
         Ok(Self {
@@ -108,7 +109,7 @@ where
 
 struct QuoteStage2<Lpn, Lpp>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
@@ -154,7 +155,7 @@ where
 
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -169,7 +170,7 @@ where
 
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: ?Sized + Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
 {
@@ -178,7 +179,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned,
+        C: 'static + Currency,
     {
         Tickers
             .maybe_visit_any::<LeaseGroup, _>(
@@ -202,7 +203,7 @@ where
 
 struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: ?Sized,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<Lpn>,
@@ -227,7 +228,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: 'static + Currency + DeserializeOwned,
+        Asset: 'static + Currency,
     {
         let downpayment_lpn = total(
             self.downpayment,

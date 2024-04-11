@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -59,7 +58,7 @@ impl InterestRate {
 
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent
     where
-        Lpn: Currency,
+        Lpn: ?Sized + PartialEq,
     {
         let utilization_max = Percent::from_ratio(
             self.utilization_optimal.units(),

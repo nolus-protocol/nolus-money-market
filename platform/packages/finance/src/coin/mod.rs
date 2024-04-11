@@ -1,6 +1,7 @@
 #[cfg(feature = "testing")]
 use std::num::NonZeroU128;
 use std::{
+    cmp::Ordering,
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
@@ -23,7 +24,7 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C>
 where
     C: ?Sized,
@@ -116,6 +117,60 @@ where
             Self::new(self.amount / gcd),
             Coin::<OtherC>::new(other.amount / gcd),
         )
+    }
+}
+
+impl<C> Debug for Coin<C>
+where
+    C: ?Sized,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Coin")
+            .field("amount", &self.amount)
+            .field("ticker", &self.ticker)
+            .finish()
+    }
+}
+
+impl<C> Default for Coin<C>
+where
+    C: ?Sized,
+{
+    fn default() -> Self {
+        Self {
+            amount: Default::default(),
+            ticker: Default::default(),
+        }
+    }
+}
+
+impl<C> PartialEq for Coin<C>
+where
+    C: ?Sized,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.amount == other.amount
+    }
+}
+
+impl<C> Eq for Coin<C> where C: ?Sized {}
+
+impl<C> PartialOrd for Coin<C>
+where
+    C: ?Sized,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<C> Ord for Coin<C>
+where
+    C: ?Sized,
+    Self: PartialOrd,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.amount.cmp(&other.amount)
     }
 }
 

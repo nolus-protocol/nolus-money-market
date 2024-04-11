@@ -22,7 +22,7 @@ pub fn new_unchecked_base_currency_stub<'a, OracleBase, OracleBaseG>(
 ) -> impl Oracle<OracleBase> + 'a
 where
     OracleBase: Currency,
-    OracleBaseG: Group + for<'de> Deserialize<'de> + 'a,
+    OracleBaseG: Group + 'a,
 {
     use self::impl_::BaseCUncheckedConverter;
 
@@ -35,12 +35,12 @@ where
 pub trait Oracle<OracleBase>
 where
     Self: Into<OracleRef> + AsRef<Self>,
-    OracleBase: Currency,
+    OracleBase: ?Sized,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency,
-        G: Group + for<'de> Deserialize<'de>;
+        G: Group;
 }
 
 pub trait WithOracle<OracleBase>
