@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use self::{
     error::{Error, Result},
-    impl_::{CheckedConverter, OracleStub},
+    impl_::OracleStub,
 };
 
 use super::error;
@@ -72,9 +72,6 @@ impl<BaseC> OracleRef<BaseC>
 where
     BaseC: ?Sized + Currency,
 {
-    // TODO [all stub-s] add a currency group as a type parameter of the struct-s
-    // in order to move the responsability to the caller. Then review if some of
-    // the dependencies to 'currencies' get obsolete.
     pub fn try_from(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::BaseCurrency {})
@@ -89,6 +86,8 @@ where
         self.addr == contract
     }
 
+    // TODO review if the OracleBase Group type is needed anymore once refactor currencies to
+    // point to their group
     pub fn execute_as_oracle<OracleBaseG, V>(
         self,
         cmd: V,
@@ -99,9 +98,7 @@ where
         V: WithOracle<BaseC>,
         Error: Into<V::Error>,
     {
-        cmd.exec(OracleStub::<_, OracleBaseG, CheckedConverter>::new(
-            self, querier,
-        ))
+        cmd.exec(OracleStub::<_, OracleBaseG>::new(self, querier))
     }
 }
 
