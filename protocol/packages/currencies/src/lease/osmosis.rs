@@ -678,6 +678,26 @@ define_symbol! {
 }
 define_currency!(Cudos, CUDOS, 18);
 
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+define_symbol! {
+    SAGA {
+        ["net_dev", "net_test"]: {
+            // full ibc route: transfer/channel-???/transfer/channel-???/usaga
+            bank: "ibc/NA_SAGA",
+            // full ibc route: transfer/channel-???/usaga
+            dex: "ibc/NA_SAGA_DEX",
+        },
+        ["net_main"]: {
+            // full ibc route: transfer/channel-0/transfer/channel-38946/usaga
+            bank: "ibc/4C3767D90875C31870ACAC95C349BBFD0585FFF8486C14F6BA0B0ED8D7D35CFD",
+            // full ibc route: transfer/channel-38946/usaga
+            dex: "ibc/094FB70C3006906F67F5D674073D2DAFAFB41537E7033098F5C752F211E7B6C2",
+        },
+    }
+}
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+define_currency!(Saga, SAGA, 6);
+
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
     symbol: &SymbolSlice,
@@ -688,7 +708,7 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
+    let res = maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
         .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, StOsmo, _>(matcher, symbol, visitor))
@@ -714,7 +734,14 @@ where
         .or_else(|visitor| maybe_visit::<_, Qsr, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor));
+    #[cfg(feature = "osmosis-osmosis-usdc_noble")]
+    {
+        res.or_else(|visitor| maybe_visit::<_, Saga, _>(matcher, symbol, visitor))
+    }
+
+    #[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
+    res
 }
 
 #[cfg(test)]
@@ -729,6 +756,8 @@ mod test {
         {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
     };
 
+    #[cfg(feature = "osmosis-osmosis-usdc_noble")]
+    use super::Saga;
     use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
@@ -744,6 +773,8 @@ mod test {
         maybe_visit_on_ticker_impl::<Lvn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Cudos, LeaseGroup>();
+        #[cfg(feature = "osmosis-osmosis-usdc_noble")]
+        maybe_visit_on_ticker_impl::<Saga, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
