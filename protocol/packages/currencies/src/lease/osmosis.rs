@@ -717,7 +717,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Axl, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, QAtom, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Strd, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Inj, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Secret, _>(matcher, symbol, visitor))
@@ -733,16 +732,16 @@ where
         .or_else(|visitor| maybe_visit::<_, Lvn, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Qsr, _>(matcher, symbol, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, symbol, visitor));
+        .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, symbol, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor));
     #[cfg(feature = "osmosis-osmosis-usdc_noble")]
     {
-        res.or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor))
-            .or_else(|visitor| maybe_visit::<_, Saga, _>(matcher, symbol, visitor))
+        res.or_else(|visitor| maybe_visit::<_, Saga, _>(matcher, symbol, visitor))
     }
 
     #[cfg(not(feature = "osmosis-osmosis-usdc_noble"))]
     {
-        res.or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, symbol, visitor))
+        res.or_else(|visitor| maybe_visit::<_, StkAtom, _>(matcher, symbol, visitor))
     }
 }
 
