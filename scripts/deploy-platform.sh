@@ -8,20 +8,20 @@ add_wasm_messages() {
   local -r treasury_init_tokens="$3"
   local -r dex_admin="$4"
 
-  local -r TREASURY_ADDRESS=$(treasury_instance_addr)
   local -r TIMEALARMS_ADDRESS=$(timealarms_instance_addr)
+  local -r TREASURY_ADDRESS=$(treasury_instance_addr)
   local -r ADMIN_CONTRACT_ADDRESS=$(admin_contract_instance_addr)
 
   local id=0
+
+  local -r timealarms_init_msg='{}'
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" \
+    "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$timealarms_init_msg"
 
   local -r treasury_init_msg='{"cadence_hours":12,"protocols_registry":"'"$ADMIN_CONTRACT_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'","tvl_to_apr":{"bars":[{"tvl":0,"apr":150},{"tvl":500,"apr":140},{"tvl":1000,"apr":130},{"tvl":2000,"apr":120},{"tvl":3000,"apr":110},{"tvl":4000,"apr":100},{"tvl":5000,"apr":90},{"tvl":7500,"apr":80},{"tvl":10000,"apr":70},{"tvl":15000,"apr":60},{"tvl":20000,"apr":50},{"tvl":25000,"apr":40},{"tvl":30000,"apr":30},{"tvl":40000,"apr":20}]}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "$treasury_init_tokens"  "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$treasury_init_msg"
-
-  local -r timealarms_init_msg='{}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" \
-    "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$timealarms_init_msg"
 
   local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"dispatcher":"'"$TIMEALARMS_ADDRESS"'","timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
@@ -29,19 +29,19 @@ add_wasm_messages() {
     "$admin_contract_init_msg"
 }
 
-treasury_instance_addr() {
+timealarms_instance_addr() {
   # An instance address is computed as a function of the code ID and the globally
   # incremented number of instantiations done so far.
   # A consequence of the above is that the instance address of smart contracts
   # will not change when the code binary changes unless the order is changed.
 
   # this the address of the first instatiation that is of the first deployed
-  # code, assuming that is treasury.
+  # code, assuming that is timealarms.
   # to update if the order is changed
   echo "nolus14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0k0puz"
 }
 
-timealarms_instance_addr() {
+treasury_instance_addr() {
   echo "nolus1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqrr2r7y"
 }
 
