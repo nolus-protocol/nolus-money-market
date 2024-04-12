@@ -9,8 +9,7 @@ use sdk::{
 
 use crate::{
     contracts::{
-        ContractsGroupedByProtocol, ContractsTemplate, Dex, Network, PlatformTemplate, Protocol,
-        ProtocolTemplate,
+        Contracts, ContractsTemplate, Dex, Network, PlatformTemplate, Protocol, ProtocolTemplate,
     },
     error::Error,
     result::Result,
@@ -19,21 +18,17 @@ use crate::{
 const PLATFORM: Item<'_, PlatformTemplate<Addr>> = Item::new("platform_contracts");
 const PROTOCOL: Map<'_, String, Protocol> = Map::new("protocol_contracts");
 
-pub(crate) fn store(
-    storage: &mut dyn Storage,
-    contracts: ContractsGroupedByProtocol,
-) -> Result<()> {
+pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> Result<()> {
     PLATFORM
         .save(storage, &contracts.platform)
         .map_err(Into::into)
         .and_then(|()| {
-            contracts.protocol.into_iter().try_for_each(
-                |(protocol, ref contracts): (String, Protocol)| {
-                    PROTOCOL
-                        .save(storage, protocol, contracts)
-                        .map_err(Into::into)
-                },
-            )
+            contracts
+                .protocol
+                .into_iter()
+                .try_for_each(|(name, protocol)| {
+                    PROTOCOL.save(storage, name, &protocol).map_err(Into::into)
+                })
         })
 }
 
@@ -64,12 +59,12 @@ pub(crate) fn load_protocol(storage: &dyn Storage, name: String) -> Result<Proto
     PROTOCOL.load(storage, name).map_err(Into::into)
 }
 
-pub(crate) fn load_all(storage: &dyn Storage) -> Result<ContractsGroupedByProtocol> {
-    load_platform(storage).and_then(|platform: PlatformTemplate<Addr>| {
+pub(crate) fn load_all(storage: &dyn Storage) -> Result<Contracts> {
+    load_platform(storage).and_then(|platform| {
         PROTOCOL
             .range(storage, None, None, Order::Ascending)
             .collect::<::std::result::Result<_, _>>()
-            .map(|protocol: BTreeMap<String, Protocol>| ContractsTemplate { platform, protocol })
+            .map(|protocol| ContractsTemplate { platform, protocol })
             .map_err(Into::into)
     })
 }

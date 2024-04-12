@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use ::platform::contract::CodeId;
 use sdk::{
-    cosmwasm_std::Addr,
+    cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
 };
 
@@ -21,22 +21,61 @@ mod impl_mod;
 mod platform;
 mod protocol;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ContractsTemplate<T, U = ProtocolTemplate<BTreeMap<String, T>>> {
-    pub platform: PlatformTemplate<T>,
-    pub protocol: U,
+pub trait HigherOrderType {
+    type Of<T>;
 }
 
-pub type ContractsMigration = ContractsTemplate<Option<MigrationSpec>>;
+#[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
+pub struct Identity;
 
-pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
+impl HigherOrderType for Identity {
+    type Of<T> = T;
+}
 
-pub type ContractsGroupedByProtocol = ContractsTemplate<Addr, BTreeMap<String, Protocol>>;
+#[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
+pub struct HigherOrderOption;
+
+impl HigherOrderType for HigherOrderOption {
+    type Of<T> = Option<T>;
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(
+    rename_all = "snake_case",
+    deny_unknown_fields,
+    bound(
+        serialize = "OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: Serialize, \
+            OutmostHigherOrderType::Of<Protocol>: Serialize",
+        deserialize = "OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: Deserialize<'de>, \
+            OutmostHigherOrderType::Of<Protocol>: Deserialize<'de>",
+    )
+)]
+#[schemars(bound = "OutmostHigherOrderType: JsonSchema, \
+    OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: JsonSchema, \
+    OutmostHigherOrderType::Of<Protocol>: JsonSchema, \
+    PlatformUnit: JsonSchema, \
+    Protocol: JsonSchema")]
+pub struct ContractsTemplate<OutmostHigherOrderType, PlatformUnit, Protocol>
+where
+    OutmostHigherOrderType: HigherOrderType,
+{
+    pub platform: OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>,
+    pub protocol: BTreeMap<String, OutmostHigherOrderType::Of<Protocol>>,
+}
+
+pub type ContractsMigration =
+    ContractsTemplate<HigherOrderOption, MigrationSpec, ProtocolTemplate<MigrationSpec>>;
+
+pub type Contracts = ContractsTemplate<Identity, Addr, Protocol>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct MigrationSpec {
-    pub code_id: CodeId,
+pub struct MigrationSpec
+where
+    Uint64: Into<CodeId>,
+    CodeId: Into<Uint64>,
+{
+    pub code_id: Uint64,
     pub migrate_msg: String,
+    pub post_migrate_execute_msg: Option<String>,
 }

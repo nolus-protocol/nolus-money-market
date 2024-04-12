@@ -4,21 +4,20 @@ use serde::{Deserialize, Serialize};
 
 use platform::contract::CodeId;
 use sdk::{
-    cosmwasm_std::Addr,
+    cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
 };
 use versioning::ReleaseLabel;
 
 pub use crate::contracts::{
-    ContractsGroupedByProtocol, ContractsMigration, ContractsPostMigrationExecute, Dex, Network,
-    PlatformTemplate, Protocol, ProtocolTemplate,
+    Contracts, ContractsMigration, Dex, Network, PlatformTemplate, Protocol, ProtocolTemplate,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct InstantiateMsg {
     pub dex_admin: Addr,
-    pub contracts: ContractsGroupedByProtocol,
+    pub contracts: Contracts,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -30,9 +29,13 @@ pub struct MigrateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg
+where
+    Uint64: Into<CodeId>,
+    CodeId: Into<Uint64>,
+{
     Instantiate {
-        code_id: CodeId,
+        code_id: Uint64,
         expected_address: Addr,
         protocol: String,
         label: String,
@@ -75,13 +78,16 @@ pub enum SudoMsg {
 pub struct MigrateContracts {
     pub release: ReleaseLabel,
     pub migration_spec: ContractsMigration,
-    pub post_migration_execute: ContractsPostMigrationExecute,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub enum QueryMsg {
-    InstantiateAddress { code_id: CodeId, protocol: String },
+pub enum QueryMsg
+where
+    Uint64: Into<CodeId>,
+    CodeId: Into<Uint64>,
+{
+    InstantiateAddress { code_id: Uint64, protocol: String },
     Protocols {},
     Platform {},
     Protocol(String),
