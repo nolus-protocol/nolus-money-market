@@ -1,6 +1,6 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -8,7 +8,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{open::NewLeaseForm, LeaseCoin},
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency, LppRef, ReserveRef},
+    finance::{LpnCurrencies, LpnCurrency, LppRef, OracleRef, ReserveRef},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
         IntoDTOResult, Lease,

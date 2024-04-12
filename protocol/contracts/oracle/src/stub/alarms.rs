@@ -1,6 +1,3 @@
-use std::marker::PhantomData;
-
-use currency::Currency;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
@@ -13,36 +10,29 @@ use super::OracleRef;
 
 pub trait PriceAlarms
 where
-    Self: Into<Batch> + Sized,
+    Self: Into<Batch>,
 {
+    type BaseC;
+
     //TODO use a type-safe Alarm, one with the typed Price
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()>;
 }
 
 pub trait AsAlarms {
-    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
-    where
-        OracleBase: Currency;
+    fn as_alarms(&self) -> impl PriceAlarms;
 }
 
-impl AsAlarms for OracleRef {
-    fn as_alarms<OracleBase>(&self) -> impl PriceAlarms
-    where
-        OracleBase: Currency,
-    {
-        self.check_base::<OracleBase>();
-
+impl<OracleBase> AsAlarms for OracleRef<OracleBase> {
+    fn as_alarms(&self) -> impl PriceAlarms {
         AlarmsStub {
             oracle_ref: self,
             batch: Batch::default(),
-            _quote_currency: PhantomData::<OracleBase>,
         }
     }
 }
 
 struct AlarmsStub<'a, OracleBase> {
-    oracle_ref: &'a OracleRef,
-    _quote_currency: PhantomData<OracleBase>,
+    oracle_ref: &'a OracleRef<OracleBase>,
     batch: Batch,
 }
 
@@ -52,10 +42,9 @@ impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     }
 }
 
-impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase>
-where
-    OracleBase: Currency,
-{
+impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase> {
+    type BaseC = OracleBase;
+
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(

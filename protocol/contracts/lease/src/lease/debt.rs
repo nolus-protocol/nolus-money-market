@@ -25,7 +25,7 @@ where
         &self,
         now: &Timestamp,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef,
+        price_alarms: &OracleRef<LpnCurrency>,
     ) -> ContractResult<DebtStatus<Asset>> {
         let due = self.loan.state(now);
 

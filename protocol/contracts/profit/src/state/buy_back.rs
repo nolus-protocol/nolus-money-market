@@ -9,7 +9,7 @@ use dex::{
     StateLocalOut, SwapTask,
 };
 use finance::coin::{Coin, CoinDTO};
-use oracle::stub::OracleRef;
+use oracle::stub::SwapPath;
 use platform::{
     bank::{self, BankAccountView},
     message::Response as PlatformResponse,
@@ -76,7 +76,7 @@ impl SwapTask for BuyBack {
         &self.account
     }
 
-    fn oracle(&self) -> &OracleRef {
+    fn oracle(&self) -> &impl SwapPath {
         self.config.oracle()
     }
 
@@ -200,7 +200,7 @@ mod tests {
             Config::new(
                 24,
                 Addr::unchecked("DEADCODE"),
-                OracleRef::unchecked::<_, StableC>("DEADCODE"),
+                OracleRef::<StableC>::unchecked("DEADCODE"),
                 TimeAlarmsRef::unchecked("DEADCODE"),
             ),
             Account::unchecked(

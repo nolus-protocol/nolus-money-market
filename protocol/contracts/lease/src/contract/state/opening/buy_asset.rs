@@ -6,7 +6,6 @@ use dex::{
     SwapTask, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
@@ -32,7 +31,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LppRef,
+    finance::{LppRef, OracleRef},
     lease::IntoDTOResult,
 };
 

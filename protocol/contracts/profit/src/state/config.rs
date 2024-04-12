@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use oracle::stub::OracleRef;
+use currencies::Lpn as QuoteC;
+use oracle::stub::{OracleRef, SwapPath};
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -10,7 +11,7 @@ use crate::typedefs::CadenceHours;
 pub(crate) struct Config {
     cadence_hours: CadenceHours,
     treasury: Addr,
-    oracle: OracleRef,
+    oracle: OracleRef<QuoteC>,
     time_alarms: TimeAlarmsRef,
 }
 
@@ -18,7 +19,7 @@ impl Config {
     pub fn new(
         cadence_hours: CadenceHours,
         treasury: Addr,
-        oracle: OracleRef,
+        oracle: OracleRef<QuoteC>,
         time_alarms: TimeAlarmsRef,
     ) -> Self {
         Self {
@@ -44,7 +45,7 @@ impl Config {
         &self.treasury
     }
 
-    pub fn oracle(&self) -> &OracleRef {
+    pub fn oracle(&self) -> &impl SwapPath {
         &self.oracle
     }
 

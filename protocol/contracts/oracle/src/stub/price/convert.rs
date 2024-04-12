@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::QuerierWrapper;
 use super::{error::Error, Oracle, OracleRef, WithOracle};
 
 pub fn to_base<BaseC, BaseG, InC, InG>(
-    oracle_ref: OracleRef,
+    oracle_ref: OracleRef<BaseC>,
     in_amount: Coin<InC>,
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<BaseC>, Error>
@@ -49,7 +49,7 @@ where
         }
     }
 
-    oracle_ref.execute_as_oracle::<BaseC, BaseG, _>(
+    oracle_ref.execute_as_oracle::<BaseG, _>(
         PriceConvert {
             in_amount,
             _in_group: PhantomData::<InG>,

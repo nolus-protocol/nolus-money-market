@@ -6,7 +6,6 @@ use dex::{
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -28,7 +27,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, OracleRef},
 };
 
 pub(super) type StartState = StartLocalLocalState<

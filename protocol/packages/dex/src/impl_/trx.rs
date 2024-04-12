@@ -3,7 +3,7 @@ use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use oracle::stub::{OracleRef, SwapPath};
+use oracle::stub::SwapPath;
 use platform::{
     bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
     batch::Batch as LocalBatch,
@@ -67,7 +67,7 @@ pub(super) struct SwapTrx<'a> {
     conn: &'a str,
     ica_account: &'a HostAccount,
     trx: Transaction,
-    oracle: &'a OracleRef,
+    oracle: &'a dyn SwapPath,
     querier: QuerierWrapper<'a>,
 }
 
@@ -75,7 +75,7 @@ impl<'a> SwapTrx<'a> {
     pub(super) fn new(
         conn: &'a str,
         ica_account: &'a HostAccount,
-        oracle: &'a OracleRef,
+        swap_path: &'a dyn SwapPath,
         querier: QuerierWrapper<'a>,
     ) -> Self {
         let trx = Transaction::default();
@@ -83,7 +83,7 @@ impl<'a> SwapTrx<'a> {
             conn,
             ica_account,
             trx,
-            oracle,
+            oracle: swap_path,
             querier,
         }
     }

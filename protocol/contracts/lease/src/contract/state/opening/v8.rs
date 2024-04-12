@@ -4,7 +4,6 @@ use currencies::LeaseGroup;
 use currency::{SymbolOwned, SymbolSlice};
 use dex::{Account, CoinVisitor, ConnectionParams, IterNext, IterState, MigrateSpec, SwapTask};
 use finance::{coin::CoinDTO, percent::Percent};
-use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -27,7 +26,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::{LppRef, ReserveRef},
+    finance::{LppRef, OracleRef, ReserveRef},
 };
 
 use super::{buy_asset::BuyAsset as BuyAsset_v9, open_ica::OpenIcaAccount as OpenIcaAccount_v9};

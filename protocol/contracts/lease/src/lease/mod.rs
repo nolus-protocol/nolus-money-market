@@ -182,7 +182,8 @@ mod tests {
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
     pub(super) type TestLpn = StableC;
     pub(super) type TestCurrency = PaymentC7;
-    pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+    pub(super) type TestLease =
+        Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub<TestLpn>>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where
@@ -248,19 +249,21 @@ mod tests {
         }
     }
 
-    pub struct OracleLocalStub {
-        address: Addr,
+    pub struct OracleLocalStub<QuoteC> {
+        ref_: OracleRef<QuoteC>,
     }
 
-    impl From<Addr> for OracleLocalStub {
+    impl<QuoteC> From<Addr> for OracleLocalStub<QuoteC> {
         fn from(oracle: Addr) -> Self {
-            Self { address: oracle }
+            Self {
+                ref_: OracleRef::unchecked(oracle),
+            }
         }
     }
 
-    impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
+    impl<OracleBase> Oracle<OracleBase> for OracleLocalStub<OracleBase>
     where
-        Self: Into<OracleRef>,
+        Self: Into<OracleRef<OracleBase>>,
         OracleBase: Currency,
     {
         fn price_of<C, G>(&self) -> PriceOracleResult<Price<C, OracleBase>>
@@ -271,15 +274,15 @@ mod tests {
         }
     }
 
-    impl AsRef<Self> for OracleLocalStub {
+    impl<QuoteC> AsRef<Self> for OracleLocalStub<QuoteC> {
         fn as_ref(&self) -> &Self {
             self
         }
     }
 
-    impl From<OracleLocalStub> for OracleRef {
-        fn from(stub: OracleLocalStub) -> Self {
-            OracleRef::unchecked::<_, TestCurrency>(stub.address)
+    impl<QuoteC> From<OracleLocalStub<QuoteC>> for OracleRef<QuoteC> {
+        fn from(stub: OracleLocalStub<QuoteC>) -> Self {
+            stub.ref_
         }
     }
 
@@ -303,7 +306,7 @@ mod tests {
         due_period: Duration,
     ) -> TestLease {
         let lease = Addr::unchecked(LEASE_ADDR);
-        let oracle: OracleLocalStub = Addr::unchecked(ORACLE_ADDR).into();
+        let oracle: OracleLocalStub<TestLpn> = Addr::unchecked(ORACLE_ADDR).into();
 
         let loan = loan.into();
         let loan = Loan::new(loan, LEASE_START, MARGIN_INTEREST_RATE, due_period);

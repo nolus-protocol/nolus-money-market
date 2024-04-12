@@ -1,6 +1,6 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::Oracle as OracleTrait;
 use platform::{
     bank::FixedAddressSender, batch::Emitter as PlatformEmitter,
     message::Response as MessageResponse,
@@ -12,7 +12,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, ReserveRef},
+    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     loan::RepayReceipt,
 };

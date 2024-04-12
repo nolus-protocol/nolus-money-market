@@ -4,7 +4,6 @@ use currencies::Lpns;
 use currency::SymbolSlice;
 use dex::{Account, CoinVisitor, IterNext, IterState, SwapTask};
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -20,7 +19,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::ReserveRef,
+    finance::{OracleRef, ReserveRef},
 };
 
 pub(crate) type PartialLiquidationDexState = DexState<liquidation::partial::RepayableImpl>;

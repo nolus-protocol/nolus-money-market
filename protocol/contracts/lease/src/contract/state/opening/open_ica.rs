@@ -5,7 +5,6 @@ use dex::{
     Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
     TimeAlarm, TransferOut,
 };
-use oracle::stub::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -18,7 +17,7 @@ use crate::{
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,
-    finance::LppRef,
+    finance::{LppRef, OracleRef},
 };
 
 use super::buy_asset::{BuyAsset, DexState};

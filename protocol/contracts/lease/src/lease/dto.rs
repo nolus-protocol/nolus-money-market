@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    finance::{LpnCurrencies, LpnCurrency, ReserveRef},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::LoanDTO,
     position::PositionDTO,
 };

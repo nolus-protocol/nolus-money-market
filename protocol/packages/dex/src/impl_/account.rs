@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use oracle::stub::OracleRef;
+use oracle::stub::SwapPath;
 use platform::{
     batch::Batch as LocalBatch,
     ica::{self, HostAccount},
@@ -61,10 +61,10 @@ impl Account {
 
     pub(super) fn swap<'a>(
         &'a self,
-        oracle: &'a OracleRef,
+        swap_path: &'a dyn SwapPath,
         querier: QuerierWrapper<'a>,
     ) -> SwapTrx<'a> {
-        SwapTrx::new(&self.dex.connection_id, &self.host, oracle, querier)
+        SwapTrx::new(&self.dex.connection_id, &self.host, swap_path, querier)
     }
 
     pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {

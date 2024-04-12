@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::Currency;
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
@@ -11,7 +11,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LeaseCoin,
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
     position::{Cause, Liquidation},
 };

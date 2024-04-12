@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{Currency, SymbolOwned};
+use currency::SymbolOwned;
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -22,16 +22,6 @@ pub enum Error {
         error: StdError,
     },
 
-    #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
-}
-
-pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> Error
-where
-    ExpC: Currency,
-{
-    Error::CurrencyMismatch {
-        expected: ExpC::TICKER.into(),
-        found,
-    }
+    #[error("[Oracle] {0}")]
+    CurrencyMismatch(#[from] currency::error::Error),
 }

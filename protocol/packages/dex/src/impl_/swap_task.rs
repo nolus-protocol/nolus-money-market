@@ -1,6 +1,6 @@
 use currency::{Group, SymbolSlice};
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
+use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -19,7 +19,7 @@ pub trait SwapTask {
 
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
-    fn oracle(&self) -> &OracleRef;
+    fn oracle(&self) -> &impl SwapPath;
     fn time_alarm(&self) -> &TimeAlarmsRef;
     fn out_currency(&self) -> &SymbolSlice;
 

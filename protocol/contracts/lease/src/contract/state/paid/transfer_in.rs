@@ -6,7 +6,6 @@ use dex::{
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
 use platform::{
     bank,
     batch::{Emit, Emitter},
@@ -32,6 +31,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::OracleRef,
     lease::{with_lease_paid, LeaseDTO},
 };
 

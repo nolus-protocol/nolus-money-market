@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -18,7 +17,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LppRef,
+    finance::{LppRef, OracleRef},
 };
 
 use super::buy_asset::DexState;

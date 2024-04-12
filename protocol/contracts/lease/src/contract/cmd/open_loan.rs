@@ -6,14 +6,14 @@ use finance::{
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
-use oracle::stub::{convert, OracleRef};
+use oracle::stub::convert;
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
     api::{open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies},
     error::ContractError,
-    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef},
     position::Spec as PositionSpec,
 };
 

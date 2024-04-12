@@ -29,7 +29,7 @@ where
         liquidation_zone: &Zone,
         total_due: LpnCoin,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef,
+        price_alarms: &OracleRef<LpnCurrency>,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
 
@@ -37,7 +37,7 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms::<LpnCurrency>();
+                let mut price_alarms = price_alarms.as_alarms();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -206,7 +206,7 @@ mod tests {
         TimeAlarmsRef::unchecked(TIME_ALARMS_ADDR)
     }
 
-    fn pricealarms() -> OracleRef {
-        OracleRef::unchecked::<_, TestLpn>(ORACLE_ADDR)
+    fn pricealarms() -> OracleRef<TestLpn> {
+        OracleRef::unchecked(ORACLE_ADDR)
     }
 }

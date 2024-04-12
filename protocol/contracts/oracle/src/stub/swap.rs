@@ -14,7 +14,7 @@ pub trait SwapPath {
     ) -> Result<Vec<SwapTarget>>;
 }
 
-impl SwapPath for OracleRef {
+impl<OracleBase> SwapPath for OracleRef<OracleBase> {
     fn swap_path(
         &self,
         from: SymbolOwned,
@@ -22,10 +22,8 @@ impl SwapPath for OracleRef {
         querier: QuerierWrapper<'_>,
     ) -> Result<Vec<SwapTarget>> {
         {
-            let msg = QueryMsg::SwapPath { from, to };
-
             querier
-                .query_wasm_smart(self.addr().clone(), &msg)
+                .query_wasm_smart(self.addr().clone(), &QueryMsg::SwapPath { from, to })
                 .map_err(Error::StubSwapPathQuery)
         }
     }

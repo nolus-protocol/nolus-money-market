@@ -2,12 +2,12 @@ use std::marker::PhantomData;
 
 use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
 use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
-use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle::stub::{Oracle as OracleTrait, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     api::LeaseAssetCurrencies,
-    finance::{LpnCurrencies, LpnCurrency, LppRef},
+    finance::{LpnCurrencies, LpnCurrency, LppRef, OracleRef},
 };
 
 pub trait WithLeaseDeps {
@@ -107,15 +107,14 @@ where
     where
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     {
-        self.oracle
-            .execute_as_oracle::<LpnCurrency, LpnCurrencies, _>(
-                FactoryStage4 {
-                    cmd: self.cmd,
-                    asset: self.asset,
-                    lpp_loan,
-                },
-                self.querier,
-            )
+        self.oracle.execute_as_oracle::<LpnCurrencies, _>(
+            FactoryStage4 {
+                cmd: self.cmd,
+                asset: self.asset,
+                lpp_loan,
+            },
+            self.querier,
+        )
     }
 }
 

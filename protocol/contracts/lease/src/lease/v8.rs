@@ -1,10 +1,13 @@
-use oracle::stub::OracleRef;
 use serde::Deserialize;
 
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{finance::ReserveRef, loan::LoanDTO, position::PositionDTO};
+use crate::{
+    finance::{OracleRef, ReserveRef},
+    loan::LoanDTO,
+    position::PositionDTO,
+};
 
 use super::LeaseDTO as LeaseDTO_v9;
 
