@@ -13,7 +13,7 @@ use crate::{error::Result as DexResult, ConnectionParams};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
-use super::{Account, Contract, DexConnectable, Enterable, EntryDelay, IcaConnectee, TimeAlarm};
+use super::{Account, Contract, DexConnectable, Enterable, IcaConnectee, TimeAlarm};
 
 #[derive(Serialize, Deserialize)]
 pub struct InRecovery<S, SEnum> {
@@ -74,14 +74,13 @@ where
 
 impl<S, SEnum> IcaConnectee for InRecovery<S, SEnum>
 where
-    S: Enterable,
-    EntryDelay<S>: Into<SEnum>,
+    S: Enterable + Into<SEnum>,
 {
     type State = SEnum;
-    type NextState = EntryDelay<S>;
+    type NextState = S;
 
     fn connected(self, _dex_account: Account) -> Self::NextState {
-        EntryDelay::new(self.state, self.time_alarms)
+        self.state
     }
 }
 
