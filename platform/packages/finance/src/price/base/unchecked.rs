@@ -27,7 +27,7 @@ impl<BaseG, QuoteG, QuoteC> TryFrom<BasePrice<BaseG, QuoteG>>
     for ValidatedBasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
     type Error = Error;

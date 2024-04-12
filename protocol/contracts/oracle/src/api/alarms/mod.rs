@@ -103,7 +103,7 @@ where
             impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
-                QuoteC: Currency,
+                QuoteC: Currency + ?Sized,
                 QuoteG: Group,
             {
                 type Output = ();
@@ -115,7 +115,7 @@ where
                     above_or_equal: Price<C, QuoteC>,
                 ) -> StdResult<Self::Output, Self::Error>
                 where
-                    C: Currency,
+                    C: Currency + ?Sized,
                 {
                     Price::<C, QuoteC>::try_from(self.below_price).map_err(Into::into).and_then(|below_price| {
                             if below_price > above_or_equal {
@@ -181,6 +181,7 @@ mod test {
     }
 
     #[test]
+    #[should_panic = " should not be zero"]
     fn below_price_err() {
         assert_err(
             from_both_str_impl(
@@ -207,6 +208,7 @@ mod test {
     }
 
     #[test]
+    #[should_panic = " should not be zero"]
     fn above_price_err() {
         let below = alarm_half_coins_to_json(
             AlarmPrice::Below,

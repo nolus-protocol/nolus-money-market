@@ -1,13 +1,14 @@
 use std::marker::PhantomData;
 
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, SymbolSlice};
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::{Coin, CoinDTO},
     error::{Error, Result as FinanceResult},
+    price::with_price::{self, WithPrice},
 };
 
 use super::{dto::PriceDTO, Price};
@@ -22,7 +23,7 @@ mod unchecked;
 pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
@@ -35,7 +36,7 @@ where
 impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
     fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
@@ -71,16 +72,25 @@ where
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
-        Self::check(!self.amount.is_zero(), "The amount should not be zero").and_then(|_| {
-            Self::check(
-                !self.amount_quote.is_zero(),
-                "The quote amount should not be zero",
-            )
-        })
-    }
+        struct InvariantCheck {}
 
-    fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
-        Error::broken_invariant_if::<Self>(!invariant, msg)
+        impl<QuoteC> WithPrice<QuoteC> for InvariantCheck
+        where
+            QuoteC: Currency + ?Sized,
+        {
+            type Output = ();
+
+            type Error = Error;
+
+            fn exec<C>(self, converted: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+            where
+                C: Currency + ?Sized,
+            {
+                converted.invariant_held()
+            }
+        }
+
+        with_price::execute(self, InvariantCheck {})
     }
 }
 
@@ -105,9 +115,9 @@ where
 
 impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
-    C: Currency,
+    C: Currency + ?Sized,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -117,9 +127,9 @@ where
 
 impl<C, BaseG, QuoteC, QuoteG> TryFrom<&BasePrice<BaseG, QuoteC, QuoteG>> for Price<C, QuoteC>
 where
-    C: Currency,
+    C: Currency + ?Sized,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
     type Error = Error;
@@ -149,7 +159,7 @@ mod test_invariant {
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency, Group,
     };
-    use sdk::cosmwasm_std::{from_json, StdError, StdResult};
+    use sdk::cosmwasm_std::{from_json, StdResult};
     use serde::Deserialize;
 
     use crate::coin::Coin;
@@ -166,16 +176,20 @@ mod test_invariant {
     }
 
     #[test]
+    #[should_panic = "zero"]
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "3", "ticker": "{}"}}}}"#,
             SuperGroupTestC1::TICKER,
             SuperGroupTestC2::TICKER
         );
-        assert_err(
-            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
-            "not be zero",
-        );
+
+        let _loaded = load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes());
+
+        #[cfg(not(debug_assertions))]
+        {
+            _loaded.expect("should have returned an error");
+        }
     }
 
     #[test]
@@ -188,16 +202,20 @@ mod test_invariant {
     }
 
     #[test]
+    #[should_panic = "zero"]
     fn quote_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "6", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
             SuperGroupTestC1::TICKER,
             SuperGroupTestC2::TICKER
         );
-        assert_err(
-            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
-            "not be zero",
-        );
+
+        let _loaded = load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes());
+
+        #[cfg(not(debug_assertions))]
+        {
+            _loaded.expect("should have returned an error");
+        }
     }
 
     fn new_invalid<BaseC, QuoteC>(amount: Coin<BaseC>, amount_quote: Coin<QuoteC>)
@@ -232,20 +250,5 @@ mod test_invariant {
         QuoteG: Group + for<'a> Deserialize<'a>,
     {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
-    }
-
-    fn assert_err<BaseG, QuoteC, QuoteG>(r: StdResult<BasePrice<BaseG, QuoteC, QuoteG>>, msg: &str)
-    where
-        BaseG: Group,
-        QuoteC: Currency,
-        QuoteG: Group,
-    {
-        assert!(matches!(
-            r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg
-            }) if target_type.contains("BasePrice") && real_msg.contains(msg)
-        ));
     }
 }

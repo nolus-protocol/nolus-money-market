@@ -1,8 +1,6 @@
 use oracle_platform::OracleRef;
 use std::marker::PhantomData;
 
-use serde::Serialize;
-
 use currency::{Currency, Group};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
