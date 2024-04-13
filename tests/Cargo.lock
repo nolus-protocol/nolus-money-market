@@ -453,7 +453,7 @@ dependencies = [
 
 [[package]]
 name = "dex"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "currency",
  "finance",
@@ -740,7 +740,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "access-control",
  "cosmwasm-std",
