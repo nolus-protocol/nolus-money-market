@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub(crate) use self::handler::{Handler, Response};
-use self::{dex::State as DexState, lease::State as LeaseState, v8::State as State_v8};
+use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
 mod dex;
@@ -80,12 +80,6 @@ const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
 
 pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
     STATE_DB_ITEM.load(storage).map_err(Into::into)
-}
-
-pub(super) fn load_v8(storage: &dyn Storage) -> ContractResult<State_v8> {
-    let db_item: Item<'static, State_v8> =
-        Item::new(str::from_utf8(STATE_DB_ITEM.as_slice()).expect("valid storage key "));
-    db_item.load(storage).map_err(Into::into)
 }
 
 pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> ContractResult<()> {
