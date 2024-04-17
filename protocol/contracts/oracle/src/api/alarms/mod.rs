@@ -55,7 +55,7 @@ impl From<error::Error> for Error {
 pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency,
+    Lpn: Currency + ?Sized,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,

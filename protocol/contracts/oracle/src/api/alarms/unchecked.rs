@@ -9,7 +9,7 @@ use super::{Alarm as ValidatedAlarm, Error};
 pub(super) struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency,
+    Lpn: Currency + ?Sized,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -19,7 +19,7 @@ where
 impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpn, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency,
+    Lpn: Currency + ?Sized,
     Lpns: Group,
 {
     type Error = Error;

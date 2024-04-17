@@ -39,7 +39,7 @@ where
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
                 let mut price_alarms =
-                    price_alarms.as_alarms::<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>();
+                    price_alarms.as_alarms::<LeaseAssetCurrencies, LpnCurrencies>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -52,7 +52,7 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>,
+        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrencies>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());

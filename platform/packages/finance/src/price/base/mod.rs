@@ -27,7 +27,6 @@ where
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
-    #[serde(serialize_with = "serialize_amount_quote::<_, _, QuoteG>")]
     amount_quote: Coin<QuoteC>,
     #[serde(skip)]
     quote_group: PhantomData<QuoteG>,
@@ -84,33 +83,16 @@ where
 
             fn exec<C>(self, converted: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
             where
-                C: Currency + ?Sized,
+                C: 'static + ?Sized,
             {
                 converted.invariant_held()
             }
         }
 
-        with_price::execute(self, InvariantCheck {})
+        currency::validate_member::<QuoteC, QuoteG>()
+            .map_err(Into::into)
+            .and_then(|()| with_price::execute(self, InvariantCheck {}))
     }
-}
-
-fn serialize_amount_quote<S, QuoteC, QuoteG>(
-    amount: &Coin<QuoteC>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-    QuoteC: Currency + ?Sized,
-    QuoteG: Group,
-{
-    currency::validate_member::<QuoteC, QuoteG>()
-        .map_err(|err| {
-            serde::ser::Error::custom(format!("Amount quote serializaion failed: {:?}", err))
-        })
-        .and_then(|_| {
-            let coin_dto = CoinDTO::<QuoteG>::from(*amount);
-            coin_dto.serialize(serializer)
-        })
 }
 
 impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
