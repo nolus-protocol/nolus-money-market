@@ -37,7 +37,7 @@ _get_predictable_contract_address() {
   local -r code_id="$4"
   local -r protocol="$5"
 
-  local -r get_predictable_contract_address_msg='{"instantiate_address":{"code_id":'"$code_id"',"protocol":"'"$protocol"'"}}'
+  local -r get_predictable_contract_address_msg='{"instantiate_address":{"code_id":"'"$code_id"'","protocol":"'"$protocol"'"}}'
   local -r expected_address=$(run_cmd "$nolus_home_dir" q wasm contract-state smart "$admin_contract_address" "$get_predictable_contract_address_msg" --node "$nolus_net" --output json | jq '.data'  | tr -d '"')
 
   echo "$expected_address"
@@ -75,7 +75,7 @@ _instantiate() {
 
   local -r escaped_string="${init_msg//\"/\\\"}"
 
-  local -r instantiate_new_contract_exec_msg='{"instantiate":{"code_id":'"$code_id"',"label":"'"$label"'","message":"'"$escaped_string"'","protocol":"'"$protocol"'","expected_address":"'"$expected_address"'"}}'
+  local -r instantiate_new_contract_exec_msg='{"instantiate":{"code_id":"'"$code_id"'","label":"'"$label"'","message":"'"$escaped_string"'","protocol":"'"$protocol"'","expected_address":"'"$expected_address"'"}}'
   local instantiate_result
   instantiate_result=$(run_cmd "$nolus_home_dir" tx wasm execute "$admin_contract_address" "$instantiate_new_contract_exec_msg" --from "$dex_admin_wallet_key" $FLAGS --yes --output json)
   instantiate_result=$(echo "$instantiate_result" | sed -n '/{/{p; q}')
