@@ -39,8 +39,8 @@ runs:
         #   }
         # }
         ########################## START OF EDIT HERE ##########################
-        stable_rust_version: '1.77'
-        nightly_rust_version: 'nightly-2024-03-31'
+        stable_rust_version: '1.78'
+        nightly_rust_version: 'nightly-2024-05-12'
         dev_profile_with_debug_assertions: 'ci_dev'
         dev_profile_without_debug_assertions: 'ci_dev_no_debug_assertions'
         build_combinations_json: |-
