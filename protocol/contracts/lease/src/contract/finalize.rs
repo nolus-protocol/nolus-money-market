@@ -5,13 +5,6 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{api::FinalizerExecuteMsg, error::ContractResult};
 
-pub trait Finalizer
-where
-    Self: TryInto<Batch>,
-{
-    fn on_finish(&mut self);
-}
-
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct FinalizerRef {

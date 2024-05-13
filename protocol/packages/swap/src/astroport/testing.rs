@@ -118,7 +118,7 @@ where
                 "Expected operation's offered denom to be the same as the last asked denom!"
             );
 
-            *expected_offer_denom = ask_denom.clone();
+            expected_offer_denom.clone_from(&ask_denom);
 
             Some(SwapTarget {
                 pool_id: Default::default(),

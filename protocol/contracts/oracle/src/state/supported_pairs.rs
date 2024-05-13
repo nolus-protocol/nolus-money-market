@@ -55,7 +55,7 @@ where
     pub fn load_path(
         &self,
         query: &SymbolSlice,
-    ) -> Result<impl Iterator<Item = &SymbolSlice> + DoubleEndedIterator + '_, ContractError> {
+    ) -> Result<impl DoubleEndedIterator<Item = &SymbolSlice> + '_, ContractError> {
         self.internal_load_path(query)
             .map(|iter| iter.map(|node| node.value().target.as_str()))
     }
@@ -193,10 +193,7 @@ where
     fn internal_load_path(
         &self,
         query: &SymbolSlice,
-    ) -> Result<
-        impl Iterator<Item = NodeRef<'_, SwapTarget>> + DoubleEndedIterator + '_,
-        ContractError,
-    > {
+    ) -> Result<impl DoubleEndedIterator<Item = NodeRef<'_, SwapTarget>> + '_, ContractError> {
         self.tree
             .find_by(|target| target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
