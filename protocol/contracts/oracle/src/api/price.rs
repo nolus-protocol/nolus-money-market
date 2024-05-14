@@ -9,7 +9,7 @@ pub enum QueryMsg {
     /// Report the base currency as [SymbolOwned]
     BaseCurrency {},
 
-    /// Provides the price of a currency against the base asset
+    /// Provides the price of a currency against the base one
     ///
     /// Return [PriceDTO]
     BasePrice { currency: SymbolOwned },

@@ -82,13 +82,14 @@ pub enum QueryMsg {
     ///
     /// Implementation of [crate::api::price::QueryMsg::BaseCurrency]
     BaseCurrency {},
-    /// Provides the price of a currency against the base asset
+    // TODO rename back to Price
+    /// Provides the price of a currency against the base currency, i.e. serving as its quote currency
     ///
     /// Implementation of [crate::api::price::QueryMsg::BasePrice]
     BasePrice {
         currency: SymbolOwned,
     },
-    /// Report the designated stable currency as [SymbolOwned]
+    /// Implementation of [oracle_platform::api::price::QueryMsg::BasePrice]
     StableCurrency {},
     /// Lists configured swap pairs
     SupportedCurrencyPairs {},

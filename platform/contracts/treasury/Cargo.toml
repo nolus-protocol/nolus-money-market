@@ -17,7 +17,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 admin_contract = { workspace = true }
 lpp-platform = { workspace = true }
-oracle-platform = { workspace = true, features = ["unchecked-base-currency"] }
+oracle-platform = { workspace = true, features = ["unchecked-quote-currency"] }
 timealarms = { workspace = true, features = ["stub"] }
 
 access-control = { workspace = true }
