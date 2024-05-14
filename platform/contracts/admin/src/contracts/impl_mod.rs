@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
 use versioning::ReleaseLabel;
@@ -10,54 +12,111 @@ use crate::{
     validate::{Validate, ValidateValues},
 };
 
-use super::{Contracts, ContractsMigration, ContractsTemplate, Identity, MigrationSpec, Protocol};
+use super::{
+    Contracts, ContractsExecute, ContractsMigration, ContractsTemplate, Granularity,
+    HigherOrderType, MigrationSpec, Protocol, ProtocolContracts,
+};
 
 impl Contracts {
-    fn migrate(self, mut migration_msgs: ContractsMigration) -> Result<Batches> {
+    fn migrate(self, migration_msgs: ContractsMigration) -> Result<Batches> {
         let mut migration_batch: Batch = Batch::default();
 
         let mut post_migration_execute_batch: Batch = Batch::default();
 
-        if let Some(platform) = migration_msgs.platform {
-            self.platform.migrate(
+        match migration_msgs.platform {
+            Granularity::Some { some: platform } => self.platform.maybe_migrate(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
                 platform,
-            );
+            ),
+            Granularity::All(Some(platform)) => self.platform.migrate(
+                &mut migration_batch,
+                &mut post_migration_execute_batch,
+                platform,
+            ),
+            Granularity::All(None) => {}
         }
 
-        self.protocol
+        Self::try_for_each_protocol(
+            self.protocol,
+            migration_msgs.protocol,
+            |contracts, protocol| match protocol {
+                Granularity::Some { some: protocol } => contracts.maybe_migrate(
+                    &mut migration_batch,
+                    &mut post_migration_execute_batch,
+                    protocol,
+                ),
+                Granularity::All(Some(protocol)) => contracts.migrate(
+                    &mut migration_batch,
+                    &mut post_migration_execute_batch,
+                    protocol,
+                ),
+                Granularity::All(None) => {}
+            },
+        )
+        .map(|()| Batches {
+            migration_batch,
+            post_migration_execute_batch,
+        })
+    }
+
+    fn execute(self, execute_msgs: ContractsExecute) -> Result<Batch> {
+        let mut batch: Batch = Batch::default();
+
+        match execute_msgs.platform {
+            Granularity::Some { some: platform } => {
+                self.platform.maybe_execute(&mut batch, platform)
+            }
+            Granularity::All(Some(platform)) => self.platform.execute(&mut batch, platform),
+            Granularity::All(None) => {}
+        }
+
+        Self::try_for_each_protocol(
+            self.protocol,
+            execute_msgs.protocol,
+            |contracts, protocol| match protocol {
+                Granularity::Some { some: protocol } => {
+                    contracts.maybe_execute(&mut batch, protocol)
+                }
+                Granularity::All(Some(protocol)) => contracts.execute(&mut batch, protocol),
+                Granularity::All(None) => {}
+            },
+        )
+        .map(|()| batch)
+    }
+
+    fn try_for_each_protocol<T, F>(
+        protocols: BTreeMap<String, Protocol<Addr>>,
+        mut counterparts: BTreeMap<String, T>,
+        mut f: F,
+    ) -> Result<()>
+    where
+        F: FnMut(ProtocolContracts<Addr>, T),
+    {
+        protocols
             .into_iter()
             .try_for_each(|(name, Protocol { contracts, .. })| {
-                migration_msgs
-                    .protocol
+                counterparts
                     .remove(&name)
                     .ok_or_else(|| Error::MissingProtocol(name))
-                    .map(|protocol| {
-                        protocol.map_or((), |protocol| {
-                            contracts.migrate(
-                                &mut migration_batch,
-                                &mut post_migration_execute_batch,
-                                protocol,
-                            )
-                        })
-                    })
-            })
-            .map(|()| Batches {
-                migration_batch,
-                post_migration_execute_batch,
+                    .map(|protocol| f(contracts, protocol))
             })
     }
 }
 
-impl<T, U> Validate for ContractsTemplate<Identity, T, U>
+impl<Platform, Protocol, Unit> Validate for ContractsTemplate<Platform, Protocol, Unit>
 where
-    T: Validate,
-    U: for<'r> Validate<Context<'r> = T::Context<'r>, Error = T::Error>,
+    Platform: HigherOrderType,
+    Platform::Of<Unit>: Validate,
+    Protocol: HigherOrderType,
+    Protocol::Of<Unit>: for<'r> Validate<
+        Context<'r> = <Platform::Of<Unit> as Validate>::Context<'r>,
+        Error = <Platform::Of<Unit> as Validate>::Error,
+    >,
 {
-    type Context<'r> = T::Context<'r>;
+    type Context<'r> = <Platform::Of<Unit> as Validate>::Context<'r>;
 
-    type Error = T::Error;
+    type Error = <Platform::Of<Unit> as Validate>::Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> ::std::result::Result<(), Self::Error> {
         self.platform
@@ -74,9 +133,8 @@ pub(crate) fn migrate(
 ) -> Result<MessageResponse> {
     ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
 
-    state_contracts::load_all(storage)?
-        .migrate(migration_spec)
-        .and_then(
+    load_and_run(storage, |contracts| {
+        contracts.migrate(migration_spec).and_then(
             |Batches {
                  mut migration_batch,
                  post_migration_execute_batch,
@@ -94,6 +152,15 @@ pub(crate) fn migrate(
                     .map_err(Into::into)
             },
         )
+    })
+}
+
+pub(crate) fn execute(
+    storage: &mut dyn Storage,
+    execute_messages: ContractsExecute,
+) -> Result<MessageResponse> {
+    load_and_run(storage, |contracts| contracts.execute(execute_messages))
+        .map(MessageResponse::messages_only)
 }
 
 pub(super) fn migrate_contract(
@@ -103,11 +170,11 @@ pub(super) fn migrate_contract(
     migrate: MigrationSpec,
 ) {
     if let Some(post_migrate_execute_msg) = migrate.post_migrate_execute_msg {
-        post_migration_execute_batch.schedule_execute_no_reply(WasmMsg::Execute {
-            contract_addr: address.clone().into_string(),
-            msg: Binary(post_migrate_execute_msg.into_bytes()),
-            funds: vec![],
-        });
+        execute_contract(
+            post_migration_execute_batch,
+            address.clone(),
+            post_migrate_execute_msg,
+        )
     }
 
     migration_batch.schedule_execute_reply_on_success(
@@ -118,6 +185,21 @@ pub(super) fn migrate_contract(
         },
         0,
     );
+}
+
+pub(super) fn execute_contract(batch: &mut Batch, address: Addr, execute_message: String) {
+    batch.schedule_execute_no_reply(WasmMsg::Execute {
+        contract_addr: address.into_string(),
+        msg: Binary(execute_message.into_bytes()),
+        funds: vec![],
+    });
+}
+
+fn load_and_run<F, R>(storage: &mut dyn Storage, f: F) -> Result<R>
+where
+    F: FnOnce(Contracts) -> Result<R>,
+{
+    state_contracts::load_all(storage).and_then(f)
 }
 
 struct Batches {

@@ -1,6 +1,7 @@
 use admin_contract::{
     msg::{
-        Dex, Network, ProtocolContracts, ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg,
+        Dex, Network, ProtocolContractAddresses, ProtocolQueryResponse, ProtocolsQueryResponse,
+        QueryMsg,
     },
     result::Result as ContractResult,
 };
@@ -93,7 +94,7 @@ fn protocols_repo_query(
             to_json_binary(&ProtocolQueryResponse {
                 network: NETWORK,
                 dex: DEX,
-                contracts: ProtocolContracts {
+                contracts: ProtocolContractAddresses {
                     leaser: addr("DEADCODE"),
                     lpp: addr("contract0"),
                     oracle: addr("contract1"),

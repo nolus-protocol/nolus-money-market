@@ -1,16 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::Addr,
-    schemars::{self, JsonSchema},
-};
+use sdk::schemars::{self, JsonSchema};
 
+pub(super) mod higher_order_type;
 #[cfg(feature = "contract")]
 mod impl_mod;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ProtocolTemplate<T> {
+pub struct ProtocolContracts<T> {
     pub leaser: T,
     pub lpp: T,
     pub oracle: T,
@@ -18,15 +16,15 @@ pub struct ProtocolTemplate<T> {
     pub reserve: T,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct Protocol {
+pub struct Protocol<T> {
     pub network: Network,
     pub dex: Dex,
-    pub contracts: ProtocolTemplate<Addr>,
+    pub contracts: ProtocolContracts<T>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     rename_all = "PascalCase",
     rename_all_fields = "snake_case",
@@ -40,7 +38,7 @@ pub enum Network {
     Osmosis,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     rename_all = "PascalCase",
     rename_all_fields = "snake_case",

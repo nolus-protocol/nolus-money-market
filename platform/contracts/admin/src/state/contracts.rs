@@ -9,14 +9,14 @@ use sdk::{
 
 use crate::{
     contracts::{
-        Contracts, ContractsTemplate, Dex, Network, PlatformTemplate, Protocol, ProtocolTemplate,
+        Contracts, ContractsTemplate, Dex, Network, PlatformContracts, Protocol, ProtocolContracts,
     },
     error::Error,
     result::Result,
 };
 
-const PLATFORM: Item<'_, PlatformTemplate<Addr>> = Item::new("platform_contracts");
-const PROTOCOL: Map<'_, String, Protocol> = Map::new("protocol_contracts");
+const PLATFORM: Item<'_, PlatformContracts<Addr>> = Item::new("platform_contracts");
+const PROTOCOL: Map<'_, String, Protocol<Addr>> = Map::new("protocol_contracts");
 
 pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> Result<()> {
     PLATFORM
@@ -35,7 +35,7 @@ pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> Result<(
 pub(crate) fn add_protocol(
     storage: &mut dyn Storage,
     name: String,
-    protocol: &Protocol,
+    protocol: &Protocol<Addr>,
 ) -> Result<()> {
     if PROTOCOL.has(storage, name.clone()) {
         Err(Error::ProtocolSetAlreadyExists(name))
@@ -51,11 +51,11 @@ pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
         .map_err(Into::into)
 }
 
-pub(crate) fn load_platform(storage: &dyn Storage) -> Result<PlatformTemplate<Addr>> {
+pub(crate) fn load_platform(storage: &dyn Storage) -> Result<PlatformContracts<Addr>> {
     PLATFORM.load(storage).map_err(Into::into)
 }
 
-pub(crate) fn load_protocol(storage: &dyn Storage, name: String) -> Result<Protocol> {
+pub(crate) fn load_protocol(storage: &dyn Storage, name: String) -> Result<Protocol<Addr>> {
     PROTOCOL.load(storage, name).map_err(Into::into)
 }
 
@@ -96,11 +96,11 @@ pub(super) fn migrate_protocols(
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 struct OldProtocol {
     pub network: Network,
-    pub contracts: ProtocolTemplate<Addr>,
+    pub contracts: ProtocolContracts<Addr>,
 }
 
 impl OldProtocol {
-    fn migrate(self, dex: Dex) -> Protocol {
+    fn migrate(self, dex: Dex) -> Protocol<Addr> {
         Protocol {
             network: self.network,
             dex,
