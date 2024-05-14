@@ -14,7 +14,7 @@ use self::{
 use super::error;
 
 use crate::api::price::QueryMsg;
-    
+
 pub mod convert;
 mod impl_;
 
