@@ -60,11 +60,7 @@ pub struct NewLeaseForm {
 #[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "snake_case",
-    try_from = "unchecked::LoanForm"
-)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 /// The value remains intact.
 pub struct LoanForm {
     /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.

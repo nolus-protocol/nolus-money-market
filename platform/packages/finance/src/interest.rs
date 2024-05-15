@@ -1,42 +1,11 @@
-use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
-
-use serde::Deserialize;
-
-use sdk::cosmwasm_std::Timestamp;
+use std::{cmp, fmt::Debug, ops::Sub};
 
 use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
-    period::Period,
     zero::Zero,
 };
-
-/// Deprecated
-/// TODO remove it once the support for v0.4.2 is dropped
-#[derive(Deserialize)]
-pub struct InterestPeriod<U, F> {
-    period: Period,
-    #[serde(skip)]
-    interest_units: PhantomData<U>,
-    interest: F,
-}
-
-impl<U, F> InterestPeriod<U, F>
-where
-    F: Fraction<U> + Copy,
-    U: PartialEq,
-{
-    // TODO remove once migrate `fn pay` result to `(Timestamp, _)`
-    pub fn start(&self) -> Timestamp {
-        self.period.start()
-    }
-
-    // TODO remove once migrate the Loan state to not keep InterestPeriod
-    pub fn interest_rate(&self) -> F {
-        self.interest
-    }
-}
 
 /// Computes how much interest is accrued
 pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> P

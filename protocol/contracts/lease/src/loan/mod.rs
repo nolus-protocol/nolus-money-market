@@ -21,17 +21,12 @@ pub use self::state::{Overdue, State};
 
 mod repay;
 mod state;
-mod unchecked;
 
 type LppRef = LppGenericRef<LpnCurrency, LpnCurrencies>;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "snake_case",
-    try_from = "unchecked::LoanDTO"
-)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct LoanDTO {
     lpp: LppRef,
     profit: ProfitRef,
