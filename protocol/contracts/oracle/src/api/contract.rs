@@ -66,35 +66,48 @@ pub enum SudoMsg {
 pub enum QueryMsg {
     // Returns contract's semantic version as a package, which is set in `Cargo.toml`.
     ContractVersion {},
+
     // returns the contract configuration
     Config {},
+
     // returns the supported currencies tree
     SwapTree {},
+
     // returns all registered feeders
     Feeders {},
+
     // check if an address belongs to a registered feeder
     IsFeeder {
         address: Addr,
     },
+
     /// Provides all supported prices
     Prices {},
+
     /// Report the base currency as [SymbolOwned]
     ///
     /// Implementation of [crate::api::price::QueryMsg::BaseCurrency]
     BaseCurrency {},
-    // TODO rename back to Price
+
     /// Provides the price of a currency against the base currency, i.e. serving as its quote currency
     ///
     /// Implementation of [crate::api::price::QueryMsg::BasePrice]
     BasePrice {
         currency: SymbolOwned,
     },
-    /// Implementation of [oracle_platform::api::price::QueryMsg::BasePrice]
+
+    /// Implementation of [oracle_platform::msg::QueryMsg::StableCurrency]
     StableCurrency {},
+
+    /// Implementation of [oracle_platform::msg::QueryMsg::StablePrice]
+    StablePrice { currency: SymbolOwned },
+
     /// Lists configured swap pairs
     SupportedCurrencyPairs {},
+
     /// Lists configured currencies
     Currencies {},
+
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
     /// Returns `oracle::api::swap::SwapPath`
