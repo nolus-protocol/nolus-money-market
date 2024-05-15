@@ -10,12 +10,12 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
         BaseCurrencies, BaseCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg,
-        PriceCurrencies, PricesResponse, QueryMsg, SudoMsg, SwapTreeResponse,
+        PriceCurrencies, PricesResponse, QueryMsg, StableCurrency, SudoMsg, SwapTreeResponse,
     },
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
@@ -30,8 +30,7 @@ mod config;
 pub mod exec;
 mod oracle;
 
-const FROM_CONTRACT_STORAGE_VERSION: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -49,7 +48,7 @@ pub fn instantiate(
         .store(deps.storage)
         .map_err(ContractError::StoreConfig)
         .and_then(|()| {
-            SupportedPairs::<BaseCurrency>::new(msg.swap_tree.into_tree(), msg.stable_currency)
+            SupportedPairs::<BaseCurrency>::new::<StableCurrency>(msg.swap_tree.into_tree())
         })
         .and_then(|supported_pairs| supported_pairs.save(deps.storage))
         .map(|()| response::empty_response())
@@ -61,18 +60,12 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<FROM_CONTRACT_STORAGE_VERSION, _, _, _, _>(
+    versioning::update_software(
         deps.storage,
         CONTRACT_VERSION,
-        |storage| SupportedPairs::<BaseCurrency>::migrate(storage),
         ContractError::UpdateSoftware,
     )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: (),
-         }| response::response(release_label),
-    )
+    .and_then(response::response)
 }
 
 #[entry_point]
@@ -90,9 +83,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             .map_err(ContractError::LoadFeeders)
             .and_then(|ref f| to_json_binary(&f)),
         QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::TICKER),
-        QueryMsg::StableCurrency {} => {
-            to_json_binary(SupportedPairs::<BaseCurrency>::load(deps.storage)?.stable_currency())
-        }
+        QueryMsg::StableCurrency {} => to_json_binary(StableCurrency::TICKER),
         QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
             &SupportedPairs::<BaseCurrency>::load(deps.storage)?
                 .swap_pairs_df()
@@ -142,11 +133,10 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
-        SudoMsg::SwapTree {
-            stable_currency,
-            tree,
-        } => SupportedPairs::<BaseCurrency>::new(tree.into_tree(), stable_currency)
-            .and_then(|supported_pairs| supported_pairs.save(deps.storage)),
+        SudoMsg::SwapTree { tree } => {
+            SupportedPairs::<BaseCurrency>::new::<StableCurrency>(tree.into_tree())
+                .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+        }
     }
     .map(|()| response::empty_response())
 }
@@ -207,7 +197,6 @@ mod tests {
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
-            StableC::TICKER.into(),
         );
         let (deps, _info) = setup_test(msg);
 

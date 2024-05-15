@@ -163,7 +163,7 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currencies::{
-        test::{NativeC, StableC},
+        test::{NativeC, PaymentC3, StableC},
         Lpns,
     };
     use currency::Currency as _;
@@ -184,6 +184,7 @@ mod test_normalized_price_not_found {
     use super::{feed::Feeds, feeder::Feeders, Oracle};
 
     type BaseCurrency = StableC;
+    type StableCurrency = PaymentC3;
     type BaseGroup = Lpns;
 
     type NlsCoin = Coin<NativeC>;
@@ -231,9 +232,8 @@ mod test_normalized_price_not_found {
 
         Config::new(price_config.clone()).store(storage).unwrap();
 
-        SupportedPairs::<BaseCurrency>::new(
-            swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER)).into_tree(),
-            StableC::TICKER.into(),
+        SupportedPairs::<BaseCurrency>::new::<StableCurrency>(
+            swap_tree!({ base: StableC::TICKER }, (1, NativeC::TICKER), (10, StableCurrency::TICKER)).into_tree(),
         )
         .unwrap()
         .save(storage)

@@ -30,7 +30,6 @@ mod tests {
             60,
             Percent::from_percent(50),
             swap_tree!({ base: StableC::TICKER }, (1, PaymentC3::TICKER)),
-            StableC::TICKER.into(),
         );
         let (mut deps, _info) = setup_test(msg);
 
@@ -79,10 +78,7 @@ mod tests {
         let res = sudo(
             deps.as_mut(),
             mock_env(),
-            SudoMsg::SwapTree {
-                stable_currency: StableC::TICKER.into(),
-                tree: test_tree,
-            },
+            SudoMsg::SwapTree { tree: test_tree },
         );
         assert!(res.is_ok());
 
@@ -133,10 +129,7 @@ mod tests {
         }: Response = sudo(
             deps.as_mut(),
             mock_env(),
-            SudoMsg::SwapTree {
-                stable_currency: StableC::TICKER.into(),
-                tree: test_tree,
-            },
+            SudoMsg::SwapTree { tree: test_tree },
         )
         .unwrap();
 
