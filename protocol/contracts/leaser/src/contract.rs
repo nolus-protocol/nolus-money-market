@@ -52,7 +52,7 @@ pub fn instantiate(
     Config::try_new(msg, &deps.querier)
         .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -73,7 +73,7 @@ pub fn migrate(
              storage_migration_output: (),
          }| response::response(release_label),
     )
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -142,7 +142,7 @@ pub fn execute(
             }),
     }
     .map(response::response_only_messages)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -160,7 +160,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
         ),
     }
     .map(response::response_only_messages)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -175,7 +175,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
     }
     .map_err(Into::into)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -191,7 +191,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
             })
         })
         .map(|lease| Response::new().add_attribute("lease_address", lease))
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 fn validate_customer(

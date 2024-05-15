@@ -54,14 +54,14 @@ pub fn instantiate(
         })
         .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
         .map(|()| response::empty_response())
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
     versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
         .and_then(response::response)
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -94,7 +94,7 @@ pub fn execute(
         }
     }
     .map(response::response_only_messages)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -108,7 +108,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
         }
     }
     .map_err(Into::into)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 fn do_cover_losses(

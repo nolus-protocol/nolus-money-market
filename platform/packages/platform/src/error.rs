@@ -73,11 +73,9 @@ impl Error {
     }
 }
 
-pub fn log<E, T>(err: E, api: &dyn Api) -> core::result::Result<T, E>
+pub fn log<Err>(api: &dyn Api) -> impl FnOnce(&Err) -> () + '_
 where
-    E: Debug,
+    Err: Debug,
 {
-    //TODO switch to calling this with Result::inspect_err once stabilized
-    api.debug(&format!("{:?}", err));
-    Err(err)
+    |err| api.debug(&format!("{:?}", err))
 }

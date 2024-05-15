@@ -50,7 +50,7 @@ pub fn instantiate(
     state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
         .map(response::response_only_messages)
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -71,14 +71,14 @@ pub fn migrate(
              storage_migration_output,
          }| response::response_with_messages(release_label, storage_migration_output),
     )
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     process_lease(deps.storage, |lease| lease.reply(deps.querier, env, msg))
         .map(response::response_only_messages)
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -92,7 +92,7 @@ pub fn execute(
         process_execute(msg, lease, deps.querier, env, info)
     })
     .map(response::response_only_messages)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -101,7 +101,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         process_sudo(msg, lease, deps.querier, env)
     })
     .map(response::response_only_messages)
-    .or_else(|err| platform_error::log(err, deps.api))
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -109,7 +109,7 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
     state::load(deps.storage)
         .and_then(|state| state.state(env.block.time, deps.querier))
         .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
-        .or_else(|err| platform_error::log(err, deps.api))
+        .inspect_err(platform_error::log(deps.api))
 }
 
 fn process_lease<ProcFn>(
