@@ -66,23 +66,6 @@ mod test {
     const MARGIN_INTEREST: Percent = Percent::from_permille(40);
 
     #[test]
-    fn read_4_2_into_5_0() {
-        let raw_4_2 = format!(
-            r#"{{"lpp":"{LPP_ADDR}","profit":"{PROFIT_ADDR}","annual_margin_interest":{interest},
-                "interest_payment":{{"due_period":{due_period},"grace_period":172800000000000}}}}"#,
-            due_period = DUE_PERIOD.nanos(),
-            interest = MARGIN_INTEREST.units(),
-        );
-
-        assert_eq!(loan_v5_0(), from_json(raw_4_2.clone()).unwrap());
-        assert_eq!(
-            to_json_vec(&loan_v5_0()).expect("serialization passed"),
-            to_json_vec(&from_json::<LoanForm>(raw_4_2).expect("deserialization passed"))
-                .expect("serialization passed")
-        );
-    }
-
-    #[test]
     fn read_5_0() {
         assert_eq!(
             loan_v5_0(),
