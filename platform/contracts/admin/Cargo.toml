@@ -33,6 +33,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 schema = { workspace = true }
+serde_test = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { workspace = true, default-features = false, features = ["testing"] }
