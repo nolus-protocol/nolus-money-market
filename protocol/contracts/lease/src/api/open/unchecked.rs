@@ -28,15 +28,12 @@ impl TryFrom<InterestPaymentSpec> for ValidatedInterestPaymentSpec {
     }
 }
 
-/// Brings invariant checking as a step in deserializing a PositionSpecDTO
+/// Bring invariant checking as a step in deserializing a PositionSpecDTO
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(super) struct PositionSpecDTO {
     liability: Liability,
     min_asset: LpnCoinDTO,
-    // TODO remove past v0.6.0 migration. Necessary to migrate nolus1suz0vsqe8c8anckaer98awhqs8r4hu7wsm8a49acdl39x6ylfypsqywxwh and
-    // nolus15hc8hwpp79lvuwu6eyplqn8lxxetpnga7gfqh2l5wdws8p2lg72q89r37p. Query their state to make sure they have been migrated.
-    #[serde(alias = "min_sell_asset")]
     min_transaction: LpnCoinDTO,
 }
 
