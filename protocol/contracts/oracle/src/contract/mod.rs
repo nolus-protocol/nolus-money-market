@@ -106,6 +106,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         QueryMsg::BasePrice { currency } => to_json_binary(
             &QueryOracle::load(deps.storage)?.try_query_base_price(env.block.time, &currency)?,
         ),
+        QueryMsg::StablePrice { currency: _ } => unimplemented!(),
         QueryMsg::Prices {} => {
             let prices = QueryOracle::load(deps.storage)?.try_query_prices(env.block.time)?;
 

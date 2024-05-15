@@ -861,6 +861,7 @@ dependencies = [
  "currency",
  "finance",
  "marketprice",
+ "oracle-platform",
  "platform",
  "schema",
  "sdk",
@@ -868,6 +869,17 @@ dependencies = [
  "thiserror",
  "tree",
  "versioning",
+]
+
+[[package]]
+name = "oracle-platform"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "finance",
+ "sdk",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

@@ -155,7 +155,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
         });
 
         let oracles = protocols.iter().map(|protocol| {
-            oracle_platform::new_unchecked_base_currency_stub::<_, StableCurrencyGroup>(
+            oracle_platform::new_unchecked_quote_currency_stub::<_, StableCurrencyGroup>(
                 protocol.contracts.oracle.clone(),
                 deps.querier,
             )

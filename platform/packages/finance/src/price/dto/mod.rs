@@ -249,7 +249,6 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-    use serde::Deserialize;
 
     use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
     use currency::{Currency, Group};
@@ -374,8 +373,8 @@ mod test_invariant {
 
     fn load_with_groups<G, QuoteG>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
     where
-        G: Group + for<'a> Deserialize<'a>,
-        QuoteG: Group + for<'a> Deserialize<'a>,
+        G: Group,
+        QuoteG: Group,
     {
         from_json::<PriceDTO<G, QuoteG>>(json)
     }

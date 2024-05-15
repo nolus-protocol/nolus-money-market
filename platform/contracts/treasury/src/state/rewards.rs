@@ -18,7 +18,7 @@ where
 {
     tvls_oracles.into_iter().map(move |tvl_oracle| {
         let reward_in_stable = interest::interest(apr, tvl_oracle.0, period);
-        convert::from_base::<_, StableCurrencyGroup, _, _, NativePlatform>(
+        convert::from_stable::<_, StableCurrencyGroup, _, _, NativePlatform>(
             tvl_oracle.1.as_ref(),
             reward_in_stable,
         )

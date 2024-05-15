@@ -1,11 +1,11 @@
 #![cfg(feature = "testing")]
 
-use currency::{test::SuperGroupTestC1, Currency, Group};
+use currency::{Currency, Group};
 use finance::{
     coin::Amount,
     price::{self, Price},
 };
-use sdk::cosmwasm_std::StdError;
+use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
     error::{Error, Result},
@@ -44,9 +44,9 @@ where
     }
 }
 
-impl From<DummyOracle> for OracleRef {
+impl<QuoteC> From<DummyOracle> for OracleRef<QuoteC> {
     fn from(_value: DummyOracle) -> Self {
-        OracleRef::unchecked::<_, SuperGroupTestC1>("ADDR")
+        OracleRef::new(Addr::unchecked("ADDR"))
     }
 }
 

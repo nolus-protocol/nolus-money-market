@@ -1,43 +1,41 @@
-use std::{fmt::Debug, result::Result as StdResult};
+use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, SymbolOwned};
+use currency::{Currency, Group};
 use finance::price::Price;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::Addr;
+#[cfg(feature = "unchecked-quote-currency")]
+use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{
-    error::{self, Error, Result},
-    msg::QueryMsg,
-};
-
-use self::impl_::{CheckedConverter, OracleStub};
+use crate::error::Result;
 
 mod impl_;
 
-#[cfg(feature = "unchecked-base-currency")]
-pub fn new_unchecked_base_currency_stub<'a, OracleBase, OracleBaseG>(
+#[cfg(feature = "unchecked-quote-currency")]
+pub fn new_unchecked_quote_currency_stub<'a, StableC, StableG>(
     oracle: Addr,
     querier: QuerierWrapper<'a>,
-) -> impl Oracle<OracleBase> + 'a
+) -> impl Oracle<StableC> + 'a
 where
-    OracleBase: Currency,
-    OracleBaseG: Group + 'a,
+    StableC: Currency,
+    StableG: Group + 'a,
 {
-    use self::impl_::BaseCUncheckedConverter;
+    use self::impl_::QuoteCUncheckedConverter;
 
-    OracleStub::<OracleBase, OracleBaseG, BaseCUncheckedConverter>::new(
-        OracleRef::new(oracle, OracleBase::TICKER.into()),
+    impl_::OracleStub::<StableC, StableG, QuoteCUncheckedConverter>::new(
+        OracleRef::new(oracle),
         querier,
     )
 }
 
-pub trait Oracle<OracleBase>
+//TODO review the necessity of maintaining Oracle traits in the platform and protocol
+pub trait Oracle<QuoteC>
 where
-    Self: Into<OracleRef> + AsRef<Self>,
-    OracleBase: ?Sized,
+    Self: Into<OracleRef<QuoteC>> + AsRef<Self>,
+    QuoteC: ?Sized,
 {
-    fn price_of<C, G>(&self) -> Result<Price<C, OracleBase>>
+    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
         C: Currency,
         G: Group;
@@ -57,75 +55,20 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct OracleRef {
+pub struct OracleRef<QuoteC>
+where
+    QuoteC: ?Sized,
+{
     addr: Addr,
-    base_currency: SymbolOwned,
+    #[serde(skip)]
+    _quote: PhantomData<QuoteC>,
 }
 
-impl OracleRef {
-    // TODO [all stub-s] add a currency group as a type parameter of the struct-s
-    // in order to move the responsability to the caller. Then review if some of
-    // the dependencies to 'currencies' get obsolete.
-    pub fn try_from(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        querier
-            .query_wasm_smart(addr.clone(), &QueryMsg::BaseCurrency {})
-            .map_err(Error::StubConfigQuery)
-            .map(|resp: SymbolOwned| Self::new(addr, resp))
-    }
-
-    fn new(addr: Addr, base_currency: SymbolOwned) -> Self {
+impl<QuoteC> OracleRef<QuoteC> {
+    pub fn new(addr: Addr) -> Self {
         Self {
             addr,
-            base_currency,
-        }
-    }
-
-    pub fn addr(&self) -> &Addr {
-        &self.addr
-    }
-
-    pub fn owned_by(&self, contract: &Addr) -> bool {
-        self.addr == contract
-    }
-
-    pub fn execute_as_oracle<OracleBase, OracleBaseG, V>(
-        self,
-        cmd: V,
-        querier: QuerierWrapper<'_>,
-    ) -> StdResult<V::Output, V::Error>
-    where
-        OracleBase: Currency,
-        OracleBaseG: Group + for<'de> Deserialize<'de>,
-        V: WithOracle<OracleBase>,
-        Error: Into<V::Error>,
-    {
-        self.check_base::<OracleBase>();
-        cmd.exec(OracleStub::<OracleBase, OracleBaseG, CheckedConverter>::new(self, querier))
-    }
-
-    pub fn check_base<OracleBase>(&self)
-    where
-        OracleBase: Currency,
-    {
-        assert_eq!(
-            OracleBase::TICKER,
-            self.base_currency,
-            "Base currency mismatch {}",
-            error::currency_mismatch::<OracleBase>(self.base_currency.clone())
-        );
-    }
-}
-
-#[cfg(feature = "testing")]
-impl OracleRef {
-    pub fn unchecked<A, C>(addr: A) -> Self
-    where
-        A: Into<String>,
-        C: Currency,
-    {
-        Self {
-            addr: Addr::unchecked(addr),
-            base_currency: C::TICKER.into(),
+            _quote: PhantomData,
         }
     }
 }

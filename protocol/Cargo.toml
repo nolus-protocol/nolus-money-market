@@ -32,6 +32,7 @@ access-control = { path = "../platform/packages/access-control", default-feature
 currency = { path = "../platform/packages/currency", default-features = false }
 finance = { path = "../platform/packages/finance", default-features = false }
 lpp-platform = { path = "../platform/packages/lpp", default-features = false }
+oracle-platform = { path = "../platform/packages/oracle", default-features = false }
 platform = { path = "../platform/packages/platform", default-features = false }
 schema = { path = "../platform/packages/schema", default-features = false }
 sdk = { path = "../platform/packages/sdk", default-features = false }
