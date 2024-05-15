@@ -100,7 +100,9 @@ pub enum QueryMsg {
     StableCurrency {},
 
     /// Implementation of [oracle_platform::msg::QueryMsg::StablePrice]
-    StablePrice { currency: SymbolOwned },
+    StablePrice {
+        currency: SymbolOwned,
+    },
 
     /// Lists configured swap pairs
     SupportedCurrencyPairs {},
