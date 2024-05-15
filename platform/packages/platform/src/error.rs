@@ -73,7 +73,7 @@ impl Error {
     }
 }
 
-pub fn log<Err>(api: &dyn Api) -> impl FnOnce(&Err) -> () + '_
+pub fn log<Err>(api: &dyn Api) -> impl FnOnce(&Err) + '_
 where
     Err: Debug,
 {
