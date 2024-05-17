@@ -9,64 +9,65 @@ use sdk::{
 };
 
 pub use self::{
-    platform::PlatformTemplate,
-    protocol::{Dex, Network, Protocol, ProtocolTemplate},
+    granular::{Granularity, HigherOrderType as HigherOrderGranularity},
+    higher_order_type::{HigherOrderType, Option as HigherOrderOption},
+    platform::{HigherOrderType as HigherOrderPlatformContracts, PlatformContracts},
+    protocol::{
+        higher_order_type::{
+            Protocol as HigherOrderProtocol, ProtocolContracts as HigherOrderProtocolContracts,
+        },
+        Dex, Network, Protocol, ProtocolContracts,
+    },
 };
 
 #[cfg(feature = "contract")]
-pub(crate) use self::impl_mod::migrate;
+pub(crate) use self::impl_mod::{execute, migrate};
 
+mod granular;
+mod higher_order_type;
 #[cfg(feature = "contract")]
 mod impl_mod;
 mod platform;
 mod protocol;
-
-pub trait HigherOrderType {
-    type Of<T>;
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
-pub struct Identity;
-
-impl HigherOrderType for Identity {
-    type Of<T> = T;
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
-pub struct HigherOrderOption;
-
-impl HigherOrderType for HigherOrderOption {
-    type Of<T> = Option<T>;
-}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     rename_all = "snake_case",
     deny_unknown_fields,
     bound(
-        serialize = "OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: Serialize, \
-            OutmostHigherOrderType::Of<Protocol>: Serialize",
-        deserialize = "OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: Deserialize<'de>, \
-            OutmostHigherOrderType::Of<Protocol>: Deserialize<'de>",
+        serialize = "Platform::Of<Unit>: Serialize, \
+            Protocol::Of<Unit>: Serialize",
+        deserialize = "Platform::Of<Unit>: Deserialize<'de>, \
+            Protocol::Of<Unit>: Deserialize<'de>",
     )
 )]
-#[schemars(bound = "OutmostHigherOrderType: JsonSchema, \
-    OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>: JsonSchema, \
-    OutmostHigherOrderType::Of<Protocol>: JsonSchema, \
-    PlatformUnit: JsonSchema, \
-    Protocol: JsonSchema")]
-pub struct ContractsTemplate<OutmostHigherOrderType, PlatformUnit, Protocol>
+#[schemars(bound = "Platform: JsonSchema, \
+    Platform::Of<Unit>: JsonSchema, \
+    Protocol: JsonSchema, \
+    Protocol::Of<Unit>: JsonSchema, \
+    Unit: JsonSchema")]
+pub struct ContractsTemplate<Platform, Protocol, Unit>
 where
-    OutmostHigherOrderType: HigherOrderType,
+    Platform: HigherOrderType,
+    Protocol: HigherOrderType,
 {
-    pub platform: OutmostHigherOrderType::Of<PlatformTemplate<PlatformUnit>>,
-    pub protocol: BTreeMap<String, OutmostHigherOrderType::Of<Protocol>>,
+    pub platform: Platform::Of<Unit>,
+    pub protocol: BTreeMap<String, Protocol::Of<Unit>>,
 }
 
-pub type ContractsMigration =
-    ContractsTemplate<HigherOrderOption, MigrationSpec, ProtocolTemplate<MigrationSpec>>;
+pub type Contracts = ContractsTemplate<HigherOrderPlatformContracts, HigherOrderProtocol, Addr>;
 
-pub type Contracts = ContractsTemplate<Identity, Addr, Protocol>;
+pub type ContractsMigration = ContractsTemplate<
+    HigherOrderGranularity<HigherOrderPlatformContracts, HigherOrderOption>,
+    HigherOrderGranularity<HigherOrderProtocolContracts, HigherOrderOption>,
+    MigrationSpec,
+>;
+
+pub type ContractsExecute = ContractsTemplate<
+    HigherOrderGranularity<HigherOrderPlatformContracts, HigherOrderOption>,
+    HigherOrderGranularity<HigherOrderProtocolContracts, HigherOrderOption>,
+    String,
+>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -79,3 +80,39 @@ where
     pub migrate_msg: String,
     pub post_migrate_execute_msg: Option<String>,
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    let _: ContractsExecute = ContractsExecute {
+        platform: Granularity::All(Some(PlatformContracts {
+            dispatcher: String::new(),
+            timealarms: String::new(),
+            treasury: String::new(),
+        })),
+        protocol: BTreeMap::from([
+            (
+                String::new(),
+                Granularity::Some {
+                    some: ProtocolContracts {
+                        leaser: Some(String::new()),
+                        lpp: None,
+                        oracle: Some(String::new()),
+                        profit: Some(String::new()),
+                        reserve: Some(String::new()),
+                    },
+                },
+            ),
+            (
+                String::new(),
+                Granularity::All(Some(ProtocolContracts {
+                    leaser: String::new(),
+                    lpp: String::new(),
+                    oracle: String::new(),
+                    profit: String::new(),
+                    reserve: String::new(),
+                })),
+            ),
+            (String::new(), Granularity::All(None)),
+        ]),
+    };
+};

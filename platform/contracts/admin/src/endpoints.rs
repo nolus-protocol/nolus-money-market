@@ -167,6 +167,10 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             crate::contracts::migrate(deps.storage, env.contract.address, release, migration_spec)
                 .map(response::response_only_messages)
         }
+        SudoMsg::ExecuteContracts(execute_messages) => {
+            crate::contracts::execute(deps.storage, execute_messages)
+                .map(response::response_only_messages)
+        }
     }
 }
 
@@ -262,7 +266,7 @@ fn register_protocol(
     storage: &mut dyn Storage,
     querier: QuerierWrapper<'_>,
     name: String,
-    protocol: &Protocol,
+    protocol: &Protocol<Addr>,
 ) -> ContractResult<CwResponse> {
     protocol.validate(querier)?;
 

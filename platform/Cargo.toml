@@ -52,6 +52,9 @@ cosmos-sdk-proto = { version = "0.20", default-features = false }
 prost = { version = "0.12", default-features = false }
 neutron-sdk = { version = "0.8", default-features = false }
 
+# Testing
+serde_test = "1"
+
 [profile.dev.build-override]
 opt-level = 3
 

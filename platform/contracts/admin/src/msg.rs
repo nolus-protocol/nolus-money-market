@@ -10,7 +10,10 @@ use sdk::{
 use versioning::ReleaseLabel;
 
 pub use crate::contracts::{
-    Contracts, ContractsMigration, Dex, Network, PlatformTemplate, Protocol, ProtocolTemplate,
+    Contracts, ContractsExecute, ContractsMigration, Dex, Granularity, HigherOrderGranularity,
+    HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
+    HigherOrderProtocolContracts, HigherOrderType, Network, PlatformContracts, Protocol,
+    ProtocolContracts,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -43,11 +46,11 @@ where
     },
     RegisterProtocol {
         name: String,
-        protocol: Protocol,
+        protocol: Protocol<Addr>,
     },
     /// A message for **internal purposes only**.
     ///
-    /// It is meant to clean-up any temporary storage changes.
+    /// It is meant to clean up any temporary storage changes.
     ///
     /// Manual execution by an outside sender is considered an
     /// error, thus execution has to fail.
@@ -62,7 +65,7 @@ pub enum SudoMsg {
     },
     RegisterProtocol {
         name: String,
-        protocol: Protocol,
+        protocol: Protocol<Addr>,
     },
     /// Trigger a migration of contracts
     ///
@@ -71,6 +74,7 @@ pub enum SudoMsg {
     /// it should start as Admin contract migration which would then
     /// continue with the migration of the other contracts.
     MigrateContracts(MigrateContracts),
+    ExecuteContracts(ContractsExecute),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -95,8 +99,8 @@ where
 
 pub type ProtocolsQueryResponse = Vec<String>;
 
-pub type PlatformQueryResponse = PlatformTemplate<Addr>;
+pub type PlatformQueryResponse = PlatformContracts<Addr>;
 
-pub type ProtocolQueryResponse = Protocol;
+pub type ProtocolQueryResponse = Protocol<Addr>;
 
-pub type ProtocolContracts = ProtocolTemplate<Addr>;
+pub type ProtocolContractAddresses = ProtocolContracts<Addr>;
