@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use sdk::schemars::{self, JsonSchema};
 
 pub trait HigherOrderType {
@@ -12,12 +10,6 @@ pub struct Identity;
 impl HigherOrderType for Identity {
     type Of<T> = T;
 }
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
-pub struct Composition<Outer, Inner>(PhantomData<Outer>, PhantomData<Inner>)
-where
-    Outer: HigherOrderType,
-    Inner: HigherOrderType;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
 pub struct Option;
