@@ -93,7 +93,7 @@ impl<'a> WithCoin for DownpaymentHandler<'a> {
             LeasePaymentCurrencies,
             LpnCurrency,
             LpnCurrencies,
-        >(self.oracle.clone(), in_amount, self.querier)?;
+        >(self.oracle, in_amount, self.querier)?;
 
         let downpayment = in_amount.into();
 

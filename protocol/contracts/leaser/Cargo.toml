@@ -29,7 +29,7 @@ testing = ["currency/testing", "lease/testing"]
 [dependencies]
 lease = { workspace = true, features = ["skel"] }
 lpp = { workspace = true }
-oracle = { workspace = true }
+oracle-platform = { workspace = true }
 reserve = { workspace = true, features = ["stub"] }
 
 access-control = { workspace = true }

@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
-use oracle::stub::OracleRef;
+use oracle_platform::OracleRef;
 use platform::{
     message::Response as MessageResponse, response, state_machine::Response as StateMachineResponse,
 };
@@ -54,7 +54,7 @@ pub fn instantiate(
         Config::new(
             msg.cadence_hours,
             msg.treasury,
-            OracleRef::try_from(msg.oracle, deps.querier)?,
+            OracleRef::try_from_base(msg.oracle, deps.querier)?,
             TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
         ),
         msg.dex,

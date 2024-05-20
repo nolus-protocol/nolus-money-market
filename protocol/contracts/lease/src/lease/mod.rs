@@ -1,6 +1,6 @@
 use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::Oracle as OracleTrait;
+use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -158,7 +158,7 @@ mod tests {
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
-    use oracle::stub::{Oracle, OracleRef, Result as PriceOracleResult};
+    use oracle_platform::{error::Result as PriceOracleResult, Oracle, OracleRef};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 

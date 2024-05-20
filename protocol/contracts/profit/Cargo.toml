@@ -33,6 +33,7 @@ contract = [
     "dex/impl",
     "dep:finance",
     "dep:oracle",
+    "dep:oracle-platform",
     "dep:platform",
     "dep:timealarms",
     "dep:thiserror",
@@ -48,6 +49,7 @@ currency = { workspace = true, optional = true }
 dex = { workspace = true }
 finance = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true }
+oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }
 swap = { workspace = true, optional = true }

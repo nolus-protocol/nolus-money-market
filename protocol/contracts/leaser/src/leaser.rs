@@ -4,7 +4,6 @@ use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
-use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     contract::Code,
@@ -13,7 +12,7 @@ use platform::{
 use reserve::api::ExecuteMsg as ReserveExecuteMsg;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
-use crate::finance::LpnCurrency;
+use crate::finance::{LpnCurrency, OracleRef};
 use crate::{
     cmd::Quote,
     finance::LpnCurrencies,
@@ -49,7 +48,7 @@ impl<'a> Leaser<'a> {
 
         let lpp = LppRef::<LpnCurrency, LpnCurrencies>::try_new(config.lpp, self.deps.querier)?;
 
-        let oracle = OracleRef::try_from(config.market_price_oracle, self.deps.querier)?;
+        let oracle = OracleRef::try_from_base(config.market_price_oracle, self.deps.querier)?;
 
         lpp.execute_lender(
             Quote::new(

@@ -57,14 +57,14 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate_ticker<C>(ticker: SymbolOwned) -> Result<SymbolOwned>
+pub fn validate_ticker<C>(ticker: &SymbolSlice) -> Result<()>
 where
     C: Currency,
 {
     if C::TICKER == ticker {
-        Ok(ticker)
+        Ok(())
     } else {
-        Err(Error::unexpected_symbol::<_, Tickers, C>(ticker))
+        Err(Error::unexpected_symbol::<_, Tickers, C>(ticker.to_owned()))
     }
 }
 

@@ -41,8 +41,8 @@ where
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
             .map_err(ContractError::from)
-            .and_then(|lpn| currency::validate_ticker::<Lpn>(lpn).map_err(Into::into))
-            .map(|_lpn: LpnResponse| Self {
+            .and_then(|lpn: LpnResponse| currency::validate_ticker::<Lpn>(&lpn).map_err(Into::into))
+            .map(|()| Self {
                 addr,
                 _lpn: PhantomData,
                 _lpns: PhantomData,

@@ -1,7 +1,7 @@
 #[cfg(feature = "stub_alarms")]
 pub use alarms::*;
 pub use error::{Error, Result};
-pub use price::{convert, Oracle, OracleRef, WithOracle};
+pub use price::convert;
 #[cfg(feature = "stub_swap")]
 pub use swap::*;
 

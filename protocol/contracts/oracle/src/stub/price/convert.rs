@@ -4,7 +4,7 @@ use currency::{Currency, Group};
 use finance::coin::Coin;
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use super::{error::Error, Oracle, OracleRef, WithOracle};
+use oracle_platform::{error::Error, Oracle, OracleRef, WithOracle};
 
 pub fn to_quote<InC, InG, QuoteC, QuoteG>(
     oracle_ref: OracleRef<QuoteC>,
@@ -41,7 +41,7 @@ where
         where
             OracleImpl: Oracle<QuoteC>,
         {
-            oracle_platform::convert::to_quote(oracle, self.in_amount)
+            oracle_platform::convert::to_quote::<_, InG, _, _>(&oracle, self.in_amount)
         }
     }
 

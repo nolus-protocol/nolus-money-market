@@ -6,9 +6,10 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{Error, Result},
-    msg::QueryMsg,
     Oracle, OracleRef,
 };
+
+use super::RequestBuilder;
 
 trait PriceConverter {
     fn try_convert<C, G, BaseC, BaseG>(dto: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
@@ -52,14 +53,16 @@ impl PriceConverter for QuoteCUncheckedConverter {
     }
 }
 
-pub struct OracleStub<'a, QuoteC, QuoteG, PriceConverterT> {
+pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> {
     oracle_ref: OracleRef<QuoteC>,
     querier: QuerierWrapper<'a>,
     _quote_group: PhantomData<QuoteG>,
+    _request: PhantomData<PriceReq>,
     _converter: PhantomData<PriceConverterT>,
 }
 
-impl<'a, QuoteC, QuoteG, PriceConverterT> OracleStub<'a, QuoteC, QuoteG, PriceConverterT>
+impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+    OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
 where
     QuoteC: Currency,
     QuoteG: Group,
@@ -72,6 +75,7 @@ where
             oracle_ref,
             querier,
             _quote_group: PhantomData,
+            _request: PhantomData,
             _converter: PhantomData,
         }
     }
@@ -81,11 +85,12 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceConverterT> Oracle<QuoteC>
-    for OracleStub<'a, QuoteC, QuoteG, PriceConverterT>
+impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC>
+    for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
     QuoteC: Currency,
     QuoteG: Group,
+    PriceReqT: RequestBuilder,
     PriceConverterT: PriceConverter,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
@@ -97,9 +102,7 @@ where
             return Ok(Price::identity());
         }
 
-        let msg = QueryMsg::StablePrice {
-            currency: C::TICKER.to_string(),
-        };
+        let msg = PriceReqT::price::<C>();
         self.querier
             .query_wasm_smart(self.addr(), &msg)
             .map_err(|error| Error::FailedToFetchPrice {
@@ -111,19 +114,19 @@ where
     }
 }
 
-impl<'a, OracleBase, OracleBaseG, PriceConverterT>
-    AsRef<OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>>
-    for OracleStub<'a, OracleBase, OracleBaseG, PriceConverterT>
+impl<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>
+    AsRef<OracleStub<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>>
+    for OracleStub<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>
 {
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceConverterT> From<OracleStub<'a, QuoteC, QuoteG, PriceConverterT>>
-    for OracleRef<QuoteC>
+impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+    From<OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>> for OracleRef<QuoteC>
 {
-    fn from(stub: OracleStub<'a, QuoteC, QuoteG, PriceConverterT>) -> Self {
+    fn from(stub: OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>) -> Self {
         stub.oracle_ref
     }
 }

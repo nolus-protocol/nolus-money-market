@@ -8,6 +8,7 @@ use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
 use oracle::api::alarms::Error as OracleAlarmError;
 use oracle::stub::Error as PriceOracleError;
+use oracle_platform::error::Error as OracleError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
 use reserve::error::Error as ReserveError;
@@ -38,6 +39,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     TimeAlarmsError(#[from] TimeAlarmsError),
+
+    #[error("[Lease] {0}")]
+    OracleError(#[from] OracleError),
 
     #[error("[Lease] {0}")]
     OracleAlarmError(#[from] OracleAlarmError),

@@ -22,7 +22,7 @@ pub enum Error {
         error: StdError,
     },
 
-    #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
+    #[error("[Oracle; Stub] Mismatch of curencies, expected {expected:?}, found {found:?}")]
     CurrencyMismatch { expected: String, found: String },
 }
 

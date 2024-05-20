@@ -1,9 +1,8 @@
 use currency::SymbolOwned;
+use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::api::swap::{Error, QueryMsg, Result, SwapTarget};
-
-use super::OracleRef;
 
 pub trait SwapPath {
     fn swap_path(

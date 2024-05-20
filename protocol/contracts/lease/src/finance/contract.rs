@@ -1,6 +1,6 @@
 use finance::{coin::Coin, price::Price as GenericPrice};
 use lpp::stub::LppRef as LppGenericRef;
-use oracle::stub::OracleRef as OracleGenericRef;
+use oracle_platform::OracleRef as OracleGenericRef;
 
 use super::{LpnCurrencies, LpnCurrency};
 

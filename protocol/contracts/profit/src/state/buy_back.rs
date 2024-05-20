@@ -188,7 +188,7 @@ mod tests {
 
     fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
         use dex::{Account, ConnectionParams, Ics20Channel};
-        use oracle::stub::OracleRef;
+        use oracle_platform::OracleRef;
         use platform::ica::HostAccount;
         use sdk::cosmwasm_std::Addr;
         use timealarms::stub::TimeAlarmsRef;
@@ -200,7 +200,7 @@ mod tests {
             Config::new(
                 24,
                 Addr::unchecked("DEADCODE"),
-                OracleRef::<StableC>::unchecked("DEADCODE"),
+                OracleRef::<StableC>::unchecked(Addr::unchecked("DEADCODE")),
                 TimeAlarmsRef::unchecked("DEADCODE"),
             ),
             Account::unchecked(

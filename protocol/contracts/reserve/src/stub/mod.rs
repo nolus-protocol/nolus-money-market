@@ -35,9 +35,9 @@ where
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
             .map_err(Error::QueryReserveFailure)
             .and_then(|lpn: LpnQueryResponse| {
-                currency::validate_ticker::<Lpn>(lpn).map_err(Error::UnexpectedLpn)
+                currency::validate_ticker::<Lpn>(&lpn).map_err(Error::UnexpectedLpn)
             })
-            .map(|_| Self {
+            .map(|()| Self {
                 contract,
                 _lpns: PhantomData,
             })

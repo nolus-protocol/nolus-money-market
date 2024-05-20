@@ -46,7 +46,7 @@ where
 
 impl<QuoteC> From<DummyOracle> for OracleRef<QuoteC> {
     fn from(_value: DummyOracle) -> Self {
-        OracleRef::new(Addr::unchecked("ADDR"))
+        OracleRef::unchecked(Addr::unchecked("ADDR"))
     }
 }
 
