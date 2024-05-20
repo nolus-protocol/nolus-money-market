@@ -89,10 +89,10 @@ impl<'a> WithCoin for DownpaymentHandler<'a> {
         C: Currency,
     {
         let downpayment_lpn = convert::to_quote::<
-            LpnCurrency,
-            LpnCurrencies,
             C,
             LeasePaymentCurrencies,
+            LpnCurrency,
+            LpnCurrencies,
         >(self.oracle.clone(), in_amount, self.querier)?;
 
         let downpayment = in_amount.into();
