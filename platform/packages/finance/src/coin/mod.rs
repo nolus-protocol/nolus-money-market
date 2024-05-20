@@ -260,39 +260,9 @@ pub trait WithCoin {
     type Output;
     type Error;
 
-    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency;
-}
-
-impl<T> WithCoin for &'_ T
-where
-    T: WithCoin,
-{
-    type Output = T::Output;
-    type Error = T::Error;
-
-    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
-    where
-        C: Currency,
-    {
-        T::on(self, coin)
-    }
-}
-
-impl<T> WithCoin for &'_ mut T
-where
-    T: WithCoin,
-{
-    type Output = T::Output;
-    type Error = T::Error;
-
-    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
-    where
-        C: Currency,
-    {
-        T::on(self, coin)
-    }
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>

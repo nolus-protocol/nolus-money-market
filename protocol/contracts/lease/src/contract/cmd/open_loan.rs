@@ -84,7 +84,7 @@ impl<'a> WithCoin for DownpaymentHandler<'a> {
 
     type Error = ContractError;
 
-    fn on<C>(&self, in_amount: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {

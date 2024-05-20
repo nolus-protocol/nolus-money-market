@@ -23,7 +23,7 @@ pub trait BankAccountView {
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
-        Cmd: WithCoin,
+        Cmd: WithCoin + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -100,7 +100,7 @@ impl<'a> BankAccountView for BankView<'a> {
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
-        Cmd: WithCoin,
+        Cmd: WithCoin + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -108,7 +108,7 @@ impl<'a> BankAccountView for BankView<'a> {
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
-                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, &cmd))
+                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone()))
                     .reduce_results(Aggregate::aggregate)
             })
             .map_err(Into::into)
@@ -165,7 +165,7 @@ where
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
-        Cmd: WithCoin,
+        Cmd: WithCoin + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
@@ -515,6 +515,7 @@ mod test {
         );
     }
 
+    #[derive(Clone)]
     struct Cmd<'r> {
         expected: &'r [&'static str],
     }
@@ -529,7 +530,7 @@ mod test {
         type Output = ();
         type Error = Error;
 
-        fn on<C>(&self, _: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, _: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {

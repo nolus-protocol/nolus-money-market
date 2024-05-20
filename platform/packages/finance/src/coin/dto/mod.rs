@@ -219,7 +219,7 @@ where
     type Output = CoinDTO<G>;
     type Error = Error;
 
-    fn on<C>(&self, coin: Coin<C>) -> super::WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<Self>
     where
         C: Currency,
     {

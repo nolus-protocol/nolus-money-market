@@ -27,7 +27,7 @@ where
         type Output = bool;
         type Error = Error;
 
-        fn on<C>(&self, expected_payment: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, expected_payment: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {

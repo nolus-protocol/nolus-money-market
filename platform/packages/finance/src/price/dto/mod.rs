@@ -178,9 +178,9 @@ where
     type Output;
     type Error;
 
-    fn exec<Base>(self, _: Price<Base, C>) -> Result<Self::Output, Self::Error>
+    fn exec<BaseC>(self, _: Price<BaseC, C>) -> Result<Self::Output, Self::Error>
     where
-        Base: Currency;
+        BaseC: Currency;
 }
 
 #[cfg(test)]

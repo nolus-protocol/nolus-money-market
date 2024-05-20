@@ -1,44 +1,35 @@
-use currency::{
-    error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers,
-};
+use currency::{Currency, Group};
 
 use crate::{
-    coin::{Coin, CoinDTO},
+    coin::{Coin, WithCoin},
     error::Error,
     price,
 };
 
 use super::{PriceDTO, WithQuote};
 
-struct BaseCVisitor<'a, G, QuoteC, Cmd>
+struct BaseCoinVisitor<QuoteC, Cmd>
 where
-    G: Group,
     QuoteC: Currency,
 {
-    base_dto: &'a CoinDTO<G>,
     quote: Coin<QuoteC>,
     cmd: Cmd,
 }
 
-impl<'a, G, C, Cmd> AnyVisitor for BaseCVisitor<'a, G, C, Cmd>
+impl<QuoteC, Cmd> WithCoin for BaseCoinVisitor<QuoteC, Cmd>
 where
-    G: Group,
-    C: Currency,
-    Cmd: WithQuote<C>,
+    QuoteC: Currency,
+    Cmd: WithQuote<QuoteC>,
 {
     type Output = Cmd::Output;
-    type Error = CmdError<Cmd::Error, Error>;
+    type Error = Cmd::Error;
 
     #[track_caller]
-    #[allow(clippy::unwrap_in_result)]
-    fn on<BaseC>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self, base_amount: Coin<C>) -> crate::coin::WithCoinResult<Self>
     where
-        BaseC: Currency,
+        C: Currency,
     {
-        let amount_base =
-            Coin::<BaseC>::try_from(self.base_dto).expect("Got different currency in visitor!");
-        let price = price::total_of(amount_base).is(self.quote);
-        self.cmd.exec(price).map_err(Self::Error::from_customer_err)
+        self.cmd.exec(price::total_of(base_amount).is(self.quote))
     }
 }
 
@@ -54,16 +45,9 @@ where
     Cmd: WithQuote<QuoteC>,
     Error: Into<Cmd::Error>,
 {
-    //TODO use CoinDTO::with_coin instead
-    Tickers
-        .visit_any::<G, _>(
-            &price.amount.ticker().clone(),
-            BaseCVisitor {
-                base_dto: &price.amount,
-                quote: Coin::<QuoteC>::try_from(&price.amount_quote)
-                    .expect("Got different currency in visitor!"),
-                cmd,
-            },
-        )
-        .map_err(CmdError::into_customer_err)
+    price.amount.with_coin(BaseCoinVisitor {
+        quote: Coin::<QuoteC>::try_from(&price.amount_quote)
+            .expect("Got different currency in visitor!"),
+        cmd,
+    })
 }

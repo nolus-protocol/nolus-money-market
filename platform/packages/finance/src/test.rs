@@ -31,7 +31,7 @@ pub mod coin {
 
         type Error = Error;
 
-        fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {

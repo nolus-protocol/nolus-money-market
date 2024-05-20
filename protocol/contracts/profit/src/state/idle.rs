@@ -173,6 +173,7 @@ impl Display for Idle {
     }
 }
 
+#[derive(Clone)]
 struct CoinToDTO<FilterC, G>(PhantomData<FilterC>, PhantomData<G>)
 where
     FilterC: Currency,
@@ -186,7 +187,7 @@ where
     type Output = SplitCoins<FilterC, G>;
     type Error = ContractError;
 
-    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {
