@@ -3,21 +3,20 @@ use finance::coin::Coin;
 
 use crate::{error::Error, stub::Oracle};
 
-pub fn from_stable<StableC, StableG, OracleS, OutC, OutG>(
+pub fn from_quote<QuoteC, OracleS, OutC, OutG>(
     oracle: &OracleS,
-    in_amount: Coin<StableC>,
+    in_amount: Coin<QuoteC>,
 ) -> Result<Coin<OutC>, Error>
 where
-    StableC: Currency,
-    StableG: Group,
-    OracleS: Oracle<StableC>,
+    QuoteC: Currency,
+    OracleS: Oracle<QuoteC>,
     OutC: Currency,
     OutG: Group,
 {
-    from_stable::PriceConvert::<_, _, OutG>::new(in_amount).do_convert(oracle)
+    impl_::PriceConvert::<_, _, OutG>::new(in_amount).do_convert(oracle)
 }
 
-mod from_stable {
+mod impl_ {
     use std::marker::PhantomData;
 
     use currency::{Currency, Group};

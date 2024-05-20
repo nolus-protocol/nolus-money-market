@@ -6,40 +6,40 @@ use sdk::cosmwasm_std::QuerierWrapper;
 
 use super::{error::Error, Oracle, OracleRef, WithOracle};
 
-pub fn to_base<BaseC, BaseG, InC, InG>(
-    oracle_ref: OracleRef<BaseC>,
+pub fn to_quote<InC, InG, QuoteC, QuoteG>(
+    oracle_ref: OracleRef<QuoteC>,
     in_amount: Coin<InC>,
     querier: QuerierWrapper<'_>,
-) -> Result<Coin<BaseC>, Error>
+) -> Result<Coin<QuoteC>, Error>
 where
-    BaseC: Currency,
-    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
     InC: Currency,
     InG: Group,
 {
-    struct PriceConvert<BaseC, InC, InG>
+    struct PriceConvert<InC, InG, QuoteC>
     where
-        BaseC: Currency,
         InC: Currency,
         InG: Group,
+        QuoteC: Currency,
     {
         in_amount: Coin<InC>,
         _in_group: PhantomData<InG>,
-        _out: PhantomData<BaseC>,
+        _out: PhantomData<QuoteC>,
     }
 
-    impl<BaseC, InC, InG> WithOracle<BaseC> for PriceConvert<BaseC, InC, InG>
+    impl<InC, InG, QuoteC> WithOracle<QuoteC> for PriceConvert<InC, InG, QuoteC>
     where
-        BaseC: Currency,
         InC: Currency,
         InG: Group,
+        QuoteC: Currency,
     {
-        type Output = Coin<BaseC>;
+        type Output = Coin<QuoteC>;
         type Error = Error;
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output, Self::Error>
         where
-            OracleImpl: Oracle<BaseC>,
+            OracleImpl: Oracle<QuoteC>,
         {
             oracle
                 .price_of::<InC, InG>()
@@ -47,11 +47,11 @@ where
         }
     }
 
-    oracle_ref.execute_as_oracle::<BaseG, _>(
+    oracle_ref.execute_as_oracle::<QuoteG, _>(
         PriceConvert {
             in_amount,
             _in_group: PhantomData::<InG>,
-            _out: PhantomData::<BaseC>,
+            _out: PhantomData::<QuoteC>,
         },
         querier,
     )

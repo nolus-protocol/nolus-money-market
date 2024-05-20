@@ -1,6 +1,6 @@
 use currency::{NativePlatform, NlsPlatform};
 use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
-use lpp_platform::{CoinStable, Stable, StableCurrencyGroup};
+use lpp_platform::{CoinStable, Stable};
 use oracle_platform::{convert, Oracle};
 
 use crate::result::ContractResult;
@@ -18,11 +18,8 @@ where
 {
     tvls_oracles.into_iter().map(move |tvl_oracle| {
         let reward_in_stable = interest::interest(apr, tvl_oracle.0, period);
-        convert::from_stable::<_, StableCurrencyGroup, _, _, NativePlatform>(
-            tvl_oracle.1.as_ref(),
-            reward_in_stable,
-        )
-        .map_err(Into::into)
+        convert::from_quote::<_, _, _, NativePlatform>(tvl_oracle.1.as_ref(), reward_in_stable)
+            .map_err(Into::into)
     })
 }
 

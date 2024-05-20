@@ -88,7 +88,7 @@ impl<'a> WithCoin for DownpaymentHandler<'a> {
     where
         C: Currency,
     {
-        let downpayment_lpn = convert::to_base::<
+        let downpayment_lpn = convert::to_quote::<
             LpnCurrency,
             LpnCurrencies,
             C,
