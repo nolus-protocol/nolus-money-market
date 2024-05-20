@@ -13,7 +13,20 @@ where
     OutC: Currency,
     OutG: Group,
 {
-    impl_::PriceConvert::<_, _, OutG>::new(in_amount).do_convert(oracle)
+    impl_::PriceConvert::<_, _>::new(in_amount).with_quote_in::<_, OutG>(oracle)
+}
+
+pub fn to_quote<InC, InG, QuoteC, OracleS>(
+    oracle: &OracleS,
+    in_amount: Coin<InC>,
+) -> Result<Coin<QuoteC>, Error>
+where
+    InC: Currency,
+    InG: Group,
+    QuoteC: Currency,
+    OracleS: Oracle<QuoteC>,
+{
+    impl_::PriceConvert::<_, _>::new(in_amount).with_quote_out::<InG, _>(oracle)
 }
 
 mod impl_ {
@@ -24,41 +37,51 @@ mod impl_ {
 
     use crate::{error::Error, Oracle};
 
-    pub(super) struct PriceConvert<InC, OutC, OutG>
+    pub(super) struct PriceConvert<InC, OutC>
     where
         InC: Currency,
         OutC: Currency,
-        OutG: Group,
     {
         in_amount: Coin<InC>,
         _out: PhantomData<OutC>,
-        _out_group: PhantomData<OutG>,
     }
 
-    impl<InC, OutC, OutG> PriceConvert<InC, OutC, OutG>
+    impl<InC, OutC> PriceConvert<InC, OutC>
     where
         InC: Currency,
         OutC: Currency,
-        OutG: Group,
     {
         pub(super) fn new(in_amount: Coin<InC>) -> Self {
             Self {
                 in_amount,
                 _out: PhantomData,
-                _out_group: PhantomData,
             }
         }
 
-        pub(super) fn do_convert<OracleImpl>(
+        pub(super) fn with_quote_in<OracleImpl, OutG>(
             &self,
             oracle: &OracleImpl,
         ) -> Result<Coin<OutC>, Error>
         where
             OracleImpl: Oracle<InC>,
+            OutG: Group,
         {
             oracle
                 .price_of::<OutC, OutG>()
                 .map(|price| price::total(self.in_amount, price.inv()))
+        }
+
+        pub(super) fn with_quote_out<InG, OracleImpl>(
+            &self,
+            oracle: &OracleImpl,
+        ) -> Result<Coin<OutC>, Error>
+        where
+            InG: Group,
+            OracleImpl: Oracle<OutC>,
+        {
+            oracle
+                .price_of::<InC, InG>()
+                .map(|price| price::total(self.in_amount, price))
         }
     }
 }

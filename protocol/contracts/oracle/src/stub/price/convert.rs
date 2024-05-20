@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, Group};
-use finance::{coin::Coin, price};
+use finance::coin::Coin;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use super::{error::Error, Oracle, OracleRef, WithOracle};
@@ -41,9 +41,7 @@ where
         where
             OracleImpl: Oracle<QuoteC>,
         {
-            oracle
-                .price_of::<InC, InG>()
-                .map(|price| price::total(self.in_amount, price))
+            oracle_platform::convert::to_quote(oracle, self.in_amount)
         }
     }
 
