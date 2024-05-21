@@ -3,7 +3,7 @@ use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
-use stub::LppStub;
+use stub::Stub;
 
 pub use crate::{
     nlpn::NLpn,
@@ -32,22 +32,14 @@ where
     fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse>;
 }
 
-pub fn new_stub<'a, 'q>(lpp: Addr, querier: QuerierWrapper<'q>, env: &'a Env) -> impl Lpp + 'a
+pub fn new_stub<'a, 'q>(
+    lpp: Addr,
+    oracle: Addr,
+    querier: QuerierWrapper<'q>,
+    env: &'a Env,
+) -> impl Lpp + 'a
 where
     'q: 'a,
 {
-    LppStub::new(lpp, querier, env)
+    Stub::new(lpp, oracle, querier, env)
 }
-
-// TODO review is needed
-// pub fn into_usd<Lpn, Lpns>(amount: Coin<Lpn>) -> Coin<Usd>
-// where
-//     Lpn: Currency,
-//     Lpns: Group,
-// {
-//     use finance::coin::Amount;
-
-//     debug_assert_eq!(currency::validate_member::<Lpn, Lpns>(), Ok(()));
-
-//     Into::<Amount>::into(amount).into()
-// }

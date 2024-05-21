@@ -127,9 +127,14 @@ fn query_reward(
     let config: Config = Config::load(storage)?;
 
     protocols(config.protocols_registry, querier).and_then(|protocols| {
-        let lpps = protocols
-            .into_iter()
-            .map(|protocol| lpp_platform::new_stub(protocol.contracts.lpp, querier, env));
+        let lpps = protocols.into_iter().map(|protocol| {
+            lpp_platform::new_stub(
+                protocol.contracts.lpp,
+                protocol.contracts.oracle,
+                querier,
+                env,
+            )
+        });
 
         RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
     })
@@ -151,7 +156,12 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
 
     protocols(config.protocols_registry, deps.querier).and_then(|protocols| {
         let lpps = protocols.iter().map(|protocol| {
-            lpp_platform::new_stub(protocol.contracts.lpp.clone(), deps.querier, env)
+            lpp_platform::new_stub(
+                protocol.contracts.lpp.clone(),
+                protocol.contracts.oracle.clone(),
+                deps.querier,
+                env,
+            )
         });
 
         let oracles = protocols.iter().map(|protocol| {

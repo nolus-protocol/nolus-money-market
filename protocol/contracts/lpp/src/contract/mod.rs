@@ -1,15 +1,17 @@
 use std::ops::DerefMut as _;
 
-use finance::coin::CoinDTO;
+use finance::coin::{Coin, CoinDTO};
+use oracle::stub::convert;
+use oracle_platform::OracleRef;
 use serde::Serialize;
 
 use access_control::SingleUserAccess;
-use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies};
+use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup};
 
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
 use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
@@ -161,13 +163,17 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
         QueryMsg::LppBalance() => rewards::query_lpp_balance::<LpnCurrency>(deps, env)
             .map(LppBalanceResponse::from)
             .and_then(|ref resp| to_json_binary(resp)),
-        QueryMsg::StableBalance {} => rewards::query_lpp_balance::<LpnCurrency>(deps, env)
-            .map(|balance_lpn| {
-                balance_lpn.balance
-                    + balance_lpn.total_principal_due
-                    + balance_lpn.total_interest_due
-            })
-            .and_then(|total| to_json_binary(&CoinDTO::<LpnCurrencies>::from(total))),
+        QueryMsg::StableBalance { oracle_addr } => {
+            rewards::query_lpp_balance::<LpnCurrency>(deps, env)
+                .map(LppBalances::into_total)
+                .and_then(|total| {
+                    OracleRef::try_from_base(oracle_addr, deps.querier)
+                        .map_err(ContractError::InvalidOracleBaseCurrency)
+                        .and_then(|oracle_ref| to_stable(oracle_ref, total, deps.querier))
+                })
+                .map(CoinDTO::<LpnCurrencies>::from)
+                .and_then(|ref resp| to_json_binary(resp))
+        }
         QueryMsg::Price() => lender::query_ntoken_price::<LpnCurrency>(deps, env)
             .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::DepositCapacity() => {
@@ -191,4 +197,14 @@ where
     T: Serialize + ?Sized,
 {
     cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
+}
+
+// TODO replace the result LpnCurrency with StableCurrency once defined
+fn to_stable(
+    oracle: OracleRef<LpnCurrency>,
+    total: Coin<LpnCurrency>,
+    querier: QuerierWrapper<'_>,
+) -> Result<Coin<LpnCurrency>> {
+    convert::from_quote::<_, LpnCurrencies, LpnCurrency, PaymentGroup>(oracle, total, querier)
+        .map_err(ContractError::ConvertFromQuote)
 }

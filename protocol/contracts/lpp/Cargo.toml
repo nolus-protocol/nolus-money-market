@@ -24,7 +24,7 @@ neutron-astroport-usdc_axelar = ["contract", "currencies/neutron-astroport-usdc_
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
 
-contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies"]
+contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies", "dep:oracle"]
 stub = []
 testing = ["currency/testing"]
 
@@ -34,6 +34,8 @@ currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
+oracle = { workspace = true, optional = true, features = ["stub_price"] }
+oracle-platform = { workspace = true }
 # TODO remove the testing feature once the storage migration v1 -> v2 is over
 platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true }

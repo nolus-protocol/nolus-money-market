@@ -761,6 +761,8 @@ dependencies = [
  "currency",
  "finance",
  "lpp-platform",
+ "oracle",
+ "oracle-platform",
  "platform",
  "schema",
  "sdk",

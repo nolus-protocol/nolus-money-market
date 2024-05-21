@@ -13,6 +13,12 @@ pub enum ContractError {
     #[error("[Lpp] {0}")]
     Currency(#[from] currency::error::Error),
 
+    #[error("[Lpp] Invalid Oracle Base currency! Cause: {0}")]
+    InvalidOracleBaseCurrency(oracle_platform::error::Error),
+
+    #[error("[Lpp] Failure converting from the quote currency! Cause: {0}")]
+    ConvertFromQuote(oracle_platform::error::Error),
+
     #[error("[Lpp] {0}")]
     Finance(#[from] finance::error::Error),
 

@@ -12,22 +12,33 @@ use crate::{
     CoinStable, Lpp,
 };
 
-pub struct LppStub<'a> {
+pub struct Stub<'a> {
     lpp: Addr,
+    oracle: Addr,
     querier: QuerierWrapper<'a>,
     env: &'a Env,
 }
 
-impl<'a> LppStub<'a> {
-    pub(crate) fn new(lpp: Addr, querier: QuerierWrapper<'a>, env: &'a Env) -> Self {
-        Self { lpp, querier, env }
+impl<'a> Stub<'a> {
+    pub(crate) fn new(lpp: Addr, oracle: Addr, querier: QuerierWrapper<'a>, env: &'a Env) -> Self {
+        Self {
+            lpp,
+            oracle,
+            querier,
+            env,
+        }
     }
 }
 
-impl<'a> Lpp for LppStub<'a> {
+impl<'a> Lpp for Stub<'a> {
     fn balance(&self) -> Result<CoinStable> {
         self.querier
-            .query_wasm_smart(&self.lpp, &(QueryMsg::StableBalance {}))
+            .query_wasm_smart(
+                &self.lpp,
+                &(QueryMsg::StableBalance {
+                    oracle_addr: self.oracle.clone(),
+                }),
+            )
             .map_err(Into::into)
     }
 
@@ -53,7 +64,7 @@ impl<'a> Lpp for LppStub<'a> {
     }
 }
 
-impl<'a> AsRef<LppStub<'a>> for LppStub<'a> {
+impl<'a> AsRef<Stub<'a>> for Stub<'a> {
     fn as_ref(&self) -> &Self {
         self
     }
@@ -69,7 +80,7 @@ mod test {
 
     use crate::Lpp;
 
-    use super::LppStub;
+    use super::Stub;
 
     #[test]
     fn ditribute_no_reward() {
@@ -77,7 +88,8 @@ mod test {
         let env = testing::mock_env();
         let querier = QuerierWrapper::new(&mock_querier);
         let lpp_addr = Addr::unchecked("LPP");
-        let stub = LppStub::new(lpp_addr, querier, &env);
+        let oracle_addr = Addr::unchecked("ORACLE");
+        let stub = Stub::new(lpp_addr, oracle_addr, querier, &env);
         assert_eq!(
             Ok(MessageResponse::default()),
             stub.ditribute_rewards(0.into())

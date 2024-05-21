@@ -27,6 +27,12 @@ where
     pub(crate) total_interest_due: Coin<Lpn>,
 }
 
+impl<Lpn> LppBalances<Lpn> {
+    pub(crate) fn into_total(self) -> Coin<Lpn> {
+        self.balance + self.total_principal_due + self.total_interest_due
+    }
+}
+
 // TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
 // and LiquidityPool and Loan. The contract API implementation should depend on
 // Deposit and Loan which in turn may use LiquidityPool.
