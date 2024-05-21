@@ -23,7 +23,6 @@ where
     Self: AsRef<Self>,
 {
     /// Return the total value in the stable currency
-    // TODO add ', oracle: OracleRef'
     fn balance(&self) -> Result<CoinStable>;
 
     /// Distributes a reward amount to an Lpp
