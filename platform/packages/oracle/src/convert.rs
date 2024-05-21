@@ -3,6 +3,8 @@ use finance::coin::Coin;
 
 use crate::{error::Error, stub::Oracle};
 
+use self::impl_::PriceConvert;
+
 pub fn from_quote<QuoteC, OracleS, OutC, OutG>(
     oracle: &OracleS,
     in_amount: Coin<QuoteC>,
@@ -13,7 +15,7 @@ where
     OutC: Currency,
     OutG: Group,
 {
-    impl_::PriceConvert::<_, _>::new(in_amount).with_quote_in::<_, OutG>(oracle)
+    PriceConvert::new(in_amount).with_quote_in::<_, OutG>(oracle)
 }
 
 pub fn to_quote<InC, InG, QuoteC, OracleS>(
@@ -26,7 +28,7 @@ where
     QuoteC: Currency,
     OracleS: Oracle<QuoteC>,
 {
-    impl_::PriceConvert::<_, _>::new(in_amount).with_quote_out::<InG, _>(oracle)
+    PriceConvert::new(in_amount).with_quote_out::<InG, _>(oracle)
 }
 
 mod impl_ {
