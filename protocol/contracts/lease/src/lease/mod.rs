@@ -261,12 +261,12 @@ mod tests {
         }
     }
 
-    impl<OracleBase> Oracle<OracleBase> for OracleLocalStub<OracleBase>
+    impl<QuoteC> Oracle<QuoteC> for OracleLocalStub<QuoteC>
     where
-        Self: Into<OracleRef<OracleBase>>,
-        OracleBase: Currency,
+        Self: Into<OracleRef<QuoteC>>,
+        QuoteC: Currency,
     {
-        fn price_of<C, G>(&self) -> PriceOracleResult<Price<C, OracleBase>>
+        fn price_of<C, G>(&self) -> PriceOracleResult<Price<C, QuoteC>>
         where
             C: Currency,
         {
@@ -274,9 +274,9 @@ mod tests {
         }
     }
 
-    impl<QuoteC> AsRef<Self> for OracleLocalStub<QuoteC> {
-        fn as_ref(&self) -> &Self {
-            self
+    impl<QuoteC> AsRef<OracleRef<QuoteC>> for OracleLocalStub<QuoteC> {
+        fn as_ref(&self) -> &OracleRef<QuoteC> {
+            &self.ref_
         }
     }
 
