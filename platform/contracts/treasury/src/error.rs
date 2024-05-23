@@ -1,8 +1,6 @@
-use std::convert::Infallible;
-
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, PartialEq, Debug)]
 pub enum ContractError {
@@ -14,6 +12,9 @@ pub enum ContractError {
 
     #[error("[Dispatcher] Failed to validate the Registry address! Cause: {0}")]
     ValidateRegistryAddr(StdError),
+
+    #[error("[Dispatcher] Failed to validate the Timealarms address! Cause: {0}")]
+    ValidateTimeAlarmsAddr(platform::error::Error),
 
     #[error("[Dispatcher] Failed to update the storage! Cause: {0}")]
     UpdateStorage(StdError),
@@ -28,7 +29,7 @@ pub enum ContractError {
     QueryProtocol(StdError),
 
     #[error("[Dispatcher] {0}")]
-    Platform(#[from] platform::error::Error),
+    SerializeResponse(#[from] platform::error::Error),
 
     #[error("[Dispatcher] Failed to load the configuration! Cause: {0}")]
     LoadConfig(StdError),
@@ -51,29 +52,14 @@ pub enum ContractError {
     #[error("[Dispatcher] Failed to convert rewards to NLS! Cause: {0}")]
     ConvertRewardsToNLS(oracle_platform::error::Error),
 
-    #[error("[Dispatcher] {0}")]
-    Finance(#[from] finance::error::Error),
+    #[error("[Dispatcher] Failed to setup a time alarms stub! Cause: {0}")]
+    SetupTimeAlarmStub(timealarms::error::ContractError),
 
-    #[error("[Dispatcher] {0}")]
-    TimeAlarm(#[from] timealarms::error::ContractError),
-
-    #[error("[Dispatcher] [Infallible] {0}")]
-    FromInfallible(#[from] Infallible),
+    #[error("[Dispatcher] Failed to setup a time alarm! Cause: {0}")]
+    SetupTimeAlarm(timealarms::error::ContractError),
 
     #[error("[Dispatcher] {0}")]
     Unauthorized(#[from] access_control::error::Error),
-
-    #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
-    UnknownCurrency { symbol: String },
-
-    #[error("[Dispatcher] Invalid contract address {0}")]
-    InvalidContractAddress(Addr),
-
-    #[error("[Dispatcher] Invalid alarm notification address: {0:?}")]
-    InvalidAlarmAddress(Addr),
-
-    #[error("[Dispatcher] Alarm comming from unknown address: {0:?}")]
-    UnrecognisedAlarm(Addr),
 
     #[error("[Dispatcher] Invalid time configuration. Current reward distribution time is before the last distribution time")]
     InvalidTimeConfiguration {},

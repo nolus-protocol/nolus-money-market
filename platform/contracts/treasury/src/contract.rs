@@ -45,7 +45,8 @@ pub fn instantiate(
     deps.api
         .addr_validate(msg.protocols_registry.as_str())
         .map_err(ContractError::ValidateRegistryAddr)?;
-    platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
+    platform::contract::validate_addr(deps.querier, &msg.timealarms)
+        .map_err(ContractError::ValidateTimeAlarmsAddr)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
@@ -216,8 +217,11 @@ fn setup_alarm(
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Batch> {
     TimeAlarmsRef::new(timealarm, querier)
-        .map_err(Into::into)
-        .and_then(|stub| stub.setup_alarm(now + alarm_in).map_err(Into::into))
+        .map_err(ContractError::SetupTimeAlarmStub)
+        .and_then(|stub| {
+            stub.setup_alarm(now + alarm_in)
+                .map_err(ContractError::SetupTimeAlarm)
+        })
 }
 
 #[cfg(test)]
