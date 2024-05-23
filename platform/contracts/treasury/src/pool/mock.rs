@@ -65,7 +65,7 @@ impl Pool for MockPool {
             DistributeRewards::Pass => {
                 let mut msgs = Batch::default();
                 msgs.schedule_execute_wasm_no_reply_no_funds(Addr::unchecked("DEADCODE"), "msg1")
-                    .unwrap();
+                    .map_err(ContractError::SerializeResponse)?;
                 let events =
                     Emitter::of_type("test-distribution").emit_percent_amount("attr_apr", apr);
                 Ok(Response::messages_with_events(msgs, events))
