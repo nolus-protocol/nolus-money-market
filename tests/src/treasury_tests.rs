@@ -12,7 +12,7 @@ use treasury::msg::ConfigResponse;
 
 use crate::common::{
     cwcoin,
-    lpp::{self as lpp_mod, LppExecuteMsg, LppQueryMsg},
+    lpp::{LppExecuteMsg, LppQueryMsg},
     oracle as oracle_mod,
     protocols::Registry,
     test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
@@ -88,14 +88,7 @@ fn test_config() {
 fn new_test_case(registry: Registry) -> DispatcherTestCase {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
-            Some(
-                ContractWrapper::new(
-                    lpp::contract::execute,
-                    lpp::contract::instantiate,
-                    lpp_mod::mock_query,
-                )
-                .with_sudo(lpp::contract::sudo),
-            ),
+            None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
@@ -121,12 +114,13 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     const REWARD: Coin<NlsPlatform> = Coin::new(37);
     let lender = Addr::unchecked(USER);
+    let lender_deposit = [cwcoin::<Lpn, _>(500)];
 
     let mut test_case = new_test_case(registry);
 
     let treasury = test_case.address_book.treasury().clone();
     test_case
-        .send_funds_from_admin(lender.clone(), &[cwcoin::<Lpn, _>(500)])
+        .send_funds_from_admin(lender.clone(), &lender_deposit)
         .send_funds_from_admin(treasury, &[cwcoin::<NlsPlatform, _>(123)]);
 
     assert!(lpp_balance(&test_case).is_zero());
@@ -139,7 +133,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
             lender.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Deposit {},
-            &[cwcoin::<Lpn, _>(500)],
+            &lender_deposit,
         )
         .unwrap()
         .ignore_response()

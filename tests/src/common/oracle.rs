@@ -83,7 +83,8 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
             prices: vec![price.into()],
         })
         .map_err(ContractError::ConvertToBinary),
-        QueryMsg::StablePrice { currency: _ } => {
+        QueryMsg::StablePrice { currency } => {
+            assert_eq!(NativeC::TICKER, currency);
             to_json_binary(&PriceDTO::<PaymentGroup, Lpns>::from(price))
                 .map_err(ContractError::ConvertToBinary)
         }

@@ -7,7 +7,6 @@ use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-use lpp_platform::CoinStable;
 use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
@@ -86,19 +85,6 @@ impl Instantiator {
         .unwrap()
         .unwrap_response()
     }
-}
-
-pub(crate) fn mock_query(
-    deps: Deps<'_>,
-    env: Env,
-    msg: QueryMsg<Lpns>,
-) -> Result<Binary, ContractError> {
-    let res = match msg {
-        QueryMsg::LppBalance() => to_json_binary(&CoinStable::new(1000000000)),
-        _ => Ok(lpp::contract::query(deps, env, msg)?),
-    }?;
-
-    Ok(res)
 }
 
 pub(crate) fn mock_quote_query(
