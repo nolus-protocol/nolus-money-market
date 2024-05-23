@@ -54,7 +54,7 @@ impl Lpp for DummyLpp {
     }
 
     #[allow(clippy::unwrap_in_result)]
-    fn ditribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
+    fn distribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
         assert_eq!(self.expected_reward, Some(reward));
 
         if self.failing_reward {

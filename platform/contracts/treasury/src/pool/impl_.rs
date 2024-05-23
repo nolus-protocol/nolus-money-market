@@ -50,7 +50,7 @@ where
             .map_err(ContractError::ConvertRewardsToNLS)
             .and_then(|rewards| {
                 self.lpp
-                    .ditribute(rewards)
+                    .distribute(rewards)
                     .map_err(ContractError::DistributeLppReward)
             })
     }
