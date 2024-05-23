@@ -7,7 +7,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group, GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers
+    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
+    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::schemars::{self, JsonSchema};
 
