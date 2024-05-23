@@ -32,8 +32,8 @@ impl Config {
         samples_number: u16,
         discount_factor: Percent,
     ) -> Self {
-        #[allow(clippy::unwrap_used)]
-        Self::new_private(min_feeders, sample_period, samples_number, discount_factor).unwrap()
+        Self::new_private(min_feeders, sample_period, samples_number, discount_factor)
+            .expect("reasonable input test data")
     }
 
     fn new_private(
@@ -149,13 +149,12 @@ mod unchecked {
         type Error = PriceFeedsError;
 
         fn try_from(dto: Config) -> Result<Self, Self::Error> {
-            let res = Self::new_private(
+            Self::new_private(
                 dto.min_feeders,
                 Duration::from_secs(dto.sample_period_secs),
                 dto.samples_number,
                 dto.discount_factor,
-            )?;
-            Ok(res)
+            )
         }
     }
 

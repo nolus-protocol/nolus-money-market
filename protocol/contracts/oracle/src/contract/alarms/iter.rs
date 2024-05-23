@@ -66,13 +66,11 @@ where
             .transpose()
     }
 
-    #[allow(clippy::unwrap_in_result)]
     fn next_alarm(&mut self) -> Option<ContractResult<Addr>> {
-        debug_assert!(self.alarm_iter.is_some());
-        self.alarm_iter
-            .as_mut()
-            .expect("calling 'next_alarm' on Some price alarms")
-            .next()
+        match self.alarm_iter.as_mut() {
+            None => unimplemented!("calling 'next_alarm' on Some price alarms"),
+            Some(iter) => iter.next(),
+        }
     }
 }
 

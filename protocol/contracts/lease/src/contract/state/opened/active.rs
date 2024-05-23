@@ -1,3 +1,4 @@
+use currency::never;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
@@ -45,7 +46,6 @@ impl Active {
         event::emit_lease_opened(env, &self.lease.lease, loan, downpayment)
     }
 
-    #[allow(clippy::unwrap_in_result)]
     fn try_repay(
         self,
         querier: QuerierWrapper<'_>,
@@ -56,8 +56,7 @@ impl Active {
             bank::may_received::<LpnCurrencies, _>(&info.funds, IntoDTO::<LpnCurrencies>::new());
         match may_lpn_payment {
             Some(lpn_payment) => {
-                // TODO use Never and safe_unwrap instead
-                let payment = lpn_payment.expect("Expected IntoDTO to pass");
+                let payment = never::safe_unwrap(lpn_payment);
                 debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().lpn());
                 repay::repay(self.lease, payment, env, querier)
             }

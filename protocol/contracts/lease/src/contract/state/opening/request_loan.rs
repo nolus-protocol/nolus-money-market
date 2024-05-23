@@ -30,7 +30,6 @@ pub(crate) struct RequestLoan {
 }
 
 impl RequestLoan {
-    #[allow(clippy::unwrap_in_result)]
     pub fn new(
         querier: QuerierWrapper<'_>,
         info: MessageInfo,
@@ -38,8 +37,7 @@ impl RequestLoan {
     ) -> ContractResult<(Batch, Self)> {
         let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
 
-        let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)
-            .expect("Market Price Oracle is not deployed, or wrong address is passed!");
+        let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)?;
 
         let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), querier)?;
 
