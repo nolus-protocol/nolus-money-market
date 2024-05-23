@@ -32,7 +32,7 @@ where
 
 pub trait Oracle<QuoteC>
 where
-    Self: Into<OracleRef<QuoteC>> + AsRef<Self>,
+    Self: Into<OracleRef<QuoteC>> + AsRef<OracleRef<QuoteC>>,
     QuoteC: ?Sized,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>

@@ -1,65 +1,58 @@
-use currency::NlsPlatform;
-use finance::{coin::Coin, duration::Duration, percent::Percent};
-use lpp_platform::{CoinStable, Lpp as LppTrait, Stable};
-use oracle_platform::Oracle as OracleTrait;
+use finance::{duration::Duration, percent::Percent};
+use lpp_platform::CoinStable;
+use platform::message::Response as MessageResponse;
 
-use crate::{
-    result::ContractResult,
-    state::{reward_scale::RewardScale, rewards},
-};
+use crate::{pool::Pool as PoolTrait, state::reward_scale::RewardScale, ContractError};
 
+// TODO rename to Rewards mand move out of 'cmd'
 #[cfg_attr(test, derive(Debug))]
-pub struct RewardCalculator {
+pub struct RewardCalculator<Pool> {
+    pools: Vec<Pool>,
     apr: Percent,
-    tvls: Vec<CoinStable>,
 }
 
-impl RewardCalculator {
-    pub fn new<'lpp, Lpp, Lpps>(lpps: Lpps, scale: &RewardScale) -> ContractResult<Self>
+impl<Pool> RewardCalculator<Pool>
+where
+    Pool: PoolTrait,
+{
+    pub fn new<Pools>(pools: Pools, scale: &RewardScale) -> Self
     where
-        Lpp: LppTrait + 'lpp,
-        Lpps: IntoIterator,
-        Lpps::Item: AsRef<Lpp>,
-        Lpps::IntoIter: 'lpp,
+        Pools: IntoIterator<Item = Pool>,
     {
-        let tvls: ContractResult<Vec<CoinStable>> = lpps
+        let mut tvls_total = CoinStable::default();
+        let pools = pools
             .into_iter()
-            .map(|lpp| lpp.as_ref().balance())
-            .map(|may_resp| may_resp.map_err(Into::into))
+            .inspect(|pool| tvls_total += pool.balance())
             .collect();
-        tvls.map(|tvls| Self {
-            apr: scale.get_apr(tvls.iter().sum()),
-            tvls,
-        })
+        Self {
+            pools,
+            apr: scale.get_apr(tvls_total),
+        }
     }
 
     pub fn apr(&self) -> Percent {
         self.apr
     }
 
-    pub fn calculate<'o, Oracle, Oracles>(
-        self,
-        period: Duration,
-        oracles: Oracles,
-    ) -> impl Iterator<Item = ContractResult<Coin<NlsPlatform>>> + 'o
-    where
-        Oracle: OracleTrait<Stable> + 'o,
-        Oracles: IntoIterator,
-        Oracles::Item: AsRef<Oracle>,
-        Oracles::IntoIter: 'o,
-    {
-        rewards::calculate(self.apr(), period, self.tvls.into_iter().zip(oracles))
+    pub fn distribute(self, period: Duration) -> Result<MessageResponse, ContractError> {
+        self.pools
+            .into_iter()
+            .map(|pool| pool.distribute_rewards(self.apr, period))
+            // use a short-circuiting fn here, avoiding swallowing of errors
+            .try_fold(MessageResponse::default(), |resp1, resp2| {
+                resp2.map(|lpp_resp2| resp1.merge_with(lpp_resp2))
+            })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use currency::{NativePlatform, NlsPlatform};
-    use finance::{duration::Duration, fraction::Fraction, percent::Percent, price};
-    use lpp_platform::{test::DummyLpp, CoinStable};
-    use oracle_platform::{test::DummyOracle, Oracle};
+    use finance::{duration::Duration, percent::Percent};
+    use lpp_platform::CoinStable;
+    use platform::response;
 
     use crate::{
+        pool::mock::MockPool,
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
         ContractError,
     };
@@ -82,13 +75,19 @@ mod tests {
         let lpp0_tvl: CoinStable = TotalValueLocked::new(23).as_coin(); //23k USD
         {
             let lpp1_tvl = tvl_total.as_coin() - lpp0_tvl - 1.into();
-            let lpps = vec![DummyLpp::with_tvl(lpp0_tvl), DummyLpp::with_tvl(lpp1_tvl)];
-            assert_eq!(RewardCalculator::new(lpps, &scale).unwrap().apr(), bar0_apr);
+            let lpps = vec![
+                MockPool::reward_none(lpp0_tvl),
+                MockPool::reward_none(lpp1_tvl),
+            ];
+            assert_eq!(RewardCalculator::new(lpps, &scale).apr(), bar0_apr);
         }
         {
             let lpp1_tvl = tvl_total.as_coin() - lpp0_tvl;
-            let lpps = vec![DummyLpp::with_tvl(lpp0_tvl), DummyLpp::with_tvl(lpp1_tvl)];
-            assert_eq!(RewardCalculator::new(lpps, &scale).unwrap().apr(), bar1_apr);
+            let lpps = vec![
+                MockPool::reward_none(lpp0_tvl),
+                MockPool::reward_none(lpp1_tvl),
+            ];
+            assert_eq!(RewardCalculator::new(lpps, &scale).apr(), bar1_apr);
         }
     }
 
@@ -96,45 +95,40 @@ mod tests {
     fn calc_ok() {
         let bar0_apr = Percent::from_percent(20);
         let scale = RewardScale::new(bar0_apr);
+        let period = Duration::YEAR;
 
         let lpp0_tvl: CoinStable = 23_000.into();
         let lpp1_tvl = 3_000.into();
-        let lpps = vec![DummyLpp::with_tvl(lpp0_tvl), DummyLpp::with_tvl(lpp1_tvl)];
-        let calc = RewardCalculator::new(lpps, &scale).unwrap();
+        let lpps = vec![
+            MockPool::reward_ok(lpp0_tvl, bar0_apr, period),
+            MockPool::reward_ok(lpp1_tvl, bar0_apr, period),
+        ];
+        let calc = RewardCalculator::new(lpps, &scale);
         assert_eq!(calc.apr(), bar0_apr);
 
-        let oracles = vec![DummyOracle::with_price(2), DummyOracle::with_price(3)];
-        let mut rewards = calc.calculate(Duration::YEAR, &oracles);
-        assert_eq!(
-            Some(Ok(price::total(
-                bar0_apr.of(lpp0_tvl),
-                oracles[0]
-                    .price_of::<NlsPlatform, NativePlatform>()
-                    .unwrap()
-                    .inv()
-            ))),
-            rewards.next()
-        );
-        assert_eq!(
-            Some(Ok(price::total(
-                bar0_apr.of(lpp1_tvl),
-                oracles[1]
-                    .price_of::<NlsPlatform, NativePlatform>()
-                    .unwrap()
-                    .inv()
-            ))),
-            rewards.next()
-        );
-        assert_eq!(None, rewards.next());
+        let resp = response::response_only_messages(calc.distribute(period).unwrap());
+        assert_eq!(resp.messages.len(), 2);
+        assert_eq!(resp.events.len(), 2);
     }
 
     #[test]
-    fn calc_err() {
-        let scale = RewardScale::new(Percent::from_percent(5));
-        let lpps = vec![DummyLpp::with_tvl(1_234_567.into()), DummyLpp::failing()];
+    fn distribute_err() {
+        let bar0_apr = Percent::from_percent(5);
+        let scale = RewardScale::new(bar0_apr);
+        let period = Duration::from_days(134);
+
+        let lpp0_tvl: CoinStable = 23_000.into();
+        let lpp1_tvl = 3_000.into();
+        let lpps = vec![
+            MockPool::reward_fail(lpp0_tvl, bar0_apr, period),
+            MockPool::reward_none(lpp1_tvl),
+        ];
+
+        let calc = RewardCalculator::new(lpps, &scale);
+        assert_eq!(calc.apr(), bar0_apr);
         assert!(matches!(
-            RewardCalculator::new(lpps, &scale),
-            Err(ContractError::LppPlatformError(_))
+            calc.distribute(period),
+            Err(ContractError::DistributeLppReward(_))
         ))
     }
 }

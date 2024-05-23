@@ -114,12 +114,11 @@ where
     }
 }
 
-impl<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>
-    AsRef<OracleStub<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>>
-    for OracleStub<'a, OracleBase, OracleBaseG, PriceReq, PriceConverterT>
+impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC>>
+    for OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
 {
-    fn as_ref(&self) -> &Self {
-        self
+    fn as_ref(&self) -> &OracleRef<QuoteC> {
+        &self.oracle_ref
     }
 }
 

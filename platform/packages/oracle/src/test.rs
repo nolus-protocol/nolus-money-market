@@ -13,21 +13,27 @@ use crate::{
     OracleRef,
 };
 
-pub struct DummyOracle(Option<Amount>);
-impl DummyOracle {
+pub struct DummyOracle<QuoteC>(Option<Amount>, OracleRef<QuoteC>);
+
+impl<QuoteC> DummyOracle<QuoteC> {
     pub fn with_price(c_in_base: Amount) -> Self {
-        Self(Some(c_in_base))
+        Self(Some(c_in_base), Self::ref_())
     }
 
     pub fn failing() -> Self {
-        Self(None)
+        Self(None, Self::ref_())
+    }
+
+    fn ref_() -> OracleRef<QuoteC> {
+        OracleRef::unchecked(Addr::unchecked("ADDR"))
     }
 }
-impl<BaseC> Oracle<BaseC> for DummyOracle
+
+impl<QuoteC> Oracle<QuoteC> for DummyOracle<QuoteC>
 where
-    BaseC: Currency,
+    QuoteC: Currency,
 {
-    fn price_of<C, G>(&self) -> Result<Price<C, BaseC>>
+    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
         C: Currency,
         G: Group,
@@ -36,7 +42,7 @@ where
             .map(|price| price::total_of(1.into()).is(price.into()))
             .ok_or_else(|| Error::FailedToFetchPrice {
                 from: C::TICKER.into(),
-                to: BaseC::TICKER.into(),
+                to: QuoteC::TICKER.into(),
                 error: StdError::GenericErr {
                     msg: "Test failing Oracle::price_of()".into(),
                 },
@@ -44,14 +50,14 @@ where
     }
 }
 
-impl<QuoteC> From<DummyOracle> for OracleRef<QuoteC> {
-    fn from(_value: DummyOracle) -> Self {
-        OracleRef::unchecked(Addr::unchecked("ADDR"))
+impl<QuoteC> From<DummyOracle<QuoteC>> for OracleRef<QuoteC> {
+    fn from(value: DummyOracle<QuoteC>) -> Self {
+        value.1
     }
 }
 
-impl AsRef<Self> for DummyOracle {
-    fn as_ref(&self) -> &Self {
-        self
+impl<QuoteC> AsRef<OracleRef<QuoteC>> for DummyOracle<QuoteC> {
+    fn as_ref(&self) -> &OracleRef<QuoteC> {
+        &self.1
     }
 }

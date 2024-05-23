@@ -49,14 +49,14 @@ impl Config {
         cadence_hours: CadenceHours,
     ) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |config| -> Result<Config, ContractError> {
+            .update(storage, |config| -> StdResult<Config> {
                 Ok(Self {
                     cadence_hours,
                     ..config
                 })
             })
             .map(|_| ())
-            .map_err(Into::into)
+            .map_err(ContractError::UpdateStorage)
     }
 
     pub fn update_tvl_to_apr(
@@ -64,13 +64,13 @@ impl Config {
         tvl_to_apr: RewardScale,
     ) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |config| -> Result<Config, ContractError> {
+            .update(storage, |config| -> StdResult<Config> {
                 Ok(Self {
                     tvl_to_apr,
                     ..config
                 })
             })
             .map(|_| ())
-            .map_err(Into::into)
+            .map_err(ContractError::UpdateStorage)
     }
 }

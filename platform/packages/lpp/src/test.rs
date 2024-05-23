@@ -13,19 +13,40 @@ use crate::{
     CoinStable, Lpp,
 };
 
-pub struct DummyLpp(Option<CoinStable>);
+pub struct DummyLpp {
+    balance: Option<CoinStable>,
+    expected_reward: Option<Coin<NlsPlatform>>,
+    failing_reward: bool,
+}
+
 impl DummyLpp {
-    pub fn with_tvl(tvl: CoinStable) -> Self {
-        Self(Some(tvl))
+    pub fn with_balance(balance: CoinStable, reward: Coin<NlsPlatform>) -> Self {
+        Self {
+            balance: Some(balance),
+            expected_reward: Some(reward),
+            failing_reward: false,
+        }
     }
 
-    pub fn failing() -> Self {
-        Self(None)
+    pub fn failing_balance() -> Self {
+        Self {
+            balance: None,
+            expected_reward: None,
+            failing_reward: true,
+        }
+    }
+
+    pub fn failing_reward(balance: CoinStable, reward: Coin<NlsPlatform>) -> Self {
+        Self {
+            balance: Some(balance),
+            expected_reward: Some(reward),
+            failing_reward: true,
+        }
     }
 }
 impl Lpp for DummyLpp {
-    fn balance(&self) -> Result<CoinStable> {
-        self.0.ok_or_else(|| {
+    fn balance(&self, _oracle: Addr) -> Result<CoinStable> {
+        self.balance.ok_or_else(|| {
             Error::Std(StdError::GenericErr {
                 msg: "Test failing Lpp::balance()".into(),
             })
@@ -34,6 +55,14 @@ impl Lpp for DummyLpp {
 
     #[allow(clippy::unwrap_in_result)]
     fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
+        assert_eq!(self.expected_reward, Some(reward));
+
+        if self.failing_reward {
+            return Err(Error::Std(StdError::generic_err(
+                "DummyLpp::distribute_rewards error",
+            )));
+        }
+
         let mut msgs = Batch::default();
 
         #[allow(clippy::unwrap_used)]
@@ -43,11 +72,5 @@ impl Lpp for DummyLpp {
         let events = Emitter::of_type("eventX").emit_coin("reward", reward);
 
         Ok(MessageResponse::messages_with_events(msgs, events))
-    }
-}
-
-impl AsRef<Self> for DummyLpp {
-    fn as_ref(&self) -> &Self {
-        self
     }
 }

@@ -11,17 +11,19 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         entry_point, to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        StdResult, Storage, Timestamp,
+        Storage, Timestamp,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    cmd::{self, RewardCalculator},
+    cmd::RewardCalculator,
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    pool::{Pool, PoolImpl},
     result::ContractResult,
     state::{Config, DispatchLog},
+    ContractError,
 };
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -36,11 +38,13 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
+    versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(ContractError::InitVersion)?;
 
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
-    deps.api.addr_validate(msg.protocols_registry.as_str())?;
+    deps.api
+        .addr_validate(msg.protocols_registry.as_str())
+        .map_err(ContractError::ValidateRegistryAddr)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
 
     SingleUserAccess::new(
@@ -49,7 +53,9 @@ pub fn instantiate(
     )
     .grant_to(&msg.timealarms)?;
 
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr).store(deps.storage)?;
+    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
+        .store(deps.storage)
+        .map_err(ContractError::SaveConfig)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     setup_alarm(
@@ -67,8 +73,12 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
+    versioning::update_software(
+        deps.storage,
+        CONTRACT_VERSION,
+        ContractError::UpdateSoftware,
+    )
+    .and_then(response::response)
 }
 
 #[entry_point]
@@ -107,43 +117,59 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
-        QueryMsg::CalculateRewards {} => {
-            to_json_binary(&query_reward(deps.storage, deps.querier, &env)?.units())
+        QueryMsg::Config {} => {
+            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::Serialize)
         }
+        QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
+            .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
     }
-    .map_err(Into::into)
 }
 
-fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
-    Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
+fn try_load_config(storage: &dyn Storage) -> ContractResult<Config> {
+    Config::load(storage).map_err(ContractError::LoadConfig)
 }
 
-fn query_reward(
+fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
+    try_load_config(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
+}
+
+fn try_build_reward<'q>(
+    config: Config,
+    querier: QuerierWrapper<'q>,
+    env: &'q Env,
+) -> ContractResult<RewardCalculator<impl Pool + 'q>> {
+    protocols(config.protocols_registry, querier).and_then(|protocols| {
+        let pools: Result<Vec<_>, _> = protocols
+            .into_iter()
+            .map(|protocol| {
+                PoolImpl::new(
+                    lpp_platform::new_stub(protocol.contracts.lpp, querier, env),
+                    oracle_platform::new_unchecked_quote_currency_stub::<_, StableCurrencyGroup>(
+                        protocol.contracts.oracle,
+                        querier,
+                    ),
+                )
+            })
+            .collect();
+
+        pools.map(|pools| RewardCalculator::new(pools, &config.tvl_to_apr))
+    })
+}
+
+fn query_reward_apr(
     storage: &dyn Storage,
     querier: QuerierWrapper<'_>,
     env: &Env,
 ) -> ContractResult<Percent> {
-    let config: Config = Config::load(storage)?;
-
-    protocols(config.protocols_registry, querier).and_then(|protocols| {
-        let lpps = protocols.into_iter().map(|protocol| {
-            lpp_platform::new_stub(
-                protocol.contracts.lpp,
-                protocol.contracts.oracle,
-                querier,
-                env,
-            )
-        });
-
-        RewardCalculator::new(lpps, &config.tvl_to_apr).map(|calc| calc.apr())
-    })
+    try_load_config(storage)
+        .and_then(|config| try_build_reward(config, querier, env))
+        .map(|rewards| rewards.apr())
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult<MessageResponse> {
     let now = env.block.time;
 
-    let config = Config::load(deps.storage)?;
+    let config = try_load_config(deps.storage)?;
     let setup_alarm = setup_alarm(
         timealarm,
         &now,
@@ -153,50 +179,32 @@ fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult
 
     let last_dispatch = DispatchLog::last_dispatch(deps.storage);
     DispatchLog::update(deps.storage, env.block.time)?;
+    let rewards_span = Duration::between(&last_dispatch, &now);
 
-    protocols(config.protocols_registry, deps.querier).and_then(|protocols| {
-        let lpps = protocols.iter().map(|protocol| {
-            lpp_platform::new_stub(
-                protocol.contracts.lpp.clone(),
-                protocol.contracts.oracle.clone(),
-                deps.querier,
-                env,
-            )
-        });
-
-        let oracles = protocols.iter().map(|protocol| {
-            oracle_platform::new_unchecked_quote_currency_stub::<_, StableCurrencyGroup>(
-                protocol.contracts.oracle.clone(),
-                deps.querier,
-            )
-        });
-
-        cmd::dispatch(
-            Duration::between(&last_dispatch, &now),
-            &config.tvl_to_apr,
-            lpps,
-            oracles,
-        )
+    try_build_reward(config, deps.querier, env)
+        .and_then(|reward| reward.distribute(rewards_span))
         .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
-    })
 }
 
 fn protocols(
     protocols_registry: Addr,
     querier: QuerierWrapper<'_>,
-) -> ContractResult<Vec<ProtocolQueryResponse>> {
+) -> ContractResult<impl IntoIterator<Item = ProtocolQueryResponse>> {
     querier
         .query_wasm_smart(protocols_registry.clone(), &ProtocolsRegistry::Protocols {})
+        .map_err(ContractError::QueryProtocols)
         .and_then(|protocols: ProtocolsQueryResponse| {
             protocols
                 .into_iter()
                 .map(|protocol| {
-                    querier.query_wasm_smart(
-                        protocols_registry.clone(),
-                        &ProtocolsRegistry::Protocol(protocol),
-                    )
+                    querier
+                        .query_wasm_smart::<ProtocolQueryResponse>(
+                            protocols_registry.clone(),
+                            &ProtocolsRegistry::Protocol(protocol),
+                        )
+                        .map_err(ContractError::QueryProtocols)
                 })
-                .collect()
+                .collect::<ContractResult<Vec<_>>>()
         })
         .map_err(Into::into)
 }

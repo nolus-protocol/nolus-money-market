@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
+    cosmwasm_std::{StdResult, Storage, Timestamp},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -32,24 +32,31 @@ impl DispatchLog {
         storage: &mut dyn Storage,
         current_dispatch: Timestamp,
     ) -> Result<(), ContractError> {
-        match Self::STORAGE.may_load(storage)? {
-            None => Self::STORAGE.save(
-                storage,
-                &DispatchLog {
-                    last_dispatch: current_dispatch,
-                },
-            )?,
-            Some(l) => {
-                if current_dispatch < l.last_dispatch {
-                    return Err(ContractError::InvalidTimeConfiguration {});
+        Self::STORAGE
+            .may_load(storage)
+            .map_err(ContractError::LoadDispatchLog)
+            .and_then(|log| match log {
+                None => Self::STORAGE
+                    .save(
+                        storage,
+                        &DispatchLog {
+                            last_dispatch: current_dispatch,
+                        },
+                    )
+                    .map_err(ContractError::SaveDispatchLog),
+                Some(l) => {
+                    if current_dispatch < l.last_dispatch {
+                        Err(ContractError::InvalidTimeConfiguration {})
+                    } else {
+                        Self::STORAGE
+                            .update(storage, |mut log| -> StdResult<DispatchLog> {
+                                log.last_dispatch = current_dispatch;
+                                Ok(log)
+                            })
+                            .map_err(ContractError::SaveDispatchLog)
+                            .map(drop)
+                    }
                 }
-                Self::STORAGE.update(storage, |mut log| -> Result<DispatchLog, ContractError> {
-                    log.last_dispatch = current_dispatch;
-                    Ok(log)
-                })?;
-            }
-        }
-
-        Ok(())
+            })
     }
 }
