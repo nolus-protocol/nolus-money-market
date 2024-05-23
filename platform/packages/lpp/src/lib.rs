@@ -25,8 +25,7 @@ pub trait Lpp {
     /// Distributes a reward amount to an Lpp
     ///
     /// If `reward` == 0 no messages nor events are generated.
-    // TODO rename by stripping rewards from the name
-    fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse>;
+    fn ditribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse>;
 }
 
 pub fn new_stub<'a, 'q>(lpp: Addr, querier: QuerierWrapper<'q>, env: &'a Env) -> impl Lpp + 'a

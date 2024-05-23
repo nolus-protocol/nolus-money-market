@@ -36,7 +36,7 @@ impl<'a> Lpp for Stub<'a> {
             .map_err(Into::into)
     }
 
-    fn ditribute_rewards(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
+    fn ditribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
         if reward.is_zero() {
             return Ok(Default::default());
         }
@@ -77,9 +77,6 @@ mod test {
         let querier = QuerierWrapper::new(&mock_querier);
         let lpp_addr = Addr::unchecked("LPP");
         let stub = Stub::new(lpp_addr, querier, &env);
-        assert_eq!(
-            Ok(MessageResponse::default()),
-            stub.ditribute_rewards(0.into())
-        );
+        assert_eq!(Ok(MessageResponse::default()), stub.ditribute(0.into()));
     }
 }
