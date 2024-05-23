@@ -118,7 +118,6 @@ where
     G: Group,
     QuoteG: Group,
 {
-    #[allow(clippy::unwrap_in_result)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         struct Comparator<'a, G, QuoteG>
         where
@@ -144,8 +143,7 @@ where
                 Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
             }
         }
-        with_price::execute(self, Comparator { other })
-            .expect("The currencies of both prices should match")
+        with_price::execute(self, Comparator { other }).unwrap_or(None) //intentionally used the explicit form rather than the `unwrap_or_default`
     }
 }
 
@@ -231,19 +229,19 @@ mod test {
     }
 
     #[test]
-    #[should_panic = "The currencies of both prices should match"]
     fn test_cmp_currencies_mismatch() {
         let p1: PriceDTO<SuperGroup, SuperGroup> = Price::new(
             Coin::<SuperGroupTestC1>::new(20),
             Coin::<SuperGroupTestC2>::new(5000),
         )
         .into();
-        let p2 = Price::new(
+        let p2: PriceDTO<SuperGroup, SuperGroup> = Price::new(
             Coin::<SuperGroupTestC1>::new(20),
             Coin::<SubGroupTestC1>::new(5000),
         )
         .into();
-        let _ = p1 < p2;
+        assert_eq!(None, p1.partial_cmp(&p2));
+        assert_eq!(None, p2.partial_cmp(&p1));
     }
 }
 

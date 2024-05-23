@@ -156,7 +156,7 @@ pub mod tests {
         Alarms::new(storage, "alarms", "alarms_idx", "in_delivery")
     }
 
-    #[allow(clippy::needless_lifetimes)]
+    #[allow(clippy::needless_lifetimes)] // cannot rely on eliding lifetimes due to a known limitattion, look at the clippy lint description
     fn query_alarms<'r, S>(alarms: &Alarms<'r, S>, t_sec: TimeSeconds) -> Vec<Addr>
     where
         S: Deref<Target = dyn Storage + 'r>,

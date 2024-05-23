@@ -53,7 +53,6 @@ impl Lpp for DummyLpp {
         })
     }
 
-    #[allow(clippy::unwrap_in_result)]
     fn distribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
         assert_eq!(self.expected_reward, Some(reward));
 
@@ -65,9 +64,8 @@ impl Lpp for DummyLpp {
 
         let mut msgs = Batch::default();
 
-        #[allow(clippy::unwrap_used)]
         msgs.schedule_execute_wasm_no_reply(Addr::unchecked("Dummy_Lpp"), "message", Some(reward))
-            .unwrap();
+            .map_err(platform::error::Error::from)?;
 
         let events = Emitter::of_type("eventX").emit_coin("reward", reward);
 
