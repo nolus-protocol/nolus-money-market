@@ -97,7 +97,7 @@ fn protocols_repo_query(
                 contracts: ProtocolContractAddresses {
                     leaser: addr("DEADCODE"),
                     lpp: addr("contract0"),
-                    oracle: addr("contract1"),
+                    oracle: addr("contract2"),
                     profit: addr("DEADCODE"),
                     reserve: addr("DEADCODE"),
                 },

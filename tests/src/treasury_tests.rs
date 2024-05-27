@@ -3,6 +3,7 @@ use currency::{Currency, NlsPlatform};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
+    price,
 };
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
@@ -94,6 +95,7 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
             ADDON_OPTIMAL_INTEREST_RATE,
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
+        .init_protocols_registry(registry)
         .init_oracle(Some(
             ContractWrapper::new(
                 oracle::contract::execute,
@@ -103,7 +105,6 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),
         ))
-        .init_protocols_registry(registry)
         .init_time_alarms()
         .init_treasury()
         .into_generic();
@@ -112,11 +113,15 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
 }
 
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
-    const REWARD: Coin<NlsPlatform> = Coin::new(37);
+    const REWARD: Coin<NlsPlatform> = Coin::new(7);
     let lender = Addr::unchecked(USER);
     let lender_deposit = [cwcoin::<Lpn, _>(500)];
 
     let mut test_case = new_test_case(registry);
+    let feeder1 = Addr::unchecked("feeder1");
+    oracle_mod::add_feeder(&mut test_case, &feeder1);
+    let price = price::total_of(Coin::<NativeC>::new(23456789)).is(Coin::<StableC>::new(100000000));
+    oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
 
     let treasury = test_case.address_book.treasury().clone();
     test_case

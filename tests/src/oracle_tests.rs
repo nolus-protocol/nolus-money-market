@@ -9,7 +9,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     percent::Percent,
-    price::{self, dto::PriceDTO},
+    price::{self, dto::PriceDTO, Price},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
@@ -23,8 +23,8 @@ use platform::{batch::Batch, coin_legacy, contract::Code};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
-        self, coin, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo,
-        Storage, Timestamp,
+        self, coin, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo, Storage,
+        Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
@@ -508,26 +508,10 @@ fn test_zero_price_dto() {
     oracle_mod::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
-    let price: PriceDTO<PaymentGroup, PaymentGroup> = cosmwasm_std::from_json(
-        r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
-    )
-    .unwrap();
+    let price: Price<LeaseC2, StableC> =
+        cosmwasm_std::from_json(r#"{"amount":{"amount":0},"amount_quote":{"amount":1}"#).unwrap();
 
-    let response: AppResponse = test_case
-        .app
-        .execute_raw(
-            feeder1,
-            wasm_execute(
-                test_case.address_book.oracle().clone(),
-                &ExecuteMsg::FeedPrices {
-                    prices: vec![price],
-                },
-                vec![],
-            )
-            .unwrap(),
-        )
-        .unwrap()
-        .unwrap_response();
+    let response: AppResponse = oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
     assert_eq!(response.data, None);
     let no_events: &[Event; 0] = &[];
     assert_eq!(&response.events, no_events);

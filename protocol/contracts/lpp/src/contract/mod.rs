@@ -6,7 +6,8 @@ use oracle_platform::OracleRef;
 use serde::Serialize;
 
 use access_control::SingleUserAccess;
-use currencies::{Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup};
+//TODO switch the definition of StableCurrency to the one provided from currencies
+use currencies::{Lpn as LpnCurrency, Lpn as StableCurrency, Lpns as LpnCurrencies, PaymentGroup};
 
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{
@@ -199,12 +200,11 @@ where
     cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
 }
 
-// TODO replace the result LpnCurrency with StableCurrency once defined
 fn to_stable(
     oracle: OracleRef<LpnCurrency>,
     total: Coin<LpnCurrency>,
     querier: QuerierWrapper<'_>,
-) -> Result<Coin<LpnCurrency>> {
-    convert::from_quote::<_, LpnCurrencies, LpnCurrency, PaymentGroup>(oracle, total, querier)
+) -> Result<Coin<StableCurrency>> {
+    convert::from_quote::<_, LpnCurrencies, StableCurrency, PaymentGroup>(oracle, total, querier)
         .map_err(ContractError::ConvertFromQuote)
 }

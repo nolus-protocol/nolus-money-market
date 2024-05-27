@@ -1,13 +1,10 @@
-use currencies::{
-    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC},
-    Lpns, PaymentGroup,
-};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, StableC};
 use currency::Currency;
 use finance::{
     coin::Coin,
     duration::Duration,
     percent::Percent,
-    price::{self, dto::PriceDTO, Price},
+    price::{self, Price},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
@@ -83,11 +80,6 @@ pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Bina
             prices: vec![price.into()],
         })
         .map_err(ContractError::ConvertToBinary),
-        QueryMsg::StablePrice { currency } => {
-            assert_eq!(NativeC::TICKER, currency);
-            to_json_binary(&PriceDTO::<PaymentGroup, Lpns>::from(price))
-                .map_err(ContractError::ConvertToBinary)
-        }
         _ => query(deps, env, msg),
     }
 }
@@ -147,7 +139,7 @@ pub(crate) fn feed_price_pair<
         Addr,
         TimeAlarms,
     >,
-    addr: Addr,
+    sender: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
 where
@@ -159,7 +151,7 @@ where
     test_case
         .app
         .execute_raw(
-            addr,
+            sender,
             wasm_execute(
                 oracle,
                 &ExecuteMsg::FeedPrices {

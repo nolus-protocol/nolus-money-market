@@ -1,7 +1,14 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
-use currency::{Currency, Group, SymbolOwned};
-use finance::price::{base::BasePrice, dto::PriceDTO};
+use currency::{Currency, Group, SymbolOwned, SymbolSlice};
+use finance::price::{
+    base::BasePrice,
+    dto::{with_quote, PriceDTO, WithQuote},
+    Price,
+};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -9,7 +16,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
+    api::{AlarmsStatusResponse, BaseCurrency, Config, ExecuteAlarmMsg, StableCurrency},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
     error::ContractError,
     result::ContractResult,
@@ -88,10 +95,55 @@ where
     pub(super) fn try_query_base_price(
         &self,
         at: Timestamp,
-        currency: &SymbolOwned,
+        currency: &SymbolSlice,
     ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
         self.feeds
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
+    }
+
+    pub(super) fn try_query_stable_price(
+        &self,
+        at: Timestamp,
+        currency: &SymbolOwned,
+    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
+        type StableBasePrice = Price<StableCurrency, BaseCurrency>;
+
+        struct StablePriceCalc<G> {
+            stable_to_base_price: StableBasePrice,
+            _group: PhantomData<G>,
+        }
+        impl<G> WithQuote<BaseCurrency> for StablePriceCalc<G>
+        where
+            G: Group,
+        {
+            type Output = PriceDTO<G, G>;
+
+            type Error = ContractError;
+
+            fn exec<BaseC>(
+                self,
+                base_price: Price<BaseC, BaseCurrency>,
+            ) -> Result<Self::Output, Self::Error>
+            where
+                BaseC: Currency,
+            {
+                Ok((base_price * self.stable_to_base_price.inv()).into())
+            }
+        }
+        self.try_query_base_price(at, StableCurrency::TICKER)
+            .and_then(|stable_price| stable_price.try_into().map_err(Into::into))
+            .and_then(|stable_price: StableBasePrice| {
+                self.try_query_base_price(at, currency)
+                    .and_then(|ref base_price| {
+                        with_quote::execute(
+                            base_price,
+                            StablePriceCalc {
+                                stable_to_base_price: stable_price,
+                                _group: PhantomData,
+                            },
+                        )
+                    })
+            })
     }
 
     fn calc_all_prices(
