@@ -38,12 +38,15 @@ serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 
 # CosmWasm
+# we cannot jump to version ^2 since neutron-sdk depends on ^1 and the compilation fails
+# once the issue with neutron gets resolved we may upgrado to 2.x although the layer 1's wasmvm is v1.5
+# the contracts v2.0 is compatible
 cosmwasm-std = { version = "1.5", default-features = false, features = [
     "cosmwasm_1_2",
 ] }
 cosmwasm-schema = "1.5"
 cw-storage-plus = "1.2"
-cw-multi-test = "0.20"
+cw-multi-test = "1"
 
 # Cosmos-sdk
 cosmos-sdk-proto = { version = "0.20", default-features = false }

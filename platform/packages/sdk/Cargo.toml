@@ -20,13 +20,12 @@ testing = [
     "dep:anyhow",
     "dep:cosmwasm-schema",
     "dep:cw-multi-test",
-    "cw-multi-test/cosmwasm_1_2",
     "dep:data-encoding",
     "dep:serde",
     "dep:thiserror",
     "cosmos_ibc",
 ]
-cosmos_ibc = ["dep:cosmos-sdk-proto", "cosmos", "cosmwasm-std/ibc3", "cosmos-sdk-proto/cosmwasm"]
+cosmos_ibc = ["dep:cosmos-sdk-proto", "cosmos", "cosmos-sdk-proto/cosmwasm"]
 cosmos = []
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 
