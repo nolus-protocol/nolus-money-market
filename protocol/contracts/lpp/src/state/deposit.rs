@@ -83,7 +83,7 @@ impl Deposit {
         globals.balance_nlpn = globals
             .balance_nlpn
             .checked_add(deposited_nlpn)
-            .ok_or(ContractError::OverflowError)?;
+            .ok_or(ContractError::OverflowError("Balance overflow".to_string()))?;
 
         Self::GLOBALS.save(storage, &globals)?;
 

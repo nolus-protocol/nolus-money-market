@@ -81,14 +81,24 @@ where
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
+        let updated_total_principal_due =
+            self.total_principal_due
+                .checked_add(amount)
+                .ok_or(ContractError::OverflowError(
+                    "Total principal due overflow".to_string(),
+                ))?;
+
         // TODO: get rid of fully qualified syntax
         self.annual_interest_rate = Rational::new(
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                + loan_interest_rate.of(amount),
-            self.total_principal_due + amount,
+                .checked_add(loan_interest_rate.of(amount))
+                .ok_or(ContractError::OverflowError(
+                    "Annual interest rate calculation overflow".to_string(),
+                ))?,
+            updated_total_principal_due,
         );
 
-        self.total_principal_due += amount;
+        self.total_principal_due = updated_total_principal_due;
 
         self.last_update_time = ctime;
 
