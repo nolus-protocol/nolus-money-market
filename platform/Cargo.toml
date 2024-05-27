@@ -49,6 +49,8 @@ cw-storage-plus = "1.2"
 cw-multi-test = "1"
 
 # Cosmos-sdk
+# again neutron-sdk is stuck on v0.20 and if we want to update to v0.21 we would get two versions in the build tree that might not be ideal
+# since we do not need to update immediatelly we won't do it right now
 cosmos-sdk-proto = { version = "0.20", default-features = false }
 
 # Other
