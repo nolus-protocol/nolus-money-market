@@ -38,7 +38,7 @@ serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 
 # CosmWasm
-# we cannot jump to version ^2 since neutron-sdk depends on ^1 and the compilation fails
+# we cannot jump to version ^2 since neutron-sdk depends on ^1 and the compilation fails due to not satisfying NeutronMsg: cosmwasm_sdk::CustomMsg
 # once the issue with neutron gets resolved we may upgrado to 2.x although the layer 1's wasmvm is v1.5
 # the contracts v2.0 is compatible
 cosmwasm-std = { version = "1.5", default-features = false, features = [
@@ -53,7 +53,7 @@ cosmos-sdk-proto = { version = "0.20", default-features = false }
 
 # Other
 prost = { version = "0.12", default-features = false }
-neutron-sdk = { version = "0.8", default-features = false }
+neutron-sdk = { version = "0.10", default-features = false }
 
 # Testing
 serde_test = "1"

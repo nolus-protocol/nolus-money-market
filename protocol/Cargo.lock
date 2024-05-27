@@ -804,9 +804,9 @@ dependencies = [
 
 [[package]]
 name = "neutron-sdk"
-version = "0.8.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f60e477bd71007d9ff78ae020ec1c6b3b47798578af6151429434d86472efc"
+checksum = "26fb513aae0c82b3185228e96664d8312e79c3aa763f6ebdc70cf4b8d513d533"
 dependencies = [
  "bech32 0.9.1",
  "cosmos-sdk-proto",
@@ -818,6 +818,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
+ "serde_json",
  "speedate",
  "tendermint-proto",
  "thiserror",
