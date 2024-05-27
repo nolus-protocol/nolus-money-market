@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
-    StakeKeeper, StargateFailingModule, WasmKeeper,
+    StakeKeeper, StargateFailing, WasmKeeper,
 };
 pub use cw_multi_test::{ContractWrapper as CwContractWrapper, Executor as CwExecutor};
 
@@ -28,7 +28,7 @@ pub type CwAppBuilder<Exec = InterChainMsg, Query = Empty> = cw_multi_test::AppB
     DistributionKeeper,
     FailingModule<IbcMsg, IbcQuery, Empty>,
     FailingModule<GovMsg, Empty, Empty>,
-    StargateFailingModule,
+    StargateFailing,
 >;
 
 pub type CwContract = dyn cw_multi_test::Contract<InterChainMsg>;

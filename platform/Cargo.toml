@@ -46,7 +46,8 @@ cosmwasm-std = { version = "1.5", default-features = false, features = [
 ] }
 cosmwasm-schema = "1.5"
 cw-storage-plus = "1.2"
-cw-multi-test = "1"
+# TODO for some reason versions v1 fail at downcasting err.root_cause(). It seems that the TypeInfo differs.
+cw-multi-test = "0.20"
 
 # Cosmos-sdk
 # again neutron-sdk is stuck on v0.20 and if we want to update to v0.21 we would get two versions in the build tree that might not be ideal

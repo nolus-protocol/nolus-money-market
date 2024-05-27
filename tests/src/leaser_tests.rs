@@ -1,5 +1,5 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC};
-use currency::Currency;
+use currencies::{test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC}, LeaseGroup};
+use currency::{error::Error as CurrencyError, Currency, Tickers};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
@@ -98,17 +98,10 @@ fn open_lease_not_in_lease_currency() {
         )
         .unwrap_err();
 
-    // For some reason the downcasting does not work. That is due to different TypeId-s of LeaseError and the root
-    // cause stored into the err. Suppose that is a flaw of the cw-multi-test.
-    // dbg!(err.root_cause().downcast_ref::<LeaseError>());
-    // assert_eq!(
-    //     &LeaseError::OracleError(OracleError::Std(StdError::GenericErr { msg: "".into() })),
-    //     root_err
-    // );
-
-    assert!(err.root_cause().to_string().contains(
-        "Found a symbol 'NLS' pretending to be ticker of a currency pertaining to the lease group"
-    ));
+    assert_eq!(
+        Some(&CurrencyError::not_in_currency_group::<_, Tickers, LeaseGroup>(lease_currency)),
+        err.root_cause().downcast_ref::<CurrencyError>()
+    );
 }
 
 #[test]
