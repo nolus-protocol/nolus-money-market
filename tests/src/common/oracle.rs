@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, NativeC, LpnC};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LpnC, NativeC};
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -72,8 +72,7 @@ impl Instantiator {
 }
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price =
-        price::total_of(Coin::<NativeC>::new(123456789)).is(Coin::<LpnC>::new(100000000));
+    let price = price::total_of(Coin::<NativeC>::new(123456789)).is(Coin::<LpnC>::new(100000000));
 
     match msg {
         QueryMsg::Prices {} => to_json_binary(&PricesResponse {

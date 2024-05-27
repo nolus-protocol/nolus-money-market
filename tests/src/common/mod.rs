@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use ::lease::api::LpnCoinDTO;
-use currencies::test::{NativeC, LpnC};
+use currencies::test::{LpnC, NativeC};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},

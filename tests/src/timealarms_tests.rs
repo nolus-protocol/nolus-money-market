@@ -1,6 +1,6 @@
 use std::array::from_fn;
 
-use currencies::test::{NativeC, LpnC};
+use currencies::test::{LpnC, NativeC};
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;

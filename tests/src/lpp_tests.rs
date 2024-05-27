@@ -1,5 +1,5 @@
 use currencies::{
-    test::{LeaseC1, NativeC, LpnC},
+    test::{LeaseC1, LpnC, NativeC},
     Lpns,
 };
 use currency::Currency;

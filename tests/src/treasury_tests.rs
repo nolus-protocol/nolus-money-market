@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, LpnC};
+use currencies::test::{LpnC, NativeC};
 use currency::{Currency, NlsPlatform};
 use finance::{
     coin::{Amount, Coin},

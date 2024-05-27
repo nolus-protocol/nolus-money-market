@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, LpnC};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
