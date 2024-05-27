@@ -178,7 +178,7 @@ where
 #[cfg(test)]
 mod tests {
     use currencies::{
-        test::{LeaseC1, PaymentC1, PaymentC5, StableC},
+        test::{LeaseC1, LpnC, PaymentC1, PaymentC5},
         LeaseGroup, Lpns,
     };
     use currency::Currency;
@@ -198,7 +198,7 @@ mod tests {
         let msg = dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: StableC::TICKER }, (1, PaymentC5::TICKER)),
+            swap_tree!({ base: LpnC::TICKER }, (1, PaymentC5::TICKER)),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -228,7 +228,7 @@ mod tests {
             from: PaymentC5::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
-                target: StableC::TICKER.into(),
+                target: LpnC::TICKER.into(),
             },
         }];
 
@@ -240,7 +240,7 @@ mod tests {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
         let from = PaymentC1::TICKER;
-        let to = StableC::TICKER;
+        let to = LpnC::TICKER;
         let query_impl = QueryMsg::SwapPath {
             from: from.into(),
             to: to.into(),
@@ -263,7 +263,7 @@ mod tests {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
         let alarm = Alarm::<LeaseGroup, Lpns>::new(
-            price::total_of::<LeaseC1>(10.into()).is::<StableC>(1.into()),
+            price::total_of::<LeaseC1>(10.into()).is::<LpnC>(1.into()),
             Some(price::total_of(7.into()).is(1.into())),
         );
         let query_impl = ExecuteMsg::AddPriceAlarm {

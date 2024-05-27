@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, StableC};
+use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, LpnC};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -24,22 +24,22 @@ use crate::common::{
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
-type TheCurrency = StableC;
+type TheCurrency = LpnC;
 
 #[test]
 fn open_osmo_lease() {
-    open_lease_impl::<StableC, LeaseC1, StableC>(true);
+    open_lease_impl::<LpnC, LeaseC1, LpnC>(true);
 }
 
 #[test]
 fn open_cro_lease() {
-    open_lease_impl::<StableC, LeaseC2, StableC>(true);
+    open_lease_impl::<LpnC, LeaseC2, LpnC>(true);
 }
 
 #[test]
 #[should_panic(expected = "Unsupported currency")]
 fn open_lease_unsupported_currency_by_oracle() {
-    open_lease_impl::<StableC, LeaseC5, StableC>(false);
+    open_lease_impl::<LpnC, LeaseC5, LpnC>(false);
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn init_lpp_with_unknown_currency() {
 
 #[test]
 fn open_lease_not_in_lease_currency() {
-    type Lpn = StableC;
+    type Lpn = LpnC;
 
     let lease_currency = NativeC::TICKER;
 
@@ -113,7 +113,7 @@ fn open_lease_not_in_lease_currency() {
 
 #[test]
 fn open_multiple_loans() {
-    type Lpn = StableC;
+    type Lpn = LpnC;
     type LeaseCurrency = LeaseC1;
 
     let user_addr = Addr::unchecked(USER);
@@ -464,7 +464,7 @@ fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeA
 #[test]
 #[should_panic(expected = "Insufficient balance")]
 fn open_loans_lpp_fails() {
-    type Lpn = StableC;
+    type Lpn = LpnC;
     type LeaseCurrency = LeaseC1;
 
     let user_addr = Addr::unchecked(USER);
@@ -653,7 +653,7 @@ fn lease_addr(events: &[Event]) -> Addr {
 }
 
 fn open_loans_insufficient_amount(downpayment: Amount) {
-    type Lpn = StableC;
+    type Lpn = LpnC;
     type LeaseCurrency = LeaseC1;
 
     let user_addr = Addr::unchecked(USER);

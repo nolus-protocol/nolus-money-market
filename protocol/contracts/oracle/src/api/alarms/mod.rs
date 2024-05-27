@@ -106,7 +106,7 @@ mod test {
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
     use currencies::{
-        test::{PaymentC5, PaymentC6, PaymentC7, StableC},
+        test::{LpnC, PaymentC5, PaymentC6, PaymentC7},
         PaymentGroup,
     };
     use currency::{Currency, Group};
@@ -125,7 +125,7 @@ mod test {
 
     #[test]
     fn below_price_ok() {
-        let exp_price = price::total_of(Coin::<PaymentC6>::new(10)).is(Coin::<StableC>::new(10));
+        let exp_price = price::total_of(Coin::<PaymentC6>::new(10)).is(Coin::<LpnC>::new(10));
         let exp_res = Ok(Alarm::new(exp_price, None));
         assert_eq!(exp_res, from_below(exp_price));
     }
@@ -137,7 +137,7 @@ mod test {
                 alarm_half_coins_to_json(
                     AlarmPrice::Below,
                     Coin::<PaymentC5>::new(5),
-                    Coin::<StableC>::new(0),
+                    Coin::<LpnC>::new(0),
                 ),
                 None::<&str>,
             ),
@@ -148,7 +148,7 @@ mod test {
                 alarm_half_coins_to_json(
                     AlarmPrice::Below,
                     Coin::<PaymentC6>::new(0),
-                    Coin::<StableC>::new(5),
+                    Coin::<LpnC>::new(5),
                 ),
                 None::<&str>,
             ),
@@ -161,7 +161,7 @@ mod test {
         let below = alarm_half_coins_to_json(
             AlarmPrice::Below,
             Coin::<PaymentC5>::new(13),
-            Coin::<StableC>::new(15),
+            Coin::<LpnC>::new(15),
         );
         assert_err(
             from_both_str_impl(
@@ -169,7 +169,7 @@ mod test {
                 Some(&alarm_half_coins_to_json(
                     AlarmPrice::Above,
                     Coin::<PaymentC5>::new(5),
-                    Coin::<StableC>::new(0),
+                    Coin::<LpnC>::new(0),
                 )),
             ),
             "The quote amount should not be zero",
@@ -180,7 +180,7 @@ mod test {
                 Some(&alarm_half_coins_to_json(
                     AlarmPrice::Above,
                     Coin::<PaymentC6>::new(0),
-                    Coin::<StableC>::new(5),
+                    Coin::<LpnC>::new(5),
                 )),
             ),
             "The amount should not be zero",
@@ -189,8 +189,8 @@ mod test {
 
     #[test]
     fn currencies_mismatch() {
-        let below = price::total_of(Coin::<PaymentC7>::new(2)).is(Coin::<StableC>::new(10));
-        let above = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<StableC>::new(10));
+        let below = price::total_of(Coin::<PaymentC7>::new(2)).is(Coin::<LpnC>::new(10));
+        let above = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<LpnC>::new(10));
         let below_extra = price::total_of(Coin::<PaymentC7>::new(2)).is(Coin::<PaymentC6>::new(10));
 
         assert_err(from_both(below, above), "Mismatch of ");
@@ -210,8 +210,8 @@ mod test {
 
     #[test]
     fn below_not_less_than_above() {
-        let below = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<StableC>::new(10));
-        let above = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<StableC>::new(9));
+        let below = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<LpnC>::new(10));
+        let above = price::total_of(Coin::<PaymentC6>::new(2)).is(Coin::<LpnC>::new(9));
 
         assert_err(
             from_both(below, above),
@@ -221,7 +221,7 @@ mod test {
 
     #[test]
     fn below_price_eq_above() {
-        let price = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<StableC>::new(10));
+        let price = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<LpnC>::new(10));
         let alarm = Alarm::new(price, Some(price));
         let msg = "valid alarm with equal above_or_equal and below prices";
         alarm.invariant_held().expect(msg);
@@ -230,9 +230,9 @@ mod test {
 
     #[test]
     fn below_price_less_than_above() {
-        let price_below = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<StableC>::new(10));
+        let price_below = price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<LpnC>::new(10));
         let price_above_or_equal =
-            price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<StableC>::new(11));
+            price::total_of(Coin::<PaymentC7>::new(1)).is(Coin::<LpnC>::new(11));
         let alarm = Alarm::new(price_below, Some(price_above_or_equal));
         let msg = "valid alarm";
         alarm.invariant_held().expect(msg);

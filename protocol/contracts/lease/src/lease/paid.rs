@@ -60,7 +60,7 @@ where
 mod tests {
     use std::marker::PhantomData;
 
-    use currencies::test::{PaymentC3, StableC};
+    use currencies::test::{LpnC, PaymentC3};
     use currency::{Currency, Group};
     use finance::{
         coin::{Coin, WithCoin},
@@ -79,7 +79,7 @@ mod tests {
     use super::Lease;
 
     const CUSTOMER: &str = "customer";
-    type TestLpn = StableC;
+    type TestLpn = LpnC;
     type TestAsset = PaymentC3;
 
     pub struct MockBankView {

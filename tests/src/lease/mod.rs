@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, StableC};
+use currencies::test::{LeaseC1, LeaseC2, LpnC};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -27,7 +27,7 @@ mod liquidation;
 mod open;
 mod repay;
 
-type LpnCurrency = StableC;
+type LpnCurrency = LpnC;
 type LpnCoin = Coin<LpnCurrency>;
 
 type LeaseCurrency = LeaseC2;

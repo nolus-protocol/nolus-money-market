@@ -16,7 +16,7 @@ pub type PaymentC5 = LC3;
 pub type PaymentC6 = LC4;
 pub type PaymentC7 = LC5;
 
-pub type StableC = Lpn;
+pub type LpnC = Lpn;
 
 pub type LeaseC1 = LC1;
 pub type LeaseC2 = LC2;

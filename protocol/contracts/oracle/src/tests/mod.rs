@@ -1,5 +1,5 @@
 use currencies::{
-    test::{NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, StableC},
+    test::{LpnC, NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     PaymentGroup,
 };
 use currency::{Currency, Group};
@@ -31,7 +31,7 @@ mod oracle_tests;
 pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type PriceGroup = PaymentGroup;
-pub(crate) type TheCurrency = StableC;
+pub(crate) type TheCurrency = LpnC;
 pub(crate) type TheStableGroup = BaseCurrencies;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
@@ -100,7 +100,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                     }}
                 ]
             }}"#,
-            usdc = StableC::TICKER,
+            usdc = LpnC::TICKER,
             weth = PaymentC7::TICKER,
             atom = PaymentC3::TICKER,
             osmo = PaymentC5::TICKER,
@@ -120,12 +120,8 @@ pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
             PriceDTO::from(
                 price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
             ),
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<StableC>::new(12)),
-            ),
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<StableC>::new(120)),
-            ),
+            PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(12))),
+            PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<LpnC>::new(120))),
         ],
     }
 }

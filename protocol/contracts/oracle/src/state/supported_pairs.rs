@@ -230,16 +230,14 @@ impl AnyVisitor for CurrencyVisitor {
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::{
-        LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, NativeC, PaymentC4, StableC,
-    };
+    use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC, PaymentC4};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
     use super::*;
 
-    type TheCurrency = StableC;
+    type TheCurrency = LpnC;
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         cosmwasm_std::from_json(format!(
@@ -280,7 +278,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<StableC>::new::<StableC>(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::<LpnC>::new::<LpnC>(tree.into_tree()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -301,15 +299,15 @@ mod tests {
                 ]
             }}"#,
             lease1 = LeaseC1::TICKER,
-            stable = StableC::TICKER,
+            stable = LpnC::TICKER,
         ))
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<StableC>::new::<StableC>(tree.into_tree()),
+            SupportedPairs::<LpnC>::new::<LpnC>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
                 LeaseC1::TICKER.into(),
-                StableC::TICKER.into()
+                LpnC::TICKER.into()
             ))
         );
     }
@@ -537,7 +535,7 @@ mod tests {
         assert_eq!(
             listed_currencies.as_slice(),
             &[
-                api::Currency::new::<StableC>(api::CurrencyGroup::Lpn),
+                api::Currency::new::<LpnC>(api::CurrencyGroup::Lpn),
                 api::Currency::new::<LeaseC1>(api::CurrencyGroup::Lease),
                 api::Currency::new::<NativeC>(api::CurrencyGroup::Native),
                 api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),

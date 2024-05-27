@@ -122,7 +122,7 @@ where
 mod test {
     use std::marker::PhantomData;
 
-    use currencies::{test::StableC, Lpns};
+    use currencies::{test::LpnC, Lpns};
     use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{
@@ -139,10 +139,10 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            _lpn: PhantomData::<StableC>,
+            _lpn: PhantomData::<LpnC>,
             _lpns: PhantomData::<Lpns>,
         };
-        let borrow_amount = Coin::<StableC>::new(10);
+        let borrow_amount = Coin::<LpnC>::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
         let mut lpp_stub = lpp.into_lender(wrapper);

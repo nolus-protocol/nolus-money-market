@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::test::StableC;
+use currencies::test::LpnC;
 use currency::{Currency, SymbolStatic};
 use finance::{
     coin::{Amount, Coin},
@@ -38,7 +38,7 @@ const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 const RESERVE_ADDR: &str = "reserve";
 
-type TheCurrency = StableC;
+type TheCurrency = LpnC;
 
 const DENOM: SymbolStatic = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);

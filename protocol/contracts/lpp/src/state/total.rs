@@ -132,7 +132,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::StableC;
+    use currencies::test::LpnC;
     use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 
@@ -143,12 +143,12 @@ mod test {
         let mut deps = testing::mock_dependencies();
         let mut env = testing::mock_env();
 
-        let total: Total<StableC> = Total::default();
+        let total: Total<LpnC> = Total::default();
         total.store(deps.as_mut().storage).expect("should store");
 
-        let mut total: Total<StableC> = Total::load(deps.as_ref().storage).expect("should load");
+        let mut total: Total<LpnC> = Total::load(deps.as_ref().storage).expect("should load");
 
-        assert_eq!(total.total_principal_due(), Coin::<StableC>::new(0));
+        assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
 
         total
             .borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))

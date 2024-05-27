@@ -1,4 +1,4 @@
-use currencies::test::{NativeC, StableC};
+use currencies::test::{NativeC, LpnC};
 use currency::{Currency, NlsPlatform};
 use finance::{
     coin::{Amount, Coin},
@@ -20,7 +20,7 @@ use crate::common::{
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
-type Lpn = StableC;
+type Lpn = LpnC;
 
 type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
 
@@ -120,7 +120,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     let mut test_case = new_test_case(registry);
     let feeder1 = Addr::unchecked("feeder1");
     oracle_mod::add_feeder(&mut test_case, &feeder1);
-    let price = price::total_of(Coin::<NativeC>::new(23456789)).is(Coin::<StableC>::new(100000000));
+    let price = price::total_of(Coin::<NativeC>::new(23456789)).is(Coin::<LpnC>::new(100000000));
     oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
 
     let treasury = test_case.address_book.treasury().clone();
