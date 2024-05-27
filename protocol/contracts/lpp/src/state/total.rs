@@ -102,19 +102,21 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
-        self.total_interest_due = self.total_interest_due_by_now(&ctime) - loan_interest_payment;
+        self.total_interest_due = self
+            .total_interest_due_by_now(&ctime)
+            .saturating_sub(loan_interest_payment);
 
-        self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
-            zero_interest_rate()
+        if loan_principal_payment >= self.total_principal_due {
+            self.annual_interest_rate = zero_interest_rate();
+            self.total_principal_due = Coin::ZERO;
         } else {
-            Rational::new(
+            self.annual_interest_rate = Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
-            )
-        };
-
-        self.total_principal_due -= loan_principal_payment;
+            );
+            self.total_principal_due -= loan_principal_payment;
+        }
 
         self.last_update_time = ctime;
 
