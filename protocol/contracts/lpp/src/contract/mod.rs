@@ -6,8 +6,9 @@ use oracle_platform::OracleRef;
 use serde::Serialize;
 
 use access_control::SingleUserAccess;
-//TODO switch the definition of StableCurrency to the one provided from currencies
-use currencies::{Lpn as LpnCurrency, Lpn as StableCurrency, Lpns as LpnCurrencies, PaymentGroup};
+use currencies::{
+    Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
+};
 
 use platform::{contract::Code, message::Response as PlatformResponse, response};
 use sdk::{

@@ -1,6 +1,5 @@
 #[cfg(feature = "stub_alarms")]
-pub use currencies::{Lpn as BaseCurrency, Lpn as StableCurrency, Lpns as BaseCurrencies};
-//TODO switch the definition of StableCurrency to the one provided from currencies
+pub use currencies::{Lpn as BaseCurrency, Lpns as BaseCurrencies, Stable as StableCurrency};
 
 #[cfg(feature = "contract")]
 pub use contract::*;
