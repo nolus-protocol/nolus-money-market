@@ -1,4 +1,7 @@
-use currencies::{test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC}, LeaseGroup};
+use currencies::{
+    test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC},
+    LeaseGroup,
+};
 use currency::{error::Error as CurrencyError, Currency, Tickers};
 use finance::{
     coin::{Amount, Coin},
@@ -99,7 +102,11 @@ fn open_lease_not_in_lease_currency() {
         .unwrap_err();
 
     assert_eq!(
-        Some(&CurrencyError::not_in_currency_group::<_, Tickers, LeaseGroup>(lease_currency)),
+        Some(&CurrencyError::not_in_currency_group::<
+            _,
+            Tickers,
+            LeaseGroup,
+        >(lease_currency)),
         err.root_cause().downcast_ref::<CurrencyError>()
     );
 }
