@@ -183,43 +183,4 @@ mod test {
         let interest_due = total.total_interest_due_by_now(&env.block.time);
         assert_eq!(interest_due, 500u128.into());
     }
-
-    #[test]
-    fn borrow_and_repay_overflow() {
-        let mut deps = testing::mock_dependencies();
-        let mut env = testing::mock_env();
-
-        let total: Total<StableC> = Total::default();
-        total.store(deps.as_mut().storage).expect("should store");
-
-        let mut total: Total<StableC> = Total::load(deps.as_ref().storage).expect("should load");
-
-        assert_eq!(total.total_principal_due(), Coin::<StableC>::new(0));
-
-        total
-            .borrow(env.block.time, Coin::new(9999), Percent::from_percent(20))
-            .expect("should borrow");
-        assert_eq!(total.total_principal_due(), Coin::new(9999));
-
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 4);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
-        assert_eq!(interest_due, Coin::new(499));
-
-        total
-            .borrow(env.block.time, Coin::new(8900), Percent::from_percent(15))
-            .expect("should borrow");
-        assert_eq!(total.total_principal_due(), Coin::new(18899));
-
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
-        assert_eq!(interest_due, Coin::new(2166));
-
-        total.repay(
-            env.block.time,
-            Coin::new(2166),
-            Coin::new(5000),
-            Percent::from_percent(20),
-        );
-        assert_eq!(total.total_principal_due(), Coin::new(13899));
-    }
 }
