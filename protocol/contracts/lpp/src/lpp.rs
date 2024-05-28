@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -14,7 +15,7 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Times
 use crate::{
     error::{ContractError, Result},
     loan::Loan,
-    msg::PriceResponse,
+    msg::{LppBalanceResponse, PriceResponse},
     state::{Config, Deposit, Total},
 };
 
@@ -30,6 +31,20 @@ where
 impl<Lpn> LppBalances<Lpn> {
     pub(crate) fn into_total(self) -> Coin<Lpn> {
         self.balance + self.total_principal_due + self.total_interest_due
+    }
+}
+
+impl<Lpn> LppBalances<Lpn>
+where
+    Lpn: Currency,
+{
+    pub(crate) fn into_response(self, total_rewards: Coin<NLpn>) -> LppBalanceResponse<Lpns> {
+        LppBalanceResponse {
+            balance: self.balance.into(),
+            total_principal_due: self.total_principal_due.into(),
+            total_interest_due: self.total_interest_due.into(),
+            balance_nlpn: total_rewards,
+        }
     }
 }
 

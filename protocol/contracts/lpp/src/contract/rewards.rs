@@ -1,3 +1,5 @@
+use finance::coin::Coin;
+use lpp_platform::NLpn;
 use serde::Serialize;
 
 use currency::Currency;
@@ -57,6 +59,10 @@ where
     Lpn: 'static + Currency + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
+}
+
+pub(super) fn query_total_rewards(storage: &dyn Storage) -> Result<Coin<NLpn>> {
+    Deposit::balance_nlpn(storage).map_err(Into::into)
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {

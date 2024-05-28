@@ -20,7 +20,7 @@ use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, Ve
 use crate::{
     error::{ContractError, Result},
     lpp::{LiquidityPool, LppBalances},
-    msg::{ExecuteMsg, InstantiateMsg, LppBalanceResponse, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::{self, Config},
 };
 
@@ -163,7 +163,10 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
                 .and_then(|ref resp| to_json_binary(resp))
         }
         QueryMsg::LppBalance() => rewards::query_lpp_balance::<LpnCurrency>(deps, env)
-            .map(LppBalanceResponse::from)
+            .and_then(|lpp_balances| {
+                rewards::query_total_rewards(deps.storage)
+                    .map(|total_rewards| lpp_balances.into_response(total_rewards))
+            })
             .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::StableBalance { oracle_addr } => {
             rewards::query_lpp_balance::<LpnCurrency>(deps, env)
@@ -180,16 +183,6 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
             .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::DepositCapacity() => {
             to_json_binary(&lender::deposit_capacity::<LpnCurrency>(deps, env)?)
-        }
-    }
-}
-
-impl From<LppBalances<LpnCurrency>> for LppBalanceResponse<LpnCurrencies> {
-    fn from(value: LppBalances<LpnCurrency>) -> Self {
-        Self {
-            balance: value.balance.into(),
-            total_principal_due: value.total_principal_due.into(),
-            total_interest_due: value.total_interest_due.into(),
         }
     }
 }
