@@ -81,22 +81,22 @@ where
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
-        let updated_total_principal_due = self
+        let new_total_principal_due = self
             .total_principal_due
             .checked_add(amount)
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
         // TODO: get rid of fully qualified syntax
-        self.annual_interest_rate = Rational::new(
+        let interest_sum =
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                 .checked_add(loan_interest_rate.of(amount))
                 .ok_or(ContractError::OverflowError(
                     "Annual interest rate calculation overflow",
-                ))?,
-            updated_total_principal_due,
-        );
+                ))?;
 
-        self.total_principal_due = updated_total_principal_due;
+        self.annual_interest_rate = Rational::new(interest_sum, new_total_principal_due);
+
+        self.total_principal_due = new_total_principal_due;
 
         self.last_update_time = ctime;
 
@@ -110,21 +110,25 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
+        // Due to rounding in the calculations, there is a possibility of overflow in the arithmetic operations.
+        // A saturating sub method will ensure that even if this happens, the result of the subtraction will become 0.
         self.total_interest_due = self
             .total_interest_due_by_now(&ctime)
             .saturating_sub(loan_interest_payment);
 
-        if loan_principal_payment >= self.total_principal_due {
-            self.annual_interest_rate = zero_interest_rate();
-            self.total_principal_due = Coin::ZERO;
-        } else {
-            self.annual_interest_rate = Rational::new(
+        self.annual_interest_rate = if self.total_principal_due > loan_principal_payment {
+            Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
-            );
-            self.total_principal_due -= loan_principal_payment;
-        }
+            )
+        } else {
+            zero_interest_rate()
+        };
+
+        self.total_principal_due = self
+            .total_principal_due
+            .saturating_sub(loan_principal_payment);
 
         self.last_update_time = ctime;
 
