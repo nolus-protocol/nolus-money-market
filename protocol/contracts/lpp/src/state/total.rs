@@ -146,6 +146,8 @@ mod test {
     use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 
+    use crate::loan::Loan;
+
     use super::*;
 
     #[test]
@@ -180,5 +182,75 @@ mod test {
         env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&env.block.time);
         assert_eq!(interest_due, 500u128.into());
+    }
+
+    #[test]
+    fn borrow_and_repay_with_overflow() {
+        let mut env = testing::mock_env();
+        env.block.time = Timestamp::from_nanos(0);
+
+        let mut total: Total<LpnC> = Total::default();
+        assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
+
+        let borrow_loan1 = Coin::<LpnC>::new(5_458_329);
+        let loan1_annual_interest_rate = Percent::from_permille(137);
+        let loan1 = Loan {
+            principal_due: borrow_loan1,
+            annual_interest_rate: loan1_annual_interest_rate,
+            interest_paid: env.block.time,
+        };
+
+        total
+            .borrow(env.block.time, borrow_loan1, loan1_annual_interest_rate)
+            .unwrap();
+        assert_eq!(total.total_principal_due(), borrow_loan1);
+        assert_eq!(total.total_interest_due_by_now(&env.block.time), Coin::ZERO);
+
+        env.block.time = env.block.time.plus_days(59);
+
+        // Open loan2 after 59 days
+        let borrow_loan2 = Coin::<LpnC>::new(3_543_118);
+        let loan2_annual_interest_rate = Percent::from_permille(133);
+        let loan2 = Loan {
+            principal_due: borrow_loan2,
+            annual_interest_rate: loan2_annual_interest_rate,
+            interest_paid: env.block.time,
+        };
+
+        let total_interest_due = total.total_interest_due_by_now(&env.block.time);
+        assert_eq!(total_interest_due, loan1.interest_due(&env.block.time));
+
+        total
+            .borrow(env.block.time, borrow_loan2, loan2_annual_interest_rate)
+            .unwrap();
+        assert_eq!(total.total_principal_due(), borrow_loan1 + borrow_loan2);
+        assert_eq!(
+            total.total_interest_due_by_now(&env.block.time),
+            total_interest_due
+        );
+
+        env.block.time = env.block.time.plus_days(147);
+
+        // Fully repay loan1 after 147 days
+        total.repay(
+            env.block.time,
+            loan1.interest_due(&env.block.time),
+            loan1.principal_due,
+            loan1.annual_interest_rate,
+        );
+        assert_eq!(total.total_principal_due(), borrow_loan2);
+
+        env.block.time = env.block.time.plus_days(67);
+
+        // Fully repay loan2 after 67 days
+        total.repay(
+            env.block.time,
+            loan2.interest_due(&env.block.time),
+            loan2.principal_due,
+            loan2.annual_interest_rate,
+        );
+
+        assert!(total.total_interest_due.is_zero());
+        assert!(total.total_principal_due.is_zero());
     }
 }
