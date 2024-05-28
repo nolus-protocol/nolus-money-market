@@ -74,7 +74,7 @@ pub enum ContractError {
     UtilizationBelowMinimalRates,
 
     #[error("[Lpp] {0}")]
-    OverflowError(String),
+    OverflowError(&'static str),
 
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
