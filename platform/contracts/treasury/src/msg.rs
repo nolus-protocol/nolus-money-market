@@ -16,8 +16,7 @@ pub struct InstantiateMsg {
     pub tvl_to_apr: RewardScale,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {}
+pub type MigrateMsg = InstantiateMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

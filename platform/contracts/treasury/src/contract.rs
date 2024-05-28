@@ -10,12 +10,12 @@ use platform::{batch::Batch, message::Response as MessageResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        Storage, Timestamp,
+        entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo,
+        QuerierWrapper, Storage, Timestamp,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::RewardCalculator,
@@ -26,60 +26,37 @@ use crate::{
     ContractError,
 };
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(ContractError::InitVersion)?;
-
-    // cannot validate the address since the Admin plays the role of the registry
-    // and it is not yet instantiated
-    deps.api
-        .addr_validate(msg.protocols_registry.as_str())
-        .map_err(ContractError::ValidateRegistryAddr)?;
-    platform::contract::validate_addr(deps.querier, &msg.timealarms)
-        .map_err(ContractError::ValidateTimeAlarmsAddr)?;
-
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
-
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
-        .store(deps.storage)
-        .map_err(ContractError::SaveConfig)?;
-    DispatchLog::update(deps.storage, env.block.time)?;
-
-    setup_alarm(
-        msg.timealarms,
-        &env.block.time,
-        Duration::from_hours(msg.cadence_hours),
-        deps.querier,
-    )
-    .map(response::response_only_messages)
+    setup_dispatching(deps.storage, deps.querier, deps.api, env, msg)
+        .map(response::response_only_messages)
 }
 
 #[entry_point]
-pub fn migrate(
-    deps: DepsMut<'_>,
-    _env: Env,
-    MigrateMsg {}: MigrateMsg,
-) -> ContractResult<CwResponse> {
-    versioning::update_software(
+pub fn migrate(deps: DepsMut<'_>, env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        ContractError::UpdateSoftware,
+        |storage| setup_dispatching(storage, deps.querier, deps.api, env, msg),
+        Into::into,
     )
-    .and_then(response::response)
+    .and_then(
+        |FullUpdateOutput {
+             release_label,
+             storage_migration_output,
+         }| response::response_with_messages(release_label, storage_migration_output),
+    )
 }
 
 #[entry_point]
@@ -222,6 +199,39 @@ fn setup_alarm(
             stub.setup_alarm(now + alarm_in)
                 .map_err(ContractError::SetupTimeAlarm)
         })
+}
+
+fn setup_dispatching(
+    mut storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
+    api: &dyn Api,
+    env: Env,
+    msg: InstantiateMsg,
+) -> ContractResult<impl Into<MessageResponse>> {
+    // cannot validate the address since the Admin plays the role of the registry
+    // and it is not yet instantiated
+    api.addr_validate(msg.protocols_registry.as_str())
+        .map_err(ContractError::ValidateRegistryAddr)?;
+    platform::contract::validate_addr(querier, &msg.timealarms)
+        .map_err(ContractError::ValidateTimeAlarmsAddr)?;
+
+    SingleUserAccess::new(
+        storage.deref_mut(),
+        crate::access_control::TIMEALARMS_NAMESPACE,
+    )
+    .grant_to(&msg.timealarms)?;
+
+    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
+        .store(storage)
+        .map_err(ContractError::SaveConfig)?;
+    DispatchLog::update(storage, env.block.time)?;
+
+    setup_alarm(
+        msg.timealarms,
+        &env.block.time,
+        Duration::from_hours(msg.cadence_hours),
+        querier,
+    )
 }
 
 #[cfg(test)]

@@ -4,6 +4,9 @@ use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, PartialEq, Debug)]
 pub enum ContractError {
+    #[error("[Treasury] [Std] {0}")]
+    Std(#[from] StdError),
+
     #[error("[Treasury] Failed to serialize! Cause: {0}")]
     Serialize(StdError),
 
