@@ -116,7 +116,7 @@ where
             .total_interest_due_by_now(&ctime)
             .saturating_sub(loan_interest_payment);
 
-        self.annual_interest_rate = if self.total_principal_due > loan_principal_payment {
+        self.annual_interest_rate = if loan_principal_payment < self.total_principal_due {
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
