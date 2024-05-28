@@ -791,8 +791,9 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "platform",
  "sdk",

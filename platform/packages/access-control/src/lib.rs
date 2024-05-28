@@ -55,6 +55,10 @@ where
             .save(self.storage.deref_mut(), user)
             .map_err(Into::into)
     }
+
+    pub fn revoke(&mut self) {
+        self.storage_item.remove(self.storage.deref_mut())
+    }
 }
 
 #[cfg(test)]
