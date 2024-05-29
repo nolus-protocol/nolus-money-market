@@ -8,9 +8,11 @@ license.workspace = true
 [package.metadata.cargo-each]
 combinations = [
     { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "stub-and-contract"], always-on = ["$net", "$protocol"], include-rest = true, generics = { "$net" = "net", "$protocol" = "protocol" } }
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "stub-and-contract", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
+    { tags = ["build", "net_main", "neutron-astroport-usdc_noble"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false },
+    { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false }
 ]
-feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, stub-and-contract = { members = ["stub", "contract"], at-least-one = false, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true } }
+feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, stub-and-contract = { members = ["stub", "contract"], at-least-one = false, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -21,6 +23,7 @@ net_test = ["contract", "currencies/net_test"]
 net_main = ["contract", "currencies/net_main"]
 
 neutron-astroport-usdc_axelar = ["contract", "currencies/neutron-astroport-usdc_axelar"]
+neutron-astroport-usdc_noble = ["contract", "currencies/neutron-astroport-usdc_noble"]
 osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
 osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
 

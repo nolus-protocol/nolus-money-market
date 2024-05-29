@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
+#[cfg(any(
+    feature = "neutron-astroport-usdc_axelar",
+    feature = "neutron-astroport-usdc_noble"
+))]
 use self::astroport as impl_mod;
 #[cfg(any(
     feature = "osmosis-osmosis-usdc_axelar",
@@ -11,7 +14,10 @@ use self::astroport as impl_mod;
 ))]
 use self::osmosis as impl_mod;
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
+#[cfg(any(
+    feature = "neutron-astroport-usdc_axelar",
+    feature = "neutron-astroport-usdc_noble"
+))]
 pub(crate) mod astroport;
 #[cfg(any(
     feature = "osmosis-osmosis-usdc_axelar",

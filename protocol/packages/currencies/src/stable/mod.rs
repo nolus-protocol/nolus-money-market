@@ -5,5 +5,6 @@
     feature = "osmosis-osmosis-usdc_axelar",
     feature = "osmosis-osmosis-usdc_noble",
     feature = "neutron-astroport-usdc_axelar",
+    feature = "neutron-astroport-usdc_noble"
 ))]
 pub use crate::Lpn as Stable;

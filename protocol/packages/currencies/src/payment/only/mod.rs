@@ -5,6 +5,8 @@ use sdk::schemars::{self, JsonSchema};
 
 #[cfg(feature = "neutron-astroport-usdc_axelar")]
 use self::neutron_astroport_usdc_axelar as impl_mod;
+#[cfg(feature = "neutron-astroport-usdc_noble")]
+use self::neutron_astroport_usdc_noble as impl_mod;
 #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 use self::osmosis_osmosis_usdc_axelar as impl_mod;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]
@@ -12,6 +14,8 @@ use self::osmosis_osmosis_usdc_noble as impl_mod;
 
 #[cfg(feature = "neutron-astroport-usdc_axelar")]
 pub(crate) mod neutron_astroport_usdc_axelar;
+#[cfg(feature = "neutron-astroport-usdc_noble")]
+mod neutron_astroport_usdc_noble;
 #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
 pub(crate) mod osmosis_osmosis_usdc_axelar;
 #[cfg(feature = "osmosis-osmosis-usdc_noble")]
