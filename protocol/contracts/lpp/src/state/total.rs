@@ -87,14 +87,14 @@ where
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
         // TODO: get rid of fully qualified syntax
-        let annual_interest =
+        let new_annual_interest =
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                 .checked_add(loan_interest_rate.of(amount))
                 .ok_or(ContractError::OverflowError(
-                    "Annual interest rate calculation overflow",
+                    "Annual interest calculation overflow",
                 ))?;
 
-        self.annual_interest_rate = Rational::new(annual_interest, new_total_principal_due);
+        self.annual_interest_rate = Rational::new(new_annual_interest, new_total_principal_due);
 
         self.total_principal_due = new_total_principal_due;
 
