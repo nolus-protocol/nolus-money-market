@@ -75,6 +75,15 @@ where
     }
 
     #[track_caller]
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let may_amount = self.amount.checked_sub(rhs.amount);
+        may_amount.map(|amount| Self {
+            amount,
+            ticker: self.ticker,
+        })
+    }
+
+    #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
         let may_amount = self.amount.checked_mul(rhs);
         may_amount.map(|amount| Self {
@@ -366,6 +375,19 @@ mod test {
         assert_eq!(coin1(0), coin1(21).saturating_sub(coin1(22)));
 
         assert_eq!(coin1(0), coin1(21).saturating_sub(coin1(122)));
+    }
+
+    #[test]
+    fn checked_sub() {
+        assert_eq!(Some(coin1(17)), coin1(21).checked_sub(coin1(4)));
+
+        assert_eq!(Some(coin1(1)), coin1(21).checked_sub(coin1(20)));
+
+        assert_eq!(Some(coin1(0)), coin1(21).checked_sub(coin1(21)));
+
+        assert_eq!(None, coin1(21).checked_sub(coin1(22)));
+
+        assert_eq!(None, coin1(21).checked_sub(coin1(122)));
     }
 
     #[test]

@@ -118,19 +118,22 @@ where
             .total_interest_due_by_now(&ctime)
             .saturating_sub(loan_interest_payment);
 
-        self.annual_interest_rate = if loan_principal_payment < self.total_principal_due {
+        let new_total_principal_due = self
+            .total_principal_due
+            .checked_sub(loan_principal_payment)
+            .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
+
+        self.annual_interest_rate = if new_total_principal_due.is_zero() {
+            zero_interest_rate()
+        } else {
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
             )
-        } else {
-            zero_interest_rate()
         };
 
-        self.total_principal_due = self
-            .total_principal_due
-            .saturating_sub(loan_principal_payment);
+        self.total_principal_due = new_total_principal_due;
 
         self.last_update_time = ctime;
 
