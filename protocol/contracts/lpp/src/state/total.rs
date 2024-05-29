@@ -160,7 +160,7 @@ mod test {
     #[test]
     fn borrow_and_repay() {
         let mut deps = testing::mock_dependencies();
-        let mut env = testing::mock_env();
+        let mut block_time = Timestamp::from_nanos(1_571_797_419_879_305_533);
 
         let total: Total<LpnC> = Total::default();
         total.store(deps.as_mut().storage).expect("should store");
@@ -170,24 +170,24 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
 
         total
-            .borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))
+            .borrow(block_time, Coin::new(10000), Percent::from_percent(20))
             .expect("should borrow");
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
+        block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
+        let interest_due = total.total_interest_due_by_now(&block_time);
         assert_eq!(interest_due, Coin::new(1000));
 
         total.repay(
-            env.block.time,
+            block_time,
             Coin::new(1000),
             Coin::new(5000),
             Percent::from_percent(20),
         );
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
+        block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
+        let interest_due = total.total_interest_due_by_now(&block_time);
         assert_eq!(interest_due, 500u128.into());
     }
 
