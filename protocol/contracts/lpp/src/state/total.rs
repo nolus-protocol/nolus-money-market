@@ -110,10 +110,9 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
-        // Due to rounding errors in the calculation of `total_interest_due_by_now`,
-        // overflow is possible in arithmetic operations. Since `repay` only reflects
-        // the payment made, we assume that when an overflow occurs, a correct result
-        // is 0, indicating that all dues have been paid.
+        // The interest payment calculation of loans is the source of truth.
+        // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
+        // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
 
         self.total_interest_due = self
             .total_interest_due_by_now(&ctime)
