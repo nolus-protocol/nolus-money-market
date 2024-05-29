@@ -48,7 +48,7 @@ pub fn migrate(deps: DepsMut<'_>, env: Env, msg: MigrateMsg) -> ContractResult<C
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage| setup_dispatching(storage, deps.querier, deps.api, env, msg),
+        |storage| migrate_store(storage, deps.querier, deps.api, env, msg),
         Into::into,
     )
     .and_then(
@@ -199,6 +199,23 @@ fn setup_alarm(
             stub.setup_alarm(now + alarm_in)
                 .map_err(ContractError::SetupTimeAlarm)
         })
+}
+
+fn migrate_store(
+    storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
+    api: &dyn Api,
+    env: Env,
+    msg: InstantiateMsg,
+) -> ContractResult<impl Into<MessageResponse>> {
+    cleanup_dispatcher_access(storage);
+    setup_dispatching(storage, querier, api, env, msg)
+}
+
+fn cleanup_dispatcher_access(storage: &mut dyn Storage) {
+    const REWARDS_DISPATCHER_NAMESPACE: &str = "contract_rewards_dispatcher";
+
+    SingleUserAccess::new(storage, REWARDS_DISPATCHER_NAMESPACE).revoke();
 }
 
 fn setup_dispatching(
