@@ -87,14 +87,14 @@ where
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
         // TODO: get rid of fully qualified syntax
-        let interest_sum =
+        let annual_interest =
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                 .checked_add(loan_interest_rate.of(amount))
                 .ok_or(ContractError::OverflowError(
                     "Annual interest rate calculation overflow",
                 ))?;
 
-        self.annual_interest_rate = Rational::new(interest_sum, new_total_principal_due);
+        self.annual_interest_rate = Rational::new(annual_interest, new_total_principal_due);
 
         self.total_principal_due = new_total_principal_due;
 
@@ -110,8 +110,11 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
-        // Due to rounding in the calculations, there is a possibility of overflow in the arithmetic operations.
-        // A saturating sub method will ensure that even if this happens, the result of the subtraction will become 0.
+        // Due to rounding errors in the calculation of `total_interest_due_by_now`,
+        // overflow is possible in arithmetic operations. Since `repay` only reflects
+        // the payment made, we assume that when an overflow occurs, a correct result
+        // is 0, indicating that all dues have been paid.
+
         self.total_interest_due = self
             .total_interest_due_by_now(&ctime)
             .saturating_sub(loan_interest_payment);
@@ -190,8 +193,7 @@ mod test {
 
     #[test]
     fn borrow_and_repay_with_overflow() {
-        let mut env = testing::mock_env();
-        env.block.time = Timestamp::from_nanos(0);
+        let mut block_time = Timestamp::from_nanos(0);
 
         let mut total: Total<LpnC> = Total::default();
         assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
@@ -201,16 +203,16 @@ mod test {
         let loan1 = Loan {
             principal_due: borrow_loan1,
             annual_interest_rate: loan1_annual_interest_rate,
-            interest_paid: env.block.time,
+            interest_paid: block_time,
         };
 
         total
-            .borrow(env.block.time, borrow_loan1, loan1_annual_interest_rate)
+            .borrow(block_time, borrow_loan1, loan1_annual_interest_rate)
             .unwrap();
         assert_eq!(total.total_principal_due(), borrow_loan1);
-        assert_eq!(total.total_interest_due_by_now(&env.block.time), Coin::ZERO);
+        assert_eq!(total.total_interest_due_by_now(&block_time), Coin::ZERO);
 
-        env.block.time = env.block.time.plus_days(59);
+        block_time = block_time.plus_days(59);
 
         // Open loan2 after 59 days
         let borrow_loan2 = Coin::<LpnC>::new(3_543_118);
@@ -218,38 +220,38 @@ mod test {
         let loan2 = Loan {
             principal_due: borrow_loan2,
             annual_interest_rate: loan2_annual_interest_rate,
-            interest_paid: env.block.time,
+            interest_paid: block_time,
         };
 
-        let total_interest_due = total.total_interest_due_by_now(&env.block.time);
-        assert_eq!(total_interest_due, loan1.interest_due(&env.block.time));
+        let total_interest_due = total.total_interest_due_by_now(&block_time);
+        assert_eq!(total_interest_due, loan1.interest_due(&block_time));
 
         total
-            .borrow(env.block.time, borrow_loan2, loan2_annual_interest_rate)
+            .borrow(block_time, borrow_loan2, loan2_annual_interest_rate)
             .unwrap();
         assert_eq!(total.total_principal_due(), borrow_loan1 + borrow_loan2);
         assert_eq!(
-            total.total_interest_due_by_now(&env.block.time),
+            total.total_interest_due_by_now(&block_time),
             total_interest_due
         );
 
-        env.block.time = env.block.time.plus_days(147);
+        block_time = block_time.plus_days(147);
 
         // Fully repay loan1 after 147 days
         total.repay(
-            env.block.time,
-            loan1.interest_due(&env.block.time),
+            block_time,
+            loan1.interest_due(&block_time),
             loan1.principal_due,
             loan1.annual_interest_rate,
         );
         assert_eq!(total.total_principal_due(), borrow_loan2);
 
-        env.block.time = env.block.time.plus_days(67);
+        block_time = block_time.plus_days(67);
 
         // Fully repay loan2 after 67 days
         total.repay(
-            env.block.time,
-            loan2.interest_due(&env.block.time),
+            block_time,
+            loan2.interest_due(&block_time),
             loan2.principal_due,
             loan2.annual_interest_rate,
         );
