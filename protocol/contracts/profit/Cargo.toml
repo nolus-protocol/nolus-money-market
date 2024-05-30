@@ -8,9 +8,9 @@ license.workspace = true
 [package.metadata.cargo-each]
 combinations = [
     { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-or-stub", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
     { tags = ["build", "net_main", "neutron-astroport-usdc_noble"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false },
-    { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false }
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-or-stub", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
+    { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], feature-groups = ["testing"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false }
 ]
 feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true }, contract-or-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
