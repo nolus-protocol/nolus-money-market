@@ -129,7 +129,7 @@ where
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
                     - loan_interest_rate.of(loan_principal_payment),
-                self.total_principal_due - loan_principal_payment,
+                new_total_principal_due,
             )
         };
 
