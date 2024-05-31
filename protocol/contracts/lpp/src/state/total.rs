@@ -126,9 +126,12 @@ where
         self.annual_interest_rate = if new_total_principal_due.is_zero() {
             zero_interest_rate()
         } else {
+            // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
+            // for updating the annual interest
+
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                    - loan_interest_rate.of(loan_principal_payment),
+                    .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
                 new_total_principal_due,
             )
         };
