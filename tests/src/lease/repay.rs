@@ -282,7 +282,7 @@ pub(crate) fn repay_with_hook_on_swap<
     swap_hook: SwapHook,
 ) -> AppResponse
 where
-    SwapHook: FnOnce(&mut App) -> (),
+    SwapHook: FnOnce(&mut App),
 {
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_payment_and_transfer(test_case, lease_addr.clone(), payment);

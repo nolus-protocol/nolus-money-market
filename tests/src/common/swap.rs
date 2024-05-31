@@ -198,9 +198,9 @@ fn send_response<'r>(
     )
 }
 
-fn send_error_response<'r>(
-    app: &'r mut App,
+fn send_error_response(
+    app: &mut App,
     requester_contract: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>> {
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
     ibc::send_error(app, requester_contract.clone())
 }
