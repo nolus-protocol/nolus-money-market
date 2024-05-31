@@ -1004,7 +1004,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1133,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "reserve"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1519,7 +1519,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "cosmwasm-std",
  "platform",
