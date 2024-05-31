@@ -14,7 +14,6 @@ use sdk::{
 };
 
 use crate::{msg::InstantiateMsg, result::ContractResult};
-pub(crate) use migration::migrate;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -98,66 +97,5 @@ impl Config {
         Lpn: ?Sized + Currency,
     {
         ReserveRef::try_new(self.reserve.clone(), querier).map_err(Into::into)
-    }
-}
-
-mod migration {
-    use std::str;
-
-    use serde::{Deserialize, Serialize, Serializer};
-
-    use finance::{duration::Duration, percent::Percent};
-    use lease::api::open::{ConnectionParams, PositionSpecDTO};
-    use platform::contract::{Code, CodeId};
-    use sdk::{
-        cosmwasm_std::{Addr, Storage},
-        cw_storage_plus::Item,
-    };
-
-    use crate::result::ContractResult;
-
-    use super::Config;
-
-    #[derive(Deserialize)]
-    struct OldConfig {
-        lease_code_id: CodeId,
-        lpp: Addr,
-        profit: Addr,
-        time_alarms: Addr,
-        market_price_oracle: Addr,
-        lease_position_spec: PositionSpecDTO,
-        lease_interest_rate_margin: Percent,
-        lease_due_period: Duration,
-        dex: ConnectionParams,
-    }
-
-    impl Serialize for OldConfig {
-        fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            unimplemented!("Required by `cw_storage_plus::Item::load`'s trait bounds.")
-        }
-    }
-
-    pub(crate) fn migrate(storage: &mut dyn Storage, reserve: Addr) -> ContractResult<()> {
-        let old_store: Item<'_, OldConfig> =
-            Item::new(str::from_utf8(Config::STORAGE.as_slice()).expect("valid storage key "));
-        old_store
-            .load(storage)
-            .map_err(Into::into)
-            .map(|old_cfg: OldConfig| Config {
-                lease_code: Code::unchecked(old_cfg.lease_code_id),
-                lpp: old_cfg.lpp,
-                profit: old_cfg.profit,
-                reserve,
-                time_alarms: old_cfg.time_alarms,
-                market_price_oracle: old_cfg.market_price_oracle,
-                lease_position_spec: old_cfg.lease_position_spec,
-                lease_interest_rate_margin: old_cfg.lease_interest_rate_margin,
-                lease_due_period: old_cfg.lease_due_period,
-                dex: old_cfg.dex,
-            })
-            .and_then(|config: Config| config.store(storage))
     }
 }
