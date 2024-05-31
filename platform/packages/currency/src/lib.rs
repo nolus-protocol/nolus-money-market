@@ -111,6 +111,13 @@ where
     }
 }
 
+pub fn visit_noone<V>(visitor: V) -> MaybeAnyVisitResult<V>
+where
+    V: AnyVisitor,
+{
+    Err(visitor)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{

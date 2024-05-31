@@ -1,5 +1,6 @@
 #[cfg(not(any(
     feature = "neutron-astroport-usdc_axelar",
+    feature = "neutron-astroport-usdc_noble",
     feature = "osmosis-osmosis-usdc_axelar",
     feature = "osmosis-osmosis-usdc_noble"
 )))]
