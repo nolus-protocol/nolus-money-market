@@ -13,7 +13,6 @@ pub mod close;
 mod event;
 mod payment;
 pub mod repay;
-pub mod v8;
 
 fn lease_state(
     lease: Lease,

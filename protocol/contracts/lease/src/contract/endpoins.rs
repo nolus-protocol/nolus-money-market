@@ -7,7 +7,7 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -17,13 +17,9 @@ use crate::{
     error::ContractResult,
 };
 
-use super::state::{
-    self,
-    v8::{Migrate, State as State_v8},
-    Response, State,
-};
+use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -57,21 +53,11 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { reserve }: MigrateMsg,
+    MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage| migrate_lease(storage, |lease| Ok(lease.into_last_version(reserve))),
-        Into::into,
-    )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output,
-         }| response::response_with_messages(release_label, storage_migration_output),
-    )
-    .inspect_err(platform_error::log(deps.api))
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -120,21 +106,6 @@ where
     ProcFn: FnOnce(State) -> ContractResult<Response>,
 {
     state::load(storage).and_then(process_fn).and_then(
-        |Response {
-             response,
-             next_state,
-         }| state::save(storage, &next_state).map(|()| response),
-    )
-}
-
-fn migrate_lease<ProcFn>(
-    storage: &mut dyn Storage,
-    process_fn: ProcFn,
-) -> ContractResult<MessageResponse>
-where
-    ProcFn: FnOnce(State_v8) -> ContractResult<Response>,
-{
-    state::load_v8(storage).and_then(process_fn).and_then(
         |Response {
              response,
              next_state,

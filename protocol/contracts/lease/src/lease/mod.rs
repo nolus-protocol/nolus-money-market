@@ -23,7 +23,6 @@ mod due;
 mod paid;
 mod repay;
 mod state;
-pub(crate) mod v8;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;

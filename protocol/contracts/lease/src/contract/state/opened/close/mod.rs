@@ -25,7 +25,6 @@ use super::payment::Repayable;
 pub mod customer_close;
 pub mod liquidation;
 pub mod sell_asset;
-pub mod v8;
 
 pub(crate) trait Closable {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin;

@@ -8,7 +8,6 @@ use platform::{
     message::Response as MessageResponse,
     reply, response,
 };
-use reserve::stub::Ref as ReserveRef; // TODO switch to using the one from the lease API
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
@@ -21,9 +20,8 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 use crate::{
     cmd::Borrow,
     error::ContractError,
-    finance::LpnCurrency,
     leaser::{self, Leaser},
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -104,14 +102,7 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| Code::try_new(new_code_id.into(), &deps.querier).map_err(Into::into))
             .and_then(|new_lease_code| {
-                load_reserve(deps.as_ref()).and_then(|reserve| {
-                    leaser::try_migrate_leases(
-                        deps.storage,
-                        new_lease_code,
-                        max_leases,
-                        migrate_msg(reserve),
-                    )
-                })
+                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg())
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
@@ -121,14 +112,12 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| validate_customer(next_customer, deps.api, deps.querier))
             .and_then(|next_customer_validated| {
-                load_reserve(deps.as_ref()).and_then(|reserve| {
-                    leaser::try_migrate_leases_cont(
-                        deps.storage,
-                        next_customer_validated,
-                        max_leases,
-                        migrate_msg(reserve),
-                    )
-                })
+                leaser::try_migrate_leases_cont(
+                    deps.storage,
+                    next_customer_validated,
+                    max_leases,
+                    migrate_msg(),
+                )
             }),
     }
     .map(response::response_only_messages)
@@ -213,16 +202,8 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
         .map(|()| lease)
 }
 
-fn migrate_msg(reserve: ReserveRef<LpnCurrency>) -> impl Fn(Addr) -> LeaseMigrateMsg {
-    move |_customer| LeaseMigrateMsg {
-        reserve: reserve.clone(),
-    }
-}
-
-fn load_reserve(deps: Deps<'_>) -> ContractResult<ReserveRef<LpnCurrency>> {
-    Leaser::new(deps)
-        .config()
-        .and_then(|ConfigResponse { config }| config.reserve(&deps.querier))
+fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {
+    move |_customer| LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {

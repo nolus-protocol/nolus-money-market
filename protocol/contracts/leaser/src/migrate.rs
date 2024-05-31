@@ -124,7 +124,6 @@ mod test {
 
     use lease::api::MigrateMsg;
     use platform::contract::Code;
-    use reserve::stub::Ref;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -358,8 +357,6 @@ mod test {
     }
 
     fn migrate_msg() -> impl Fn(Addr) -> MigrateMsg {
-        |_customer| MigrateMsg {
-            reserve: Ref::unchecked(Addr::unchecked("RESERVE_ADDR")),
-        }
+        |_customer| MigrateMsg {}
     }
 }
