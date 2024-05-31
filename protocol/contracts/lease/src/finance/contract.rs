@@ -1,4 +1,4 @@
-pub     use currencies::Lpn as LpnCurrency;
+pub use currencies::Lpn as LpnCurrency;
 use finance::{coin::Coin, price::Price as GenericPrice};
 use lpp::stub::LppRef as LppGenericRef;
 use oracle_platform::OracleRef as OracleGenericRef;
