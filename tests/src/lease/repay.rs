@@ -23,7 +23,7 @@ use crate::common::{
     self, cwcoin, ibc,
     leaser::Instantiator as LeaserInstantiator,
     swap::{self, DexDenom},
-    test_case::{response::ResponseWithInterChainMsgs, TestCase},
+    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
     CwCoin, USER,
 };
 
@@ -257,7 +257,16 @@ fn full_repay_with_excess() {
     );
 }
 
-pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+pub(crate) fn repay_with_hook_on_swap<
+    ProtocolsRegistry,
+    Treasury,
+    Profit,
+    Reserve,
+    Leaser,
+    Lpp,
+    Oracle,
+    SwapHook,
+>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Treasury,
@@ -270,7 +279,11 @@ pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, O
     >,
     lease_addr: Addr,
     payment: PaymentCoin,
-) -> AppResponse {
+    swap_hook: SwapHook,
+) -> AppResponse
+where
+    SwapHook: FnOnce(&mut App) -> (),
+{
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_payment_and_transfer(test_case, lease_addr.clone(), payment);
 
@@ -282,6 +295,8 @@ pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, O
 
     () = response.unwrap_response();
 
+    swap_hook(&mut test_case.app);
+
     let swap_out_lpn: LpnCoin = price::total(payment, price_lpn_of());
 
     let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
@@ -291,7 +306,7 @@ pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, O
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
-        |amount: u128, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
+        |amount: Amount, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
             assert_eq!(amount, payment.into());
             assert_eq!(in_denom, PaymentCurrency::DEX_SYMBOL);
             assert_eq!(out_denom, LpnCurrency::DEX_SYMBOL);
@@ -319,6 +334,23 @@ pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, O
         &transfer_amount,
     )
     .unwrap_response()
+}
+
+pub(crate) fn repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
+    lease_addr: Addr,
+    payment: PaymentCoin,
+) -> AppResponse {
+    repay_with_hook_on_swap(test_case, lease_addr, payment, |_app| {})
 }
 
 fn send_payment_and_transfer<

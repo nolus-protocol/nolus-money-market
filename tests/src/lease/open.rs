@@ -23,7 +23,7 @@ fn open_downpayment_lease_currency() {
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(expected_result, query_result);
 
-    heal::heal_no_inconsistency(&mut test_case, lease);
+    heal::heal_no_inconsistency(&mut test_case.app, lease);
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn open_downpayment_different_than_lease_currency() {
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
 
-    heal::heal_no_inconsistency(&mut test_case, lease);
+    heal::heal_no_inconsistency(&mut test_case.app, lease);
 }
 
 #[test]
@@ -51,5 +51,5 @@ fn open_takes_longer() {
 
     super::complete_init_lease(&mut test_case, downpayment, None, &lease);
 
-    heal::heal_no_inconsistency(&mut test_case, lease);
+    heal::heal_no_inconsistency(&mut test_case.app, lease);
 }

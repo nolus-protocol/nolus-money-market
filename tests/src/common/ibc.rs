@@ -125,6 +125,29 @@ pub(super) fn send_response(
     .unwrap()
 }
 
+pub(super) fn send_error(
+    app: &mut App,
+    contract: Addr,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    app.sudo(
+        contract,
+        &SudoMsg::Error {
+            // TODO fill-in with real/valid response data
+            request: RequestPacket {
+                sequence: None,
+                source_port: None,
+                source_channel: None,
+                destination_port: None,
+                destination_channel: None,
+                data: None,
+                timeout_height: None,
+                timeout_timestamp: None,
+            },
+            details: "min output amount not fulfilled!".to_string(),
+        },
+    )
+}
+
 fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     send_response(app, addr, Binary(Vec::new()))
 }
