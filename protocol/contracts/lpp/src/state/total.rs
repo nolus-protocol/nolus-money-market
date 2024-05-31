@@ -81,14 +81,22 @@ where
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
-        // TODO: get rid of fully qualified syntax
-        self.annual_interest_rate = Rational::new(
-            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                + loan_interest_rate.of(amount),
-            self.total_principal_due + amount,
-        );
+        let new_total_principal_due = self
+            .total_principal_due
+            .checked_add(amount)
+            .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
-        self.total_principal_due += amount;
+        // TODO: get rid of fully qualified syntax
+        let new_annual_interest =
+            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+                .checked_add(loan_interest_rate.of(amount))
+                .ok_or(ContractError::OverflowError(
+                    "Annual interest calculation overflow",
+                ))?;
+
+        self.annual_interest_rate = Rational::new(new_annual_interest, new_total_principal_due);
+
+        self.total_principal_due = new_total_principal_due;
 
         self.last_update_time = ctime;
 
@@ -102,19 +110,33 @@ where
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> &Self {
-        self.total_interest_due = self.total_interest_due_by_now(&ctime) - loan_interest_payment;
+        // The interest payment calculation of loans is the source of truth.
+        // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
+        // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
 
-        self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
+        self.total_interest_due = self
+            .total_interest_due_by_now(&ctime)
+            .saturating_sub(loan_interest_payment);
+
+        let new_total_principal_due = self
+            .total_principal_due
+            .checked_sub(loan_principal_payment)
+            .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
+
+        self.annual_interest_rate = if new_total_principal_due.is_zero() {
             zero_interest_rate()
         } else {
+            // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
+            // for updating the annual interest
+
             Rational::new(
                 Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                    - loan_interest_rate.of(loan_principal_payment),
-                self.total_principal_due - loan_principal_payment,
+                    .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
+                new_total_principal_due,
             )
         };
 
-        self.total_principal_due -= loan_principal_payment;
+        self.total_principal_due = new_total_principal_due;
 
         self.last_update_time = ctime;
 
@@ -136,12 +158,14 @@ mod test {
     use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 
+    use crate::loan::Loan;
+
     use super::*;
 
     #[test]
     fn borrow_and_repay() {
         let mut deps = testing::mock_dependencies();
-        let mut env = testing::mock_env();
+        let mut block_time = Timestamp::from_nanos(1_571_797_419_879_305_533);
 
         let total: Total<LpnC> = Total::default();
         total.store(deps.as_mut().storage).expect("should store");
@@ -151,24 +175,93 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
 
         total
-            .borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))
+            .borrow(block_time, Coin::new(10000), Percent::from_percent(20))
             .expect("should borrow");
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
+        block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
+        let interest_due = total.total_interest_due_by_now(&block_time);
         assert_eq!(interest_due, Coin::new(1000));
 
         total.repay(
-            env.block.time,
+            block_time,
             Coin::new(1000),
             Coin::new(5000),
             Percent::from_percent(20),
         );
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
-        let interest_due = total.total_interest_due_by_now(&env.block.time);
+        block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
+        let interest_due = total.total_interest_due_by_now(&block_time);
         assert_eq!(interest_due, 500u128.into());
+    }
+
+    #[test]
+    fn borrow_and_repay_with_overflow() {
+        let mut block_time = Timestamp::from_nanos(0);
+
+        let mut total: Total<LpnC> = Total::default();
+        assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
+
+        let borrow_loan1 = Coin::<LpnC>::new(5_458_329);
+        let loan1_annual_interest_rate = Percent::from_permille(137);
+        let loan1 = Loan {
+            principal_due: borrow_loan1,
+            annual_interest_rate: loan1_annual_interest_rate,
+            interest_paid: block_time,
+        };
+
+        total
+            .borrow(block_time, borrow_loan1, loan1_annual_interest_rate)
+            .unwrap();
+        assert_eq!(total.total_principal_due(), borrow_loan1);
+        assert_eq!(total.total_interest_due_by_now(&block_time), Coin::ZERO);
+
+        block_time = block_time.plus_days(59);
+
+        // Open loan2 after 59 days
+        let borrow_loan2 = Coin::<LpnC>::new(3_543_118);
+        let loan2_annual_interest_rate = Percent::from_permille(133);
+        let loan2 = Loan {
+            principal_due: borrow_loan2,
+            annual_interest_rate: loan2_annual_interest_rate,
+            interest_paid: block_time,
+        };
+
+        let total_interest_due = total.total_interest_due_by_now(&block_time);
+        assert_eq!(total_interest_due, loan1.interest_due(&block_time));
+
+        total
+            .borrow(block_time, borrow_loan2, loan2_annual_interest_rate)
+            .unwrap();
+        assert_eq!(total.total_principal_due(), borrow_loan1 + borrow_loan2);
+        assert_eq!(
+            total.total_interest_due_by_now(&block_time),
+            total_interest_due
+        );
+
+        block_time = block_time.plus_days(147);
+
+        // Fully repay loan1 after 147 days
+        total.repay(
+            block_time,
+            loan1.interest_due(&block_time),
+            loan1.principal_due,
+            loan1.annual_interest_rate,
+        );
+        assert_eq!(total.total_principal_due(), borrow_loan2);
+
+        block_time = block_time.plus_days(67);
+
+        // Fully repay loan2 after 67 days
+        total.repay(
+            block_time,
+            loan2.interest_due(&block_time),
+            loan2.principal_due,
+            loan2.annual_interest_rate,
+        );
+
+        assert!(total.total_interest_due.is_zero());
+        assert!(total.total_principal_due.is_zero());
     }
 }
