@@ -10,25 +10,27 @@ use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
 
-use platform::{contract::Code, message::Response as PlatformResponse, response};
+use platform::{
+    contract::Code, error as platform_error, message::Response as PlatformResponse, response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
-    state::{self, Config},
+    state::Config,
 };
 
 mod borrow;
 mod lender;
 mod rewards;
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -57,22 +59,14 @@ pub fn instantiate(
         .and_then(|lease_code| Config::try_new::<LpnCurrency>(msg, lease_code))
         .and_then(|cfg| LiquidityPool::<LpnCurrency>::store(deps.storage, cfg))
         .map(|()| response::empty_response())
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        state::migrate::<LpnCurrency>,
-        Into::into,
-    )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: (),
-         }| response::response(release_label),
-    )
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -82,6 +76,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg<LpnCurrencies>,
 ) -> Result<CwResponse> {
+    let api = deps.api;
     match msg {
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
@@ -125,6 +120,7 @@ pub fn execute(
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
             .map(response::response_only_messages),
     }
+    .inspect_err(platform_error::log(api))
 }
 
 #[entry_point]
@@ -140,6 +136,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
     }
     .map(|()| PlatformResponse::default())
     .map(response::response_only_messages)
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -185,6 +182,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
             to_json_binary(&lender::deposit_capacity::<LpnCurrency>(deps, env)?)
         }
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 fn to_json_binary<T>(data: &T) -> Result<Binary>
