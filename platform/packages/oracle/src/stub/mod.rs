@@ -54,7 +54,8 @@ where
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+// TODO get back to deny unknown fields once all leases have passed through read/write cycle #[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC>
 where
     QuoteC: ?Sized,
