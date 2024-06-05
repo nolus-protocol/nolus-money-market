@@ -66,10 +66,8 @@ where
     BaseC: Currency,
     QuoteG: Group,
 {
-    let config = Config::load(storage).map_err(ContractError::LoadConfig)?;
-    let oracle = Feeds::<G, BaseC, QuoteG>::with(config.price_config);
-
-    oracle
-        .feed_prices(storage, block_time, &sender, &prices)
+    Config::load(storage)
+        .map(|cfg| Feeds::<G, BaseC, QuoteG>::with(cfg.price_config))
+        .and_then(|oracle| oracle.feed_prices(storage, block_time, &sender, &prices))
         .map(|()| Default::default())
 }

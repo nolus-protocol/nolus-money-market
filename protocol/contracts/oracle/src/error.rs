@@ -37,6 +37,9 @@ pub enum ContractError {
     #[error("[Oracle] Failed to store configuration! Cause: {0}")]
     StoreConfig(StdError),
 
+    #[error("[Oracle] Failed to load the v0 configuration! Cause: {0}")]
+    LoadConfigV0(StdError),
+
     #[error("[Oracle] Failed to load supported pairs! Cause: {0}")]
     LoadSupportedPairs(StdError),
 

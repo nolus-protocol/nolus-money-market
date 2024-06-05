@@ -3,7 +3,7 @@ use sdk::cosmwasm_std::Storage;
 use crate::{api::Config, ContractError};
 
 pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractError> {
-    Config::load(storage).map_err(ContractError::LoadConfig)
+    Config::load(storage)
 }
 
 #[cfg(test)]
