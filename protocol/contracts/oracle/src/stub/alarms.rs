@@ -1,12 +1,10 @@
 use oracle_platform::OracleRef;
-use std::marker::PhantomData;
 
 use currency::{Currency, Group};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
-
 
 pub trait PriceAlarms<AlarmCurrencies, OracleBaseG>
 where
