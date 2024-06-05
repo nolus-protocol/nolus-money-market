@@ -19,7 +19,6 @@ use crate::{
 pub mod base;
 pub mod dto;
 pub mod with_price;
-pub mod with_quote;
 
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
@@ -127,6 +126,13 @@ where
             amount: self.amount_quote,
             amount_quote: self.amount,
         }
+    }
+
+    fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<()> {
+        Self::check(!amount.is_zero(), "The amount should not be zero").and(Self::check(
+            !amount_quote.is_zero(),
+            "The quote amount should not be zero",
+        ))
     }
 
     fn invariant_held(&self) -> Result<()> {

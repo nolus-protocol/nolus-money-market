@@ -5,8 +5,11 @@ use std::{
 
 use currency::{Currency, Group, SymbolOwned, SymbolSlice};
 use finance::price::{
-    base::BasePrice,
-    dto::{with_quote, PriceDTO, WithQuote},
+    base::{
+        with_quote::{self, WithQuote},
+        BasePrice,
+    },
+    dto::PriceDTO,
     Price,
 };
 use platform::{
@@ -215,7 +218,7 @@ where
 mod test_normalized_price_not_found {
     use currencies::{
         test::{LpnC, NativeC, PaymentC3},
-        Lpns,
+        Lpns, PaymentGroup,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};

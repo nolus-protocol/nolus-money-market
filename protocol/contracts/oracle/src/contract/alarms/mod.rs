@@ -1,7 +1,13 @@
 use std::ops::{Deref, DerefMut};
 
 use currency::{Currency, Group};
-use finance::price::{base::BasePrice, dto::WithQuote, with_quote, Price};
+use finance::price::{
+    base::{
+        with_quote::{self, WithQuote},
+        BasePrice,
+    },
+    Price,
+};
 use marketprice::alarms::PriceAlarms;
 use sdk::cosmwasm_std::{Addr, Storage};
 
@@ -163,7 +169,7 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{
-        test::{PaymentC5, PaymentC6, PaymentC7, StableC as TestLpn},
+        test::{PaymentC5, PaymentC6, PaymentC7},
         Lpns,
     };
     use sdk::cosmwasm_std::testing::MockStorage;
@@ -178,7 +184,7 @@ mod test {
     fn alarm_dto<C>(
         below: (u128, u128),
         above: Option<(u128, u128)>,
-    ) -> AlarmDTO<PriceCurrencies, TestLpn, Lpns>
+    ) -> AlarmDTO<PriceCurrencies, Base, Lpns>
     where
         C: Currency,
     {
@@ -190,7 +196,7 @@ mod test {
 
     fn add_alarms<'a>(
         mut storage: &mut dyn Storage,
-        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, TestLpn, Lpns>)>,
+        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO<PriceCurrencies, Base, Lpns>)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
             MarketAlarms::new(storage.deref_mut())

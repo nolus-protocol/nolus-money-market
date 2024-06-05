@@ -14,6 +14,7 @@ use crate::{
 use super::{dto::PriceDTO, Price};
 
 mod unchecked;
+pub mod with_quote;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
@@ -53,7 +54,7 @@ where
     pub fn base_ticker(&self) -> &SymbolSlice {
         self.amount.ticker()
     }
-
+    
     pub(crate) fn amount(&self) -> &CoinDTO<BaseG> {
         &self.amount
     }

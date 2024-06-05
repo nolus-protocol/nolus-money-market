@@ -168,18 +168,6 @@ where
         QuoteC: Currency;
 }
 
-pub trait WithQuote<C>
-where
-    C: Currency,
-{
-    type Output;
-    type Error;
-
-    fn exec<BaseC>(self, _: Price<BaseC, C>) -> Result<Self::Output, Self::Error>
-    where
-        BaseC: Currency;
-}
-
 #[cfg(test)]
 mod test {
     use std::cmp::Ordering;
