@@ -55,15 +55,14 @@ where
         let tree = SupportedPairs::load(storage.deref())?;
         let feeders =
             Feeders::total_registered(storage.deref()).map_err(ContractError::LoadFeeders)?;
-        let config = Config::load(storage.deref()).map_err(ContractError::LoadConfig)?;
-        let feeds = Feeds::<PriceG, BaseC, BaseG>::with(config.price_config);
-
-        Ok(Self {
-            storage,
-            tree,
-            feeders,
-            feeds,
-        })
+        Config::load(storage.deref())
+            .map(|cfg| Feeds::<PriceG, BaseC, BaseG>::with(cfg.price_config))
+            .map(|feeds| Self {
+                storage,
+                tree,
+                feeders,
+                feeds,
+            })
     }
 
     pub(super) fn try_query_alarms(
