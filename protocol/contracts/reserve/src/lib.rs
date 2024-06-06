@@ -1,7 +1,4 @@
 #[cfg(feature = "contract")]
-pub use state::Config;
-
-#[cfg(feature = "contract")]
 mod access_control;
 pub mod api;
 #[cfg(feature = "contract")]

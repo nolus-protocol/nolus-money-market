@@ -47,7 +47,7 @@ mod test {
     use cosmwasm_std::{testing::MockStorage, Storage};
     use platform::contract::{Code, CodeId};
 
-    use crate::Config;
+    use super::Config;
 
     #[test]
     fn store_load() {

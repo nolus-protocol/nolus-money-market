@@ -1,6 +1,6 @@
-pub use config::Config;
-
 use crate::api::ConfigResponse;
+
+pub use self::config::Config;
 
 mod config;
 
