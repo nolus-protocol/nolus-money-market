@@ -55,7 +55,7 @@ impl Config {
             where
                 S: Serializer,
             {
-                unreachable!("satisfy Item::load requirements")
+                unimplemented!("No need to serialize an old config. We just satisfy the Item::load's trait boundary")
             }
         }
 

@@ -37,6 +37,7 @@ pub enum ContractError {
     #[error("[Oracle] Failed to store configuration! Cause: {0}")]
     StoreConfig(StdError),
 
+    // TODO remove when the storage migration to v1 is gone
     #[error("[Oracle] Failed to load the v0 configuration! Cause: {0}")]
     LoadConfigV0(StdError),
 
