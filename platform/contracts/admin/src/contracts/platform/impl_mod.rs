@@ -1,107 +1,56 @@
-use platform::batch::Batch;
-use sdk::cosmwasm_std::Addr;
-
 use crate::validate::Validate;
 
 use super::{
-    super::{
-        impl_mod::{execute_contract, migrate_contract},
-        MigrationSpec,
-    },
+    super::{AsRef, ForEachPair, HigherOrderType, TryForEach},
     PlatformContracts,
 };
 
-impl PlatformContracts<Addr> {
-    pub(in crate::contracts) fn migrate(
-        self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
-        migration_msgs: PlatformContracts<MigrationSpec>,
-    ) {
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.dispatcher,
-            migration_msgs.dispatcher,
-        );
+impl<T> AsRef for PlatformContracts<T> {
+    type Item = T;
 
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.timealarms,
-            migration_msgs.timealarms,
-        );
+    type HigherOrderType = super::HigherOrderType;
 
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.treasury,
-            migration_msgs.treasury,
-        );
+    fn as_ref(&self) -> <Self::HigherOrderType as HigherOrderType>::Of<&Self::Item> {
+        PlatformContracts {
+            dispatcher: &self.dispatcher,
+            timealarms: &self.timealarms,
+            treasury: &self.treasury,
+        }
     }
+}
 
-    pub(in crate::contracts) fn maybe_migrate(
-        self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
-        migration_msgs: PlatformContracts<Option<MigrationSpec>>,
-    ) {
-        () = migration_msgs.dispatcher.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.dispatcher,
-                migration_spec,
-            )
-        });
+impl<T> TryForEach for PlatformContracts<T> {
+    type Item = T;
 
-        () = migration_msgs.timealarms.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.timealarms,
-                migration_spec,
-            )
-        });
-
-        () = migration_msgs.treasury.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.treasury,
-                migration_spec,
-            )
-        });
+    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    where
+        F: FnMut(Self::Item, U) -> Result<U, E>,
+    {
+        functor(self.dispatcher, accumulator)
+            .and_then(|accumulator| functor(self.timealarms, accumulator))
+            .and_then(|accumulator| functor(self.treasury, accumulator))
     }
+}
 
-    pub(in crate::contracts) fn execute(
+impl<T> ForEachPair for PlatformContracts<T> {
+    type Item = T;
+
+    type HigherOrderType = super::HigherOrderType;
+
+    fn for_each_pair<U, V, F>(
         self,
-        batch: &mut Batch,
-        execute_messages: PlatformContracts<String>,
-    ) {
-        execute_contract(batch, self.dispatcher, execute_messages.dispatcher);
+        counter_part: PlatformContracts<U>,
+        mut accumulator: V,
+        mut functor: F,
+    ) -> V
+    where
+        F: FnMut(Self::Item, U, V) -> V,
+    {
+        accumulator = functor(self.dispatcher, counter_part.dispatcher, accumulator);
 
-        execute_contract(batch, self.timealarms, execute_messages.timealarms);
+        accumulator = functor(self.timealarms, counter_part.timealarms, accumulator);
 
-        execute_contract(batch, self.treasury, execute_messages.treasury);
-    }
-
-    pub(in crate::contracts) fn maybe_execute(
-        self,
-        batch: &mut Batch,
-        execute_messages: PlatformContracts<Option<String>>,
-    ) {
-        () = execute_messages.dispatcher.map_or((), |execute_message| {
-            execute_contract(batch, self.dispatcher, execute_message)
-        });
-
-        () = execute_messages.timealarms.map_or((), |execute_message| {
-            execute_contract(batch, self.timealarms, execute_message)
-        });
-
-        () = execute_messages.treasury.map_or((), |execute_message| {
-            execute_contract(batch, self.treasury, execute_message)
-        });
+        functor(self.treasury, counter_part.treasury, accumulator)
     }
 }
 
@@ -114,10 +63,7 @@ where
     type Error = T::Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
-        self.dispatcher.validate(ctx)?;
-
-        self.timealarms.validate(ctx)?;
-
-        self.treasury.validate(ctx)
+        self.as_ref()
+            .try_for_each((), |contract, ()| contract.validate(ctx))
     }
 }

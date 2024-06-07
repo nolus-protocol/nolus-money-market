@@ -8,6 +8,10 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+#[cfg(feature = "contract")]
+pub(crate) use self::impl_mod::{execute, migrate};
+#[cfg(feature = "contract")]
+use self::impl_mod::{AsRef, ForEachPair, TryForEach};
 pub use self::{
     granular::{Granularity, HigherOrderType as HigherOrderGranularity},
     higher_order_type::{HigherOrderType, Option as HigherOrderOption},
@@ -19,9 +23,6 @@ pub use self::{
         Dex, Network, Protocol, ProtocolContracts,
     },
 };
-
-#[cfg(feature = "contract")]
-pub(crate) use self::impl_mod::{execute, migrate};
 
 mod granular;
 mod higher_order_type;

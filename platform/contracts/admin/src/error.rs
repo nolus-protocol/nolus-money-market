@@ -13,35 +13,40 @@ pub enum Error {
     AccessControl(#[from] access_control::error::Error),
     #[error("[Admin] {0}")]
     Platform(#[from] platform::error::Error),
-    #[error("No data in migration response!")]
+    #[error("[Admin] No data in migration response!")]
     NoMigrationResponseData {},
     #[error(
-        "Contract returned wrong release string! \"{reported}\" was returned, \
-        but \"{expected}\" was expected!"
+        "[Admin] Contract returned wrong release string! \"{reported}\" was \
+        returned, but \"{expected}\" was expected!"
     )]
     WrongRelease { reported: String, expected: String },
     #[error(
-        "Contract returned wrong address! Expected \"{expected}\", but got \
-        \"{reported}\"!"
+        "[Admin] Contract returned wrong address! Expected \"{expected}\", \
+        but got \"{reported}\"!"
     )]
     DifferentInstantiatedAddress { reported: Addr, expected: Addr },
     #[error(
-        "Contract returned wrong code id! Expected \"{expected}\", but got \
-        \"{reported}\"!"
+        "[Admin] Contract returned wrong code id! Expected \"{expected}\", \
+        but got \"{reported}\"!"
     )]
     DifferentInstantiatedCodeId { reported: CodeId, expected: CodeId },
     #[error(
-        "Protocol not mentioned under either migration messages, or \
+        "[Admin] Protocol not mentioned under either migration messages, or \
         post-migration execution messages! Protocol's friendly name: {0}"
     )]
     MissingProtocol(String),
     #[error(
-        "Protocol set of contracts already exists for this protocol name! \
-        Protocol's friendly name: {0}"
+        "[Admin] Protocol deregistration message not sent by a registered \
+        protocol leaser!"
+    )]
+    SenderNotARegisteredLeaser {},
+    #[error(
+        "[Admin] Protocol set of contracts already exists for this protocol \
+        name! Protocol's friendly name: {0}"
     )]
     ProtocolSetAlreadyExists(String),
     #[error(
-        "No protocol set of contracts exists for this protocol name! \
+        "[Admin] No protocol set of contracts exists for this protocol name! \
         Protocol's friendly name: {0}"
     )]
     UnknownProtocol(String),

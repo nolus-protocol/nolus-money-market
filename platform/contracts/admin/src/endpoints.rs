@@ -12,7 +12,7 @@ use versioning::{
 };
 
 use crate::{
-    contracts::Protocol,
+    contracts::{MigrationSpec, Protocol, ProtocolContracts},
     error::Error as ContractError,
     msg::{
         ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, PlatformQueryResponse,
@@ -25,7 +25,7 @@ use crate::{
 
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
+const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -130,6 +130,9 @@ pub fn execute(
 
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
+        ExecuteMsg::DeregisterProtocol(migration_spec) => {
+            deregister_protocol(deps.storage, &info.sender, migration_spec)
+        }
         ExecuteMsg::EndOfMigration {} => {
             ensure_eq!(
                 info.sender,
@@ -209,7 +212,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 
-            sdk::cosmwasm_std::to_json_binary(&addr).map_err(From::from)
+            to_json_binary(&addr).map_err(From::from)
         }
         QueryMsg::Protocols {} => {
             state_contracts::protocols(deps.storage).and_then(|ref protocols| {
@@ -273,6 +276,24 @@ fn register_protocol(
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
+fn deregister_protocol(
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    migration_spec: ProtocolContracts<MigrationSpec>,
+) -> ContractResult<CwResponse> {
+    for name in state_contracts::protocols(storage)? {
+        let protocol = state_contracts::load_protocol(storage, name.clone())?.contracts;
+
+        if protocol.leaser == sender {
+            return Ok(response::response_only_messages(
+                protocol.migrate_standalone(migration_spec),
+            ));
+        }
+    }
+
+    Err(ContractError::SenderNotARegisteredLeaser {})
+}
+
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
     platform::reply::from_execute(msg)?
         .ok_or(ContractError::NoMigrationResponseData {})
@@ -283,7 +304,7 @@ fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult
 fn check_release_label(
     reported_release: ReleaseLabel,
     expected_release: ReleaseLabel,
-) -> Result<(), ContractError> {
+) -> ContractResult<()> {
     ensure_eq!(
         reported_release,
         expected_release,
