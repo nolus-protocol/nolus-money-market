@@ -3,8 +3,8 @@ use platform::{batch::Batch, contract::CodeId, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        ensure_eq, entry_point, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut,
-        Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
+        self, ensure_eq, entry_point, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env,
+        MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{
@@ -208,25 +208,26 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 
             let canonical_addr =
-                sdk::cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
+                cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 
-            to_json_binary(&addr).map_err(From::from)
+            cosmwasm_std::to_json_binary(&addr).map_err(From::from)
         }
         QueryMsg::Protocols {} => {
             state_contracts::protocols(deps.storage).and_then(|ref protocols| {
-                to_json_binary::<ProtocolsQueryResponse>(protocols).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<ProtocolsQueryResponse>(protocols)
+                    .map_err(Into::into)
             })
         }
         QueryMsg::Platform {} => {
             state_contracts::load_platform(deps.storage).and_then(|ref platform| {
-                to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
             })
         }
         QueryMsg::Protocol(protocol) => state_contracts::load_protocol(deps.storage, protocol)
             .and_then(|ref protocol| {
-                to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
             }),
     }
 }
