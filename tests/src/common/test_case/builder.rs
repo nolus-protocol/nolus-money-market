@@ -269,8 +269,10 @@ where
             &mut test_case.app,
             test_case.address_book.lease_code(),
             test_case.address_book.lpp().clone(),
-            test_case.address_book.time_alarms().clone(),
-            test_case.address_book.oracle().clone(),
+            (
+                test_case.address_book.time_alarms().clone(),
+                test_case.address_book.oracle().clone(),
+            ),
             test_case.address_book.profit().clone(),
             test_case.address_book.reserve().clone(),
             test_case.address_book.protocols_registry().clone(),

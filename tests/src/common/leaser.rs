@@ -68,8 +68,7 @@ impl Instantiator {
         app: &mut App,
         lease_code: Code,
         lpp: Addr,
-        time_alarms: Addr,
-        market_price_oracle: Addr,
+        time_market_alarms: (Addr, Addr),
         profit: Addr,
         reserve: Addr,
         protocols_registry: Addr,
@@ -90,8 +89,8 @@ impl Instantiator {
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
-            time_alarms,
-            market_price_oracle,
+            time_alarms: time_market_alarms.0,
+            market_price_oracle: time_market_alarms.1,
             dex: ConnectionParams {
                 connection_id: TestCase::DEX_CONNECTION_ID.into(),
                 transfer_channel: Ics20Channel {
