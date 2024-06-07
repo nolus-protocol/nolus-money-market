@@ -72,6 +72,7 @@ impl Instantiator {
         market_price_oracle: Addr,
         profit: Addr,
         reserve: Addr,
+        protocols_registry: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
@@ -85,6 +86,7 @@ impl Instantiator {
             lpp,
             profit,
             reserve,
+            protocols_registry,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,

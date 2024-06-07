@@ -255,14 +255,11 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Treasury>
-    Builder<Lpn, ProtocolsRegistry, Treasury, Addr, Addr, (), Addr, Addr, Addr>
+impl<Lpn, Treasury> Builder<Lpn, Addr, Treasury, Addr, Addr, (), Addr, Addr, Addr>
 where
     Lpn: Currency,
 {
-    pub fn init_leaser(
-        self,
-    ) -> Builder<Lpn, ProtocolsRegistry, Treasury, Addr, Addr, Addr, Addr, Addr, Addr> {
+    pub fn init_leaser(self) -> Builder<Lpn, Addr, Treasury, Addr, Addr, Addr, Addr, Addr, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -276,6 +273,7 @@ where
             test_case.address_book.oracle().clone(),
             test_case.address_book.profit().clone(),
             test_case.address_book.reserve().clone(),
+            test_case.address_book.protocols_registry().clone(),
         );
 
         test_case.app.update_block(next_block);

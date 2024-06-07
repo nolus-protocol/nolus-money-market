@@ -766,6 +766,7 @@ name = "leaser"
 version = "0.8.3"
 dependencies = [
  "access-control",
+ "admin_contract",
  "cosmwasm-std",
  "currencies",
  "currency",

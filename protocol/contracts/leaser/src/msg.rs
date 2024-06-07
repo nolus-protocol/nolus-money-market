@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use admin_contract::msg::{
-    HigherOrderGranularity, HigherOrderOption, HigherOrderProtocolContracts, HigherOrderType,
-    MigrationSpec,
-};
+use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
@@ -85,10 +82,10 @@ pub enum SudoMsg {
         lease_due_period: Duration,
     },
     CloseProtocol {
-        migration_spec: <HigherOrderGranularity<HigherOrderProtocolContracts, HigherOrderOption> as HigherOrderType>::Of<MigrationSpec>,
+        migration_spec: ProtocolContracts<MigrationSpec>,
         #[serde(default)]
         force: ForceClose,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema)]
