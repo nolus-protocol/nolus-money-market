@@ -68,7 +68,7 @@ impl Instantiator {
         app: &mut App,
         lease_code: Code,
         lpp: Addr,
-        time_market_alarms: (Addr, Addr),
+        alarms: Alarms,
         profit: Addr,
         reserve: Addr,
         protocols_registry: Addr,
@@ -89,8 +89,8 @@ impl Instantiator {
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
-            time_alarms: time_market_alarms.0,
-            market_price_oracle: time_market_alarms.1,
+            time_alarms: alarms.time_alarm,
+            market_price_oracle: alarms.market_price_oracle,
             dex: ConnectionParams {
                 connection_id: TestCase::DEX_CONNECTION_ID.into(),
                 transfer_channel: Ics20Channel {
@@ -104,6 +104,11 @@ impl Instantiator {
             .unwrap()
             .unwrap_response()
     }
+}
+
+pub(crate) struct Alarms {
+    pub time_alarm: Addr,
+    pub market_price_oracle: Addr,
 }
 
 pub(crate) fn query_quote<DownpaymentC, LeaseC>(
