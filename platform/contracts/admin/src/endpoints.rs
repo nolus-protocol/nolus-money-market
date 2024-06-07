@@ -282,17 +282,21 @@ fn deregister_protocol(
     sender: &Addr,
     migration_spec: ProtocolContracts<MigrationSpec>,
 ) -> ContractResult<CwResponse> {
-    for name in state_contracts::protocols(storage)? {
-        let protocol = state_contracts::load_protocol(storage, name.clone())?.contracts;
-
-        if protocol.leaser == sender {
-            return Ok(response::response_only_messages(
-                protocol.migrate_standalone(migration_spec),
-            ));
-        }
-    }
-
-    Err(ContractError::SenderNotARegisteredLeaser {})
+    state_contracts::protocols(storage)?
+        .into_iter()
+        .find_map(|name| {
+            match state_contracts::load_protocol(storage, name.clone())
+                .map(|protocol| protocol.contracts)
+            {
+                Ok(protocol) => (protocol.leaser == sender).then(|| {
+                    Ok(response::response_only_messages(
+                        protocol.migrate_standalone(migration_spec),
+                    ))
+                }),
+                Err(error) => Some(Err(error)),
+            }
+        })
+        .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
 }
 
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
