@@ -30,6 +30,7 @@ osmosis-osmosis-usdc_noble = ["currencies/osmosis-osmosis-usdc_noble"]
 testing = ["currency/testing", "lease/testing"]
 
 [dependencies]
+admin_contract = { workspace = true }
 lease = { workspace = true, features = ["skel"] }
 lpp = { workspace = true }
 oracle-platform = { workspace = true }

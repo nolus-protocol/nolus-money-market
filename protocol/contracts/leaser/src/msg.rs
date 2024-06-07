@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
@@ -23,6 +24,7 @@ pub struct InstantiateMsg {
     pub reserve: Addr,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
+    pub protocols_registry: Addr,
     pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
@@ -79,6 +81,20 @@ pub enum SudoMsg {
         lease_position_spec: PositionSpecDTO,
         lease_due_period: Duration,
     },
+    CloseProtocol {
+        migration_spec: ProtocolContracts<MigrationSpec>,
+        #[serde(default)]
+        force: ForceClose,
+    },
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum ForceClose {
+    #[default]
+    No,
+    KillProtocol,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]

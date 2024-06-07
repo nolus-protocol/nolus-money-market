@@ -16,7 +16,7 @@ use sdk::{
 
 use crate::common::{
     cwcoin, cwcoin_dex,
-    leaser::Instantiator as LeaserInstantiator,
+    leaser::{Alarms, Instantiator as LeaserInstantiator},
     lpp::Instantiator as LppInstantiator,
     oracle::Instantiator as OracleInstantiator,
     profit::Instantiator as ProfitInstantiator,
@@ -255,14 +255,11 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Treasury>
-    Builder<Lpn, ProtocolsRegistry, Treasury, Addr, Addr, (), Addr, Addr, Addr>
+impl<Lpn, Treasury> Builder<Lpn, Addr, Treasury, Addr, Addr, (), Addr, Addr, Addr>
 where
     Lpn: Currency,
 {
-    pub fn init_leaser(
-        self,
-    ) -> Builder<Lpn, ProtocolsRegistry, Treasury, Addr, Addr, Addr, Addr, Addr, Addr> {
+    pub fn init_leaser(self) -> Builder<Lpn, Addr, Treasury, Addr, Addr, Addr, Addr, Addr, Addr> {
         let Self {
             mut test_case,
             _lpn,
@@ -272,10 +269,13 @@ where
             &mut test_case.app,
             test_case.address_book.lease_code(),
             test_case.address_book.lpp().clone(),
-            test_case.address_book.time_alarms().clone(),
-            test_case.address_book.oracle().clone(),
+            Alarms {
+                time_alarm: test_case.address_book.time_alarms().clone(),
+                market_price_oracle: test_case.address_book.oracle().clone(),
+            },
             test_case.address_book.profit().clone(),
             test_case.address_book.reserve().clone(),
+            test_case.address_book.protocols_registry().clone(),
         );
 
         test_case.app.update_block(next_block);

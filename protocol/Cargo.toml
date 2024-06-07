@@ -25,6 +25,7 @@ marketprice = { path = "packages/marketprice", default-features = false }
 swap = { path = "packages/swap", default-features = false }
 
 # Platform Contracts
+admin_contract = { path = "../platform/contracts/admin", default-features = false }
 timealarms = { path = "../platform/contracts/timealarms", default-features = false }
 
 # Platform Packages

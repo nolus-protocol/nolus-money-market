@@ -68,10 +68,10 @@ impl Instantiator {
         app: &mut App,
         lease_code: Code,
         lpp: Addr,
-        time_alarms: Addr,
-        market_price_oracle: Addr,
+        alarms: Alarms,
         profit: Addr,
         reserve: Addr,
+        protocols_registry: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(execute, instantiate, query)
@@ -85,11 +85,12 @@ impl Instantiator {
             lpp,
             profit,
             reserve,
+            protocols_registry,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
-            time_alarms,
-            market_price_oracle,
+            time_alarms: alarms.time_alarm,
+            market_price_oracle: alarms.market_price_oracle,
             dex: ConnectionParams {
                 connection_id: TestCase::DEX_CONNECTION_ID.into(),
                 transfer_channel: Ics20Channel {
@@ -103,6 +104,11 @@ impl Instantiator {
             .unwrap()
             .unwrap_response()
     }
+}
+
+pub(crate) struct Alarms {
+    pub time_alarm: Addr,
+    pub market_price_oracle: Addr,
 }
 
 pub(crate) fn query_quote<DownpaymentC, LeaseC>(
