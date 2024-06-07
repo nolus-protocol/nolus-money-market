@@ -37,6 +37,7 @@ const TIMEALARMS_ADDR: &str = "timealarms";
 const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 const RESERVE_ADDR: &str = "reserve";
+const PROTOCOLS_REGISTRY_ADDR: &str = "protocols";
 
 type TheCurrency = LpnC;
 
@@ -51,6 +52,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         reserve: Addr::unchecked(RESERVE_ADDR),
         time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
         market_price_oracle: Addr::unchecked(ORACLE_ADDR),
+        protocols_registry: Addr::unchecked(PROTOCOLS_REGISTRY_ADDR),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),

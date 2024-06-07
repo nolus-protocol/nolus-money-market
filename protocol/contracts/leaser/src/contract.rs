@@ -137,6 +137,10 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             lease_position_spec,
             lease_due_period,
         ),
+        SudoMsg::CloseProtocol {
+            migration_spec: _,
+            force: _,
+        } => todo!(),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))

@@ -11,6 +11,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "admin_contract"
+version = "0.4.0"
+dependencies = [
+ "access-control",
+ "currency",
+ "finance",
+ "platform",
+ "sdk",
+ "serde",
+ "thiserror",
+ "versioning",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -729,6 +743,7 @@ name = "leaser"
 version = "0.8.3"
 dependencies = [
  "access-control",
+ "admin_contract",
  "cosmwasm-std",
  "currencies",
  "currency",

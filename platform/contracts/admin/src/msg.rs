@@ -12,8 +12,8 @@ use versioning::ReleaseLabel;
 pub use crate::contracts::{
     Contracts, ContractsExecute, ContractsMigration, Dex, Granularity, HigherOrderGranularity,
     HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
-    HigherOrderProtocolContracts, HigherOrderType, Network, PlatformContracts, Protocol,
-    ProtocolContracts,
+    HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, Network, PlatformContracts,
+    Protocol, ProtocolContracts,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
