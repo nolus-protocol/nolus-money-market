@@ -44,6 +44,10 @@ pub(crate) fn add_protocol(
     }
 }
 
+pub(crate) fn remove_protocol(storage: &mut dyn Storage, name: String) {
+    PROTOCOL.remove(storage, name)
+}
+
 pub(crate) fn protocols(storage: &dyn Storage) -> Result<Vec<String>> {
     PROTOCOL
         .keys(storage, None, None, Order::Ascending)
