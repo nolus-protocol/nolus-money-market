@@ -285,18 +285,14 @@ fn deregister_protocol(
     state_contracts::protocols(storage)?
         .into_iter()
         .find_map(|name| {
-            match state_contracts::load_protocol(storage, name.clone())
-                .map(|protocol| protocol.contracts)
-            {
-                Ok(protocol) => (protocol.leaser == sender).then(|| {
-                    Ok(response::response_only_messages(
-                        protocol.migrate_standalone(migration_spec),
-                    ))
-                }),
-                Err(error) => Some(Err(error)),
-            }
+            state_contracts::load_protocol(storage, name.clone())
+                .map(|protocol| (protocol.contracts.leaser == sender).then_some(protocol.contracts))
+                .transpose()
         })
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
+        .map(|protocol| {
+            response::response_only_messages(protocol.migrate_standalone(migration_spec))
+        })
 }
 
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
