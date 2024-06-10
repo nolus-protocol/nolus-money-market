@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
+use cosmwasm_std::Storage;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
     contract::{self, Code},
@@ -42,6 +43,9 @@ pub fn instantiate(
     contract::validate_addr(deps.querier, &msg.time_alarms)?;
     contract::validate_addr(deps.querier, &msg.market_price_oracle)?;
     contract::validate_addr(deps.querier, &msg.profit)?;
+    // cannot validate the address since the Admin plays the role of the registry
+    // and it is not yet instantiated
+    deps.api.addr_validate(msg.protocols_registry.as_str())?;
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
@@ -138,9 +142,11 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             lease_due_period,
         ),
         SudoMsg::CloseProtocol {
-            migration_spec: _,
-            force: _,
-        } => todo!(),
+            migration_spec,
+            force,
+        } => {
+            leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec, force)
+        }
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -204,6 +210,10 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
             contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
         })
         .map(|()| lease)
+}
+
+fn protocols_registry_load(storage: &dyn Storage) -> ContractResult<Addr> {
+    Config::load(storage).map(|cfg| cfg.protocols_registry)
 }
 
 fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {

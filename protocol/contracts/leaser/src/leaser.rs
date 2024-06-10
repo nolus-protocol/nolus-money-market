@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currency::SymbolOwned;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
@@ -12,7 +13,6 @@ use platform::{
 use reserve::api::ExecuteMsg as ReserveExecuteMsg;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
 
-use crate::finance::{LpnCurrency, OracleRef};
 use crate::{
     cmd::Quote,
     finance::LpnCurrencies,
@@ -20,6 +20,11 @@ use crate::{
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
+};
+use crate::{
+    finance::{LpnCurrency, OracleRef},
+    msg::ForceClose,
+    ContractError,
 };
 
 pub struct Leaser<'a> {
@@ -116,6 +121,35 @@ where
     })
 }
 
+pub(super) fn try_close_protocol<ProtocolsRegistryLoader>(
+    storage: &dyn Storage,
+    protocols_registry: ProtocolsRegistryLoader,
+    migration_spec: ProtocolContracts<MigrationSpec>,
+    force: ForceClose,
+) -> ContractResult<MessageResponse>
+where
+    ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
+{
+    if force == ForceClose::No && has_lease(storage) {
+        Err(ContractError::ProtocolStillInUse())
+    } else {
+        protocols_registry(storage).and_then(|protocols_registry| {
+            let mut batch = Batch::default();
+            batch
+                .schedule_execute_wasm_no_reply_no_funds(
+                    protocols_registry,
+                    &ExecuteMsg::DeregisterProtocol(migration_spec),
+                )
+                .map_err(ContractError::ProtocolDeregistration)
+                .map(|()| batch.into())
+        })
+    }
+}
+
+fn has_lease(storage: &dyn Storage) -> bool {
+    Leases::iter(storage, None).next().is_some()
+}
+
 fn update_remote_refs(
     storage: &dyn Storage,
     new_lease: Code,
@@ -144,5 +178,67 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
         emitter.emit("contunuation-key", next)
     } else {
         emitter.emit("status", "done")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use admin_contract::msg::{MigrationSpec, ProtocolContracts};
+    use cosmwasm_std::Addr;
+    use sdk::cosmwasm_std::testing::MockStorage;
+
+    use crate::{msg::ForceClose, state::leases::Leases, ContractError};
+
+    #[test]
+    fn close_empty_protocol() {
+        let store = MockStorage::default();
+        assert!(super::try_close_protocol(
+            &store,
+            |_| Ok(Addr::unchecked("Registry")),
+            dummy_spec(),
+            ForceClose::No
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn close_non_empty_protocol() {
+        let mut store = MockStorage::default();
+        let customer = Addr::unchecked("CustomerA");
+        let lease = Addr::unchecked("Lease1");
+        Leases::cache_open_req(&mut store, &customer).expect("cache the customer should succeed");
+        Leases::save(&mut store, lease).expect("save a new lease should succeed");
+        assert_eq!(
+            Err(ContractError::ProtocolStillInUse()),
+            super::try_close_protocol(
+                &store,
+                |_| Ok(Addr::unchecked("Registry")),
+                dummy_spec(),
+                ForceClose::No
+            )
+        );
+
+        assert!(super::try_close_protocol(
+            &store,
+            |_| Ok(Addr::unchecked("Registry")),
+            dummy_spec(),
+            ForceClose::KillProtocol
+        )
+        .is_ok());
+    }
+
+    fn dummy_spec() -> ProtocolContracts<MigrationSpec> {
+        let migration_spec = MigrationSpec {
+            code_id: 23u64.into(),
+            migrate_msg: "{}".into(),
+            post_migrate_execute_msg: None,
+        };
+        ProtocolContracts {
+            leaser: migration_spec.clone(),
+            lpp: migration_spec.clone(),
+            oracle: migration_spec.clone(),
+            profit: migration_spec.clone(),
+            reserve: migration_spec,
+        }
     }
 }
