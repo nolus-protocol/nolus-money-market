@@ -89,3 +89,60 @@ impl Config {
             .map_err(Into::into)
     }
 }
+
+pub mod migrate {
+    use cosmwasm_std::{Addr, Storage};
+    use finance::{duration::Duration, percent::Percent};
+    use lease::api::open::{ConnectionParams, PositionSpecDTO};
+    use platform::contract::Code;
+    use sdk::cw_storage_plus::Item;
+    use serde::{Deserialize, Serialize, Serializer};
+
+    use crate::result::ContractResult;
+
+    use super::Config;
+
+    const STORAGE_OLD: Item<'static, ConfigOld> = Item::new("config");
+
+    #[derive(Deserialize)]
+    pub struct ConfigOld {
+        pub lease_code: Code,
+        pub lpp: Addr,
+        pub profit: Addr,
+        pub reserve: Addr,
+        pub time_alarms: Addr,
+        pub market_price_oracle: Addr,
+        pub lease_position_spec: PositionSpecDTO,
+        pub lease_interest_rate_margin: Percent,
+        pub lease_due_period: Duration,
+        pub dex: ConnectionParams,
+    }
+    impl Serialize for ConfigOld {
+        fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            unimplemented!("Required by `cw_storage_plus::Item::load`'s trait bounds.")
+        }
+    }
+
+    pub fn migrate(storage: &mut dyn Storage, protocols_registry: Addr) -> ContractResult<()> {
+        STORAGE_OLD
+            .load(storage)
+            .map_err(Into::into)
+            .map(|old_cfg: ConfigOld| Config {
+                lease_code: old_cfg.lease_code,
+                lpp: old_cfg.lpp,
+                profit: old_cfg.profit,
+                reserve: old_cfg.reserve,
+                time_alarms: old_cfg.time_alarms,
+                market_price_oracle: old_cfg.market_price_oracle,
+                protocols_registry,
+                lease_position_spec: old_cfg.lease_position_spec,
+                lease_interest_rate_margin: old_cfg.lease_interest_rate_margin,
+                lease_due_period: old_cfg.lease_due_period,
+                dex: old_cfg.dex,
+            })
+            .and_then(|config: Config| config.store(storage))
+    }
+}
