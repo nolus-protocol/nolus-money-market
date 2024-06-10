@@ -1,7 +1,7 @@
 use currency::Currency;
 use platform::{
     batch::{Emit, Emitter},
-    response,
+    error as platform_error, response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -10,7 +10,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -30,8 +30,8 @@ mod config;
 pub mod exec;
 mod oracle;
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -60,18 +60,13 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software(
         deps.storage,
         CONTRACT_VERSION,
-        Config::migrate,
         ContractError::UpdateSoftware,
     )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: (),
-         }| response::response(release_label),
-    )
+    .and_then(response::response)
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

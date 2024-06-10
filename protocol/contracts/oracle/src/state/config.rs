@@ -36,32 +36,4 @@ impl Config {
             .map(mem::drop)
             .map_err(ContractError::UpdateConfig)
     }
-
-    pub fn migrate(storage: &mut dyn Storage) -> ContractResult<()> {
-        use currency::SymbolOwned;
-        use serde::{Deserialize, Serialize, Serializer};
-
-        const STORAGE_V0: Item<'static, OldConfig> = Item::new("config");
-
-        #[derive(Deserialize)]
-        #[serde(deny_unknown_fields, rename_all = "snake_case")]
-        struct OldConfig {
-            #[allow(dead_code)]
-            base_asset: SymbolOwned,
-            price_config: PriceConfig,
-        }
-        impl Serialize for OldConfig {
-            fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: Serializer,
-            {
-                unimplemented!("No need to serialize an old config. We just satisfy the Item::load's trait boundary")
-            }
-        }
-
-        STORAGE_V0
-            .load(storage)
-            .map_err(ContractError::LoadConfigV0)
-            .and_then(|old_config| Config::new(old_config.price_config).store(storage))
-    }
 }
