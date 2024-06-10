@@ -286,7 +286,11 @@ fn deregister_protocol(
         .into_iter()
         .find_map(|name| {
             state_contracts::load_protocol(storage, name.clone())
-                .map(|protocol| (protocol.contracts.leaser == sender).then_some(protocol.contracts))
+                .map(|protocol| {
+                    (protocol.contracts.leaser == sender)
+                        .then_some(protocol.contracts)
+                        .inspect(|_| () = state_contracts::remove_protocol(storage, name))
+                })
                 .transpose()
         })
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
