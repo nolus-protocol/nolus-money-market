@@ -4,148 +4,86 @@ use sdk::cosmwasm_std::Addr;
 use crate::validate::Validate;
 
 use super::{
-    super::{
-        impl_mod::{execute_contract, migrate_contract},
-        MigrationSpec,
-    },
-    Protocol, ProtocolContracts,
+    super::{impl_mod::migrate_contract, AsRef, ForEachPair, MigrationSpec, TryForEach},
+    higher_order_type, Protocol, ProtocolContracts,
 };
 
 impl ProtocolContracts<Addr> {
-    pub(in crate::contracts) fn migrate(
+    pub(crate) fn migrate_standalone(
         self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
         migration_msgs: ProtocolContracts<MigrationSpec>,
-    ) {
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.leaser,
-            migration_msgs.leaser,
-        );
+    ) -> Batch {
+        let mut migration_batch = Batch::default();
 
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.lpp,
-            migration_msgs.lpp,
-        );
+        let mut post_migration_execute_batch = Batch::default();
 
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.oracle,
-            migration_msgs.oracle,
-        );
+        () = self.for_each_pair(migration_msgs, (), |address, migration_spec, ()| {
+            () = migrate_contract(
+                &mut migration_batch,
+                &mut post_migration_execute_batch,
+                address,
+                migration_spec,
+            );
+        });
 
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.profit,
-            migration_msgs.profit,
-        );
-
-        migrate_contract(
-            migration_batch,
-            post_migration_execute_batch,
-            self.reserve,
-            migration_msgs.reserve,
-        );
+        migration_batch.merge(post_migration_execute_batch)
     }
+}
 
-    pub(in crate::contracts) fn maybe_migrate(
-        self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
-        migration_msgs: ProtocolContracts<Option<MigrationSpec>>,
-    ) {
-        () = migration_msgs.leaser.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.leaser,
-                migration_spec,
-            )
-        });
+impl<T> AsRef for ProtocolContracts<T> {
+    type Item = T;
 
-        () = migration_msgs.lpp.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.lpp,
-                migration_spec,
-            )
-        });
+    type HigherOrderType = higher_order_type::ProtocolContracts;
 
-        () = migration_msgs.oracle.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.oracle,
-                migration_spec,
-            )
-        });
-
-        () = migration_msgs.profit.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.profit,
-                migration_spec,
-            )
-        });
-
-        () = migration_msgs.reserve.map_or((), |migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                self.reserve,
-                migration_spec,
-            )
-        });
+    fn as_ref(&self) -> ProtocolContracts<&T> {
+        ProtocolContracts {
+            leaser: &self.leaser,
+            lpp: &self.lpp,
+            oracle: &self.oracle,
+            profit: &self.profit,
+            reserve: &self.reserve,
+        }
     }
+}
 
-    pub(in crate::contracts) fn execute(
-        self,
-        batch: &mut Batch,
-        execute_messages: ProtocolContracts<String>,
-    ) {
-        execute_contract(batch, self.leaser, execute_messages.leaser);
+impl<T> TryForEach for ProtocolContracts<T> {
+    type Item = T;
 
-        execute_contract(batch, self.lpp, execute_messages.lpp);
-
-        execute_contract(batch, self.oracle, execute_messages.oracle);
-
-        execute_contract(batch, self.profit, execute_messages.profit);
-
-        execute_contract(batch, self.reserve, execute_messages.reserve);
+    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    where
+        F: FnMut(Self::Item, U) -> Result<U, E>,
+    {
+        functor(self.leaser, accumulator)
+            .and_then(|accumulator| functor(self.lpp, accumulator))
+            .and_then(|accumulator| functor(self.oracle, accumulator))
+            .and_then(|accumulator| functor(self.profit, accumulator))
+            .and_then(|accumulator| functor(self.reserve, accumulator))
     }
+}
 
-    pub(in crate::contracts) fn maybe_execute(
+impl<T> ForEachPair for ProtocolContracts<T> {
+    type Item = T;
+
+    type HigherOrderType = higher_order_type::ProtocolContracts;
+
+    fn for_each_pair<U, V, F>(
         self,
-        batch: &mut Batch,
-        execute_messages: ProtocolContracts<Option<String>>,
-    ) {
-        () = execute_messages.leaser.map_or((), |execute_message| {
-            execute_contract(batch, self.leaser, execute_message)
-        });
+        counter_part: ProtocolContracts<U>,
+        mut accumulator: V,
+        mut functor: F,
+    ) -> V
+    where
+        F: FnMut(T, U, V) -> V,
+    {
+        accumulator = functor(self.leaser, counter_part.leaser, accumulator);
 
-        () = execute_messages.lpp.map_or((), |execute_message| {
-            execute_contract(batch, self.lpp, execute_message)
-        });
+        accumulator = functor(self.lpp, counter_part.lpp, accumulator);
 
-        () = execute_messages.oracle.map_or((), |execute_message| {
-            execute_contract(batch, self.oracle, execute_message)
-        });
+        accumulator = functor(self.oracle, counter_part.oracle, accumulator);
 
-        () = execute_messages.profit.map_or((), |execute_message| {
-            execute_contract(batch, self.profit, execute_message)
-        });
+        accumulator = functor(self.profit, counter_part.profit, accumulator);
 
-        () = execute_messages.reserve.map_or((), |execute_message| {
-            execute_contract(batch, self.reserve, execute_message)
-        });
+        functor(self.reserve, counter_part.reserve, accumulator)
     }
 }
 
@@ -158,12 +96,8 @@ where
     type Error = T::Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
-        self.leaser
-            .validate(ctx)
-            .and_then(|()| self.lpp.validate(ctx))
-            .and_then(|()| self.oracle.validate(ctx))
-            .and_then(|()| self.profit.validate(ctx))
-            .and_then(|()| self.reserve.validate(ctx))
+        self.as_ref()
+            .try_for_each((), |contract, ()| contract.validate(ctx))
     }
 }
 

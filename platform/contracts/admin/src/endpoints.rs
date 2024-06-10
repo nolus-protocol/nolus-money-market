@@ -3,8 +3,8 @@ use platform::{batch::Batch, contract::CodeId, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        ensure_eq, entry_point, to_json_binary, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut,
-        Env, MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
+        self, ensure_eq, entry_point, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env,
+        MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{
@@ -12,7 +12,7 @@ use versioning::{
 };
 
 use crate::{
-    contracts::Protocol,
+    contracts::{MigrationSpec, Protocol, ProtocolContracts},
     error::Error as ContractError,
     msg::{
         ExecuteMsg, InstantiateMsg, MigrateContracts, MigrateMsg, PlatformQueryResponse,
@@ -25,7 +25,7 @@ use crate::{
 
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
+const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -130,6 +130,9 @@ pub fn execute(
 
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
+        ExecuteMsg::DeregisterProtocol(migration_spec) => {
+            deregister_protocol(deps.storage, &info.sender, migration_spec)
+        }
         ExecuteMsg::EndOfMigration {} => {
             ensure_eq!(
                 info.sender,
@@ -205,25 +208,26 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 
             let canonical_addr =
-                sdk::cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
+                cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 
-            sdk::cosmwasm_std::to_json_binary(&addr).map_err(From::from)
+            cosmwasm_std::to_json_binary(&addr).map_err(From::from)
         }
         QueryMsg::Protocols {} => {
             state_contracts::protocols(deps.storage).and_then(|ref protocols| {
-                to_json_binary::<ProtocolsQueryResponse>(protocols).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<ProtocolsQueryResponse>(protocols)
+                    .map_err(Into::into)
             })
         }
         QueryMsg::Platform {} => {
             state_contracts::load_platform(deps.storage).and_then(|ref platform| {
-                to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<PlatformQueryResponse>(platform).map_err(Into::into)
             })
         }
         QueryMsg::Protocol(protocol) => state_contracts::load_protocol(deps.storage, protocol)
             .and_then(|ref protocol| {
-                to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
+                cosmwasm_std::to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
             }),
     }
 }
@@ -273,6 +277,24 @@ fn register_protocol(
     state_contracts::add_protocol(storage, name, protocol).map(|()| response::empty_response())
 }
 
+fn deregister_protocol(
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    migration_spec: ProtocolContracts<MigrationSpec>,
+) -> ContractResult<CwResponse> {
+    state_contracts::protocols(storage)?
+        .into_iter()
+        .find_map(|name| {
+            state_contracts::load_protocol(storage, name.clone())
+                .map(|protocol| (protocol.contracts.leaser == sender).then_some(protocol.contracts))
+                .transpose()
+        })
+        .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
+        .map(|protocol| {
+            response::response_only_messages(protocol.migrate_standalone(migration_spec))
+        })
+}
+
 fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
     platform::reply::from_execute(msg)?
         .ok_or(ContractError::NoMigrationResponseData {})
@@ -283,7 +305,7 @@ fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult
 fn check_release_label(
     reported_release: ReleaseLabel,
     expected_release: ReleaseLabel,
-) -> Result<(), ContractError> {
+) -> ContractResult<()> {
     ensure_eq!(
         reported_release,
         expected_release,

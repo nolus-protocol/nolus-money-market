@@ -48,6 +48,7 @@ where
         name: String,
         protocol: Protocol<Addr>,
     },
+    DeregisterProtocol(ProtocolContracts<MigrationSpec>),
     /// A message for **internal purposes only**.
     ///
     /// It is meant to clean up any temporary storage changes.
