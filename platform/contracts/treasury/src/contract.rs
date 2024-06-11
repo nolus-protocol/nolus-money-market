@@ -15,7 +15,7 @@ use sdk::{
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::RewardCalculator,
@@ -27,7 +27,7 @@ use crate::{
 };
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
@@ -44,19 +44,9 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage| migrate_store(storage, deps.querier, deps.api, env, msg),
-        Into::into,
-    )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output,
-         }| response::response_with_messages(release_label, storage_migration_output),
-    )
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
 }
 
 #[entry_point]
@@ -199,23 +189,6 @@ fn setup_alarm(
             stub.setup_alarm(now + alarm_in)
                 .map_err(ContractError::SetupTimeAlarm)
         })
-}
-
-fn migrate_store(
-    storage: &mut dyn Storage,
-    querier: QuerierWrapper<'_>,
-    api: &dyn Api,
-    env: Env,
-    msg: InstantiateMsg,
-) -> ContractResult<impl Into<MessageResponse>> {
-    cleanup_dispatcher_access(storage);
-    setup_dispatching(storage, querier, api, env, msg)
-}
-
-fn cleanup_dispatcher_access(storage: &mut dyn Storage) {
-    const REWARDS_DISPATCHER_NAMESPACE: &str = "contract_rewards_dispatcher";
-
-    SingleUserAccess::new(storage, REWARDS_DISPATCHER_NAMESPACE).revoke();
 }
 
 fn setup_dispatching(
