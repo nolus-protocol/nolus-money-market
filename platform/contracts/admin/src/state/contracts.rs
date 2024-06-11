@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -8,9 +6,7 @@ use sdk::{
 };
 
 use crate::{
-    contracts::{
-        Contracts, ContractsTemplate, Dex, Network, PlatformContracts, Protocol, ProtocolContracts,
-    },
+    contracts::{Contracts, ContractsTemplate, PlatformContracts, Protocol},
     error::Error,
     result::Result,
 };
@@ -73,42 +69,35 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<Contracts> {
     })
 }
 
-pub(super) fn migrate_protocols(
-    storage: &mut dyn Storage,
-    mut dexes: BTreeMap<String, Dex>,
-) -> Result<()> {
-    Map::<'_, String, OldProtocol>::new(
-        std::str::from_utf8(PROTOCOL.namespace()).expect("Expected valid UTF-8 encoded key!"),
-    )
-    .range(storage, None, None, Order::Ascending)
-    .collect::<sdk::cosmwasm_std::StdResult<Vec<_>>>()
-    .map_err(Into::into)
-    .and_then(|protocols| {
-        protocols.into_iter().try_for_each(|(name, protocol)| {
-            let Some(dex) = dexes.remove(&name) else {
-                return Err(Error::MissingProtocol(name));
-            };
-
-            PROTOCOL
-                .save(storage, name, &protocol.migrate(dex))
-                .map_err(Into::into)
-        })
-    })
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
-struct OldProtocol {
-    pub network: Network,
-    pub contracts: ProtocolContracts<Addr>,
-}
-
-impl OldProtocol {
-    fn migrate(self, dex: Dex) -> Protocol<Addr> {
-        Protocol {
-            network: self.network,
-            dex,
-            contracts: self.contracts,
-        }
+pub(super) fn migrate_platform(storage: &mut dyn Storage) -> Result<()> {
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case", deny_unknown_fields)]
+    pub struct Platform {
+        pub dispatcher: Addr,
+        pub timealarms: Addr,
+        pub treasury: Addr,
     }
+
+    Item::<'_, Platform>::new(
+        std::str::from_utf8(PLATFORM.as_slice()).expect("Expected valid UTF-8 encoded key!"),
+    )
+    .load(storage)
+    .map_err(Into::into)
+    .and_then(
+        |Platform {
+             dispatcher: _,
+             timealarms,
+             treasury,
+         }| {
+            PLATFORM
+                .save(
+                    storage,
+                    &PlatformContracts {
+                        timealarms,
+                        treasury,
+                    },
+                )
+                .map_err(Into::into)
+        },
+    )
 }

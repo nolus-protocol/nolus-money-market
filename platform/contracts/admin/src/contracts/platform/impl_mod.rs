@@ -12,7 +12,6 @@ impl<T> AsRef for PlatformContracts<T> {
 
     fn as_ref(&self) -> <Self::HigherOrderType as HigherOrderType>::Of<&Self::Item> {
         PlatformContracts {
-            dispatcher: &self.dispatcher,
             timealarms: &self.timealarms,
             treasury: &self.treasury,
         }
@@ -26,8 +25,7 @@ impl<T> TryForEach for PlatformContracts<T> {
     where
         F: FnMut(Self::Item, U) -> Result<U, E>,
     {
-        functor(self.dispatcher, accumulator)
-            .and_then(|accumulator| functor(self.timealarms, accumulator))
+        functor(self.timealarms, accumulator)
             .and_then(|accumulator| functor(self.treasury, accumulator))
     }
 }
@@ -46,8 +44,6 @@ impl<T> ForEachPair for PlatformContracts<T> {
     where
         F: FnMut(Self::Item, U, V) -> V,
     {
-        accumulator = functor(self.dispatcher, counter_part.dispatcher, accumulator);
-
         accumulator = functor(self.timealarms, counter_part.timealarms, accumulator);
 
         functor(self.treasury, counter_part.treasury, accumulator)
