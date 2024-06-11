@@ -15,7 +15,6 @@ impl super::HigherOrderType for HigherOrderType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct PlatformContracts<T> {
-    pub dispatcher: T,
     pub timealarms: T,
     pub treasury: T,
 }

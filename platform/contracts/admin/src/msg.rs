@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 use platform::contract::CodeId;
@@ -26,7 +24,6 @@ pub struct InstantiateMsg {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateMsg {
-    pub dexes: BTreeMap<String, Dex>,
     pub migrate_contracts: MigrateContracts,
 }
 
