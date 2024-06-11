@@ -30,11 +30,8 @@ pub struct Protocol<T> {
     rename_all_fields = "snake_case",
     deny_unknown_fields
 )]
-// TODO remove aliases after next migration
 pub enum Network {
-    #[serde(alias = "NEUTRON")]
     Neutron,
-    #[serde(alias = "OSMOSIS")]
     Osmosis,
 }
 
