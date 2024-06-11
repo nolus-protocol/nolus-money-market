@@ -86,7 +86,6 @@ where
 const _: fn() = || {
     let _: ContractsExecute = ContractsExecute {
         platform: Granularity::All(Some(PlatformContracts {
-            dispatcher: String::new(),
             timealarms: String::new(),
             treasury: String::new(),
         })),

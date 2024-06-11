@@ -10,7 +10,6 @@ fn contracts_execute() {
     const PLATFORM_FIELD_NAME: &str = "platform";
     const PROTOCOL_FIELD_NAME: &str = "protocol";
     const PLATFORM_STRUCT_NAME: &str = "PlatformContracts";
-    const DISPATCHER_FIELD_NAME: &str = "dispatcher";
     const TIME_ALARMS_FIELD_NAME: &str = "timealarms";
     const TREASURY_FIELD_NAME: &str = "treasury";
     const PROTOCOL_STRUCT_NAME: &str = "ProtocolContracts";
@@ -22,7 +21,6 @@ fn contracts_execute() {
     const PROFIT_FIELD_NAME: &str = "profit";
     const RESERVE_FIELD_NAME: &str = "reserve";
 
-    const DISPATCHER_MSG: &str = r#"{"dispatcher": 0}"#;
     const TIME_ALARMS_MSG: &str = r#"{"timealarms": 0}"#;
     const TREASURY_MSG: &str = r#"{"treasury": 0}"#;
 
@@ -43,7 +41,6 @@ fn contracts_execute() {
 
     let value = ContractsExecute {
         platform: Granularity::All(Some(PlatformContracts {
-            dispatcher: DISPATCHER_MSG.into(),
             timealarms: TIME_ALARMS_MSG.into(),
             treasury: TREASURY_MSG.into(),
         })),
@@ -84,7 +81,6 @@ fn contracts_execute() {
                     some(r#struct(
                         PLATFORM_STRUCT_NAME,
                         vec![
-                            (DISPATCHER_FIELD_NAME, str(DISPATCHER_MSG)),
                             (TIME_ALARMS_FIELD_NAME, str(TIME_ALARMS_MSG)),
                             (TREASURY_FIELD_NAME, str(TREASURY_MSG)),
                         ],
