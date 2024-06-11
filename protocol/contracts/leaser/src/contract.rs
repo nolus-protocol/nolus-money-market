@@ -61,11 +61,15 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg { protocols_registry }: MigrateMsg,
+) -> ContractResult<Response> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
         deps.storage,
         CONTRACT_VERSION,
-        |storage| cfg_migrate::migrate(storage, msg.protocols_registry),
+        |storage| cfg_migrate::migrate(storage, protocols_registry),
         Into::into,
     )
     .and_then(
