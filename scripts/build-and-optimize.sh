@@ -1,8 +1,6 @@
-#!/bin/sh
+#!/bin/sh -e
 
 set -e
-
-RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS}"
 
 cd "/code/"
 
@@ -23,6 +21,8 @@ rm -rf "/target/"*
 rm -rf "/artifacts/"*
 
 rm -rf "/temp-artifacts/"*
+
+mkdir "/artifacts/pre-binaryen/"
 
 if [ -z "${NETWORK}" ]
 then
@@ -71,6 +71,8 @@ do
   wasm_name="$(basename "${wasm_path}")"
 
   echo "Optimizing: ${wasm_name}"
+
+  cp "${wasm_path}" "/artifacts/pre-binaryen/"
 
   wasm-opt -Os --signext-lowering -o "/temp-artifacts/${wasm_name}" \
     "${wasm_path}"

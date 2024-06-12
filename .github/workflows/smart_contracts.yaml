@@ -38,6 +38,7 @@ defaults:
     shell: "sh"
 
 env:
+  CARGO_BUILD_JOBS: "default"
   CARGO_TERM_COLOR: "always"
   RELEASE_VERSION: "ci"
   UPLOAD_ARTIFACTS: |-
@@ -463,6 +464,7 @@ jobs:
         env:
           file_hashes: |-
             ${{ hashFiles(
+              './.cargo/config.toml',
               './Containerfile',
               './scripts/build-and-optimize.sh',
               './tools/cargo-each/**',

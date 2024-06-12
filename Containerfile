@@ -65,4 +65,6 @@ RUN ["mkdir", "/target/"]
 
 RUN ["mkdir", "/temp-artifacts/"]
 
+COPY --chmod="0550" "./.cargo/" "/.cargo/"
+
 CMD ["sh", "/build/build.sh"]
