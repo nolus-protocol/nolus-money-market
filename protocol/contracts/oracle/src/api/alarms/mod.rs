@@ -50,8 +50,8 @@ impl From<error::Error> for Error {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm<G, Lpn, Lpns>", bound(serialize = ""))]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[serde(try_from = "unchecked::Alarm<G, Lpns>", into = "unchecked::Alarm<G, Lpns>", bound(serialize = "", deserialize = ""))]
 pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
@@ -150,17 +150,28 @@ where
     }
 }
 
+impl<G, Lpn, Lpns> Clone for Alarm<G, Lpn, Lpns>
+where
+    G: Group,
+    Lpn: Currency + ?Sized,
+    Lpns: Group
+{
+    fn clone(&self) -> Self {
+        Self {
+            below: self.below.clone(),
+            above: self.above.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use serde::Serialize;
-    use std::{
-        error::Error,
-        fmt::{Debug, Display, Formatter, Result as FmtResult},
-    };
+    use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
     use currencies::{
         test::{LpnC, PaymentC5, PaymentC6, PaymentC7},
-        PaymentGroup,
+        Lpns, PaymentGroup,
     };
     use currency::{Currency, Group};
     use finance::{
@@ -184,25 +195,21 @@ mod test {
     #[should_panic = " should not be zero"]
     fn below_price_err() {
         assert_err(
-            from_both_str_impl(
-                alarm_half_coins_to_json(
-                    AlarmPrice::Below,
-                    Coin::<PaymentC5>::new(5),
-                    Coin::<LpnC>::new(0),
-                ),
-                None::<&str>,
-            ),
+            alarm_half_coins_to_json(
+                AlarmPrice::Below,
+                Coin::<PaymentC5>::new(5),
+                Coin::<LpnC>::new(0),
+            )
+            .and_then(|json| from_both_str_impl(json, None::<&str>)),
             "The quote amount should not be zero",
         );
         assert_err(
-            from_both_str_impl(
-                alarm_half_coins_to_json(
-                    AlarmPrice::Below,
-                    Coin::<PaymentC6>::new(0),
-                    Coin::<LpnC>::new(5),
-                ),
-                None::<&str>,
-            ),
+            alarm_half_coins_to_json(
+                AlarmPrice::Below,
+                Coin::<PaymentC6>::new(0),
+                Coin::<LpnC>::new(5),
+            )
+            .and_then(|json| from_both_str_impl(json, None::<&str>)),
             "The amount should not be zero",
         );
     }
@@ -214,27 +221,25 @@ mod test {
             AlarmPrice::Below,
             Coin::<PaymentC5>::new(13),
             Coin::<LpnC>::new(15),
-        );
+        )
+        .unwrap();
+
         assert_err(
-            from_both_str_impl(
-                &below,
-                Some(&alarm_half_coins_to_json(
-                    AlarmPrice::Above,
-                    Coin::<PaymentC5>::new(5),
-                    Coin::<LpnC>::new(0),
-                )),
-            ),
+            alarm_half_coins_to_json(
+                AlarmPrice::Above,
+                Coin::<PaymentC5>::new(5),
+                Coin::<LpnC>::new(0),
+            )
+            .and_then(|json| from_both_str_impl(&below, Some(&json))),
             "The quote amount should not be zero",
         );
         assert_err(
-            from_both_str_impl(
-                &below,
-                Some(&alarm_half_coins_to_json(
-                    AlarmPrice::Above,
-                    Coin::<PaymentC6>::new(0),
-                    Coin::<LpnC>::new(5),
-                )),
-            ),
+            alarm_half_coins_to_json(
+                AlarmPrice::Above,
+                Coin::<PaymentC6>::new(0),
+                Coin::<LpnC>::new(5),
+            )
+            .and_then(|json| from_both_str_impl(&below, Some(&json))),
             "The amount should not be zero",
         );
     }
@@ -295,29 +300,23 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err<G, Lpn, LpnG, E>(r: Result<Alarm<G, Lpn, LpnG>, E>, msg: &str)
+    fn assert_err<G, Lpn, LpnG>(r: Result<Alarm<G, Lpn, LpnG>, StdError>, msg: &str)
     where
         G: Group + Debug,
         Lpn: Currency,
         LpnG: Group + Debug,
-        E: Error + Debug,
     {
         assert!(r.is_err());
-        dbg!(msg);
-        // assert!(matches!(
-        //     dbg!(r),
-        //     Err(StdError::ParseErr {
-        //         target_type,
-        //         msg: real_msg
-        //     }) if target_type.contains("Alarm") && real_msg.contains(msg)
-        // ));
         assert!(matches!(
             dbg!(r),
-            Err(err) if err.to_string().contains(msg)
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("Alarm") && real_msg.contains(msg)
         ));
     }
 
-    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
+    fn from_below<C1, Q1>(below: Price<C1, Q1>) -> Result<Alarm<AssetG, LpnC, Lpns>, StdError>
     where
         C1: Currency + Serialize,
         Q1: Currency + Serialize,
@@ -328,7 +327,7 @@ mod test {
     fn from_both<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Price<C2, Q2>,
-    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
+    ) -> Result<Alarm<AssetG, LpnC, Lpns>, StdError>
     where
         C1: Currency,
         C2: Currency,
@@ -341,7 +340,7 @@ mod test {
     fn from_both_impl<C1, C2, Q1, Q2>(
         below: Price<C1, Q1>,
         above: Option<Price<C2, Q2>>,
-    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
+    ) -> Result<Alarm<AssetG, LpnC, Lpns>, StdError>
     where
         C1: Currency,
         C2: Currency,
@@ -352,15 +351,13 @@ mod test {
             .map(|above| alarm_half_to_json(AlarmPrice::Above, above))
             .transpose()?;
         let below_str = alarm_half_to_json(AlarmPrice::Below, below)?;
-        dbg!(&below);
-        dbg!(&above_str);
         from_both_str_impl(below_str, above_str)
     }
 
     fn from_both_str_impl<Str1, Str2>(
         below: Str1,
         above: Option<Str2>,
-    ) -> Result<Alarm<AssetG, Lpn, Lpns>, StdError>
+    ) -> Result<Alarm<AssetG, LpnC, Lpns>, StdError>
     where
         Str1: AsRef<str>,
         Str2: AsRef<str>,
