@@ -1520,7 +1520,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "cosmwasm-std",
  "platform",
@@ -1533,7 +1533,7 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "access-control",
  "admin_contract",
