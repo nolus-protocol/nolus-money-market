@@ -16,7 +16,7 @@ use super::{dto::PriceDTO, Price};
 mod unchecked;
 pub mod with_quote;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
     try_from = "unchecked::BasePrice<BaseG, QuoteG>",
     bound(serialize = "", deserialize = "")
@@ -136,6 +136,30 @@ where
     }
 }
 
+impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    type Error = Error;
+    
+    fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
+        price.quote().try_into().and_then(|amount_quote|Self::new_checked(price.base().clone(), amount_quote))
+    }
+}
+
+impl<BaseG, QuoteC, QuoteG> Clone for BasePrice<BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    fn clone(&self) -> Self {
+        Self::new_raw(self.amount.clone(), self.amount_quote.clone())
+    }
+}
+
 #[cfg(test)]
 mod test_invariant {
     use currency::{
@@ -235,3 +259,6 @@ mod test_invariant {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }
 }
+
+// #[cfg(test)]
+// mod test_serialize {}
