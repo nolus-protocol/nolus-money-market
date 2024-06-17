@@ -7,7 +7,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-pub use self::release::ReleaseLabel;
+pub use self::release::{void as void_release, ReleaseLabel};
 
 mod release;
 

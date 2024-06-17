@@ -12,20 +12,30 @@ use super::{Version, VersionSegment};
 #[serde(transparent)]
 pub struct ReleaseLabel(String);
 
+impl ReleaseLabel {
+    const RELEASE_LABEL: &'static str = env!(
+        "RELEASE_VERSION",
+        "No release label provided as an environment variable! Please set \
+        \"RELEASE_VERSION\" environment variable!",
+    );
+
+    const DEV_RELEASE: &'static str = "dev-release";
+
+    const VOID_CONTRACT: &'static str = "void-contract";
+}
+
 impl From<ReleaseLabel> for String {
     fn from(value: ReleaseLabel) -> Self {
         value.0
     }
 }
 
-const RELEASE_LABEL: &str = env!(
-    "RELEASE_VERSION",
-    "No release label provided as an environment variable! Please set \"RELEASE_VERSION\" environment variable!",
-);
-const RELEASE_LABEL_DEV: &str = "dev-release";
-
 pub fn label() -> ReleaseLabel {
-    ReleaseLabel(self::RELEASE_LABEL.into())
+    ReleaseLabel(ReleaseLabel::RELEASE_LABEL.into())
+}
+
+pub fn void() -> ReleaseLabel {
+    ReleaseLabel(ReleaseLabel::VOID_CONTRACT.into())
 }
 
 pub fn allow_software_update(current: &Version, new: &Version) -> Result<(), StdError> {
@@ -100,7 +110,7 @@ enum Type {
 }
 
 fn release_type() -> Type {
-    if RELEASE_LABEL == RELEASE_LABEL_DEV {
+    if ReleaseLabel::RELEASE_LABEL == ReleaseLabel::DEV_RELEASE {
         Type::Dev
     } else {
         Type::Prod
