@@ -59,7 +59,7 @@ where
     pub fn base_ticker(&self) -> &SymbolSlice {
         self.amount.ticker()
     }
-    
+
     pub(crate) fn amount(&self) -> &CoinDTO<BaseG> {
         &self.amount
     }
