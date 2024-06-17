@@ -11,6 +11,7 @@ use super::{Version, VersionSegment};
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct ReleaseLabel(String);
+//TODO merge ReleaseLabel with Type and refactor the free functions into member functions of the new type Release
 
 impl ReleaseLabel {
     const RELEASE_LABEL: &'static str = env!(
@@ -23,12 +24,12 @@ impl ReleaseLabel {
 
     const VOID_RELEASE: &'static str = "void-release";
 
-    pub fn label() -> Self {
-        Self(Self::RELEASE_LABEL.into())
-    }
-
     pub fn void() -> Self {
         Self(Self::VOID_RELEASE.into())
+    }
+
+    pub(crate) fn label() -> Self {
+        Self(Self::RELEASE_LABEL.into())
     }
 }
 
