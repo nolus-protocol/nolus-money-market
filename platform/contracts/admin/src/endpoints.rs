@@ -295,7 +295,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             ContractState::AwaitContractsMigrationReply {
-                release: versioning::void_release(),
+                release: ReleaseLabel::void(),
             }
             .store(storage)
             .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
