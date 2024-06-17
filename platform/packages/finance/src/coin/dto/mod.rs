@@ -124,12 +124,16 @@ where
     }
 }
 
-impl<G> Clone for CoinDTO<G> 
+impl<G> Clone for CoinDTO<G>
 where
     G: Group,
 {
     fn clone(&self) -> Self {
-        Self { amount: self.amount.clone(), ticker: self.ticker.clone(), _g: PhantomData }
+        Self {
+            amount: self.amount.clone(),
+            ticker: self.ticker.clone(),
+            _g: PhantomData,
+        }
     }
 }
 

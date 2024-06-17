@@ -39,6 +39,11 @@ where
     QuoteC: Currency + ?Sized,
     QuoteG: Group,
 {
+    #[cfg(any(test, feature = "testing"))]
+    pub fn new(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
+        Self::new_unchecked(amount, amount_quote)
+    }
+
     fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
         let res = Self::new_raw(amount, amount_quote);
         res.invariant_held().map(|_| res)
@@ -143,9 +148,12 @@ where
     QuoteG: Group,
 {
     type Error = Error;
-    
+
     fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-        price.quote().try_into().and_then(|amount_quote|Self::new_checked(price.base().clone(), amount_quote))
+        price
+            .quote()
+            .try_into()
+            .and_then(|amount_quote| Self::new_checked(price.base().clone(), amount_quote))
     }
 }
 
@@ -259,6 +267,3 @@ mod test_invariant {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }
 }
-
-// #[cfg(test)]
-// mod test_serialize {}

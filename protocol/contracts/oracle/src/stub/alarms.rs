@@ -6,34 +6,36 @@ use sdk::cosmwasm_std::{wasm_execute, Addr};
 
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
-pub trait PriceAlarms<AlarmCurrencies, OracleBaseG>
+pub trait PriceAlarms<AlarmCurrencies, BaseC, OracleBaseG>
 where
     AlarmCurrencies: Group,
+    BaseC: Currency + ?Sized,
     OracleBaseG: Group,
     Self: Into<Batch> + Sized,
 {
-    type BaseC: Currency + ?Sized;
-
     //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, OracleBaseG>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseC, OracleBaseG>) -> Result<()>;
 }
 
-pub trait AsAlarms {
-    fn as_alarms<AlarmCurrencies, OracleBaseG>(
-        &self,
-    ) -> impl PriceAlarms<AlarmCurrencies, OracleBaseG>
-    where
-        AlarmCurrencies: Group,
-        OracleBaseG: Group;
-}
-
-impl<OracleBase> AsAlarms for OracleRef<OracleBase>
+pub trait AsAlarms<OracleBase>
 where
     OracleBase: Currency + ?Sized,
 {
     fn as_alarms<AlarmCurrencies, OracleBaseG>(
         &self,
-    ) -> impl PriceAlarms<AlarmCurrencies, OracleBaseG>
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG>
+    where
+        AlarmCurrencies: Group,
+        OracleBaseG: Group;
+}
+
+impl<OracleBase> AsAlarms<OracleBase> for OracleRef<OracleBase>
+where
+    OracleBase: Currency + ?Sized,
+{
+    fn as_alarms<AlarmCurrencies, OracleBaseG>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG>
     where
         AlarmCurrencies: Group,
         OracleBaseG: Group,
@@ -62,16 +64,14 @@ where
     }
 }
 
-impl<'a, AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies, OracleBaseG>
-    for AlarmsStub<'a, OracleBase>
+impl<'a, AlarmCurrencies, OracleBase, OracleBaseG>
+    PriceAlarms<AlarmCurrencies, OracleBase, OracleBaseG> for AlarmsStub<'a, OracleBase>
 where
     AlarmCurrencies: Group,
     OracleBase: Currency,
     OracleBaseG: Group,
 {
-    type BaseC = OracleBase;
-
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, OracleBaseG>) -> Result<()> {
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, OracleBase, OracleBaseG>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),

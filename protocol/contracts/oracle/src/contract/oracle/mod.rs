@@ -19,7 +19,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    api::{AlarmsStatusResponse, BaseCurrency, Config, ExecuteAlarmMsg, StableCurrency},
+    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg, StableCurrency},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
     error::ContractError,
     result::ContractResult,
@@ -98,7 +98,7 @@ where
         &self,
         at: Timestamp,
         currency: &SymbolSlice,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
         self.feeds
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
@@ -108,14 +108,13 @@ where
         at: Timestamp,
         currency: &SymbolOwned,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
-        type StableBasePrice = Price<StableCurrency, BaseCurrency>;
-
-        struct StablePriceCalc<G> {
-            stable_to_base_price: StableBasePrice,
+        struct StablePriceCalc<BaseCurrency, G> {
+            stable_to_base_price: Price<StableCurrency, BaseCurrency>,
             _group: PhantomData<G>,
         }
-        impl<G> WithQuote<BaseCurrency> for StablePriceCalc<G>
+        impl<BaseCurrency, G> WithQuote<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
         where
+            BaseCurrency: Currency,
             G: Group,
         {
             type Output = PriceDTO<G, G>;
@@ -133,8 +132,10 @@ where
             }
         }
         self.try_query_base_price(at, StableCurrency::TICKER)
-            .and_then(|stable_price| stable_price.try_into().map_err(Into::into))
-            .and_then(|stable_price: StableBasePrice| {
+            .and_then(|stable_price| {
+                Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
+            })
+            .and_then(|stable_price: Price<StableCurrency, BaseC>| {
                 self.try_query_base_price(at, currency)
                     .and_then(|ref base_price| {
                         with_quote::execute(

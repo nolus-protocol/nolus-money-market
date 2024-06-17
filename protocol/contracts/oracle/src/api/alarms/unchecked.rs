@@ -24,16 +24,18 @@ where
     type Error = Error;
 
     fn try_from(unchecked: Alarm<G, Lpns>) -> Result<Self, Self::Error> {
-        unchecked.below.try_into().map_err(Into::into).and_then(|below| {
-            unchecked
-                .above
-                .map(|above_dto| above_dto.try_into().map_err(Into::into))
-                .transpose()
-                .map(|above| Self { below, above })
-                .and_then(|alarm| {
-                    alarm.invariant_held().map(|()| alarm)
-                })
-        })
+        unchecked
+            .below
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|below| {
+                unchecked
+                    .above
+                    .map(|above_dto| above_dto.try_into().map_err(Into::into))
+                    .transpose()
+                    .map(|above| Self { below, above })
+                    .and_then(|alarm| alarm.invariant_held().map(|()| alarm))
+            })
     }
 }
 

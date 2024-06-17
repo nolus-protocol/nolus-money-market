@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, Group, SymbolSlice};
-use finance::price::dto::PriceDTO;
+use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
@@ -105,10 +105,12 @@ where
         currency: &SymbolSlice,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
-        self.feeds
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
+        let dto = self
+            .feeds
             .price::<BaseC, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
-            .map_err(Into::into)
+            .map_err(Into::<ContractError>::into)?;
+        BasePrice::try_from(dto).map_err(Into::into)
     }
 }
 
