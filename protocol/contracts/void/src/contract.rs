@@ -8,6 +8,7 @@ use sdk::{
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use timealarms::msg::ExecuteAlarmMsg;
+use versioning;
 
 #[derive(Serialize, Deserialize)]
 pub struct EmptyMsg {}
@@ -27,8 +28,8 @@ pub fn migrate(
     _deps: DepsMut<'_>,
     _env: Env,
     EmptyMsg {}: EmptyMsg,
-) -> Result<CwResponse, Infallible> {
-    unimplemented!("Migration of a Void contract is not allowed!");
+) -> Result<CwResponse, platform::error::Error> {
+    response::response(versioning::void_release())
 }
 
 #[entry_point]
