@@ -293,8 +293,13 @@ fn deregister_protocol(
                 .transpose()
         })
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
-        .map(|protocol| {
-            response::response_only_messages(protocol.migrate_standalone(migration_spec))
+        .and_then(|protocol| {
+            ContractState::AwaitContractsMigrationReply {
+                release: versioning::void_release(),
+            }
+            .store(storage)
+            .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
+            .map_err(Into::into)
         })
 }
 
