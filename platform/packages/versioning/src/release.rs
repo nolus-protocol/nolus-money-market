@@ -11,6 +11,7 @@ use super::{Version, VersionSegment};
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct ReleaseLabel(String);
+//TODO merge ReleaseLabel with Type and refactor the free functions into member functions of the new type Release
 
 impl ReleaseLabel {
     const RELEASE_LABEL: &'static str = env!(
@@ -21,21 +22,21 @@ impl ReleaseLabel {
 
     const DEV_RELEASE: &'static str = "dev-release";
 
-    const VOID_CONTRACT: &'static str = "void-contract";
+    const VOID_RELEASE: &'static str = "void-release";
+
+    pub fn void() -> Self {
+        Self(Self::VOID_RELEASE.into())
+    }
+
+    pub(crate) fn label() -> Self {
+        Self(Self::RELEASE_LABEL.into())
+    }
 }
 
 impl From<ReleaseLabel> for String {
     fn from(value: ReleaseLabel) -> Self {
         value.0
     }
-}
-
-pub fn label() -> ReleaseLabel {
-    ReleaseLabel(ReleaseLabel::RELEASE_LABEL.into())
-}
-
-pub fn void() -> ReleaseLabel {
-    ReleaseLabel(ReleaseLabel::VOID_CONTRACT.into())
 }
 
 pub fn allow_software_update(current: &Version, new: &Version) -> Result<(), StdError> {

@@ -7,7 +7,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-pub use self::release::{void as void_release, ReleaseLabel};
+pub use self::release::ReleaseLabel;
 
 mod release;
 
@@ -114,7 +114,7 @@ where
     load_version(storage)
         .and_then(|current| release::allow_software_update(&current, &new))
         .and_then(|()| save_version(storage, &new))
-        .map(|()| release::label())
+        .map(|()| ReleaseLabel::label())
         .map_err(map_error)
 }
 
@@ -148,7 +148,7 @@ where
         .map_err(map_error)
         .and_then(|()| migrate_storage(storage))
         .map(|storage_migration_output| FullUpdateOutput {
-            release_label: release::label(),
+            release_label: ReleaseLabel::label(),
             storage_migration_output,
         })
 }
