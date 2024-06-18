@@ -130,7 +130,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            amount: self.amount.clone(),
+            amount: self.amount,
             ticker: self.ticker.clone(),
             _g: PhantomData,
         }

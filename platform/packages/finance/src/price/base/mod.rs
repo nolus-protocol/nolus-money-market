@@ -164,7 +164,7 @@ where
     QuoteG: Group,
 {
     fn clone(&self) -> Self {
-        Self::new_raw(self.amount.clone(), self.amount_quote.clone())
+        Self::new_raw(self.amount.clone(), self.amount_quote)
     }
 }
 
