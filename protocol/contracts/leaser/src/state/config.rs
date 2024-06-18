@@ -6,7 +6,7 @@ use finance::{duration::Duration, percent::Percent};
 use lease::api::open::{ConnectionParams, PositionSpecDTO};
 use platform::contract::Code;
 use sdk::{
-    cosmwasm_std::{Addr, QuerierWrapper, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -32,22 +32,20 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn try_new(msg: InstantiateMsg, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
-        Code::try_new(msg.lease_code.into(), querier)
-            .map_err(Into::into)
-            .map(|lease_code| Self {
-                lease_code,
-                lpp: msg.lpp,
-                profit: msg.profit,
-                reserve: msg.reserve,
-                time_alarms: msg.time_alarms,
-                market_price_oracle: msg.market_price_oracle,
-                protocols_registry: msg.protocols_registry,
-                lease_position_spec: msg.lease_position_spec,
-                lease_interest_rate_margin: msg.lease_interest_rate_margin,
-                lease_due_period: msg.lease_due_period,
-                dex: msg.dex,
-            })
+    pub fn new(lease_code: Code, msg: InstantiateMsg) -> Self {
+        Self {
+            lease_code,
+            lpp: msg.lpp,
+            profit: msg.profit,
+            reserve: msg.reserve,
+            time_alarms: msg.time_alarms,
+            market_price_oracle: msg.market_price_oracle,
+            protocols_registry: msg.protocols_registry,
+            lease_position_spec: msg.lease_position_spec,
+            lease_interest_rate_margin: msg.lease_interest_rate_margin,
+            lease_due_period: msg.lease_due_period,
+            dex: msg.dex,
+        }
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
