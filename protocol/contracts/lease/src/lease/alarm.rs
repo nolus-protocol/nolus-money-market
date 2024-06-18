@@ -52,7 +52,7 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>,
+        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrencies, BaseC = LpnCurrency>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
