@@ -134,24 +134,30 @@ where
     MsgFactory: Fn(Addr) -> MigrateMsg,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
-    if force == ForceClose::No && has_lease(storage) {
-        Err(ContractError::ProtocolStillInUse())
-    } else {
-        try_migrate_leases(storage, new_lease_code, max_leases, migrate_msg).and_then(
-            |leases_resp| {
-                protocols_registry(storage).and_then(|protocols_registry| {
-                    let mut batch = Batch::default();
-                    batch
-                        .schedule_execute_wasm_no_reply_no_funds(
-                            protocols_registry,
-                            &ExecuteMsg::DeregisterProtocol(migration_spec),
-                        )
-                        .map_err(ContractError::ProtocolDeregistration)
-                        .map(|()| leases_resp.merge_with(batch))
-                })
-            },
-        )
+    match force {
+        ForceClose::KillProtocol => {
+            try_migrate_leases(storage, new_lease_code, max_leases, migrate_msg)
+        }
+        ForceClose::No => {
+            if has_lease(storage) {
+                Err(ContractError::ProtocolStillInUse())
+            } else {
+                Ok(MessageResponse::default())
+            }
+        }
     }
+    .and_then(|leases_resp| {
+        protocols_registry(storage).and_then(|protocols_registry| {
+            let mut batch = Batch::default();
+            batch
+                .schedule_execute_wasm_no_reply_no_funds(
+                    protocols_registry,
+                    &ExecuteMsg::DeregisterProtocol(migration_spec),
+                )
+                .map_err(ContractError::ProtocolDeregistration)
+                .map(|()| leases_resp.merge_with(batch))
+        })
+    })
 }
 
 fn has_lease(storage: &dyn Storage) -> bool {

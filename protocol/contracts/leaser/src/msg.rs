@@ -87,7 +87,7 @@ pub enum SudoMsg {
         // Since this is an external system API we should not use [Code].
         new_lease_code_id: Uint64,
         migration_spec: ProtocolContracts<MigrationSpec>,
-        /// If `ForceClose::KillProtocol` closes the protocol even if it has not closed leases
+        /// `ForceClose::KillProtocol` closes the protocol even if it has not closed leases
         /// by migrating them to void.
         ///
         /// Limitation!
