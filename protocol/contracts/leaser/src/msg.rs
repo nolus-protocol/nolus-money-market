@@ -84,7 +84,14 @@ pub enum SudoMsg {
         lease_due_period: Duration,
     },
     CloseProtocol {
+        // Since this is an external system API we should not use [Code].
+        new_lease_code_id: Uint64,
         migration_spec: ProtocolContracts<MigrationSpec>,
+        /// `ForceClose::KillProtocol` closes the protocol even if it has not closed leases
+        /// by migrating them to void.
+        ///
+        /// Limitation!
+        /// The leases number is limited up to the max gas.
         #[serde(default)]
         force: ForceClose,
     },

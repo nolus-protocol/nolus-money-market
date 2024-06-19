@@ -4,7 +4,7 @@ use access_control::ContractOwnerAccess;
 use cosmwasm_std::Storage;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
-    contract::{self, Code},
+    contract::{self, Code, CodeId},
     error as platform_error,
     message::Response as MessageResponse,
     reply, response,
@@ -22,7 +22,7 @@ use crate::{
     cmd::Borrow,
     error::ContractError,
     leaser::{self, Leaser},
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{
         config::{migrate as cfg_migrate, Config},
@@ -54,7 +54,9 @@ pub fn instantiate(
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
-    Config::try_new(msg, &deps.querier)
+    new_code(msg.lease_code, deps.querier)
+        .map_err(Into::into)
+        .map(|lease_code| Config::new(lease_code, msg))
         .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
@@ -117,9 +119,9 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(|()| Code::try_new(new_code_id.into(), &deps.querier).map_err(Into::into))
+            .and_then(|()| new_code(new_code_id, deps.querier))
             .and_then(|new_lease_code| {
-                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg())
+                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg)
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
@@ -133,7 +135,7 @@ pub fn execute(
                     deps.storage,
                     next_customer_validated,
                     max_leases,
-                    migrate_msg(),
+                    migrate_msg,
                 )
             }),
     }
@@ -155,11 +157,20 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             lease_due_period,
         ),
         SudoMsg::CloseProtocol {
+            new_lease_code_id,
             migration_spec,
             force,
-        } => {
-            leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec, force)
-        }
+        } => new_code(new_lease_code_id, deps.querier).and_then(|new_lease_code| {
+            leaser::try_close_protocol(
+                deps.storage,
+                new_lease_code,
+                MaxLeases::MAX,
+                migrate_msg,
+                protocols_registry_load,
+                migration_spec,
+                force,
+            )
+        }),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -229,8 +240,15 @@ fn protocols_registry_load(storage: &dyn Storage) -> ContractResult<Addr> {
     Config::load(storage).map(|cfg| cfg.protocols_registry)
 }
 
-fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {
-    move |_customer| LeaseMigrateMsg {}
+fn new_code<C>(new_code_id: C, querier: QuerierWrapper<'_>) -> ContractResult<Code>
+where
+    C: Into<CodeId>,
+{
+    Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
+}
+
+fn migrate_msg(_customer: Addr) -> LeaseMigrateMsg {
+    LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {

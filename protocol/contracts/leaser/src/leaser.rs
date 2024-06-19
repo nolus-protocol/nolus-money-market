@@ -121,18 +121,27 @@ where
     })
 }
 
-pub(super) fn try_close_protocol<ProtocolsRegistryLoader>(
-    storage: &dyn Storage,
+pub(super) fn try_close_protocol<ProtocolsRegistryLoader, MsgFactory>(
+    storage: &mut dyn Storage,
+    new_lease_code: Code,
+    max_leases: MaxLeases,
+    migrate_msg: MsgFactory,
     protocols_registry: ProtocolsRegistryLoader,
     migration_spec: ProtocolContracts<MigrationSpec>,
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
+    MsgFactory: Fn(Addr) -> MigrateMsg,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
-    if force == ForceClose::No && has_lease(storage) {
-        Err(ContractError::ProtocolStillInUse())
-    } else {
+    match force {
+        ForceClose::KillProtocol => {
+            try_migrate_leases(storage, new_lease_code, max_leases, migrate_msg)
+        }
+        ForceClose::No if has_lease(storage) => Err(ContractError::ProtocolStillInUse()),
+        ForceClose::No => Ok(MessageResponse::default()),
+    }
+    .and_then(|leases_resp| {
         protocols_registry(storage).and_then(|protocols_registry| {
             let mut batch = Batch::default();
             batch
@@ -141,9 +150,9 @@ where
                     &ExecuteMsg::DeregisterProtocol(migration_spec),
                 )
                 .map_err(ContractError::ProtocolDeregistration)
-                .map(|()| batch.into())
+                .map(|()| leases_resp.merge_with(batch))
         })
-    }
+    })
 }
 
 fn has_lease(storage: &dyn Storage) -> bool {
@@ -185,25 +194,51 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use cosmwasm_std::Addr;
+    use currencies::test::LpnC;
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use lease::api::{
+        open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
+        MigrateMsg,
+    };
+    use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
 
-    use crate::{msg::ForceClose, state::leases::Leases, ContractError};
+    use crate::{
+        msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
+        state::leases::Leases,
+        ContractError,
+    };
+
+    const MAX_LEASES: MaxLeases = 100_000;
+    const LEASE_VOID_CODE: Code = Code::unchecked(12);
 
     #[test]
     fn close_empty_protocol() {
-        let store = MockStorage::default();
-        assert!(super::try_close_protocol(
-            &store,
+        let mut store = MockStorage::default();
+        Config::new(Code::unchecked(10), dummy_instantiate_msg())
+            .store(&mut store)
+            .unwrap();
+        let resp = super::try_close_protocol(
+            &mut store,
+            LEASE_VOID_CODE,
+            MAX_LEASES,
+            migrate_msg,
             |_| Ok(Addr::unchecked("Registry")),
             dummy_spec(),
-            ForceClose::No
+            ForceClose::No,
         )
-        .is_ok());
+        .unwrap();
+        let cw_resp = response::response_only_messages(resp);
+        let delete_protocol = 1;
+        assert_eq!(delete_protocol, cw_resp.messages.len());
     }
 
     #[test]
     fn close_non_empty_protocol() {
         let mut store = MockStorage::default();
+        Config::new(Code::unchecked(10), dummy_instantiate_msg())
+            .store(&mut store)
+            .unwrap();
         let customer = Addr::unchecked("CustomerA");
         let lease = Addr::unchecked("Lease1");
         Leases::cache_open_req(&mut store, &customer).expect("cache the customer should succeed");
@@ -211,20 +246,66 @@ mod test {
         assert_eq!(
             Err(ContractError::ProtocolStillInUse()),
             super::try_close_protocol(
-                &store,
+                &mut store,
+                LEASE_VOID_CODE,
+                MAX_LEASES,
+                migrate_msg,
                 |_| Ok(Addr::unchecked("Registry")),
                 dummy_spec(),
                 ForceClose::No
             )
         );
 
-        assert!(super::try_close_protocol(
-            &store,
+        let resp = super::try_close_protocol(
+            &mut store,
+            LEASE_VOID_CODE,
+            MAX_LEASES,
+            migrate_msg,
             |_| Ok(Addr::unchecked("Registry")),
             dummy_spec(),
-            ForceClose::KillProtocol
+            ForceClose::KillProtocol,
         )
-        .is_ok());
+        .unwrap();
+        let cw_resp = response::response_only_messages(resp);
+        let update_lpp_update_reserve_migrate_lease_delete_protocol = 1 + 1 + 1 + 1;
+        assert_eq!(
+            update_lpp_update_reserve_migrate_lease_delete_protocol,
+            cw_resp.messages.len()
+        );
+    }
+
+    fn dummy_instantiate_msg() -> InstantiateMsg {
+        InstantiateMsg {
+            lease_code: 10u16.into(),
+            lpp: Addr::unchecked("LPP"),
+            profit: Addr::unchecked("Profit"),
+            reserve: Addr::unchecked("reserve"),
+            time_alarms: Addr::unchecked("time alarms"),
+            market_price_oracle: Addr::unchecked("oracle"),
+            protocols_registry: Addr::unchecked("protocols"),
+            lease_position_spec: PositionSpecDTO {
+                liability: Liability::new(
+                    Percent::from_percent(10),
+                    Percent::from_percent(65),
+                    Percent::from_percent(72),
+                    Percent::from_percent(74),
+                    Percent::from_percent(76),
+                    Percent::from_percent(80),
+                    Duration::from_hours(12),
+                ),
+                min_asset: Coin::<LpnC>::from(120_000).into(),
+                min_transaction: Coin::<LpnC>::from(12_000).into(),
+            },
+            lease_interest_rate_margin: Percent::from_percent(3),
+            lease_due_period: Duration::from_days(14),
+            dex: ConnectionParams {
+                connection_id: "conn-12".into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "chan-1".into(),
+                    remote_endpoint: "chan-13".into(),
+                },
+            },
+        }
     }
 
     fn dummy_spec() -> ProtocolContracts<MigrationSpec> {
@@ -240,5 +321,9 @@ mod test {
             profit: migration_spec.clone(),
             reserve: migration_spec,
         }
+    }
+
+    fn migrate_msg(_customer: Addr) -> MigrateMsg {
+        MigrateMsg {}
     }
 }
