@@ -264,6 +264,19 @@ jobs:
           tool: "cargo-audit"
           local: "false"
       - env:
+          working_directory: |-
+            ${{ matrix.working-directory }}
+        run: |
+          if [ "-f" "./.cargo/audit.toml" ]
+          then
+            if [ ! "-d" "${working_directory}/.cargo" ]
+            then
+              mkdir "${working_directory}/.cargo"
+            fi
+
+            cp "./.cargo/audit.toml" "${working_directory}/.cargo/audit.toml"
+          fi
+      - env:
           stable_rust_version: |-
             ${{ needs.configuration.outputs.stable-rust-version }}
         run: |-
