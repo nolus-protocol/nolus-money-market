@@ -1,0 +1,10 @@
+[advisories]
+ignore = [
+    # https://rustsec.org/advisories/RUSTSEC-2024-0344
+    # Crate: curve25519-dalek
+    # Title: Timing variability in `curve25519-dalek`'s `Scalar29::sub`/`Scalar52::sub`
+    # Ignore reason: Affected functions not used.
+    "RUSTSEC-2024-0344",
+]
+informational_warnings = ["unmaintained"]
+severity_threshold = "none"
