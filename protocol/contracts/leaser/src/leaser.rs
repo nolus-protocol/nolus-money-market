@@ -138,13 +138,8 @@ where
         ForceClose::KillProtocol => {
             try_migrate_leases(storage, new_lease_code, max_leases, migrate_msg)
         }
-        ForceClose::No => {
-            if has_lease(storage) {
-                Err(ContractError::ProtocolStillInUse())
-            } else {
-                Ok(MessageResponse::default())
-            }
-        }
+        ForceClose::No if has_lease(storage) => Err(ContractError::ProtocolStillInUse()),
+        ForceClose::No => Ok(MessageResponse::default()),
     }
     .and_then(|leases_resp| {
         protocols_registry(storage).and_then(|protocols_registry| {
@@ -227,7 +222,7 @@ mod test {
             &mut store,
             LEASE_VOID_CODE,
             MAX_LEASES,
-            migrate_msg(),
+            migrate_msg,
             |_| Ok(Addr::unchecked("Registry")),
             dummy_spec(),
             ForceClose::No,
@@ -257,7 +252,7 @@ mod test {
                 &mut store,
                 LEASE_VOID_CODE,
                 MAX_LEASES,
-                migrate_msg(),
+                migrate_msg,
                 |_| Ok(Addr::unchecked("Registry")),
                 dummy_spec(),
                 ForceClose::No
@@ -268,7 +263,7 @@ mod test {
             &mut store,
             LEASE_VOID_CODE,
             MAX_LEASES,
-            migrate_msg(),
+            migrate_msg,
             |_| Ok(Addr::unchecked("Registry")),
             dummy_spec(),
             ForceClose::KillProtocol,
@@ -331,7 +326,7 @@ mod test {
         }
     }
 
-    fn migrate_msg() -> impl Fn(Addr) -> MigrateMsg {
-        |_customer| MigrateMsg {}
+    fn migrate_msg(_customer: Addr) -> MigrateMsg {
+        MigrateMsg {}
     }
 }

@@ -121,7 +121,7 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, deps.querier))
             .and_then(|new_lease_code| {
-                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg())
+                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg)
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
@@ -135,7 +135,7 @@ pub fn execute(
                     deps.storage,
                     next_customer_validated,
                     max_leases,
-                    migrate_msg(),
+                    migrate_msg,
                 )
             }),
     }
@@ -165,7 +165,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
                 deps.storage,
                 new_lease_code,
                 MaxLeases::MAX,
-                migrate_msg(),
+                migrate_msg,
                 protocols_registry_load,
                 migration_spec,
                 force,
@@ -247,8 +247,8 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-fn migrate_msg() -> impl Fn(Addr) -> LeaseMigrateMsg {
-    |_customer| LeaseMigrateMsg {}
+fn migrate_msg(_customer: Addr) -> LeaseMigrateMsg {
+    LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {
