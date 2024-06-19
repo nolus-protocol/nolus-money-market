@@ -229,11 +229,8 @@ mod test {
         )
         .unwrap();
         let cw_resp = response::response_only_messages(resp);
-        let update_lpp_update_reserve_delete_protocol = 1 + 1 + 1;
-        assert_eq!(
-            update_lpp_update_reserve_delete_protocol,
-            cw_resp.messages.len()
-        );
+        let delete_protocol = 1;
+        assert_eq!(delete_protocol, cw_resp.messages.len());
     }
 
     #[test]
