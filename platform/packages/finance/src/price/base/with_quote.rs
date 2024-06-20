@@ -22,6 +22,31 @@ where
         BaseC: Currency;
 }
 
+#[track_caller]
+pub fn execute<G, QuoteC, QuoteG, Cmd>(
+    price: &BasePrice<G, QuoteC, QuoteG>,
+    cmd: Cmd,
+) -> Result<Cmd::Output, Cmd::Error>
+where
+    G: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+    Cmd: WithQuote<QuoteC>,
+    Error: Into<Cmd::Error>,
+{
+    //TODO use CoinDTO::with_coin instead
+    Tickers
+        .visit_any::<G, _>(
+            price.base_ticker(),
+            BaseCVisitor {
+                base_dto: price.amount(),
+                quote: price.amount_quote(),
+                cmd,
+            },
+        )
+        .map_err(CmdError::into_customer_err)
+}
+
 struct BaseCVisitor<'a, G, QuoteC, Cmd>
 where
     G: Group,
@@ -52,29 +77,4 @@ where
         let price = price::total_of(amount_base).is(self.quote);
         self.cmd.exec(price).map_err(Self::Error::from_customer_err)
     }
-}
-
-#[track_caller]
-pub fn execute<G, QuoteC, QuoteG, Cmd>(
-    price: &BasePrice<G, QuoteC, QuoteG>,
-    cmd: Cmd,
-) -> Result<Cmd::Output, Cmd::Error>
-where
-    G: Group,
-    QuoteC: Currency,
-    QuoteG: Group,
-    Cmd: WithQuote<QuoteC>,
-    Error: Into<Cmd::Error>,
-{
-    //TODO use CoinDTO::with_coin instead
-    Tickers
-        .visit_any::<G, _>(
-            price.base_ticker(),
-            BaseCVisitor {
-                base_dto: price.amount(),
-                quote: price.amount_quote(),
-                cmd,
-            },
-        )
-        .map_err(CmdError::into_customer_err)
 }

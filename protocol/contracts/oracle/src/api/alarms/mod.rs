@@ -6,8 +6,10 @@ use currency::{Currency, Group};
 use finance::{
     error,
     price::{
-        base::BasePrice,
-        with_price::{self, WithPrice},
+        base::{
+            with_price::{self, WithPrice},
+            BasePrice,
+        },
         Price,
     },
 };

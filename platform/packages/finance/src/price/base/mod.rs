@@ -4,17 +4,18 @@ use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
+use with_price::WithPrice;
 
 use crate::{
     coin::{Coin, CoinDTO},
     error::{Error, Result as FinanceResult},
-    price::with_price::{self, WithPrice},
 };
 
 use super::{dto::PriceDTO, Price};
 
 mod unchecked;
 pub mod with_quote;
+pub mod with_price;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
@@ -30,7 +31,7 @@ where
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
     #[serde(skip)]
-    quote_group: PhantomData<QuoteG>,
+    _quote_group: PhantomData<QuoteG>,
 }
 
 impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
@@ -46,7 +47,7 @@ where
 
     fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
         let res = Self::new_raw(amount, amount_quote);
-        res.invariant_held().map(|_| res)
+        res.invariant_held().map(|()| res)
     }
 
     fn new_unchecked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
@@ -72,7 +73,7 @@ where
         Self {
             amount,
             amount_quote,
-            quote_group: PhantomData,
+            _quote_group: PhantomData,
         }
     }
 
