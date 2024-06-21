@@ -127,6 +127,7 @@ runs:
 
           tee -a "${GITHUB_STEP_SUMMARY}" < output
 
+          # TODO / FIXME remove comment
           # exit 1
         else
           rm "output"
