@@ -1,5 +1,3 @@
-#![cfg(feature = "testing")]
-
 use currency::{Currency, Group};
 use finance::{
     coin::Amount,

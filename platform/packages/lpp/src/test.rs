@@ -1,5 +1,3 @@
-#![cfg(feature = "testing")]
-
 use currency::NlsPlatform;
 use finance::coin::Coin;
 use platform::{
