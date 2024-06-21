@@ -380,7 +380,7 @@ mod test {
     #[test]
     fn reduce_results_empty() {
         assert_eq!(
-            [Ok::<(), TestError>(()); 0]
+            ([] as [Result<(), TestError>; 0])
                 .into_iter()
                 .reduce_results(|(), ()| unreachable!()),
             None
@@ -390,7 +390,7 @@ mod test {
     #[test]
     fn reduce_results_1_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1)]
+            [Ok::<_, TestError>(1)]
                 .into_iter()
                 .reduce_results(|_, _| unreachable!()),
             Some(Ok(1))
@@ -400,7 +400,7 @@ mod test {
     #[test]
     fn reduce_results_3_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Ok(2), Ok(3)]
+            [Ok::<_, TestError>(1), Ok(2), Ok(3)]
                 .into_iter()
                 .reduce_results(|acc, element| acc + element),
             Some(Ok(6))
@@ -410,9 +410,9 @@ mod test {
     #[test]
     fn reduce_results_1_err() {
         assert_eq!(
-            [Err::<u8, TestError>(TestError)]
+            [Err(TestError)]
                 .into_iter()
-                .reduce_results(|_, _| unreachable!()),
+                .reduce_results(|(), ()| unreachable!()),
             Some(Err(TestError))
         );
     }
@@ -420,7 +420,7 @@ mod test {
     #[test]
     fn reduce_results_1_ok_1_err() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Err(TestError)]
+            [Ok(1), Err(TestError)]
                 .into_iter()
                 .reduce_results(|_, _| unreachable!()),
             Some(Err(TestError))
@@ -430,7 +430,7 @@ mod test {
     #[test]
     fn reduce_results_1_err_1_ok() {
         assert_eq!(
-            [Err::<u8, TestError>(TestError), Ok(2)]
+            [Err(TestError), Ok(2)]
                 .into_iter()
                 .reduce_results(|_, _| unreachable!()),
             Some(Err(TestError))
@@ -440,7 +440,7 @@ mod test {
     #[test]
     fn reduce_results_2_ok_1_err_1_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Ok(2), Err(TestError), Ok(4)]
+            [Ok(1), Ok(2), Err(TestError), Ok(4)]
                 .into_iter()
                 .reduce_results(|acc, element| {
                     assert_ne!(element, 4);
