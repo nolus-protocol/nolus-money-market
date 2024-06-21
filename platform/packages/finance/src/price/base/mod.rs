@@ -14,8 +14,8 @@ use crate::{
 use super::{dto::PriceDTO, Price};
 
 mod unchecked;
-pub mod with_quote;
 pub mod with_price;
+pub mod with_quote;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
