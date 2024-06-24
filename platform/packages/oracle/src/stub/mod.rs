@@ -33,7 +33,7 @@ where
 pub trait Oracle<QuoteC>
 where
     Self: Into<OracleRef<QuoteC>> + AsRef<OracleRef<QuoteC>>,
-    QuoteC: ?Sized,
+    QuoteC: Currency,
 {
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
@@ -43,7 +43,7 @@ where
 
 pub trait WithOracle<OracleBase>
 where
-    OracleBase: ?Sized,
+    OracleBase: Currency,
 {
     type Output;
     type Error;
@@ -58,7 +58,7 @@ where
 #[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC>
 where
-    QuoteC: ?Sized,
+    QuoteC: Currency,
 {
     addr: Addr,
     #[serde(skip)]
@@ -106,7 +106,10 @@ where
     }
 }
 
-impl<QuoteC> OracleRef<QuoteC> {
+impl<QuoteC> OracleRef<QuoteC>
+where
+    QuoteC: Currency,
+{
     pub fn unchecked(addr: Addr) -> Self {
         Self {
             addr,

@@ -1,19 +1,15 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Formatter},
     ops::{Add, AddAssign, Mul},
 };
 
-use serde::{Deserialize, Serialize};
-
-use currency::Currency;
-use sdk::schemars::{self, JsonSchema};
+use currency::{BaseCurrency, Constants, Currency};
+use sdk::cosmwasm_std::Uint128;
 
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Fraction,
-    fractionable::HigherRank,
-    ratio::{Ratio, Rational},
+    ratio::{Ratio, Unit},
 };
 
 pub mod base;
@@ -21,29 +17,28 @@ pub mod dto;
 
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     PriceBuilder(amount)
 }
 
 pub struct PriceBuilder<C>(Coin<C>)
 where
-    C: 'static + ?Sized;
+    C: BaseCurrency;
 
 impl<C> PriceBuilder<C>
 where
-    C: 'static + ?Sized,
+    C: BaseCurrency,
 {
     pub fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
     where
-        QuoteC: 'static + ?Sized,
+        QuoteC: BaseCurrency,
     {
         Price::new(self.0, to)
     }
 }
 
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
-type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
+type DoubleAmount = <Amount as Unit>::DoubledCapacity;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -52,21 +47,63 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 /// Both amounts a price is composed of should be non-zero.
 ///
 /// Not designed to be used in public APIs
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(bound(serialize = "", deserialize = ""))]
 pub struct Price<C, QuoteC>
 where
-    C: ?Sized,
-    QuoteC: ?Sized,
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
 {
     amount: Coin<C>,
     amount_quote: Coin<QuoteC>,
 }
 
+impl<C, QuoteC> Debug for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Price")
+            .field("amount", &self.amount)
+            .field("amount_quote", &self.amount_quote)
+            .finish()
+    }
+}
+
+impl<C, QuoteC> Clone for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C, QuoteC> Copy for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
+}
+
 impl<C, QuoteC> Price<C, QuoteC>
 where
-    C: 'static + ?Sized,
-    QuoteC: 'static + ?Sized,
+    C: Currency,
+    QuoteC: Currency,
+{
+    /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
+    pub const fn identity() -> Self {
+        Self {
+            amount: Coin::new(1),
+            amount_quote: Coin::new(1),
+        }
+    }
+}
+
+impl<C, QuoteC> Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
@@ -84,37 +121,48 @@ where
     }
 
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
-    pub const fn identity() -> Self {
+    pub const fn identity_with_constants(
+        amount: &'static Constants<C>,
+        amount_quote: &'static Constants<QuoteC>,
+    ) -> Self {
         Self {
-            amount: Coin::new(1),
-            amount_quote: Coin::new(1),
+            amount: Coin::with_constants(1, amount),
+            amount_quote: Coin::with_constants(1, amount_quote),
         }
     }
 
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
-    where
-        R: Ratio<Amount>,
-    {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
+    pub(crate) fn lossy_mul(self, rhs: Ratio<Amount>) -> Self {
+        let (amount_normalized, rhs_nominator_normalized) = self
+            .amount
+            .into_coprime_with(Coin::with_constants(*rhs.parts(), self.amount.constants()));
 
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
+        let (amount_quote_normalized, rhs_denominator_normalized) =
+            self.amount_quote.into_coprime_with(Coin::with_constants(
+                *rhs.total(),
+                self.amount_quote.constants(),
+            ));
+
+        let double_amount = DoubleAmount::from(amount_normalized.amount())
+            * DoubleAmount::from(rhs_denominator_normalized.amount());
+
+        let double_amount_quote = DoubleAmount::from(amount_quote_normalized.amount())
+            * DoubleAmount::from(rhs_nominator_normalized.amount());
 
         let extra_bits =
             Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
 
         Price::new(
-            Self::trim_down(double_amount, extra_bits).into(),
-            Self::trim_down(double_amount_quote, extra_bits).into(),
+            Coin::with_constants(
+                Self::trim_down(double_amount, extra_bits),
+                self.amount.constants(),
+            ),
+            Coin::with_constants(
+                Self::trim_down(double_amount_quote, extra_bits),
+                self.amount_quote.constants(),
+            ),
         )
     }
 
@@ -147,23 +195,32 @@ where
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
         let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
+
         debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
+
         debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
+
         let gcd: Amount = match self.amount.checked_div(a1.into()) {
             None => unreachable!("invariant on amount != 0 should have passed!"),
             Some(gcd) => gcd.into(),
         };
-        debug_assert_eq!(Some(gcd.into()), rhs.amount.checked_div(c1.into()));
+
+        debug_assert_eq!(
+            Some(Coin::with_constants(gcd, rhs.amount.constants())),
+            rhs.amount.checked_div(c1.into())
+        );
 
         let may_b_c1 = self.amount_quote.checked_mul(c1.into());
+
         let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());
-        let may_amount_quote = may_b_c1
-            .zip(may_d_a1)
-            .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1));
+
         let may_amount = a1
             .checked_mul(c1.into())
             .and_then(|a1_c1| a1_c1.checked_mul(gcd));
-        may_amount_quote
+
+        may_b_c1
+            .zip(may_d_a1)
+            .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1))
             .zip(may_amount)
             .map(|(amount_quote, amount)| Self::new(amount, amount_quote))
     }
@@ -177,72 +234,106 @@ where
     /// until a * d + b * c and b * d do not overflow.
     fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = FACTOR.into();
-        let may_factored_total =
-            total(factored_amount, self).checked_add(total(factored_amount, rhs));
-        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
+
+        let factored_amount = Coin::with_constants(FACTOR, self.amount.constants());
+
+        total(factored_amount, self)
+            .checked_add(total(factored_amount, rhs))
+            .map(|factored_total| total_of(factored_amount).is(factored_total))
     }
 
     #[track_caller]
     fn bits_above_max(double_amount: DoubleAmount) -> u32 {
         const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!")
-            .into();
+
+        let higher_half = Uint128::try_from(double_amount >> BITS_MAX_AMOUNT)
+            .unwrap()
+            .u128();
+
         BITS_MAX_AMOUNT - higher_half.leading_zeros()
     }
 
     #[track_caller]
     fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
         debug_assert!(bits <= Amount::BITS);
-        let amount: IntermediateAmount = (double_amount >> bits)
-            .try_into()
-            .expect("insufficient bits to trim");
-        let res = amount.into();
-        assert!(res > 0, "price overflow during multiplication");
-        res
+
+        let amount = Uint128::try_from(double_amount >> bits)
+            .expect("insufficient bits to trim")
+            .into();
+
+        assert!(amount > 0, "price overflow during multiplication");
+
+        amount
     }
+}
+
+impl<C, QuoteC> PartialEq for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+impl<C, QuoteC> Eq for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
 }
 
 impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
 where
-    C: ?Sized + PartialEq,
-    QuoteC: ?Sized + PartialEq,
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // a/b < c/d if and only if a * d < b * c
-        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
-
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
-        (a * d).partial_cmp(&(b * c))
+        Some(self.cmp(other))
     }
 }
 
-impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
+impl<C, QuoteC> Ord for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
 {
-    type Output = Price<C, QuoteC>;
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // a/b < c/d if and only if a * d < b * c
+        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-    fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
+        let a: DoubleAmount = self.amount_quote.amount().into();
+        let d: DoubleAmount = other.amount.amount().into();
+
+        let b: DoubleAmount = self.amount.amount().into();
+        let c: DoubleAmount = other.amount_quote.amount().into();
+
+        (a * d).cmp(&(b * c))
+    }
+}
+
+impl<C, QuoteC> Add for Price<C, QuoteC>
+where
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+{
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
         self.checked_add(rhs)
             .or_else(|| self.lossy_add(rhs))
             .expect("should not observe huge prices")
     }
 }
 
-impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
+impl<C, QuoteC> AddAssign for Price<C, QuoteC>
 where
     C: Currency,
     QuoteC: Currency,
 {
     #[track_caller]
-    fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
+    fn add_assign(&mut self, rhs: Self) {
         *self = self.add(rhs);
     }
 }
@@ -251,9 +342,9 @@ where
 
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
-    QuoteQuoteC: Currency,
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
+    QuoteQuoteC: BaseCurrency,
 {
     type Output = Price<C, QuoteQuoteC>;
 
@@ -262,8 +353,8 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&Rational::new(self.amount_quote, rhs.amount))
+        Price::new(self.amount, rhs.amount_quote)
+            .lossy_mul(Ratio::new(self.amount_quote.into(), rhs.amount.into()))
     }
 }
 
@@ -272,11 +363,14 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
 where
-    C: ?Sized,
-    QuoteC: ?Sized,
+    C: BaseCurrency,
+    QuoteC: BaseCurrency,
 {
-    let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    let ratio: Ratio<Amount> = Ratio::new(of.into(), price.amount.into());
+
+    let amount = ratio * price.amount_quote.into();
+
+    Coin::with_constants(amount, price.amount_quote.constants())
 }
 
 #[cfg(test)]
@@ -289,14 +383,15 @@ mod test {
     };
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
+    use crate::ratio::Ratio;
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::Rational,
     };
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     struct QuoteQuoteCurrency {}
+
     impl Currency for QuoteQuoteCurrency {
         const TICKER: SymbolStatic = "mycutecoin";
 
@@ -306,6 +401,7 @@ mod test {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
+
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;
     type Coin = CoinT<SuperGroupTestC2>;
@@ -319,7 +415,7 @@ mod test {
             Price::new(Coin::new(amount), QuoteCoin::new(amount_quote)),
             Price::new(
                 Coin::new(amount * factor),
-                QuoteCoin::new(amount_quote * factor)
+                QuoteCoin::new(amount_quote * factor),
             )
         );
     }
@@ -606,8 +702,8 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = Rational::new(quote1, amount2);
-        assert_eq!(exp, price3.lossy_mul(&ratio));
+        let ratio = Ratio::new(quote1, amount2).map();
+        assert_eq!(exp, price3.lossy_mul(ratio));
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
@@ -669,7 +765,7 @@ mod test_invariant {
             Price::identity(),
             Price::new(
                 Coin::<SuperGroupTestC2>::new(4),
-                Coin::<SuperGroupTestC2>::new(4)
+                Coin::<SuperGroupTestC2>::new(4),
             )
         );
     }

@@ -53,7 +53,10 @@ impl PriceConverter for QuoteCUncheckedConverter {
     }
 }
 
-pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> {
+pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+where
+    QuoteC: Currency,
+{
     oracle_ref: OracleRef<QuoteC>,
     querier: QuerierWrapper<'a>,
     _quote_group: PhantomData<QuoteG>,
@@ -116,6 +119,8 @@ where
 
 impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC>>
     for OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+where
+    QuoteC: Currency,
 {
     fn as_ref(&self) -> &OracleRef<QuoteC> {
         &self.oracle_ref
@@ -124,6 +129,8 @@ impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC>>
 
 impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
     From<OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>> for OracleRef<QuoteC>
+where
+    QuoteC: Currency,
 {
     fn from(stub: OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>) -> Self {
         stub.oracle_ref

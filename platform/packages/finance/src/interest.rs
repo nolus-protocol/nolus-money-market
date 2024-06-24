@@ -1,11 +1,6 @@
 use std::{cmp, fmt::Debug, ops::Sub};
 
-use crate::{
-    duration::Duration,
-    fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
-    zero::Zero,
-};
+use crate::{duration::Duration, fraction::Fraction, zero::Zero};
 
 /// Computes how much interest is accrued
 pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> P

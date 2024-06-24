@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, fraction::Fraction, percent::Percent};
+use finance::ratio::Ratio;
+use finance::{duration::Duration, percent::Percent};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
@@ -59,7 +60,9 @@ impl Config {
     }
 
     pub fn min_feeders(&self, total: usize) -> usize {
-        self.min_feeders.of(total)
+        (Ratio::<u32>::from(self.min_feeders) * u32::try_from(total).unwrap())
+            .try_into()
+            .unwrap()
     }
 
     pub fn sample_period(&self) -> Duration {

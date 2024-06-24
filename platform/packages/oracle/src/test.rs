@@ -13,9 +13,14 @@ use crate::{
     OracleRef,
 };
 
-pub struct DummyOracle<QuoteC>(Option<Amount>, OracleRef<QuoteC>);
+pub struct DummyOracle<QuoteC>(Option<Amount>, OracleRef<QuoteC>)
+where
+    QuoteC: Currency;
 
-impl<QuoteC> DummyOracle<QuoteC> {
+impl<QuoteC> DummyOracle<QuoteC>
+where
+    QuoteC: Currency,
+{
     pub fn with_price(c_in_base: Amount) -> Self {
         Self(Some(c_in_base), Self::ref_())
     }
@@ -50,13 +55,19 @@ where
     }
 }
 
-impl<QuoteC> From<DummyOracle<QuoteC>> for OracleRef<QuoteC> {
+impl<QuoteC> From<DummyOracle<QuoteC>> for OracleRef<QuoteC>
+where
+    QuoteC: Currency,
+{
     fn from(value: DummyOracle<QuoteC>) -> Self {
         value.1
     }
 }
 
-impl<QuoteC> AsRef<OracleRef<QuoteC>> for DummyOracle<QuoteC> {
+impl<QuoteC> AsRef<OracleRef<QuoteC>> for DummyOracle<QuoteC>
+where
+    QuoteC: Currency,
+{
     fn as_ref(&self) -> &OracleRef<QuoteC> {
         &self.1
     }

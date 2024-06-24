@@ -1,4 +1,4 @@
-use currency::{Currency, Group, SymbolSlice};
+use currency::{BaseCurrency, Currency, Group, SymbolSlice};
 
 use crate::{
     coin::{Coin, CoinDTO},
@@ -11,7 +11,7 @@ use super::{dto::PriceDTO, Price};
 pub struct BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: ?Sized,
+    QuoteC: BaseCurrency,
 {
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
@@ -20,7 +20,7 @@ where
 impl<BaseG, QuoteC> BasePrice<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: BaseCurrency,
 {
     pub fn base_ticker(&self) -> &SymbolSlice {
         self.amount.ticker()
@@ -29,9 +29,9 @@ where
 
 impl<C, BaseG, QuoteC> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC>
 where
-    C: Currency,
+    C: BaseCurrency,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: BaseCurrency,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
         Self {
@@ -45,7 +45,7 @@ impl<C, BaseG, QuoteC> TryFrom<&BasePrice<BaseG, QuoteC>> for Price<C, QuoteC>
 where
     C: Currency,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: BaseCurrency,
 {
     type Error = Error;
 
@@ -57,7 +57,7 @@ where
 impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC>> for PriceDTO<BaseG, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: BaseCurrency,
     QuoteG: Group,
 {
     fn from(price: BasePrice<BaseG, QuoteC>) -> Self {

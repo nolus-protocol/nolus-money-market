@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use currency::Currency;
-use finance::{duration::Duration, fraction::Fraction, price::Price, ratio::Rational};
+use finance::{duration::Duration, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;

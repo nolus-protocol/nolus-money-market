@@ -1,16 +1,15 @@
+use ::serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 #[cfg(feature = "testing")]
 use std::num::NonZeroU128;
 use std::{
     cmp::Ordering,
     fmt::{Debug, Display, Formatter},
     iter::Sum,
-    marker::PhantomData,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-use ::serde::{Deserialize, Serialize};
-
-use currency::Currency;
+use currency::{BaseCurrency, Constants, Currency};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
@@ -25,35 +24,63 @@ pub type Amount = u128;
 pub type NonZeroAmount = NonZeroU128;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
-pub struct Coin<C>
+pub struct CompileTimeCoin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
     amount: Amount,
     #[serde(skip)]
-    ticker: PhantomData<C>,
+    _currency: PhantomData<C>,
 }
 
-impl<C> Clone for Coin<C>
+impl<C> From<CompileTimeCoin<C>> for Coin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
-    fn clone(&self) -> Self {
-        *self
+    fn from(value: CompileTimeCoin<C>) -> Self {
+        Self {
+            amount: value.amount,
+            constants: C::CONSTANTS,
+        }
     }
 }
 
-impl<C> Copy for Coin<C> where C: ?Sized {}
+pub struct Coin<C>
+where
+    C: BaseCurrency,
+{
+    amount: Amount,
+    constants: &'static Constants<C>,
+}
 
 impl<C> Coin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
     pub const fn new(amount: Amount) -> Self {
         Self {
             amount,
-            ticker: PhantomData,
+            constants: C::CONSTANTS,
         }
+    }
+}
+
+impl<C> Coin<C>
+where
+    C: BaseCurrency,
+{
+    pub const fn with_constants(amount: Amount, constants: &'static Constants<C>) -> Self {
+        Self { amount, constants }
+    }
+
+    #[inline]
+    pub const fn amount(&self) -> Amount {
+        self.amount
+    }
+
+    #[inline]
+    pub const fn constants(&self) -> &'static Constants<C> {
+        self.constants
     }
 
     pub const fn is_zero(&self) -> bool {
@@ -62,49 +89,44 @@ where
 
     #[track_caller]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_add(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.amount
+            .checked_add(rhs.amount)
+            .map(|amount| Self { amount, ..self })
     }
 
     #[track_caller]
     pub fn saturating_sub(self, rhs: Self) -> Self {
-        self.amount.saturating_sub(rhs.amount).into()
+        Self {
+            amount: self.amount.saturating_sub(rhs.amount),
+            ..self
+        }
     }
 
     #[track_caller]
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_sub(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.amount
+            .checked_sub(rhs.amount)
+            .map(|amount| Self { amount, ..self })
     }
 
     #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_mul(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.amount
+            .checked_mul(rhs)
+            .map(|amount| Self { amount, ..self })
     }
 
     #[track_caller]
     pub fn checked_div(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_div(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.amount
+            .checked_div(rhs)
+            .map(|amount| Self { amount, ..self })
     }
 
     #[track_caller]
     pub(super) const fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
-        OtherC: ?Sized,
+        OtherC: BaseCurrency,
     {
         debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
         debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
@@ -123,50 +145,64 @@ where
         );
 
         (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
+            Self {
+                amount: self.amount / gcd,
+                ..self
+            },
+            Coin {
+                amount: other.amount / gcd,
+                ..other
+            },
         )
     }
 }
 
+impl<C> Clone for Coin<C>
+where
+    C: BaseCurrency,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> Copy for Coin<C> where C: BaseCurrency {}
+
 impl<C> Debug for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Coin")
             .field("amount", &self.amount)
-            .field("ticker", &self.ticker)
+            .field("ticker", &self.constants.ticker())
             .finish()
     }
 }
 
 impl<C> Default for Coin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
     fn default() -> Self {
-        Self {
-            amount: Default::default(),
-            ticker: Default::default(),
-        }
+        Self::ZERO
     }
 }
 
 impl<C> PartialEq for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     fn eq(&self, other: &Self) -> bool {
         self.amount == other.amount
     }
 }
 
-impl<C> Eq for Coin<C> where C: ?Sized {}
+impl<C> Eq for Coin<C> where C: BaseCurrency {}
 
 impl<C> PartialOrd for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -175,8 +211,7 @@ where
 
 impl<C> Ord for Coin<C>
 where
-    C: ?Sized,
-    Self: PartialOrd,
+    C: BaseCurrency,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.amount.cmp(&other.amount)
@@ -185,40 +220,44 @@ where
 
 impl<C> Zero for Coin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
     const ZERO: Self = Self::new(Zero::ZERO);
 }
 
-impl<C> Add<Coin<C>> for Coin<C>
+impl<C> Add for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     type Output = Self;
 
     #[track_caller]
-    fn add(self, rhs: Coin<C>) -> Self::Output {
-        self.checked_add(rhs)
-            .expect("addition should not overflow with real data")
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            amount: self.amount + rhs.amount,
+            ..self
+        }
     }
 }
 
-impl<C> Sub<Coin<C>> for Coin<C>
+impl<C> Sub for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     type Output = Self;
 
     #[track_caller]
-    fn sub(mut self, rhs: Coin<C>) -> Self::Output {
-        self -= rhs;
-        self
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            amount: self.amount - rhs.amount,
+            ..self
+        }
     }
 }
 
-impl<C> AddAssign<Coin<C>> for Coin<C>
+impl<C> AddAssign for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: Coin<C>) {
@@ -226,9 +265,9 @@ where
     }
 }
 
-impl<C> SubAssign<Coin<C>> for Coin<C>
+impl<C> SubAssign for Coin<C>
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
@@ -238,16 +277,16 @@ where
 
 impl<C> Display for Coin<C>
 where
-    C: Currency,
+    C: BaseCurrency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.amount, C::TICKER))
+        f.write_fmt(format_args!("{} {}", self.amount, self.constants.ticker()))
     }
 }
 
 impl<C> From<Amount> for Coin<C>
 where
-    C: ?Sized,
+    C: Currency,
 {
     fn from(amount: Amount) -> Self {
         Self::new(amount)
@@ -256,7 +295,7 @@ where
 
 impl<C> From<Coin<C>> for Amount
 where
-    C: ?Sized,
+    C: BaseCurrency,
 {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
@@ -284,7 +323,10 @@ where
     }
 }
 
-impl<C> AsRef<Self> for Coin<C> {
+impl<C> AsRef<Self> for Coin<C>
+where
+    C: BaseCurrency,
+{
     fn as_ref(&self) -> &Self {
         self
     }

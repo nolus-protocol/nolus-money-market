@@ -10,13 +10,6 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{
-    fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
-    ratio::Rational,
-    zero::Zero,
-};
-
 pub type Units = u64;
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
@@ -91,21 +84,21 @@ impl Duration {
         self.nanos().checked_mul(rhs.into()).map(Self::from_nanos)
     }
 
-    #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
-    where
-        T: TimeSliceable,
-    {
-        annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
-    }
-
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
-    where
-        Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
-    {
-        Rational::new(amount, annual_amount).of(self)
-    }
+    // #[track_caller]
+    // pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
+    // where
+    //     T: TimeSliceable,
+    // {
+    //     annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+    // }
+    //
+    // pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    // where
+    //     Self: Fractionable<U>,
+    //     U: Zero + Debug + PartialEq + Copy,
+    // {
+    //     Rational::new(amount, annual_amount).of(self)
+    // }
 }
 
 impl From<Duration> for u128 {

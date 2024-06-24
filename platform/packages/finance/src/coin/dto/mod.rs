@@ -7,8 +7,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
+    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, BaseCurrency, Currency,
+    CurrencyVisit, Group, GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::schemars::{self, JsonSchema};
 
@@ -179,11 +179,11 @@ where
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: Currency + ?Sized,
+    C: BaseCurrency + ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         // TODO consider adding a compile-time check that the currency belongs to the group
-        Self::new_unchecked(coin.amount, C::TICKER)
+        Self::new_unchecked(coin.amount, coin.constants.ticker())
     }
 }
 

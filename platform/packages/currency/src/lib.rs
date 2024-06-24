@@ -1,4 +1,4 @@
-use std::{any::TypeId, fmt::Debug};
+use std::{any::TypeId, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -29,10 +29,11 @@ pub type SymbolSlice = str;
 pub type SymbolStatic = &'static SymbolSlice;
 pub type SymbolOwned = String;
 
-// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
-// satisfy trait bounds with regards of the lifetimes
-// Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
-pub trait Currency: Copy + Ord + Default + Debug + 'static {
+pub trait BaseCurrency: Sized + 'static {}
+
+impl<C> BaseCurrency for C where C: Currency {}
+
+pub trait Currency: BaseCurrency {
     /// Identifier of the currency
     const TICKER: SymbolStatic;
 
@@ -47,12 +48,52 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
     ///
     /// Example: `(10 ^ DECIMAL_DIGITS) uUSDC = 1 USDC`
     const DECIMAL_DIGITS: u8;
+
+    const CONSTANTS: &'static Constants<Self> = &Constants {
+        ticker: Self::TICKER,
+        bank_symbol: Self::BANK_SYMBOL,
+        dex_symbol: Self::DEX_SYMBOL,
+        decimal_digits: Self::DECIMAL_DIGITS,
+        _type: PhantomData,
+    };
+}
+
+pub struct Constants<C>
+where
+    C: BaseCurrency,
+{
+    ticker: SymbolStatic,
+    bank_symbol: SymbolStatic,
+    dex_symbol: SymbolStatic,
+    decimal_digits: u8,
+    _type: PhantomData<C>,
+}
+
+impl<C> Constants<C>
+where
+    C: BaseCurrency,
+{
+    pub const fn ticker(&self) -> SymbolStatic {
+        self.ticker
+    }
+
+    pub const fn bank_symbol(&self) -> SymbolStatic {
+        self.bank_symbol
+    }
+
+    pub const fn dex_symbol(&self) -> SymbolStatic {
+        self.dex_symbol
+    }
+
+    pub const fn decimal_digits(&self) -> u8 {
+        self.decimal_digits
+    }
 }
 
 pub fn equal<C1, C2>() -> bool
 where
-    C1: 'static + ?Sized,
-    C2: 'static + ?Sized,
+    C1: 'static,
+    C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
@@ -68,12 +109,37 @@ where
     }
 }
 
+pub fn validate_ticker_with_constants<C>(
+    constants: &'static Constants<C>,
+    ticker: &SymbolSlice,
+) -> Result<()>
+where
+    C: BaseCurrency,
+{
+    if ticker == constants.ticker {
+        Ok(())
+    } else {
+        Err(Error::unexpected_symbol_with_constants::<_, Tickers, C>(
+            constants,
+            ticker.to_owned(),
+        ))
+    }
+}
+
 pub fn validate_member<C, G>() -> Result<()>
 where
     C: Currency,
     G: Group,
 {
     validate::<G>(C::TICKER)
+}
+
+pub fn validate_member_with_constants<C, G>(constants: &'static Constants<C>) -> Result<()>
+where
+    C: BaseCurrency,
+    G: Group,
+{
+    validate::<G>(constants.ticker)
 }
 
 pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>

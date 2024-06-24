@@ -1,11 +1,11 @@
 use thiserror::Error;
 
-use crate::{Currency, Group, SymbolOwned, Symbols};
+use crate::{BaseCurrency, Constants, Currency, Group, SymbolOwned, SymbolStatic, Symbols};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Currency] Found a symbol '{0}' pretending to be the {1} of the currency with ticker '{2}'")]
-    UnexpectedSymbol(String, String, String),
+    UnexpectedSymbol(String, String, SymbolStatic),
 
     #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
     NotInCurrencyGroup(String, String, String),
@@ -18,7 +18,19 @@ impl Error {
         CS: Symbols + ?Sized,
         C: Currency,
     {
-        Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), C::TICKER.into())
+        Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), C::TICKER)
+    }
+
+    pub fn unexpected_symbol_with_constants<S, CS, C>(
+        constants: &'static Constants<C>,
+        symbol: S,
+    ) -> Self
+    where
+        S: Into<SymbolOwned>,
+        CS: Symbols + ?Sized,
+        C: BaseCurrency,
+    {
+        Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), constants.ticker)
     }
 
     pub fn not_in_currency_group<S, CS, G>(symbol: S) -> Self

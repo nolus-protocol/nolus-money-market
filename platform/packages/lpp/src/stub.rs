@@ -1,5 +1,5 @@
 use currency::NlsPlatform;
-use finance::coin::Coin;
+use finance::coin::{Coin, CompileTimeCoin};
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -29,10 +29,11 @@ impl<'a> Lpp for Stub<'a> {
         self.querier
             .query_wasm_smart(
                 &self.lpp,
-                &(QueryMsg::StableBalance {
+                &QueryMsg::StableBalance {
                     oracle_addr: oracle,
-                }),
+                },
             )
+            .map(CompileTimeCoin::into)
             .map_err(Into::into)
     }
 

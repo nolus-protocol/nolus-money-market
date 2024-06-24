@@ -12,9 +12,7 @@ use sdk::{
 
 use crate::{
     error::Result as FinanceResult,
-    fraction::Fraction,
-    fractionable::Fractionable,
-    ratio::{Ratio, Rational},
+    ratio::{Ratio, Unit},
     zero::Zero,
 };
 
@@ -43,12 +41,13 @@ impl Percent {
         Self(permille)
     }
 
-    pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
+    pub fn from_ratio<T>(ratio: Ratio<T>) -> Self
     where
-        FractionUnit: Zero + Debug + Copy + PartialEq,
-        Self: Fractionable<FractionUnit>,
+        Units: Into<T>,
+        T: Unit + TryInto<Units>,
+        <T as TryInto<Units>>::Error: Debug,
     {
-        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        Self(ratio * Self::HUNDRED.units())
     }
 
     pub const fn units(&self) -> Units {
@@ -78,33 +77,13 @@ impl Zero for Percent {
     const ZERO: Self = Self::ZERO;
 }
 
-impl Fraction<Units> for Percent {
-    #[track_caller]
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: Fractionable<Units>,
-    {
-        whole.safe_mul(self)
-    }
-}
-
-impl Ratio<Units> for Percent {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Percent::HUNDRED.units()
-    }
-}
-
-impl Ratio<Units> for Rational<Percent> {
-    fn parts(&self) -> Units {
-        Ratio::<Percent>::parts(self).units()
-    }
-
-    fn total(&self) -> Units {
-        Ratio::<Percent>::total(self).units()
+impl<T> From<Percent> for Ratio<T>
+where
+    Units: Into<T>,
+    T: Unit,
+{
+    fn from(value: Percent) -> Self {
+        Self::new(value.units().into(), Percent::HUNDRED.units().into())
     }
 }
 
@@ -126,7 +105,7 @@ impl Display for Percent {
     }
 }
 
-impl Add<Percent> for Percent {
+impl Add for Percent {
     type Output = Self;
 
     #[track_caller]
@@ -148,7 +127,7 @@ impl<'a> Add<&'a Percent> for Percent {
     }
 }
 
-impl Sub<Percent> for Percent {
+impl Sub for Percent {
     type Output = Self;
 
     #[track_caller]
@@ -179,10 +158,9 @@ pub(super) mod test {
 
     use currency::test::SubGroupTestC1;
 
-    use crate::{
-        coin::Coin, fraction::Fraction, fractionable::Percentable, percent::Percent,
-        ratio::Rational,
-    };
+    use crate::coin::Amount;
+    use crate::ratio::Ratio;
+    use crate::{coin::Coin, percent::Percent};
 
     use super::Units;
 
@@ -206,13 +184,26 @@ pub(super) mod test {
         let c1 = Coin::<SubGroupTestC1>::new(a1);
         let c2 = Coin::<SubGroupTestC1>::new(a2);
         let c3 = Coin::<SubGroupTestC1>::new(a3);
-        assert_eq!(Percent::ZERO, Percent::from_ratio(c1, c2));
 
-        assert_eq!(from_parts(a3, a2), Percent::from_ratio(c3, c2));
+        assert_eq!(
+            Percent::ZERO,
+            Percent::from_ratio(Ratio::new(c1, c2).map::<Amount>())
+        );
 
-        assert_eq!(Percent::HUNDRED, Percent::from_ratio(c3, c3));
+        assert_eq!(
+            from_parts(a3, a2),
+            Percent::from_ratio(Ratio::new(c3, c2).map::<Amount>())
+        );
 
-        assert_eq!(from_parts(a2, a3), Percent::from_ratio(c2, c3));
+        assert_eq!(
+            Percent::HUNDRED,
+            Percent::from_ratio(Ratio::new(c3, c3).map::<Amount>())
+        );
+
+        assert_eq!(
+            from_parts(a2, a3),
+            Percent::from_ratio(Ratio::new(c2, c3).map::<Amount>())
+        );
     }
 
     #[test]
@@ -302,8 +293,9 @@ pub(super) mod test {
     #[test]
     #[should_panic]
     fn of_overflow() {
-        use crate::fraction::Fraction;
-        Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
+        Percent::from_permille(1001)
+            .into()
+            .of(Percent::from_permille(Units::MAX));
     }
 
     #[test]

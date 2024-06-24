@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{Currency, SymbolOwned};
+use currency::{BaseCurrency, Constants, Currency, SymbolOwned, SymbolStatic};
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -23,7 +23,10 @@ pub enum Error {
     },
 
     #[error("[Oracle; Stub] Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
+    CurrencyMismatch {
+        expected: SymbolStatic,
+        found: String,
+    },
 }
 
 pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> Error
@@ -32,6 +35,19 @@ where
 {
     Error::CurrencyMismatch {
         expected: ExpC::TICKER.into(),
+        found,
+    }
+}
+
+pub fn currency_mismatch_with_constants<ExpC>(
+    constants: &'static Constants<ExpC>,
+    found: SymbolOwned,
+) -> Error
+where
+    ExpC: BaseCurrency,
+{
+    Error::CurrencyMismatch {
+        expected: constants.ticker().into(),
         found,
     }
 }
