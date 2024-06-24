@@ -57,6 +57,7 @@ where
         res
     }
 
+    // TODO use with_price instead
     pub fn base_ticker(&self) -> &SymbolSlice {
         self.amount.ticker()
     }
