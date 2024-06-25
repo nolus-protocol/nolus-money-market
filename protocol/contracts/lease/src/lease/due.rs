@@ -57,6 +57,24 @@ mod test {
     };
 
     #[test]
+    #[should_panic = "overflow"]
+    fn test_large_interest_accrual_period() {
+        let principal_due = 20.into();
+        let due_interest = 5.into();
+        let due_margin_interest = 1.into();
+        let till_due_end = Duration::from_days(1);
+        let s = State {
+            annual_interest: Percent::from_percent(15),
+            annual_interest_margin: Percent::from_percent(0),
+            principal_due,
+            due_interest,
+            due_margin_interest,
+            overdue: Overdue::StartIn(till_due_end),
+        };
+        s.overdue_collection(1_800.into());
+    }
+
+    #[test]
     fn already_above_the_limit_before_due_end() {
         let principal_due = 100_000.into();
         let due_interest = 10.into();
