@@ -11,8 +11,8 @@ define_symbol! {
             dex: "ibc/NA_USDC_NOBLE_DEX",
         },
         ["net_test"]: {
-            // full ibc route: transfer/channel-1993/transfer/channel-4280/uusdc
-            bank: "ibc/3C6122E1619E4265FA2AB9821BCB84E72E3A457DE10CE69DE7C682A166F225B5",
+            // full ibc route: transfer/channel-0/transfer/channel-4280/uusdc
+            bank: "ibc/83C68CA1189A7DAC4FDA8B89F9166FFA6BA3A8C5534B0E3D84D831B4F350FE59",
             // full ibc route: transfer/channel-4280/uusdc
             dex: "ibc/DE6792CF9E521F6AD6E9A4BDF6225C9571A3B74ACC0A529F92BC5122A39D2E58",
         },
