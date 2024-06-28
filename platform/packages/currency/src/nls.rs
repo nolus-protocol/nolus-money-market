@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    group::MemberOf, matcher::Matcher, AnyVisitor, Currency, Group, MaybeAnyVisitResult, SymbolStatic, Symbols
+    group::MemberOf, matcher::Matcher, AnyVisitor, Currency, Group, MaybeAnyVisitResult,
+    SymbolStatic, Symbols,
 };
 
 #[derive(

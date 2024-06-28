@@ -54,7 +54,6 @@ where
             .map_err(Self::Error::from_api_err)
             .and_then(|price| {
                 self.cmd
-               
                     .exec::<C1, C2>(price)
                     .map_err(Self::Error::from_customer_err)
             })

@@ -34,7 +34,7 @@ where
     G: Group,
 {
     amount: Amount,
-    #[serde(rename="ticker")]
+    #[serde(rename = "ticker")]
     currency: CurrencyDTO<G>,
 }
 

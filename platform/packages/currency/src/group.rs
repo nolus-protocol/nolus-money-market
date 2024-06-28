@@ -48,10 +48,7 @@ mod test {
     fn visit_any_sub_group() {
         let visitor = Expect::<SubGroupTestC1, SuperGroup>::default();
         let matcher = TypeMatcher::new(TypeId::of::<SubGroupTestC1>());
-        assert_eq!(
-            Ok(Ok(true)),
-            SuperGroup::maybe_visit(&matcher, visitor)
-        );
+        assert_eq!(Ok(Ok(true)), SuperGroup::maybe_visit(&matcher, visitor));
     }
     //     let v_nls = Expect::<SuperGroupTestC2, SuperGroup>::default();
     //     assert_eq!(

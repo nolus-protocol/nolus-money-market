@@ -66,10 +66,8 @@ impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
 where
     QuoteC: Currency,
     QuoteC::Group: Group<QuoteG>,
-
 {
     pub fn new(oracle_ref: OracleRef<QuoteC>, querier: QuerierWrapper<'a>) -> Self {
-
         Self {
             oracle_ref,
             querier,

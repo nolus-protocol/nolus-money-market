@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Currency, Group, SymbolMatcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+    AnyVisitor, Currency, Group, MaybeAnyVisitResult, SymbolMatcher, SymbolSlice, SymbolStatic,
 };
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};

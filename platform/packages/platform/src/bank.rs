@@ -579,7 +579,10 @@ mod test {
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<SubGroupCurrency>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
+        total_balance_tester::<SubGroupCurrency>(
+            vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)],
+            &[],
+        );
     }
 
     #[test]
