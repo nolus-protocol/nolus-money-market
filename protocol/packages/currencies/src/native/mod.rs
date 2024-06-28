@@ -2,15 +2,14 @@ use currency::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult}
 
 use crate::PaymentGroup;
 
-use self::r#impl as impl_mod;
-
 pub(crate) mod r#impl;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PaymentOnlyGroup {}
+pub type Nls = r#impl::Nls;
 
-impl Group for PaymentOnlyGroup {
-    const DESCR: &'static str = "payment only";
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Native {}
+impl Group for Native {
+    const DESCR: &'static str = "native";
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
@@ -26,9 +25,9 @@ impl Group for PaymentOnlyGroup {
         V: AnyVisitor,
         Self: MemberOf<V::VisitedG>,
     {
-        impl_mod::maybe_visit(matcher, visitor)
+        currency::maybe_visit_any::<_, Nls, _>(matcher, visitor)
     }
 }
 
-impl MemberOf<PaymentGroup> for PaymentOnlyGroup {}
-impl MemberOf<Self> for PaymentOnlyGroup {}
+impl MemberOf<Self> for Native {}
+impl MemberOf<PaymentGroup> for Native {}

@@ -2,7 +2,7 @@ use currency::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult}
 
 use crate::PaymentGroup;
 
-pub use self::r#impl;
+pub use self::r#impl::Lpn;
 
 mod r#impl;
 
@@ -35,7 +35,7 @@ impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {
-    use currency::Currency;
+    use currency::Symbols;
 
     use crate::{
         lpn::{Lpn, Lpns},
