@@ -18,14 +18,14 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["dep:swap", "contract", "currencies/net_dev", "swap/test"]
-net_test = ["dep:swap", "contract", "currencies/net_test", "swap/test"]
-net_main = ["dep:swap", "contract", "currencies/net_main", "swap/main"]
+net_dev = ["dep:swap", "contract", "swap/test"]
+net_test = ["dep:swap", "contract", "swap/test"]
+net_main = ["dep:swap", "contract", "swap/main"]
 
-neutron-astroport-usdc_axelar = ["contract", "currencies/neutron-astroport-usdc_axelar", "swap/astroport"]
-neutron-astroport-usdc_noble = ["contract", "currencies/neutron-astroport-usdc_noble", "swap/astroport"]
-osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar", "swap/osmosis"]
-osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble", "swap/osmosis"]
+neutron-astroport-usdc_axelar = ["contract", "swap/astroport"]
+neutron-astroport-usdc_noble = ["contract", "swap/astroport"]
+osmosis-osmosis-usdc_axelar = ["contract", "swap/osmosis"]
+osmosis-osmosis-usdc_noble = ["contract", "swap/osmosis"]
 
 contract = [
     "sdk/contract",

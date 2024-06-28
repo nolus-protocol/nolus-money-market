@@ -2,16 +2,16 @@ use std::fmt::Debug;
 
 use crate::{AnyVisitor, Currency, Matcher, MaybeAnyVisitResult};
 
-// TODO rename to GroupMember???
-// TODO try to remove the + MemberOf<Self>
 pub trait Group: Copy + Clone + Debug + PartialEq + MemberOf<Self> {
     const DESCR: &'static str;
 
+    // Visit this group directly by a visitor
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor<VisitedG = Self>;
 
+    // Visit this group since it is a member, or a sub-group, of another that is being visited
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,

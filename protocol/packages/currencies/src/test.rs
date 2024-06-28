@@ -1,13 +1,5 @@
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-use crate::lease::astroport::{Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as LC3, Tia as LC5};
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-use crate::lease::r#impl::{Atom as LC1, Axl as LC2, Cro as LC3, Osmo as LC4, Weth as LC5};
+// Select some 5 distinct currencies
+use crate::lease::{Atom as LC1, Axl as LC2, Cro as LC3, Osmo as LC4, Weth as LC5};
 use crate::lpn::Lpn;
 use crate::native::Nls;
 
