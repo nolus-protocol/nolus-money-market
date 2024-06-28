@@ -25,7 +25,6 @@ where
     SampleBuilder::from(observations, start_from, sample_span)
 }
 
-#[derive(Default, Copy, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct Sample<C, QuoteC>
 where
@@ -44,6 +43,37 @@ where
 {
     pub fn into_maybe_price(self) -> Option<Price<C, QuoteC>> {
         self.price
+    }
+}
+
+impl<C, QuoteC> Clone for Sample<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn clone(&self) -> Self {
+        Self {
+            price: self.price.clone(),
+        }
+    }
+}
+
+impl<C, QuoteC> Copy for Sample<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+}
+
+impl<C, QuoteC> Default for Sample<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn default() -> Self {
+        Self {
+            price: Default::default(),
+        }
     }
 }
 

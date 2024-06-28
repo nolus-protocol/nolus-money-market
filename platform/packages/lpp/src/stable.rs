@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+    AnyVisitor, Currency, Group, SymbolMatcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
 };
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
@@ -31,7 +31,7 @@ impl Group for StableCurrencyGroup {
 
     fn maybe_visit<M, V>(_matcher: &M, _symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
+        M: SymbolMatcher + ?Sized,
         V: AnyVisitor,
     {
         Ok(visitor.on::<Stable>())

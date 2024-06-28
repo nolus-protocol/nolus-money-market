@@ -1,41 +1,37 @@
-use serde::{Deserialize, Serialize};
+use currency::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
-use sdk::schemars::{self, JsonSchema};
+use crate::PaymentGroup;
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
-pub use self::neutron_astroport_usdc_axelar::UsdcAxelar as Lpn;
-#[cfg(feature = "neutron-astroport-usdc_noble")]
-pub use self::neutron_astroport_usdc_noble::UsdcNoble as Lpn;
-#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
-pub use self::osmosis_osmosis_usdc_axelar::Usdc as Lpn;
-#[cfg(feature = "osmosis-osmosis-usdc_noble")]
-pub use self::osmosis_osmosis_usdc_noble::UsdcNoble as Lpn;
+pub use self::r#impl;
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
-mod neutron_astroport_usdc_axelar;
-#[cfg(feature = "neutron-astroport-usdc_noble")]
-mod neutron_astroport_usdc_noble;
-#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
-mod osmosis_osmosis_usdc_axelar;
-#[cfg(feature = "osmosis-osmosis-usdc_noble")]
-mod osmosis_osmosis_usdc_noble;
+mod r#impl;
 
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Lpns {}
 
 impl Group for Lpns {
     const DESCR: &'static str = "lpns";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher + ?Sized,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG>,
     {
-        currency::maybe_visit_any::<_, Lpn, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Lpn, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<PaymentGroup> for Lpns {}
+impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {

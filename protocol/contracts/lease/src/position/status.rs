@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, duration::Duration, liability::Zone, percent::Percent};
@@ -9,7 +11,8 @@ pub enum Cause {
     Liability { ltv: Percent, healthy_ltv: Percent },
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+// #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub enum Liquidation<Asset> {
     Partial { amount: Coin<Asset>, cause: Cause },

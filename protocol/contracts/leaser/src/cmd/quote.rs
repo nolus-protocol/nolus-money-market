@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
-use lease::api::DownpaymentCoin;
+use lease::api::{DownpaymentCoin, LeaseCoin};
 use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
@@ -250,6 +250,8 @@ where
 
         Ok(QuoteResponse {
             total: total_asset.into(),
+            // total: finance::coin::from_amount_ticker(20, "ATOM".into()).unwrap(),
+            // borrow: finance::coin::from_amount_ticker(10, "USDC".into()).unwrap(),
             borrow: borrow.into(),
             annual_interest_rate,
             annual_interest_rate_margin: self.lease_interest_rate_margin,

@@ -1,34 +1,73 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Debug, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
-use crate::{error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, SingleVisitor};
+use crate::{
+    error::Error, group::MemberOf, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, Group,
+    SingleVisitor,
+};
 
 pub use self::group::*;
 
 mod group;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expect<C>(PhantomData<C>);
+pub struct Expect<C, TopG>(PhantomData<C>, PhantomData<TopG>)
+where
+    C: ?Sized;
 
-impl<C> Default for Expect<C> {
-    fn default() -> Self {
-        Self(Default::default())
+impl<C, TopG> Clone for Expect<C, TopG>
+where
+    C: ?Sized,
+{
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1.clone())
     }
 }
-impl<C> AnyVisitor for Expect<C>
+
+impl<C, TopG> Debug for Expect<C, TopG>
 where
-    C: 'static,
+    C: ?Sized,
 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.debug_tuple("Expect").field(&self.0).finish()
+    }
+}
+
+impl<C, TopG> Default for Expect<C, TopG>
+where
+    C: ?Sized,
+{
+    fn default() -> Self {
+        Self(Default::default(), Default::default())
+    }
+}
+
+impl<C, TopG> PartialEq for Expect<C, TopG> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+impl<C, TopG> Eq for Expect<C, TopG> {}
+
+impl<C, TopG> AnyVisitor for Expect<C, TopG>
+where
+    C: Currency,
+    TopG: Group,
+{
+    type VisitedG = TopG;
+
     type Output = bool;
     type Error = Error;
 
     fn on<Cin>(self) -> AnyVisitorResult<Self>
     where
-        Cin: 'static,
+        Cin: Currency + MemberOf<Self::VisitedG>,
     {
         Ok(crate::equal::<C, Cin>())
     }
 }
-impl<C> SingleVisitor<C> for Expect<C> {
+impl<C, TopG> SingleVisitor<C> for Expect<C, TopG> {
     type Output = bool;
     type Error = Error;
 
@@ -37,8 +76,17 @@ impl<C> SingleVisitor<C> for Expect<C> {
     }
 }
 
-pub struct ExpectUnknownCurrency;
-impl AnyVisitor for ExpectUnknownCurrency {
+pub struct ExpectUnknownCurrency<TopG>(PhantomData<TopG>);
+impl<TopG> Default for ExpectUnknownCurrency<TopG> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+impl<G> AnyVisitor for ExpectUnknownCurrency<G>
+where
+    G: Group,
+{
+    type VisitedG = G;
     type Output = bool;
     type Error = Error;
 
@@ -50,7 +98,7 @@ impl AnyVisitor for ExpectUnknownCurrency {
     }
 }
 
-impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
+impl<C, TopG> SingleVisitor<C> for ExpectUnknownCurrency<TopG> {
     type Output = bool;
     type Error = Error;
 
@@ -59,13 +107,21 @@ impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
     }
 }
 
-#[derive(Default)]
-pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
-impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
+pub struct ExpectPair<C1, VisitedG1, C2, VisitedG2>(
+    PhantomData<C1>,
+    PhantomData<VisitedG1>,
+    PhantomData<C2>,
+    PhantomData<VisitedG2>,
+);
+impl<C1, VisitedG1, C2, VisitedG2> AnyVisitorPair for ExpectPair<C1, VisitedG1, C2, VisitedG2>
 where
-    C1: 'static,
-    C2: 'static,
+    C1: Currency,
+    VisitedG1: Group,
+    C2: Currency,
+    VisitedG2: Group,
 {
+    type VisitedG1 = VisitedG1;
+    type VisitedG2 = VisitedG2;
     type Output = bool;
     type Error = Error;
 
@@ -75,5 +131,16 @@ where
         C2in: Currency,
     {
         Ok(crate::equal::<C1, C1in>() && crate::equal::<C2, C2in>())
+    }
+}
+
+impl<C1, VisitedG1, C2, VisitedG2> Default for ExpectPair<C1, VisitedG1, C2, VisitedG2> {
+    fn default() -> Self {
+        Self(
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        )
     }
 }

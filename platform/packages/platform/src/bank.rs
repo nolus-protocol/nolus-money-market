@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currency::{Currency, Group};
+use currency::{group::MemberOf, Currency, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -46,13 +46,13 @@ where
 }
 
 /// Ensure a single coin of the specified currency is received by a contract and return it
-pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
+pub fn received_one<C, G>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     received_one_impl(
         cw_amount,
-        Error::no_funds::<C>,
+        Error::no_funds::<C, G>,
         Error::unexpected_funds::<C>,
     )
     .and_then(from_cosmwasm_impl)
@@ -351,7 +351,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
+        test::{SubGroupCurrency, SubGroupTestC1, SuperGroupTestC1},
         Currency, Group, SymbolStatic,
     };
     use finance::{
@@ -367,7 +367,7 @@ mod test {
 
     use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
-    type TheGroup = SubGroup;
+    type TheGroup = SubGroupCurrency;
     type TheCurrency = SubGroupTestC1;
     type ExtraCurrency = SuperGroupTestC1;
 
@@ -467,6 +467,9 @@ mod test {
         #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         struct MyNiceCurrency {}
         impl Currency for MyNiceCurrency {
+            type Group = TheGroup;
+        }
+        impl Symbols for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";
 
             const DEX_SYMBOL: SymbolStatic = "dex3rdf";
@@ -563,12 +566,12 @@ mod test {
 
     #[test]
     fn total_balance_empty() {
-        total_balance_tester::<SubGroup>(vec![], &[]);
+        total_balance_tester::<SubGroupCurrency>(vec![], &[]);
     }
 
     #[test]
     fn total_balance_same_group() {
-        total_balance_tester::<SubGroup>(
+        total_balance_tester::<SubGroupCurrency>(
             vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)],
             &[SubGroupTestC1::BANK_SYMBOL],
         );
@@ -576,12 +579,12 @@ mod test {
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<SubGroup>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
+        total_balance_tester::<SubGroupCurrency>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
     }
 
     #[test]
     fn total_balance_mixed_group() {
-        total_balance_tester::<SubGroup>(
+        total_balance_tester::<SubGroupCurrency>(
             vec![
                 cw_coin(100, SuperGroupTestC1::TICKER),
                 cw_coin(100, SubGroupTestC1::BANK_SYMBOL),

@@ -1,8 +1,9 @@
 #[cfg(feature = "testing")]
 use std::num::NonZeroU128;
 use std::{
+    any,
     cmp::Ordering,
-    fmt::{Debug, Display, Formatter},
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     iter::Sum,
     marker::PhantomData,
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -10,7 +11,7 @@ use std::{
 
 use ::serde::{Deserialize, Serialize};
 
-use currency::Currency;
+use currency::{group::MemberOf, Currency};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
@@ -33,17 +34,6 @@ where
     #[serde(skip)]
     ticker: PhantomData<C>,
 }
-
-impl<C> Clone for Coin<C>
-where
-    C: ?Sized,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C> Copy for Coin<C> where C: ?Sized {}
 
 impl<C> Coin<C>
 where
@@ -129,11 +119,22 @@ where
     }
 }
 
+impl<C> Clone for Coin<C>
+where
+    C: ?Sized,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> Copy for Coin<C> where C: ?Sized {}
+
 impl<C> Debug for Coin<C>
 where
     C: ?Sized,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Coin")
             .field("amount", &self.amount)
             .field("ticker", &self.ticker)
@@ -153,6 +154,17 @@ where
     }
 }
 
+impl<C> Display for Coin<C>
+where
+    C: ?Sized,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
+    }
+}
+
+impl<C> Eq for Coin<C> where C: ?Sized {}
+
 impl<C> PartialEq for Coin<C>
 where
     C: ?Sized,
@@ -161,8 +173,6 @@ where
         self.amount == other.amount
     }
 }
-
-impl<C> Eq for Coin<C> where C: ?Sized {}
 
 impl<C> PartialOrd for Coin<C>
 where
@@ -236,15 +246,6 @@ where
     }
 }
 
-impl<C> Display for Coin<C>
-where
-    C: Currency,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.amount, C::TICKER))
-    }
-}
-
 impl<C> From<Amount> for Coin<C>
 where
     C: ?Sized,
@@ -263,15 +264,15 @@ where
     }
 }
 
-pub type WithCoinResult<V> = Result<<V as WithCoin>::Output, <V as WithCoin>::Error>;
+pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoin<G>>::Error>;
 
-pub trait WithCoin {
+pub trait WithCoin<G> {
     type Output;
     type Error;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
     where
-        C: Currency;
+        C: Currency + MemberOf<G>;
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>
@@ -292,10 +293,9 @@ impl<C> AsRef<Self> for Coin<C> {
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
-    };
+    use std::any;
+
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
     use crate::percent::test::test_of;
 
@@ -304,11 +304,11 @@ mod test {
     #[test]
     fn display() {
         assert_eq!(
-            format!("25 {}", SuperGroupTestC2::TICKER),
+            format!("25 {}", any::type_name::<SuperGroupTestC2>()),
             coin2(25).to_string()
         );
         assert_eq!(
-            format!("0 {}", SuperGroupTestC1::TICKER),
+            format!("0 {}", any::type_name::<SuperGroupTestC1>()),
             coin1(0).to_string()
         );
     }

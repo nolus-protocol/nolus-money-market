@@ -51,9 +51,10 @@ mod test {
     #[test]
     fn serialize_deserialize_as_field() {
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        #[serde(bound(serialize = "", deserialize = ""))]
         struct CoinContainer<C>
         where
-            C: Currency,
+            C: ?Sized,
         {
             coin: Coin<C>,
         }

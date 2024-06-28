@@ -3,17 +3,17 @@ use std::{marker::PhantomData, result::Result as StdResult};
 #[cfg(any(test, feature = "testing"))]
 use currency::DexSymbols;
 use currency::{
-    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
-    SingleVisitor, Symbol, Symbols,
+    group::MemberOf, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group,
+    GroupVisit, SingleVisitor, Symbol, Symbols,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{error::Error, result::Result};
 
-pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
+pub(crate) fn from_cosmwasm_impl<C, G>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     BankSymbols.visit(&coin.denom, CoinTransformer(&coin))
 }
@@ -21,10 +21,10 @@ where
 pub(crate) fn from_cosmwasm_any<G, V>(coin: &CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
 where
     G: Group,
-    V: WithCoin,
+    V: WithCoin<G>,
 {
     BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(coin, v))
+        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(coin, PhantomData::<G>, v))
         .map_err(|transformer| transformer.1)
 }
 
@@ -107,20 +107,22 @@ where
     }
 }
 
-struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
+struct CoinTransformerAny<'a, G, V>(&'a CosmWasmCoin, PhantomData<G>, V);
 
-impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
+impl<'a, G, V> AnyVisitor for CoinTransformerAny<'a, G, V>
 where
-    V: WithCoin,
+    G: Group,
+    V: WithCoin<G>,
 {
+    type VisitedG = G;
     type Output = V::Output;
     type Error = V::Error;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
     {
-        self.1.on::<C>(from_cosmwasm_internal(self.0))
+        self.2.on::<C>(from_cosmwasm_internal(self.0))
     }
 }
 
@@ -135,7 +137,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SuperGroupCurrency, SuperGroupTestC1, SuperGroupTestC2},
         BankSymbols, Currency,
     };
     use finance::test::coin;
@@ -198,7 +200,7 @@ mod test {
         type TheCurrency = SuperGroupTestC1;
         assert_eq!(
             Ok(Ok(true)),
-            super::from_cosmwasm_any::<SuperGroup, _>(
+            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
@@ -212,14 +214,14 @@ mod test {
         type AnotherCurrency = SuperGroupTestC2;
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any::<SuperGroup, _>(
+            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
                 &CosmWasmCoin::new(amount + 1, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any::<SuperGroup, _>(
+            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
@@ -227,7 +229,7 @@ mod test {
         let with_coin = coin::Expect(Coin::<TheCurrency>::from(amount));
         assert_eq!(
             Err(with_coin.clone()),
-            super::from_cosmwasm_any::<SuperGroup, _>(
+            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::DEX_SYMBOL),
                 with_coin
             )

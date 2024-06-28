@@ -7,7 +7,7 @@ use crate::lease::astroport::{Atom as LC1, Dydx as LC4, Ntrn as LC2, StAtom as L
     feature = "osmosis-osmosis-usdc_axelar",
     feature = "osmosis-osmosis-usdc_noble"
 ))]
-use crate::lease::osmosis::{Atom as LC1, Axl as LC2, Cro as LC3, Osmo as LC4, Weth as LC5};
+use crate::lease::r#impl::{Atom as LC1, Axl as LC2, Cro as LC3, Osmo as LC4, Weth as LC5};
 use crate::lpn::Lpn;
 use crate::native::Nls;
 

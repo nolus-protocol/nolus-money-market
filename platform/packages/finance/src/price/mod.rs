@@ -5,7 +5,6 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -52,7 +51,7 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 /// Both amounts a price is composed of should be non-zero.
 ///
 /// Not designed to be used in public APIs
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Price<C, QuoteC>
 where
@@ -204,10 +203,47 @@ where
     }
 }
 
+impl<C, QuoteC> Clone for Price<C, QuoteC>
+where
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
+{
+    fn clone(&self) -> Self {
+        Self {
+            amount: self.amount,
+            amount_quote: self.amount_quote,
+        }
+    }
+}
+
+impl<C, QuoteC> Copy for Price<C, QuoteC>
+where
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
+{
+}
+
+impl<C, QuoteC> Eq for Price<C, QuoteC>
+where
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
+{
+}
+
+impl<C, QuoteC> PartialEq for Price<C, QuoteC>
+where
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.amount == other.amount && self.amount_quote == other.amount_quote
+    }
+}
+
 impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
 where
-    C: ?Sized + PartialEq,
-    QuoteC: ?Sized + PartialEq,
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // a/b < c/d if and only if a * d < b * c
@@ -224,8 +260,8 @@ where
 
 impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
 {
     type Output = Price<C, QuoteC>;
 
@@ -238,8 +274,8 @@ where
 
 impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
@@ -251,9 +287,9 @@ where
 
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
-    QuoteQuoteC: Currency,
+    C: 'static + ?Sized,
+    QuoteC: 'static + ?Sized,
+    QuoteQuoteC: 'static + ?Sized,
 {
     type Output = Price<C, QuoteQuoteC>;
 
@@ -283,10 +319,7 @@ where
 mod test {
     use std::ops::{Add, AddAssign, Mul};
 
-    use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency, SymbolStatic,
-    };
+    use currency::test::{SubGroupTestC1, SuperGroupTestC1, SuperGroupTestC2};
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -295,18 +328,7 @@ mod test {
         ratio::Rational,
     };
 
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-    struct QuoteQuoteCurrency {}
-    impl Currency for QuoteQuoteCurrency {
-        const TICKER: SymbolStatic = "mycutecoin";
-
-        const BANK_SYMBOL: SymbolStatic = "ibc/dcnqweuio2938fh2f";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/cme72hr2";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-    type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
+    type QuoteQuoteCoin = CoinT<SubGroupTestC1>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;
     type Coin = CoinT<SuperGroupTestC2>;
 

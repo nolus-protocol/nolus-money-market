@@ -105,6 +105,18 @@ where
     }
 }
 
+impl<C, QuoteC> Default for PriceFeed<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn default() -> Self {
+        Self {
+            observations: Default::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};

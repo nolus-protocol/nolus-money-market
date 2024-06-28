@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, Group};
-use finance::price::{dto::PriceDTO, Price};
+use finance::price::{self, dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -43,7 +43,7 @@ impl PriceConverter for QuoteCUncheckedConverter {
         BaseC: Currency,
         BaseG: Group,
     {
-        use finance::{coin::Coin, price};
+        use finance::coin::Coin;
 
         price
             .base()
@@ -65,11 +65,10 @@ impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
     OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
 where
     QuoteC: Currency,
-    QuoteG: Group,
+    QuoteC::Group: Group<QuoteG>,
+
 {
     pub fn new(oracle_ref: OracleRef<QuoteC>, querier: QuerierWrapper<'a>) -> Self {
-        currency::validate_member::<QuoteC, QuoteG>()
-            .expect("create OracleStub with an appropriate currency and a group");
 
         Self {
             oracle_ref,
