@@ -178,20 +178,20 @@ mod test {
         let v_usdc = Expect::<SuperGroupTestC1, SuperGroup>::default();
         assert_eq!(
             Ok(true),
-            Tickers::visit_any::<SuperGroup, _>(SuperGroupTestC1::TICKER, v_usdc)
+            Tickers::visit_any(SuperGroupTestC1::TICKER, v_usdc)
         );
 
         let v_nls = Expect::<SuperGroupTestC2, SuperGroup>::default();
         assert_eq!(
             Ok(true),
-            Tickers::visit_any::<SuperGroup, _>(SuperGroupTestC2::TICKER, v_nls)
+            Tickers::visit_any(SuperGroupTestC2::TICKER, v_nls)
         );
 
         assert_eq!(
             Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
                 SubGroupTestC1::BANK_SYMBOL
             )),
-            Tickers::visit_any::<SuperGroup, _>(
+            Tickers::visit_any(
                 SubGroupTestC1::BANK_SYMBOL,
                 ExpectUnknownCurrency::<SuperGroup>::default()
             )
@@ -203,10 +203,7 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            Tickers::visit_any::<SuperGroup, _>(
-                DENOM,
-                ExpectUnknownCurrency::<SuperGroup>::default()
-            ),
+            Tickers::visit_any(DENOM, ExpectUnknownCurrency::<SuperGroup>::default()),
             Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
                 DENOM
             )),

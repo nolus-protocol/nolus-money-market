@@ -37,9 +37,11 @@ where
     where
         C: Currency + MemberOf<G>,
     {
-        let _res = TypeId::of::<C>().into();
-        // TODO debug_assert!(_res.into_currency_type(Expect))
-        _res
+        let id = TypeId::of::<C>();
+        Self {
+            id,
+            _group_member: PhantomData,
+        }
     }
 
     pub fn into_currency_type<V>(self, visitor: V) -> AnyVisitorResult<V>
@@ -47,7 +49,7 @@ where
         V: AnyVisitor<VisitedG = G>,
         G: MemberOf<V::VisitedG>,
     {
-        G::maybe_visit(&TypeMatcher::new(self), visitor).unwrap_or_else(|_| {
+        G::maybe_visit(&TypeMatcher::new(self.id), visitor).unwrap_or_else(|_| {
             panic!(
                 r#"Found an invalid currency instance! "{:?}" did not match "{}" !"#,
                 self,
@@ -66,34 +68,13 @@ where
     }
 }
 
-impl<G> From<CurrencyDTO<G>> for TypeId
+impl<G, GSelf> PartialEq<CurrencyDTO<G>> for CurrencyDTO<GSelf>
 where
     G: Group,
+    GSelf: Group,
 {
-    fn from(value: CurrencyDTO<G>) -> Self {
-        value.id
-    }
-}
-
-impl<G> From<TypeId> for CurrencyDTO<G>
-where
-    G: Group,
-{
-    fn from(type_id: TypeId) -> Self {
-        Self {
-            id: type_id,
-            _group_member: PhantomData,
-        }
-    }
-}
-
-impl<G1, G2> PartialEq<CurrencyDTO<G1>> for CurrencyDTO<G2>
-where
-    G1: Group,
-    G2: Group,
-{
-    fn eq(&self, other: &CurrencyDTO<G1>) -> bool {
-        TypeId::from(*self).eq(&TypeId::from(*other))
+    fn eq(&self, other: &CurrencyDTO<G>) -> bool {
+        self.id == other.id
     }
 }
 
@@ -112,31 +93,30 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::any::TypeId;
 
     use crate::{
-        test::{SubGroup, SubGroupCurrency, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         CurrencyDTO,
     };
 
     #[test]
     fn eq_same_type() {
         assert_eq!(
-            CurrencyDTO::<SuperGroup>::from(TypeId::of::<SuperGroupTestC1>()),
-            CurrencyDTO::<SuperGroup>::from(TypeId::of::<SuperGroupTestC1>())
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC1>(),
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC1>()
         );
 
         assert_ne!(
-            CurrencyDTO::<SuperGroup>::from(TypeId::of::<SuperGroupTestC1>()),
-            CurrencyDTO::<SuperGroup>::from(TypeId::of::<SuperGroupTestC2>())
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC1>(),
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC2>()
         );
     }
 
     #[test]
     fn eq_other_type() {
         assert_ne!(
-            CurrencyDTO::<SuperGroup>::from(TypeId::of::<SuperGroupTestC1>()),
-            CurrencyDTO::<SubGroup>::from(TypeId::of::<SubGroupCurrency>())
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC1>(),
+            CurrencyDTO::<SubGroup>::from_currency_type::<SubGroupTestC1>()
         );
     }
 }
