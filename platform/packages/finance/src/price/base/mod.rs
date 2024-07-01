@@ -62,14 +62,6 @@ where
         self.amount.ticker()
     }
 
-    pub(crate) fn amount(&self) -> &CoinDTO<BaseG> {
-        &self.amount
-    }
-
-    pub(crate) fn amount_quote(&self) -> Coin<QuoteC> {
-        self.amount_quote
-    }
-
     fn new_raw(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
         Self {
             amount,

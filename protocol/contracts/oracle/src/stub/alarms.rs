@@ -14,7 +14,6 @@ where
 {
     type BaseC: Currency + ?Sized;
 
-    //TODO use a type-safe Alarm, one with the typed Price
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, OracleBaseG>) -> Result<()>;
 }
 

@@ -146,7 +146,6 @@ where
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
-    #[allow(clippy::unwrap_used, clippy::unwrap_in_result)]
     fn checked_add(self, rhs: Self) -> Option<Self> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
