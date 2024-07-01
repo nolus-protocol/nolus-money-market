@@ -1,7 +1,5 @@
 use crate::{
-    error::Error,
-    matcher::{self, Matcher, Symbol},
-    Definition, SymbolSlice,
+    error::Error, matcher::{self, Matcher, }, symbol::Symbol, Definition, SymbolSlice
 };
 
 use super::Currency;

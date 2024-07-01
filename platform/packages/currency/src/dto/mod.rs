@@ -59,6 +59,14 @@ where
     }
 }
 
+/// Prepare a human-friendly representation of a currency
+pub fn to_string<C>() -> String
+where
+    C: Currency,
+{
+    CurrencyDTO::<C::Group>::from_currency_type::<C>().to_string()
+}
+
 impl<G> Display for CurrencyDTO<G>
 where
     G: Group,

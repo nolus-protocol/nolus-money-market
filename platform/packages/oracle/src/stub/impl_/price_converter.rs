@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group};
-use finance::price::{dto::PriceDTO, Price};
+use currency::{group::MemberOf, Currency, Group};
+use finance::price::{self, dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -45,11 +45,7 @@ impl PriceConverter for QuoteCUncheckedConverter {
     {
         use finance::coin::Coin;
 
-        price
-            .base()
-            .try_into()
-            .map_err(Into::into)
-            .map(|base| price::total_of(base).is(Into::<Coin<BaseC>>::into(price.quote().amount())))
+        price::total_of(price.base().into()).is(Into::<Coin<BaseC>>::into(price.quote().amount()))
     }
 }
 
@@ -64,8 +60,7 @@ pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> {
 impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
     OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
 where
-    QuoteC: Currency,
-    QuoteC::Group: Group<QuoteG>,
+    QuoteC: Currency + MemberOf<QuoteG>,
 {
     pub fn new(oracle_ref: OracleRef<QuoteC>, querier: QuerierWrapper<'a>) -> Self {
         Self {
@@ -85,7 +80,7 @@ where
 impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC>
     for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     PriceReqT: RequestBuilder,
     PriceConverterT: PriceConverter,

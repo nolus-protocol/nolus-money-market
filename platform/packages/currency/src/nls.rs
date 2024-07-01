@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
@@ -18,26 +16,26 @@ use crate::{
 /// - LP rewards
 /// - Relayers' tips
 pub struct NlsPlatform;
+impl Currency for NlsPlatform {
+    type Group = Native;
+}
+
 impl Definition for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
 
     const BANK_SYMBOL: SymbolStatic = "unls";
 
-    // TODO Define trait PlatformCurrency as a super trait of Currency and
+    // TODO Define trait DexDefinition providing an associative constant DEX_SYMBOL for NlsPlatform and
     // merge NlsPlatform and Nls
     const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
 
     const DECIMAL_DIGITS: u8 = 6;
 }
 
-impl Currency for NlsPlatform {
-    type Group = Native;
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Native(TypeId);
+pub struct Native;
 
-impl MemberOf<Self> for Native {}
 
 impl Group for Native {
     const DESCR: &'static str = "Native";
@@ -46,7 +44,7 @@ impl Group for Native {
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
-        Native: MemberOf<V::VisitedG>,
+        Self: MemberOf<V::VisitedG>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
@@ -60,3 +58,5 @@ impl Group for Native {
         crate::maybe_visit_any::<_, NlsPlatform, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<Self> for Native {}

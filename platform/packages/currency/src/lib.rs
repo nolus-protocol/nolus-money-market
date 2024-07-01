@@ -10,8 +10,9 @@ pub use crate::{
         AnyVisitorResult, GroupVisit,
     },
     group::Group,
-    matcher::{BankSymbols, DexSymbols, Matcher, Tickers, TypeMatcher},
+    matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
+    symbol::{BankSymbols, DexSymbols, Tickers},
 };
 
 mod dto;
@@ -22,6 +23,7 @@ pub mod group;
 mod matcher;
 pub mod never;
 mod nls;
+mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
 

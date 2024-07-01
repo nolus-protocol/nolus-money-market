@@ -13,17 +13,17 @@ use crate::{
     result::Result,
 };
 
-pub type BalancesResult<Cmd> = StdResult<Option<WithCoinResult<Cmd>>, Error>;
+pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -53,15 +53,15 @@ where
     received_one_impl(
         cw_amount,
         Error::no_funds::<C, G>,
-        Error::unexpected_funds::<C>,
+        Error::unexpected_funds::<C, G>,
     )
     .and_then(from_cosmwasm_impl)
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
+pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<G, V>>
 where
-    V: WithCoin,
+    V: WithCoin<G>,
     G: Group,
 {
     let mut may_res = None;
@@ -97,10 +97,10 @@ impl<'a> BankAccountView for BankView<'a> {
         from_cosmwasm_impl(coin)
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -162,10 +162,10 @@ where
         self.view.balance()
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
@@ -351,8 +351,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroupCurrency, SubGroupTestC1, SuperGroupTestC1},
-        Currency, Group, SymbolStatic,
+        test::{SubGroup, SubGroupCurrency, SubGroupTestC1, SuperGroupTestC1}, Currency, Definition, DexDefinition, Group, SymbolStatic
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -367,7 +366,7 @@ mod test {
 
     use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
-    type TheGroup = SubGroupCurrency;
+    type TheGroup = SubGroup;
     type TheCurrency = SubGroupTestC1;
     type ExtraCurrency = SuperGroupTestC1;
 

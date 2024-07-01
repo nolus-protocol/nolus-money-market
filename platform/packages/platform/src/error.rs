@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use prost::DecodeError;
 use thiserror::Error;
 
-use currency::{group::MemberOf, Currency, CurrencyDTO};
+use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
 use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
@@ -54,8 +54,9 @@ impl Error {
     pub fn no_funds<C, G>() -> Self
     where
         C: Currency + MemberOf<G>,
+        G: Group,
     {
-        Self::NoFunds(CurrencyDTO::from_currency_type::<C>().to_string())
+        Self::NoFunds(CurrencyDTO::display::<C>())
     }
 
     pub fn unexpected_funds<C, G>() -> Self

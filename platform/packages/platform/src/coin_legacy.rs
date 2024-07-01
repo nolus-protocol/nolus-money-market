@@ -34,7 +34,7 @@ where
     V: WithCoin,
 {
     BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, PhantomData, v))
         .ok()
 }
 
@@ -66,22 +66,23 @@ where
     G: Group,
     S: Definition,
 {
-    struct CoinTransformer<CM>(PhantomData<CM>);
-    impl<S> WithCoin for CoinTransformer<S>
+    struct CoinTransformer<G, S>(PhantomData<G>, PhantomData<S>);
+    impl<G, S> WithCoin<G> for CoinTransformer<G, S>
     where
+        G: Group,
         S: Definition,
     {
         type Output = CosmWasmCoin;
         type Error = Error;
 
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
         where
             C: Currency,
         {
             Ok(to_cosmwasm_on_network_impl::<C, S>(coin))
         }
     }
-    coin_dto.with_coin(CoinTransformer(PhantomData::<S>))
+    coin_dto.with_coin(CoinTransformer(PhantomData::<G>, PhantomData::<S>))
 }
 
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin

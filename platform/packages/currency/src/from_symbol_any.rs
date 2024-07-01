@@ -1,8 +1,6 @@
 use crate::{
-    error::Error,
-    group::MemberOf,
-    matcher::{self, Symbol},
-    CurrencyDTO, Definition, MaybeAnyVisitResult, SymbolSlice,
+    error::Error, group::MemberOf, matcher, symbol::Symbol, CurrencyDTO, Definition,
+    MaybeAnyVisitResult, SymbolSlice,
 };
 
 use super::{Currency, Group};
@@ -163,7 +161,7 @@ mod test {
         error::Error,
         from_symbol_any::GroupVisit,
         group::MemberOf,
-        matcher::Tickers,
+        symbol::Tickers,
         test::{
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC1, SuperGroup,
             SuperGroupTestC1, SuperGroupTestC2,

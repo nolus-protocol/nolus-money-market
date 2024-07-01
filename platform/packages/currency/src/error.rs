@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{matcher::Symbol, Definition, Group, SymbolOwned};
+use crate::{symbol::Symbol, Definition, Group, SymbolOwned};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

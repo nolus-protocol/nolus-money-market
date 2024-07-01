@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Currency, Group, MaybeAnyVisitResult, SymbolMatcher, SymbolSlice, SymbolStatic,
+    AnyVisitor, Currency, Definition, Group, MaybeAnyVisitResult, SymbolMatcher, SymbolSlice,
+    SymbolStatic,
 };
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
@@ -12,6 +13,9 @@ use sdk::schemars::{self, JsonSchema};
 pub struct Stable;
 
 impl Currency for Stable {
+    type Group = StableCurrencyGroup;
+}
+impl Definition for Stable {
     // should not be visible
     const TICKER: SymbolStatic = "STABLE";
 
@@ -34,6 +38,14 @@ impl Group for StableCurrencyGroup {
         M: SymbolMatcher + ?Sized,
         V: AnyVisitor,
     {
-        Ok(visitor.on::<Stable>())
+        Self::maybe_visit_member(Imatcher, visitor)
+    }
+    
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: currency::Matcher + ?Sized,
+        V: AnyVisitor,
+        Self: MemberOf<V::VisitedG> {
+            Ok(visitor.on::<Stable>())
     }
 }

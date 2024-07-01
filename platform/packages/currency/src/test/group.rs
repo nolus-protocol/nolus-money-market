@@ -95,6 +95,9 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC2;
+    impl Currency for TestC2 {
+        type Group = SuperGroup;
+    }
     impl Definition for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
 
@@ -104,12 +107,12 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC2 {
-        type Group = SuperGroup;
-    }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC3;
+    impl Currency for TestC3 {
+        type Group = SuperGroup;
+    }
     impl Definition for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";
 
@@ -119,12 +122,13 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC3 {
-        type Group = SuperGroup;
-    }
+
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC4;
+    impl Currency for TestC4 {
+        type Group = SuperGroup;
+    }
     impl Definition for TestC4 {
         const TICKER: SymbolStatic = "ticker#4";
 
@@ -134,12 +138,13 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC4 {
-        type Group = SuperGroup;
-    }
+
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC5;
+    impl Currency for TestC5 {
+        type Group = SuperGroup;
+    }
     impl Definition for TestC5 {
         const TICKER: SymbolStatic = "ticker#5";
 
@@ -149,12 +154,13 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC5 {
-        type Group = SuperGroup;
-    }
+
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC6;
+    impl Currency for TestC6 {
+        type Group = SubGroup;
+    }
     impl Definition for TestC6 {
         const TICKER: SymbolStatic = "ticker#6";
 
@@ -164,12 +170,13 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC6 {
-        type Group = SuperGroup;
-    }
+
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC10;
+    impl Currency for TestC10 {
+        type Group = SubGroup;
+    }
     impl Definition for TestC10 {
         const TICKER: SymbolStatic = "ticker#10";
 
@@ -179,7 +186,5 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-    impl Currency for TestC10 {
-        type Group = SubGroup;
-    }
+
 }
