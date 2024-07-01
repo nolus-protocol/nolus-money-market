@@ -12,9 +12,9 @@ use crate::{
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
 )]
-/// A 'local'-only 'protokol-independent' representation of Nls.
+/// A 'local'-only 'protocol-independent' representation of Nls.
 ///
-/// Intended to be used *only* until the TODO below gets done, and *only* in protokol-independent usecases:
+/// Intended to be used *only* until the TODO below gets done, and *only* in protocol-independent usecases:
 /// - LP rewards
 /// - Relayers' tips
 pub struct NlsPlatform;
@@ -58,17 +58,5 @@ impl Group for Native {
         Self: MemberOf<V::VisitedG>,
     {
         crate::maybe_visit_any::<_, NlsPlatform, _>(matcher, visitor)
-    }
-}
-
-impl From<Native> for TypeId {
-    fn from(value: Native) -> Self {
-        value.0
-    }
-}
-
-impl From<TypeId> for Native {
-    fn from(type_id: TypeId) -> Self {
-        Self(type_id)
     }
 }
