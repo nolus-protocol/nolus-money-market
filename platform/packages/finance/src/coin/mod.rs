@@ -200,7 +200,7 @@ where
     const ZERO: Self = Self::new(Zero::ZERO);
 }
 
-impl<C> Add<Coin<C>> for Coin<C>
+impl<C> Add for Coin<C>
 where
     C: ?Sized,
 {
@@ -213,7 +213,7 @@ where
     }
 }
 
-impl<C> Sub<Coin<C>> for Coin<C>
+impl<C> Sub for Coin<C>
 where
     C: ?Sized,
 {
@@ -226,7 +226,7 @@ where
     }
 }
 
-impl<C> AddAssign<Coin<C>> for Coin<C>
+impl<C> AddAssign for Coin<C>
 where
     C: ?Sized,
 {
@@ -236,7 +236,7 @@ where
     }
 }
 
-impl<C> SubAssign<Coin<C>> for Coin<C>
+impl<C> SubAssign for Coin<C>
 where
     C: ?Sized,
 {

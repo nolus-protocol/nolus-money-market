@@ -258,7 +258,7 @@ where
     }
 }
 
-impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
+impl<C, QuoteC> Add for Price<C, QuoteC>
 where
     C: 'static + ?Sized,
     QuoteC: 'static + ?Sized,
@@ -272,7 +272,7 @@ where
     }
 }
 
-impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
+impl<C, QuoteC> AddAssign for Price<C, QuoteC>
 where
     C: 'static + ?Sized,
     QuoteC: 'static + ?Sized,
