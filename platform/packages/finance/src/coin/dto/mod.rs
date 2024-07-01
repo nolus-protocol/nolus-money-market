@@ -233,7 +233,7 @@ mod test {
             V: AnyVisitor,
             Self: MemberOf<V::VisitedG>,
         {
-            assert!(matcher.match_::<MyTestCurrency>());
+            assert!(matcher.r#match::<MyTestCurrency>());
             Ok(visitor.on::<MyTestCurrency>())
         }
     }

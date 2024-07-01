@@ -21,7 +21,7 @@ pub trait CurrencyVisit: Symbol {
         Error: Into<V::Error>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        if matcher.match_::<C>() {
+        if matcher.r#match::<C>() {
             visitor.on()
         } else {
             Err(Error::unexpected_symbol::<_, Self, C>(symbol).into())

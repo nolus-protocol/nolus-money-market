@@ -65,7 +65,7 @@ where
     C: Currency + MemberOf<V::VisitedG> + Definition,
     V: AnyVisitor,
 {
-    if matcher.match_::<C>() {
+    if matcher.r#match::<C>() {
         Ok(visitor.on::<C>())
     } else {
         Err(visitor)

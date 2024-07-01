@@ -5,7 +5,7 @@ use crate::{Definition, SymbolSlice};
 use super::{Currency, SymbolStatic};
 
 pub trait Matcher {
-    fn match_<C>(&self) -> bool
+    fn r#match<C>(&self) -> bool
     where
         C: Currency + Definition;
 }
@@ -24,7 +24,7 @@ impl<'a, S> Matcher for SymbolMatcher<'a, S>
 where
     S: Symbol + ?Sized,
 {
-    fn match_<CD>(&self) -> bool
+    fn r#match<CD>(&self) -> bool
     where
         CD: Definition,
     {
@@ -43,7 +43,7 @@ impl TypeMatcher {
     }
 }
 impl Matcher for TypeMatcher {
-    fn match_<C>(&self) -> bool
+    fn r#match<C>(&self) -> bool
     where
         C: 'static,
     {
