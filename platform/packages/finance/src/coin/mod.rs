@@ -32,7 +32,7 @@ where
 {
     amount: Amount,
     #[serde(skip)]
-    ticker: PhantomData<C>,
+    currency: PhantomData<C>,
 }
 
 impl<C> Coin<C>
@@ -42,7 +42,7 @@ where
     pub const fn new(amount: Amount) -> Self {
         Self {
             amount,
-            ticker: PhantomData,
+            currency: PhantomData,
         }
     }
 
@@ -55,7 +55,7 @@ where
         let may_amount = self.amount.checked_add(rhs.amount);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -69,7 +69,7 @@ where
         let may_amount = self.amount.checked_sub(rhs.amount);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -78,7 +78,7 @@ where
         let may_amount = self.amount.checked_mul(rhs);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -87,7 +87,7 @@ where
         let may_amount = self.amount.checked_div(rhs);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -137,7 +137,7 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Coin")
             .field("amount", &self.amount)
-            .field("ticker", &self.ticker)
+            .field("currency", &self.currency)
             .finish()
     }
 }
@@ -149,7 +149,7 @@ where
     fn default() -> Self {
         Self {
             amount: Default::default(),
-            ticker: Default::default(),
+            currency: Default::default(),
         }
     }
 }
