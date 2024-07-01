@@ -70,7 +70,6 @@ where
     G1: Group,
     G2: Group,
     V: AnyVisitorPair<VisitedG1 = G1, VisitedG2 = G2>,
-    Error: Into<V::Error>,
 {
     currency1.into_currency_type(FirstTickerVisitor::<G1, G2, _>::new(currency2, visitor))
 }
@@ -78,7 +77,7 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use crate::{error::Error, group::MemberOf, Currency, CurrencyDTO, Group};
+    use crate::{group::MemberOf, Currency, CurrencyDTO, Group};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult};
 
@@ -111,7 +110,6 @@ mod impl_any_tickers {
         G1: Group,
         G2: Group,
         V: AnyVisitorPair<VisitedG1 = G1, VisitedG2 = G2>,
-        Error: Into<V::Error>,
     {
         type VisitedG = G1;
 

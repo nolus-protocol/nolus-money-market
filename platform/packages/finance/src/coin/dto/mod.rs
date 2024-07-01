@@ -7,8 +7,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    error::CmdError, group::MemberOf, never::Never, AnyVisitor, AnyVisitorResult, Currency,
-    CurrencyDTO, Group,
+    group::MemberOf, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, Group,
 };
 use sdk::schemars::{self, JsonSchema};
 
@@ -76,21 +75,18 @@ where
             type VisitedG = G;
 
             type Output = V::Output;
-            type Error = CmdError<V::Error, Error>;
+            type Error = V::Error;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + MemberOf<G>,
             {
-                self.1
-                    .on::<C>(self.0.amount().into())
-                    .map_err(Self::Error::from_customer_err)
+                self.1.on::<C>(self.0.amount().into())
             }
         }
 
         self.currency
             .into_currency_type(CoinTransformerAny(self, cmd))
-            .map_err(CmdError::into_customer_err)
     }
 }
 

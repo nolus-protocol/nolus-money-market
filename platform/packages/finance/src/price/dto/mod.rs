@@ -13,7 +13,7 @@ mod unchecked;
 pub mod with_price;
 pub mod with_quote;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     try_from = "unchecked::PriceDTO<G, QuoteG>",
     bound(serialize = "", deserialize = "")
@@ -83,34 +83,15 @@ where
     }
 }
 
-// TODO migrate it to `impl From`
-impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
+impl<G, QuoteG, C, QuoteC> From<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
     C: Currency + MemberOf<G>,
     QuoteC: Currency + MemberOf<QuoteG>,
 {
-    type Error = Error;
-
-    fn try_from(value: &PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        Ok(super::total_of(Coin::<C>::from(value.amount))
-            .is(Coin::<QuoteC>::from(value.amount_quote)))
-    }
-}
-
-// TODO migrate it to `impl From`
-impl<G, QuoteG, C, QuoteC> TryFrom<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
-where
-    G: Group,
-    QuoteG: Group,
-    C: Currency + MemberOf<G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
-{
-    type Error = Error;
-
-    fn try_from(value: PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        Self::try_from(&value)
+    fn from(value: PriceDTO<G, QuoteG>) -> Self {
+        super::total_of(Coin::<C>::from(value.amount)).is(Coin::<QuoteC>::from(value.amount_quote))
     }
 }
 

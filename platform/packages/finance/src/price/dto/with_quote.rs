@@ -21,8 +21,7 @@ where
     Error: Into<Cmd::Error>,
 {
     price.amount.with_coin(BaseCoinVisitor {
-        quote: Coin::<QuoteC>::try_from(&price.amount_quote)
-            .expect("Got different currency in visitor!"),
+        quote: Coin::<QuoteC>::from(price.amount_quote),
         cmd,
     })
 }
