@@ -35,7 +35,7 @@ impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {
-    use currency::Symbols;
+    use currency::Definition;
 
     use crate::{
         lpn::{Lpn, Lpns},

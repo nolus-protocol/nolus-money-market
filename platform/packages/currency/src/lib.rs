@@ -10,7 +10,7 @@ pub use crate::{
         AnyVisitorResult, GroupVisit,
     },
     group::Group,
-    matcher::{BankSymbols, DexSymbols, Matcher, Symbols, Tickers, TypeMatcher},
+    matcher::{BankSymbols, DexSymbols, Matcher, Tickers, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
 };
 
@@ -31,12 +31,24 @@ pub type SymbolSlice = str;
 pub type SymbolStatic = &'static SymbolSlice;
 pub type SymbolOwned = String;
 
-// TODO rename to CurrencyType
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
 // satisfy trait bounds with regards of the lifetimes
-// Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
+// For example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
     type Group: Group;
+}
+
+pub trait Definition {
+    /// Identifier of the currency
+    const TICKER: SymbolStatic;
+
+    /// Symbol at the Nolus network used by the Cosmos-SDK modules, mainly the Banking one
+    const BANK_SYMBOL: SymbolStatic;
+
+    /// Symbol at the Dex network
+    const DEX_SYMBOL: SymbolStatic;
+
+    const DECIMAL_DIGITS: u8;
 }
 
 pub fn equal<C1, C2>() -> bool
@@ -50,7 +62,7 @@ where
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
-    C: Currency + MemberOf<V::VisitedG> + Symbols,
+    C: Currency + MemberOf<V::VisitedG> + Definition,
     V: AnyVisitor,
 {
     if matcher.match_::<C>() {

@@ -1,4 +1,4 @@
-pub use currency::{Currency, SymbolStatic, Symbols};
+pub use currency::{Currency, Definition, SymbolStatic};
 
 #[macro_export]
 macro_rules! define_currency {
@@ -15,7 +15,7 @@ macro_rules! define_currency {
             type Group = $group;
         }
 
-        impl $crate::currency_macro::Symbols for $ident {
+        impl $crate::currency_macro::Definition for $ident {
             const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
 
             const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;

@@ -322,7 +322,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Symbols;
+    use currency::Definition;
 
     use crate::{
         lease::LeaseGroup,

@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     group::MemberOf,
     never::{self, Never},
-    AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned, SymbolStatic, Symbols,
-    Tickers,
+    AnyVisitor, AnyVisitorResult, Currency, Definition, Group, GroupVisit, SymbolOwned,
+    SymbolStatic, Tickers,
 };
 
 use crate::error::Error;
@@ -72,7 +72,7 @@ where
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Symbols,
+                C: Definition,
             {
                 Ok(C::TICKER)
             }

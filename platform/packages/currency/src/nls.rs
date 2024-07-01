@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    group::MemberOf, matcher::Matcher, AnyVisitor, Currency, Group, MaybeAnyVisitResult,
-    SymbolStatic, Symbols,
+    group::MemberOf, matcher::Matcher, AnyVisitor, Currency, Definition, Group,
+    MaybeAnyVisitResult, SymbolStatic,
 };
 
 #[derive(
@@ -18,7 +18,7 @@ use crate::{
 /// - LP rewards
 /// - Relayers' tips
 pub struct NlsPlatform;
-impl Symbols for NlsPlatform {
+impl Definition for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
 
     const BANK_SYMBOL: SymbolStatic = "unls";

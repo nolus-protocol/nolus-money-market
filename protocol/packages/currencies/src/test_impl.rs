@@ -1,12 +1,12 @@
 use currency::{
-    group::MemberOf, test::Expect, BankSymbols, Currency, Group, GroupVisit, SymbolSlice, Symbols,
-    Tickers,
+    group::MemberOf, test::Expect, BankSymbols, Currency, Definition, Group, GroupVisit,
+    SymbolSlice, Tickers,
 };
 
 #[track_caller]
 pub fn maybe_visit_on_ticker_impl<C, G>()
 where
-    C: Currency + MemberOf<G> + Symbols,
+    C: Currency + MemberOf<G> + Definition,
     G: Group,
 {
     let v = Expect::<C, G>::default();
@@ -16,7 +16,7 @@ where
 #[track_caller]
 pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: &SymbolSlice)
 where
-    C: Currency + MemberOf<G> + Symbols,
+    C: Currency + MemberOf<G> + Definition,
     G: Group,
 {
     let v = Expect::<C, G>::default();
@@ -26,7 +26,7 @@ where
 #[track_caller]
 pub fn maybe_visit_on_bank_symbol_impl<C, G>()
 where
-    C: Currency + MemberOf<G> + Symbols,
+    C: Currency + MemberOf<G> + Definition,
     G: Group,
 {
     let v = Expect::<C, G>::default();
@@ -39,7 +39,7 @@ where
 #[track_caller]
 pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: &SymbolSlice)
 where
-    C: Currency + MemberOf<G> + Symbols,
+    C: Currency + MemberOf<G> + Definition,
     G: Group,
 {
     let v = Expect::<C, G>::default();

@@ -3,8 +3,8 @@ use std::{marker::PhantomData, result::Result as StdResult};
 #[cfg(any(test, feature = "testing"))]
 use currency::DexSymbols;
 use currency::{
-    group::MemberOf, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor, Symbol, Symbols,
+    group::MemberOf, AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit,
+    Definition, Group, GroupVisit, SingleVisitor, Symbol,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -64,12 +64,12 @@ where
 pub fn to_cosmwasm_on_network<G, S>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
     G: Group,
-    S: Symbols,
+    S: Definition,
 {
     struct CoinTransformer<CM>(PhantomData<CM>);
     impl<S> WithCoin for CoinTransformer<S>
     where
-        S: Symbols,
+        S: Definition,
     {
         type Output = CosmWasmCoin;
         type Error = Error;
@@ -87,7 +87,7 @@ where
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
-    S: Symbols,
+    S: Definition,
 {
     CosmWasmCoin::new(coin.into(), <S::Symbol<C>>::VALUE)
 }

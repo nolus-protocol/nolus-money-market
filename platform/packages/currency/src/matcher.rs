@@ -1,26 +1,13 @@
 use std::{any::TypeId, marker::PhantomData};
 
-use crate::SymbolSlice;
+use crate::{Definition, SymbolSlice};
 
 use super::{Currency, SymbolStatic};
-
-pub trait Symbols {
-    /// Identifier of the currency
-    const TICKER: SymbolStatic;
-
-    /// Symbol at the Nolus network used by the Cosmos-SDK modules, mainly the Banking one
-    const BANK_SYMBOL: SymbolStatic;
-
-    /// Symbol at the Dex network
-    const DEX_SYMBOL: SymbolStatic;
-
-    const DECIMAL_DIGITS: u8;
-}
 
 pub trait Matcher {
     fn match_<C>(&self) -> bool
     where
-        C: Currency + Symbols;
+        C: Currency + Definition;
 }
 
 pub(crate) fn symbol_matcher<'a, S>(symbol: &'a SymbolSlice) -> impl Matcher + 'a
@@ -37,11 +24,11 @@ impl<'a, S> Matcher for SymbolMatcher<'a, S>
 where
     S: Symbol + ?Sized,
 {
-    fn match_<CS>(&self) -> bool
+    fn match_<CD>(&self) -> bool
     where
-        CS: Symbols,
+        CD: Definition,
     {
-        self.0 == S::symbol::<CS>()
+        self.0 == S::symbol::<CD>()
     }
 }
 
@@ -56,20 +43,20 @@ impl TypeMatcher {
     }
 }
 impl Matcher for TypeMatcher {
-    fn match_<CS>(&self) -> bool
+    fn match_<C>(&self) -> bool
     where
-        CS: 'static,
+        C: 'static,
     {
-        TypeId::of::<CS>() == self.0
+        TypeId::of::<C>() == self.0
     }
 }
 
 pub trait Symbol {
     const DESCR: &'static str;
 
-    fn symbol<S>() -> SymbolStatic
+    fn symbol<CD>() -> SymbolStatic
     where
-        S: Symbols;
+        CD: Definition;
 }
 
 #[derive(Clone, Copy)]
@@ -77,11 +64,11 @@ pub struct Tickers;
 impl Symbol for Tickers {
     const DESCR: &'static str = "ticker";
 
-    fn symbol<S>() -> SymbolStatic
+    fn symbol<CD>() -> SymbolStatic
     where
-        S: Symbols,
+        CD: Definition,
     {
-        S::TICKER
+        CD::TICKER
     }
 }
 
@@ -90,11 +77,11 @@ pub struct BankSymbols;
 impl Symbol for BankSymbols {
     const DESCR: &'static str = "bank symbol";
 
-    fn symbol<S>() -> SymbolStatic
+    fn symbol<CD>() -> SymbolStatic
     where
-        S: Symbols,
+        CD: Definition,
     {
-        S::BANK_SYMBOL
+        CD::BANK_SYMBOL
     }
 }
 
@@ -103,10 +90,10 @@ pub struct DexSymbols;
 impl Symbol for DexSymbols {
     const DESCR: &'static str = "dex symbol";
 
-    fn symbol<S>() -> SymbolStatic
+    fn symbol<CD>() -> SymbolStatic
     where
-        S: Symbols,
+        CD: Definition,
     {
-        S::BANK_SYMBOL
+        CD::BANK_SYMBOL
     }
 }

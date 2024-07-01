@@ -188,7 +188,7 @@ mod test {
             SubGroup, SubGroupTestC1, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
             SuperGroupTestC2,
         },
-        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic, Symbols,
+        AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult, SymbolStatic,
     };
     use sdk::cosmwasm_std;
 
@@ -201,7 +201,7 @@ mod test {
     impl Currency for MyTestCurrency {
         type Group = MyTestGroup;
     }
-    impl Symbols for MyTestCurrency {
+    impl Definition for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/1";

@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     group::MemberOf,
     matcher::{self, Symbol},
-    CurrencyDTO, MaybeAnyVisitResult, SymbolSlice, Symbols,
+    CurrencyDTO, Definition, MaybeAnyVisitResult, SymbolSlice,
 };
 
 use super::{Currency, Group};
@@ -22,7 +22,7 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + MemberOf<Self::VisitedG> + Symbols;
+        C: Currency + MemberOf<Self::VisitedG> + Definition;
 }
 
 pub trait AnyVisitorPair {
@@ -170,7 +170,7 @@ mod test {
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC1, SuperGroup,
             SuperGroupTestC1, SuperGroupTestC2,
         },
-        Currency, CurrencyDTO, Group, Symbols,
+        Currency, CurrencyDTO, Definition, Group,
     };
 
     #[test]

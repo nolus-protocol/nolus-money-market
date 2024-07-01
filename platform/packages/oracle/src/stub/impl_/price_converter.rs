@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, Group};
-use finance::price::{self, dto::PriceDTO, Price};
+use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{

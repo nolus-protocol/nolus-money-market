@@ -249,7 +249,7 @@ mod test_invariant {
     use currency::{
         group::MemberOf,
         test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Group, Symbols,
+        Currency, Definition, Group,
     };
     use sdk::cosmwasm_std::{from_json, StdError, StdResult};
 

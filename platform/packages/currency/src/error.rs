@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{matcher::Symbol, Group, SymbolOwned, Symbols};
+use crate::{matcher::Symbol, Definition, Group, SymbolOwned};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -16,7 +16,7 @@ impl Error {
     where
         S: Into<SymbolOwned>,
         CS: Symbol + ?Sized,
-        SS: Symbols,
+        SS: Definition,
     {
         Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), SS::TICKER.into())
     }

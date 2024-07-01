@@ -74,13 +74,13 @@ impl MemberOf<Self> for SubGroup {}
 impl MemberOf<SuperGroup> for SubGroup {}
 
 mod impl_ {
-    use crate::{Currency, SymbolStatic, Symbols};
+    use crate::{Currency, Definition, SymbolStatic};
 
     use super::{SubGroup, SuperGroup};
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC1;
-    impl Symbols for TestC1 {
+    impl Definition for TestC1 {
         const TICKER: SymbolStatic = "ticker#1";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
@@ -95,7 +95,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC2;
-    impl Symbols for TestC2 {
+    impl Definition for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
@@ -110,7 +110,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC3;
-    impl Symbols for TestC3 {
+    impl Definition for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
@@ -125,7 +125,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC4;
-    impl Symbols for TestC4 {
+    impl Definition for TestC4 {
         const TICKER: SymbolStatic = "ticker#4";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
@@ -140,7 +140,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC5;
-    impl Symbols for TestC5 {
+    impl Definition for TestC5 {
         const TICKER: SymbolStatic = "ticker#5";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
@@ -155,7 +155,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC6;
-    impl Symbols for TestC6 {
+    impl Definition for TestC6 {
         const TICKER: SymbolStatic = "ticker#6";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
@@ -170,7 +170,7 @@ mod impl_ {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC10;
-    impl Symbols for TestC10 {
+    impl Definition for TestC10 {
         const TICKER: SymbolStatic = "ticker#10";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";
