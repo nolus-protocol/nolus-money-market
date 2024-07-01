@@ -1,17 +1,17 @@
-use currency::{Currency, Group};
+use currency::{group::MemberOf, Currency, Group};
 
-use crate::coin::{Coin, CoinDTO};
+use crate::coin::{Amount, Coin, CoinDTO};
 
-pub fn funds<G, C>(amount: u128) -> CoinDTO<G>
+pub fn funds<G, C>(amount: Amount) -> CoinDTO<G>
 where
     G: Group,
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     Coin::<C>::new(amount).into()
 }
 
 pub mod coin {
-    use currency::{equal, Currency};
+    use currency::{equal, group::MemberOf, Currency};
 
     use crate::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -23,17 +23,17 @@ pub mod coin {
     where
         CExp: Currency;
 
-    impl<CExp> WithCoin for Expect<CExp>
+    impl<CExp, G> WithCoin<G> for Expect<CExp>
     where
-        CExp: Currency,
+        CExp: Currency + MemberOf<G>,
     {
         type Output = bool;
 
         type Error = Error;
 
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
         where
-            C: Currency,
+            C: Currency + MemberOf<G>,
         {
             Ok(equal::<CExp, C>() && Amount::from(coin) == self.0.into())
         }

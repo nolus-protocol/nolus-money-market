@@ -2,6 +2,8 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "unchecked-quote-currency")]
+use currency::group::MemberOf;
 use currency::{Currency, Group, SymbolOwned};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -18,12 +20,13 @@ pub fn new_unchecked_quote_currency_stub<'a, StableC, StableG>(
     querier: QuerierWrapper<'a>,
 ) -> impl Oracle<StableC> + 'a
 where
-    StableC: Currency,
+    StableC: Currency + MemberOf<StableG>,
     StableG: Group + 'a,
 {
     use self::impl_::QuoteCUncheckedConverter;
     use self::impl_::StablePriceRequest;
 
+    // TODO pass StablePriceRequest to OracleRef to parameterize it over which currency to use as quote - the base or the stable
     impl_::OracleStub::<StableC, StableG, StablePriceRequest, QuoteCUncheckedConverter>::new(
         OracleRef::unchecked(oracle),
         querier,

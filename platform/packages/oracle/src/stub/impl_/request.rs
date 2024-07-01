@@ -22,7 +22,7 @@ impl RequestBuilder for BasePriceRequest {
         C: Currency,
     {
         BaseCurrencyQueryMsg::BasePrice {
-            currency: C::TICKER.to_string(),
+            currency: CurrencyDTO::from_currency_type::<C>,
         }
     }
 }

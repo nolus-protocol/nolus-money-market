@@ -1,8 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-use sdk::schemars::{self, JsonSchema};
-
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
@@ -11,21 +7,31 @@ pub use self::only::PaymentOnlyGroup;
 mod only;
 mod osmosis_tests;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {
     const DESCR: &'static str = "payment";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher + ?Sized,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        LeaseGroup::maybe_visit_member(matcher, visitor)
+            .or_else(|visitor| Lpns::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| Native::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| PaymentOnlyGroup::maybe_visit_member(matcher, visitor))
+    }
+
+    fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG>,
     {
-        LeaseGroup::maybe_visit(matcher, symbol, visitor)
-            .or_else(|v| Lpns::maybe_visit(matcher, symbol, v))
-            .or_else(|v| Native::maybe_visit(matcher, symbol, v))
-            .or_else(|v| PaymentOnlyGroup::maybe_visit(matcher, symbol, v))
+        unreachable!()
     }
 }
+
+impl MemberOf<Self> for PaymentGroup {}

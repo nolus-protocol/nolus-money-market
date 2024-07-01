@@ -18,15 +18,6 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 doctest = false
 
 [features]
-net_dev = []
-net_test = []
-net_main = []
-
-neutron-astroport-usdc_axelar = []
-neutron-astroport-usdc_noble = []
-osmosis-osmosis-usdc_axelar = []
-osmosis-osmosis-usdc_noble = []
-
 testing = []
 
 [dependencies]

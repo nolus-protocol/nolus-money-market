@@ -2,7 +2,7 @@ use std::any::type_name;
 
 use thiserror::Error;
 
-use currency::{error::Error as CurrencyError, Currency};
+use currency::error::Error as CurrencyError;
 use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use crate::percent::Units as PercentUnits;
@@ -17,12 +17,6 @@ pub enum Error {
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
-
-    #[error("[Finance] Expecting funds of '{0}' but found none")]
-    NoFunds(String),
-
-    #[error("[Finance] Expecting funds of '{0}' but found extra ones")]
-    UnexpectedFunds(String),
 
     #[error(
         "[Finance] [Percent] Upper bound has been crossed! Upper bound is: {bound}, but got: {value}!"
@@ -43,20 +37,6 @@ impl Error {
         } else {
             Ok(())
         }
-    }
-
-    pub fn no_funds<C>() -> Self
-    where
-        C: Currency,
-    {
-        Self::NoFunds(C::TICKER.into())
-    }
-
-    pub fn unexpected_funds<C>() -> Self
-    where
-        C: Currency,
-    {
-        Self::UnexpectedFunds(C::TICKER.into())
     }
 }
 

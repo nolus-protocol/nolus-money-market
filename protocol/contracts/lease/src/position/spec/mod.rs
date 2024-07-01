@@ -1,6 +1,5 @@
 use std::ops::Add;
 
-use currency::Currency;
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -171,7 +170,7 @@ impl Spec {
         transaction_currency_in_lpn: Price<TransactionC>,
     ) -> bool
     where
-        TransactionC: Currency,
+        TransactionC: ?Sized,
     {
         let amount = price::total(amount, transaction_currency_in_lpn);
 
@@ -184,7 +183,7 @@ impl Spec {
         transaction_currency_in_lpn: Price<TransactionC>,
     ) -> bool
     where
-        TransactionC: Currency,
+        TransactionC: ?Sized,
     {
         let asset_amount = price::total(asset_amount, transaction_currency_in_lpn);
 

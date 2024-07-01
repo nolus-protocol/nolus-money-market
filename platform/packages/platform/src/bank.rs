@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currency::{Currency, Group};
+use currency::{group::MemberOf, Currency, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -13,17 +13,17 @@ use crate::{
     result::Result,
 };
 
-pub type BalancesResult<Cmd> = StdResult<Option<WithCoinResult<Cmd>>, Error>;
+pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -46,22 +46,22 @@ where
 }
 
 /// Ensure a single coin of the specified currency is received by a contract and return it
-pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
+pub fn received_one<C, G>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     received_one_impl(
         cw_amount,
-        Error::no_funds::<C>,
-        Error::unexpected_funds::<C>,
+        Error::no_funds::<C, G>,
+        Error::unexpected_funds::<C, G>,
     )
     .and_then(from_cosmwasm_impl)
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
+pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<G, V>>
 where
-    V: WithCoin,
+    V: WithCoin<G>,
     G: Group,
 {
     let mut may_res = None;
@@ -97,10 +97,10 @@ impl<'a> BankAccountView for BankView<'a> {
         from_cosmwasm_impl(coin)
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -162,10 +162,10 @@ where
         self.view.balance()
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
@@ -351,8 +351,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
-        Currency, Group, SymbolStatic,
+        test::{SubGroup, SubGroupCurrency, SubGroupTestC1, SuperGroupTestC1}, Currency, Definition, DexDefinition, Group, SymbolStatic
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -467,6 +466,9 @@ mod test {
         #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         struct MyNiceCurrency {}
         impl Currency for MyNiceCurrency {
+            type Group = TheGroup;
+        }
+        impl Symbols for MyNiceCurrency {
             const BANK_SYMBOL: SymbolStatic = "wdd";
 
             const DEX_SYMBOL: SymbolStatic = "dex3rdf";
@@ -563,12 +565,12 @@ mod test {
 
     #[test]
     fn total_balance_empty() {
-        total_balance_tester::<SubGroup>(vec![], &[]);
+        total_balance_tester::<SubGroupCurrency>(vec![], &[]);
     }
 
     #[test]
     fn total_balance_same_group() {
-        total_balance_tester::<SubGroup>(
+        total_balance_tester::<SubGroupCurrency>(
             vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)],
             &[SubGroupTestC1::BANK_SYMBOL],
         );
@@ -576,12 +578,15 @@ mod test {
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<SubGroup>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
+        total_balance_tester::<SubGroupCurrency>(
+            vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)],
+            &[],
+        );
     }
 
     #[test]
     fn total_balance_mixed_group() {
-        total_balance_tester::<SubGroup>(
+        total_balance_tester::<SubGroupCurrency>(
             vec![
                 cw_coin(100, SuperGroupTestC1::TICKER),
                 cw_coin(100, SubGroupTestC1::BANK_SYMBOL),

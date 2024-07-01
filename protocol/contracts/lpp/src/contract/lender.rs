@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use serde::Serialize;
 
 use currency::Currency;
@@ -27,7 +28,7 @@ where
     Lpn: 'static + Currency + Serialize,
 {
     let lender_addr = info.sender;
-    let pending_deposit = bank::received_one(info.funds)?;
+    let pending_deposit = bank::received_one::<_, Lpns>(info.funds)?;
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 

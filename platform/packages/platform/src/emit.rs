@@ -78,7 +78,7 @@ where
         K: Into<String>,
         G: Group,
     {
-        emit_coinable(self, event_key, coin.amount(), coin.ticker())
+        emit_coinable(self, event_key, coin.amount(), coin.currency())
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {

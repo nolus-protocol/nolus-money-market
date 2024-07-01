@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{Currency, SymbolOwned};
+use currency::{Definition, SymbolOwned};
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -28,7 +28,7 @@ pub enum Error {
 
 pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> Error
 where
-    ExpC: Currency,
+    ExpC: Definition,
 {
     Error::CurrencyMismatch {
         expected: ExpC::TICKER.into(),

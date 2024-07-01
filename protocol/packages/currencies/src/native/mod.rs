@@ -1,40 +1,33 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-use self::astroport as impl_mod;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-use self::osmosis as impl_mod;
+use crate::PaymentGroup;
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-pub(crate) mod astroport;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-pub(crate) mod osmosis;
+pub(crate) mod r#impl;
 
-pub type Nls = impl_mod::Nls;
+pub type Nls = r#impl::Nls;
 
-#[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher + ?Sized,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG>,
     {
-        currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Nls, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<Self> for Native {}
+impl MemberOf<PaymentGroup> for Native {}
