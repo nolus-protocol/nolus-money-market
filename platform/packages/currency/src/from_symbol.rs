@@ -2,7 +2,10 @@ use crate::{error::Error, Matcher, SymbolSlice};
 
 use super::Currency;
 
-pub trait SingleVisitor<C> {
+pub trait SingleVisitor<C>
+where
+    C: ?Sized,
+{
     type Output;
     type Error;
 

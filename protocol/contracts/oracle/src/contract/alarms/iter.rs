@@ -10,24 +10,27 @@ use crate::{contract::alarms::PriceResult, error::ContractError, result::Contrac
 type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
 type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
 
-pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group + Clone,
     BaseC: Currency,
+    BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
     price_iter: I,
     alarm_iter: Option<AlarmIter<'alarms, PriceG>>,
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC> Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
+    Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group + Clone,
     BaseC: Currency,
+    BaseG: Group,
 {
     pub fn new(
         alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -52,15 +55,16 @@ where
     fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms, PriceG>>> {
         self.price_iter
             .next()
-            .map(|price_result: PriceResult<PriceG, BaseC>| {
+            .map(|price_result: PriceResult<PriceG, BaseC, BaseG>| {
                 price_result.and_then(|ref price| {
-                    Tickers.visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC>>(
-                        price.base_ticker(),
-                        Cmd {
-                            alarms: self.alarms,
-                            price,
-                        },
-                    )
+                    Tickers
+                        .visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC, BaseG>>(
+                            price.base_ticker(),
+                            Cmd {
+                                alarms: self.alarms,
+                                price,
+                            },
+                        )
                 })
             })
             .transpose()
@@ -74,13 +78,14 @@ where
     }
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC> Iterator
-    for Iter<'storage, 'alarms, S, I, PriceG, BaseC>
+impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG> Iterator
+    for Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC>>,
+    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group + Clone,
     BaseC: Currency,
+    BaseG: Group,
 {
     type Item = ContractResult<Addr>;
 
@@ -101,22 +106,24 @@ where
     }
 }
 
-struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
+struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
     BaseC: Currency,
+    BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
-    price: &'price BasePrice<PriceG, BaseC>,
+    price: &'price BasePrice<PriceG, BaseC, BaseG>,
 }
 
-impl<'storage, 'alarms, 'price, S, PriceG, BaseC> AnyVisitor
-    for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC>
+impl<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG> AnyVisitor
+    for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
     BaseC: Currency,
+    BaseG: Group,
 {
     type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;

@@ -193,7 +193,7 @@ where
 }
 
 fn to_stable(
-    oracle: OracleRef<LpnCurrency>,
+    oracle: OracleRef<LpnCurrency, LpnCurrencies>,
     total: Coin<LpnCurrency>,
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<StableCurrency>> {

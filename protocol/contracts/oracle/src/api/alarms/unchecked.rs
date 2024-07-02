@@ -1,33 +1,54 @@
-use currency::Group;
+use currency::{Currency, Group};
 use finance::price::dto::PriceDTO;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use super::{Alarm as ValidatedAlarm, AlarmError};
+use super::{Alarm as ValidatedAlarm, Error};
 
-/// Brings invariant checking as a step in deserializing an Alarm
-#[derive(Deserialize)]
-pub(super) struct Alarm<G, LpnG>
+#[derive(Deserialize, Serialize)]
+#[serde(bound(serialize = "", deserialize = ""))]
+pub(super) struct Alarm<G, Lpns>
 where
     G: Group,
-    LpnG: Group,
+    Lpns: Group,
 {
-    below: PriceDTO<G, LpnG>,
-    above: Option<PriceDTO<G, LpnG>>,
+    below: PriceDTO<G, Lpns>,
+    above: Option<PriceDTO<G, Lpns>>,
 }
 
-impl<G, LpnG> TryFrom<Alarm<G, LpnG>> for ValidatedAlarm<G, LpnG>
+impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
-    LpnG: Group,
+    Lpn: Currency,
+    Lpns: Group,
 {
-    type Error = AlarmError;
+    type Error = Error;
 
-    fn try_from(dto: Alarm<G, LpnG>) -> Result<Self, Self::Error> {
-        let res = Self {
-            below: dto.below,
-            above: dto.above,
-        };
-        res.invariant_held()?;
-        Ok(res)
+    fn try_from(unchecked: Alarm<G, Lpns>) -> Result<Self, Self::Error> {
+        unchecked
+            .below
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|below| {
+                unchecked
+                    .above
+                    .map(|above_dto| above_dto.try_into().map_err(Into::into))
+                    .transpose()
+                    .map(|above| Self { below, above })
+                    .and_then(|alarm| alarm.invariant_held().map(|()| alarm))
+            })
+    }
+}
+
+impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpns>
+where
+    G: Group,
+    Lpn: Currency,
+    Lpns: Group,
+{
+    fn from(validated: ValidatedAlarm<G, Lpn, Lpns>) -> Self {
+        Self {
+            below: validated.below.into(),
+            above: validated.above.map(|base_price| base_price.into()),
+        }
     }
 }

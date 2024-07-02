@@ -57,7 +57,7 @@ impl<'r> WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'r> {
     where
         Lpp: LppLenderTrait<LpnCurrency, LpnCurrencies>,
     {
-        self.oracle.execute_as_oracle::<LpnCurrencies, _>(
+        self.oracle.execute_as_oracle(
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
@@ -119,7 +119,7 @@ where
     max_ltd: Option<Percent>,
 }
 
-impl<Lpn, Lpp> WithOracle<Lpn> for QuoteStage2<Lpn, Lpp>
+impl<Lpn, Lpp> WithOracle<Lpn, LpnCurrencies> for QuoteStage2<Lpn, Lpp>
 where
     Lpn: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
@@ -129,7 +129,7 @@ where
 
     fn exec<O>(self, oracle: O) -> Result<Self::Output, Self::Error>
     where
-        O: OracleTrait<Lpn>,
+        O: OracleTrait<Lpn, LpnCurrencies>,
     {
         let downpayment = self.downpayment.ticker().clone();
 
@@ -156,7 +156,7 @@ struct QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Oracle: OracleTrait<Lpn, LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
@@ -171,7 +171,7 @@ impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: ?Sized + Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Oracle: OracleTrait<Lpn, LpnCurrencies>,
 {
     type Output = QuoteResponse;
     type Error = ContractError;
@@ -205,7 +205,7 @@ where
     Lpn: ?Sized,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Oracle: OracleTrait<Lpn, LpnCurrencies>,
 {
     downpayment: Coin<Dpc>,
     lpp_quote: LppQuote<Lpn, Lpp>,
@@ -220,7 +220,7 @@ where
     Lpn: Currency,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn>,
+    Oracle: OracleTrait<Lpn, LpnCurrencies>,
 {
     type Output = QuoteResponse;
     type Error = ContractError;

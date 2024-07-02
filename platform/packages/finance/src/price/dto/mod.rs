@@ -13,7 +13,6 @@ use crate::{
 
 mod unchecked;
 pub mod with_price;
-pub mod with_quote;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
@@ -167,18 +166,6 @@ where
     fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency;
-}
-
-pub trait WithQuote<C>
-where
-    C: Currency,
-{
-    type Output;
-    type Error;
-
-    fn exec<BaseC>(self, _: Price<BaseC, C>) -> Result<Self::Output, Self::Error>
-    where
-        BaseC: Currency;
 }
 
 #[cfg(test)]

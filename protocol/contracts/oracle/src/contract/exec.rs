@@ -49,7 +49,7 @@ pub fn do_executute(
             contract::validate_addr(deps.querier, &sender)?;
 
             MarketAlarms::new(deps.storage)
-                .try_add_price_alarm::<BaseCurrency, _>(sender, alarm)
+                .try_add_price_alarm(sender, alarm)
                 .map(|()| Default::default())
         }
     }
