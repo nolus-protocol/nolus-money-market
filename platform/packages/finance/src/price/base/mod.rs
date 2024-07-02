@@ -165,10 +165,10 @@ where
 #[cfg(test)]
 mod test_invariant {
     use currency::{
-        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency, Group,
     };
-    use sdk::cosmwasm_std::{from_json, StdResult};
+    use sdk::cosmwasm_std::{from_json, to_json_string, StdResult};
     use serde::Deserialize;
 
     use crate::coin::Coin;
@@ -225,6 +225,19 @@ mod test_invariant {
         {
             _loaded.expect("should have returned an error");
         }
+    }
+
+    #[test]
+    #[should_panic = "Failed to deserialize"]
+    fn test_serialize_deserialize() {
+        let base_price = BasePrice::<SuperGroup, SubGroupTestC1, SubGroup>::new(
+            Coin::<SuperGroupTestC2>::new(2).into(),
+            Coin::<SubGroupTestC1>::new(10),
+        );
+
+        let serialized = to_json_string(&base_price).expect("Failed to serialize");
+        let _loaded = load::<SuperGroup, SubGroupTestC1, SubGroup>(&serialized.into_bytes())
+            .expect("Failed to deserialize");
     }
 
     fn new_invalid<BaseC, QuoteC>(amount: Coin<BaseC>, amount_quote: Coin<QuoteC>)
