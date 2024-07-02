@@ -23,7 +23,7 @@ pub trait WithLeaseDeps {
         Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency>;
+        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>;
 }
 
 pub fn execute<Cmd>(
@@ -107,7 +107,7 @@ where
     where
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     {
-        self.oracle.execute_as_oracle::<LpnCurrencies, _>(
+        self.oracle.execute_as_oracle(
             FactoryStage4 {
                 cmd: self.cmd,
                 asset: self.asset,
@@ -124,7 +124,8 @@ struct FactoryStage4<Cmd, Asset, LppLoan> {
     lpp_loan: LppLoan,
 }
 
-impl<Cmd, Asset, LppLoan> WithOracle<LpnCurrency> for FactoryStage4<Cmd, Asset, LppLoan>
+impl<Cmd, Asset, LppLoan> WithOracle<LpnCurrency, LpnCurrencies>
+    for FactoryStage4<Cmd, Asset, LppLoan>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency,
@@ -135,7 +136,7 @@ where
 
     fn exec<Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
-        Oracle: OracleTrait<LpnCurrency>,
+        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     {
         self.cmd
             .exec::<LpnCurrency, Asset, _, _>(self.lpp_loan, oracle)

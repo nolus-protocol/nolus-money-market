@@ -1,6 +1,6 @@
 use currency::NativePlatform;
 use finance::{duration::Duration, interest, percent::Percent};
-use lpp_platform::{CoinStable, Lpp as LppTrait, Stable};
+use lpp_platform::{CoinStable, Lpp as LppTrait, Stable, StableCurrencyGroup};
 use oracle_platform::{convert, Oracle};
 use platform::message::Response as MessageResponse;
 
@@ -17,7 +17,7 @@ pub struct Pool<Lpp, StableOracle> {
 impl<Lpp, StableOracle> Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<Stable>,
+    StableOracle: Oracle<Stable, StableCurrencyGroup>,
 {
     pub fn new(lpp: Lpp, oracle: StableOracle) -> Result<Self, ContractError> {
         lpp.balance(oracle.as_ref().addr().clone())
@@ -33,7 +33,7 @@ where
 impl<Lpp, StableOracle> PoolTrait for Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<Stable>,
+    StableOracle: Oracle<Stable, StableCurrencyGroup>,
 {
     fn balance(&self) -> CoinStable {
         self.balance
@@ -46,7 +46,7 @@ where
     ) -> Result<MessageResponse, ContractError> {
         let reward_in_stable = interest::interest(apr, self.balance, period);
 
-        convert::from_quote::<_, _, _, NativePlatform>(&self.oracle, reward_in_stable)
+        convert::from_quote::<_, _, _, _, NativePlatform>(&self.oracle, reward_in_stable)
             .map_err(ContractError::ConvertRewardsToNLS)
             .and_then(|rewards| {
                 self.lpp

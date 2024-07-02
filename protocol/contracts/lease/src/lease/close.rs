@@ -33,7 +33,7 @@ impl FullRepayReceipt {
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency>,
+    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     Asset: Currency,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {

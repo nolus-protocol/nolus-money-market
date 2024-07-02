@@ -20,7 +20,7 @@ use crate::{
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency>,
+    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     Asset: Currency,
 {
     pub(super) fn reschedule(
@@ -30,7 +30,7 @@ where
         liquidation_zone: &Zone,
         total_due: LpnCoin,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef<LpnCurrency>,
+        price_alarms: &OracleRef<LpnCurrency, LpnCurrencies>,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
 
@@ -38,8 +38,7 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms =
-                    price_alarms.as_alarms::<LeaseAssetCurrencies, LpnCurrencies>();
+                let mut price_alarms = price_alarms.as_alarms::<LeaseAssetCurrencies>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -52,7 +51,8 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait<LeaseAssetCurrencies, LpnCurrencies, BaseC = LpnCurrency>,
+        PriceAlarms:
+            PriceAlarmsTrait<LeaseAssetCurrencies, BaseC = LpnCurrency, BaseG = LpnCurrencies>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
@@ -209,7 +209,7 @@ mod tests {
         TimeAlarmsRef::unchecked(TIME_ALARMS_ADDR)
     }
 
-    fn pricealarms() -> OracleRef<TestLpn> {
+    fn pricealarms() -> OracleRef<TestLpn, Lpns> {
         OracleRef::unchecked(Addr::unchecked(ORACLE_ADDR))
     }
 }

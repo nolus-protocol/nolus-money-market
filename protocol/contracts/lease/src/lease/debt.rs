@@ -18,14 +18,14 @@ use super::Lease;
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency>,
+    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     Asset: Currency,
 {
     pub(crate) fn check_debt(
         &self,
         now: &Timestamp,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef<LpnCurrency>,
+        price_alarms: &OracleRef<LpnCurrency, LpnCurrencies>,
     ) -> ContractResult<DebtStatus<Asset>> {
         let due = self.loan.state(now);
 
