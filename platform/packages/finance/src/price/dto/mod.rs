@@ -42,8 +42,8 @@ where
         res
     }
 
-    pub const fn base(&self) -> &CoinDTO<G> {
-        &self.amount
+    pub fn base(&self) -> CoinDTO<G> {
+        self.amount.clone()
     }
 
     pub const fn quote(&self) -> &CoinDTO<QuoteG> {
@@ -312,7 +312,7 @@ mod test_invariant {
             Coin::<SuperGroupTestC2>::new(4).into(),
         );
         assert_eq!(
-            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
+            CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
             p.base()
         );
     }
@@ -326,7 +326,7 @@ mod test_invariant {
         );
         assert_eq!(
             load(&json.into_bytes()).unwrap().base(),
-            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC1>::new(4)),
+            CoinDTO::<TC>::from(Coin::<SuperGroupTestC1>::new(4)),
         );
     }
 

@@ -147,7 +147,7 @@ where
         price
             .quote()
             .try_into()
-            .and_then(|amount_quote| Self::new_checked(price.base().clone(), amount_quote))
+            .and_then(|amount_quote| Self::new_checked(price.base(), amount_quote))
     }
 }
 
