@@ -17,7 +17,7 @@ pub struct Pool<Lpp, StableOracle> {
 impl<Lpp, StableOracle> Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<Stable, StableCurrencyGroup>,
+    StableOracle: Oracle<QuoteC = Stable, QuoteG = StableCurrencyGroup>,
 {
     pub fn new(lpp: Lpp, oracle: StableOracle) -> Result<Self, ContractError> {
         lpp.balance(oracle.as_ref().addr().clone())
@@ -33,7 +33,7 @@ where
 impl<Lpp, StableOracle> PoolTrait for Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<Stable, StableCurrencyGroup>,
+    StableOracle: Oracle<QuoteC = Stable, QuoteG = StableCurrencyGroup>,
 {
     fn balance(&self) -> CoinStable {
         self.balance

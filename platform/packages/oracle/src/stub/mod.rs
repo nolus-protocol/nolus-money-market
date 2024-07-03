@@ -16,7 +16,7 @@ mod impl_;
 pub fn new_unchecked_quote_currency_stub<'a, StableC, StableG>(
     oracle: Addr,
     querier: QuerierWrapper<'a>,
-) -> impl Oracle<StableC, StableG> + 'a
+) -> impl Oracle<QuoteC = StableC, QuoteG = StableG> + 'a
 where
     StableC: Currency,
     StableG: Group + 'a,
@@ -30,13 +30,15 @@ where
     )
 }
 
-pub trait Oracle<QuoteC, QuoteG>
+pub trait Oracle
 where
-    Self: Into<OracleRef<QuoteC, QuoteG>> + AsRef<OracleRef<QuoteC, QuoteG>>,
-    QuoteC: ?Sized,
-    QuoteG: Group,
+    Self:
+        Into<OracleRef<Self::QuoteC, Self::QuoteG>> + AsRef<OracleRef<Self::QuoteC, Self::QuoteG>>,
 {
-    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
+    type QuoteC: ?Sized;
+    type QuoteG: Group;
+
+    fn price_of<C, G>(&self) -> Result<Price<C, Self::QuoteC>>
     where
         C: Currency,
         G: Group;
@@ -52,7 +54,7 @@ where
 
     fn exec<O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
-        O: Oracle<OracleBase, OracleBaseG>;
+        O: Oracle<QuoteC = OracleBase, QuoteG = OracleBaseG>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -30,7 +30,7 @@ impl<'spec> WithLease for Cmd<'spec> {
     where
         Asset: currency::Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         (&self.spec.amount)
             .try_into()

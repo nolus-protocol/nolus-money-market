@@ -18,7 +18,7 @@ use super::Lease;
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     Asset: Currency,
 {
     pub(crate) fn check_debt(
