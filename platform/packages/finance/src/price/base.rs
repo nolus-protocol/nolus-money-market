@@ -1,36 +1,33 @@
 use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
 
-use crate::{
-    coin::{Coin, CoinDTO},
-    error::Error,
-};
+use crate::coin::{Coin, CoinDTO};
 
 use super::{dto::PriceDTO, Price};
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasePrice<BaseG, QuoteC>
+pub struct BasePrice<G, QuoteC>
 where
-    BaseG: Group,
+    G: Group,
     QuoteC: ?Sized,
 {
-    amount: CoinDTO<BaseG>,
+    amount: CoinDTO<G>,
     amount_quote: Coin<QuoteC>,
 }
 
-impl<BaseG, QuoteC> BasePrice<BaseG, QuoteC>
+impl<G, QuoteC> BasePrice<G, QuoteC>
 where
-    BaseG: Group,
+    G: Group,
     QuoteC: Currency,
 {
-    pub fn base_ticker(&self) -> CurrencyDTO<BaseG> {
+    pub fn base_ticker(&self) -> CurrencyDTO<G> {
         self.amount.currency()
     }
 }
 
-impl<C, BaseG, QuoteC> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC>
+impl<C, G, QuoteC> From<Price<C, QuoteC>> for BasePrice<G, QuoteC>
 where
-    C: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    C: Currency + MemberOf<G>,
+    G: Group,
     QuoteC: Currency,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -41,26 +38,24 @@ where
     }
 }
 
-impl<C, BaseG, QuoteC> TryFrom<&BasePrice<BaseG, QuoteC>> for Price<C, QuoteC>
+impl<C, G, QuoteC> From<&BasePrice<G, QuoteC>> for Price<C, QuoteC>
 where
-    C: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    C: Currency + MemberOf<G>,
+    G: Group,
     QuoteC: Currency,
 {
-    type Error = Error;
-
-    fn try_from(value: &BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
-        Ok(super::total_of(value.amount.into()).is(value.amount_quote))
+    fn from(value: &BasePrice<G, QuoteC>) -> Self {
+        super::total_of(value.amount.into()).is(value.amount_quote)
     }
 }
 
-impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC>> for PriceDTO<BaseG, QuoteG>
+impl<G, QuoteC, QuoteG> From<BasePrice<G, QuoteC>> for PriceDTO<G, QuoteG>
 where
-    BaseG: Group,
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn from(price: BasePrice<BaseG, QuoteC>) -> Self {
+    fn from(price: BasePrice<G, QuoteC>) -> Self {
         Self::new(price.amount, price.amount_quote.into())
     }
 }
