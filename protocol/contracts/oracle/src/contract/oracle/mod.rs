@@ -6,7 +6,7 @@ use std::{
 use currency::{Currency, Group, SymbolOwned, SymbolSlice};
 use finance::price::{
     base::{
-        with_quote::{self, WithQuote},
+        with_price::{self, WithPrice},
         BasePrice,
     },
     dto::PriceDTO,
@@ -112,7 +112,7 @@ where
             stable_to_base_price: Price<StableCurrency, BaseCurrency>,
             _group: PhantomData<G>,
         }
-        impl<BaseCurrency, G> WithQuote<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
+        impl<BaseCurrency, G> WithPrice<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
         where
             BaseCurrency: Currency,
             G: Group,
@@ -138,7 +138,7 @@ where
             .and_then(|stable_price: Price<StableCurrency, BaseC>| {
                 self.try_query_base_price(at, currency)
                     .and_then(|ref base_price| {
-                        with_quote::execute(
+                        with_price::execute(
                             base_price,
                             StablePriceCalc {
                                 stable_to_base_price: stable_price,

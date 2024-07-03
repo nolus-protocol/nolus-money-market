@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use currency::{Currency, Group};
 use finance::price::{
     base::{
-        with_quote::{self, WithQuote},
+        with_price::{self, WithPrice},
         BasePrice,
     },
     Price,
@@ -99,7 +99,7 @@ where
     {
         let (below, above_or_equal) = alarm.into();
 
-        with_quote::execute::<_, BaseC, BaseG, _>(
+        with_price::execute::<_, BaseC, BaseG, _>(
             &below,
             AddAlarmsCmd {
                 receiver,
@@ -139,7 +139,7 @@ where
     price_alarms: &'alarms mut PriceAlarms<'storage, G, S>,
 }
 
-impl<'storage, 'alarms, S, G, BaseC, BaseG> WithQuote<BaseC>
+impl<'storage, 'alarms, S, G, BaseC, BaseG> WithPrice<BaseC>
     for AddAlarmsCmd<'storage, 'alarms, S, G, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
