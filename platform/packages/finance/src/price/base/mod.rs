@@ -45,10 +45,7 @@ where
         Self::new_unchecked(amount, amount_quote)
     }
 
-    pub(crate) fn new_checked(
-        amount: CoinDTO<BaseG>,
-        amount_quote: Coin<QuoteC>,
-    ) -> FinanceResult<Self> {
+    fn new_checked(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
         let res = Self::new_raw(amount, amount_quote);
         res.invariant_held().map(|()| res)
     }
@@ -138,28 +135,21 @@ where
     }
 }
 
-// impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
-// where
-//     BaseG: Group,
-//     QuoteC: Currency,
-//     QuoteG: Group,
-// {
-//     type Error = Error;
+impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    type Error = Error;
 
-//     // fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-//     //     price
-//     //         .quote()
-//     //         .try_into()
-//     //         .and_then(|amount_quote| Self::new_checked(price.base(), amount_quote))
-//     // }
-//     fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-//         let PriceDTO { amount, amount_quote } = price;
-
-//         amount_quote
-//             .try_into()
-//             .and_then(|amount_quote| Self::new_checked(amount, amount_quote))
-//     }
-// }
+    fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
+        price
+            .quote()
+            .try_into()
+            .and_then(|amount_quote| Self::new_checked(price.base(), amount_quote))
+    }
+}
 
 impl<BaseG, QuoteC, QuoteG> Clone for BasePrice<BaseG, QuoteC, QuoteG>
 where
