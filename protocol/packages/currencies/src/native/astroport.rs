@@ -11,8 +11,8 @@ define_symbol! {
         },
         ["net_test"]: {
             bank: "unls",
-            // full ibc route: transfer/channel-208/unls
-            dex: "ibc/C9F36A5FCF5FBD26661F9A09900301755C8B042696E4F456ACD73FAA7AFA6551"
+            // full ibc route: transfer/channel-1061/unls
+            dex: "ibc/E808FAAE7ADDA37453A8F0F67D74669F6580CBA5EF0F7889D46FB02D282098E3"
         },
         ["net_main"]: {
             bank: "unls",
