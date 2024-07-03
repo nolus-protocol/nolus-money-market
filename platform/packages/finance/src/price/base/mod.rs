@@ -20,6 +20,7 @@ pub mod with_quote;
 #[derive(Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
 #[serde(
     try_from = "unchecked::BasePrice<BaseG, QuoteG>",
+    into = "unchecked::BasePrice<BaseG, QuoteG>",
     bound(serialize = "", deserialize = "")
 )]
 pub struct BasePrice<BaseG, QuoteC, QuoteG>
@@ -228,7 +229,6 @@ mod test_invariant {
     }
 
     #[test]
-    #[should_panic = "Failed to deserialize"]
     fn test_serialize_deserialize() {
         let base_price = BasePrice::<SuperGroup, SubGroupTestC1, SubGroup>::new(
             Coin::<SuperGroupTestC2>::new(2).into(),
@@ -236,8 +236,9 @@ mod test_invariant {
         );
 
         let serialized = to_json_string(&base_price).expect("Failed to serialize");
-        let _loaded = load::<SuperGroup, SubGroupTestC1, SubGroup>(&serialized.into_bytes())
+        let loaded = load::<SuperGroup, SubGroupTestC1, SubGroup>(&serialized.into_bytes())
             .expect("Failed to deserialize");
+        assert_eq!(base_price, loaded);
     }
 
     fn new_invalid<BaseC, QuoteC>(amount: Coin<BaseC>, amount_quote: Coin<QuoteC>)
