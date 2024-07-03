@@ -1,3 +1,5 @@
+#[cfg(feature = "contract")]
+use currencies::PaymentGroup as PriceCurrencies;
 #[cfg(feature = "stub_alarms")]
 pub use currencies::{Lpn as BaseCurrency, Lpns as BaseCurrencies, Stable as StableCurrency};
 

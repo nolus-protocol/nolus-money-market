@@ -18,7 +18,7 @@ pub enum QueryMsg {
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
     /// Returns `self::SwapPath`
-    SwapPath { from: SymbolOwned, to: SymbolOwned },
+    SwapPath { from: SymbolOwned, to: SymbolOwned }, // TODO refactor to use CurrencyDTO instead
 }
 
 pub type SwapPath = Vec<SwapTarget>;
@@ -35,7 +35,7 @@ pub enum Error {
 #[schemars(with = "(PoolId, SymbolOwned)")]
 pub struct SwapTarget {
     pub pool_id: PoolId,
-    pub target: SymbolOwned,
+    pub target: SymbolOwned, // TODO refactor to use CurrencyDTO instead
 }
 
 impl Serialize for SwapTarget {

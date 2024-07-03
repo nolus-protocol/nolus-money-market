@@ -78,22 +78,22 @@ pub enum QueryMsg {
 
     /// Report the base currency as [SymbolOwned]
     ///
-    /// Implementation of [crate::api::price::QueryMsg::BaseCurrency]
+    /// Implementation of [oracle_platform::msg::BaseCurrencyQueryMsg<G>::BaseCurrency]
     BaseCurrency {},
 
     /// Provides the price of a currency against the base currency, i.e. serving as its quote currency
     ///
-    /// Implementation of [crate::api::price::QueryMsg::BasePrice]
+    /// Implementation of [oracle_platform::msg::BaseCurrencyQueryMsg<G>::BasePrice]
     BasePrice {
-        currency: SymbolOwned,
+        currency: CurrencyDTO<PriceCurrencies>,
     },
 
-    /// Implementation of [oracle_platform::msg::QueryMsg::StableCurrency]
+    /// Implementation of [oracle_platform::msg::StableCurrencyQueryMsg<G>::StableCurrency]
     StableCurrency {},
 
-    /// Implementation of [oracle_platform::msg::QueryMsg::StablePrice]
+    /// Implementation of [oracle_platform::msg::StableCurrencyQueryMsg<G>::StablePrice]
     StablePrice {
-        currency: SymbolOwned,
+        currency: CurrencyDTO<PriceCurrencies>,
     },
 
     /// Lists configured swap pairs

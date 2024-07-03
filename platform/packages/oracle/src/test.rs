@@ -1,6 +1,8 @@
 #![cfg(feature = "testing")]
 
-use currency::{Currency, Group};
+use std::marker::PhantomData;
+
+use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
 use finance::{
     coin::Amount,
     price::{self, Price},
@@ -8,56 +10,79 @@ use finance::{
 use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
-    error::{Error, Result},
+    error::{self, Result},
     stub::Oracle,
     OracleRef,
 };
 
-pub struct DummyOracle<QuoteC>(Option<Amount>, OracleRef<QuoteC>);
+pub struct DummyOracle<G, QuoteC>(
+    Option<Amount>,
+    OracleRef<QuoteC, QuoteC::Group>,
+    PhantomData<G>,
+)
+where
+    QuoteC: Currency;
 
-impl<QuoteC> DummyOracle<QuoteC> {
+impl<G, QuoteC> DummyOracle<G, QuoteC>
+where
+    QuoteC: Currency,
+{
     pub fn with_price(c_in_base: Amount) -> Self {
-        Self(Some(c_in_base), Self::ref_())
+        Self(Some(c_in_base), Self::ref_(), PhantomData)
     }
 
     pub fn failing() -> Self {
-        Self(None, Self::ref_())
+        Self(None, Self::ref_(), PhantomData)
     }
 
-    fn ref_() -> OracleRef<QuoteC> {
+    fn ref_() -> OracleRef<QuoteC, QuoteC::Group> {
         OracleRef::unchecked(Addr::unchecked("ADDR"))
     }
 }
 
-impl<QuoteC> Oracle<QuoteC> for DummyOracle<QuoteC>
+impl<G, QuoteC> Oracle for DummyOracle<G, QuoteC>
 where
+    G: Group,
     QuoteC: Currency,
 {
-    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
+    type G = G;
+
+    type QuoteC = QuoteC;
+
+    type QuoteG = QuoteC::Group;
+
+    fn price_of<C>(&self) -> Result<Price<C, QuoteC>, G>
     where
-        C: Currency,
-        G: Group,
+        C: Currency + MemberOf<G>,
     {
         self.0
             .map(|price| price::total_of(1.into()).is(price.into()))
-            .ok_or_else(|| Error::FailedToFetchPrice {
-                from: C::TICKER.into(),
-                to: QuoteC::TICKER.into(),
-                error: StdError::GenericErr {
-                    msg: "Test failing Oracle::price_of()".into(),
-                },
+            .ok_or_else(|| {
+                error::failed_to_fetch_price(
+                    CurrencyDTO::<G>::from_currency_type::<C>(),
+                    CurrencyDTO::<Self::QuoteG>::from_currency_type::<QuoteC>(),
+                    StdError::GenericErr {
+                        msg: "Test failing Oracle::price_of()".into(),
+                    },
+                )
             })
     }
 }
 
-impl<QuoteC> From<DummyOracle<QuoteC>> for OracleRef<QuoteC> {
-    fn from(value: DummyOracle<QuoteC>) -> Self {
+impl<G, QuoteC> From<DummyOracle<G, QuoteC>> for OracleRef<QuoteC, QuoteC::Group>
+where
+    QuoteC: Currency,
+{
+    fn from(value: DummyOracle<G, QuoteC>) -> Self {
         value.1
     }
 }
 
-impl<QuoteC> AsRef<OracleRef<QuoteC>> for DummyOracle<QuoteC> {
-    fn as_ref(&self) -> &OracleRef<QuoteC> {
+impl<G, QuoteC> AsRef<OracleRef<QuoteC, QuoteC::Group>> for DummyOracle<G, QuoteC>
+where
+    QuoteC: Currency,
+{
+    fn as_ref(&self) -> &OracleRef<QuoteC, QuoteC::Group> {
         &self.1
     }
 }

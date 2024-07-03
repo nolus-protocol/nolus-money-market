@@ -1,10 +1,12 @@
-use currency::Currency;
+use currency::{Currency, CurrencyDTO, Group};
 use serde::Serialize;
 
 use crate::msg::{BaseCurrencyQueryMsg, StableCurrencyQueryMsg};
 
 pub trait RequestBuilder {
-    fn currency() -> impl Serialize;
+    fn currency<G>() -> impl Serialize
+    where
+        G: Group;
 
     fn price<C>() -> impl Serialize
     where
@@ -13,8 +15,11 @@ pub trait RequestBuilder {
 
 pub struct BasePriceRequest {}
 impl RequestBuilder for BasePriceRequest {
-    fn currency() -> impl Serialize {
-        BaseCurrencyQueryMsg::BaseCurrency {}
+    fn currency<G>() -> impl Serialize
+    where
+        G: Group,
+    {
+        BaseCurrencyQueryMsg::<G>::BaseCurrency {}
     }
 
     fn price<C>() -> impl Serialize
@@ -22,15 +27,18 @@ impl RequestBuilder for BasePriceRequest {
         C: Currency,
     {
         BaseCurrencyQueryMsg::BasePrice {
-            currency: CurrencyDTO::from_currency_type::<C>,
+            currency: CurrencyDTO::<C::Group>::from_currency_type::<C>(),
         }
     }
 }
 
 pub struct StablePriceRequest {}
 impl RequestBuilder for StablePriceRequest {
-    fn currency() -> impl Serialize {
-        StableCurrencyQueryMsg::StableCurrency {}
+    fn currency<G>() -> impl Serialize
+    where
+        G: Group,
+    {
+        StableCurrencyQueryMsg::<G>::StableCurrency {}
     }
 
     fn price<C>() -> impl Serialize
@@ -38,7 +46,7 @@ impl RequestBuilder for StablePriceRequest {
         C: Currency,
     {
         StableCurrencyQueryMsg::StablePrice {
-            currency: C::TICKER.to_string(),
+            currency: CurrencyDTO::<C::Group>::from_currency_type::<C>(),
         }
     }
 }

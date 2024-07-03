@@ -1,11 +1,18 @@
 use sdk::schemars::{self, JsonSchema};
 use serde::Serialize;
 
-use currency::{CurrencyDTO, SymbolOwned};
+use currency::{CurrencyDTO, Group};
 
 #[derive(Serialize, JsonSchema)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum BaseCurrencyQueryMsg {
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
+pub enum BaseCurrencyQueryMsg<G>
+where
+    G: Group,
+{
     /// Report the base currency as [CurrencyDTO]
     BaseCurrency {},
 
@@ -16,13 +23,20 @@ pub enum BaseCurrencyQueryMsg {
 }
 
 #[derive(Serialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum StableCurrencyQueryMsg {
-    /// Report the stable currency as [SymbolOwned]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
+pub enum StableCurrencyQueryMsg<G>
+where
+    G: Group,
+{
+    /// Report the stable currency as [CurrencyDTO]
     StableCurrency {},
 
     /// Provide the price of a currency against the stable one
     ///
     /// Return [PriceDTO]
-    StablePrice { currency: SymbolOwned },
+    StablePrice { currency: CurrencyDTO<G> },
 }

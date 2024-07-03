@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::{group::MemberOf, Currency, Group};
 use finance::coin::Coin;
 
 use crate::{error::Error, stub::Oracle};
@@ -8,11 +8,11 @@ use self::impl_::PriceConvert;
 pub fn from_quote<QuoteC, OracleS, OutC, OutG>(
     oracle: &OracleS,
     in_amount: Coin<QuoteC>,
-) -> Result<Coin<OutC>, Error>
+) -> Result<Coin<OutC>, Error<OutG>>
 where
     QuoteC: Currency,
-    OracleS: Oracle<QuoteC>,
-    OutC: Currency,
+    OracleS: Oracle<G = OutG, QuoteC = QuoteC, QuoteG = QuoteC::Group>,
+    OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
     PriceConvert::new(in_amount).with_quote_in::<_, OutG>(oracle)
@@ -21,12 +21,12 @@ where
 pub fn to_quote<InC, InG, QuoteC, OracleS>(
     oracle: &OracleS,
     in_amount: Coin<InC>,
-) -> Result<Coin<QuoteC>, Error>
+) -> Result<Coin<QuoteC>, Error<InG>>
 where
-    InC: Currency,
+    InC: Currency + MemberOf<InG>,
     InG: Group,
     QuoteC: Currency,
-    OracleS: Oracle<QuoteC>,
+    OracleS: Oracle<G = InG, QuoteC = QuoteC, QuoteG = QuoteC::Group>,
 {
     PriceConvert::new(in_amount).with_quote_out::<InG, _>(oracle)
 }
@@ -34,7 +34,7 @@ where
 mod impl_ {
     use std::marker::PhantomData;
 
-    use currency::{Currency, Group};
+    use currency::{group::MemberOf, Currency, Group};
     use finance::{coin::Coin, price};
 
     use crate::{error::Error, Oracle};
@@ -63,26 +63,28 @@ mod impl_ {
         pub(super) fn with_quote_in<OracleImpl, OutG>(
             &self,
             oracle: &OracleImpl,
-        ) -> Result<Coin<OutC>, Error>
+        ) -> Result<Coin<OutC>, Error<OutG>>
         where
-            OracleImpl: Oracle<InC>,
+            OracleImpl: Oracle<G = OutG, QuoteC = InC, QuoteG = InC::Group>,
+            OutC: MemberOf<OutG>,
             OutG: Group,
         {
             oracle
-                .price_of::<OutC, OutG>()
+                .price_of::<OutC>()
                 .map(|price| price::total(self.in_amount, price.inv()))
         }
 
         pub(super) fn with_quote_out<InG, OracleImpl>(
             &self,
             oracle: &OracleImpl,
-        ) -> Result<Coin<OutC>, Error>
+        ) -> Result<Coin<OutC>, Error<InG>>
         where
+            InC: MemberOf<InG>,
             InG: Group,
-            OracleImpl: Oracle<OutC>,
+            OracleImpl: Oracle<G = InG, QuoteC = OutC, QuoteG = OutC::Group>,
         {
             oracle
-                .price_of::<InC, InG>()
+                .price_of::<InC>()
                 .map(|price| price::total(self.in_amount, price))
         }
     }

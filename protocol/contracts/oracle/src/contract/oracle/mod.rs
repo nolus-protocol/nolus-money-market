@@ -94,7 +94,7 @@ where
     pub(super) fn try_query_base_price(
         &self,
         at: Timestamp,
-        currency: &SymbolSlice,
+        currency: &CurrencyDTO<PriceCurrencies>,
     ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
         self.feeds
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
@@ -103,7 +103,7 @@ where
     pub(super) fn try_query_stable_price(
         &self,
         at: Timestamp,
-        currency: &SymbolOwned,
+        currency: &CurrencyDTO<PriceCurrencies>,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
         type StableBasePrice = Price<StableCurrency, BaseCurrency>;
 
@@ -115,6 +115,8 @@ where
         where
             G: Group,
         {
+            type BaseG = PriceG;
+
             type Output = PriceDTO<G, G>;
 
             type Error = ContractError;

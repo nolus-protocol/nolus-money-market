@@ -1,72 +1,98 @@
 use std::marker::PhantomData;
 
-use currency::{group::MemberOf, Currency, Group};
-use finance::price::{self, dto::PriceDTO, Price};
+use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
+use finance::price::{base::BasePrice, dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use serde::Deserialize;
 
 use crate::{
-    error::{Error, Result},
+    error::{self, Result},
     Oracle, OracleRef,
 };
 
 use super::RequestBuilder;
 
 trait PriceConverter {
-    fn try_convert<C, G, BaseC, BaseG>(dto: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
+    type G: Group;
+    type QuoteC: Currency + MemberOf<Self::QuoteG>;
+    type QuoteG: Group;
+    type From;
+
+    fn convert<C>(from: Self::From) -> Price<C, Self::QuoteC>
     where
-        C: Currency,
-        G: Group,
-        BaseC: Currency,
-        BaseG: Group;
+        C: Currency + MemberOf<Self::G>;
 }
-pub struct CheckedConverter();
-impl PriceConverter for CheckedConverter {
-    fn try_convert<C, G, BaseC, BaseG>(price: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
+pub struct CheckedConverter<G, QuoteC, QuoteG>(
+    PhantomData<G>,
+    PhantomData<QuoteC>,
+    PhantomData<QuoteG>,
+);
+impl<G, QuoteC, QuoteG> PriceConverter for CheckedConverter<G, QuoteC, QuoteG>
+where
+    G: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    type G = G;
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+    type From = PriceDTO<G, QuoteG>;
+
+    fn convert<C>(from: Self::From) -> Price<C, QuoteC>
     where
-        C: Currency,
-        G: Group,
-        BaseC: Currency,
-        BaseG: Group,
+        C: Currency + MemberOf<G>,
     {
-        price.try_into().map_err(Into::into)
+        from.into()
     }
 }
 
 #[cfg(feature = "unchecked-quote-currency")]
-pub struct QuoteCUncheckedConverter();
+pub struct QuoteCUncheckedConverter<G, QuoteC, QuoteG>(
+    PhantomData<G>,
+    PhantomData<QuoteC>,
+    PhantomData<QuoteG>,
+);
 #[cfg(feature = "unchecked-quote-currency")]
-impl PriceConverter for QuoteCUncheckedConverter {
-    fn try_convert<C, G, BaseC, BaseG>(price: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
-    where
-        C: Currency,
-        G: Group,
-        BaseC: Currency,
-        BaseG: Group,
-    {
-        use finance::coin::Coin;
+impl<G, QuoteC, QuoteG> PriceConverter for QuoteCUncheckedConverter<G, QuoteC, QuoteG>
+where
+    G: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    type G = G;
 
-        price::total_of(price.base().into()).is(Into::<Coin<BaseC>>::into(price.quote().amount()))
+    type QuoteC = QuoteC;
+
+    type QuoteG = QuoteG;
+
+    type From = BasePrice<G, QuoteC>;
+
+    fn convert<C>(price: Self::From) -> Price<C, QuoteC>
+    where
+        C: Currency + MemberOf<Self::G>,
+    {
+        (&price).into()
     }
 }
 
-pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> {
-    oracle_ref: OracleRef<QuoteC>,
+pub struct OracleStub<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT> {
+    oracle_ref: OracleRef<QuoteC, QuoteG>,
     querier: QuerierWrapper<'a>,
-    _quote_group: PhantomData<QuoteG>,
+    _group: PhantomData<G>,
     _request: PhantomData<PriceReq>,
     _converter: PhantomData<PriceConverterT>,
 }
 
-impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
-    OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+impl<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>
+    OracleStub<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
 {
-    pub fn new(oracle_ref: OracleRef<QuoteC>, querier: QuerierWrapper<'a>) -> Self {
+    pub fn new(oracle_ref: OracleRef<QuoteC, QuoteG>, querier: QuerierWrapper<'a>) -> Self {
         Self {
             oracle_ref,
             querier,
-            _quote_group: PhantomData,
+            _group: PhantomData,
             _request: PhantomData,
             _converter: PhantomData,
         }
@@ -77,18 +103,23 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC>
-    for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
+impl<'a, G, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle
+    for OracleStub<'a, G, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     PriceReqT: RequestBuilder,
-    PriceConverterT: PriceConverter,
+    PriceConverterT: PriceConverter<G = G, QuoteG = QuoteG, QuoteC = QuoteC>,
+    PriceConverterT::From: for<'de> Deserialize<'de>,
 {
-    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
+    type G = G;
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+
+    fn price_of<C>(&self) -> Result<Price<C, Self::QuoteC>, Self::G>
     where
-        C: Currency,
-        G: Group,
+        C: Currency + MemberOf<Self::G>,
     {
         if currency::equal::<C, QuoteC>() {
             return Ok(Price::identity());
@@ -97,27 +128,30 @@ where
         let msg = PriceReqT::price::<C>();
         self.querier
             .query_wasm_smart(self.addr(), &msg)
-            .map_err(|error| Error::FailedToFetchPrice {
-                from: C::TICKER.into(),
-                to: QuoteC::TICKER.into(),
-                error,
+            .map_err(|error| {
+                error::failed_to_fetch_price(
+                    CurrencyDTO::<G>::from_currency_type::<C>(),
+                    CurrencyDTO::<QuoteG>::from_currency_type::<QuoteC>(),
+                    error,
+                )
             })
-            .and_then(PriceConverterT::try_convert::<C, G, QuoteC, QuoteG>)
+            .map(PriceConverterT::convert::<C>)
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC>>
-    for OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+impl<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC, QuoteG>>
+    for OracleStub<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>
 {
-    fn as_ref(&self) -> &OracleRef<QuoteC> {
+    fn as_ref(&self) -> &OracleRef<QuoteC, QuoteG> {
         &self.oracle_ref
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
-    From<OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>> for OracleRef<QuoteC>
+impl<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>
+    From<OracleStub<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>>
+    for OracleRef<QuoteC, QuoteG>
 {
-    fn from(stub: OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>) -> Self {
+    fn from(stub: OracleStub<'a, G, QuoteC, QuoteG, PriceReq, PriceConverterT>) -> Self {
         stub.oracle_ref
     }
 }

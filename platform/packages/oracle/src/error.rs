@@ -2,13 +2,16 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{Definition, SymbolOwned};
+use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::StdError;
 
-pub type Result<T> = StdResult<T, Error>;
+pub type Result<T, G> = StdResult<T, Error<G>>;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum Error {
+pub enum Error<G>
+where
+    G: Group,
+{
     #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
     StubConfigQuery(StdError),
 
@@ -17,21 +20,37 @@ pub enum Error {
 
     #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
     FailedToFetchPrice {
-        from: SymbolOwned,
-        to: SymbolOwned,
+        from: CurrencyDTO<G>,
+        to: String,
         error: StdError,
     },
 
     #[error("[Oracle; Stub] Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
+    CurrencyMismatch {
+        expected: CurrencyDTO<G>,
+        found: CurrencyDTO<G>,
+    },
 }
 
-pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> Error
+pub fn currency_mismatch<G>(expected: CurrencyDTO<G>, found: CurrencyDTO<G>) -> Error<G>
 where
-    ExpC: Definition,
+    G: Group,
 {
-    Error::CurrencyMismatch {
-        expected: ExpC::TICKER.into(),
-        found,
+    Error::CurrencyMismatch { expected, found }
+}
+
+pub fn failed_to_fetch_price<G, QuoteG>(
+    from: CurrencyDTO<G>,
+    to: CurrencyDTO<QuoteG>,
+    error: StdError,
+) -> Error<G>
+where
+    G: Group,
+    QuoteG: Group,
+{
+    Error::FailedToFetchPrice {
+        from: from,
+        to: to.to_string(),
+        error,
     }
 }
