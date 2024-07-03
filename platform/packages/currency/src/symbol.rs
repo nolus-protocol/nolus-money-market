@@ -1,4 +1,4 @@
-use crate::{Definition,  SymbolStatic};
+use crate::{Definition, SymbolStatic};
 
 pub trait Symbol {
     const DESCR: &'static str;

@@ -32,10 +32,8 @@ impl Definition for NlsPlatform {
     const DECIMAL_DIGITS: u8 = 6;
 }
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Native;
-
 
 impl Group for Native {
     const DESCR: &'static str = "Native";

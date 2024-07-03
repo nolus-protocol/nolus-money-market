@@ -123,7 +123,6 @@ mod impl_ {
         const DECIMAL_DIGITS: u8 = 0;
     }
 
-
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC4;
     impl Currency for TestC4 {
@@ -138,7 +137,6 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC5;
@@ -155,7 +153,6 @@ mod impl_ {
         const DECIMAL_DIGITS: u8 = 0;
     }
 
-
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC6;
     impl Currency for TestC6 {
@@ -171,7 +168,6 @@ mod impl_ {
         const DECIMAL_DIGITS: u8 = 0;
     }
 
-
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
     pub struct TestC10;
     impl Currency for TestC10 {
@@ -186,5 +182,4 @@ mod impl_ {
 
         const DECIMAL_DIGITS: u8 = 0;
     }
-
 }

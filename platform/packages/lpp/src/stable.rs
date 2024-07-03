@@ -40,12 +40,13 @@ impl Group for StableCurrencyGroup {
     {
         Self::maybe_visit_member(Imatcher, visitor)
     }
-    
+
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: currency::Matcher + ?Sized,
         V: AnyVisitor,
-        Self: MemberOf<V::VisitedG> {
-            Ok(visitor.on::<Stable>())
+        Self: MemberOf<V::VisitedG>,
+    {
+        Ok(visitor.on::<Stable>())
     }
 }
