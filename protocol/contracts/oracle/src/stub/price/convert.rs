@@ -10,7 +10,7 @@ use oracle_platform::{
 };
 
 pub fn from_quote<QuoteC, QuoteG, OutC, OutG>(
-    oracle_ref: OracleRef<QuoteC>,
+    oracle_ref: OracleRef<QuoteC, QuoteG>,
     in_amount: Coin<QuoteC>,
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>>
@@ -31,9 +31,10 @@ where
         _out_group: PhantomData<OutG>,
     }
 
-    impl<QuoteC, OutC, OutG> WithOracle<QuoteC> for PriceConvert<QuoteC, OutC, OutG>
+    impl<QuoteC, QuoteG, OutC, OutG> WithOracle<QuoteC, QuoteG> for PriceConvert<QuoteC, OutC, OutG>
     where
         QuoteC: Currency,
+        QuoteG: Group,
         OutC: Currency,
         OutG: Group,
     {
@@ -42,13 +43,13 @@ where
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC>,
+            OracleImpl: Oracle<QuoteC, QuoteG>,
         {
-            oracle_platform::convert::from_quote::<_, _, _, OutG>(&oracle, self.in_amount)
+            oracle_platform::convert::from_quote::<_, _, _, _, OutG>(&oracle, self.in_amount)
         }
     }
 
-    oracle_ref.execute_as_oracle::<QuoteG, _>(
+    oracle_ref.execute_as_oracle(
         PriceConvert {
             in_amount,
             _out: PhantomData::<OutC>,
@@ -59,7 +60,7 @@ where
 }
 
 pub fn to_quote<InC, InG, QuoteC, QuoteG>(
-    oracle_ref: OracleRef<QuoteC>,
+    oracle_ref: OracleRef<QuoteC, QuoteG>,
     in_amount: Coin<InC>,
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<QuoteC>>
@@ -80,24 +81,25 @@ where
         _out: PhantomData<QuoteC>,
     }
 
-    impl<InC, InG, QuoteC> WithOracle<QuoteC> for PriceConvert<InC, InG, QuoteC>
+    impl<InC, InG, QuoteC, QuoteG> WithOracle<QuoteC, QuoteG> for PriceConvert<InC, InG, QuoteC>
     where
         InC: Currency,
         InG: Group,
         QuoteC: Currency,
+        QuoteG: Group,
     {
         type Output = Coin<QuoteC>;
         type Error = Error;
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC>,
+            OracleImpl: Oracle<QuoteC, QuoteG>,
         {
-            oracle_platform::convert::to_quote::<_, InG, _, _>(&oracle, self.in_amount)
+            oracle_platform::convert::to_quote::<_, InG, _, _, _>(&oracle, self.in_amount)
         }
     }
 
-    oracle_ref.execute_as_oracle::<QuoteG, _>(
+    oracle_ref.execute_as_oracle(
         PriceConvert {
             in_amount,
             _in_group: PhantomData::<InG>,

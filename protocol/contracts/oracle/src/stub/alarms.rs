@@ -1,28 +1,46 @@
 use oracle_platform::OracleRef;
+
+use currency::{Currency, Group};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
-use crate::api::{
-    alarms::{Alarm, AlarmCurrencies, Error, ExecuteMsg, Result},
-    BaseCurrencies,
-};
+use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
-pub trait PriceAlarms
+pub trait PriceAlarms<AlarmCurrencies>
 where
-    Self: Into<Batch>,
+    AlarmCurrencies: Group,
+    Self: Into<Batch> + Sized,
 {
-    type BaseC;
+    type BaseC: Currency + ?Sized;
+    type BaseG: Group;
 
-    //TODO use a type-safe Alarm, one with the typed Price
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()>;
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, Self::BaseG>) -> Result<()>;
 }
 
-pub trait AsAlarms {
-    fn as_alarms(&self) -> impl PriceAlarms;
+pub trait AsAlarms<OracleBase, OracleBaseG>
+where
+    OracleBase: Currency + ?Sized,
+    OracleBaseG: Group,
+{
+    fn as_alarms<AlarmCurrencies>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, BaseC = OracleBase, BaseG = OracleBaseG>
+    where
+        AlarmCurrencies: Group;
 }
 
-impl<OracleBase> AsAlarms for OracleRef<OracleBase> {
-    fn as_alarms(&self) -> impl PriceAlarms {
+impl<OracleBase, OracleBaseG> AsAlarms<OracleBase, OracleBaseG>
+    for OracleRef<OracleBase, OracleBaseG>
+where
+    OracleBase: Currency + ?Sized,
+    OracleBaseG: Group,
+{
+    fn as_alarms<AlarmCurrencies>(
+        &self,
+    ) -> impl PriceAlarms<AlarmCurrencies, BaseC = OracleBase, BaseG = OracleBaseG>
+    where
+        AlarmCurrencies: Group,
+    {
         AlarmsStub {
             oracle_ref: self,
             batch: Batch::default(),
@@ -30,21 +48,36 @@ impl<OracleBase> AsAlarms for OracleRef<OracleBase> {
     }
 }
 
-struct AlarmsStub<'a, OracleBase> {
-    oracle_ref: &'a OracleRef<OracleBase>,
+struct AlarmsStub<'a, OracleBase, OracleBaseG>
+where
+    OracleBase: Currency + ?Sized,
+    OracleBaseG: Group,
+{
+    oracle_ref: &'a OracleRef<OracleBase, OracleBaseG>,
     batch: Batch,
 }
 
-impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
+impl<'a, OracleBase, OracleBaseG> AlarmsStub<'a, OracleBase, OracleBaseG>
+where
+    OracleBase: Currency + ?Sized,
+    OracleBaseG: Group,
+{
     fn addr(&self) -> &Addr {
         self.oracle_ref.addr()
     }
 }
 
-impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase> {
+impl<'a, AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies>
+    for AlarmsStub<'a, OracleBase, OracleBaseG>
+where
+    AlarmCurrencies: Group,
+    OracleBase: Currency,
+    OracleBaseG: Group,
+{
     type BaseC = OracleBase;
+    type BaseG = OracleBaseG;
 
-    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, BaseCurrencies>) -> Result<()> {
+    fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, Self::BaseG>) -> Result<()> {
         self.batch.schedule_execute_no_reply(
             wasm_execute(
                 self.addr().clone(),
@@ -58,8 +91,12 @@ impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase> {
     }
 }
 
-impl<'a, OracleBase> From<AlarmsStub<'a, OracleBase>> for Batch {
-    fn from(stub: AlarmsStub<'a, OracleBase>) -> Self {
+impl<'a, OracleBase, OracleBaseG> From<AlarmsStub<'a, OracleBase, OracleBaseG>> for Batch
+where
+    OracleBase: Currency + ?Sized,
+    OracleBaseG: Group,
+{
+    fn from(stub: AlarmsStub<'a, OracleBase, OracleBaseG>) -> Self {
         stub.batch
     }
 }

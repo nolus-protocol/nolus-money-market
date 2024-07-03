@@ -11,6 +11,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::ContractResult,
     finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
@@ -19,7 +20,7 @@ use crate::{
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency>,
+    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     Asset: Currency,
 {
     pub(super) fn reschedule(
@@ -29,7 +30,7 @@ where
         liquidation_zone: &Zone,
         total_due: LpnCoin,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef<LpnCurrency>,
+        price_alarms: &OracleRef<LpnCurrency, LpnCurrencies>,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
 
@@ -37,7 +38,7 @@ where
             .setup_alarm(next_recheck)
             .map_err(Into::into)
             .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms();
+                let mut price_alarms = price_alarms.as_alarms::<LeaseAssetCurrencies>();
                 self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
                     .map(|_| schedule_time_alarm.merge(price_alarms.into()))
             })
@@ -50,7 +51,8 @@ where
         price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
-        PriceAlarms: PriceAlarmsTrait,
+        PriceAlarms:
+            PriceAlarmsTrait<LeaseAssetCurrencies, BaseC = LpnCurrency, BaseG = LpnCurrencies>,
     {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
@@ -70,6 +72,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use currencies::{LeaseGroup, Lpns};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -133,7 +136,7 @@ mod tests {
             let below_alarm = total_of(liability_alarm_on.of(asset)).is(due.total_due());
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
                     alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
@@ -191,7 +194,7 @@ mod tests {
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm {
+                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
                     alarm: Alarm::new(exp_below, Some(exp_above)),
                 })
                 .unwrap(),
@@ -206,7 +209,7 @@ mod tests {
         TimeAlarmsRef::unchecked(TIME_ALARMS_ADDR)
     }
 
-    fn pricealarms() -> OracleRef<TestLpn> {
+    fn pricealarms() -> OracleRef<TestLpn, Lpns> {
         OracleRef::unchecked(Addr::unchecked(ORACLE_ADDR))
     }
 }

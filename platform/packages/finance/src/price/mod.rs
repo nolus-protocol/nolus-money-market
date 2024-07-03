@@ -70,6 +70,8 @@ where
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+        debug_assert_eq!(Ok(()), Self::precondition_check(amount, amount_quote));
+
         let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
             amount.into_coprime_with(amount_quote);
 
@@ -125,17 +127,19 @@ where
         }
     }
 
+    fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<()> {
+        Self::check(!amount.is_zero(), "The amount should not be zero").and(Self::check(
+            !amount_quote.is_zero(),
+            "The quote amount should not be zero",
+        ))
+    }
+
     fn invariant_held(&self) -> Result<()> {
-        Self::check(!self.amount.is_zero(), "The amount should not be zero")
-            .and(Self::check(
-                !self.amount_quote.is_zero(),
-                "The quote amount should not be zero",
-            ))
-            .and(Self::check(
-                Amount::from(self.amount) == Amount::from(self.amount_quote)
-                    || !currency::equal::<C, QuoteC>(),
-                "The price should be equal to the identity if the currencies match",
-            ))
+        Self::precondition_check(self.amount, self.amount_quote).and(Self::check(
+            Amount::from(self.amount) == Amount::from(self.amount_quote)
+                || !currency::equal::<C, QuoteC>(),
+            "The price should be equal to the identity if the currencies match",
+        ))
     }
 
     fn check(invariant: bool, msg: &str) -> Result<()> {

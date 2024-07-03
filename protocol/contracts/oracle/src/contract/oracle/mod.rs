@@ -5,8 +5,11 @@ use std::{
 
 use currency::{Currency, Group, SymbolOwned, SymbolSlice};
 use finance::price::{
-    base::BasePrice,
-    dto::{with_quote, PriceDTO, WithQuote},
+    base::{
+        with_price::{self, WithPrice},
+        BasePrice,
+    },
+    dto::PriceDTO,
     Price,
 };
 use platform::{
@@ -16,7 +19,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    api::{AlarmsStatusResponse, BaseCurrency, Config, ExecuteAlarmMsg, StableCurrency},
+    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg, StableCurrency},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
     error::ContractError,
     result::ContractResult,
@@ -28,8 +31,8 @@ use self::feeder::Feeders;
 pub mod feed;
 pub mod feeder;
 
-pub(crate) type PriceResult<PriceG, OracleBase> =
-    Result<BasePrice<PriceG, OracleBase>, ContractError>;
+pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
+    Result<BasePrice<PriceG, OracleBase, OracleBaseG>, ContractError>;
 
 pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
@@ -70,7 +73,7 @@ where
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
         MarketAlarms::new(self.storage.deref())
-            .try_query_alarms::<_, BaseC>(self.calc_all_prices(block_time))
+            .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(block_time))
             .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
     }
 
@@ -81,7 +84,7 @@ where
         self.calc_all_prices(block_time).try_fold(
             vec![],
             |mut v: Vec<PriceDTO<PriceG, BaseG>>,
-             price: Result<BasePrice<PriceG, BaseC>, ContractError>| {
+             price: Result<BasePrice<PriceG, BaseC, BaseG>, ContractError>| {
                 price.map(|price| {
                     v.push(price.into());
 
@@ -95,7 +98,7 @@ where
         &self,
         at: Timestamp,
         currency: &SymbolSlice,
-    ) -> Result<PriceDTO<PriceG, BaseG>, ContractError> {
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
         self.feeds
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
@@ -105,14 +108,13 @@ where
         at: Timestamp,
         currency: &SymbolOwned,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
-        type StableBasePrice = Price<StableCurrency, BaseCurrency>;
-
-        struct StablePriceCalc<G> {
-            stable_to_base_price: StableBasePrice,
+        struct StablePriceCalc<BaseCurrency, G> {
+            stable_to_base_price: Price<StableCurrency, BaseCurrency>,
             _group: PhantomData<G>,
         }
-        impl<G> WithQuote<BaseCurrency> for StablePriceCalc<G>
+        impl<BaseCurrency, G> WithPrice<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
         where
+            BaseCurrency: Currency,
             G: Group,
         {
             type Output = PriceDTO<G, G>;
@@ -130,11 +132,13 @@ where
             }
         }
         self.try_query_base_price(at, StableCurrency::TICKER)
-            .and_then(|stable_price| stable_price.try_into().map_err(Into::into))
-            .and_then(|stable_price: StableBasePrice| {
+            .and_then(|stable_price| {
+                Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
+            })
+            .and_then(|stable_price: Price<StableCurrency, BaseC>| {
                 self.try_query_base_price(at, currency)
                     .and_then(|ref base_price| {
-                        with_quote::execute(
+                        with_price::execute(
                             base_price,
                             StablePriceCalc {
                                 stable_to_base_price: stable_price,
@@ -148,7 +152,7 @@ where
     fn calc_all_prices(
         &self,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC>> + '_ {
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + '_ {
         self.feeds.all_prices_iter(
             self.storage.deref(),
             self.tree.swap_pairs_df(),
@@ -175,7 +179,7 @@ where
     ) -> ContractResult<(u32, MessageResponse)> {
         let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
             .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, BaseC>(self.calc_all_prices(block_time))?
+            .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(block_time))?
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
@@ -215,7 +219,7 @@ where
 mod test_normalized_price_not_found {
     use currencies::{
         test::{LpnC, NativeC, PaymentC3},
-        Lpns,
+        Lpns, PaymentGroup,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
@@ -237,6 +241,7 @@ mod test_normalized_price_not_found {
     type BaseCurrency = LpnC;
     type StableCurrency = PaymentC3;
     type BaseGroup = Lpns;
+    type AlarmCurrencies = PaymentGroup;
 
     type NlsCoin = Coin<NativeC>;
     type UsdcCoin = Coin<LpnC>;
@@ -298,9 +303,9 @@ mod test_normalized_price_not_found {
             MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, _>(
+            .try_add_price_alarm::<BaseCurrency, BaseGroup>(
                 Addr::unchecked("1"),
-                Alarm::<_, BaseGroup>::new(
+                Alarm::<AlarmCurrencies, BaseCurrency, BaseGroup>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
                     Some(price::total_of(PRICE_BASE).is(PRICE_QUOTE)),
                 ),

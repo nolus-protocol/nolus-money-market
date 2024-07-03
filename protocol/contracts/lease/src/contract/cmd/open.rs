@@ -75,7 +75,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency>,
+        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     {
         let lease = PositionSpec::try_from(self.form.position_spec)
             .and_then(|spec| Position::<Asset>::try_from(self.amount, spec))

@@ -28,7 +28,7 @@ mod unchecked;
 /// carries also the currency ticker. The aim is to use it everywhere the cosmwasm
 /// framework does not support type parameterization or where the currency type
 /// is unknown at compile time.
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
@@ -121,6 +121,19 @@ where
 
     fn invariant_held(&self) -> Result<()> {
         currency::validate::<G>(&self.ticker).map_err(Into::into)
+    }
+}
+
+impl<G> Clone for CoinDTO<G>
+where
+    G: Group,
+{
+    fn clone(&self) -> Self {
+        Self {
+            amount: self.amount,
+            ticker: self.ticker.clone(),
+            _g: PhantomData,
+        }
     }
 }
 

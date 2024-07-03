@@ -178,7 +178,7 @@ impl<I> TryFind for I where I: Iterator + ?Sized {}
 mod tests {
     use currencies::{
         test::{LpnC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-        PaymentGroup,
+        Lpns, PaymentGroup,
     };
     use currency::never::Never;
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
@@ -200,7 +200,7 @@ mod tests {
             Config::new(
                 24,
                 Addr::unchecked("DEADCODE"),
-                OracleRef::<LpnC>::unchecked(Addr::unchecked("DEADCODE")),
+                OracleRef::<LpnC, Lpns>::unchecked(Addr::unchecked("DEADCODE")),
                 TimeAlarmsRef::unchecked("DEADCODE"),
             ),
             Account::unchecked(

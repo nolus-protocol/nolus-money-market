@@ -33,7 +33,7 @@ impl WithLease for LeaseState {
     where
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency>,
+        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     {
         Ok(StateResponse::opened_from(
             lease.state(self.now),

@@ -58,7 +58,7 @@ where
     where
         Asset: Currency,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency>,
+        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
     {
         let lease_addr = lease.addr().clone();
 

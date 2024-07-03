@@ -46,7 +46,10 @@ where
         .into()
 }
 
-pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<PriceGroup, TheCurrency>
+pub(crate) fn base_price<C>(
+    total_of: Amount,
+    is: Amount,
+) -> BasePrice<PriceGroup, TheCurrency, TheStableGroup>
 where
     C: Currency,
 {

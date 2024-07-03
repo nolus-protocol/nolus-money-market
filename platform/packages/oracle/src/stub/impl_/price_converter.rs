@@ -53,10 +53,13 @@ impl PriceConverter for QuoteCUncheckedConverter {
     }
 }
 
-pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> {
-    oracle_ref: OracleRef<QuoteC>,
+pub struct OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+where
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    oracle_ref: OracleRef<QuoteC, QuoteG>,
     querier: QuerierWrapper<'a>,
-    _quote_group: PhantomData<QuoteG>,
     _request: PhantomData<PriceReq>,
     _converter: PhantomData<PriceConverterT>,
 }
@@ -67,14 +70,13 @@ where
     QuoteC: Currency,
     QuoteG: Group,
 {
-    pub fn new(oracle_ref: OracleRef<QuoteC>, querier: QuerierWrapper<'a>) -> Self {
+    pub fn new(oracle_ref: OracleRef<QuoteC, QuoteG>, querier: QuerierWrapper<'a>) -> Self {
         currency::validate_member::<QuoteC, QuoteG>()
             .expect("create OracleStub with an appropriate currency and a group");
 
         Self {
             oracle_ref,
             querier,
-            _quote_group: PhantomData,
             _request: PhantomData,
             _converter: PhantomData,
         }
@@ -85,7 +87,7 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC>
+impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC, QuoteG>
     for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
     QuoteC: Currency,
@@ -114,16 +116,22 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC>>
+impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT> AsRef<OracleRef<QuoteC, QuoteG>>
     for OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
+where
+    QuoteC: Currency,
+    QuoteG: Group,
 {
-    fn as_ref(&self) -> &OracleRef<QuoteC> {
+    fn as_ref(&self) -> &OracleRef<QuoteC, QuoteG> {
         &self.oracle_ref
     }
 }
 
 impl<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>
-    From<OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>> for OracleRef<QuoteC>
+    From<OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>> for OracleRef<QuoteC, QuoteG>
+where
+    QuoteC: Currency,
+    QuoteG: Group,
 {
     fn from(stub: OracleStub<'a, QuoteC, QuoteG, PriceReq, PriceConverterT>) -> Self {
         stub.oracle_ref
