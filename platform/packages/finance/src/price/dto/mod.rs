@@ -11,6 +11,8 @@ use crate::{
     price::Price,
 };
 
+use super::base::BasePrice;
+
 mod unchecked;
 pub mod with_price;
 
@@ -42,8 +44,8 @@ where
         res
     }
 
-    pub fn base(&self) -> CoinDTO<G> {
-        self.amount.clone()
+    pub const fn base(&self) -> &CoinDTO<G> {
+        &self.amount
     }
 
     pub const fn quote(&self) -> &CoinDTO<QuoteG> {
@@ -109,6 +111,22 @@ where
 
     fn try_from(value: PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
         Self::try_from(&value)
+    }
+}
+
+impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    type Error = Error;
+
+    fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
+        price
+            .amount_quote
+            .try_into()
+            .and_then(|amount_quote| Self::new_checked(price.amount, amount_quote))
     }
 }
 
@@ -312,7 +330,7 @@ mod test_invariant {
             Coin::<SuperGroupTestC2>::new(4).into(),
         );
         assert_eq!(
-            CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
+            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC2>::new(4)),
             p.base()
         );
     }
@@ -326,7 +344,7 @@ mod test_invariant {
         );
         assert_eq!(
             load(&json.into_bytes()).unwrap().base(),
-            CoinDTO::<TC>::from(Coin::<SuperGroupTestC1>::new(4)),
+            &CoinDTO::<TC>::from(Coin::<SuperGroupTestC1>::new(4)),
         );
     }
 
