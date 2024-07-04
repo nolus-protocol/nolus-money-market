@@ -7,7 +7,9 @@ use std::{
 use sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::{group::MemberOf, Currency, Group, TypeMatcher};
+use crate::{
+    group::MemberOf, never::{self, Never}, Currency, Definition, Group, Symbol, SymbolStatic, Tickers, TypeMatcher
+};
 
 use super::{AnyVisitor, AnyVisitorResult};
 
@@ -57,6 +59,48 @@ where
             )
         })
     }
+
+    pub fn into_symbol<S>(self) -> SymbolStatic
+    where
+        S: Symbol,
+    {
+        struct SymbolRetriever<G, S> {
+            visited_g: PhantomData<G>,
+            symbol: PhantomData<S>,
+        }
+
+        impl<G, S> AnyVisitor for SymbolRetriever<G, S>
+        where
+            G: Group,
+            S: Symbol,
+        {
+            type VisitedG = G;
+
+            type Output = SymbolStatic;
+
+            type Error = Never;
+
+            fn on<C>(self) -> AnyVisitorResult<Self>
+            where
+                C: Definition,
+            {
+                Ok(S::symbol::<C>())
+            }
+        }
+
+        never::safe_unwrap(self.into_currency_type(SymbolRetriever {
+            visited_g: PhantomData,
+            symbol: PhantomData::<S>,
+        }))
+    }
+}
+
+pub fn symbol<C, S>() -> SymbolStatic
+where
+    C: Currency,
+    S: Symbol,
+{
+    CurrencyDTO::<C::Group>::from_currency_type::<C>().into_symbol::<S>()
 }
 
 /// Prepare a human-friendly representation of a currency
@@ -64,7 +108,7 @@ pub fn to_string<C>() -> String
 where
     C: Currency,
 {
-    CurrencyDTO::<C::Group>::from_currency_type::<C>().to_string()
+    symbol::<C, Tickers>().to_owned()
 }
 
 impl<G> Display for CurrencyDTO<G>
@@ -72,7 +116,7 @@ where
     G: Group,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", unchecked::CurrencyDTO::from(*self)))
+        f.write_fmt(format_args!("{}", self.unchecked::CurrencyDTO::from(*self)))
     }
 }
 
@@ -103,8 +147,8 @@ where
 mod test {
 
     use crate::{
-        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        CurrencyDTO,
+        test::{self, SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        BankSymbols, Currency, CurrencyDTO, Definition, DexSymbols, Tickers,
     };
 
     #[test]
@@ -121,10 +165,73 @@ mod test {
     }
 
     #[test]
+    fn into_currency_type() {
+        type TheC = SuperGroupTestC1;
+        type OtherC = SuperGroupTestC2;
+        let c1 = CurrencyDTO::<SuperGroup>::from_currency_type::<TheC>();
+        assert_eq!(
+            Ok(true),
+            c1.into_currency_type(test::Expect::<TheC, SuperGroup>::new())
+        );
+
+        assert_eq!(
+            Ok(false),
+            c1.into_currency_type(test::Expect::<OtherC, SuperGroup>::new())
+        );
+    }
+
+    #[test]
+    fn from_super_group() {
+        assert_eq!(
+            CurrencyDTO::<SuperGroup>::from_currency_type::<SubGroupTestC1>(),
+            CurrencyDTO::<SubGroup>::from_currency_type::<SubGroupTestC1>()
+        );
+
+        assert_eq!(
+            CurrencyDTO::<<SubGroupTestC1 as Currency>::Group>::from_currency_type::<SubGroupTestC1>(
+            ),
+            CurrencyDTO::<SubGroup>::from_currency_type::<SubGroupTestC1>()
+        );
+    }
+
+    #[test]
     fn eq_other_type() {
         assert_ne!(
             CurrencyDTO::<SuperGroup>::from_currency_type::<SuperGroupTestC1>(),
             CurrencyDTO::<SubGroup>::from_currency_type::<SubGroupTestC1>()
         );
+    }
+
+    #[test]
+    fn to_string() {
+        assert_eq!(
+            CurrencyDTO::<<SubGroupTestC1 as Currency>::Group>::from_currency_type::<SubGroupTestC1>().to_string(),
+            super::to_string::<SubGroupTestC1>()
+        );
+
+        assert_eq!(
+            crate::symbol::<SubGroupTestC1, Tickers>(),
+            super::to_string::<SubGroupTestC1>()
+        );
+    }
+
+    #[test]
+    fn into_symbol() {
+        type TheC = SuperGroupTestC1;
+        assert_eq!(
+            TheC::BANK_SYMBOL,
+            CurrencyDTO::<SuperGroup>::from_currency_type::<TheC>().into_symbol::<BankSymbols>()
+        );
+        assert_eq!(
+            TheC::DEX_SYMBOL,
+            CurrencyDTO::<SuperGroup>::from_currency_type::<TheC>().into_symbol::<DexSymbols>()
+        );
+        assert_eq!(
+            TheC::TICKER,
+            CurrencyDTO::<SuperGroup>::from_currency_type::<TheC>().into_symbol::<Tickers>()
+        );
+
+        let c = CurrencyDTO::<SuperGroup>::from_currency_type::<TheC>();
+        assert_eq!(c.to_string(), c.into_symbol::<Tickers>());
     }
 }

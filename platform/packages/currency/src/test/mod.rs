@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    error::Error, group::MemberOf, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, Group,
-    SingleVisitor,
+    error::Error, group::MemberOf, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency,
+    Definition, Group, SingleVisitor,
 };
 
 pub use self::group::*;
@@ -16,6 +16,11 @@ pub struct Expect<C, TopG>(PhantomData<C>, PhantomData<TopG>)
 where
     C: ?Sized;
 
+impl<C, TopG> Expect<C, TopG> {
+    pub fn new() -> Self {
+        Self(PhantomData, PhantomData)
+    }
+}
 impl<C, TopG> Clone for Expect<C, TopG>
 where
     C: ?Sized,
@@ -67,7 +72,10 @@ where
         Ok(crate::equal::<C, Cin>())
     }
 }
-impl<C, TopG> SingleVisitor<C> for Expect<C, TopG> {
+impl<CDef, TopG> SingleVisitor<CDef> for Expect<CDef, TopG>
+where
+    CDef: Definition,
+{
     type Output = bool;
     type Error = Error;
 
@@ -98,7 +106,10 @@ where
     }
 }
 
-impl<C, TopG> SingleVisitor<C> for ExpectUnknownCurrency<TopG> {
+impl<CDef, TopG> SingleVisitor<CDef> for ExpectUnknownCurrency<TopG>
+where
+    CDef: Definition,
+{
     type Output = bool;
     type Error = Error;
 

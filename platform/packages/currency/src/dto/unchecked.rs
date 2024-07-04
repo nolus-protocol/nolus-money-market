@@ -7,10 +7,8 @@ use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::MemberOf,
-    never::{self, Never},
-    AnyVisitor, AnyVisitorResult, Currency, Definition, Group, GroupVisit, SymbolOwned,
-    SymbolStatic, Tickers,
+    group::MemberOf, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned,
+    Tickers,
 };
 
 use crate::error::Error;
@@ -61,25 +59,7 @@ where
     G: Group + MemberOf<G>,
 {
     fn from(value: ValidatedDTO<G>) -> Self {
-        #[derive(Debug)]
-        struct TypeToTicker<G>(PhantomData<G>);
-        impl<G> AnyVisitor for TypeToTicker<G> {
-            type VisitedG = G;
-
-            type Output = SymbolStatic;
-
-            type Error = Never;
-
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Definition,
-            {
-                Ok(C::TICKER)
-            }
-        }
-
-        let ticker = never::safe_unwrap(value.into_currency_type(TypeToTicker(PhantomData::<G>)));
-        Self(ticker.into())
+        Self(value.into_symbol::<Tickers>().to_owned())
     }
 }
 

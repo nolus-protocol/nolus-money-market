@@ -1,10 +1,16 @@
 use crate::{
-    error::Error, matcher::{self, Matcher, }, symbol::Symbol, Definition, SymbolSlice
+    error::Error,
+    matcher::{self, Matcher},
+    symbol::Symbol,
+    Definition, SymbolSlice,
 };
 
 use super::Currency;
 
-pub trait SingleVisitor<C> {
+pub trait SingleVisitor<CDef>
+where
+    CDef: Definition,
+{
     type Output;
     type Error;
 
@@ -12,17 +18,17 @@ pub trait SingleVisitor<C> {
 }
 
 pub trait CurrencyVisit: Symbol {
-    fn visit<C, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    fn visit<CDef, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
-        C: Currency + Definition,
-        V: SingleVisitor<C>,
+        CDef: Currency + Definition,
+        V: SingleVisitor<CDef>,
         Error: Into<V::Error>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        if matcher.r#match::<C>() {
+        if matcher.r#match::<CDef>() {
             visitor.on()
         } else {
-            Err(Error::unexpected_symbol::<_, Self, C>(symbol).into())
+            Err(Error::unexpected_symbol::<_, Self, CDef>(symbol).into())
         }
     }
 }

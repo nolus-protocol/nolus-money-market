@@ -3,7 +3,7 @@ use std::{any::TypeId, fmt::Debug};
 use group::MemberOf;
 
 pub use crate::{
-    dto::{CurrencyDTO, MaybeAnyVisitResult},
+    dto::{to_string, CurrencyDTO, MaybeAnyVisitResult},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
@@ -12,7 +12,7 @@ pub use crate::{
     group::Group,
     matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
-    symbol::{BankSymbols, DexSymbols, Tickers},
+    symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
 mod dto;
