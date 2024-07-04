@@ -3,7 +3,7 @@ use std::{any::TypeId, fmt::Debug};
 use group::MemberOf;
 
 pub use crate::{
-    dto::{to_string, CurrencyDTO, MaybeAnyVisitResult},
+    dto::{symbol, to_string, CurrencyDTO, MaybeAnyVisitResult},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,

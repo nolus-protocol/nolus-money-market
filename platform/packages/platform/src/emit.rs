@@ -1,4 +1,4 @@
-use currency::{Currency, Group, SymbolSlice};
+use currency::{Currency, Definition, Group, SymbolStatic, Tickers};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     percent::Percent,
@@ -44,13 +44,13 @@ where
     fn emit_currency<K, C>(self, event_key: K) -> Self
     where
         K: Into<String>,
-        C: Currency,
+        C: Currency + Definition,
     {
         self.emit_currency_symbol(event_key, C::TICKER)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
-    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: &SymbolSlice) -> Self
+    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: SymbolStatic) -> Self
     where
         K: Into<String>,
     {
@@ -68,7 +68,7 @@ where
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
     where
         K: Into<String>,
-        C: Currency,
+        C: Definition,
     {
         emit_coinable(self, event_key, coin.into(), C::TICKER)
     }
@@ -78,7 +78,12 @@ where
         K: Into<String>,
         G: Group,
     {
-        emit_coinable(self, event_key, coin.amount(), coin.currency())
+        emit_coinable(
+            self,
+            event_key,
+            coin.amount(),
+            coin.currency().into_symbol::<Tickers>(),
+        )
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {
@@ -129,7 +134,7 @@ impl From<Emitter> for Event {
     }
 }
 
-fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: &SymbolSlice) -> E
+fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: SymbolStatic) -> E
 where
     E: Emit,
     K: Into<String>,

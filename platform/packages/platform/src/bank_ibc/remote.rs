@@ -96,8 +96,8 @@ impl<'c> From<Sender<'c>> for Transaction {
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SuperGroupCurrency, SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        Currency, Definition,
     };
     use finance::coin::{Amount, Coin};
     use prost::Name;
@@ -125,12 +125,8 @@ mod test {
 
         let coin1: Coin<SuperGroupTestC2> = 63.into();
         let coin2: Coin<SuperGroupTestC1> = 2.into();
-        funds_sender
-            .send::<SuperGroupCurrency>(&coin1.into())
-            .unwrap();
-        funds_sender
-            .send::<SuperGroupCurrency>(&coin2.into())
-            .unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
 
         assert_eq!(Transaction::from(funds_sender), {
             let mut trx = Transaction::default();
@@ -160,7 +156,7 @@ mod test {
 
     fn into_cosmos_sdk_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
     where
-        C: Currency,
+        C: Currency + Definition,
     {
         CosmosSdkCoin {
             amount: Amount::from(coin).to_string(),

@@ -11,31 +11,44 @@ use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{error::Error, result::Result};
 
-pub(crate) fn from_cosmwasm_impl<C, G>(coin: CosmWasmCoin) -> Result<Coin<C>>
+pub(crate) fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
-    C: Currency + MemberOf<G>,
+    C: Currency + Definition,
 {
-    BankSymbols.visit(&coin.denom, CoinTransformer(&coin))
+    from_cosmwasm_currency_not_definition::<C, C>(coin)
 }
 
-pub(crate) fn from_cosmwasm_any<G, V>(coin: &CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
+pub(crate) fn from_cosmwasm_currency_not_definition<COut, CDef>(
+    coin: CosmWasmCoin,
+) -> Result<Coin<COut>>
+where
+    COut: 'static,
+    CDef: Currency + Definition,
+{
+    BankSymbols::visit::<CDef, _>(&coin.denom, CoinTransformer(&coin, PhantomData))
+}
+
+pub(crate) fn from_cosmwasm_any<G, V>(
+    coin: &CosmWasmCoin,
+    v: V,
+) -> StdResult<WithCoinResult<G, V>, V>
 where
     G: Group,
     V: WithCoin<G>,
 {
-    BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(coin, PhantomData::<G>, v))
-        .map_err(|transformer| transformer.1)
+    BankSymbols::maybe_visit_any(&coin.denom, CoinTransformerAny(coin, PhantomData::<G>, v))
+        .map_err(|transformer| transformer.2)
 }
 
-pub(crate) fn maybe_from_cosmwasm_any<G, V>(coin: CosmWasmCoin, v: V) -> Option<WithCoinResult<V>>
+pub(crate) fn maybe_from_cosmwasm_any<G, V>(
+    coin: &CosmWasmCoin,
+    v: V,
+) -> Option<WithCoinResult<G, V>>
 where
     G: Group,
-    V: WithCoin,
+    V: WithCoin<G>,
 {
-    BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, PhantomData, v))
-        .ok()
+    BankSymbols::maybe_visit_any(&coin.denom, CoinTransformerAny(coin, PhantomData::<G>, v)).ok()
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -64,13 +77,13 @@ where
 pub fn to_cosmwasm_on_network<G, S>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
     G: Group,
-    S: Definition,
+    S: Symbol,
 {
     struct CoinTransformer<G, S>(PhantomData<G>, PhantomData<S>);
     impl<G, S> WithCoin<G> for CoinTransformer<G, S>
     where
         G: Group,
-        S: Definition,
+        S: Symbol,
     {
         type Output = CosmWasmCoin;
         type Error = Error;
@@ -88,23 +101,25 @@ where
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
-    S: Definition,
+    S: Symbol,
 {
-    CosmWasmCoin::new(coin.into(), <S::Symbol<C>>::VALUE)
+    CosmWasmCoin::new(coin.into(), currency::symbol::<C, S>())
 }
 
-struct CoinTransformer<'a>(&'a CosmWasmCoin);
-
-impl<'a, C> SingleVisitor<C> for CoinTransformer<'a>
+struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>)
 where
-    C: Currency,
+    COut: 'static;
+
+impl<'a, CDef, COut> SingleVisitor<CDef> for CoinTransformer<'a, COut>
+where
+    CDef: 'static + Definition,
 {
-    type Output = Coin<C>;
+    type Output = Coin<COut>;
 
     type Error = Error;
 
-    fn on(self) -> Result<Self::Output> {
-        Ok(from_cosmwasm_internal(self.0))
+    fn on(self) -> std::result::Result<Self::Output, Self::Error> {
+        Ok(from_cosmwasm_internal::<CDef, _>(self.0))
     }
 }
 
@@ -121,30 +136,32 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency + MemberOf<G>,
+        C: 'static + Currency + MemberOf<G> + Definition,
     {
-        self.2.on::<C>(from_cosmwasm_internal(self.0))
+        self.2.on::<C>(from_cosmwasm_internal::<C, _>(self.0))
     }
 }
 
-fn from_cosmwasm_internal<C>(coin: &CosmWasmCoin) -> Coin<C>
+fn from_cosmwasm_internal<CDef, COut>(coin: &CosmWasmCoin) -> Coin<COut>
 where
-    C: Currency,
+    CDef: 'static + Definition,
+    COut: 'static,
 {
-    debug_assert_eq!(C::BANK_SYMBOL, coin.denom);
+    debug_assert_eq!(CDef::BANK_SYMBOL, coin.denom);
+    debug_assert!(currency::equal::<COut, CDef>());
     Amount::from(coin.amount).into()
 }
 
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SuperGroupCurrency, SuperGroupTestC1, SuperGroupTestC2},
-        BankSymbols, Currency,
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        BankSymbols, Definition, Symbol,
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-    use crate::{coin_legacy::from_cosmwasm_impl, error::Error};
+    use crate::{coin_legacy::from_cosmwasm, error::Error};
 
     use super::{to_cosmwasm_impl, Coin};
 
@@ -157,8 +174,8 @@ mod test {
     }
 
     #[test]
-    fn from_cosmwasm() {
-        let c1 = from_cosmwasm_impl::<SuperGroupTestC2>(CosmWasmCoin::new(
+    fn from_cosmwasm_impl() {
+        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
             12,
             SuperGroupTestC2::BANK_SYMBOL,
         ));
@@ -166,32 +183,32 @@ mod test {
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = from_cosmwasm_impl::<SuperGroupTestC2>(CosmWasmCoin::new(
+        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
             12,
             SuperGroupTestC1::BANK_SYMBOL,
         ));
 
         assert_eq!(
             c1,
-            Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbols, SuperGroupTestC2>(
-                    SuperGroupTestC1::BANK_SYMBOL,
-                )
-            )),
+            Err(Error::Currency(currency::error::Error::UnexpectedSymbol(
+                SuperGroupTestC1::BANK_SYMBOL.into(),
+                BankSymbols::DESCR.into(),
+                SuperGroupTestC2::TICKER.into()
+            ))),
         );
 
-        let c2 = from_cosmwasm_impl::<SuperGroupTestC1>(CosmWasmCoin::new(
+        let c2 = super::from_cosmwasm::<SuperGroupTestC1>(CosmWasmCoin::new(
             12,
             SuperGroupTestC2::BANK_SYMBOL,
         ));
 
         assert_eq!(
             c2,
-            Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbols, SuperGroupTestC1>(
-                    SuperGroupTestC2::BANK_SYMBOL,
-                )
-            )),
+            Err(Error::Currency(currency::error::Error::UnexpectedSymbol(
+                SuperGroupTestC2::BANK_SYMBOL.into(),
+                BankSymbols::DESCR.into(),
+                SuperGroupTestC1::TICKER.into()
+            ))),
         );
     }
 
@@ -201,7 +218,7 @@ mod test {
         type TheCurrency = SuperGroupTestC1;
         assert_eq!(
             Ok(Ok(true)),
-            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
+            super::from_cosmwasm_any::<SuperGroup, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
@@ -215,14 +232,14 @@ mod test {
         type AnotherCurrency = SuperGroupTestC2;
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
+            super::from_cosmwasm_any::<SuperGroup, _>(
                 &CosmWasmCoin::new(amount + 1, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
+            super::from_cosmwasm_any::<SuperGroup, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
@@ -230,7 +247,7 @@ mod test {
         let with_coin = coin::Expect(Coin::<TheCurrency>::from(amount));
         assert_eq!(
             Err(with_coin.clone()),
-            super::from_cosmwasm_any::<SuperGroupCurrency, _>(
+            super::from_cosmwasm_any::<SuperGroup, _>(
                 &CosmWasmCoin::new(amount, TheCurrency::DEX_SYMBOL),
                 with_coin
             )
@@ -253,9 +270,9 @@ mod test {
     #[test]
     fn from_to_cosmwasm() {
         let c_nls = Coin::<SuperGroupTestC2>::new(24563);
-        assert_eq!(Ok(c_nls), from_cosmwasm_impl(to_cosmwasm_impl(c_nls)));
+        assert_eq!(Ok(c_nls), from_cosmwasm(to_cosmwasm_impl(c_nls)));
 
         let c_usdc = Coin::<SuperGroupTestC1>::new(u128::MAX);
-        assert_eq!(Ok(c_usdc), from_cosmwasm_impl(to_cosmwasm_impl(c_usdc)));
+        assert_eq!(Ok(c_usdc), from_cosmwasm(to_cosmwasm_impl(c_usdc)));
     }
 }

@@ -8,7 +8,9 @@ use sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    group::MemberOf, never::{self, Never}, Currency, Definition, Group, Symbol, SymbolStatic, Tickers, TypeMatcher
+    group::MemberOf,
+    never::{self, Never},
+    Currency, Definition, Group, Symbol, SymbolStatic, Tickers, TypeMatcher,
 };
 
 use super::{AnyVisitor, AnyVisitorResult};

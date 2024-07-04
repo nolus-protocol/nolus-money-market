@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use prost::DecodeError;
 use thiserror::Error;
 
-use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
+use currency::Currency;
 use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
@@ -31,8 +31,26 @@ pub enum Error {
     #[error("[Platform] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("[Platform] [Std] {0}")]
-    CosmWasmError(#[from] StdError),
+    #[error("[Platform] [Std] An error occured while querying code info: {0}")]
+    CosmWasmQueryCodeInfo(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying contract info: {0}")]
+    CosmWasmQueryContractInfo(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
+    CosmWasmAddressInvalid(String, StdError),
+
+    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
+    CosmWasmQueryBalance(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
+    CosmWasmQueryAllBalances(StdError),
+
+    #[error("[Platform] [Std] An error occured on data serialization: {0}")]
+    Serialization(StdError),
+
+    #[error("[Platform] [Std] An error occured on data deserialization: {0}")]
+    Deserialization(StdError),
 
     #[error("[ICA] Invalid ICA host account")]
     InvalidICAHostAccount(),
@@ -51,19 +69,18 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn no_funds<C, G>() -> Self
+    pub fn no_funds<C>() -> Self
     where
-        C: Currency + MemberOf<G>,
-        G: Group,
+        C: Currency,
     {
-        Self::NoFunds(CurrencyDTO::display::<C>())
+        Self::NoFunds(currency::to_string::<C>())
     }
 
-    pub fn unexpected_funds<C, G>() -> Self
+    pub fn unexpected_funds<C>() -> Self
     where
-        C: Currency + MemberOf<G>,
+        C: Currency,
     {
-        Self::UnexpectedFunds(C::TICKER.into())
+        Self::UnexpectedFunds(currency::to_string::<C>())
     }
 
     pub fn unexpected_code<A>(exp_code_id: CodeId, instance: A) -> Self

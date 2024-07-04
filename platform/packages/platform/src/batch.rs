@@ -10,7 +10,7 @@ use sdk::{
 };
 
 pub use crate::emit::{Emit, Emitter};
-use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, result::Result};
+use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, error::Error, result::Result};
 
 pub type ReplyId = u64;
 
@@ -159,11 +159,13 @@ impl Batch {
     where
         M: Serialize + ?Sized,
     {
-        Ok(WasmMsg::Execute {
-            contract_addr: addr.into_string(),
-            funds: vec![],
-            msg: to_json_binary(msg)?,
-        })
+        to_json_binary(msg)
+            .map_err(Error::Serialization)
+            .map(|raw_msg| WasmMsg::Execute {
+                contract_addr: addr.into_string(),
+                funds: vec![],
+                msg: raw_msg,
+            })
     }
 
     fn wasm_exec_msg<M, C>(addr: Addr, msg: &M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -172,6 +174,7 @@ impl Batch {
         C: Currency,
     {
         to_json_binary(msg)
+            .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: if let Some(funds) = funds {
@@ -195,6 +198,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
+            .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Instantiate {
                 admin: admin.map(Addr::into_string),
                 code_id: code.into(),
@@ -210,6 +214,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
+            .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Migrate {
                 contract_addr: addr.into_string(),
                 new_code_id: new_code.into(),
