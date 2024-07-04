@@ -7,27 +7,20 @@ use super::HigherRank;
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
-    C: ?Sized,
 {
     type Type = Uint256;
 
     type Intermediate = Uint128;
 }
 
-impl<C> From<Coin<C>> for Uint256
-where
-    C: ?Sized,
-{
+impl<C> From<Coin<C>> for Uint256 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
         c.into()
     }
 }
 
-impl<C> From<Uint128> for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();
         c.into()

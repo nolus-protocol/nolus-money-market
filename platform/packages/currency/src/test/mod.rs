@@ -12,37 +12,27 @@ pub use self::group::*;
 
 mod group;
 
-pub struct Expect<C, TopG>(PhantomData<C>, PhantomData<TopG>)
-where
-    C: ?Sized;
+pub struct Expect<C, TopG>(PhantomData<C>, PhantomData<TopG>);
 
 impl<C, TopG> Expect<C, TopG> {
     pub fn new() -> Self {
         Self(PhantomData, PhantomData)
     }
 }
-impl<C, TopG> Clone for Expect<C, TopG>
-where
-    C: ?Sized,
-{
+impl<C, TopG> Copy for Expect<C, TopG> {}
+impl<C, TopG> Clone for Expect<C, TopG> {
     fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
+        *self
     }
 }
 
-impl<C, TopG> Debug for Expect<C, TopG>
-where
-    C: ?Sized,
-{
+impl<C, TopG> Debug for Expect<C, TopG> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_tuple("Expect").field(&self.0).finish()
     }
 }
 
-impl<C, TopG> Default for Expect<C, TopG>
-where
-    C: ?Sized,
-{
+impl<C, TopG> Default for Expect<C, TopG> {
     fn default() -> Self {
         Self(Default::default(), Default::default())
     }

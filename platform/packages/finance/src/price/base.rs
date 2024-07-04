@@ -8,7 +8,6 @@ use super::{dto::PriceDTO, Price};
 pub struct BasePrice<G, QuoteC>
 where
     G: Group,
-    QuoteC: ?Sized,
 {
     amount: CoinDTO<G>,
     amount_quote: Coin<QuoteC>,

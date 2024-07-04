@@ -124,7 +124,7 @@ where
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: Currency + ?Sized + MemberOf<G>,
+    C: Currency + MemberOf<G>,
 {
     fn from(coin: Coin<C>) -> Self {
         Self::new(coin.amount, CurrencyDTO::<G>::from_currency_type::<C>())

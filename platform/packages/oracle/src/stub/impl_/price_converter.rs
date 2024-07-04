@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
 
 use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
-use finance::price::{base::BasePrice, dto::PriceDTO, Price};
+#[cfg(feature = "unchecked-quote-currency")]
+use finance::price::base::BasePrice;
+use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use serde::Deserialize;
 

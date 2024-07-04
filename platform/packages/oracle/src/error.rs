@@ -49,7 +49,7 @@ where
     QuoteG: Group,
 {
     Error::FailedToFetchPrice {
-        from: from,
+        from,
         to: to.to_string(),
         error,
     }

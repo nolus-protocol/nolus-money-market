@@ -26,19 +26,13 @@ pub type Amount = u128;
 pub type NonZeroAmount = NonZeroU128;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
-pub struct Coin<C>
-where
-    C: ?Sized,
-{
+pub struct Coin<C> {
     amount: Amount,
     #[serde(skip)]
     currency: PhantomData<C>,
 }
 
-impl<C> Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Coin<C> {
     pub const fn new(amount: Amount) -> Self {
         Self {
             amount,
@@ -92,10 +86,10 @@ where
     }
 
     #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
-    where
-        OtherC: ?Sized,
-    {
+    pub(super) const fn into_coprime_with<OtherC>(
+        self,
+        other: Coin<OtherC>,
+    ) -> (Self, Coin<OtherC>) {
         debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
         debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
 
@@ -119,21 +113,15 @@ where
     }
 }
 
-impl<C> Clone for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Clone for Coin<C> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<C> Copy for Coin<C> where C: ?Sized {}
+impl<C> Copy for Coin<C> {}
 
-impl<C> Debug for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Debug for Coin<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Coin")
             .field("amount", &self.amount)
@@ -142,10 +130,7 @@ where
     }
 }
 
-impl<C> Default for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Default for Coin<C> {
     fn default() -> Self {
         Self {
             amount: Default::default(),
@@ -154,30 +139,21 @@ where
     }
 }
 
-impl<C> Display for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Display for Coin<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
     }
 }
 
-impl<C> Eq for Coin<C> where C: ?Sized {}
+impl<C> Eq for Coin<C> {}
 
-impl<C> PartialEq for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> PartialEq for Coin<C> {
     fn eq(&self, other: &Self) -> bool {
         self.amount == other.amount
     }
 }
 
-impl<C> PartialOrd for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> PartialOrd for Coin<C> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -185,7 +161,6 @@ where
 
 impl<C> Ord for Coin<C>
 where
-    C: ?Sized,
     Self: PartialOrd,
 {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -193,17 +168,11 @@ where
     }
 }
 
-impl<C> Zero for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Zero for Coin<C> {
     const ZERO: Self = Self::new(Zero::ZERO);
 }
 
-impl<C> Add for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Add for Coin<C> {
     type Output = Self;
 
     #[track_caller]
@@ -213,10 +182,7 @@ where
     }
 }
 
-impl<C> Sub for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> Sub for Coin<C> {
     type Output = Self;
 
     #[track_caller]
@@ -226,39 +192,27 @@ where
     }
 }
 
-impl<C> AddAssign for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> AddAssign for Coin<C> {
     #[track_caller]
     fn add_assign(&mut self, rhs: Coin<C>) {
         self.amount += rhs.amount;
     }
 }
 
-impl<C> SubAssign for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> SubAssign for Coin<C> {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
         self.amount -= rhs.amount;
     }
 }
 
-impl<C> From<Amount> for Coin<C>
-where
-    C: ?Sized,
-{
+impl<C> From<Amount> for Coin<C> {
     fn from(amount: Amount) -> Self {
         Self::new(amount)
     }
 }
 
-impl<C> From<Coin<C>> for Amount
-where
-    C: ?Sized,
-{
+impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
     }

@@ -1,7 +1,5 @@
 use std::{any::TypeId, fmt::Debug};
 
-use group::MemberOf;
-
 pub use crate::{
     dto::{symbol, to_string, CurrencyDTO, MaybeAnyVisitResult},
     from_symbol::{CurrencyVisit, SingleVisitor},
@@ -9,7 +7,7 @@ pub use crate::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
         AnyVisitorResult, GroupVisit,
     },
-    group::Group,
+    group::{Group, MemberOf},
     matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
@@ -55,8 +53,8 @@ pub trait Definition {
 
 pub fn equal<C1, C2>() -> bool
 where
-    C1: 'static + ?Sized,
-    C2: 'static + ?Sized,
+    C1: 'static,
+    C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }

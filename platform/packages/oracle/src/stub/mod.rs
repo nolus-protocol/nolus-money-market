@@ -2,8 +2,6 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "unchecked-quote-currency")]
-use currency::group::MemberOf;
 use currency::{group::MemberOf, Currency, CurrencyDTO, Group};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -52,8 +50,6 @@ where
 }
 
 pub trait WithOracle<OracleBase>
-where
-    OracleBase: ?Sized,
 {
     type Output;
     type Error;
@@ -67,8 +63,6 @@ where
 // TODO get back to deny unknown fields once all leases have passed through read/write cycle #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC, QuoteG>
-where
-    QuoteC: ?Sized,
 {
     addr: Addr,
     #[serde(skip)]
