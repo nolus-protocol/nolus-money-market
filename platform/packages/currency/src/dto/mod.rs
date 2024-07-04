@@ -116,7 +116,7 @@ where
     G: Group,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.unchecked::CurrencyDTO::from(*self)))
+        f.write_fmt(format_args!("{}", unchecked::CurrencyDTO::from(*self)))
     }
 }
 
@@ -210,7 +210,7 @@ mod test {
         );
 
         assert_eq!(
-            crate::symbol::<SubGroupTestC1, Tickers>(),
+            super::symbol::<SubGroupTestC1, Tickers>(),
             super::to_string::<SubGroupTestC1>()
         );
     }
