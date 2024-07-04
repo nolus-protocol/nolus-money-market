@@ -75,7 +75,7 @@ where
 
         impl<QuoteC> WithPrice<QuoteC> for InvariantCheck
         where
-            QuoteC: Currency + ?Sized,
+            QuoteC: Currency,
         {
             type Output = ();
 
@@ -83,7 +83,7 @@ where
 
             fn exec<C>(self, converted: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
             where
-                C: 'static + ?Sized,
+                C: 'static,
             {
                 converted.invariant_held()
             }

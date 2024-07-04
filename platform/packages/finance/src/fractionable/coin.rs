@@ -7,7 +7,6 @@ use super::HigherRank;
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
-    C: ?Sized,
 {
     type Type = Uint256;
 
@@ -15,8 +14,6 @@ where
 }
 
 impl<C> From<Coin<C>> for Uint256
-where
-    C: ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
@@ -25,8 +22,6 @@ where
 }
 
 impl<C> From<Uint128> for Coin<C>
-where
-    C: ?Sized,
 {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();

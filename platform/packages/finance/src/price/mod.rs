@@ -5,7 +5,6 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -19,24 +18,21 @@ use crate::{
 pub mod base;
 pub mod dto;
 
-pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
-where
-    C: ?Sized,
-{
+pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C> {
     PriceBuilder(amount)
 }
 
 pub struct PriceBuilder<C>(Coin<C>)
 where
-    C: 'static + ?Sized;
+    C: 'static;
 
 impl<C> PriceBuilder<C>
 where
-    C: 'static + ?Sized,
+    C: 'static,
 {
     pub fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
     where
-        QuoteC: 'static + ?Sized,
+        QuoteC: 'static,
     {
         Price::new(self.0, to)
     }
@@ -52,21 +48,17 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 /// Both amounts a price is composed of should be non-zero.
 ///
 /// Not designed to be used in public APIs
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub struct Price<C, QuoteC>
-where
-    C: ?Sized,
-    QuoteC: ?Sized,
-{
+pub struct Price<C, QuoteC> {
     amount: Coin<C>,
     amount_quote: Coin<QuoteC>,
 }
 
 impl<C, QuoteC> Price<C, QuoteC>
 where
-    C: 'static + ?Sized,
-    QuoteC: 'static + ?Sized,
+    C: 'static,
+    QuoteC: 'static,
 {
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
@@ -208,10 +200,47 @@ where
     }
 }
 
+impl<C, QuoteC> Clone for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            amount: self.amount,
+            amount_quote: self.amount_quote,
+        }
+    }
+}
+
+impl<C, QuoteC> Copy for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC> Eq for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC> PartialEq for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.amount == other.amount && self.amount_quote == other.amount_quote
+    }
+}
+
 impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
 where
-    C: ?Sized + PartialEq,
-    QuoteC: ?Sized + PartialEq,
+    C: 'static,
+    QuoteC: 'static,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // a/b < c/d if and only if a * d < b * c
@@ -228,8 +257,8 @@ where
 
 impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     type Output = Price<C, QuoteC>;
 
@@ -242,8 +271,8 @@ where
 
 impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
@@ -255,9 +284,9 @@ where
 
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
-    QuoteQuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
+    QuoteQuoteC: 'static,
 {
     type Output = Price<C, QuoteQuoteC>;
 
@@ -274,11 +303,7 @@ where
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
-where
-    C: ?Sized,
-    QuoteC: ?Sized,
-{
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
     let ratio_impl = Rational::new(of, price.amount);
     Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
 }

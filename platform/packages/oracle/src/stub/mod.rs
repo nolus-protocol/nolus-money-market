@@ -35,7 +35,7 @@ where
     Self:
         Into<OracleRef<Self::QuoteC, Self::QuoteG>> + AsRef<OracleRef<Self::QuoteC, Self::QuoteG>>,
 {
-    type QuoteC: ?Sized;
+    type QuoteC;
     type QuoteG: Group;
 
     fn price_of<C, G>(&self) -> Result<Price<C, Self::QuoteC>>

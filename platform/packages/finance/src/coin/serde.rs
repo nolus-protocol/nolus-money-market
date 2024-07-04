@@ -52,8 +52,6 @@ mod test {
     fn serialize_deserialize_as_field() {
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
         struct CoinContainer<C>
-        where
-            C: Currency,
         {
             coin: Coin<C>,
         }

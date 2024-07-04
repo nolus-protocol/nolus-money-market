@@ -1,6 +1,7 @@
 #[cfg(feature = "testing")]
 use std::num::NonZeroU128;
 use std::{
+    any,
     cmp::Ordering,
     fmt::{Debug, Display, Formatter},
     iter::Sum,
@@ -26,28 +27,15 @@ pub type NonZeroAmount = NonZeroU128;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C>
-where
-    C: ?Sized,
+// where
+//     C: ?Sized,
 {
     amount: Amount,
     #[serde(skip)]
     ticker: PhantomData<C>,
 }
 
-impl<C> Clone for Coin<C>
-where
-    C: ?Sized,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C> Copy for Coin<C> where C: ?Sized {}
-
 impl<C> Coin<C>
-where
-    C: ?Sized,
 {
     pub const fn new(amount: Amount) -> Self {
         Self {
@@ -103,8 +91,8 @@ where
 
     #[track_caller]
     pub(super) const fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
-    where
-        OtherC: ?Sized,
+    // where
+    //     OtherC: ?Sized,
     {
         debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
         debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
@@ -129,9 +117,20 @@ where
     }
 }
 
+impl<C> Clone for Coin<C>
+// where
+//     C: ?Sized,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> Copy for Coin<C> {}
+
 impl<C> Debug for Coin<C>
-where
-    C: ?Sized,
+// where
+//     C: ?Sized,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Coin")
@@ -142,8 +141,8 @@ where
 }
 
 impl<C> Default for Coin<C>
-where
-    C: ?Sized,
+// where
+//     C: ?Sized,
 {
     fn default() -> Self {
         Self {
@@ -153,20 +152,16 @@ where
     }
 }
 
+impl<C> Eq for Coin<C> {}
+
 impl<C> PartialEq for Coin<C>
-where
-    C: ?Sized,
 {
     fn eq(&self, other: &Self) -> bool {
         self.amount == other.amount
     }
 }
 
-impl<C> Eq for Coin<C> where C: ?Sized {}
-
 impl<C> PartialOrd for Coin<C>
-where
-    C: ?Sized,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -175,7 +170,6 @@ where
 
 impl<C> Ord for Coin<C>
 where
-    C: ?Sized,
     Self: PartialOrd,
 {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -184,15 +178,11 @@ where
 }
 
 impl<C> Zero for Coin<C>
-where
-    C: ?Sized,
 {
     const ZERO: Self = Self::new(Zero::ZERO);
 }
 
-impl<C> Add<Coin<C>> for Coin<C>
-where
-    C: ?Sized,
+impl<C> Add for Coin<C>
 {
     type Output = Self;
 
@@ -203,9 +193,7 @@ where
     }
 }
 
-impl<C> Sub<Coin<C>> for Coin<C>
-where
-    C: ?Sized,
+impl<C> Sub for Coin<C>
 {
     type Output = Self;
 
@@ -216,9 +204,7 @@ where
     }
 }
 
-impl<C> AddAssign<Coin<C>> for Coin<C>
-where
-    C: ?Sized,
+impl<C> AddAssign for Coin<C>
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: Coin<C>) {
@@ -226,9 +212,7 @@ where
     }
 }
 
-impl<C> SubAssign<Coin<C>> for Coin<C>
-where
-    C: ?Sized,
+impl<C> SubAssign for Coin<C>
 {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
@@ -237,17 +221,13 @@ where
 }
 
 impl<C> Display for Coin<C>
-where
-    C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.amount, C::TICKER))
+        f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
     }
 }
 
 impl<C> From<Amount> for Coin<C>
-where
-    C: ?Sized,
 {
     fn from(amount: Amount) -> Self {
         Self::new(amount)
@@ -255,8 +235,6 @@ where
 }
 
 impl<C> From<Coin<C>> for Amount
-where
-    C: ?Sized,
 {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
