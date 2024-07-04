@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Currency, Definition, Group, MaybeAnyVisitResult, SymbolMatcher, SymbolSlice,
+    group::MemberOf, AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult,
     SymbolStatic,
 };
 use finance::coin::Coin;
@@ -28,25 +28,27 @@ impl Definition for Stable {
 
 pub type CoinStable = Coin<Stable>;
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
 pub struct StableCurrencyGroup;
 impl Group for StableCurrencyGroup {
     const DESCR: &'static str = "stable currency group";
 
-    fn maybe_visit<M, V>(_matcher: &M, _symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: SymbolMatcher + ?Sized,
-        V: AnyVisitor,
+        M: Matcher + ?Sized,
+        V: AnyVisitor<VisitedG = Self>,
     {
-        Self::maybe_visit_member(Imatcher, visitor)
+        Self::maybe_visit_member(matcher, visitor)
     }
 
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: currency::Matcher + ?Sized,
+        M: Matcher + ?Sized,
         V: AnyVisitor,
         Self: MemberOf<V::VisitedG>,
     {
-        Ok(visitor.on::<Stable>())
+        currency::maybe_visit_any::<_, Stable, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<Self> for StableCurrencyGroup {}
