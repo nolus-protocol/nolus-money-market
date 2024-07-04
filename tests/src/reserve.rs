@@ -88,7 +88,9 @@ fn cover_losses_unauthortized() {
     );
     assert!(matches!(
         err.downcast_ref::<ReserveError>(),
-        Some(&ReserveError::Platform(PlatformError::CosmWasmError(_)))
+        Some(&ReserveError::Platform(
+            PlatformError::CosmWasmQueryContractInfo(_)
+        ))
     ));
 
     let unauthorized_sender = test_case.address_book.reserve().clone();
