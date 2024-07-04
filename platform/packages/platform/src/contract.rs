@@ -23,7 +23,7 @@ impl Code {
     pub fn try_new(id: CodeId, querier: &QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query(&WasmQuery::CodeInfo { code_id: id }.into())
-            .map_err(Error::from)
+            .map_err(Error::CosmWasmQueryBalance)
             .map(|resp: CodeInfoResponse| Self { id: resp.code_id })
     }
 
@@ -68,7 +68,9 @@ fn query_info(
         contract_addr: contract_address.into(),
     }
     .into();
-    querier.query(&raw).map_err(Error::from)
+    querier
+        .query(&raw)
+        .map_err(Error::CosmWasmQueryContractInfo)
 }
 
 #[cfg(test)]

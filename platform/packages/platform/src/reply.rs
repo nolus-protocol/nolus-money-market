@@ -40,7 +40,7 @@ where
     T: DeserializeOwned,
 {
     decode::<MsgExecuteContractResponse>(reply)
-        .and_then(|data| from_json(data.data).map_err(Into::into))
+        .and_then(|data| from_json(data.data).map_err(Error::Serialization))
 }
 
 trait InstantiationResponse
@@ -79,11 +79,11 @@ where
     let response: R = decode(reply)?;
 
     api.addr_validate(response.addr())
+        .map_err(|err| Error::CosmWasmAddressInvalid(response.addr().to_string(), err))
         .map(|address: Addr| InstantiateResponse {
             address,
             data: response.into_data(),
         })
-        .map_err(Into::into)
 }
 
 fn decode_raw<M>(message: &[u8]) -> Result<M>

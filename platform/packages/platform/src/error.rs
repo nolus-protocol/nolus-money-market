@@ -31,8 +31,26 @@ pub enum Error {
     #[error("[Platform] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("[Platform] [Std] {0}")]
-    CosmWasmError(#[from] StdError),
+    #[error("[Platform] [Std] An error occured while querying code info: {0}")]
+    CosmWasmQueryCodeInfo(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying contract info: {0}")]
+    CosmWasmQueryContractInfo(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
+    CosmWasmAddressInvalid(String, StdError),
+
+    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
+    CosmWasmQueryBalance(StdError),
+
+    #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
+    CosmWasmQueryAllBalances(StdError),
+
+    #[error("[Platform] [Std] An error occured on data serialization: {0}")]
+    Serialization(StdError),
+
+    #[error("[Platform] [Std] An error occured on data deserialization: {0}")]
+    Deserialization(StdError),
 
     #[error("[ICA] Invalid ICA host account")]
     InvalidICAHostAccount(),

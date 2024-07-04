@@ -61,8 +61,9 @@ where
 }
 
 pub fn parse_register_response(response: &str) -> Result<HostAccount> {
-    let open_ack = sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)?;
-    open_ack.address.try_into()
+    sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)
+        .map_err(Error::Deserialization)
+        .and_then(|open_ack| open_ack.address.try_into())
 }
 
 pub fn submit_transaction<Conn, M, C>(

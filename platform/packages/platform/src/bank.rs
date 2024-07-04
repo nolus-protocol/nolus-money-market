@@ -93,8 +93,10 @@ impl<'a> BankAccountView for BankView<'a> {
     where
         C: Currency,
     {
-        let coin = self.querier.query_balance(self.account, C::BANK_SYMBOL)?;
-        from_cosmwasm_impl(coin)
+        self.querier
+            .query_balance(self.account, C::BANK_SYMBOL)
+            .map_err(Error::CosmWasmQueryBalance)
+            .and_then(|coin| from_cosmwasm_impl(coin))
     }
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
@@ -105,6 +107,7 @@ impl<'a> BankAccountView for BankView<'a> {
     {
         self.querier
             .query_all_balances(self.account)
+            .map_err(Error::CosmWasmQueryAllBalances)
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
