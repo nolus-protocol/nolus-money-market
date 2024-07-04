@@ -43,7 +43,7 @@ where
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC, QuoteG>,
+            OracleImpl: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
         {
             oracle_platform::convert::from_quote::<_, _, _, _, OutG>(&oracle, self.in_amount)
         }
@@ -93,7 +93,7 @@ where
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC, QuoteG>,
+            OracleImpl: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
         {
             oracle_platform::convert::to_quote::<_, InG, _, _, _>(&oracle, self.in_amount)
         }

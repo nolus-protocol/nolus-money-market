@@ -32,7 +32,7 @@ impl RepayFn for CloseFn {
     ) -> ContractResult<RepayReceipt>
     where
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
         Asset: Currency,
         Profit: FixedAddressSender,
     {

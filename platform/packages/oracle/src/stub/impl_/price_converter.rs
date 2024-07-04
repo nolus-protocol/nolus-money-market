@@ -87,7 +87,7 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle<QuoteC, QuoteG>
+impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle
     for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
     QuoteC: Currency,
@@ -95,6 +95,9 @@ where
     PriceReqT: RequestBuilder,
     PriceConverterT: PriceConverter,
 {
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
         C: Currency,

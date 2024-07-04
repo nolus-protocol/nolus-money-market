@@ -29,7 +29,7 @@ pub(crate) trait RepayFn {
     ) -> ContractResult<RepayReceipt>
     where
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
         Asset: Currency,
         Profit: FixedAddressSender;
 }
@@ -113,7 +113,7 @@ where
     where
         Asset: Currency,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         let amount = self.amount.try_into()?;
         let mut profit_sender = self.profit.clone().into_stub();

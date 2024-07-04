@@ -25,7 +25,7 @@ pub(crate) fn check_debt<Asset, Lpp, Oracle>(
 where
     Asset: Currency,
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
         .check_debt(when, time_alarms, price_alarms)
@@ -123,7 +123,7 @@ impl<'a> WithLease for Cmd<'a> {
     where
         Asset: Currency,
         Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
     }

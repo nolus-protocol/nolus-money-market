@@ -46,11 +46,14 @@ where
     }
 }
 
-impl<QuoteC, QuoteG> Oracle<QuoteC, QuoteG> for DummyOracle<QuoteC, QuoteG>
+impl<QuoteC, QuoteG> Oracle for DummyOracle<QuoteC, QuoteG>
 where
     QuoteC: Currency,
     QuoteG: Group,
 {
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
         C: Currency,

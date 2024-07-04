@@ -23,7 +23,7 @@ pub trait WithLeaseDeps {
         Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>;
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>;
 }
 
 pub fn execute<Cmd>(
@@ -136,7 +136,7 @@ where
 
     fn exec<Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         self.cmd
             .exec::<LpnCurrency, Asset, _, _>(self.lpp_loan, oracle)

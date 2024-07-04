@@ -17,5 +17,5 @@ pub trait WithLease {
     where
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>;
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>;
 }

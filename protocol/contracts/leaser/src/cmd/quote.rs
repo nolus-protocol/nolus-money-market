@@ -129,7 +129,7 @@ where
 
     fn exec<O>(self, oracle: O) -> Result<Self::Output, Self::Error>
     where
-        O: OracleTrait<Lpn, LpnCurrencies>,
+        O: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
         let downpayment = self.downpayment.ticker().clone();
 
@@ -156,7 +156,7 @@ struct QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
@@ -171,7 +171,7 @@ impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: ?Sized + Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     type Output = QuoteResponse;
     type Error = ContractError;
@@ -205,7 +205,7 @@ where
     Lpn: ?Sized,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: Coin<Dpc>,
     lpp_quote: LppQuote<Lpn, Lpp>,
@@ -220,7 +220,7 @@ where
     Lpn: Currency,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     type Output = QuoteResponse;
     type Error = ContractError;

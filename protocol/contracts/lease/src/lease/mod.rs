@@ -55,7 +55,7 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
     Asset: Currency,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     pub(super) fn new(
         addr: Addr,
@@ -111,7 +111,7 @@ where
     Asset: Currency,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
-    Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     pub(super) fn try_into_dto(
         self,
@@ -268,12 +268,15 @@ mod tests {
         }
     }
 
-    impl<QuoteC, QuoteG> Oracle<QuoteC, QuoteG> for OracleLocalStub<QuoteC, QuoteG>
+    impl<QuoteC, QuoteG> Oracle for OracleLocalStub<QuoteC, QuoteG>
     where
         Self: Into<OracleRef<QuoteC, QuoteG>>,
         QuoteC: Currency,
         QuoteG: Group,
     {
+        type QuoteC = QuoteC;
+        type QuoteG = QuoteG;
+
         fn price_of<C, G>(&self) -> PriceOracleResult<Price<C, QuoteC>>
         where
             C: Currency,

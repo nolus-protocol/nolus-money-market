@@ -99,7 +99,7 @@ where
         Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         self.cmd.exec(Lease::<Asset, _, _>::from_dto(
             self.lease_dto,
