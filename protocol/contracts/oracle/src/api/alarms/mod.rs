@@ -61,7 +61,7 @@ impl From<error::Error> for Error {
 pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + ?Sized,
+    Lpn: Currency,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -109,7 +109,7 @@ where
             impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
-                QuoteC: Currency + ?Sized,
+                QuoteC: Currency,
                 QuoteG: Group,
             {
                 type Output = ();
@@ -121,7 +121,7 @@ where
                     above_or_equal: Price<C, QuoteC>,
                 ) -> StdResult<Self::Output, Self::Error>
                 where
-                    C: Currency + ?Sized,
+                    C: Currency,
                 {
                     Price::<C, QuoteC>::try_from(self.below_price).map_err(Into::into).and_then(|below_price| {
                             if below_price > above_or_equal {
@@ -159,7 +159,7 @@ where
 impl<G, Lpn, Lpns> Clone for Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + ?Sized,
+    Lpn: Currency,
     Lpns: Group,
 {
     fn clone(&self) -> Self {

@@ -11,7 +11,7 @@ pub fn emit_deposit<Lpn>(
     receipts: Coin<NLpn>,
 ) -> Emitter
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
 {
     Emitter::of_type("lp-deposit")
         .emit_tx_info(&env)
@@ -29,7 +29,7 @@ pub fn emit_withdraw<Lpn>(
     close_flag: bool,
 ) -> Emitter
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
 {
     Emitter::of_type("lp-withdraw")
         .emit_tx_info(&env)

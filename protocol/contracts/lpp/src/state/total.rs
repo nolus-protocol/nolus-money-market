@@ -19,29 +19,20 @@ use crate::error::ContractError;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub struct Total<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct Total<Lpn> {
     total_principal_due: Coin<Lpn>,
     total_interest_due: Coin<Lpn>,
     annual_interest_rate: Rational<Coin<Lpn>>,
     last_update_time: Timestamp,
 }
 
-impl<Lpn> Default for Total<Lpn>
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> Default for Total<Lpn> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<Lpn> Total<Lpn>
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> Total<Lpn> {
     const STORAGE: Item<'static, Total<Lpn>> = Item::new("total");
 
     pub fn new() -> Self {
@@ -144,10 +135,7 @@ where
     }
 }
 
-fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>>
-where
-    Lpn: ?Sized,
-{
+fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>> {
     const THOUSAND: Amount = 1000;
     Rational::new(Coin::ZERO, THOUSAND.into())
 }

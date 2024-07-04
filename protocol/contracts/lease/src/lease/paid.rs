@@ -9,10 +9,7 @@ use crate::error::ContractResult;
 
 use super::LeaseDTO;
 
-pub struct Lease<Asset, Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct Lease<Asset, Lpn> {
     customer: Addr,
     amount: Coin<Asset>,
     lpn: PhantomData<Lpn>,
@@ -21,7 +18,6 @@ where
 impl<Asset, Lpn> Lease<Asset, Lpn>
 where
     Asset: Currency,
-    Lpn: ?Sized,
 {
     pub(crate) fn from_dto(dto: LeaseDTO) -> Self {
         let amount = dto.position.amount().try_into().expect(
@@ -38,7 +34,7 @@ where
 impl<Asset, Lpn> Lease<Asset, Lpn>
 where
     Asset: Currency,
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
 {
     pub(crate) fn close<B>(self, mut lease_account: B) -> ContractResult<Batch>
     where
@@ -128,7 +124,6 @@ mod tests {
 
     pub fn create_lease<Asset, Lpn>(amount: Coin<Asset>) -> Lease<Asset, Lpn>
     where
-        Lpn: ?Sized,
         Asset: Currency,
     {
         Lease {

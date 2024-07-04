@@ -17,10 +17,7 @@ mod reserve;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct Ref<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct Ref<Lpn> {
     contract: Addr,
     #[serde(skip)]
     _lpns: PhantomData<Lpn>,
@@ -28,7 +25,7 @@ where
 
 impl<Lpn> Ref<Lpn>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
 {
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         querier
@@ -56,10 +53,7 @@ where
     }
 }
 
-impl<Lpn> From<Ref<Lpn>> for Addr
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> From<Ref<Lpn>> for Addr {
     fn from(value: Ref<Lpn>) -> Self {
         value.contract
     }

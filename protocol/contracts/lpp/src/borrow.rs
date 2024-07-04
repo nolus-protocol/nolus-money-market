@@ -58,7 +58,7 @@ impl InterestRate {
 
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent
     where
-        Lpn: ?Sized + PartialEq,
+        Lpn: PartialEq,
     {
         let utilization_max = Percent::from_ratio(
             self.utilization_optimal.units(),

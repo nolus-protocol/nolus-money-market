@@ -11,7 +11,7 @@ where
     AlarmCurrencies: Group,
     Self: Into<Batch> + Sized,
 {
-    type BaseC: Currency + ?Sized;
+    type BaseC: Currency;
     type BaseG: Group;
 
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, Self::BaseG>) -> Result<()>;
@@ -19,7 +19,7 @@ where
 
 pub trait AsAlarms<OracleBase, OracleBaseG>
 where
-    OracleBase: Currency + ?Sized,
+    OracleBase: Currency,
     OracleBaseG: Group,
 {
     fn as_alarms<AlarmCurrencies>(
@@ -32,7 +32,7 @@ where
 impl<OracleBase, OracleBaseG> AsAlarms<OracleBase, OracleBaseG>
     for OracleRef<OracleBase, OracleBaseG>
 where
-    OracleBase: Currency + ?Sized,
+    OracleBase: Currency,
     OracleBaseG: Group,
 {
     fn as_alarms<AlarmCurrencies>(
@@ -50,7 +50,7 @@ where
 
 struct AlarmsStub<'a, OracleBase, OracleBaseG>
 where
-    OracleBase: Currency + ?Sized,
+    OracleBase: Currency,
     OracleBaseG: Group,
 {
     oracle_ref: &'a OracleRef<OracleBase, OracleBaseG>,
@@ -59,7 +59,7 @@ where
 
 impl<'a, OracleBase, OracleBaseG> AlarmsStub<'a, OracleBase, OracleBaseG>
 where
-    OracleBase: Currency + ?Sized,
+    OracleBase: Currency,
     OracleBaseG: Group,
 {
     fn addr(&self) -> &Addr {
@@ -93,7 +93,7 @@ where
 
 impl<'a, OracleBase, OracleBaseG> From<AlarmsStub<'a, OracleBase, OracleBaseG>> for Batch
 where
-    OracleBase: Currency + ?Sized,
+    OracleBase: Currency,
     OracleBaseG: Group,
 {
     fn from(stub: AlarmsStub<'a, OracleBase, OracleBaseG>) -> Self {

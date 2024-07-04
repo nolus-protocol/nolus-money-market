@@ -6,14 +6,14 @@ use crate::price::base::BasePrice;
 
 pub trait WithPrice<QuoteC>
 where
-    QuoteC: Currency + ?Sized,
+    QuoteC: Currency,
 {
     type Output;
     type Error;
 
     fn exec<C>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + ?Sized;
+        C: Currency;
 }
 
 pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(

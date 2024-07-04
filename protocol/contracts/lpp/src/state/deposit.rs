@@ -66,7 +66,7 @@ impl Deposit {
         price: NTokenPrice<Lpn>,
     ) -> Result<Coin<NLpn>>
     where
-        Lpn: ?Sized + Copy,
+        Lpn: Copy,
     {
         if amount_lpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);

@@ -15,7 +15,6 @@ use super::{LppBatch, LppRef};
 
 pub trait LppLoan<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
     Self: TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = ContractError>,
 {
@@ -32,7 +31,6 @@ where
 
 pub trait WithLppLoan<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
 {
     type Output;
@@ -43,10 +41,7 @@ where
         Loan: LppLoan<Lpn, Lpns>;
 }
 
-pub(super) struct LppLoanImpl<Lpn, Lpns>
-where
-    Lpn: ?Sized,
-{
+pub(super) struct LppLoanImpl<Lpn, Lpns> {
     lpp_ref: LppRef<Lpn, Lpns>,
     lpn: PhantomData<Lpn>,
     loan: Loan<Lpn>,
@@ -55,7 +50,6 @@ where
 
 impl<Lpn, Lpns> LppLoanImpl<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
 {
     pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>, loan: Loan<Lpn>) -> Self {
@@ -69,7 +63,7 @@ where
 }
 impl<Lpn, Lpns> LppLoan<Lpn, Lpns> for LppLoanImpl<Lpn, Lpns>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
     Lpns: Group,
 {
     fn principal_due(&self) -> Coin<Lpn> {
@@ -92,7 +86,7 @@ where
 
 impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
     Lpns: Group,
 {
     type Error = ContractError;

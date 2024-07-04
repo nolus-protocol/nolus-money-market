@@ -184,10 +184,7 @@ mod tests {
     pub(super) type TestLease =
         Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub<TestLpn, LpnCurrencies>>;
 
-    pub fn loan<Lpn>() -> LoanResponse<Lpn>
-    where
-        Lpn: ?Sized,
-    {
+    pub fn loan<Lpn>() -> LoanResponse<Lpn> {
         LoanResponse {
             principal_due: Coin::from(100),
             annual_interest_rate: Percent::from_percent(10),
@@ -197,26 +194,17 @@ mod tests {
 
     // TODO migrate to using lpp::stub::unchecked_lpp_loan
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct LppLoanLocal<Lpn>
-    where
-        Lpn: ?Sized,
-    {
+    pub struct LppLoanLocal<Lpn> {
         loan: LoanResponse<Lpn>,
     }
 
-    impl<Lpn> From<LoanResponse<Lpn>> for LppLoanLocal<Lpn>
-    where
-        Lpn: ?Sized,
-    {
+    impl<Lpn> From<LoanResponse<Lpn>> for LppLoanLocal<Lpn> {
         fn from(loan: LoanResponse<Lpn>) -> Self {
             Self { loan }
         }
     }
 
-    impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn>
-    where
-        Lpn: ?Sized,
-    {
+    impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn> {
         fn principal_due(&self) -> Coin<Lpn> {
             self.loan.principal_due
         }
@@ -234,10 +222,7 @@ mod tests {
         }
     }
 
-    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>>
-    where
-        Lpn: ?Sized,
-    {
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>> {
         type Error = LppError;
 
         fn try_from(_: LppLoanLocal<Lpn>) -> LppResult<Self> {

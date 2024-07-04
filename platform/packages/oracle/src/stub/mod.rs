@@ -46,7 +46,6 @@ where
 
 pub trait WithOracle<OracleBase, OracleBaseG>
 where
-    OracleBase: ?Sized,
     OracleBaseG: Group,
 {
     type Output;
@@ -62,7 +61,6 @@ where
 #[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: ?Sized,
     QuoteG: Group,
 {
     addr: Addr,

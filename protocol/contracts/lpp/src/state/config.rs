@@ -26,7 +26,7 @@ impl Config {
 
     pub fn try_new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Result<Self>
     where
-        Lpn: ?Sized + Currency,
+        Lpn: Currency,
     {
         if msg.lpn_ticker == Self::lpn_ticker::<Lpn>() {
             Ok(Self {
@@ -56,7 +56,7 @@ impl Config {
 
     pub fn lpn_ticker<Lpn>() -> &'static SymbolSlice
     where
-        Lpn: ?Sized + Currency,
+        Lpn: Currency,
     {
         Lpn::TICKER
     }
@@ -83,7 +83,7 @@ impl Config {
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
     where
-        Lpn: 'static + ?Sized,
+        Lpn: 'static,
     {
         Price::identity()
     }

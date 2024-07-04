@@ -17,7 +17,6 @@ use super::{LppBatch, LppRef};
 
 pub trait LppLender<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
     Self: Into<LppBatch<LppRef<Lpn, Lpns>>>,
 {
@@ -29,7 +28,6 @@ where
 
 pub trait WithLppLender<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
 {
     type Output;
@@ -40,10 +38,7 @@ where
         Lpp: LppLender<Lpn, Lpns>;
 }
 
-pub(super) struct LppLenderStub<'a, Lpn, Lpns>
-where
-    Lpn: ?Sized,
-{
+pub(super) struct LppLenderStub<'a, Lpn, Lpns> {
     lpp_ref: LppRef<Lpn, Lpns>,
     lpn: PhantomData<Lpn>,
     querier: QuerierWrapper<'a>,
@@ -52,7 +47,6 @@ where
 
 impl<'a, Lpn, Lpns> LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
 {
     const OPEN_LOAN_REQ_ID: ReplyId = 0;
@@ -73,7 +67,7 @@ where
 
 impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
     Lpns: Group,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
@@ -106,10 +100,7 @@ where
     }
 }
 
-impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>>
-where
-    Lpn: ?Sized,
-{
+impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>> {
     fn from(stub: LppLenderStub<'a, Lpn, Lpns>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,

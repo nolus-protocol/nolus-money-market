@@ -21,10 +21,7 @@ pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct LppRef<Lpn, Lpns>
-where
-    Lpn: ?Sized,
-{
+pub struct LppRef<Lpn, Lpns> {
     addr: Addr,
     #[serde(skip)]
     _lpn: PhantomData<Lpn>,
@@ -34,7 +31,7 @@ where
 
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
     Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
@@ -109,7 +106,6 @@ where
 #[cfg(any(test, feature = "testing"))]
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: ?Sized,
     Lpns: Group,
 {
     pub fn unchecked<A>(addr: A) -> Self

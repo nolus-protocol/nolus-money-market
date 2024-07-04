@@ -14,10 +14,7 @@ use crate::error::{ContractError, Result};
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 #[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
-pub struct Loan<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct Loan<Lpn> {
     pub principal_due: Coin<Lpn>,
     pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
@@ -26,17 +23,14 @@ where
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct RepayShares<Lpn>
 where
-    Lpn: 'static + ?Sized,
+    Lpn: 'static,
 {
     pub interest: Coin<Lpn>,
     pub principal: Coin<Lpn>,
     pub excess: Coin<Lpn>,
 }
 
-impl<Lpn> Loan<Lpn>
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> Loan<Lpn> {
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
     pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
@@ -74,10 +68,7 @@ where
     }
 }
 
-impl<Lpn> Loan<Lpn>
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> Loan<Lpn> {
     pub fn open(storage: &mut dyn Storage, addr: Addr, loan: &Self) -> Result<()> {
         if Self::STORAGE.has(storage, addr.clone()) {
             return Err(ContractError::LoanExists {});

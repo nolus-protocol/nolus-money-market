@@ -20,7 +20,6 @@ pub trait WithLeaseDeps {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpn: ?Sized,
         Asset: Currency,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>;

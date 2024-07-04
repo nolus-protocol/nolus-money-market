@@ -12,8 +12,7 @@ where
     type Intermediate = Uint128;
 }
 
-impl<C> Fractionable<Coin<C>> for Duration
-{
+impl<C> Fractionable<Coin<C>> for Duration {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where

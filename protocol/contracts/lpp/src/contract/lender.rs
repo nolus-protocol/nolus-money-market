@@ -105,7 +105,7 @@ where
 
 pub fn query_ntoken_price<Lpn>(deps: Deps<'_>, env: Env) -> Result<PriceResponse<Lpn>>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
 {
     LiquidityPool::load(deps.storage).and_then(|lpp| {
         lpp.calculate_price(&deps, &env, Coin::default())

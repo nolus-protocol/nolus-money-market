@@ -51,8 +51,8 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
 
 pub fn equal<C1, C2>() -> bool
 where
-    C1: 'static + ?Sized,
-    C2: 'static + ?Sized,
+    C1: 'static,
+    C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }

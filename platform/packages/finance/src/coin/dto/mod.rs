@@ -192,7 +192,7 @@ where
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: Currency + ?Sized,
+    C: Currency,
 {
     fn from(coin: Coin<C>) -> Self {
         // TODO consider adding a compile-time check that the currency belongs to the group

@@ -946,7 +946,7 @@ mod tests {
             exp_due_period_paid: Duration,
             now: &Timestamp,
         ) where
-            P: Into<LpnCoin> + Copy + ?Sized,
+            P: Into<LpnCoin> + Copy,
         {
             let mut profit = profit_stub();
 

@@ -71,10 +71,7 @@ impl<'r> WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'r> {
     }
 }
 
-pub struct LppQuote<Lpn, Lpp>
-where
-    Lpn: ?Sized,
-{
+pub struct LppQuote<Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
 }
@@ -82,7 +79,6 @@ where
 impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Lpn: ?Sized,
 {
     pub fn new(lpp: Lpp) -> StdResult<LppQuote<Lpn, Lpp>> {
         Ok(Self {
@@ -108,7 +104,6 @@ where
 
 struct QuoteStage2<Lpn, Lpp>
 where
-    Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
@@ -154,7 +149,6 @@ where
 
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: ?Sized,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
@@ -169,7 +163,7 @@ where
 
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: ?Sized + Currency,
+    Lpn: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
@@ -202,7 +196,6 @@ where
 
 struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: ?Sized,
     Dpc: Currency,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,

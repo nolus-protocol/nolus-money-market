@@ -187,7 +187,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
 
 fn to_json_binary<T>(data: &T) -> Result<Binary>
 where
-    T: Serialize + ?Sized,
+    T: Serialize,
 {
     cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
 }

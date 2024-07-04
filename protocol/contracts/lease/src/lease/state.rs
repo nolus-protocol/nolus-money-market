@@ -4,10 +4,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::finance::LpnCoin;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct State<Asset>
-where
-    Asset: ?Sized,
-{
+pub struct State<Asset> {
     pub amount: Coin<Asset>,
     pub interest_rate: Percent,
     pub interest_rate_margin: Percent,

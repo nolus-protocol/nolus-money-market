@@ -25,7 +25,7 @@ pub mod with_price;
 pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: Currency,
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
@@ -37,7 +37,7 @@ where
 impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: Currency,
     QuoteG: Group,
 {
     #[cfg(any(test, feature = "testing"))]
@@ -97,9 +97,9 @@ where
 
 impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
-    C: Currency + ?Sized,
+    C: Currency,
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: Currency,
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -109,9 +109,9 @@ where
 
 impl<C, BaseG, QuoteC, QuoteG> TryFrom<&BasePrice<BaseG, QuoteC, QuoteG>> for Price<C, QuoteC>
 where
-    C: Currency + ?Sized,
+    C: Currency,
     BaseG: Group,
-    QuoteC: Currency + ?Sized,
+    QuoteC: Currency,
     QuoteG: Group,
 {
     type Error = Error;

@@ -19,10 +19,7 @@ use crate::{
     state::{Config, Deposit, Total},
 };
 
-pub struct LppBalances<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub struct LppBalances<Lpn> {
     pub(crate) balance: Coin<Lpn>,
     pub(crate) total_principal_due: Coin<Lpn>,
     pub(crate) total_interest_due: Coin<Lpn>,
@@ -53,14 +50,14 @@ where
 // Deposit and Loan which in turn may use LiquidityPool.
 pub struct NTokenPrice<Lpn>
 where
-    Lpn: 'static + ?Sized,
+    Lpn: 'static,
 {
     price: Price<NLpn, Lpn>,
 }
 
 impl<Lpn> NTokenPrice<Lpn>
 where
-    Lpn: 'static + ?Sized + Copy,
+    Lpn: 'static + Copy,
 {
     pub fn get(&self) -> Price<NLpn, Lpn> {
         self.price
@@ -74,26 +71,20 @@ where
     }
 }
 
-impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn>
-where
-    Lpn: ?Sized,
-{
+impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn> {
     fn from(nprice: NTokenPrice<Lpn>) -> Self {
         PriceResponse(nprice.price)
     }
 }
 
-pub(crate) struct LiquidityPool<Lpn>
-where
-    Lpn: ?Sized,
-{
+pub(crate) struct LiquidityPool<Lpn> {
     config: Config,
     total: Total<Lpn>,
 }
 
 impl<Lpn> LiquidityPool<Lpn>
 where
-    Lpn: 'static + ?Sized,
+    Lpn: 'static,
 {
     pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
         config
@@ -111,7 +102,7 @@ where
 
 impl<Lpn> LiquidityPool<Lpn>
 where
-    Lpn: 'static + ?Sized + Currency,
+    Lpn: 'static + Currency,
 {
     pub fn deposit_capacity(
         &self,

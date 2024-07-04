@@ -27,7 +27,7 @@ where
     fn exec<Asset, Lpn>(self, dto: LeaseDTO) -> Result<Self::Output, Self::Error>
     where
         Asset: Currency,
-        Lpn: ?Sized + Currency,
+        Lpn: Currency,
     {
         LeasePaid::<Asset, Lpn>::from_dto(dto).close(self.lease_account)
     }

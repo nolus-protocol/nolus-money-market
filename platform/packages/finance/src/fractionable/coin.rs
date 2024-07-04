@@ -13,16 +13,14 @@ where
     type Intermediate = Uint128;
 }
 
-impl<C> From<Coin<C>> for Uint256
-{
+impl<C> From<Coin<C>> for Uint256 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
         c.into()
     }
 }
 
-impl<C> From<Uint128> for Coin<C>
-{
+impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();
         c.into()
