@@ -49,7 +49,7 @@ mod test {
     #[test]
     fn visit_on_ticker() {
         let v_usdc = Expect::<SuperGroupTestC1, SuperGroupCurrency>::default();
-        Tickers::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc.clone()).unwrap_err();
+        Tickers::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc).unwrap_err();
         assert_eq!(Tickers::visit(SuperGroupTestC1::TICKER, v_usdc), Ok(true));
 
         let v_nls = Expect::<SuperGroupTestC2, SuperGroupCurrency>::default();

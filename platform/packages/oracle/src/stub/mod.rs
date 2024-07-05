@@ -49,8 +49,7 @@ where
         C: Currency + MemberOf<Self::G>;
 }
 
-pub trait WithOracle<OracleBase>
-{
+pub trait WithOracle<OracleBase> {
     type Output;
     type Error;
 
@@ -62,8 +61,7 @@ pub trait WithOracle<OracleBase>
 #[derive(Clone, Debug, Serialize, Deserialize)]
 // TODO get back to deny unknown fields once all leases have passed through read/write cycle #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
-pub struct OracleRef<QuoteC, QuoteG>
-{
+pub struct OracleRef<QuoteC, QuoteG> {
     addr: Addr,
     #[serde(skip)]
     _quote: PhantomData<QuoteC>,
