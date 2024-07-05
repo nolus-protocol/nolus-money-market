@@ -206,10 +206,7 @@ where
     QuoteC: 'static,
 {
     fn clone(&self) -> Self {
-        Self {
-            amount: self.amount,
-            amount_quote: self.amount_quote,
-        }
+        *self
     }
 }
 

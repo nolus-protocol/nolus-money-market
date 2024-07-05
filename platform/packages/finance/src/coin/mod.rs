@@ -247,10 +247,9 @@ impl<C> AsRef<Self> for Coin<C> {
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
-    };
+    use std::any;
+
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
     use crate::percent::test::test_of;
 
@@ -259,11 +258,11 @@ mod test {
     #[test]
     fn display() {
         assert_eq!(
-            format!("25 {}", SuperGroupTestC2::TICKER),
+            format!("25 {}", any::type_name::<SuperGroupTestC2>()),
             coin2(25).to_string()
         );
         assert_eq!(
-            format!("0 {}", SuperGroupTestC1::TICKER),
+            format!("0 {}", any::type_name::<SuperGroupTestC1>()),
             coin1(0).to_string()
         );
     }
