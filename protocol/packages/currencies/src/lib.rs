@@ -14,6 +14,5 @@ mod payment;
 mod stable;
 mod symbols_macro;
 
-mod stable;
 #[cfg(test)]
 mod test_impl;

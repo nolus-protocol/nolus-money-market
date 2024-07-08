@@ -6,7 +6,6 @@ use sdk::schemars::{self, JsonSchema};
 pub use r#impl::Lpn;
 
 mod r#impl;
-mod r#impl;
 
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
