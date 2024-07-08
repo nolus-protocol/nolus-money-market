@@ -38,7 +38,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: "actions/checkout@v4"
     - uses: "./.github/actions/cache-rust"
       with:
         cache-cargo: "true"

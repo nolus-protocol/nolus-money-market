@@ -61,6 +61,8 @@ jobs:
         ${{ steps.configuration.outputs.dev-profile-with-debug-assertions }}
       dev-profile-without-debug-assertions: |-
         ${{ steps.configuration.outputs.dev-profile-without-debug-assertions }}
+      formatting-matrix-json: |-
+        ${{ steps.configuration.outputs.formatting-matrix-json }}
       linting-matrix-json: |-
         ${{ steps.configuration.outputs.linting-matrix-json }}
       unused-deps-matrix-json: |-
@@ -289,16 +291,45 @@ jobs:
       - "configuration"
       - "cache_stable_rust_toolchain"
     strategy:
-      matrix:
-        working-directory:
-          - "platform"
-          - "protocol"
-          - "tests"
-          - "tools"
+      fail-fast: true
+      ### GitHub Actions escaped string
+      matrix: "${{ fromJSON(needs.configuration.outputs.formatting-matrix-json) }}"
     ### GitHub Actions escaped string
-    name: "Check formatting [${{ matrix.working-directory }}]"
+    name: "Check formatting [${{ matrix.working-directory }}; ${{ matrix.network }};
+      ${{ matrix.protocol }}]"
     steps:
       - uses: "actions/checkout@v4"
+      ### TODO remove [start]
+      - env:
+          network: |-
+            ${{ matrix.network }}
+          protocol: |-
+            ${{ matrix.protocol }}
+        run: |-
+          set -e
+
+          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
+          then
+            exit
+          fi
+
+          files="$(
+            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
+          )"
+
+          if [ -z "${files}" ]
+          then
+            exit
+          fi
+
+          cp \
+            -R \
+            -f \
+            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
+            "./packages/currencies/src/"
+        working-directory: |-
+          ${{ matrix.working-directory }}
+      ### TODO remove [end]
       - uses: "./.github/actions/cache-rust"
         with:
           cache-cargo: "false"
@@ -311,6 +342,10 @@ jobs:
       - env:
           stable_rust_version: |-
             ${{ needs.configuration.outputs.stable-rust-version }}
+        if: |-
+          matrix.working-directory != 'protocol' || (
+            matrix.network != '@agnostic' && matrix.protocol != '@agnostic'
+          )
         run: |-
           set -e
 
@@ -379,6 +414,37 @@ jobs:
       ${{ matrix.protocol }}; ${{ matrix.profile }}]"
     steps:
       - uses: "actions/checkout@v4"
+      ### TODO remove [start]
+      - env:
+          network: |-
+            ${{ matrix.network }}
+          protocol: |-
+            ${{ matrix.protocol }}
+        run: |-
+          set -e
+
+          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
+          then
+            exit
+          fi
+
+          files="$(
+            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
+          )"
+
+          if [ -z "${files}" ]
+          then
+            exit
+          fi
+
+          cp \
+            -R \
+            -f \
+            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
+            "./packages/currencies/src/"
+        working-directory: |-
+          ${{ matrix.working-directory }}
+      ### TODO remove [end]
       - uses: "./.github/actions/linting"
         with:
           rust-version: |-
@@ -413,6 +479,37 @@ jobs:
       ${{ matrix.network }}; ${{ matrix.protocol }}]"
     steps:
       - uses: "actions/checkout@v4"
+      ### TODO remove [start]
+      - env:
+          network: |-
+            ${{ matrix.network }}
+          protocol: |-
+            ${{ matrix.protocol }}
+        run: |-
+          set -e
+
+          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
+          then
+            exit
+          fi
+
+          files="$(
+            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
+          )"
+
+          if [ -z "${files}" ]
+          then
+            exit
+          fi
+
+          cp \
+            -R \
+            -f \
+            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
+            "./packages/currencies/src/"
+        working-directory: |-
+          ${{ matrix.working-directory }}
+      ### TODO remove [end]
       - uses: "./.github/actions/unused-deps"
         with:
           stable-rust-version: |-
@@ -446,6 +543,37 @@ jobs:
       ${{ matrix.network }}; ${{ matrix.protocol }}]"
     steps:
       - uses: "actions/checkout@v4"
+      ### TODO remove [start]
+      - env:
+          network: |-
+            ${{ matrix.network }}
+          protocol: |-
+            ${{ matrix.protocol }}
+        run: |-
+          set -e
+
+          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
+          then
+            exit
+          fi
+
+          files="$(
+            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
+          )"
+
+          if [ -z "${files}" ]
+          then
+            exit
+          fi
+
+          cp \
+            -R \
+            -f \
+            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
+            "./packages/currencies/src/"
+        working-directory: |-
+          ${{ matrix.working-directory }}
+      ### TODO remove [end]
       - uses: "./.github/actions/run-tests"
         with:
           rust-version: |-
@@ -534,6 +662,37 @@ jobs:
       ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]"
     steps:
       - uses: "actions/checkout@v4"
+      ### TODO remove [start]
+      - env:
+          network: |-
+            ${{ matrix.network }}
+          protocol: |-
+            ${{ matrix.protocol }}
+        run: |-
+          set -e
+
+          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
+          then
+            exit
+          fi
+
+          files="$(
+            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
+          )"
+
+          if [ -z "${files}" ]
+          then
+            exit
+          fi
+
+          cp \
+            -R \
+            -f \
+            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
+            "./packages/currencies/src/"
+        working-directory: |-
+          ${{ matrix.working-directory }}
+      ### TODO remove [end]
       - uses: "./.github/actions/build-and-check-optimized"
         with:
           rust-version: |-
