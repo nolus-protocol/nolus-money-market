@@ -1,11 +1,8 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
-use sdk::schemars;
-
-use crate::{define_currency, define_symbol};
 
 pub(super) fn maybe_visit<M, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
+    _matcher: &M,
+    _symbol: &SymbolSlice,
     visitor: V,
 ) -> MaybeAnyVisitResult<V>
 where
@@ -23,10 +20,7 @@ mod test {
         lpn::{Lpn, Lpns},
         native::Nls,
         payment::only::PaymentOnlyGroup,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
+        test_impl::{maybe_visit_on_bank_symbol_err, maybe_visit_on_ticker_err},
     };
 
     #[test]
@@ -36,9 +30,9 @@ mod test {
         maybe_visit_on_ticker_err::<Lpn, PaymentOnlyGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::TICKER);
 
-        maybe_visit_on_ticker_err::<Nls, PaymentGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Lpn, PaymentGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Lpn, PaymentGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Nls, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
     }
 
     #[test]
@@ -48,8 +42,8 @@ mod test {
         maybe_visit_on_bank_symbol_err::<Lpn, PaymentOnlyGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::TICKER);
 
-        maybe_visit_on_bank_symbol_impl::<Nls, PaymentGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_impl::<Lpn, PaymentGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_impl::<Lpn, PaymentGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Nls, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
     }
 }

@@ -38,7 +38,6 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        PaymentGroup,
     };
 
     use super::UsdcNoble;

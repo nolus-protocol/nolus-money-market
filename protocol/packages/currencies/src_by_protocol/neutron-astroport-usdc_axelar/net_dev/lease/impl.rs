@@ -80,6 +80,6 @@ mod test {
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Ntrn, LeaseGroup>(Ntrn::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Ntrn, LeaseGroup>(Ntrx::DEX_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Ntrn, LeaseGroup>(Ntrn::DEX_SYMBOL);
     }
 }
