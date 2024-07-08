@@ -37,7 +37,8 @@ mod test {
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        }, PaymentGroup,
+        },
+        PaymentGroup,
     };
 
     use super::UsdcNoble;
@@ -45,7 +46,7 @@ mod test {
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<UsdcNoble, PaymentOnlyGroup>();
-        
+
         maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Lpn, Lpns>(UsdcNoble::TICKER);
