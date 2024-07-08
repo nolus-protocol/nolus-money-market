@@ -39,10 +39,10 @@ define_currency!(Osmo, OSMO, 6);
 
 define_symbol! {
     ST_OSMO {
-        // full ibc route: transfer/channel-0/transfer/channel-??/uatom
-        bank: "ibc/NA_ST_OSMO",
-        // full ibc route: transfer/channel-??/uatom
-        dex: "ibc/NA_ST_OSMO_DEX",
+        // full ibc route: transfer/channel-0/transfer/channel-326/stuosmo
+        bank: "ibc/AF5559D128329B6C753F15481BEC26E533B847A471074703FA4903E7E6F61BA1",
+        // full ibc route: transfer/channel-326/stuosmo
+        dex: "ibc/D176154B0C63D1F9C6DCFB4F70349EBF2E2B5A87A05902F57A6AE92B863E9AEC",
     }
 }
 define_currency!(StOsmo, ST_OSMO, 6);
