@@ -3,27 +3,15 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-use self::astroport as impl_mod;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-use self::osmosis as impl_mod;
+#[cfg(not(feature = "testing"))]
+use self::r#impl as impl_mod;
+#[cfg(feature = "testing")]
+use self::testing as impl_mod;
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-pub(crate) mod astroport;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-pub(crate) mod osmosis;
+#[cfg(not(feature = "testing"))]
+mod r#impl;
+#[cfg(feature = "testing")]
+pub mod testing;
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

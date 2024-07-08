@@ -1,28 +1,8 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-use self::astroport as impl_mod;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-use self::osmosis as impl_mod;
+pub use r#impl::Nls;
 
-#[cfg(any(
-    feature = "neutron-astroport-usdc_axelar",
-    feature = "neutron-astroport-usdc_noble"
-))]
-pub(crate) mod astroport;
-#[cfg(any(
-    feature = "osmosis-osmosis-usdc_axelar",
-    feature = "osmosis-osmosis-usdc_noble"
-))]
-pub(crate) mod osmosis;
-
-pub type Nls = impl_mod::Nls;
+mod r#impl;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

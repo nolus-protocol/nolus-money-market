@@ -3,23 +3,9 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
-pub use self::neutron_astroport_usdc_axelar::UsdcAxelar as Lpn;
-#[cfg(feature = "neutron-astroport-usdc_noble")]
-pub use self::neutron_astroport_usdc_noble::UsdcNoble as Lpn;
-#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
-pub use self::osmosis_osmosis_usdc_axelar::Usdc as Lpn;
-#[cfg(feature = "osmosis-osmosis-usdc_noble")]
-pub use self::osmosis_osmosis_usdc_noble::UsdcNoble as Lpn;
+pub use r#impl::Lpn;
 
-#[cfg(feature = "neutron-astroport-usdc_axelar")]
-mod neutron_astroport_usdc_axelar;
-#[cfg(feature = "neutron-astroport-usdc_noble")]
-mod neutron_astroport_usdc_noble;
-#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
-mod osmosis_osmosis_usdc_axelar;
-#[cfg(feature = "osmosis-osmosis-usdc_noble")]
-mod osmosis_osmosis_usdc_noble;
+mod r#impl;
 
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
