@@ -7,8 +7,8 @@ pub type LpnC = Lpn;
 
 pub type PaymentC1 = Nls;
 pub type PaymentC2 = Lpn;
-pub type PaymentC3 = LC1;
-pub type PaymentC4 = LC2;
-pub type PaymentC5 = LC3;
-pub type PaymentC6 = LC4;
-pub type PaymentC7 = LC5;
+pub type PaymentC3 = LeaseC1;
+pub type PaymentC4 = LeaseC2;
+pub type PaymentC5 = LeaseC3;
+pub type PaymentC6 = LeaseC4;
+pub type PaymentC7 = LeaseC5;

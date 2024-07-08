@@ -22,7 +22,8 @@ where
     M: Matcher + ?Sized,
     V: AnyVisitor,
 {
-    currency::visit_noone(visitor)
+    use currency::maybe_visit_any as maybe_visit;
+    maybe_visit::<_, UsdcNoble, _>(matcher, symbol, visitor)
 }
 
 #[cfg(test)]
