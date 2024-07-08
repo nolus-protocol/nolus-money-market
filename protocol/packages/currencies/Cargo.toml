@@ -11,7 +11,7 @@ combinations = [
     { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], include-rest = true }
 ]
 
-feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true } }
+feature-groups = { net = { members = [], at-least-one = true, mutually-exclusive = true }, protocol = { members = [], at-least-one = true, mutually-exclusive = true } }
 
 [lib]
 doctest = false
