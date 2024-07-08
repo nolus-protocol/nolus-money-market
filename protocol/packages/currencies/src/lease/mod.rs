@@ -10,6 +10,7 @@ use self::testing as impl_mod;
 
 #[cfg(not(feature = "testing"))]
 mod r#impl;
+mod r#impl;
 #[cfg(feature = "testing")]
 pub mod testing;
 

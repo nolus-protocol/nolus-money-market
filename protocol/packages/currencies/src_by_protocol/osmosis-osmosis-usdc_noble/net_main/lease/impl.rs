@@ -336,7 +336,9 @@ mod test {
         {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
     };
 
-    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, Saga, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{
+        Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, Saga, StAtom, StOsmo, StTia, Tia, Wbtc, Weth,
+    };
 
     #[test]
     fn maybe_visit_on_ticker() {

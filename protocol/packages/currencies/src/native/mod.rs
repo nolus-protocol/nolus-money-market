@@ -3,6 +3,7 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 pub use r#impl::Nls;
 
 mod r#impl;
+mod r#impl;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

@@ -142,7 +142,7 @@ mod test {
     };
 
     use super::{Atom, Dydx, Eclip, Newt, Ntrn, StAtom, StTia, StkAtom, Tia, WstEth};
- 
+
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Atom, LeaseGroup>();

@@ -6,6 +6,7 @@ use sdk::schemars::{self, JsonSchema};
 use self::r#impl as impl_mod;
 
 mod r#impl;
+mod r#impl;
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
