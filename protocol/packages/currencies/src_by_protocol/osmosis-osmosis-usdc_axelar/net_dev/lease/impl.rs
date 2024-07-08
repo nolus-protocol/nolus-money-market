@@ -109,12 +109,10 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
+        {lease::LeaseGroup, lpn::Lpn, native::Nls},
     };
 
-    #[cfg(feature = "osmosis-osmosis-usdc_noble")]
-    use super::Saga;
-    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Akt, Atom, Juno, Mars, Osmo, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -122,6 +120,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Osmo, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Akt, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Mars, LeaseGroup>();
 
@@ -138,6 +137,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Osmo, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Mars, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);

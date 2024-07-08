@@ -11,3 +11,5 @@ define_symbol! {
     }
 }
 define_currency!(Usdc, USDC, 6);
+
+pub use Usdc as Lpn;

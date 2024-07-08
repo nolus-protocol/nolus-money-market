@@ -109,7 +109,7 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::Lpn, native::osmosis::Nls},
+        {lease::LeaseGroup, lpn::Lpn, native::Nls},
     };
 
     use super::{Akt, Atom, Juno, Mars, Osmo, Wbtc, Weth};

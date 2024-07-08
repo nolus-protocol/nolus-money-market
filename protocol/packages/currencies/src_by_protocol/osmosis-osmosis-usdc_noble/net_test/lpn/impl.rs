@@ -11,3 +11,5 @@ define_symbol! {
     }
 }
 define_currency!(UsdcNoble, USDC_NOBLE, 6);
+
+pub use UsdcNoble as Lpn;

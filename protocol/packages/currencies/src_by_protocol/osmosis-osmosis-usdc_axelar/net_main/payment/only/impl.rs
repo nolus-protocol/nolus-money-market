@@ -31,9 +31,8 @@ mod test {
     use currency::Currency;
 
     use crate::{
-        lease::osmosis::Osmo,
         lpn::{Lpn, Lpns},
-        native::osmosis::Nls,
+        native::Nls,
         payment::only::PaymentOnlyGroup,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
@@ -56,7 +55,6 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<UsdcNoble, PaymentOnlyGroup>();
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::TICKER);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Osmo::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
     }
 }
