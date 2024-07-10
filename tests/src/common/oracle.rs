@@ -1,4 +1,7 @@
-use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, Lpn, Nls};
+use currencies::{
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency,
+    Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
+};
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -49,7 +52,7 @@ impl Instantiator {
                 ),
             },
             swap_tree: oracle::swap_tree!(
-                { base: Lpn::TICKER },
+                { base: BaseCurrency::TICKER },
                 (1, LeaseC2::TICKER),
                 (3, LeaseC3::TICKER),
                 (7, LeaseC4::TICKER),
@@ -72,10 +75,11 @@ impl Instantiator {
 }
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Lpn>::new(100000000));
+    let price =
+        price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => to_json_binary(&PricesResponse {
+        QueryMsg::Prices {} => to_json_binary(&PricesResponse::<PriceCurrencies, BaseCurrencies> {
             prices: vec![price.into()],
         })
         .map_err(ContractError::ConvertToBinary),
@@ -153,7 +157,7 @@ where
             sender,
             wasm_execute(
                 oracle,
-                &ExecuteMsg::FeedPrices {
+                &ExecuteMsg::<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>::FeedPrices {
                     prices: vec![price.into()],
                 },
                 vec![],

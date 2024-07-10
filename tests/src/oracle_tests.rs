@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use currencies::{
-    LeaseGroup, Lpns, PaymentGroup, {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn},
+    LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns, Lpns as BaseCurrencies,
+    PaymentGroup, PaymentGroup as PriceCurrencies,
+    {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn},
 };
 use currency::Currency;
 use finance::{
@@ -14,7 +16,7 @@ use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{
         swap::{SwapPath, SwapTarget},
-        Alarm, AlarmsCount, ExecuteMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
+        AlarmsCount, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
     },
     result::ContractResult,
 };
@@ -46,6 +48,9 @@ use crate::common::{
 type LeaseCurrency = LeaseC1;
 type TheCoin = Coin<Lpn>;
 type BaseC = LeaseC3;
+type Alarm = oracle::api::Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>;
+type ExecuteMsg =
+    oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>;
 
 fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where

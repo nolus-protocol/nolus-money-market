@@ -1,4 +1,7 @@
-use currencies::Lpns;
+use currencies::{
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Lpns,
+    PaymentGroup as PriceCurrencies,
+};
 use currency::{Currency, SymbolSlice};
 use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::Code;
@@ -38,7 +41,7 @@ type OptionalLppEndpoints = Option<
 
 type OptionalOracleWrapper = Option<
     CwContractWrapper<
-        oracle::api::ExecuteMsg,
+        oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
         oracle::ContractError,
         oracle::api::InstantiateMsg,
         oracle::ContractError,
