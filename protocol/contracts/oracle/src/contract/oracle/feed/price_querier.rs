@@ -72,7 +72,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::test::{PaymentC3, PaymentC7};
+    use currencies::{PaymentC3, PaymentC7};
     use finance::{coin::Coin, price::total_of};
 
     use super::*;

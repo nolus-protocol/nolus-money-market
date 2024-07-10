@@ -194,7 +194,7 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use cosmwasm_std::Addr;
-    use currencies::test::LpnC;
+    use currencies::Lpn;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use lease::api::{
         open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
@@ -293,8 +293,8 @@ mod test {
                     Percent::from_percent(80),
                     Duration::from_hours(12),
                 ),
-                min_asset: Coin::<LpnC>::from(120_000).into(),
-                min_transaction: Coin::<LpnC>::from(12_000).into(),
+                min_asset: Coin::<Lpn>::from(120_000).into(),
+                min_transaction: Coin::<Lpn>::from(12_000).into(),
             },
             lease_interest_rate_margin: Percent::from_percent(3),
             lease_due_period: Duration::from_days(14),

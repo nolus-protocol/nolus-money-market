@@ -1,6 +1,3 @@
-#[cfg(feature = "stub_alarms")]
-pub use currencies::{Lpn as BaseCurrency, Lpns as BaseCurrencies, Stable as StableCurrency};
-
 #[cfg(feature = "contract")]
 pub use contract::*;
 

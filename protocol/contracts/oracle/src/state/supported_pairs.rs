@@ -230,14 +230,14 @@ impl AnyVisitor for CurrencyVisitor {
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LpnC, NativeC, PaymentC4};
+    use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
     use super::*;
 
-    type TheCurrency = LpnC;
+    type TheCurrency = Lpn;
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         cosmwasm_std::from_json(format!(
@@ -270,7 +270,7 @@ mod tests {
             lease3 = LeaseC3::TICKER,
             lease4 = LeaseC4::TICKER,
             lease5 = LeaseC5::TICKER,
-            native = NativeC::TICKER,
+            native = Nls::TICKER,
         ))
         .expect("123")
     }
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<LpnC>::new::<LpnC>(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::<Lpn>::new::<Lpn>(tree.into_tree()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -299,15 +299,15 @@ mod tests {
                 ]
             }}"#,
             lease1 = LeaseC1::TICKER,
-            stable = LpnC::TICKER,
+            stable = Lpn::TICKER,
         ))
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<LpnC>::new::<LpnC>(tree.into_tree()),
+            SupportedPairs::<Lpn>::new::<Lpn>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
                 LeaseC1::TICKER.into(),
-                LpnC::TICKER.into()
+                Lpn::TICKER.into()
             ))
         );
     }
@@ -412,9 +412,7 @@ mod tests {
 
         assert_eq!(resp, expect);
 
-        let resp = tree
-            .load_swap_path(NativeC::TICKER, LeaseC5::TICKER)
-            .unwrap();
+        let resp = tree.load_swap_path(Nls::TICKER, LeaseC5::TICKER).unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 6,
@@ -478,7 +476,7 @@ mod tests {
                 },
             },
             SwapLeg {
-                from: NativeC::TICKER.into(),
+                from: Nls::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 6,
                     target: LeaseC1::TICKER.into(),
@@ -522,7 +520,7 @@ mod tests {
                 }}"#,
                 TheCurrency::TICKER,
                 LeaseC1::TICKER,
-                NativeC::TICKER,
+                Nls::TICKER,
                 LeaseC2::TICKER,
             ))
             .unwrap()
@@ -535,9 +533,9 @@ mod tests {
         assert_eq!(
             listed_currencies.as_slice(),
             &[
-                api::Currency::new::<LpnC>(api::CurrencyGroup::Lpn),
+                api::Currency::new::<Lpn>(api::CurrencyGroup::Lpn),
                 api::Currency::new::<LeaseC1>(api::CurrencyGroup::Lease),
-                api::Currency::new::<NativeC>(api::CurrencyGroup::Native),
+                api::Currency::new::<Nls>(api::CurrencyGroup::Native),
                 api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),
             ]
         );

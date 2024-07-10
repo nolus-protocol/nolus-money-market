@@ -1,3 +1,7 @@
+use currencies::{
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
+    PaymentGroup as PriceCurrencies, Stable as StableCurrency,
+};
 use currency::Currency;
 use finance::price::dto::PriceDTO;
 use platform::{
@@ -15,8 +19,8 @@ use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
-        BaseCurrencies, BaseCurrency, Config, ExecuteMsg, InstantiateMsg, MigrateMsg,
-        PriceCurrencies, PricesResponse, QueryMsg, StableCurrency, SudoMsg, SwapTreeResponse,
+        Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PricesResponse, QueryMsg, SudoMsg,
+        SwapTreeResponse,
     },
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
@@ -102,7 +106,8 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                 .map(PriceDTO::from)?,
         ),
         QueryMsg::StablePrice { currency } => to_json_binary(
-            &QueryOracle::load(deps.storage)?.try_query_stable_price(env.block.time, &currency)?,
+            &QueryOracle::load(deps.storage)?
+                .try_query_stable_price::<StableCurrency>(env.block.time, &currency)?,
         ),
         QueryMsg::Prices {} => {
             let prices = QueryOracle::load(deps.storage)?.try_query_prices(env.block.time)?;
@@ -128,7 +133,7 @@ pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
     exec::do_executute(deps, env, msg, info.sender)
 }
@@ -182,8 +187,7 @@ where
 #[cfg(test)]
 mod tests {
     use currencies::{
-        test::{LeaseC1, LpnC, PaymentC1, PaymentC5},
-        LeaseGroup, Lpns,
+        LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
     };
     use currency::Currency;
     use finance::{duration::Duration, percent::Percent, price};
@@ -196,13 +200,15 @@ mod tests {
         tests::{dummy_instantiate_msg, setup_test},
     };
 
+    use super::{AlarmCurrencies, BaseCurrencies, BaseCurrency, PriceCurrencies};
+
     #[test]
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: LpnC::TICKER }, (1, PaymentC5::TICKER)),
+            swap_tree!({ base: Lpn::TICKER }, (1, PaymentC5::TICKER)),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -232,7 +238,7 @@ mod tests {
             from: PaymentC5::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
-                target: LpnC::TICKER.into(),
+                target: Lpn::TICKER.into(),
             },
         }];
 
@@ -244,7 +250,7 @@ mod tests {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
         let from = PaymentC1::TICKER;
-        let to = LpnC::TICKER;
+        let to = Lpn::TICKER;
         let query_impl = QueryMsg::SwapPath {
             from: from.into(),
             to: to.into(),
@@ -266,19 +272,24 @@ mod tests {
     fn impl_add_price_alarm() {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
-        let alarm = Alarm::<LeaseGroup, LpnC, Lpns>::new(
-            price::total_of::<LeaseC1>(10.into()).is::<LpnC>(1.into()),
+        let alarm = Alarm::<AlarmCurrencies, BaseCurrency, BaseCurrencies>::new(
+            price::total_of::<LeaseC1>(10.into()).is::<BaseCurrency>(1.into()),
             Some(price::total_of(7.into()).is(1.into())),
         );
-        let query_impl = ExecuteMsg::AddPriceAlarm {
+        let query_impl = ExecuteMsg::<
+            BaseCurrency,
+            BaseCurrencies,
+            AlarmCurrencies,
+            PriceCurrencies,
+        >::AddPriceAlarm {
             alarm: alarm.clone(),
         };
-        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<LeaseGroup, LpnC, Lpns>>(
+        let query_api = cosmwasm_std::from_json::<ExecuteMsgApi<LeaseGroup, Lpn, Lpns>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
         )
         .unwrap();
         assert_eq!(
-            ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, LpnC, Lpns> { alarm },
+            ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, Lpn, Lpns> { alarm },
             query_api
         );
     }

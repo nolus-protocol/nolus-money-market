@@ -109,7 +109,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::{test::LpnC, Lpns};
+    use currencies::{Lpn, Lpns};
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
@@ -124,18 +124,18 @@ mod test {
 
     #[test]
     fn try_from_no_payments() {
-        let lpp_ref = LppRef::<LpnC, _>::unchecked("lpp_address");
+        let lpp_ref = LppRef::<Lpn, _>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(10);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<LpnC>::new(100),
+                principal_due: Coin::<Lpn>::new(100),
                 annual_interest_rate: Percent::from_percent(12),
                 interest_paid: start,
             },
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
-        let batch: LppBatch<LppRef<LpnC, Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpn, Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
@@ -143,12 +143,12 @@ mod test {
 
     #[test]
     fn try_from_a_few_payments() {
-        let lpp_ref = LppRef::<LpnC, _>::unchecked("lpp_address");
+        let lpp_ref = LppRef::<Lpn, _>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(0);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<LpnC>::new(100),
+                principal_due: Coin::<Lpn>::new(100),
                 annual_interest_rate: Percent::from_percent(12),
                 interest_paid: start,
             },
@@ -157,7 +157,7 @@ mod test {
         let payment2 = 4.into();
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
-        let batch: LppBatch<LppRef<LpnC, Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpn, Lpns>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         {

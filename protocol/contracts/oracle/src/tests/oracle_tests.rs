@@ -1,4 +1,7 @@
-use currencies::test::{LpnC, PaymentC3, PaymentC4, PaymentC5, PaymentC7};
+use currencies::{
+    Lpn, Lpns as BaseCurrencies, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
+    PaymentGroup as PriceCurrencies,
+};
 use currency::{Currency, Group};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use platform::{contract, tests};
@@ -14,7 +17,7 @@ use sdk::{
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract::{execute, query},
-    tests::{dummy_default_instantiate_msg, setup_test, PriceGroup, TheStableGroup},
+    tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
 
@@ -33,12 +36,12 @@ fn feed_prices_unknown_feeder() {
 
 #[test]
 fn feed_direct_price() {
-    fn generate_price<BaseG>() -> PriceDTO<PriceGroup, BaseG>
+    fn generate_price<BaseG>() -> PriceDTO<PriceCurrencies, BaseG>
     where
         BaseG: Group,
     {
         price::total_of(Coin::<PaymentC4>::new(10))
-            .is(Coin::<LpnC>::new(120))
+            .is(Coin::<Lpn>::new(120))
             .into()
     }
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
@@ -58,7 +61,7 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
     assert_eq!(generate_price(), value);
 }
 
@@ -71,7 +74,7 @@ fn feed_indirect_price() {
     let price_b_to_c =
         PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(5)));
     let price_c_to_usdc =
-        PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(5)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(5)));
 
     // Feed indirect price from PaymentC5 to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
@@ -90,8 +93,8 @@ fn feed_indirect_price() {
     .unwrap();
 
     let expected_price =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<LpnC>::new(3)));
-    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<Lpn>::new(3)));
+    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 
@@ -130,7 +133,7 @@ fn deliver_alarm() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
     setup_receiver(&mut deps.querier);
 
-    let current_price = price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(23451));
+    let current_price = price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23451));
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.into()],
     };
@@ -139,7 +142,7 @@ fn deliver_alarm() {
 
     {
         let alarm_below_price =
-            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(23450));
+            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23450));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
@@ -155,7 +158,7 @@ fn deliver_alarm() {
     }
     {
         let alarm_below_price =
-            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(23452));
+            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23452));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };

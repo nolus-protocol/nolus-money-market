@@ -1,7 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currencies::{LeaseGroup, Lpn, Lpns, PaymentGroup};
-use currency::SymbolOwned;
+use currency::{Currency as CurrencyT, Group, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -11,11 +10,8 @@ use sdk::{
 use tree::HumanReadableTree;
 
 pub use super::alarms::Alarm;
-use super::{swap::SwapTarget, BaseCurrencies};
+use super::swap::SwapTarget;
 
-pub type PriceCurrencies = PaymentGroup;
-pub(crate) type BaseCurrency = Lpn;
-pub(crate) type AlarmCurrencies = LeaseGroup;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -32,13 +28,23 @@ pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg {
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
+pub enum ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>
+where
+    BaseCurrency: CurrencyT,
+    BaseCurrencies: Group,
+    AlarmCurrencies: Group,
+    PriceCurrencies: Group,
+{
     FeedPrices {
         prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
     },
     AddPriceAlarm {
-        alarm: Alarm<AlarmCurrencies, BaseCurrency, Lpns>,
+        alarm: Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms { max_count: AlarmsCount },
@@ -143,9 +149,9 @@ pub type CurrenciesResponse = Vec<Currency>;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Currency {
-    pub ticker: String,
-    pub bank_symbol: String,
-    pub dex_symbol: String,
+    pub ticker: SymbolOwned,
+    pub bank_symbol: SymbolOwned,
+    pub dex_symbol: SymbolOwned,
     pub decimal_digits: u8,
     pub group: CurrencyGroup,
 }
@@ -185,7 +191,11 @@ pub struct SwapTreeResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct PricesResponse {
+pub struct PricesResponse<PriceCurrencies, BaseCurrencies>
+where
+    PriceCurrencies: Group,
+    BaseCurrencies: Group,
+{
     pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencies>>,
 }
 

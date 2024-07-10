@@ -8,8 +8,12 @@ use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
 pub use self::only::PaymentOnlyGroup;
 
+#[cfg(feature = "testing")]
+pub use testing::*;
+
 mod only;
-mod osmosis_tests;
+#[cfg(feature = "testing")]
+mod testing;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

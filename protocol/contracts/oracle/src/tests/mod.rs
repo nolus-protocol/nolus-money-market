@@ -1,6 +1,6 @@
 use currencies::{
-    test::{LpnC, NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-    PaymentGroup,
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
+    PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
 };
 use currency::{Currency, Group};
 use finance::{
@@ -21,7 +21,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, BaseCurrencies, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
     contract::{instantiate, sudo},
 };
 
@@ -29,10 +29,6 @@ use crate::{
 mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
-
-pub(crate) type PriceGroup = PaymentGroup;
-pub(crate) type TheCurrency = LpnC;
-pub(crate) type TheStableGroup = BaseCurrencies;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
@@ -49,7 +45,7 @@ where
 pub(crate) fn base_price<C>(
     total_of: Amount,
     is: Amount,
-) -> BasePrice<PriceGroup, TheCurrency, TheStableGroup>
+) -> BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>
 where
     C: Currency,
 {
@@ -103,7 +99,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                     }}
                 ]
             }}"#,
-            usdc = LpnC::TICKER,
+            usdc = BaseCurrency::TICKER,
             weth = PaymentC7::TICKER,
             atom = PaymentC3::TICKER,
             osmo = PaymentC5::TICKER,
@@ -114,7 +110,8 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     )
 }
 
-pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
+pub(crate) fn dummy_feed_prices_msg(
+) -> ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies> {
     ExecuteMsg::FeedPrices {
         prices: vec![
             PriceDTO::from(
@@ -123,8 +120,12 @@ pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
             PriceDTO::from(
                 price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
             ),
-            PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(12))),
-            PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<LpnC>::new(120))),
+            PriceDTO::from(
+                price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<BaseCurrency>::new(12)),
+            ),
+            PriceDTO::from(
+                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<BaseCurrency>::new(120)),
+            ),
         ],
     }
 }
@@ -133,7 +134,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, NativeC::TICKER));
+    let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
     let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 

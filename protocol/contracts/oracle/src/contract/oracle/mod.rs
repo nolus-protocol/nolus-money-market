@@ -19,7 +19,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg, StableCurrency},
+    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
     error::ContractError,
     result::ContractResult,
@@ -103,17 +103,23 @@ where
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
-    pub(super) fn try_query_stable_price(
+    pub(super) fn try_query_stable_price<StableCurrency>(
         &self,
         at: Timestamp,
         currency: &SymbolOwned,
-    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
-        struct StablePriceCalc<BaseCurrency, G> {
+    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
+    where
+        StableCurrency: Currency,
+    {
+        struct StablePriceCalc<StableCurrency, BaseCurrency, G> {
             stable_to_base_price: Price<StableCurrency, BaseCurrency>,
-            _group: PhantomData<G>,
+            _stable: PhantomData<StableCurrency>,
+            _base_group: PhantomData<G>,
         }
-        impl<BaseCurrency, G> WithPrice<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
+        impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
+            for StablePriceCalc<StableCurrency, BaseCurrency, G>
         where
+            StableCurrency: Currency,
             BaseCurrency: Currency,
             G: Group,
         {
@@ -142,7 +148,8 @@ where
                             base_price,
                             StablePriceCalc {
                                 stable_to_base_price: stable_price,
-                                _group: PhantomData,
+                                _stable: PhantomData,
+                                _base_group: PhantomData,
                             },
                         )
                     })
@@ -218,8 +225,8 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currencies::{
-        test::{LpnC, NativeC, PaymentC3},
-        Lpns, PaymentGroup,
+        Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
+        PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
@@ -230,7 +237,7 @@ mod test_normalized_price_not_found {
     };
 
     use crate::{
-        api::{Alarm, Config, PriceCurrencies},
+        api::{Alarm, Config},
         contract::alarms::MarketAlarms,
         state::supported_pairs::SupportedPairs,
         swap_tree,
@@ -238,18 +245,13 @@ mod test_normalized_price_not_found {
 
     use super::{feed::Feeds, feeder::Feeders, Oracle};
 
-    type BaseCurrency = LpnC;
-    type StableCurrency = PaymentC3;
-    type BaseGroup = Lpns;
-    type AlarmCurrencies = PaymentGroup;
-
-    type NlsCoin = Coin<NativeC>;
-    type UsdcCoin = Coin<LpnC>;
+    type NlsCoin = Coin<Nls>;
+    type BaseCoin = Coin<BaseCurrency>;
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
 
     const PRICE_BASE: NlsCoin = Coin::new(1);
-    const PRICE_QUOTE: UsdcCoin = Coin::new(1);
+    const PRICE_QUOTE: BaseCoin = Coin::new(1);
 
     #[test]
     fn test() {
@@ -274,7 +276,7 @@ mod test_normalized_price_not_found {
         dispatch_and_deliver(&mut storage, 0);
     }
 
-    #[track_caller]
+    // #[track_caller]
     fn init(storage: &mut dyn Storage, price_config: &PriceConfig) {
         Feeders::try_register(
             DepsMut {
@@ -289,7 +291,7 @@ mod test_normalized_price_not_found {
         Config::new(price_config.clone()).store(storage).unwrap();
 
         SupportedPairs::<BaseCurrency>::new::<StableCurrency>(
-            swap_tree!({ base: LpnC::TICKER }, (1, NativeC::TICKER), (10, StableCurrency::TICKER))
+            swap_tree!({ base: BaseCurrency::TICKER }, (1, Nls::TICKER), (10, PaymentC3::TICKER))
                 .into_tree(),
         )
         .unwrap()
@@ -299,13 +301,12 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn add_alarm(storage: &mut dyn Storage) {
-        let mut alarms: MarketAlarms<'_, &mut dyn Storage, PriceCurrencies> =
-            MarketAlarms::new(storage);
+        let mut alarms: MarketAlarms<'_, &mut dyn Storage, _> = MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, BaseGroup>(
+            .try_add_price_alarm::<BaseCurrency, BaseCurrencies>(
                 Addr::unchecked("1"),
-                Alarm::<AlarmCurrencies, BaseCurrency, BaseGroup>::new(
+                Alarm::<AlarmCurrencies, BaseCurrency, BaseCurrencies>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),
                     Some(price::total_of(PRICE_BASE).is(PRICE_QUOTE)),
                 ),
@@ -315,7 +316,7 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn feed_price(price_config: &PriceConfig, storage: &mut dyn Storage) {
-        Feeds::<PriceCurrencies, BaseCurrency, BaseGroup>::with(price_config.clone())
+        Feeds::<PriceCurrencies, BaseCurrency, BaseCurrencies>::with(price_config.clone())
             .feed_prices(
                 storage,
                 NOW,
@@ -327,8 +328,13 @@ mod test_normalized_price_not_found {
 
     #[track_caller]
     fn dispatch(storage: &mut dyn Storage, expected_count: u32) {
-        let mut oracle: Oracle<'_, &mut dyn Storage, PriceCurrencies, BaseCurrency, BaseGroup> =
-            Oracle::load(storage).unwrap();
+        let mut oracle: Oracle<
+            '_,
+            &mut dyn Storage,
+            PriceCurrencies,
+            BaseCurrency,
+            BaseCurrencies,
+        > = Oracle::load(storage).unwrap();
 
         let alarms: u32 = oracle.try_notify_alarms(NOW, 16).unwrap().0;
 

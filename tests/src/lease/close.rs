@@ -10,7 +10,7 @@ use crate::common::{
 };
 
 use super::{
-    heal, repay, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, PaymentCoin, PaymentCurrency,
+    heal, repay, LeaseCoin, LeaseCurrency, LeaseTestCase, Lpnoin, PaymentCoin, PaymentCurrency,
     DOWNPAYMENT,
 };
 
@@ -19,7 +19,7 @@ fn state_closed() {
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
     let lease_addr: Addr = super::open_lease(&mut test_case, downpayment, None);
-    let borrowed_lpn: LpnCoin = super::quote_borrow(&test_case, downpayment);
+    let borrowed_lpn: Lpnoin = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin =
         price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());
     let lease_amount: LeaseCoin = price::total(

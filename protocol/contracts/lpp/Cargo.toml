@@ -18,14 +18,14 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract", "currencies/net_dev"]
-net_test = ["contract", "currencies/net_test"]
-net_main = ["contract", "currencies/net_main"]
+net_dev = ["contract"]
+net_test = ["contract"]
+net_main = ["contract"]
 
-neutron-astroport-usdc_axelar = ["contract", "currencies/neutron-astroport-usdc_axelar"]
-neutron-astroport-usdc_noble = ["contract", "currencies/neutron-astroport-usdc_noble"]
-osmosis-osmosis-usdc_axelar = ["contract", "currencies/osmosis-osmosis-usdc_axelar"]
-osmosis-osmosis-usdc_noble = ["contract", "currencies/osmosis-osmosis-usdc_noble"]
+neutron-astroport-usdc_axelar = ["contract"]
+neutron-astroport-usdc_noble = ["contract"]
+osmosis-osmosis-usdc_axelar = ["contract"]
+osmosis-osmosis-usdc_noble = ["contract"]
 
 contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies", "dep:oracle"]
 stub = []

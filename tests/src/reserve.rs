@@ -1,3 +1,4 @@
+use currencies::Lpn;
 use currency::Currency;
 use finance::coin::{Amount, Coin};
 use platform::{contract::Code, error::Error as PlatformError};
@@ -15,7 +16,6 @@ use crate::{
             app::App, builder::BlankBuilder as TestCaseBuilder,
             response::ResponseWithInterChainMsgs, TestCase,
         },
-        Lpn,
     },
     lease::LeaseTestCase,
 };
