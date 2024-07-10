@@ -1,6 +1,5 @@
 use finance::price::dto::PriceDTO;
 
-use currencies::PaymentGroup as PriceCurrencies;
 use currency::{Currency, Group};
 use platform::{contract, response};
 use sdk::{
@@ -9,7 +8,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{BaseCurrencies, BaseCurrency, Config, DispatchAlarmsResponse, ExecuteMsg},
+    api::{Config, DispatchAlarmsResponse, ExecuteMsg},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,
@@ -17,12 +16,18 @@ use crate::{
 
 use super::oracle::{feed::Feeds, feeder::Feeders};
 
-pub fn do_executute(
+pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>(
     deps: DepsMut<'_>,
     env: Env,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
     sender: Addr,
-) -> ContractResult<CwResponse> {
+) -> ContractResult<CwResponse>
+where
+    BaseCurrency: Currency,
+    BaseCurrencies: Group,
+    AlarmCurrencies: Group + Clone,
+    PriceCurrencies: Group + Clone, //TODO figure out whether Clone is really needed
+{
     match msg {
         ExecuteMsg::FeedPrices { prices } => {
             if !Feeders::is_feeder(deps.storage, &sender).map_err(ContractError::LoadFeeders)? {

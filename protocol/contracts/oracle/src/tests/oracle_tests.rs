@@ -1,4 +1,7 @@
-use currencies::{Lpn, PaymentC3, PaymentC4, PaymentC5, PaymentC7};
+use currencies::{
+    Lpn, Lpns as BaseCurrencies, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
+    PaymentGroup as PriceCurrencies,
+};
 use currency::{Currency, Group};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use platform::{contract, tests};
@@ -14,7 +17,7 @@ use sdk::{
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract::{execute, query},
-    tests::{dummy_default_instantiate_msg, setup_test, PriceGroup, TheStableGroup},
+    tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
 
@@ -33,7 +36,7 @@ fn feed_prices_unknown_feeder() {
 
 #[test]
 fn feed_direct_price() {
-    fn generate_price<BaseG>() -> PriceDTO<PriceGroup, BaseG>
+    fn generate_price<BaseG>() -> PriceDTO<PriceCurrencies, BaseG>
     where
         BaseG: Group,
     {
@@ -58,7 +61,7 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
     assert_eq!(generate_price(), value);
 }
 
@@ -91,7 +94,7 @@ fn feed_indirect_price() {
 
     let expected_price =
         PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<Lpn>::new(3)));
-    let value: PriceDTO<PriceGroup, TheStableGroup> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 

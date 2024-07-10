@@ -119,7 +119,7 @@ mod test {
     use std::collections::HashMap;
 
     use currencies::{
-        PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
+        Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
         PaymentGroup as PriceCurrencies,
     };
     use currency::SymbolStatic;
@@ -136,7 +136,7 @@ mod test {
     };
     use tree::HumanReadableTree;
 
-    use crate::tests::{self, TheCurrency};
+    use crate::tests;
 
     use super::*;
 
@@ -172,7 +172,7 @@ mod test {
     }
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
-        let base = TheCurrency::TICKER;
+        let base = BaseCurrency::TICKER;
         let osmo = PaymentC5::TICKER;
         let nls = PaymentC1::TICKER;
         let weth = PaymentC7::TICKER;
@@ -210,9 +210,8 @@ mod test {
     }
 
     mod all_prices_iter {
+        use currencies::{Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies};
         use finance::price::base::BasePrice;
-
-        use crate::tests::{PriceGroup, TheStableGroup};
 
         use super::*;
 
@@ -221,7 +220,8 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree = SupportedPairs::<TheCurrency>::new::<TheCurrency>(tree.into_tree()).unwrap();
+            let tree =
+                SupportedPairs::<BaseCurrency>::new::<BaseCurrency>(tree.into_tree()).unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -231,7 +231,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceGroup, TheCurrency, TheStableGroup> = Feeds::with(config);
+            let oracle: Feeds<PriceCurrencies, BaseCurrency, BaseCurrencies> = Feeds::with(config);
 
             oracle
                 .feed_prices(
@@ -239,8 +239,8 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        tests::dto_price::<PaymentC3, _, TheCurrency, _>(1, 1),
-                        tests::dto_price::<PaymentC1, _, TheCurrency, _>(2, 1),
+                        tests::dto_price::<PaymentC3, _, BaseCurrency, _>(1, 1),
+                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(2, 1),
                         tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
                         tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
                         tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
@@ -254,7 +254,7 @@ mod test {
                 .flatten()
                 .collect();
 
-            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency, TheStableGroup>> = vec![
+            let expected: Vec<BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>> = vec![
                 tests::base_price::<PaymentC3>(1, 1),
                 tests::base_price::<PaymentC7>(1, 1),
                 tests::base_price::<PaymentC1>(2, 1),
@@ -271,7 +271,8 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree = SupportedPairs::<TheCurrency>::new::<TheCurrency>(tree.into_tree()).unwrap();
+            let tree =
+                SupportedPairs::<BaseCurrency>::new::<BaseCurrency>(tree.into_tree()).unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -281,7 +282,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceGroup, TheCurrency, TheStableGroup> = Feeds::with(config);
+            let oracle: Feeds<PriceCurrencies, BaseCurrency, BaseCurrencies> = Feeds::with(config);
 
             oracle
                 .feed_prices(
@@ -289,8 +290,8 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        // tests::dto_price::<PaymentC3, TheCurrency>(1, 1),
-                        tests::dto_price::<PaymentC1, _, TheCurrency, _>(2, 1),
+                        // tests::dto_price::<PaymentC3, BaseCurrency>(1, 1),
+                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(2, 1),
                         tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
                         tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
                         tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
@@ -299,7 +300,7 @@ mod test {
                 )
                 .unwrap();
 
-            let expected: Vec<BasePrice<PriceCurrencies, TheCurrency, TheStableGroup>> = vec![
+            let expected: Vec<BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>> = vec![
                 tests::base_price::<PaymentC1>(2, 1),
                 tests::base_price::<PaymentC5>(2, 1),
                 tests::base_price::<PaymentC4>(2, 1),

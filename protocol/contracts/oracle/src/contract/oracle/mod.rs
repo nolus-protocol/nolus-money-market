@@ -19,7 +19,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg, StableCurrency},
+    api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
     error::ContractError,
     result::ContractResult,
@@ -103,17 +103,23 @@ where
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
-    pub(super) fn try_query_stable_price(
+    pub(super) fn try_query_stable_price<StableCurrency>(
         &self,
         at: Timestamp,
         currency: &SymbolOwned,
-    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError> {
-        struct StablePriceCalc<BaseCurrency, G> {
+    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
+    where
+        StableCurrency: Currency,
+    {
+        struct StablePriceCalc<StableCurrency, BaseCurrency, G> {
             stable_to_base_price: Price<StableCurrency, BaseCurrency>,
-            _group: PhantomData<G>,
+            _stable: PhantomData<StableCurrency>,
+            _base_group: PhantomData<G>,
         }
-        impl<BaseCurrency, G> WithPrice<BaseCurrency> for StablePriceCalc<BaseCurrency, G>
+        impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
+            for StablePriceCalc<StableCurrency, BaseCurrency, G>
         where
+            StableCurrency: Currency,
             BaseCurrency: Currency,
             G: Group,
         {
@@ -142,7 +148,8 @@ where
                             base_price,
                             StablePriceCalc {
                                 stable_to_base_price: stable_price,
-                                _group: PhantomData,
+                                _stable: PhantomData,
+                                _base_group: PhantomData,
                             },
                         )
                     })
@@ -218,7 +225,8 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currencies::{
-        Nls, PaymentC3, PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies,
+        Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
+        PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
     use currency::Currency as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
@@ -229,7 +237,7 @@ mod test_normalized_price_not_found {
     };
 
     use crate::{
-        api::{Alarm, BaseCurrencies, BaseCurrency, Config, StableCurrency},
+        api::{Alarm, Config},
         contract::alarms::MarketAlarms,
         state::supported_pairs::SupportedPairs,
         swap_tree,
