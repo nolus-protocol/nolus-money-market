@@ -13,7 +13,6 @@ mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
-
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
