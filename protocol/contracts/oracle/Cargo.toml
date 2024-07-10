@@ -33,11 +33,13 @@ contract = [
     "stub_swap",
     "sdk/contract",
     "dep:cosmwasm-std",
+    "dep:currencies",
+    "dep:marketprice",
     "dep:versioning",
 ]
-stub_alarms = []
-stub_price = []
-stub_swap = []
+stub_alarms = ["dep:currencies"]
+stub_price = ["dep:oracle-platform"]
+stub_swap = ["dep:oracle-platform"]
 testing = [
     "stub_alarms",
     "stub_price",
@@ -47,11 +49,11 @@ testing = [
 ]
 
 [dependencies]
-currencies = { workspace = true }
+currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
-marketprice = { workspace = true }
-oracle-platform = { workspace = true }
+marketprice = { workspace = true, optional = true }
+oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 tree = { workspace = true, features = ["schema"] }
