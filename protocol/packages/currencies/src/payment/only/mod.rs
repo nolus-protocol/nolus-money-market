@@ -3,9 +3,16 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-use self::r#impl as impl_mod;
+#[cfg(not(feature = "testing"))]
+use r#impl as impl_mod;
+#[cfg(feature = "testing")]
+use testing as impl_mod;
 
+#[cfg(not(feature = "testing"))]
 mod r#impl;
+#[cfg(feature = "testing")]
+mod testing;
+
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
