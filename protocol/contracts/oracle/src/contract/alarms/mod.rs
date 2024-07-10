@@ -225,20 +225,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn wrong_base_currency() {
-        let mut storage = MockStorage::new();
-
-        let receiver = Addr::unchecked("receiver");
-
-        let _ = MarketAlarms::new(&mut storage as &mut dyn Storage)
-            .try_add_price_alarm::<BaseCurrency, BaseCurrencies>(
-                receiver,
-                AlarmDTO::new(tests::base_price::<BaseCurrency>(1, 20), None),
-            );
-    }
-
-    #[test]
     fn add_remove() {
         let mut storage = MockStorage::new();
         let mut alarms = MarketAlarms::new(&mut storage as &mut dyn Storage);
@@ -290,7 +276,7 @@ mod test {
         let storage = MockStorage::new();
 
         let alarms = MarketAlarms::new(&storage as &dyn Storage);
-        let res = alarms.notify_alarms_iter::<_, _, Lpns>(
+        let res = alarms.notify_alarms_iter::<_, _, BaseCurrencies>(
             [tests::base_price::<SuperGroupTestC1>(1, 25)]
                 .into_iter()
                 .map(Ok),
