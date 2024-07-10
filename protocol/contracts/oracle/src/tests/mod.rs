@@ -1,6 +1,5 @@
 use currencies::{
-    test::{LpnC, NativeC, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-    PaymentGroup,
+    PaymentGroup, {Lpn, Nls, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
 };
 use currency::{Currency, Group};
 use finance::{
@@ -31,7 +30,7 @@ mod oracle_tests;
 pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type PriceGroup = PaymentGroup;
-pub(crate) type TheCurrency = LpnC;
+pub(crate) type TheCurrency = Lpn;
 pub(crate) type TheStableGroup = BaseCurrencies;
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
@@ -103,7 +102,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                     }}
                 ]
             }}"#,
-            usdc = LpnC::TICKER,
+            usdc = Lpn::TICKER,
             weth = PaymentC7::TICKER,
             atom = PaymentC3::TICKER,
             osmo = PaymentC5::TICKER,
@@ -123,8 +122,8 @@ pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
             PriceDTO::from(
                 price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
             ),
-            PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<LpnC>::new(12))),
-            PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<LpnC>::new(120))),
+            PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(12))),
+            PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(120))),
         ],
     }
 }
@@ -133,7 +132,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, NativeC::TICKER));
+    let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
     let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 

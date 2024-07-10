@@ -142,7 +142,7 @@ fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>> {
 
 #[cfg(test)]
 mod test {
-    use currencies::test::LpnC;
+    use currencies::Lpn;
     use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 
@@ -155,12 +155,12 @@ mod test {
         let mut deps = testing::mock_dependencies();
         let mut block_time = Timestamp::from_nanos(1_571_797_419_879_305_533);
 
-        let total: Total<LpnC> = Total::default();
+        let total: Total<Lpn> = Total::default();
         total.store(deps.as_mut().storage).expect("should store");
 
-        let mut total: Total<LpnC> = Total::load(deps.as_ref().storage).expect("should load");
+        let mut total: Total<Lpn> = Total::load(deps.as_ref().storage).expect("should load");
 
-        assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
+        assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
 
         total
             .borrow(block_time, Coin::new(10000), Percent::from_percent(20))
@@ -188,10 +188,10 @@ mod test {
     fn borrow_and_repay_with_overflow() {
         let mut block_time = Timestamp::from_nanos(0);
 
-        let mut total: Total<LpnC> = Total::default();
-        assert_eq!(total.total_principal_due(), Coin::<LpnC>::new(0));
+        let mut total: Total<Lpn> = Total::default();
+        assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
 
-        let borrow_loan1 = Coin::<LpnC>::new(5_458_329);
+        let borrow_loan1 = Coin::<Lpn>::new(5_458_329);
         let loan1_annual_interest_rate = Percent::from_permille(137);
         let loan1 = Loan {
             principal_due: borrow_loan1,
@@ -208,7 +208,7 @@ mod test {
         block_time = block_time.plus_days(59);
 
         // Open loan2 after 59 days
-        let borrow_loan2 = Coin::<LpnC>::new(3_543_118);
+        let borrow_loan2 = Coin::<Lpn>::new(3_543_118);
         let loan2_annual_interest_rate = Percent::from_permille(133);
         let loan2 = Loan {
             principal_due: borrow_loan2,

@@ -28,7 +28,7 @@ use crate::common::{
 };
 
 use super::{
-    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
+    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, Lpnoin, Lpnurrency, PaymentCoin,
     PaymentCurrency, DOWNPAYMENT,
 };
 
@@ -79,7 +79,7 @@ fn partial_repay_after_time() {
 
     super::feed_price(&mut test_case);
 
-    let due_margin_to_pay: LpnCoin = LpnCoin::try_from(due_margin)
+    let due_margin_to_pay: Lpnoin = Lpnoin::try_from(due_margin)
         .unwrap()
         .checked_div(2)
         .unwrap();
@@ -88,8 +88,8 @@ fn partial_repay_after_time() {
         &mut test_case,
         lease_address.clone(),
         price::total(
-            LpnCoin::try_from(overdue_margin).unwrap()
-                + LpnCoin::try_from(overdue_interest).unwrap()
+            Lpnoin::try_from(overdue_margin).unwrap()
+                + Lpnoin::try_from(overdue_interest).unwrap()
                 + due_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
         ),
@@ -174,11 +174,11 @@ fn full_repay_with_max_ltd() {
         loan_interest_rate: Percent::from_permille(70),
         margin_interest_rate: Percent::from_permille(30),
         principal_due: price::total(percent.of(downpayment), super::price_lpn_of()).into(),
-        overdue_margin: LpnCoin::ZERO.into(),
-        overdue_interest: LpnCoin::ZERO.into(),
+        overdue_margin: Lpnoin::ZERO.into(),
+        overdue_interest: Lpnoin::ZERO.into(),
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
-        due_margin: LpnCoin::ZERO.into(),
-        due_interest: LpnCoin::ZERO.into(),
+        due_margin: Lpnoin::ZERO.into(),
+        due_interest: Lpnoin::ZERO.into(),
         validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
@@ -227,7 +227,7 @@ fn full_repay_with_excess() {
             .query()
             .query_all_balances(lease_address.clone())
             .unwrap(),
-        &[cwcoin::<LpnCurrency, Amount>(overpayment.into())],
+        &[cwcoin::<Lpnurrency, Amount>(overpayment.into())],
     );
 
     assert_eq!(
@@ -297,7 +297,7 @@ where
 
     swap_hook(&mut test_case.app);
 
-    let swap_out_lpn: LpnCoin = price::total(payment, price_lpn_of());
+    let swap_out_lpn: Lpnoin = price::total(payment, price_lpn_of());
 
     let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
 
@@ -309,7 +309,7 @@ where
         |amount: Amount, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
             assert_eq!(amount, payment.into());
             assert_eq!(in_denom, PaymentCurrency::DEX_SYMBOL);
-            assert_eq!(out_denom, LpnCurrency::DEX_SYMBOL);
+            assert_eq!(out_denom, Lpnurrency::DEX_SYMBOL);
 
             swap_out_lpn.into()
         },

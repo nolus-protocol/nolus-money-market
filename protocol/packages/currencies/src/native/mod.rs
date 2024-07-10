@@ -1,8 +1,16 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 
-pub use r#impl::Nls;
+pub use impl_mod::Nls;
 
+#[cfg(not(feature = "testing"))]
+use r#impl as impl_mod;
+#[cfg(feature = "testing")]
+use testing as impl_mod;
+
+#[cfg(not(feature = "testing"))]
 mod r#impl;
+#[cfg(feature = "testing")]
+mod testing;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

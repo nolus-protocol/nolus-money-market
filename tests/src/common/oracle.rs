@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LpnC, NativeC};
+use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, Lpn, Nls};
 use currency::Currency;
 use finance::{
     coin::Coin,
@@ -49,11 +49,11 @@ impl Instantiator {
                 ),
             },
             swap_tree: oracle::swap_tree!(
-                { base: LpnC::TICKER },
+                { base: Lpn::TICKER },
                 (1, LeaseC2::TICKER),
                 (3, LeaseC3::TICKER),
                 (7, LeaseC4::TICKER),
-                (11, NativeC::TICKER),
+                (11, Nls::TICKER),
                 (13, LeaseC1::TICKER),
             ),
         };
@@ -72,7 +72,7 @@ impl Instantiator {
 }
 
 pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price = price::total_of(Coin::<NativeC>::new(123456789)).is(Coin::<LpnC>::new(100000000));
+    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Lpn>::new(100000000));
 
     match msg {
         QueryMsg::Prices {} => to_json_binary(&PricesResponse {

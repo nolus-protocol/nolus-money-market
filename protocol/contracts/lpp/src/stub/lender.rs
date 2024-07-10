@@ -113,7 +113,7 @@ impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpn, 
 mod test {
     use std::marker::PhantomData;
 
-    use currencies::{test::LpnC, Lpns};
+    use currencies::{Lpn, Lpns};
     use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{
@@ -130,10 +130,10 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            _lpn: PhantomData::<LpnC>,
+            _lpn: PhantomData::<Lpn>,
             _lpns: PhantomData::<Lpns>,
         };
-        let borrow_amount = Coin::<LpnC>::new(10);
+        let borrow_amount = Coin::<Lpn>::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
         let mut lpp_stub = lpp.into_lender(wrapper);

@@ -169,15 +169,11 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{
-        test::{PaymentC5, PaymentC6, PaymentC7},
-        Lpns,
+        Lpns, PaymentGroup as PriceCurrencies, {PaymentC5, PaymentC6, PaymentC7},
     };
     use sdk::cosmwasm_std::testing::MockStorage;
 
-    use crate::{
-        api::PriceCurrencies,
-        tests::{self, TheCurrency as Base},
-    };
+    use crate::tests::{self, TheCurrency as Base};
 
     use super::*;
 

@@ -11,7 +11,7 @@ use crate::{
         },
         USER,
     },
-    lease::{repay, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
+    lease::{repay, LeaseCoin, LeaseCurrency, Lpnoin, Lpnurrency},
 };
 
 #[test]
@@ -25,12 +25,12 @@ fn active_state() {
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
 
-    let unutilized_amount: LpnCoin = 100.into();
+    let unutilized_amount: Lpnoin = 100.into();
 
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
     heal_ok(&mut test_case.app, lease.clone()).expect_empty();
     assert!(
-        platform::bank::balance::<LpnCurrency>(&lease, test_case.app.query())
+        platform::bank::balance::<Lpnurrency>(&lease, test_case.app.query())
             .unwrap()
             .is_zero()
     );

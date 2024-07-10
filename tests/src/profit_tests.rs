@@ -1,6 +1,6 @@
 use std::slice;
 
-use currencies::test::LpnC;
+use currencies::{Lpn, Nls};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -25,7 +25,7 @@ use crate::common::{
     test_case::{
         builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs, TestCase,
     },
-    CwCoin, Native, ADMIN, USER,
+    CwCoin, ADMIN, USER,
 };
 
 fn test_case_with<Lpn>(
@@ -57,8 +57,6 @@ where
 
 #[test]
 fn update_config() {
-    type Lpn = LpnC;
-
     const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
     const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
 
@@ -103,8 +101,6 @@ fn update_config() {
 
 #[test]
 fn update_config_unauthorized() {
-    type Lpn = LpnC;
-
     const INITIAL_CACDENCE_HOURS: CadenceHours = 2;
     const UPDATED_CACDENCE_HOURS: CadenceHours = INITIAL_CACDENCE_HOURS + 1;
 
@@ -128,7 +124,6 @@ fn update_config_unauthorized() {
 
 #[test]
 fn on_alarm_from_unknown() {
-    type Lpn = LpnC;
     let user_addr: Addr = Addr::unchecked(USER);
 
     let mut test_case = test_case::<Lpn>();
@@ -164,7 +159,6 @@ fn on_alarm_from_unknown() {
 
 #[test]
 fn on_alarm_zero_balance() {
-    type Lpn = LpnC;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = test_case::<Lpn>();
@@ -185,7 +179,7 @@ fn on_alarm_zero_balance() {
 }
 
 struct InitTreasuryBalancesResult<Lpn> {
-    native: Coin<Native>,
+    native: Coin<Nls>,
     lpn: Coin<Lpn>,
 }
 
@@ -212,13 +206,13 @@ where
 
 struct SendAlarmAndMaybeSwapResult {
     response: AppResponse,
-    lpn_profit_swap_out: Coin<Native>,
+    lpn_profit_swap_out: Coin<Nls>,
     has_swap: bool,
 }
 
 fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, Addr>,
-    lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Native>)>,
+    lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Nls>)>,
 ) -> SendAlarmAndMaybeSwapResult
 where
     Lpn: Currency,
@@ -277,7 +271,7 @@ where
             |amount: Amount, from_denom: DexDenom<'_>, to_denom: DexDenom<'_>| {
                 assert_eq!(amount, lpn_profit_swap_in.into());
                 assert_eq!(from_denom, Lpn::DEX_SYMBOL);
-                assert_eq!(to_denom, Native::DEX_SYMBOL);
+                assert_eq!(to_denom, Nls::DEX_SYMBOL);
 
                 lpn_profit_swap_out.into()
             },
@@ -315,17 +309,14 @@ where
     }
 }
 
-fn total_native_profit(
-    native_profit: Coin<Native>,
-    lpn_profit_swap_out: Coin<Native>,
-) -> Coin<Native> {
+fn total_native_profit(native_profit: Coin<Nls>, lpn_profit_swap_out: Coin<Nls>) -> Coin<Nls> {
     (native_profit + lpn_profit_swap_out).saturating_sub(::profit::profit::Profit::IBC_FEE_RESERVE)
 }
 
 fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
     test_case: &TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, Addr>,
     alarm_result: SendAlarmAndMaybeSwapResult,
-    total_native_profit: Coin<Native>,
+    total_native_profit: Coin<Nls>,
 ) {
     let SendAlarmAndMaybeSwapResult {
         mut response,
@@ -373,7 +364,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
                 "profit-amount-amount",
                 &Amount::from(total_native_profit).to_string()
             ),
-            ("profit-amount-symbol", Native::TICKER)
+            ("profit-amount-symbol", Nls::TICKER)
         ]
     );
 
@@ -391,11 +382,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!(
-                    "{}{}",
-                    Amount::from(total_native_profit),
-                    Native::BANK_SYMBOL
-                )
+                &format!("{}{}", Amount::from(total_native_profit), Nls::BANK_SYMBOL)
             )
         ]
     );
@@ -413,14 +400,14 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
 
 fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: TestCase<ProtocolsRegistry, Addr, Addr, Reserve, Leaser, Lpp, Oracle, TimeAlarms>,
-    init_treasury_native_balance: Coin<Native>,
-    total_native_profit: Coin<Native>,
+    init_treasury_native_balance: Coin<Nls>,
+    total_native_profit: Coin<Nls>,
     init_treasury_lpn_balance: Coin<Lpn>,
 ) where
     Lpn: Currency,
 {
     assert_eq!(
-        bank::balance::<Native>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        bank::balance::<Nls>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_native_balance + total_native_profit,
     );
 
@@ -436,8 +423,8 @@ fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAla
 }
 
 fn on_time_alarm_do_transfers<Lpn>(
-    native_profit: Coin<Native>,
-    lpn_profit: Option<(Coin<Lpn>, Coin<Native>)>,
+    native_profit: Coin<Nls>,
+    lpn_profit: Option<(Coin<Lpn>, Coin<Nls>)>,
 ) where
     Lpn: Currency,
 {
@@ -446,8 +433,8 @@ fn on_time_alarm_do_transfers<Lpn>(
         Some(&[
             cwcoin::<Lpn, _>(1_000_000_000),
             cwcoin_dex::<Lpn, _>(1_000_000_000),
-            cwcoin::<Native, _>(1_000_000_000),
-            cwcoin_dex::<Native, _>(1_000_000_000),
+            cwcoin::<Nls, _>(1_000_000_000),
+            cwcoin_dex::<Nls, _>(1_000_000_000),
         ]),
     );
 
@@ -505,8 +492,6 @@ fn on_time_alarm_do_transfers<Lpn>(
 
 #[test]
 fn on_alarm_native_only_transfer() {
-    type Lpn = LpnC;
-
     let native_profit = 1000.into();
 
     on_time_alarm_do_transfers::<Lpn>(native_profit, None);
@@ -514,8 +499,6 @@ fn on_alarm_native_only_transfer() {
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
-    type Lpn = LpnC;
-
     let lpn_profit = 500.into();
     let swapped_lpn_profit = 250.into();
 
@@ -524,8 +507,6 @@ fn on_alarm_foreign_only_transfer() {
 
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
-    type Lpn = LpnC;
-
     let native_profit = 1000.into();
     let lpn_profit = 500.into();
     let swapped_lpn_profit = 250.into();
@@ -535,7 +516,6 @@ fn on_alarm_native_and_foreign_transfer() {
 
 #[test]
 fn integration_with_time_alarms() {
-    type Lpn = LpnC;
     const CADENCE_HOURS: CadenceHours = 2;
 
     let mut test_case = test_case_with::<Lpn>(CADENCE_HOURS, None);
@@ -546,13 +526,13 @@ fn integration_with_time_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin::<Native, _>(500)],
+        &[cwcoin::<Nls, _>(500)],
     );
 
     assert!(!test_case
         .app
         .query()
-        .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
+        .query_balance(test_case.address_book.profit().clone(), Nls::BANK_SYMBOL)
         .unwrap()
         .amount
         .is_zero());
@@ -579,7 +559,7 @@ fn integration_with_time_alarms() {
         test_case
             .app
             .query()
-            .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
+            .query_balance(test_case.address_book.profit().clone(), Nls::BANK_SYMBOL)
             .unwrap()
             .amount
             .u128(),

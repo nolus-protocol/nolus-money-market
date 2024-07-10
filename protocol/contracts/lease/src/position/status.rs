@@ -39,7 +39,7 @@ impl<Asset> Debt<Asset> {
 
 #[cfg(test)]
 mod test_status {
-    use currencies::test::LpnC;
+    use currencies::Lpn;
     use finance::percent::Percent;
 
     use crate::position::Liquidation;
@@ -49,14 +49,14 @@ mod test_status {
     #[test]
     fn ord_liq() {
         assert!(
-            Liquidation::<LpnC>::Full(Cause::Overdue())
+            Liquidation::<Lpn>::Full(Cause::Overdue())
                 < Liquidation::Full(Cause::Liability {
                     ltv: Percent::from_percent(20),
                     healthy_ltv: Percent::from_percent(40)
                 })
         );
         assert!(
-            Liquidation::<LpnC>::Full(Cause::Liability {
+            Liquidation::<Lpn>::Full(Cause::Liability {
                 ltv: Percent::from_percent(19),
                 healthy_ltv: Percent::from_percent(40)
             }) < Liquidation::Full(Cause::Liability {

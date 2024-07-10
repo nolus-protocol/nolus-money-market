@@ -1,5 +1,6 @@
 use finance::price::dto::PriceDTO;
 
+use currencies::PaymentGroup as PriceCurrencies;
 use currency::{Currency, Group};
 use platform::{contract, response};
 use sdk::{
@@ -8,9 +9,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{
-        BaseCurrencies, BaseCurrency, Config, DispatchAlarmsResponse, ExecuteMsg, PriceCurrencies,
-    },
+    api::{BaseCurrencies, BaseCurrency, Config, DispatchAlarmsResponse, ExecuteMsg},
     contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     result::ContractResult,

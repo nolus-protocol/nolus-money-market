@@ -1,6 +1,6 @@
 use std::array::from_fn;
 
-use currencies::test::{LpnC, NativeC};
+use currencies::{Lpn, Nls};
 use currency::Currency;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
@@ -188,8 +188,6 @@ mod mock_lease {
         .unwrap_response()
     }
 }
-
-type Lpn = LpnC;
 
 #[test]
 fn test_lease_serde() {
@@ -550,7 +548,7 @@ fn test_time_notify() {
 fn test_profit_alarms() {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin(Coin::<Lpn>::new(1_000_000)),
-        cwcoin(Coin::<NativeC>::new(1_000_000)),
+        cwcoin(Coin::<Nls>::new(1_000_000)),
     ])
     .init_time_alarms()
     .init_oracle(None)
@@ -561,7 +559,7 @@ fn test_profit_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin(Coin::<NativeC>::new(100_000))],
+        &[cwcoin(Coin::<Nls>::new(100_000))],
     );
 
     test_case.app.time_shift(Duration::from_hours(10));

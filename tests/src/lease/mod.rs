@@ -1,4 +1,4 @@
-use currencies::test::{LeaseC1, LeaseC2, LpnC};
+use currencies::{LeaseC1, LeaseC2, Lpn};
 use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
@@ -27,8 +27,8 @@ mod liquidation;
 mod open;
 mod repay;
 
-type LpnCurrency = LpnC;
-type LpnCoin = Coin<LpnCurrency>;
+type Lpnurrency = Lpn;
+type Lpnoin = Coin<Lpnurrency>;
 
 type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -44,7 +44,7 @@ pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
 }
 
-pub(super) fn price_lpn_of<C>() -> Price<C, LpnCurrency>
+pub(super) fn price_lpn_of<C>() -> Price<C, Lpnurrency>
 where
     C: Currency,
 {
@@ -74,11 +74,11 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<Lpnurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<Lpnurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<Lpnurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
@@ -88,7 +88,7 @@ where
         None,
         &[coin(
             5_000_000_000_000_000_000_000_000_000,
-            LpnCurrency::BANK_SYMBOL,
+            Lpnurrency::BANK_SYMBOL,
         )],
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -117,10 +117,10 @@ where
 }
 
 pub(super) fn calculate_interest(
-    principal: Coin<LpnCurrency>,
+    principal: Coin<Lpnurrency>,
     interest_rate: Percent,
     duration: Duration,
-) -> Coin<LpnCurrency> {
+) -> Coin<Lpnurrency> {
     interest::interest(interest_rate, principal, duration)
 }
 
@@ -238,7 +238,7 @@ pub(super) fn complete_init_lease<
         downpayment,
         max_ltd,
     );
-    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
+    let exp_borrow: Lpnoin = quote.borrow.try_into().unwrap();
 
     common::lease::complete_initialization(
         &mut test_case.app,
@@ -269,8 +269,8 @@ pub(super) fn quote_borrow<
         TimeAlarms,
     >,
     downpayment: PaymentCoin,
-) -> LpnCoin {
-    LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
+) -> Lpnoin {
+    Lpnoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
 pub(super) fn quote_query<
@@ -371,8 +371,8 @@ where
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
-    let expected_principal: LpnCoin = total_lpn
+    let total_lpn: Lpnoin = price::total(total, price_lpn_of::<AssetC>());
+    let expected_principal: Lpnoin = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
         - price::total(payments, price_lpn_of::<PaymentC>());
     let due_period_start = (now - max_due).max(last_paid);

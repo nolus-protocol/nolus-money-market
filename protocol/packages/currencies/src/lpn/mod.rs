@@ -3,9 +3,17 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 
-pub use r#impl::Lpn;
+pub use impl_mod::Lpn;
 
+#[cfg(not(feature = "testing"))]
+use r#impl as impl_mod;
+#[cfg(feature = "testing")]
+use testing as impl_mod;
+
+#[cfg(not(feature = "testing"))]
 mod r#impl;
+#[cfg(feature = "testing")]
+mod testing;
 
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

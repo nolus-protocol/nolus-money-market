@@ -176,8 +176,7 @@ mod test {
     use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
     use currencies::{
-        test::{LeaseC1, LeaseC2, LeaseC3, LpnC},
-        Lpns,
+        LeaseGroup, Lpns, {LeaseC1, LeaseC2, LeaseC3, Lpn},
     };
     use currency::{Currency, Group};
     use finance::{
@@ -186,16 +185,14 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
-    use crate::api::AlarmCurrencies as AssetG;
-
     use super::Alarm;
 
-    type BasePriceTest = BasePrice<AssetG, LpnC, Lpns>;
+    type BasePriceTest = BasePrice<LeaseGroup, Lpn, Lpns>;
 
     #[test]
     fn new_valid() {
-        let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<LpnC>::new(10));
-        let above = BasePriceTest::new(Coin::<LeaseC2>::new(1).into(), Coin::<LpnC>::new(12));
+        let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
+        let above = BasePriceTest::new(Coin::<LeaseC2>::new(1).into(), Coin::<Lpn>::new(12));
         let exp = Alarm::new(below.clone(), Some(above.clone()));
 
         let below_json =
@@ -211,27 +208,27 @@ mod test {
 
     #[test]
     fn below_price_ok() {
-        let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<LpnC>::new(10));
+        let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
         let exp_res = Ok(Alarm::new(exp_price.clone(), None));
         assert_eq!(exp_res, from_below(exp_price))
     }
 
     #[test]
     fn below_price_err() {
-        assert_err::<AssetG, LpnC, Lpns>(
+        assert_err::<LeaseGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Below,
                 Coin::<LeaseC1>::new(5),
-                Coin::<LpnC>::new(0),
+                Coin::<Lpn>::new(0),
             )
             .and_then(|json| from_both_str_impl(json, None::<&str>)),
             "The quote amount should not be zero",
         );
-        assert_err::<AssetG, LpnC, Lpns>(
+        assert_err::<LeaseGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Below,
                 Coin::<LeaseC2>::new(0),
-                Coin::<LpnC>::new(5),
+                Coin::<Lpn>::new(5),
             )
             .and_then(|json| from_both_str_impl(json, None::<&str>)),
             "The amount should not be zero",
@@ -243,24 +240,24 @@ mod test {
         let below = alarm_half_coins_to_json(
             AlarmPrice::Below,
             Coin::<LeaseC2>::new(13),
-            Coin::<LpnC>::new(15),
+            Coin::<Lpn>::new(15),
         )
         .unwrap();
 
-        assert_err::<AssetG, LpnC, Lpns>(
+        assert_err::<LeaseGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Above,
                 Coin::<LeaseC1>::new(5),
-                Coin::<LpnC>::new(0),
+                Coin::<Lpn>::new(0),
             )
             .and_then(|json| from_both_str_impl(&below, Some(&json))),
             "The quote amount should not be zero",
         );
-        assert_err::<AssetG, LpnC, Lpns>(
+        assert_err::<LeaseGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Above,
                 Coin::<LeaseC3>::new(0),
-                Coin::<LpnC>::new(5),
+                Coin::<Lpn>::new(5),
             )
             .and_then(|json| from_both_str_impl(&below, Some(&json))),
             "The amount should not be zero",
@@ -269,8 +266,8 @@ mod test {
 
     #[test]
     fn currencies_mismatch() {
-        let below = BasePriceTest::new(Coin::<LeaseC1>::new(2).into(), Coin::<LpnC>::new(10));
-        let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<LpnC>::new(10));
+        let below = BasePriceTest::new(Coin::<LeaseC1>::new(2).into(), Coin::<Lpn>::new(10));
+        let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
 
         let msg = "Mismatch of above alarm and below alarm currencies";
 
@@ -279,18 +276,18 @@ mod test {
         let full_json = format!(
             r#"{{"below": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}, "above": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}}}"#,
             LeaseC3::TICKER,
-            LpnC::TICKER,
+            Lpn::TICKER,
             LeaseC1::TICKER,
-            LpnC::TICKER
+            Lpn::TICKER
         );
 
-        assert_err::<AssetG, LpnC, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
+        assert_err::<LeaseGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
     }
 
     #[test]
     fn below_not_less_than_above() {
-        let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<LpnC>::new(10));
-        let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<LpnC>::new(9));
+        let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
+        let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(9));
 
         assert_err(
             from_both(below, above),
@@ -300,7 +297,7 @@ mod test {
 
     #[test]
     fn below_price_eq_above() {
-        let price = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<LpnC>::new(10));
+        let price = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
         let alarm = Alarm::new(price.clone(), Some(price.clone()));
         let msg = "valid alarm with equal above_or_equal and below prices";
 
@@ -309,9 +306,9 @@ mod test {
 
     #[test]
     fn below_price_less_than_above() {
-        let price_below = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<LpnC>::new(10));
+        let price_below = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
         let price_above_or_equal =
-            BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<LpnC>::new(11));
+            BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(11));
         let alarm = Alarm::new(price_below.clone(), Some(price_above_or_equal.clone()));
         let msg = "valid alarm";
 
@@ -434,7 +431,7 @@ mod test {
         C: Currency,
         Q: Currency,
     {
-        as_json(&CoinDTO::<AssetG>::from(amount)).and_then(|amount_str| {
+        as_json(&CoinDTO::<LeaseGroup>::from(amount)).and_then(|amount_str| {
             as_json(&CoinDTO::<Lpns>::from(amount_quote)).map(|amount_quote_str| {
                 let price = format!(
                     r#"{{"amount": {},"amount_quote": {}}}"#,

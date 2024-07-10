@@ -118,7 +118,10 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use currencies::test::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7};
+    use currencies::{
+        PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
+        PaymentGroup as PriceCurrencies,
+    };
     use currency::SymbolStatic;
     use finance::{
         coin::Amount,
@@ -133,10 +136,7 @@ mod test {
     };
     use tree::HumanReadableTree;
 
-    use crate::{
-        api::PriceCurrencies,
-        tests::{self, TheCurrency},
-    };
+    use crate::tests::{self, TheCurrency};
 
     use super::*;
 
