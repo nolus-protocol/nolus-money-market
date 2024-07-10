@@ -1,4 +1,4 @@
-#[cfg(any(feature = "stub_alarms", feature = "stub_price", feature = "stub_swap"))]
+#[cfg(feature = "stub_alarms")]
 pub use currencies::{Lpn as BaseCurrency, Lpns as BaseCurrencies, Stable as StableCurrency};
 
 #[cfg(feature = "contract")]
