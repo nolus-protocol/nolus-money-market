@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, LeaseGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -16,7 +16,7 @@ define_symbol! {
         dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
     }
 }
-define_currency!(Atom, ATOM, 6);
+define_currency!(Atom, ATOM, LeaseGroup, 6);
 
 define_symbol! {
     ST_ATOM {
@@ -26,7 +26,7 @@ define_symbol! {
         dex: "ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C",
     }
 }
-define_currency!(StAtom, ST_ATOM, 6);
+define_currency!(StAtom, ST_ATOM, LeaseGroup, 6);
 
 define_symbol! {
     NTRN {
@@ -35,7 +35,7 @@ define_symbol! {
         dex: "untrn",
     }
 }
-define_currency!(Ntrn, NTRN, 6);
+define_currency!(Ntrn, NTRN, LeaseGroup, 6);
 
 define_symbol! {
     DYDX {
@@ -45,7 +45,7 @@ define_symbol! {
         dex: "ibc/2CB87BCE0937B1D1DFCEE79BE4501AAF3C265E923509AEAC410AD85D27F35130",
     }
 }
-define_currency!(Dydx, DYDX, 18);
+define_currency!(Dydx, DYDX, LeaseGroup, 18);
 
 define_symbol! {
     TIA {
@@ -55,7 +55,7 @@ define_symbol! {
         dex: "ibc/773B4D0A3CD667B2275D5A4A7A2F0909C0BA0F4059C0B9181E680DDF4965DCC7",
     }
 }
-define_currency!(Tia, TIA, 6);
+define_currency!(Tia, TIA, LeaseGroup, 6);
 
 define_symbol! {
     ST_TIA {
@@ -65,7 +65,7 @@ define_symbol! {
         dex: "ibc/6569E05DEE32B339D9286A52BE33DFCEFC97267F23EF9CFDE0C055140967A9A5",
     }
 }
-define_currency!(StTia, ST_TIA, 6);
+define_currency!(StTia, ST_TIA, LeaseGroup, 6);
 
 define_symbol! {
     STK_ATOM {
@@ -75,7 +75,7 @@ define_symbol! {
         dex: "ibc/3649CE0C8A2C79048D8C6F31FF18FA69C9BC7EB193512E0BD03B733011290445",
     }
 }
-define_currency!(StkAtom, STK_ATOM, 6);
+define_currency!(StkAtom, STK_ATOM, LeaseGroup, 6);
 
 define_symbol! {
     NEWT {
@@ -85,7 +85,7 @@ define_symbol! {
         dex: "factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt",
     }
 }
-define_currency!(Newt, NEWT, 6);
+define_currency!(Newt, NEWT, LeaseGroup, 6);
 
 define_symbol! {
     ECLIP {
@@ -95,7 +95,7 @@ define_symbol! {
         dex: "factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip",
     }
 }
-define_currency!(Eclip, ECLIP, 6);
+define_currency!(Eclip, ECLIP, LeaseGroup, 6);
 
 define_symbol! {
     WST_ETH {
@@ -105,7 +105,7 @@ define_symbol! {
         dex: "factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH",
     }
 }
-define_currency!(WstEth, WST_ETH, 18);
+define_currency!(WstEth, WST_ETH, LeaseGroup, 18);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where

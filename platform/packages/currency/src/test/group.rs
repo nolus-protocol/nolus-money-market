@@ -50,12 +50,16 @@ mod impl_ {
 
     use crate::{Currency, SymbolStatic};
 
+    use super::{SubGroup, SuperGroup};
+
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
     )]
     pub struct TestC1;
 
     impl Currency for TestC1 {
+        type Group = SuperGroup;
+
         const TICKER: SymbolStatic = "ticker#1";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
@@ -71,6 +75,8 @@ mod impl_ {
     pub struct TestC2;
 
     impl Currency for TestC2 {
+        type Group = SuperGroup;
+
         const TICKER: SymbolStatic = "ticker#2";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
@@ -86,6 +92,8 @@ mod impl_ {
     pub struct TestC3;
 
     impl Currency for TestC3 {
+        type Group = SuperGroup;
+
         const TICKER: SymbolStatic = "ticker#3";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
@@ -101,6 +109,8 @@ mod impl_ {
     pub struct TestC4;
 
     impl Currency for TestC4 {
+        type Group = SuperGroup;
+
         const TICKER: SymbolStatic = "ticker#4";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
@@ -116,6 +126,8 @@ mod impl_ {
     pub struct TestC5;
 
     impl Currency for TestC5 {
+        type Group = SuperGroup;
+
         const TICKER: SymbolStatic = "ticker#5";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
@@ -131,6 +143,8 @@ mod impl_ {
     pub struct TestC6;
 
     impl Currency for TestC6 {
+        type Group = SubGroup;
+
         const TICKER: SymbolStatic = "ticker#6";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
@@ -145,6 +159,8 @@ mod impl_ {
     )]
     pub struct TestC10;
     impl Currency for TestC10 {
+        type Group = SubGroup;
+        
         const TICKER: SymbolStatic = "ticker#10";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";

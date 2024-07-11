@@ -309,10 +309,7 @@ pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
 mod test {
     use std::ops::{Add, AddAssign, Mul};
 
-    use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
-        Currency, SymbolStatic,
-    };
+    use currency::test::{SubGroupTestC1, SuperGroupTestC1, SuperGroupTestC2};
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -321,18 +318,7 @@ mod test {
         ratio::Rational,
     };
 
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-    struct QuoteQuoteCurrency {}
-    impl Currency for QuoteQuoteCurrency {
-        const TICKER: SymbolStatic = "mycutecoin";
-
-        const BANK_SYMBOL: SymbolStatic = "ibc/dcnqweuio2938fh2f";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/cme72hr2";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-    type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
+    type QuoteQuoteCoin = CoinT<SubGroupTestC1>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;
     type Coin = CoinT<SuperGroupTestC2>;
 

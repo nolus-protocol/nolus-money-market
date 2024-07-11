@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, LeaseGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -16,7 +16,7 @@ define_symbol! {
         dex: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
     }
 }
-define_currency!(Atom, ATOM, 6);
+define_currency!(Atom, ATOM, LeaseGroup, 6);
 
 define_symbol! {
     ST_ATOM {
@@ -26,7 +26,7 @@ define_symbol! {
         dex: "ibc/C140AFD542AE77BD7DCC83F13FDD8C5E5BB8C4929785E6EC2F4C636F98F17901",
     }
 }
-define_currency!(StAtom, ST_ATOM, 6);
+define_currency!(StAtom, ST_ATOM, LeaseGroup, 6);
 
 define_symbol! {
     OSMO {
@@ -35,7 +35,7 @@ define_symbol! {
         dex: "uosmo",
     }
 }
-define_currency!(Osmo, OSMO, 6);
+define_currency!(Osmo, OSMO, LeaseGroup, 6);
 
 define_symbol! {
     ST_OSMO {
@@ -45,7 +45,7 @@ define_symbol! {
         dex: "ibc/D176154B0C63D1F9C6DCFB4F70349EBF2E2B5A87A05902F57A6AE92B863E9AEC",
     }
 }
-define_currency!(StOsmo, ST_OSMO, 6);
+define_currency!(StOsmo, ST_OSMO, LeaseGroup, 6);
 
 define_symbol! {
     WETH {
@@ -55,7 +55,7 @@ define_symbol! {
         dex: "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
     }
 }
-define_currency!(Weth, WETH, 18);
+define_currency!(Weth, WETH, LeaseGroup, 18);
 
 define_symbol! {
     WBTC {
@@ -65,7 +65,7 @@ define_symbol! {
         dex: "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
     }
 }
-define_currency!(Wbtc, WBTC, 8);
+define_currency!(Wbtc, WBTC, LeaseGroup, 8);
 
 define_symbol! {
     AKT {
@@ -75,7 +75,7 @@ define_symbol! {
         dex: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
     }
 }
-define_currency!(Akt, AKT, 6);
+define_currency!(Akt, AKT, LeaseGroup, 6);
 
 define_symbol! {
     AXL {
@@ -85,7 +85,7 @@ define_symbol! {
         dex: "ibc/903A61A498756EA560B85A85132D3AEE21B5DEDD41213725D22ABF276EA6945E",
     }
 }
-define_currency!(Axl, AXL, 6);
+define_currency!(Axl, AXL, LeaseGroup, 6);
 
 define_symbol! {
     Q_ATOM {
@@ -95,7 +95,7 @@ define_symbol! {
         dex: "ibc/FA602364BEC305A696CBDF987058E99D8B479F0318E47314C49173E8838C5BAC",
     }
 }
-define_currency!(QAtom, Q_ATOM, 6);
+define_currency!(QAtom, Q_ATOM, LeaseGroup, 6);
 
 define_symbol! {
     STK_ATOM {
@@ -105,7 +105,7 @@ define_symbol! {
         dex: "ibc/CAA179E40F0266B0B29FB5EAA288FB9212E628822265D4141EBD1C47C3CBFCBC",
     }
 }
-define_currency!(StkAtom, STK_ATOM, 6);
+define_currency!(StkAtom, STK_ATOM, LeaseGroup, 6);
 
 define_symbol! {
     STRD {
@@ -115,7 +115,7 @@ define_symbol! {
         dex: "ibc/A8CA5EE328FA10C9519DF6057DA1F69682D28F7D0F5CCC7ECB72E3DCA2D157A4",
     }
 }
-define_currency!(Strd, STRD, 6);
+define_currency!(Strd, STRD, LeaseGroup, 6);
 
 define_symbol! {
     INJ {
@@ -125,7 +125,7 @@ define_symbol! {
         dex: "ibc/64BA6E31FE887D66C6F8F31C7B1A80C7CA179239677B4088BB55F5EA07DBE273",
     }
 }
-define_currency!(Inj, INJ, 18);
+define_currency!(Inj, INJ, LeaseGroup, 18);
 
 define_symbol! {
     SCRT {
@@ -135,7 +135,7 @@ define_symbol! {
         dex: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
     }
 }
-define_currency!(Secret, SCRT, 6);
+define_currency!(Secret, SCRT, LeaseGroup, 6);
 
 define_symbol! {
     STARS {
@@ -145,7 +145,7 @@ define_symbol! {
         dex: "ibc/987C17B11ABC2B20019178ACE62929FE9840202CE79498E29FE8E5CB02B7C0A4",
     }
 }
-define_currency!(Stars, STARS, 6);
+define_currency!(Stars, STARS, LeaseGroup, 6);
 
 define_symbol! {
     CRO {
@@ -155,7 +155,7 @@ define_symbol! {
         dex: "ibc/E6931F78057F7CC5DA0FD6CEF82FF39373A6E0452BF1FD76910B93292CF356C1",
     }
 }
-define_currency!(Cro, CRO, 8);
+define_currency!(Cro, CRO, LeaseGroup, 8);
 
 define_symbol! {
     JUNO {
@@ -165,7 +165,7 @@ define_symbol! {
         dex: "ibc/46B44899322F3CD854D2D46DEEF881958467CDD4B3B10086DA49296BBED94BED",
     }
 }
-define_currency!(Juno, JUNO, 6);
+define_currency!(Juno, JUNO, LeaseGroup, 6);
 
 define_symbol! {
     EVMOS {
@@ -175,7 +175,7 @@ define_symbol! {
         dex: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
     }
 }
-define_currency!(Evmos, EVMOS, 18);
+define_currency!(Evmos, EVMOS, LeaseGroup, 18);
 
 define_symbol! {
     MARS {
@@ -185,7 +185,7 @@ define_symbol! {
         dex: "ibc/573FCD90FACEE750F55A8864EF7D38265F07E5A9273FA0E8DAFD39951332B580",
     }
 }
-define_currency!(Mars, MARS, 6);
+define_currency!(Mars, MARS, LeaseGroup, 6);
 
 define_symbol! {
     TIA {
@@ -195,7 +195,7 @@ define_symbol! {
         dex: "ibc/D79E7D83AB399BFFF93433E54FAA480C191248FC556924A2A8351AE2638B3877",
     }
 }
-define_currency!(Tia, TIA, 6);
+define_currency!(Tia, TIA, LeaseGroup, 6);
 
 define_symbol! {
     ST_TIA {
@@ -205,7 +205,7 @@ define_symbol! {
         dex: "ibc/698350B8A61D575025F3ED13E9AC9C0F45C89DEFE92F76D5838F1D3C1A7FF7C9",
     }
 }
-define_currency!(StTia, ST_TIA, 6);
+define_currency!(StTia, ST_TIA, LeaseGroup, 6);
 
 define_symbol! {
     JKL {
@@ -215,7 +215,7 @@ define_symbol! {
         dex: "ibc/8E697BDABE97ACE8773C6DF7402B2D1D5104DD1EEABE12608E3469B7F64C15BA",
     }
 }
-define_currency!(Jkl, JKL, 6);
+define_currency!(Jkl, JKL, LeaseGroup, 6);
 
 define_symbol! {
     MILK_TIA {
@@ -224,7 +224,7 @@ define_symbol! {
         dex: "factory/osmo1f5vfcph2dvfeqcqkhetwv75fda69z7e5c2dldm3kvgj23crkv6wqcn47a0/umilkTIA",
     }
 }
-define_currency!(MilkTia, MILK_TIA, 6);
+define_currency!(MilkTia, MILK_TIA, LeaseGroup, 6);
 
 define_symbol! {
     LVN {
@@ -233,7 +233,7 @@ define_symbol! {
         dex: "factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn",
     }
 }
-define_currency!(Lvn, LVN, 6);
+define_currency!(Lvn, LVN, LeaseGroup, 6);
 
 define_symbol! {
     QSR {
@@ -243,7 +243,7 @@ define_symbol! {
         dex: "ibc/1B708808D372E959CD4839C594960309283424C775F4A038AAEBE7F83A988477",
     }
 }
-define_currency!(Qsr, QSR, 6);
+define_currency!(Qsr, QSR, LeaseGroup, 6);
 
 define_symbol! {
     PICA {
@@ -253,7 +253,7 @@ define_symbol! {
         dex: "ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516",
     }
 }
-define_currency!(Pica, PICA, 12);
+define_currency!(Pica, PICA, LeaseGroup, 12);
 
 define_symbol! {
     DYM {
@@ -263,7 +263,7 @@ define_symbol! {
         dex: "ibc/9A76CDF0CBCEF37923F32518FA15E5DC92B9F56128292BC4D63C4AEA76CBB110",
     }
 }
-define_currency!(Dym, DYM, 18);
+define_currency!(Dym, DYM, LeaseGroup, 18);
 
 define_symbol! {
     CUDOS {
@@ -273,7 +273,7 @@ define_symbol! {
         dex: "ibc/E09ED39F390EC51FA9F3F69BEA08B5BBE6A48B3057B2B1C3467FAAE9E58B021B",
     }
 }
-define_currency!(Cudos, CUDOS, 18);
+define_currency!(Cudos, CUDOS, LeaseGroup, 18);
 
 define_symbol! {
     SAGA {
@@ -283,7 +283,7 @@ define_symbol! {
         dex: "ibc/094FB70C3006906F67F5D674073D2DAFAFB41537E7033098F5C752F211E7B6C2",
     }
 }
-define_currency!(Saga, SAGA, 6);
+define_currency!(Saga, SAGA, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where

@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, LeaseGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -16,7 +16,7 @@ define_symbol! {
         dex: "ibc/9FF2B7A5F55038A7EE61F4FD6749D9A648B48E89830F2682B67B5DC158E2753C",
     }
 }
-define_currency!(Atom, ATOM, 6);
+define_currency!(Atom, ATOM, LeaseGroup, 6);
 
 define_symbol! {
     OSMO {
@@ -25,7 +25,7 @@ define_symbol! {
         dex: "uosmo",
     }
 }
-define_currency!(Osmo, OSMO, 6);
+define_currency!(Osmo, OSMO, LeaseGroup, 6);
 
 define_symbol! {
     WETH {
@@ -37,7 +37,7 @@ define_symbol! {
         dex: "ibc/29320BE25C3BF64A2355344625410899C1EB164038E328531C36095B0AA8BBFC",
     }
 }
-define_currency!(Weth, WETH, 18);
+define_currency!(Weth, WETH, LeaseGroup, 18);
 
 define_symbol! {
     WBTC {
@@ -49,7 +49,7 @@ define_symbol! {
         dex: "ibc/CEDA3AFF171E72ACB689B7B64E988C0077DA7D4BF157637FFBDEB688D205A473",
     }
 }
-define_currency!(Wbtc, WBTC, 8);
+define_currency!(Wbtc, WBTC, LeaseGroup, 8);
 
 define_symbol! {
     AKT {
@@ -59,7 +59,7 @@ define_symbol! {
         dex: "ibc/7153C8C55DB988805FAC69E449B680A8BAAC15944B87CF210ADCD1A3A9542857",
     }
 }
-define_currency!(Akt, AKT, 6);
+define_currency!(Akt, AKT, LeaseGroup, 6);
 
 define_symbol! {
     JUNO {
@@ -69,7 +69,7 @@ define_symbol! {
         dex: "ibc/8E2FEFCBD754FA3C97411F0126B9EC76191BAA1B3959CB73CECF396A4037BBF0",
     }
 }
-define_currency!(Juno, JUNO, 6);
+define_currency!(Juno, JUNO, LeaseGroup, 6);
 
 define_symbol! {
     MARS {
@@ -79,7 +79,7 @@ define_symbol! {
         dex: "ibc/2E7368A14AC9AB7870F32CFEA687551C5064FA861868EDF7437BC877358A81F9",
     }
 }
-define_currency!(Mars, MARS, 6);
+define_currency!(Mars, MARS, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where

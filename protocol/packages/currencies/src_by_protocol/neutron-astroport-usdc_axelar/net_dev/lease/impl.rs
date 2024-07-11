@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, LeaseGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -16,7 +16,7 @@ define_symbol! {
         dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
     }
 }
-define_currency!(Atom, ATOM, 6);
+define_currency!(Atom, ATOM, LeaseGroup, 6);
 
 define_symbol! {
     NTRN {
@@ -25,7 +25,7 @@ define_symbol! {
         dex: "untrn",
     }
 }
-define_currency!(Ntrn, NTRN, 6);
+define_currency!(Ntrn, NTRN, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where

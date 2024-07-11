@@ -260,6 +260,8 @@ mod test {
     struct MyTestCurrency;
 
     impl Currency for MyTestCurrency {
+        type Group = MyTestGroup;
+
         const TICKER: SymbolStatic = "qwerty";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/1";

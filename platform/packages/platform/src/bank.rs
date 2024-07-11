@@ -355,7 +355,7 @@ where
 mod test {
     use currency::{
         test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
-        Currency, Group, SymbolStatic,
+        Currency, Group,
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -464,25 +464,15 @@ mod test {
 
     #[test]
     fn may_received_not_in_group() {
-        let coin = Coin::<ExtraCurrency>::new(AMOUNT);
-        let in_coin_1 = coin_legacy::to_cosmwasm(coin);
+        let coin_1 = Coin::<ExtraCurrency>::new(AMOUNT);
+        let in_coin_1 = coin_legacy::to_cosmwasm(coin_1);
 
-        #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        struct MyNiceCurrency {}
-        impl Currency for MyNiceCurrency {
-            const BANK_SYMBOL: SymbolStatic = "wdd";
-
-            const DEX_SYMBOL: SymbolStatic = "dex3rdf";
-
-            const TICKER: SymbolStatic = "ticedc";
-
-            const DECIMAL_DIGITS: u8 = 0;
-        }
-        let in_coin_2 = coin_legacy::to_cosmwasm(Coin::<MyNiceCurrency>::new(AMOUNT));
+        let coin_2 = Coin::<ExtraCurrency>::new(AMOUNT + AMOUNT);
+        let in_coin_2 = coin_legacy::to_cosmwasm(coin_2);
 
         assert_eq!(
             None,
-            may_received::<TheGroup, _>(&vec![in_coin_1, in_coin_2], Expect(coin))
+            may_received::<TheGroup, _>(&vec![in_coin_1, in_coin_2], Expect(coin_1))
         );
     }
 

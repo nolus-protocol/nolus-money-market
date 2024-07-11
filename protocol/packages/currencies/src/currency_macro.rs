@@ -9,6 +9,7 @@ macro_rules! define_currency {
     (
         $ident:ident,
         $ticker:path,
+        $group:ident,
         $decimal_digits:literal $(,)?
     ) => {
         #[derive(
@@ -28,6 +29,8 @@ macro_rules! define_currency {
         pub struct $ident {}
 
         impl $crate::currency_macro::Currency for $ident {
+            type Group = $group;
+
             const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
 
             const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;

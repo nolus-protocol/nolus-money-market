@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, PaymentOnlyGroup};
 
 define_symbol! {
     USDC_NOBLE {
@@ -11,7 +11,7 @@ define_symbol! {
         dex: "ibc/DE6792CF9E521F6AD6E9A4BDF6225C9571A3B74ACC0A529F92BC5122A39D2E58",
     }
 }
-define_currency!(UsdcNoble, USDC_NOBLE, 6);
+define_currency!(UsdcNoble, USDC_NOBLE, PaymentOnlyGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where

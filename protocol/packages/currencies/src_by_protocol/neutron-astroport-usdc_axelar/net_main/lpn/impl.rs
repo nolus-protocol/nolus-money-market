@@ -1,6 +1,6 @@
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, Lpns};
 
 define_symbol! {
     USDC_AXELAR {
@@ -10,6 +10,6 @@ define_symbol! {
         dex: "ibc/F082B65C88E4B6D5EF1DB243CDA1D331D002759E938A0F5CD3FFDC5D53B3E349",
     }
 }
-define_currency!(UsdcAxelar, USDC_AXELAR, 6);
+define_currency!(UsdcAxelar, USDC_AXELAR, Lpns, 6);
 
 pub use UsdcAxelar as Lpn;

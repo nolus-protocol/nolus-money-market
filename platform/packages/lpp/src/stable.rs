@@ -10,6 +10,8 @@ use sdk::schemars::{self, JsonSchema};
 pub struct Stable;
 
 impl Currency for Stable {
+    type Group = StableCurrencyGroup;
+    
     // should not be visible
     const TICKER: SymbolStatic = "STABLE";
 

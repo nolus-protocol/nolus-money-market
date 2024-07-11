@@ -1,7 +1,7 @@
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
-use crate::{define_currency, define_symbol};
+use crate::{define_currency, define_symbol, LeaseGroup};
 
 define_symbol! {
     LC1 {
@@ -11,7 +11,7 @@ define_symbol! {
         dex: "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
     }
 }
-define_currency!(LeaseC1, LC1, 6);
+define_currency!(LeaseC1, LC1, LeaseGroup, 6);
 
 define_symbol! {
     LC2 {
@@ -21,7 +21,7 @@ define_symbol! {
         dex: "ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C",
     }
 }
-define_currency!(LeaseC2, LC2, 6);
+define_currency!(LeaseC2, LC2, LeaseGroup, 6);
 
 define_symbol! {
     LC3 {
@@ -30,7 +30,7 @@ define_symbol! {
         dex: "untrn",
     }
 }
-define_currency!(LeaseC3, LC3, 6);
+define_currency!(LeaseC3, LC3, LeaseGroup, 6);
 
 define_symbol! {
     LC4 {
@@ -40,7 +40,7 @@ define_symbol! {
         dex: "ibc/2CB87BCE0937B1D1DFCEE79BE4501AAF3C265E923509AEAC410AD85D27F35130",
     }
 }
-define_currency!(LeaseC4, LC4, 18);
+define_currency!(LeaseC4, LC4, LeaseGroup, 18);
 
 define_symbol! {
     LC5 {
@@ -50,7 +50,7 @@ define_symbol! {
         dex: "ibc/773B4D0A3CD667B2275D5A4A7A2F0909C0BA0F4059C0B9181E680DDF4965DCC7",
     }
 }
-define_currency!(LeaseC5, LC5, 6);
+define_currency!(LeaseC5, LC5, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
