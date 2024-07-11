@@ -34,7 +34,7 @@ pub type SymbolOwned = String;
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
     type Group: Group;
-    
+
     /// Identifier of the currency
     const TICKER: SymbolStatic;
 

@@ -16,7 +16,7 @@ pub struct NlsPlatform;
 
 impl Currency for NlsPlatform {
     type Group = Native;
-    
+
     const TICKER: SymbolStatic = "NLS";
 
     const BANK_SYMBOL: SymbolStatic = "unls";

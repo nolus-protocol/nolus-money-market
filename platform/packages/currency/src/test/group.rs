@@ -160,7 +160,7 @@ mod impl_ {
     pub struct TestC10;
     impl Currency for TestC10 {
         type Group = SubGroup;
-        
+
         const TICKER: SymbolStatic = "ticker#10";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";
