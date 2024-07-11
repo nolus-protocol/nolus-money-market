@@ -275,10 +275,7 @@ define_symbol! {
 }
 define_currency!(Cudos, CUDOS, 18);
 
-pub(super) fn maybe_visit<M, V>(
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
+pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
     V: AnyVisitor,
