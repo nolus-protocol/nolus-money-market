@@ -33,14 +33,7 @@ Implementation of the core business logic as CosmWasm contracts.
 
 ### Build
 
-The build is controlled with a few environment variables:
-
-* `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `NET_NAME` - sets the targeted network; possible values are:
-  * `dev`
-  * `test`
-  * `main`
-* `PROTOCOL_NAME` - sets the targeted protocol
+The build requires an environment variables named `RELEASE_VERSION` that is the name of the release as an arbitrary string.
 
 #### Workspaces
 
@@ -54,11 +47,17 @@ In the instructions below this value is stored in *WORKSPACE_DIR_NAME*.
 
 #### A non-optimized version
 
-The command below builds a contract if ran from the contract directory,
+From the `protocols` directory select the directory with the protocol specific definitions and execute
+```sh
+cp -r --update=all packages/currencies/src_by_protocol/<protocol>/<net>/* packages/currencies/src/
+```
+
+The command below builds the protocol contracts if ran from the contract directory,
 or builds the contracts of the workspace from within which it is ran:
 
 ```sh
-RELEASE_VERSION='dev-release' NET_NAME='dev' PROTOCOL_NAME='osmosis-osmosis-usdc_axelar' cargo build --features "net_${$NET_NAME},${PROTOCOL_NAME}" --target=wasm32-unknown-unknown
+
+RELEASE_VERSION='dev-release' cargo each run -x -t ci -- cargo build --target=wasm32-unknown-unknown
 ```
 
 One way to avoid having to set those environment variables is to
