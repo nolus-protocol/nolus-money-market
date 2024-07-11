@@ -42,7 +42,7 @@ fn into_route_err() {
     }];
     assert!(matches!(
         super::to_route::<SuperGroup>(&path),
-        Err(Error::Currency(_))
+        Err(Error::Platform(_))
     ));
 }
 

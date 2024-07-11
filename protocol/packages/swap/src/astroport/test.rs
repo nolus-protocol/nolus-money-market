@@ -91,7 +91,7 @@ fn to_operations_err() {
     }];
     assert!(matches!(
         super::to_operations::<SuperGroup>(SuperGroupTestC1::DEX_SYMBOL, &path),
-        Err(Error::Currency(_))
+        Err(Error::Platform(_))
     ));
 }
 
