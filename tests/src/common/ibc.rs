@@ -1,7 +1,7 @@
 use std::slice;
 
 use currencies::PaymentGroup;
-use currency::{BankSymbols, DexSymbols, Group, SymbolStatic};
+use currency::{BankSymbols, DexSymbols, GroupVisit, SymbolStatic};
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin,
@@ -78,9 +78,9 @@ fn do_transfer_no_response(
     cw_coin: &CwCoin,
 ) {
     let new_symbol: SymbolStatic = if on_remote_chain {
-        PaymentGroup::maybe_visit(&DexSymbols, &cw_coin.denom, BankSymbols).ok()
+        DexSymbols::maybe_visit_any::<PaymentGroup, _>(&cw_coin.denom, BankSymbols).ok()
     } else {
-        PaymentGroup::maybe_visit(&BankSymbols, &cw_coin.denom, DexSymbols).ok()
+        BankSymbols::maybe_visit_any::<PaymentGroup, _>(&cw_coin.denom, DexSymbols).ok()
     }
     .unwrap()
     .unwrap();
