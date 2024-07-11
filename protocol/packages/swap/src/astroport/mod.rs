@@ -6,7 +6,7 @@ use astroport::{
 };
 use serde::{Deserialize, Serialize};
 
-use currency::{self, DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+use currency::{self, DexSymbols, Group, SymbolSlice};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
@@ -131,8 +131,8 @@ where
 
     swap_path
         .iter()
-        .map(|swap_target| swap_target.target.as_str())
-        .map(to_dex_symbol::<G>)
+        .map(|swap_target| swap_target.target.as_ref())
+        .map(|ticker| coin_legacy::to_cosmwasm_on_dex_symbol::<G>(ticker).map_err(Into::into))
         .scan(scanner, |scanner, may_next_denom| {
             Some(may_next_denom.map(|next_denom| {
                 let op = SwapOperation::AstroSwap {
@@ -160,13 +160,4 @@ where
             denom,
             amount: amount.into(),
         })
-}
-
-fn to_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
-where
-    G: Group,
-{
-    Tickers
-        .visit_any::<G, _>(ticker, DexSymbols {})
-        .map_err(Error::from)
 }

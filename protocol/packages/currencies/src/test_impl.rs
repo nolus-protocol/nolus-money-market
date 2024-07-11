@@ -9,7 +9,7 @@ where
     G: Group,
 {
     let v = Expect::<C>::default();
-    assert_eq!(Tickers.maybe_visit_any::<G, _>(C::TICKER, v), Ok(Ok(true)));
+    assert_eq!(Tickers::maybe_visit_any::<G, _>(C::TICKER, v), Ok(Ok(true)));
 }
 
 #[track_caller]
@@ -20,7 +20,7 @@ where
 {
     let v = Expect::<C>::default();
     assert_eq!(
-        Tickers.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
+        Tickers::maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
         Err(v)
     );
 }
@@ -33,7 +33,7 @@ where
 {
     let v = Expect::<C>::default();
     assert_eq!(
-        BankSymbols.maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
+        BankSymbols::maybe_visit_any::<G, _>(C::BANK_SYMBOL, v),
         Ok(Ok(true))
     );
 }
@@ -46,7 +46,7 @@ where
 {
     let v = Expect::<C>::default();
     assert_eq!(
-        BankSymbols.maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
+        BankSymbols::maybe_visit_any::<G, _>(unknown_ticker, v.clone()),
         Err(v)
     );
 }

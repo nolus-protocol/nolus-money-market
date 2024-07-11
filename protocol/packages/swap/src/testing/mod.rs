@@ -31,18 +31,17 @@ pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::Co
 where
     G: currency::Group,
 {
-    currency::DexSymbols
-        .visit_any::<G, _>(
-            denom,
-            ConstructDto {
-                amount: amount
-                    .parse::<NonZeroAmount>()
-                    .expect("Expected swap-in amount to be a non-zero unsigned integer!")
-                    .get(),
-                _group: PhantomData,
-            },
-        )
-        .expect("Expected swap-in token to be part of selected group!")
+    currency::DexSymbols::visit_any::<G, _>(
+        denom,
+        ConstructDto {
+            amount: amount
+                .parse::<NonZeroAmount>()
+                .expect("Expected swap-in amount to be a non-zero unsigned integer!")
+                .get(),
+            _group: PhantomData,
+        },
+    )
+    .expect("Expected swap-in token to be part of selected group!")
 }
 
 #[cold]

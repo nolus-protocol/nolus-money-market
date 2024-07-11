@@ -42,8 +42,7 @@ impl ExactAmountInSkel for Impl {
                      }| {
                         SwapTarget {
                             pool_id,
-                            target: DexSymbols
-                                .visit_any::<GSwap, _>(&target, Tickers)
+                            target: DexSymbols::visit_any::<GSwap, _>(&target, Tickers)
                                 .expect("Asked asset doesn't belong to swapping currency group!")
                                 .into(),
                         }

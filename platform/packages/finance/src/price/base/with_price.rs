@@ -27,8 +27,7 @@ where
     Cmd: WithPrice<QuoteC>,
     Error: Into<Cmd::Error>,
 {
-    Tickers
-        .visit_any::<BaseG, _>(price.base_ticker(), CurrencyResolve { price, cmd })
+    Tickers::visit_any::<BaseG, _>(price.base_ticker(), CurrencyResolve { price, cmd })
         .map_err(CmdError::into_customer_err)
 }
 

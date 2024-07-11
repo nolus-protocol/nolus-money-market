@@ -1,10 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-#[cfg(any(test, feature = "testing"))]
-use currency::DexSymbols;
 use currency::{
-    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, Group, GroupVisit,
-    SingleVisitor, Symbol, Symbols,
+    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyVisit, DexSymbols, Group,
+    GroupVisit, SingleVisitor, Symbol, SymbolSlice, SymbolStatic, Tickers,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -15,7 +13,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    BankSymbols.visit(&coin.denom, CoinTransformer(&coin))
+    BankSymbols::visit(&coin.denom, CoinTransformer(&coin))
 }
 
 pub(crate) fn from_cosmwasm_any<G, V>(coin: &CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
@@ -23,8 +21,7 @@ where
     G: Group,
     V: WithCoin,
 {
-    BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(coin, v))
+    BankSymbols::maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(coin, v))
         .map_err(|transformer| transformer.1)
 }
 
@@ -33,9 +30,7 @@ where
     G: Group,
     V: WithCoin,
 {
-    BankSymbols
-        .maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
-        .ok()
+    BankSymbols::maybe_visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v)).ok()
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -44,6 +39,13 @@ where
     C: Currency,
 {
     to_cosmwasm_impl(coin)
+}
+
+pub fn to_cosmwasm_on_dex_symbol<G>(ticker: &SymbolSlice) -> Result<SymbolStatic>
+where
+    G: Group,
+{
+    Tickers::visit_any::<G, _>(ticker, DexSymbols {}).map_err(Error::from)
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -64,12 +66,12 @@ where
 pub fn to_cosmwasm_on_network<G, S>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
     G: Group,
-    S: Symbols,
+    S: Symbol,
 {
     struct CoinTransformer<CM>(PhantomData<CM>);
     impl<S> WithCoin for CoinTransformer<S>
     where
-        S: Symbols,
+        S: Symbol,
     {
         type Output = CosmWasmCoin;
         type Error = Error;
@@ -87,9 +89,9 @@ where
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
-    S: Symbols,
+    S: Symbol,
 {
-    CosmWasmCoin::new(coin.into(), <S::Symbol<C>>::VALUE)
+    CosmWasmCoin::new(coin.into(), S::symbol::<C>())
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
@@ -136,12 +138,15 @@ where
 mod test {
     use currency::{
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        BankSymbols, Currency,
+        BankSymbols, Currency, SymbolStatic,
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-    use crate::{coin_legacy::from_cosmwasm_impl, error::Error};
+    use crate::{
+        coin_legacy::{from_cosmwasm_impl, to_cosmwasm_on_dex_symbol},
+        error::Error,
+    };
 
     use super::{to_cosmwasm_impl, Coin};
 
@@ -254,5 +259,23 @@ mod test {
 
         let c_usdc = Coin::<SuperGroupTestC1>::new(u128::MAX);
         assert_eq!(Ok(c_usdc), from_cosmwasm_impl(to_cosmwasm_impl(c_usdc)));
+    }
+
+    #[test]
+    fn to_dex_symbol() {
+        type Currency = SuperGroupTestC1;
+        assert_eq!(
+            Ok(Currency::DEX_SYMBOL),
+            to_cosmwasm_on_dex_symbol::<SuperGroup>(Currency::TICKER)
+        );
+    }
+
+    #[test]
+    fn to_dex_symbol_err() {
+        const INVALID_TICKER: SymbolStatic = "NotATicker";
+        assert!(matches!(
+            to_cosmwasm_on_dex_symbol::<SuperGroup>(INVALID_TICKER),
+            Err(Error::Currency(_))
+        ));
     }
 }

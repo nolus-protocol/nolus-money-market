@@ -126,32 +126,29 @@ where
 
     pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
         self.tree.iter().map(|node| {
-            if let Ok(currency) = currency::Tickers
-                .maybe_visit_any::<currencies::Native, _>(
+            if let Ok(currency) = currency::Tickers::maybe_visit_any::<currencies::Native, _>(
+                &node.value().target,
+                crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Native),
+            )
+            .or_else(|_| {
+                Tickers::maybe_visit_any::<currencies::Lpns, _>(
                     &node.value().target,
-                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Native),
+                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lpn),
                 )
-                .or_else(|_| {
-                    Tickers.maybe_visit_any::<currencies::Lpns, _>(
-                        &node.value().target,
-                        crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lpn),
-                    )
-                })
-                .or_else(|_| {
-                    Tickers.maybe_visit_any::<currencies::LeaseGroup, _>(
-                        &node.value().target,
-                        crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lease),
-                    )
-                })
-                .or_else(|_| {
-                    Tickers.maybe_visit_any::<currencies::PaymentOnlyGroup, _>(
-                        &node.value().target,
-                        crate::state::supported_pairs::CurrencyVisitor(
-                            api::CurrencyGroup::PaymentOnly,
-                        ),
-                    )
-                })
-                .map(never::safe_unwrap)
+            })
+            .or_else(|_| {
+                Tickers::maybe_visit_any::<currencies::LeaseGroup, _>(
+                    &node.value().target,
+                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lease),
+                )
+            })
+            .or_else(|_| {
+                Tickers::maybe_visit_any::<currencies::PaymentOnlyGroup, _>(
+                    &node.value().target,
+                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::PaymentOnly),
+                )
+            })
+            .map(never::safe_unwrap)
             {
                 currency
             } else {

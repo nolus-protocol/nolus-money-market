@@ -1,10 +1,11 @@
-use crate::{error::Error, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use crate::{error::Error, matcher, MaybeAnyVisitResult, Symbol, SymbolSlice, Tickers};
 
-use super::{matcher::Tickers, Currency, Group};
+use super::{Currency, Group};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
-pub type AnyVisitorResult<V> = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
+pub type AnyVisitorResult<Visitor> =
+    Result<<Visitor as AnyVisitor>::Output, <Visitor as AnyVisitor>::Error>;
 pub type AnyVisitorPairResult<V> =
     Result<<V as AnyVisitorPair>::Output, <V as AnyVisitorPair>::Error>;
 
@@ -26,26 +27,27 @@ pub trait AnyVisitorPair {
         C2: Currency;
 }
 
-pub trait GroupVisit: Matcher {
-    fn visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+pub trait GroupVisit: Symbol {
+    fn visit_any<G, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
         G: Group,
         V: AnyVisitor,
         Error: Into<V::Error>,
     {
-        self.maybe_visit_any::<G, _>(ticker, visitor)
-            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, Self, G>(ticker).into()))
+        Self::maybe_visit_any::<G, _>(symbol, visitor)
+            .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, Self, G>(symbol).into()))
     }
 
-    fn maybe_visit_any<G, V>(&self, ticker: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_any<G, V>(symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
     where
         G: Group,
         V: AnyVisitor,
     {
-        G::maybe_visit(self, ticker, visitor)
+        let matcher = matcher::symbol_matcher::<Self>(symbol);
+        G::maybe_visit(&matcher, visitor)
     }
 }
-impl<T> GroupVisit for T where T: Matcher {}
+impl<T> GroupVisit for T where T: Symbol {}
 
 pub fn visit_any_on_tickers<G1, G2, V>(
     ticker1: &SymbolSlice,
@@ -58,13 +60,13 @@ where
     V: AnyVisitorPair,
     Error: Into<V::Error>,
 {
-    Tickers.visit_any::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
+    Tickers::visit_any::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use crate::{error::Error, matcher::Tickers, Currency, Group, SymbolSlice};
+    use crate::{error::Error, Currency, Group, SymbolSlice, Tickers};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, GroupVisit};
 
@@ -103,7 +105,7 @@ mod impl_any_tickers {
         where
             C1: Currency,
         {
-            Tickers.visit_any::<G2, _>(
+            Tickers::visit_any::<G2, _>(
                 self.ticker2,
                 SecondTickerVisitor {
                     currency1: PhantomData::<C1>,
@@ -143,12 +145,11 @@ mod test {
     use crate::{
         error::Error,
         from_symbol_any::GroupVisit,
-        matcher::Tickers,
         test::{
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC1, SuperGroup,
             SuperGroupTestC1, SuperGroupTestC2,
         },
-        Currency, Group,
+        Currency, Group, Tickers,
     };
 
     #[test]
@@ -156,20 +157,20 @@ mod test {
         let v_usdc = Expect::<SuperGroupTestC1>::default();
         assert_eq!(
             Ok(true),
-            Tickers.visit_any::<SuperGroup, _>(SuperGroupTestC1::TICKER, v_usdc)
+            Tickers::visit_any::<SuperGroup, _>(SuperGroupTestC1::TICKER, v_usdc)
         );
 
         let v_nls = Expect::<SuperGroupTestC2>::default();
         assert_eq!(
             Ok(true),
-            Tickers.visit_any::<SuperGroup, _>(SuperGroupTestC2::TICKER, v_nls)
+            Tickers::visit_any::<SuperGroup, _>(SuperGroupTestC2::TICKER, v_nls)
         );
 
         assert_eq!(
             Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
                 SubGroupTestC1::BANK_SYMBOL
             )),
-            Tickers.visit_any::<SuperGroup, _>(SubGroupTestC1::BANK_SYMBOL, ExpectUnknownCurrency)
+            Tickers::visit_any::<SuperGroup, _>(SubGroupTestC1::BANK_SYMBOL, ExpectUnknownCurrency)
         );
     }
 
@@ -178,7 +179,7 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            Tickers.visit_any::<SuperGroup, _>(DENOM, ExpectUnknownCurrency),
+            Tickers::visit_any::<SuperGroup, _>(DENOM, ExpectUnknownCurrency),
             Err(Error::not_in_currency_group::<_, Tickers, SuperGroup>(
                 DENOM
             )),

@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol};
@@ -52,21 +52,17 @@ define_symbol! {
 }
 define_currency!(LeaseC5, LC5, 6);
 
-pub(super) fn maybe_visit<M, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
+pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, LeaseC1, _>(matcher, symbol, visitor)
-        .or_else(|visitor| maybe_visit::<_, LeaseC2, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC3, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC4, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC5, _>(matcher, symbol, visitor))
+    maybe_visit::<_, LeaseC1, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, LeaseC2, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC3, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC4, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC5, _>(matcher, visitor))
 }
 
 #[cfg(test)]

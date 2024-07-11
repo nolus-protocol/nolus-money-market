@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 pub use impl_mod::Nls;
 
@@ -18,11 +18,11 @@ pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        currency::maybe_visit_any::<_, Nls, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Nls, _>(matcher, visitor)
     }
 }

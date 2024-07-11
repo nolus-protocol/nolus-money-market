@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol};
@@ -83,7 +83,6 @@ define_currency!(Mars, MARS, 6);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
-    symbol: &SymbolSlice,
     visitor: V,
 ) -> MaybeAnyVisitResult<V>
 where
@@ -91,13 +90,13 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
-        .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, symbol, visitor))
-        .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, symbol, visitor))
+    maybe_visit::<_, Atom, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, visitor))
 }
 
 #[cfg(test)]

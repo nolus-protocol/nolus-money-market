@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 
 pub(super) fn maybe_visit<M, V>(
     _matcher: &M,

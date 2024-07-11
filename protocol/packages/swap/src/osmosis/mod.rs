@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
 };
 use serde::{Deserialize, Serialize};
 
-use currency::{DexSymbols, Group, GroupVisit, SymbolSlice, Tickers};
+use currency::{DexSymbols, Group};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
@@ -81,10 +81,12 @@ where
     swap_path
         .iter()
         .map(|swap_target| {
-            to_dex_symbol::<G>(&swap_target.target).map(|dex_symbol| SwapAmountInRoute {
-                pool_id: swap_target.pool_id,
-                token_out_denom: dex_symbol.into(),
-            })
+            coin_legacy::to_cosmwasm_on_dex_symbol::<G>(&swap_target.target)
+                .map_err(Into::into)
+                .map(|dex_symbol| SwapAmountInRoute {
+                    pool_id: swap_target.pool_id,
+                    token_out_denom: dex_symbol.into(),
+                })
         })
         .collect()
 }
@@ -94,13 +96,4 @@ where
     G: Group,
 {
     coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(token).map_err(Error::from)
-}
-
-fn to_dex_symbol<G>(ticker: &SymbolSlice) -> Result<&SymbolSlice>
-where
-    G: Group,
-{
-    Tickers
-        .visit_any::<G, _>(ticker, DexSymbols {})
-        .map_err(Error::from)
 }

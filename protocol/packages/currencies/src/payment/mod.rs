@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 use super::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
@@ -22,14 +22,14 @@ pub struct PaymentGroup {}
 impl Group for PaymentGroup {
     const DESCR: &'static str = "payment";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        LeaseGroup::maybe_visit(matcher, symbol, visitor)
-            .or_else(|v| Lpns::maybe_visit(matcher, symbol, v))
-            .or_else(|v| Native::maybe_visit(matcher, symbol, v))
-            .or_else(|v| PaymentOnlyGroup::maybe_visit(matcher, symbol, v))
+        LeaseGroup::maybe_visit(matcher, visitor)
+            .or_else(|v| Lpns::maybe_visit(matcher, v))
+            .or_else(|v| Native::maybe_visit(matcher, v))
+            .or_else(|v| PaymentOnlyGroup::maybe_visit(matcher, v))
     }
 }

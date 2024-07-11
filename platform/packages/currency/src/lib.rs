@@ -1,18 +1,17 @@
 use std::{any::TypeId, fmt::Debug};
 
-use serde::{de::DeserializeOwned, Serialize};
-
 use crate::error::{Error, Result};
 
 pub use self::{
-    from_symbol::{CurrencyVisit, MaybeVisitResult, SingleVisitor},
+    from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
         GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult},
-    matcher::{BankSymbols, DexSymbols, Matcher, Symbol, Symbols, Tickers},
+    matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
+    symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
 pub mod error;
@@ -22,6 +21,7 @@ mod group;
 mod matcher;
 pub mod never;
 mod nls;
+mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
 
@@ -91,20 +91,16 @@ where
             Ok(())
         }
     }
-    Tickers.visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
+    Tickers::visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
 }
 
-pub fn maybe_visit_any<M, C, V>(
-    matcher: &M,
-    symbol: &SymbolSlice,
-    visitor: V,
-) -> MaybeAnyVisitResult<V>
+pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
     M: Matcher + ?Sized,
-    C: Currency + Serialize + DeserializeOwned,
+    C: Currency,
     V: AnyVisitor,
 {
-    if matcher.match_::<C>(symbol) {
+    if matcher.r#match::<C>() {
         Ok(visitor.on::<C>())
     } else {
         Err(visitor)

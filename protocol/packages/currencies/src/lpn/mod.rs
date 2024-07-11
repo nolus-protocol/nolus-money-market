@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 use sdk::schemars::{self, JsonSchema};
 
 pub use impl_mod::Lpn;
@@ -22,12 +22,12 @@ pub struct Lpns {}
 impl Group for Lpns {
     const DESCR: &'static str = "lpns";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        currency::maybe_visit_any::<_, Lpn, _>(matcher, symbol, visitor)
+        currency::maybe_visit_any::<_, Lpn, _>(matcher, visitor)
     }
 }
 

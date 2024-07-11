@@ -21,7 +21,7 @@ where
     Cmd: WithLeaseTypes,
     currency::error::Error: Into<Cmd::Error>,
 {
-    Tickers.visit_any::<LeaseAssetCurrencies, _>(
+    Tickers::visit_any::<LeaseAssetCurrencies, _>(
         &lease_dto.position.amount().ticker().clone(),
         FactoryStage1 { lease_dto, cmd },
     )
@@ -45,7 +45,7 @@ where
         Asset: Currency,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        Tickers.visit_any::<LpnCurrencies, _>(
+        Tickers::visit_any::<LpnCurrencies, _>(
             &lpn,
             FactoryStage2 {
                 lease_dto: self.lease_dto,

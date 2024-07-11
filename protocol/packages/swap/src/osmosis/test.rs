@@ -13,23 +13,6 @@ use super::{SwapAmountInRoute, SwapTarget};
 const INVALID_TICKER: SymbolStatic = "NotATicker";
 
 #[test]
-fn to_dex_symbol() {
-    type Currency = SuperGroupTestC1;
-    assert_eq!(
-        Ok(Currency::DEX_SYMBOL),
-        super::to_dex_symbol::<SuperGroup>(Currency::TICKER)
-    );
-}
-
-#[test]
-fn to_dex_symbol_err() {
-    assert!(matches!(
-        super::to_dex_symbol::<SuperGroup>(INVALID_TICKER),
-        Err(Error::Currency(_))
-    ));
-}
-
-#[test]
 fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = 3541415.into();
     assert_eq!(

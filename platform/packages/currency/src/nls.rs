@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic};
+use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic};
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -33,11 +33,11 @@ pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, NlsPlatform, _>(matcher, symbol, visitor)
+        crate::maybe_visit_any::<_, NlsPlatform, _>(matcher, visitor)
     }
 }

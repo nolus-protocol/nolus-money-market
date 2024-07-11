@@ -161,7 +161,7 @@ where
                 price,
                 _quote_g: PhantomData,
             };
-            Tickers.visit_any::<G, _>(next_currency, next_collect)
+            Tickers::visit_any::<G, _>(next_currency, next_collect)
         } else {
             Ok(price.into())
         }

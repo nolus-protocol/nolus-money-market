@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -16,28 +16,18 @@ pub struct SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, symbol, visitor)
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, symbol, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, symbol, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, symbol, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, symbol, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC6, _>(matcher, symbol, visitor)
-            })
-            .or_else(|visitor| SubGroup::maybe_visit(matcher, symbol, visitor))
+        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC6, _>(matcher, visitor))
+            .or_else(|visitor| SubGroup::maybe_visit(matcher, visitor))
     }
 }
 
@@ -46,12 +36,12 @@ pub struct SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, symbol, visitor)
+        crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, visitor)
     }
 }
 

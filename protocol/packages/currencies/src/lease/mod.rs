@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 use sdk::schemars::{self, JsonSchema};
 
 #[cfg(not(feature = "testing"))]
@@ -21,11 +21,11 @@ pub struct LeaseGroup {}
 impl Group for LeaseGroup {
     const DESCR: &'static str = "lease";
 
-    fn maybe_visit<M, V>(matcher: &M, symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
         M: Matcher + ?Sized,
         V: AnyVisitor,
     {
-        impl_mod::maybe_visit(matcher, symbol, visitor)
+        impl_mod::maybe_visit(matcher, visitor)
     }
 }

@@ -58,7 +58,7 @@ where
             .map(|price_result: PriceResult<PriceG, BaseC, BaseG>| {
                 price_result.and_then(|ref price| {
                     Tickers
-                        .visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC, BaseG>>(
+                        ::visit_any::<PriceG, Cmd<'storage, 'alarms, '_, S, PriceG, BaseC, BaseG>>(
                             price.base_ticker(),
                             Cmd {
                                 alarms: self.alarms,

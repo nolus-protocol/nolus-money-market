@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, SymbolSlice};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol};
@@ -29,7 +29,6 @@ define_currency!(Ntrn, NTRN, 6);
 
 pub(super) fn maybe_visit<M, V>(
     matcher: &M,
-    symbol: &SymbolSlice,
     visitor: V,
 ) -> MaybeAnyVisitResult<V>
 where
@@ -37,8 +36,8 @@ where
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, symbol, visitor)
-        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, symbol, visitor))
+    maybe_visit::<_, Atom, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, Ntrn, _>(matcher, visitor))
 }
 
 #[cfg(test)]

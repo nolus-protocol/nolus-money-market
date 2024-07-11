@@ -12,7 +12,7 @@ pub(super) fn balance(
     currency: &SymbolSlice,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<LpnCoinDTO> {
-    Tickers.visit_any::<LpnCurrencies, _>(currency, CheckBalance { account, querier })
+    Tickers::visit_any::<LpnCurrencies, _>(currency, CheckBalance { account, querier })
 }
 
 struct CheckBalance<'a> {

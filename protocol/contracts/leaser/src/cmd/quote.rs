@@ -128,22 +128,21 @@ where
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        Tickers
-            .maybe_visit_any::<PaymentGroup, _>(
-                &downpayment,
-                QuoteStage3 {
-                    downpayment: self.downpayment,
-                    lease_asset: self.lease_asset,
-                    lpp_quote: self.lpp_quote,
-                    oracle,
-                    liability: self.liability,
-                    lease_interest_rate_margin: self.lease_interest_rate_margin,
-                    max_ltd: self.max_ltd,
-                },
-            )
-            .map_err(|_| ContractError::UnknownCurrency {
-                symbol: downpayment,
-            })?
+        Tickers::maybe_visit_any::<PaymentGroup, _>(
+            &downpayment,
+            QuoteStage3 {
+                downpayment: self.downpayment,
+                lease_asset: self.lease_asset,
+                lpp_quote: self.lpp_quote,
+                oracle,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltd: self.max_ltd,
+            },
+        )
+        .map_err(|_| ContractError::UnknownCurrency {
+            symbol: downpayment,
+        })?
     }
 }
 
@@ -174,23 +173,22 @@ where
     where
         C: 'static + Currency,
     {
-        Tickers
-            .maybe_visit_any::<LeaseGroup, _>(
-                &self.lease_asset,
-                QuoteStage4 {
-                    downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
-                    lpp_quote: self.lpp_quote,
-                    oracle: self.oracle,
-                    liability: self.liability,
-                    lease_interest_rate_margin: self.lease_interest_rate_margin,
-                    max_ltd: self.max_ltd,
-                },
-            )
-            .map_err({
-                let symbol = self.lease_asset;
+        Tickers::maybe_visit_any::<LeaseGroup, _>(
+            &self.lease_asset,
+            QuoteStage4 {
+                downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
+                lpp_quote: self.lpp_quote,
+                oracle: self.oracle,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltd: self.max_ltd,
+            },
+        )
+        .map_err({
+            let symbol = self.lease_asset;
 
-                |_| ContractError::UnknownCurrency { symbol }
-            })?
+            |_| ContractError::UnknownCurrency { symbol }
+        })?
     }
 }
 

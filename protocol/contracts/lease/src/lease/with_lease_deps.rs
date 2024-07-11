@@ -39,7 +39,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
-    Tickers.visit_any::<LeaseAssetCurrencies, _>(
+    Tickers::visit_any::<LeaseAssetCurrencies, _>(
         asset,
         FactoryStage1 {
             cmd,

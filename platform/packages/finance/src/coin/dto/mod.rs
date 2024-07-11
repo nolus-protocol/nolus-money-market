@@ -106,8 +106,7 @@ where
             }
         }
 
-        Tickers
-            .visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+        Tickers::visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
 
@@ -173,7 +172,7 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        Tickers.visit(&coin.ticker, CoinFactory(coin))
+        Tickers::visit(&coin.ticker, CoinFactory(coin))
     }
 }
 
@@ -246,7 +245,7 @@ mod test {
 
     use currency::{
         test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolSlice, SymbolStatic,
+        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic,
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 
@@ -276,16 +275,12 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 
-        fn maybe_visit<M, V>(
-            matcher: &M,
-            symbol: &SymbolSlice,
-            visitor: V,
-        ) -> MaybeAnyVisitResult<V>
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
         where
             M: Matcher + ?Sized,
             V: AnyVisitor,
         {
-            assert!(matcher.match_::<MyTestCurrency>(symbol));
+            assert!(matcher.r#match::<MyTestCurrency>());
             Ok(visitor.on::<MyTestCurrency>())
         }
     }

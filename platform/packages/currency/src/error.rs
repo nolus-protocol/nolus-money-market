@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{Currency, Group, SymbolOwned, Symbols};
+use crate::{Currency, Group, Symbol, SymbolOwned};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -15,7 +15,7 @@ impl Error {
     pub fn unexpected_symbol<S, CS, C>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
-        CS: Symbols + ?Sized,
+        CS: Symbol + ?Sized,
         C: Currency,
     {
         Self::UnexpectedSymbol(symbol.into(), CS::DESCR.into(), C::TICKER.into())
@@ -24,7 +24,7 @@ impl Error {
     pub fn not_in_currency_group<S, CS, G>(symbol: S) -> Self
     where
         S: Into<SymbolOwned>,
-        CS: Symbols + ?Sized,
+        CS: Symbol + ?Sized,
         G: Group,
     {
         Self::NotInCurrencyGroup(symbol.into(), CS::DESCR.into(), G::DESCR.into())
