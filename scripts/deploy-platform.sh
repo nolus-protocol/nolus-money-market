@@ -23,7 +23,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "$treasury_init_tokens"  "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$treasury_init_msg"
 
-  local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"dispatcher":"'"${TIMEALARMS_ADDRESS}"'","timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{}}}'
+  local -r admin_contract_init_msg='{"dex_admin":"'"${dex_admin}"'","contracts":{"platform":{"timealarms":"'"${TIMEALARMS_ADDRESS}"'","treasury":"'"${TREASURY_ADDRESS}"'"},"protocol":{}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
     "$((++id))" "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$admin_contract_init_msg"
