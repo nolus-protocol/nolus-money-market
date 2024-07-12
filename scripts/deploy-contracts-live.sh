@@ -57,7 +57,7 @@ _store_code() {
   local -r store_tx_hash=$(echo "$store_result" | jq -r '.txhash')
 
   local -r store_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$store_tx_hash")
-  local -r code_id=$(echo "$store_tx" | jq -r '.logs[].events[] | select(.type == "store_code") | .attributes[] | select(.key == "code_id") | .value')
+  local -r code_id=$(echo "$store_tx" | jq -r '.events[] | select(.type == "store_code") | .attributes[] | select(.key == "code_id") | .value')
   echo "$code_id"
 }
 
@@ -82,7 +82,7 @@ _instantiate() {
   local -r instantiate_tx_hash=$(echo "$instantiate_result" | jq -r '.txhash')
 
   local -r instantiate_tx=$(_wait_tx_included_in_block "$nolus_home_dir" "$nolus_net" "$instantiate_tx_hash")
-  local -r contract_address=$(echo "$instantiate_tx" |  jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
+  local -r contract_address=$(echo "$instantiate_tx" |  jq -r '.events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
 
   echo "$contract_address"
 }
