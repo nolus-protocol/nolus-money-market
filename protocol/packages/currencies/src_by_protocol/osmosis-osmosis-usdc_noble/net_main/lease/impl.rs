@@ -330,7 +330,11 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::Lpn, native::Nls},
+        {
+            lease::LeaseGroup,
+            lpn::{Lpn, Lpns},
+            native::Nls,
+        },
     };
 
     use super::{
@@ -351,7 +355,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Cudos, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Saga, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
@@ -370,7 +374,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Pica, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Qsr, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Dym, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);

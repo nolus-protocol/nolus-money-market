@@ -106,7 +106,11 @@ mod test {
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::Lpn, native::Nls},
+        {
+            lease::LeaseGroup,
+            lpn::{Lpn, Lpns},
+            native::Nls,
+        },
     };
 
     use super::{Akt, Atom, Juno, Mars, Osmo, Wbtc, Weth};
@@ -120,7 +124,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Akt, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Mars, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
@@ -136,7 +140,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Mars, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
