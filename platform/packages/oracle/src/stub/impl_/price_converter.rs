@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -11,21 +11,22 @@ use crate::{
 
 use super::RequestBuilder;
 
+// TODO un-needed since the CoinDTO<G> deserialization is already checked, remove it
 trait PriceConverter {
     fn try_convert<C, G, BaseC, BaseG>(dto: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group,
-        BaseC: Currency,
+        BaseC: Currency + MemberOf<BaseG>,
         BaseG: Group;
 }
 pub struct CheckedConverter();
 impl PriceConverter for CheckedConverter {
     fn try_convert<C, G, BaseC, BaseG>(price: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group,
-        BaseC: Currency,
+        BaseC: Currency + MemberOf<BaseG>,
         BaseG: Group,
     {
         price.try_into().map_err(Into::into)
@@ -38,9 +39,9 @@ pub struct QuoteCUncheckedConverter();
 impl PriceConverter for QuoteCUncheckedConverter {
     fn try_convert<C, G, BaseC, BaseG>(price: PriceDTO<G, BaseG>) -> Result<Price<C, BaseC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group,
-        BaseC: Currency,
+        BaseC: Currency + MemberOf<BaseG>,
         BaseG: Group,
     {
         use finance::{coin::Coin, price};
@@ -90,7 +91,7 @@ where
 impl<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT> Oracle
     for OracleStub<'a, QuoteC, QuoteG, PriceReqT, PriceConverterT>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     PriceReqT: RequestBuilder,
     PriceConverterT: PriceConverter,
@@ -100,7 +101,7 @@ where
 
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group,
     {
         if currency::equal::<C, QuoteC>() {

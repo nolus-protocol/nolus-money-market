@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{
@@ -10,6 +10,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
@@ -30,7 +31,7 @@ pub(crate) trait RepayFn {
     where
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Profit: FixedAddressSender;
 }
 
@@ -111,7 +112,7 @@ where
         mut lease: LeaseDO<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

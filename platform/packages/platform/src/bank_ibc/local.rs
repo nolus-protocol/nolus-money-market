@@ -47,7 +47,7 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<G, BankSymbols>(amount).map(|coin| {
+        coin_legacy::to_cosmwasm_on_network::<BankSymbols<G>>(amount).map(|coin| {
             self.amounts.push(coin);
         })
     }

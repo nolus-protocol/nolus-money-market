@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use currencies::{LeaseGroup, PaymentGroup};
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolOwned, Tickers};
+use currency::{
+    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, SymbolOwned, Tickers,
+};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
 use lpp::{
@@ -12,7 +13,7 @@ use oracle_platform::{Oracle as OracleTrait, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{
-    finance::{LpnCurrencies, LpnCurrency, OracleRef},
+    finance::{LeaseCurrencies, LpnCurrencies, LpnCurrency, OracleRef, PaymentCurrencies},
     msg::QuoteResponse,
     ContractError,
 };
@@ -116,7 +117,7 @@ where
 
 impl<Lpn, Lpp> WithOracle<Lpn, LpnCurrencies> for QuoteStage2<Lpn, Lpp>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     type Output = QuoteResponse;
@@ -128,7 +129,7 @@ where
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        Tickers::maybe_visit_any::<PaymentGroup, _>(
+        Tickers::maybe_visit_any(
             &downpayment,
             QuoteStage3 {
                 downpayment: self.downpayment,
@@ -162,18 +163,20 @@ where
 
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
+    type VisitedG = PaymentCurrencies;
+
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
-        Tickers::maybe_visit_any::<LeaseGroup, _>(
+        Tickers::maybe_visit_any(
             &self.lease_asset,
             QuoteStage4 {
                 downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
@@ -194,7 +197,7 @@ where
 
 struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Dpc: Currency,
+    Dpc: Currency + MemberOf<PaymentCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
@@ -208,21 +211,23 @@ where
 
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: Currency,
-    Dpc: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Dpc: Currency + MemberOf<PaymentCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
+    type VisitedG = LeaseCurrencies;
+
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: 'static + Currency,
+        Asset: Currency + MemberOf<Self::VisitedG>,
     {
         let downpayment_lpn = total(
             self.downpayment,
-            self.oracle.price_of::<Dpc, PaymentGroup>()?,
+            self.oracle.price_of::<Dpc, PaymentCurrencies>()?,
         );
 
         if downpayment_lpn.is_zero() {
@@ -233,7 +238,7 @@ where
             .liability
             .init_borrow_amount(downpayment_lpn, self.max_ltd);
 
-        let asset_price = self.oracle.price_of::<Asset, LeaseGroup>()?.inv();
+        let asset_price = self.oracle.price_of::<Asset, LeaseCurrencies>()?.inv();
 
         let total_asset = total(downpayment_lpn + borrow, asset_price);
 

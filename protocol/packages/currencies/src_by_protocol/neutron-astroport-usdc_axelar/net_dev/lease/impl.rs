@@ -29,7 +29,7 @@ define_currency!(Ntrn, NTRN, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
-    M: Matcher + ?Sized,
+    M: Matcher,
     V: AnyVisitor,
 {
     use currency::maybe_visit_any as maybe_visit;

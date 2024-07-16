@@ -1,4 +1,4 @@
-use currency::{error::CmdError, AnyVisitorPair, Currency, Group};
+use currency::{error::CmdError, AnyVisitorPair, Currency, Group, MemberOf};
 
 use crate::error::Error;
 
@@ -11,7 +11,7 @@ pub fn execute<G, QuoteG, Cmd>(
 where
     G: Group,
     QuoteG: Group,
-    Cmd: WithPrice,
+    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Error: Into<Cmd::Error>,
 {
     currency::visit_any_on_tickers::<G, QuoteG, _>(
@@ -36,16 +36,19 @@ impl<'a, G, QuoteG, Cmd> AnyVisitorPair for PairVisitor<'a, G, QuoteG, Cmd>
 where
     G: Group,
     QuoteG: Group,
-    Cmd: WithPrice,
+    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Error: Into<Cmd::Error>,
 {
+    type VisitedG1 = G;
+    type VisitedG2 = QuoteG;
+
     type Output = Cmd::Output;
     type Error = CmdError<Cmd::Error, Error>;
 
     fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
     where
-        C1: Currency,
-        C2: Currency,
+        C1: Currency + MemberOf<Self::VisitedG1>,
+        C2: Currency + MemberOf<Self::VisitedG2>,
     {
         self.price
             .try_into()

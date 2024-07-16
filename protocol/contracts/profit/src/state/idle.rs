@@ -184,6 +184,8 @@ where
     FilterC: Currency,
     G: Group,
 {
+    type VisitedG = G;
+
     type Output = SplitCoins<FilterC, G>;
     type Error = ContractError;
 

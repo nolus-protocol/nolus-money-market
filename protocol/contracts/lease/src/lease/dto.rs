@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::LoanDTO,
     position::PositionDTO,
@@ -96,7 +97,7 @@ where
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

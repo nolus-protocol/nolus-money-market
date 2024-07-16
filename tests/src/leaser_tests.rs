@@ -1,7 +1,5 @@
-use currencies::{
-    LeaseGroup, {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls},
-};
-use currency::{error::Error as CurrencyError, Currency, Tickers};
+use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup, Lpn, Lpns, Nls};
+use currency::{error::Error as CurrencyError, Currency, MemberOf, Tickers};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
@@ -101,7 +99,7 @@ fn open_lease_not_in_lease_currency() {
     assert_eq!(
         Some(&CurrencyError::not_in_currency_group::<
             _,
-            Tickers,
+            Tickers::<LeaseGroup>,
             LeaseGroup,
         >(lease_currency)),
         err.root_cause().downcast_ref::<CurrencyError>()
@@ -534,7 +532,7 @@ fn open_loans_insufficient_asset() {
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<Lpns>,
     LeaseC: Currency,
     DownpaymentC: Currency,
 {

@@ -95,5 +95,5 @@ fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(token).map_err(Error::from)
+    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token).map_err(Error::from)
 }

@@ -1,8 +1,8 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{open::PositionSpecDTO, LeaseCoin},
+    api::{open::PositionSpecDTO, LeaseAssetCurrencies, LeaseCoin},
     error::{ContractError, ContractResult},
 };
 
@@ -24,7 +24,7 @@ impl PositionDTO {
 
 impl<Asset> TryFrom<PositionDTO> for Position<Asset>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     type Error = ContractError;
 

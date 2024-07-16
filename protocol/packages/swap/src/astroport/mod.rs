@@ -154,7 +154,7 @@ fn to_dex_proto_coin<G>(token: &CoinDTO<G>) -> Result<ProtoCoin>
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(token)
+    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
         .map_err(Error::from)
         .map(|CwCoin { denom, amount }| ProtoCoin {
             denom,

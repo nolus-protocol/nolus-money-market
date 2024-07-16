@@ -1,6 +1,6 @@
 use std::{iter, ops::Deref};
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, Tickers};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, MemberOf, Tickers};
 use finance::price::{base::BasePrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
@@ -14,8 +14,8 @@ pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -28,8 +28,8 @@ impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
     pub fn new(
@@ -57,7 +57,7 @@ where
             .next()
             .map(|price_result: PriceResult<PriceG, BaseC, BaseG>| {
                 price_result.and_then(|ref price| {
-                    Tickers::visit_any::<PriceG, _>(
+                    Tickers::visit_any(
                         price.base_ticker(),
                         Cmd {
                             alarms: self.alarms,
@@ -82,8 +82,8 @@ impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG> Iterator
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
     type Item = ContractResult<Addr>;
@@ -109,7 +109,7 @@ struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -120,16 +120,18 @@ impl<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG> AnyVisitor
     for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
+    type VisitedG = PriceG;
+
     type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
         Price::<C, BaseC>::try_from(self.price)
             .map(|price: Price<C, BaseC>| {

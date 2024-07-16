@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     percent::Percent,
@@ -52,7 +52,7 @@ impl<'a> WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'a> {
     where
         LppLender: LppLenderTrait<LpnCurrency, LpnCurrencies>,
     {
-        let (downpayment, downpayment_lpn) = bank::may_received::<LeasePaymentCurrencies, _>(
+        let (downpayment, downpayment_lpn) = bank::may_received(
             &self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
@@ -80,13 +80,15 @@ struct DownpaymentHandler<'a> {
     querier: QuerierWrapper<'a>,
 }
 impl<'a> WithCoin for DownpaymentHandler<'a> {
+    type VisitedG = LeasePaymentCurrencies;
+
     type Output = (DownpaymentCoin, LpnCoin);
 
     type Error = ContractError;
 
     fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
         let downpayment_lpn = convert::to_quote::<
             C,

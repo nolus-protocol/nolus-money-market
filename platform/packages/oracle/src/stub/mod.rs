@@ -2,11 +2,11 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, SymbolOwned};
+use currency::{Currency, Group, MemberOf, SymbolOwned};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::error::{self, Error, Result};
+use crate::error::{Error, Result};
 
 use self::impl_::{BasePriceRequest, CheckedConverter, OracleStub, RequestBuilder};
 
@@ -18,7 +18,7 @@ pub fn new_unchecked_quote_currency_stub<'a, StableC, StableG>(
     querier: QuerierWrapper<'a>,
 ) -> impl Oracle<QuoteC = StableC, QuoteG = StableG> + 'a
 where
-    StableC: Currency,
+    StableC: Currency + MemberOf<StableG>,
     StableG: Group + 'a,
 {
     use self::impl_::QuoteCUncheckedConverter;
@@ -35,12 +35,12 @@ where
     Self:
         Into<OracleRef<Self::QuoteC, Self::QuoteG>> + AsRef<OracleRef<Self::QuoteC, Self::QuoteG>>,
 {
-    type QuoteC;
+    type QuoteC: MemberOf<Self::QuoteG>;
     type QuoteG: Group;
 
     fn price_of<C, G>(&self) -> Result<Price<C, Self::QuoteC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group;
 }
 
@@ -72,13 +72,14 @@ where
 
 impl<QuoteC, QuoteG> OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     pub fn try_from_base(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         Self::try_from::<BasePriceRequest>(addr, querier)
     }
 
+    // TODO no need to be pub anymore
     pub fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
     where
         CurrencyReq: RequestBuilder,
@@ -86,9 +87,8 @@ where
         querier
             .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
             .map_err(Error::StubConfigQuery)
-            .and_then(|base_c: SymbolOwned| {
-                currency::validate_ticker::<QuoteC>(&base_c)
-                    .map_err(|_e| error::currency_mismatch::<QuoteC>(base_c))
+            .and_then(|quote_c: SymbolOwned| {
+                currency::validate_ticker(quote_c, QuoteC::TICKER).map_err(Error::StubConfigInvalid)
             })
             .map(|()| Self::unchecked(addr))
     }

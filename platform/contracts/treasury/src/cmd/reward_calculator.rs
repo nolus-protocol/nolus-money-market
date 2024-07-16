@@ -4,7 +4,7 @@ use platform::message::Response as MessageResponse;
 
 use crate::{pool::Pool as PoolTrait, state::reward_scale::RewardScale, ContractError};
 
-// TODO rename to Rewards mand move out of 'cmd'
+// TODO rename to Rewards and move out of 'cmd'
 #[cfg_attr(test, derive(Debug))]
 pub struct RewardCalculator<Pool> {
     pools: Vec<Pool>,

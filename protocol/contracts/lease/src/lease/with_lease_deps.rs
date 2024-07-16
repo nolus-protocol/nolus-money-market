@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use currency::{self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers};
+use currency::{
+    self, AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, SymbolSlice, Tickers,
+};
 use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
 use oracle_platform::{Oracle as OracleTrait, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -20,7 +22,7 @@ pub trait WithLeaseDeps {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>;
 }
@@ -39,7 +41,7 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
-    Tickers::visit_any::<LeaseAssetCurrencies, _>(
+    Tickers::visit_any(
         asset,
         FactoryStage1 {
             cmd,
@@ -66,12 +68,14 @@ where
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
+    type VisitedG = LeaseAssetCurrencies;
+
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: 'static + Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
         self.lpp.execute_loan(
             FactoryStage2 {
@@ -95,7 +99,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
 impl<'r, Cmd, Asset> WithLppLoan<LpnCurrency, LpnCurrencies> for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     lpp::error::ContractError: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
@@ -127,7 +131,7 @@ impl<Cmd, Asset, LppLoan> WithOracle<LpnCurrency, LpnCurrencies>
     for FactoryStage4<Cmd, Asset, LppLoan>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
 {
     type Output = Cmd::Output;

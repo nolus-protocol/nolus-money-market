@@ -132,7 +132,7 @@ fn from_dex_symbol<G>(ticker: &SymbolSlice) -> dex::swap::Result<&SymbolSlice>
 where
     G: Group,
 {
-    DexSymbols::visit_any::<G, _>(ticker, Tickers {}).map_err(Error::from)
+    DexSymbols::visit_any(ticker, Tickers::<G>::new()).map_err(Error::from)
 }
 
 fn parse_request_from_any(request: CosmosAny) -> RequestMsg {

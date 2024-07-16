@@ -1,6 +1,6 @@
 use platform::{bank::FixedAddressSender, batch::Batch};
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -8,6 +8,7 @@ use reserve::stub::Reserve as ReserveTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
@@ -34,7 +35,7 @@ impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
         self.price_of_lease_currency()

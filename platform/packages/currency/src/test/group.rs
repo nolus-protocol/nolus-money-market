@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
+use crate::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -11,15 +11,15 @@ pub type SuperGroupTestC6 = impl_::TestC6;
 
 pub type SubGroupTestC1 = impl_::TestC10;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
 pub struct SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
-        V: AnyVisitor,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<VisitedG = Self>,
     {
         crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
@@ -27,23 +27,43 @@ impl Group for SuperGroup {
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC6, _>(matcher, visitor))
-            .or_else(|visitor| SubGroup::maybe_visit(matcher, visitor))
+            .or_else(|visitor| SubGroup::maybe_visit_member(matcher, visitor))
+    }
+
+    fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: ?Sized,
+        V: AnyVisitor,
+    {
+        unreachable!()
     }
 }
+impl MemberOf<Self> for SuperGroup {}
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
 pub struct SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
     {
         crate::maybe_visit_any::<_, SubGroupTestC1, _>(matcher, visitor)
     }
 }
+impl MemberOf<Self> for SubGroup {}
+impl MemberOf<SuperGroup> for SubGroup {}
 
 mod impl_ {
     use serde::{Deserialize, Serialize};

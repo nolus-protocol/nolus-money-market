@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -6,7 +6,7 @@ use platform::bank;
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
-    api::{LeasePaymentCurrencies, PaymentCoin},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies, PaymentCoin},
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, Lease},
@@ -32,15 +32,12 @@ impl WithLease for ObtainPayment {
         lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
-        bank::may_received::<LeasePaymentCurrencies, _>(
-            &self.cw_amount,
-            RepaymentHandler::<_, _, _> { lease },
-        )
-        .ok_or_else(ContractError::NoPaymentError)?
+        bank::may_received(&self.cw_amount, RepaymentHandler::<_, _, _> { lease })
+            .ok_or_else(ContractError::NoPaymentError)?
     }
 }
 
@@ -50,17 +47,19 @@ struct RepaymentHandler<Asset, LppLoan, Oracle> {
 
 impl<Asset, LppLoan, Oracle> WithCoin for RepaymentHandler<Asset, LppLoan, Oracle>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
+    type VisitedG = LeasePaymentCurrencies;
+
     type Output = PaymentCoin;
 
     type Error = ContractError;
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<LeasePaymentCurrencies>,
     {
         self.lease.validate_repay(coin).map(|()| coin.into())
     }

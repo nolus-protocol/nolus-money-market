@@ -1,6 +1,6 @@
 #![cfg(feature = "testing")]
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::{
     coin::Amount,
     price::{self, Price},
@@ -48,7 +48,7 @@ where
 
 impl<QuoteC, QuoteG> Oracle for DummyOracle<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type QuoteC = QuoteC;

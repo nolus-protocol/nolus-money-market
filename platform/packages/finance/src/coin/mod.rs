@@ -11,7 +11,7 @@ use std::{
 
 use ::serde::{Deserialize, Serialize};
 
-use currency::Currency;
+use currency::{Currency, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
@@ -221,12 +221,13 @@ impl<C> From<Coin<C>> for Amount {
 pub type WithCoinResult<V> = Result<<V as WithCoin>::Output, <V as WithCoin>::Error>;
 
 pub trait WithCoin {
+    type VisitedG: Group;
     type Output;
     type Error;
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
     where
-        C: Currency;
+        C: Currency + MemberOf<Self::VisitedG>;
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>

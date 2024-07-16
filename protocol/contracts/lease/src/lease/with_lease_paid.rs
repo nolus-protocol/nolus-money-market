@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, Tickers};
 
 use crate::{api::LeaseAssetCurrencies, finance::LpnCurrencies};
 
@@ -12,7 +12,7 @@ pub trait WithLeaseTypes {
 
     fn exec<Asset, Lpn>(self, lease_dto: LeaseDTO) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Lpn: Currency;
 }
 
@@ -21,7 +21,7 @@ where
     Cmd: WithLeaseTypes,
     currency::error::Error: Into<Cmd::Error>,
 {
-    Tickers::visit_any::<LeaseAssetCurrencies, _>(
+    Tickers::visit_any(
         &lease_dto.position.amount().ticker().clone(),
         FactoryStage1 { lease_dto, cmd },
     )
@@ -37,15 +37,17 @@ where
     Cmd: WithLeaseTypes,
     currency::error::Error: Into<Cmd::Error>,
 {
+    type VisitedG = LeaseAssetCurrencies;
+
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<Self::VisitedG>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        Tickers::visit_any::<LpnCurrencies, _>(
+        Tickers::visit_any(
             &lpn,
             FactoryStage2 {
                 lease_dto: self.lease_dto,
@@ -64,8 +66,10 @@ struct FactoryStage2<Cmd, Asset> {
 impl<Cmd, Asset> AnyVisitor for FactoryStage2<Cmd, Asset>
 where
     Cmd: WithLeaseTypes,
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
+    type VisitedG = LpnCurrencies;
+
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 

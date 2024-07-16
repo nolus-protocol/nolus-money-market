@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     matcher::{self, Matcher},
     symbol::Symbol,
-    SymbolSlice,
+    MemberOf, SymbolSlice,
 };
 
 use super::Currency;
@@ -17,7 +17,7 @@ pub trait SingleVisitor<C> {
 pub trait CurrencyVisit: Symbol {
     fn visit<CDef, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
-        CDef: Currency,
+        CDef: Currency + MemberOf<Self::Group>,
         V: SingleVisitor<CDef>,
         Error: Into<V::Error>,
     {
@@ -36,20 +36,27 @@ mod test {
     use crate::{
         error::Error,
         from_symbol::CurrencyVisit,
-        test::{Expect, ExpectUnknownCurrency},
-        test::{SuperGroupTestC1, SuperGroupTestC2},
+        test::{
+            Expect, ExpectUnknownCurrency, SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+        },
         Currency,
     };
     use crate::{BankSymbols, Tickers};
 
     #[test]
     fn visit_on_ticker() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
-        Tickers::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc.clone()).unwrap_err();
-        assert_eq!(Tickers::visit(SuperGroupTestC1::TICKER, v_usdc), Ok(true));
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup>::default();
+        Tickers::<SuperGroup>::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc.clone()).unwrap_err();
+        assert_eq!(
+            Tickers::<SuperGroup>::visit(SuperGroupTestC1::TICKER, v_usdc),
+            Ok(true)
+        );
 
-        let v_nls = Expect::<SuperGroupTestC2>::default();
-        assert_eq!(Tickers::visit(SuperGroupTestC2::TICKER, v_nls), Ok(true));
+        let v_nls = Expect::<SuperGroupTestC2, SubGroup>::default();
+        assert_eq!(
+            Tickers::<SuperGroup>::visit(SuperGroupTestC2::TICKER, v_nls),
+            Ok(true)
+        );
     }
 
     #[test]
@@ -57,31 +64,41 @@ mod test {
         const UNKNOWN_TICKER: &str = "my_fancy_coin";
 
         assert_eq!(
-            Tickers::visit::<SuperGroupTestC2, _>(UNKNOWN_TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, Tickers, SuperGroupTestC2>(
+            Tickers::<SuperGroup>::visit::<SuperGroupTestC2, _>(
                 UNKNOWN_TICKER,
-            )),
+                ExpectUnknownCurrency::<SuperGroup>::new()
+            ),
+            Err(Error::unexpected_symbol::<
+                _,
+                Tickers<SuperGroup>,
+                SuperGroupTestC2,
+            >(UNKNOWN_TICKER,)),
         );
 
         assert_eq!(
-            Tickers::visit::<SuperGroupTestC2, _>(SuperGroupTestC1::TICKER, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, Tickers, SuperGroupTestC2>(
+            Tickers::<SuperGroup>::visit::<SuperGroupTestC2, _>(
                 SuperGroupTestC1::TICKER,
-            )),
+                ExpectUnknownCurrency::<SuperGroup>::new()
+            ),
+            Err(Error::unexpected_symbol::<
+                _,
+                Tickers<SuperGroup>,
+                SuperGroupTestC2,
+            >(SuperGroupTestC1::TICKER,)),
         );
     }
 
     #[test]
     fn visit_on_bank_symbol() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup>::default();
         assert_eq!(
-            BankSymbols::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc),
+            BankSymbols::<SuperGroup>::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc),
             Ok(true)
         );
 
-        let v_nls = Expect::<SuperGroupTestC2>::default();
+        let v_nls = Expect::<SuperGroupTestC2, SubGroup>::default();
         assert_eq!(
-            BankSymbols::visit(SuperGroupTestC2::BANK_SYMBOL, v_nls),
+            BankSymbols::<SuperGroup>::visit(SuperGroupTestC2::BANK_SYMBOL, v_nls),
             Ok(true)
         );
     }
@@ -91,8 +108,15 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            BankSymbols::visit::<SuperGroupTestC2, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::unexpected_symbol::<_, BankSymbols, SuperGroupTestC2>(DENOM,)),
+            BankSymbols::<SuperGroup>::visit::<SuperGroupTestC2, _>(
+                DENOM,
+                ExpectUnknownCurrency::<SuperGroup>::new()
+            ),
+            Err(Error::unexpected_symbol::<
+                _,
+                BankSymbols::<SuperGroup>,
+                SuperGroupTestC2,
+            >(DENOM,)),
         );
     }
 }

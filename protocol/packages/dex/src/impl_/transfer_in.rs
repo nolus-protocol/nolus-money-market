@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use currency::{Currency, Group};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
@@ -19,11 +21,17 @@ pub(super) fn check_received<G>(
 where
     G: Group,
 {
-    struct CheckBalance<'a> {
+    struct CheckBalance<'a, G> {
         account: &'a Addr,
         querier: QuerierWrapper<'a>,
+        currency_g: PhantomData<G>,
     }
-    impl<'a> WithCoin for CheckBalance<'a> {
+    impl<'a, G> WithCoin for CheckBalance<'a, G>
+    where
+        G: Group,
+    {
+        type VisitedG = G;
+
         type Output = bool;
         type Error = Error;
 
@@ -36,7 +44,11 @@ where
         }
     }
 
-    payment.with_coin(CheckBalance { account, querier })
+    payment.with_coin(CheckBalance::<G> {
+        account,
+        querier,
+        currency_g: PhantomData,
+    })
 }
 
 pub(super) fn setup_alarm(time_alarms: &TimeAlarmsRef, now: Timestamp) -> Result<Batch> {

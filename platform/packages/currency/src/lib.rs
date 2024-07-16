@@ -1,4 +1,4 @@
-use std::{any::TypeId, fmt::Debug};
+use std::{any::TypeId, fmt::Debug, marker::PhantomData};
 
 use crate::error::{Error, Result};
 
@@ -8,7 +8,7 @@ pub use self::{
         visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
         GroupVisit,
     },
-    group::{Group, MaybeAnyVisitResult},
+    group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
@@ -25,14 +25,17 @@ mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
 
+// TODO get rid of these definitions. Move some to much smaller scope, for example move SymbolOwned close to CurrencyDTO
+// and SymbolStatic close to Symbols
 pub type SymbolSlice = str;
 pub type SymbolStatic = &'static SymbolSlice;
 pub type SymbolOwned = String;
 
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
 // satisfy trait bounds with regards of the lifetimes
-// Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
+// For example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
+    /// The group this currency belongs to
     type Group: Group;
 
     /// Identifier of the currency
@@ -59,14 +62,11 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate_ticker<C>(ticker: &SymbolSlice) -> Result<()>
-where
-    C: Currency,
-{
-    if C::TICKER == ticker {
+pub fn validate_ticker(got: SymbolOwned, expected: SymbolStatic) -> Result<()> {
+    if expected == got {
         Ok(())
     } else {
-        Err(Error::unexpected_symbol::<_, Tickers, C>(ticker.to_owned()))
+        Err(Error::currency_mismatch(expected, got))
     }
 }
 
@@ -82,8 +82,14 @@ pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>
 where
     G: Group,
 {
-    struct SupportedLeaseCurrency {}
-    impl AnyVisitor for SupportedLeaseCurrency {
+    struct SupportedLeaseCurrency<G> {
+        expected_group: PhantomData<G>,
+    }
+    impl<G> AnyVisitor for SupportedLeaseCurrency<G>
+    where
+        G: Group,
+    {
+        type VisitedG = G;
         type Error = Error;
         type Output = ();
         fn on<C>(self) -> Result<Self::Output>
@@ -93,13 +99,18 @@ where
             Ok(())
         }
     }
-    Tickers::visit_any::<G, _>(ticker, SupportedLeaseCurrency {})
+    Tickers::<G>::visit_any(
+        ticker,
+        SupportedLeaseCurrency {
+            expected_group: PhantomData::<G>,
+        },
+    )
 }
 
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
-    M: Matcher + ?Sized,
-    C: Currency,
+    M: Matcher,
+    C: Currency + MemberOf<V::VisitedG> + MemberOf<M::Group>,
     V: AnyVisitor,
 {
     if matcher.r#match::<C>() {
@@ -135,9 +146,11 @@ mod tests {
             super::validate::<SuperGroup>(SuperGroupTestC2::TICKER)
         );
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, Tickers, SubGroup>(
-                SuperGroupTestC1::TICKER
-            )),
+            Err(Error::not_in_currency_group::<
+                _,
+                Tickers::<SubGroup>,
+                SubGroup,
+            >(SuperGroupTestC1::TICKER)),
             super::validate::<SubGroup>(SuperGroupTestC1::TICKER)
         );
         assert_eq!(Ok(()), super::validate::<SubGroup>(SubGroupTestC1::TICKER));

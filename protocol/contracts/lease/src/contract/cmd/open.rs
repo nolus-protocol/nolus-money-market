@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseForm, LeaseCoin},
+    api::{open::NewLeaseForm, LeaseAssetCurrencies, LeaseCoin},
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, LppRef, OracleRef, ReserveRef},
     lease::{
@@ -72,7 +72,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

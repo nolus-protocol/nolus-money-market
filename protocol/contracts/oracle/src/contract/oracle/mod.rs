@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use currency::{Currency, Group, SymbolOwned, SymbolSlice};
+use currency::{Currency, Group, MemberOf, SymbolOwned, SymbolSlice};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -38,7 +38,7 @@ pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
     storage: S,
@@ -50,8 +50,8 @@ where
 impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
-    PriceG: Group + Clone,
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
@@ -109,12 +109,12 @@ where
         currency: &SymbolOwned,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
     where
-        StableCurrency: Currency,
+        StableCurrency: Currency + MemberOf<PriceG>,
     {
         struct StablePriceCalc<StableCurrency, BaseCurrency, G> {
+            _currency_group: PhantomData<G>,
             stable_to_base_price: Price<StableCurrency, BaseCurrency>,
             _stable: PhantomData<StableCurrency>,
-            _base_group: PhantomData<G>,
         }
         impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
             for StablePriceCalc<StableCurrency, BaseCurrency, G>
@@ -123,6 +123,8 @@ where
             BaseCurrency: Currency,
             G: Group,
         {
+            type PriceG = G;
+
             type Output = PriceDTO<G, G>;
 
             type Error = ContractError;
@@ -147,9 +149,9 @@ where
                         with_price::execute(
                             base_price,
                             StablePriceCalc {
+                                _currency_group: PhantomData,
                                 stable_to_base_price: stable_price,
                                 _stable: PhantomData,
-                                _base_group: PhantomData,
                             },
                         )
                     })
@@ -173,7 +175,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     PriceG: Group + Clone,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     const REPLY_ID: Id = 0;

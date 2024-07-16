@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic};
+use crate::{
+    group::MemberOf, AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic,
+};
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -28,8 +30,7 @@ impl Currency for NlsPlatform {
     const DECIMAL_DIGITS: u8 = 6;
 }
 
-#[derive(Deserialize, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Native {}
 
 impl Group for Native {
@@ -37,9 +38,20 @@ impl Group for Native {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
     {
         crate::maybe_visit_any::<_, NlsPlatform, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<Self> for Native {}

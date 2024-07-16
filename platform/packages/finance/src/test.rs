@@ -27,6 +27,7 @@ pub mod coin {
     where
         CExp: Currency,
     {
+        type VisitedG = CExp::Group;
         type Output = bool;
 
         type Error = Error;

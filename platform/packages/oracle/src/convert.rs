@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::coin::Coin;
 
 use crate::{error::Error, stub::Oracle};
@@ -10,10 +10,10 @@ pub fn from_quote<QuoteC, QuoteG, OracleS, OutC, OutG>(
     in_amount: Coin<QuoteC>,
 ) -> Result<Coin<OutC>, Error>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     OracleS: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
-    OutC: Currency,
+    OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
     PriceConvert::<QuoteC, QuoteG, OutC, OutG>::new(in_amount).with_quote_in(oracle)
@@ -24,9 +24,9 @@ pub fn to_quote<InC, InG, QuoteC, QuoteG, OracleS>(
     in_amount: Coin<InC>,
 ) -> Result<Coin<QuoteC>, Error>
 where
-    InC: Currency,
+    InC: Currency + MemberOf<InG>,
     InG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     OracleS: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
 {
@@ -36,7 +36,7 @@ where
 mod impl_ {
     use std::marker::PhantomData;
 
-    use currency::{Currency, Group};
+    use currency::{Currency, Group, MemberOf};
     use finance::{coin::Coin, price};
 
     use crate::{error::Error, Oracle};
@@ -56,9 +56,9 @@ mod impl_ {
 
     impl<InC, InG, OutC, OutG> PriceConvert<InC, InG, OutC, OutG>
     where
-        InC: Currency,
+        InC: Currency + MemberOf<InG>,
         InG: Group,
-        OutC: Currency,
+        OutC: Currency + MemberOf<OutG>,
         OutG: Group,
     {
         pub(super) fn new(in_amount: Coin<InC>) -> Self {
