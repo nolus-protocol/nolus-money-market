@@ -79,20 +79,6 @@ where
         Self::try_from::<BasePriceRequest>(addr, querier)
     }
 
-    // TODO no need to be pub anymore
-    pub fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
-    where
-        CurrencyReq: RequestBuilder,
-    {
-        querier
-            .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
-            .map_err(Error::StubConfigQuery)
-            .and_then(|quote_c: SymbolOwned| {
-                currency::validate_ticker(quote_c, QuoteC::TICKER).map_err(Error::StubConfigInvalid)
-            })
-            .map(|()| Self::unchecked(addr))
-    }
-
     pub fn execute_as_oracle<V>(
         self,
         cmd: V,
@@ -103,6 +89,19 @@ where
         Error: Into<V::Error>,
     {
         cmd.exec(OracleStub::<_, QuoteG, BasePriceRequest, CheckedConverter>::new(self, querier))
+    }
+
+    fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
+    where
+        CurrencyReq: RequestBuilder,
+    {
+        querier
+            .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
+            .map_err(Error::StubConfigQuery)
+            .and_then(|quote_c: SymbolOwned| {
+                currency::validate_ticker(quote_c, QuoteC::TICKER).map_err(Error::StubConfigInvalid)
+            })
+            .map(|()| Self::unchecked(addr))
     }
 }
 
