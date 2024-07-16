@@ -17,6 +17,7 @@ pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<
 where
     M: Matcher,
     V: AnyVisitor,
+    PaymentOnlyGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
 {
     use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, UsdcAxelar, _>(matcher, visitor)

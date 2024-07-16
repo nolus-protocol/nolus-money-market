@@ -39,6 +39,5 @@ macro_rules! define_currency {
 
             const DECIMAL_DIGITS: u8 = $decimal_digits;
         }
-        // impl $crate::currency_macro::MemberOf<$group> for $ident {}
     };
 }
