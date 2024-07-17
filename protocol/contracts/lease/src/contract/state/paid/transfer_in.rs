@@ -1,3 +1,4 @@
+use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolSlice;
@@ -31,7 +32,6 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::OracleRef,
     lease::{with_lease_paid, LeaseDTO},
 };
 
@@ -99,7 +99,7 @@ impl SwapTask for TransferIn {
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &OracleRef {
+    fn oracle(&self) -> &impl SwapPath {
         &self.lease.lease.oracle
     }
 
