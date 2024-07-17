@@ -156,7 +156,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Newt, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Eclip, LeaseGroup>();
         maybe_visit_on_ticker_impl::<WstEth, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
@@ -172,7 +172,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StTia, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StkAtom, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);

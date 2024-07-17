@@ -125,7 +125,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Mars, LeaseGroup>();
 
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::DEX_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);

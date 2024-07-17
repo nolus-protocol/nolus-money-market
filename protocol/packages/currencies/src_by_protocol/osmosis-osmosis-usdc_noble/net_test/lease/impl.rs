@@ -140,7 +140,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Mars, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::DEX_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
