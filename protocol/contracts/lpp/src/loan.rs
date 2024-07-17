@@ -136,7 +136,7 @@ mod test {
         };
 
         assert_eq!(
-            Coin::<LpnC>::from(50),
+            Coin::<Lpn>::from(50),
             l.interest_due(&(l.interest_paid + Duration::YEAR)).unwrap()
         );
 
@@ -269,7 +269,7 @@ mod test {
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-            let interest: Coin<LpnC> = loan.interest_due(&time).unwrap();
+            let interest: Coin<Lpn> = loan.interest_due(&time).unwrap();
             assert_eq!(interest, 100u128.into());
 
             // partial repay
