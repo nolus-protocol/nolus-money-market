@@ -1,5 +1,5 @@
-use currencies::{LeaseC1, LeaseC2, Lpn};
-use currency::Currency;
+use currencies::{LeaseC1, LeaseC2, LeaseGroup, Lpn};
+use currency::{Currency, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -365,7 +365,7 @@ pub(super) fn expected_open_state<
 where
     DownpaymentC: Currency,
     PaymentC: Currency,
-    AssetC: Currency,
+    AssetC: Currency + MemberOf<LeaseGroup>,
 {
     let now = test_case.app.block_info().time;
     let last_paid = now;

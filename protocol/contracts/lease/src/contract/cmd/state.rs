@@ -1,10 +1,13 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::query::{opened::OngoingTrx, StateResponse},
+    api::{
+        query::{opened::OngoingTrx, StateResponse},
+        LeaseAssetCurrencies,
+    },
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency},
     lease::{with_lease::WithLease, Lease},
@@ -31,7 +34,7 @@ impl WithLease for LeaseState {
         lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

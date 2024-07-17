@@ -52,8 +52,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let may_lpn_payment =
-            bank::may_received::<LpnCurrencies, _>(&info.funds, IntoDTO::<LpnCurrencies>::new());
+        let may_lpn_payment = bank::may_received(&info.funds, IntoDTO::<LpnCurrencies>::new());
         match may_lpn_payment {
             Some(lpn_payment) => {
                 let payment = never::safe_unwrap(lpn_payment);
@@ -188,14 +187,12 @@ impl Handler for Active {
     }
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
-        balance::balance(&lease_addr, self.lease.lease.loan.lpp().lpn(), querier).and_then(
-            |balance| {
-                if balance.is_zero() {
-                    Err(ContractError::InconsistencyNotDetected())
-                } else {
-                    repay::repay(self.lease, balance, &env, querier)
-                }
-            },
-        )
+        balance::lpn_balance(&lease_addr, querier).and_then(|balance| {
+            if balance.is_zero() {
+                Err(ContractError::InconsistencyNotDetected())
+            } else {
+                repay::repay(self.lease, balance, &env, querier)
+            }
+        })
     }
 }

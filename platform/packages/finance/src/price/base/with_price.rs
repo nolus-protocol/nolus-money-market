@@ -1,3 +1,4 @@
+use currency::MemberOf;
 use currency::{error::CmdError, AnyVisitor, Currency, Group, GroupVisit, Tickers};
 
 use crate::{error::Error, price::Price};
@@ -8,12 +9,14 @@ pub trait WithPrice<QuoteC>
 where
     QuoteC: Currency,
 {
+    type PriceG: Group;
+
     type Output;
     type Error;
 
     fn exec<C>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency;
+        C: Currency + MemberOf<Self::PriceG>;
 }
 
 pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
@@ -22,21 +25,21 @@ pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
-    Cmd: WithPrice<QuoteC>,
+    Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Error: Into<Cmd::Error>,
 {
-    Tickers::visit_any::<BaseG, _>(price.base_ticker(), CurrencyResolve { price, cmd })
+    Tickers::<BaseG>::visit_any(price.base_ticker(), CurrencyResolve { price, cmd })
         .map_err(CmdError::into_customer_err)
 }
 
 struct CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
-    Cmd: WithPrice<QuoteC>,
+    Cmd: WithPrice<QuoteC, PriceG = G>,
 {
     price: &'a BasePrice<G, QuoteC, QuoteG>,
     cmd: Cmd,
@@ -45,17 +48,18 @@ where
 impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
-    Cmd: WithPrice<QuoteC>,
+    Cmd: WithPrice<QuoteC, PriceG = G>,
     Error: Into<Cmd::Error>,
 {
+    type VisitedG = G;
     type Output = Cmd::Output;
     type Error = CmdError<Cmd::Error, Error>;
 
     fn on<C>(self) -> currency::AnyVisitorResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
         self.price
             .try_into()

@@ -38,7 +38,7 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<G, DexSymbols>(amount)
+        coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount)
             .map(into_cosmos_sdk_coin)
             .map(|cosmos_sdk_coin| {
                 self.amounts.push(cosmos_sdk_coin);

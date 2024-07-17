@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
+    GroupVisit, MemberOf, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::schemars::{self, JsonSchema};
 
@@ -81,24 +81,24 @@ where
 
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
-        V: WithCoin,
+        V: WithCoin<VisitedG = G>,
         Error: Into<V::Error>,
     {
-        struct CoinTransformerAny<'a, G, V>(&'a CoinDTO<G>, V)
+        struct CoinTransformerAny<'a, V>(&'a CoinDTO<V::VisitedG>, V)
         where
-            G: Group;
+            V: WithCoin;
 
-        impl<'a, G, V> AnyVisitor for CoinTransformerAny<'a, G, V>
+        impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
         where
-            G: Group,
             V: WithCoin,
         {
+            type VisitedG = V::VisitedG;
             type Output = V::Output;
             type Error = CmdError<V::Error, Error>;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency,
+                C: Currency + MemberOf<Self::VisitedG>,
             {
                 self.1
                     .on::<C>(self.0.amount().into())
@@ -106,7 +106,7 @@ where
             }
         }
 
-        Tickers::visit_any::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+        Tickers::<G>::visit_any(&self.ticker, CoinTransformerAny(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
 
@@ -148,7 +148,7 @@ where
 impl<G, C> TryFrom<&CoinDTO<G>> for Coin<C>
 where
     G: Group,
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     type Error = Error;
 
@@ -172,14 +172,14 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        Tickers::visit(&coin.ticker, CoinFactory(coin))
+        Tickers::<G>::visit(&coin.ticker, CoinFactory(coin))
     }
 }
 
 impl<G, C> TryFrom<CoinDTO<G>> for Coin<C>
 where
     G: Group,
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     type Error = Error;
 
@@ -228,6 +228,7 @@ impl<G> WithCoin for IntoDTO<G>
 where
     G: Group,
 {
+    type VisitedG = G;
     type Output = CoinDTO<G>;
     type Error = Never;
 
@@ -245,7 +246,7 @@ mod test {
 
     use currency::{
         test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic,
+        AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, MemberOf, SymbolStatic,
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 
@@ -271,7 +272,7 @@ mod test {
         const DECIMAL_DIGITS: u8 = 0;
     }
 
-    #[derive(PartialEq)]
+    #[derive(Copy, Clone, Debug, PartialEq)]
     struct MyTestGroup {}
 
     impl Group for MyTestGroup {
@@ -279,13 +280,23 @@ mod test {
 
         fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
         where
-            M: Matcher + ?Sized,
+            M: Matcher<Group = Self>,
+            V: AnyVisitor<VisitedG = Self>,
+        {
+            Self::maybe_visit_member(matcher, visitor)
+        }
+
+        fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+        where
+            M: Matcher,
             V: AnyVisitor,
+            Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
         {
             assert!(matcher.r#match::<MyTestCurrency>());
             Ok(visitor.on::<MyTestCurrency>())
         }
     }
+    impl MemberOf<Self> for MyTestGroup {}
 
     #[test]
     fn longer_representation() {

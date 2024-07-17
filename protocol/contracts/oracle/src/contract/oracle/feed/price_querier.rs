@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Storage, Timestamp};
@@ -35,16 +35,20 @@ where
 }
 
 pub trait PriceQuerier {
+    type CurrencyGroup: Group;
+
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
     where
-        B: Currency,
-        Q: Currency;
+        B: Currency + MemberOf<Self::CurrencyGroup>,
+        Q: Currency + MemberOf<Self::CurrencyGroup>;
 }
 
 impl<'a, G> PriceQuerier for FedPrices<'a, G>
 where
     G: Group,
 {
+    type CurrencyGroup = G;
+
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
     where
         B: Currency,

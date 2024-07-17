@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned, SymbolSlice,
-    Tickers,
+    self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, MemberOf, SymbolOwned,
+    SymbolSlice, Tickers,
 };
 use finance::price::{
     dto::{with_price, PriceDTO, WithPrice},
@@ -73,7 +73,7 @@ where
     where
         'm: 'a,
         G: Group,
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
         Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
     {
@@ -161,7 +161,7 @@ where
                 price,
                 _quote_g: PhantomData,
             };
-            Tickers::visit_any::<G, _>(next_currency, next_collect)
+            Tickers::visit_any(next_currency, next_collect)
         } else {
             Ok(price.into())
         }
@@ -176,6 +176,7 @@ where
     QuoteQuoteC: Currency,
     QuoteG: Group,
 {
+    type VisitedG = G;
     type Output = PriceDTO<G, QuoteG>;
     type Error = PriceFeedsError;
 
@@ -210,14 +211,22 @@ where
     QuoteG: Group,
 {
     debug_assert!(valid_since < at);
-    struct AddObservation<'a> {
+    struct AddObservation<'a, G, QuoteG> {
         feed_bin: Option<PriceFeedBin>,
         from: &'a Addr,
         at: Timestamp,
         valid_since: Timestamp,
+        group: PhantomData<G>,
+        quote_group: PhantomData<QuoteG>,
     }
 
-    impl<'a> WithPrice for AddObservation<'a> {
+    impl<'a, G, QuoteG> WithPrice for AddObservation<'a, G, QuoteG>
+    where
+        G: Group,
+        QuoteG: Group,
+    {
+        type G = G;
+        type QuoteG = QuoteG;
         type Output = PriceFeedBin;
         type Error = PriceFeedsError;
 
@@ -240,6 +249,8 @@ where
             from,
             at,
             valid_since,
+            group: PhantomData,
+            quote_group: PhantomData,
         },
     )
 }

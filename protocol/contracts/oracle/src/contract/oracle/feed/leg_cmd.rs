@@ -1,4 +1,4 @@
-use currency::{AnyVisitorPair, Currency, Group};
+use currency::{AnyVisitorPair, Currency, Group, MemberOf};
 use finance::price::{base::BasePrice, Price};
 
 use crate::ContractError;
@@ -8,7 +8,7 @@ use super::price_querier::PriceQuerier;
 pub struct LegCmd<PriceG, BaseC, BaseG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
     Querier: PriceQuerier,
 {
@@ -19,7 +19,7 @@ where
 impl<PriceG, BaseC, BaseG, Querier> LegCmd<PriceG, BaseC, BaseG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
     Querier: PriceQuerier,
 {
@@ -34,17 +34,21 @@ where
 impl<PriceG, BaseC, BaseG, Querier> AnyVisitorPair for &mut LegCmd<PriceG, BaseC, BaseG, Querier>
 where
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
-    Querier: PriceQuerier,
+    Querier: PriceQuerier<CurrencyGroup = PriceG>,
 {
+    type VisitedG1 = PriceG;
+
+    type VisitedG2 = PriceG;
+
     type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
     type Error = ContractError;
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
     where
-        B: Currency,
-        Q: Currency,
+        B: Currency + MemberOf<Self::VisitedG1>,
+        Q: Currency + MemberOf<Self::VisitedG2>,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases

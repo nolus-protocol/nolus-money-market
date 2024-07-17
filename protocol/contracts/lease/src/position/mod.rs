@@ -1,10 +1,10 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
 
 use crate::{
-    api::LeaseCoin,
+    api::{LeaseAssetCurrencies, LeaseCoin},
     error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
 };
@@ -27,7 +27,7 @@ pub struct Position<Asset> {
 
 impl<Asset> Position<Asset>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     fn new_internal(amount: Coin<Asset>, spec: Spec) -> Self {
         let obj = Self { amount, spec };

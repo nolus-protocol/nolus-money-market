@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::coin::Coin;
 use platform::{bank::BankAccount, batch::Batch};
 use sdk::cosmwasm_std::Addr;
 
-use crate::error::ContractResult;
+use crate::{api::LeaseAssetCurrencies, error::ContractResult};
 
 use super::LeaseDTO;
 
@@ -17,7 +17,7 @@ pub struct Lease<Asset, Lpn> {
 
 impl<Asset, Lpn> Lease<Asset, Lpn>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     pub(crate) fn from_dto(dto: LeaseDTO) -> Self {
         let amount = dto.position.amount().try_into().expect(

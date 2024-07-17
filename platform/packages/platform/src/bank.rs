@@ -59,14 +59,13 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<G, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
+pub fn may_received<V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
 where
     V: WithCoin,
-    G: Group,
 {
     let mut may_res = None;
     for coin in cw_amount {
-        cmd = match from_cosmwasm_any::<G, _>(coin, cmd) {
+        cmd = match from_cosmwasm_any(coin, cmd) {
             Ok(res) => {
                 may_res = Some(res);
                 break;
@@ -111,7 +110,7 @@ impl<'a> BankAccountView for BankView<'a> {
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
-                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone()))
+                    .filter_map(|cw_coin| maybe_from_cosmwasm_any(cw_coin, cmd.clone()))
                     .reduce_results(Aggregate::aggregate)
             })
             .map_err(Into::into)
@@ -353,6 +352,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::marker::PhantomData;
+
     use currency::{
         test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
         Currency, Group,
@@ -370,7 +371,6 @@ mod test {
 
     use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
-    type TheGroup = SubGroup;
     type TheCurrency = SubGroupTestC1;
     type ExtraCurrency = SuperGroupTestC1;
 
@@ -458,7 +458,7 @@ mod test {
     fn may_received_no_input() {
         assert_eq!(
             None,
-            may_received::<TheGroup, _>(&vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+            may_received(&vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
         );
     }
 
@@ -472,7 +472,10 @@ mod test {
 
         assert_eq!(
             None,
-            may_received::<TheGroup, _>(&vec![in_coin_1, in_coin_2], Expect(coin_1))
+            may_received(
+                &vec![in_coin_1, in_coin_2],
+                Expect(Coin::<TheCurrency>::new(AMOUNT))
+            )
         );
     }
 
@@ -480,10 +483,7 @@ mod test {
     fn may_received_in_group() {
         let coin = Coin::<TheCurrency>::new(AMOUNT);
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
-        assert_eq!(
-            Some(Ok(true)),
-            may_received::<TheGroup, _>(&vec![in_coin_1], Expect(coin))
-        );
+        assert_eq!(Some(Ok(true)), may_received(&vec![in_coin_1], Expect(coin)));
     }
 
     #[test]
@@ -497,29 +497,37 @@ mod test {
         let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
         assert_eq!(
             Some(Ok(true)),
-            may_received::<TheGroup, _>(
+            may_received(
                 &vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
                 Expect(coin_2)
             )
         );
         assert_eq!(
             Some(Ok(true)),
-            may_received::<TheGroup, _>(&vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
+            may_received(&vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
         );
     }
 
     #[derive(Clone)]
-    struct Cmd<'r> {
+    struct Cmd<'r, G> {
+        group: PhantomData<G>,
         expected: &'r [&'static str],
     }
 
-    impl<'r> Cmd<'r> {
+    impl<'r, G> Cmd<'r, G> {
         pub const fn new(expected: &'r [&'static str]) -> Self {
-            Self { expected }
+            Self {
+                group: PhantomData,
+                expected,
+            }
         }
     }
 
-    impl WithCoin for Cmd<'_> {
+    impl<G> WithCoin for Cmd<'_, G>
+    where
+        G: Group,
+    {
+        type VisitedG = G;
         type Output = ();
         type Error = Error;
 
@@ -546,10 +554,10 @@ mod test {
 
         let bank_view: BankView<'_> = BankView::account(&addr, querier);
 
-        let cmd: Cmd<'_> = Cmd::new(expected);
+        let cmd = Cmd::<G>::new(expected);
 
         assert_eq!(
-            bank_view.balances::<G, Cmd<'_>>(cmd).unwrap().is_none(),
+            bank_view.balances::<G, _>(cmd).unwrap().is_none(),
             expected.is_empty()
         );
     }

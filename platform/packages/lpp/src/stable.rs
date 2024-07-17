@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic};
+use currency::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, MemberOf, SymbolStatic};
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
 
@@ -24,16 +24,27 @@ impl Currency for Stable {
 
 pub type CoinStable = Coin<Stable>;
 
-#[derive(PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
 pub struct StableCurrencyGroup;
 impl Group for StableCurrencyGroup {
-    const DESCR: &'static str = "stable currency group";
+    const DESCR: &'static str = "stable currency";
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
-        V: AnyVisitor,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<VisitedG = Self>,
     {
-        Ok(visitor.on::<Stable>())
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher,
+        V: AnyVisitor,
+        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+    {
+        MaybeAnyVisitResult::Ok(visitor.on::<Stable>()) // we accept ANY currency to allow any stable@protocol to be a member
     }
 }
+
+impl MemberOf<Self> for StableCurrencyGroup {}

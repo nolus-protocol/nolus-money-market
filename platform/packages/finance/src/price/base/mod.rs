@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, SymbolSlice};
+use currency::{Currency, Group, MemberOf, SymbolSlice};
 use sdk::schemars::{self, JsonSchema};
 use with_price::WithPrice;
 
@@ -25,7 +25,7 @@ pub mod with_price;
 pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
@@ -37,7 +37,7 @@ where
 impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     #[cfg(any(test, feature = "testing"))]
@@ -71,12 +71,17 @@ where
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
-        struct InvariantCheck {}
+        struct InvariantCheck<PriceG> {
+            price_g: PhantomData<PriceG>,
+        }
 
-        impl<QuoteC> WithPrice<QuoteC> for InvariantCheck
+        impl<PriceG, QuoteC> WithPrice<QuoteC> for InvariantCheck<PriceG>
         where
+            PriceG: Group,
             QuoteC: Currency,
         {
+            type PriceG = PriceG;
+
             type Output = ();
 
             type Error = Error;
@@ -91,15 +96,22 @@ where
 
         currency::validate_member::<QuoteC, QuoteG>()
             .map_err(Into::into)
-            .and_then(|()| with_price::execute(self, InvariantCheck {}))
+            .and_then(|()| {
+                with_price::execute(
+                    self,
+                    InvariantCheck {
+                        price_g: PhantomData::<BaseG>,
+                    },
+                )
+            })
     }
 }
 
 impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
-    C: Currency,
+    C: Currency + MemberOf<BaseG>,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -109,9 +121,9 @@ where
 
 impl<C, BaseG, QuoteC, QuoteG> TryFrom<&BasePrice<BaseG, QuoteC, QuoteG>> for Price<C, QuoteC>
 where
-    C: Currency,
+    C: Currency + MemberOf<BaseG>,
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -127,7 +139,7 @@ where
 impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC, QuoteG>> for PriceDTO<BaseG, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(base: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
@@ -138,7 +150,7 @@ where
 impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -154,7 +166,7 @@ where
 impl<BaseG, QuoteC, QuoteG> Clone for BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn clone(&self) -> Self {
@@ -166,10 +178,9 @@ where
 mod test_invariant {
     use currency::{
         test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Group,
+        Currency, Group, MemberOf,
     };
     use sdk::cosmwasm_std::{from_json, to_json_string, StdResult};
-    use serde::Deserialize;
 
     use crate::coin::Coin;
 
@@ -242,8 +253,8 @@ mod test_invariant {
 
     fn new_invalid<BaseC, QuoteC>(amount: Coin<BaseC>, amount_quote: Coin<QuoteC>)
     where
-        BaseC: Currency,
-        QuoteC: Currency,
+        BaseC: Currency + MemberOf<SuperGroup>,
+        QuoteC: Currency + MemberOf<SuperGroup>,
     {
         let _base_price: BasePrice<SuperGroup, QuoteC, SuperGroup> =
             BasePrice::new_unchecked(amount.into(), amount_quote);
@@ -258,18 +269,18 @@ mod test_invariant {
 
     fn load<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>
     where
-        G: Group + for<'a> Deserialize<'a>,
-        QuoteC: Currency + for<'a> Deserialize<'a>,
-        QuoteG: Group + for<'a> Deserialize<'a>,
+        G: Group,
+        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteG: Group,
     {
         load_with_group::<G, QuoteC, QuoteG>(json)
     }
 
     fn load_with_group<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>
     where
-        G: Group + for<'a> Deserialize<'a>,
-        QuoteC: Currency + for<'a> Deserialize<'a>,
-        QuoteG: Group + for<'a> Deserialize<'a>,
+        G: Group,
+        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteG: Group,
     {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }

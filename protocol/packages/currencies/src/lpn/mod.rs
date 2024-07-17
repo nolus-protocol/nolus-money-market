@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 pub use impl_mod::Lpn;
@@ -10,12 +10,14 @@ use r#impl as impl_mod;
 #[cfg(feature = "testing")]
 use testing as impl_mod;
 
+use crate::PaymentGroup;
+
 #[cfg(not(feature = "testing"))]
 mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Lpns {}
 
@@ -24,12 +26,24 @@ impl Group for Lpns {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        M: Matcher + ?Sized,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<VisitedG = Self>,
+    {
+        Self::maybe_visit_member(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        M: Matcher,
         V: AnyVisitor,
+        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
     {
         currency::maybe_visit_any::<_, Lpn, _>(matcher, visitor)
     }
 }
+
+impl MemberOf<PaymentGroup> for Lpns {}
+impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {

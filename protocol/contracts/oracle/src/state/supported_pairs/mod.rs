@@ -1,12 +1,9 @@
 use std::{fmt::Debug, marker::PhantomData};
 
+use ::currencies::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
-use currencies::PaymentGroup;
-use currency::{
-    never::{self, Never},
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, SymbolSlice, Tickers,
-};
+use currency::{Currency, SymbolSlice};
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
@@ -15,6 +12,8 @@ use crate::{
     error::{self, ContractError},
     result::ContractResult,
 };
+
+mod currencies;
 
 type Tree = tree::Tree<SwapTarget>;
 
@@ -125,36 +124,7 @@ where
     }
 
     pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
-        self.tree.iter().map(|node| {
-            if let Ok(currency) = currency::Tickers::maybe_visit_any::<currencies::Native, _>(
-                &node.value().target,
-                crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Native),
-            )
-            .or_else(|_| {
-                Tickers::maybe_visit_any::<currencies::Lpns, _>(
-                    &node.value().target,
-                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lpn),
-                )
-            })
-            .or_else(|_| {
-                Tickers::maybe_visit_any::<currencies::LeaseGroup, _>(
-                    &node.value().target,
-                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::Lease),
-                )
-            })
-            .or_else(|_| {
-                Tickers::maybe_visit_any::<currencies::PaymentOnlyGroup, _>(
-                    &node.value().target,
-                    crate::state::supported_pairs::CurrencyVisitor(api::CurrencyGroup::PaymentOnly),
-                )
-            })
-            .map(never::safe_unwrap)
-            {
-                currency
-            } else {
-                unreachable!("Groups didn't cover all available currencies!")
-            }
-        })
+        currencies::currencies(self.tree.iter())
     }
 
     pub fn query_swap_tree(self) -> Tree {
@@ -208,26 +178,11 @@ where
     }
 }
 
-struct CurrencyVisitor(api::CurrencyGroup);
-
-impl AnyVisitor for CurrencyVisitor {
-    type Output = api::Currency;
-
-    type Error = Never;
-
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency,
-    {
-        Ok(api::Currency::new::<C>(self.0))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
 
-    use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4};
+    use ::currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4};
     use currency::Currency;
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;

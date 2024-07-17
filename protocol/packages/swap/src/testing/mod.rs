@@ -31,7 +31,7 @@ pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::Co
 where
     G: currency::Group,
 {
-    currency::DexSymbols::visit_any::<G, _>(
+    currency::DexSymbols::visit_any(
         denom,
         ConstructDto {
             amount: amount
@@ -63,6 +63,8 @@ impl<G> AnyVisitor for ConstructDto<G>
 where
     G: Group,
 {
+    type VisitedG = G;
+
     type Output = CoinDTO<G>;
     type Error = currency::error::Error;
 

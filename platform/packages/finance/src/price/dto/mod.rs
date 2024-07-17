@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -88,8 +88,8 @@ impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency,
-    QuoteC: Currency,
+    C: Currency + MemberOf<G>,
+    QuoteC: Currency + MemberOf<QuoteG>,
 {
     type Error = Error;
 
@@ -102,8 +102,8 @@ impl<G, QuoteG, C, QuoteC> TryFrom<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency,
-    QuoteC: Currency,
+    C: Currency + MemberOf<G>,
+    QuoteC: Currency + MemberOf<QuoteG>,
 {
     type Error = Error;
 
@@ -128,16 +128,18 @@ where
 
         impl<'a, G, QuoteG> WithPrice for Comparator<'a, G, QuoteG>
         where
-            G: PartialEq + Group,
+            G: Group,
             QuoteG: Group,
         {
+            type G = G;
+            type QuoteG = QuoteG;
             type Output = Option<Ordering>;
             type Error = Error;
 
             fn exec<C, QuoteC>(self, lhs: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
             where
-                C: Currency,
-                QuoteC: Currency,
+                C: Currency + MemberOf<Self::G>,
+                QuoteC: Currency + MemberOf<Self::QuoteG>,
             {
                 Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
             }
@@ -147,13 +149,16 @@ where
 }
 
 pub trait WithPrice {
+    type G: Group;
+    type QuoteG: Group;
+
     type Output;
     type Error;
 
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency,
-        QuoteC: Currency;
+        C: Currency + MemberOf<Self::G>,
+        QuoteC: Currency + MemberOf<Self::QuoteG>;
 }
 
 pub trait WithBase<C>

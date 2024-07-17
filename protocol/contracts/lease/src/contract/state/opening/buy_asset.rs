@@ -1,3 +1,4 @@
+use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::SymbolSlice;
@@ -126,7 +127,7 @@ impl SwapTask for BuyAsset {
         &self.dex_account
     }
 
-    fn oracle(&self) -> &OracleRef {
+    fn oracle(&self) -> &impl SwapPath {
         &self.deps.1
     }
 

@@ -9,8 +9,8 @@ license.workspace = true
 combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
 
 [features]
-# the 'unchecked-quote-currency' feature adds an ability to obtain price with quote currency not matching the oracle's quote currency
-unchecked-quote-currency = []
+# the 'unchecked-stable-quote' feature adds an ability to obtain price with quote currency not matching the oracle's quote currency
+unchecked-stable-quote = []
 testing = ["currency/testing"]
 
 [dependencies]

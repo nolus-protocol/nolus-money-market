@@ -1,6 +1,6 @@
 use finance::price::dto::PriceDTO;
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use platform::{contract, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -23,10 +23,10 @@ pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrenci
     sender: Addr,
 ) -> ContractResult<CwResponse>
 where
-    BaseCurrency: Currency,
+    BaseCurrency: Currency + MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
     BaseCurrencies: Group,
-    AlarmCurrencies: Group + Clone,
-    PriceCurrencies: Group + Clone, //TODO figure out whether Clone is really needed
+    AlarmCurrencies: Group,
+    PriceCurrencies: Group,
 {
     match msg {
         ExecuteMsg::FeedPrices { prices } => {
@@ -34,7 +34,7 @@ where
                 return Err(ContractError::UnknownFeeder {});
             }
 
-            try_feed_prices::<PriceCurrencies, BaseCurrency, PriceCurrencies>(
+            try_feed_prices::<PriceCurrencies, BaseCurrency, BaseCurrencies>(
                 deps.storage,
                 env.block.time,
                 sender,
@@ -59,7 +59,7 @@ where
     }
 }
 
-fn try_feed_prices<G, BaseC, QuoteG>(
+fn try_feed_prices<G, BaseC, BaseG>(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender: Addr,
@@ -67,10 +67,10 @@ fn try_feed_prices<G, BaseC, QuoteG>(
 ) -> ContractResult<()>
 where
     G: Group,
-    BaseC: Currency,
-    QuoteG: Group,
+    BaseC: Currency + MemberOf<BaseG> + MemberOf<G>,
+    BaseG: Group,
 {
     Config::load(storage)
-        .map(|cfg| Feeds::<G, BaseC, QuoteG>::with(cfg.price_config))
+        .map(|cfg| Feeds::<G, BaseC, BaseG>::with(cfg.price_config))
         .and_then(|oracle| oracle.feed_prices(storage, block_time, &sender, &prices))
 }

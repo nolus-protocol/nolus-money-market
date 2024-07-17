@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol, LeaseGroup};
@@ -54,8 +54,9 @@ define_currency!(LeaseC5, LC5, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
 where
-    M: Matcher + ?Sized,
+    M: Matcher,
     V: AnyVisitor,
+    LeaseGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
 {
     use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, LeaseC1, _>(matcher, visitor)
@@ -70,11 +71,14 @@ mod test {
     use currency::Currency;
 
     use crate::{
+        lease::LeaseGroup,
+        lpn::Lpn,
+        native::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
-        {lease::LeaseGroup, lpn::Lpn, native::Nls},
+        Lpns,
     };
 
     use super::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5};
@@ -86,9 +90,7 @@ mod test {
         maybe_visit_on_ticker_impl::<LeaseC3, LeaseGroup>();
         maybe_visit_on_ticker_impl::<LeaseC4, LeaseGroup>();
         maybe_visit_on_ticker_impl::<LeaseC5, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Lpn::TICKER);
-        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Lpn, LeaseGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<LeaseC2, LeaseGroup>(LeaseC2::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<LeaseC3, LeaseGroup>(LeaseC3::DEX_SYMBOL);
     }
@@ -100,7 +102,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<LeaseC3, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<LeaseC4, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<LeaseC5, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, LeaseGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::TICKER);
         maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::DEX_SYMBOL);
         maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Lpn::TICKER);

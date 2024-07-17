@@ -1,10 +1,11 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{bank::FixedAddressSender, message::Response as MessageResponse};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::ContractError,
     finance::{LpnCoinDTO, LpnCurrencies, LpnCurrency, ReserveRef},
     lease::{with_lease::WithLease, Lease},
@@ -56,7 +57,7 @@ where
         lease: Lease<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

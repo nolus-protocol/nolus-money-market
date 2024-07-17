@@ -1,4 +1,4 @@
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::price::dto::PriceDTO;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ where
 impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
     type Error = Error;
@@ -42,7 +42,7 @@ where
 impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpns>
 where
     G: Group,
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
     fn from(validated: ValidatedAlarm<G, Lpn, Lpns>) -> Self {

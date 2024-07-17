@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group, SymbolSlice};
+use currency::{Currency, Group, MemberOf, SymbolSlice};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -27,7 +27,7 @@ pub struct Feeds<PriceG, BaseC, BaseG> {
 impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
 where
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     pub(crate) fn with(config: Config) -> Self {
@@ -85,14 +85,7 @@ where
             .scan(
                 cmd,
                 |cmd: &mut LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>>, leg: SwapLeg| {
-                    Some(
-                        currency::visit_any_on_tickers::<PriceG, PriceG, _>(
-                            &leg.from,
-                            &leg.to.target,
-                            cmd,
-                        )
-                        .transpose(),
-                    )
+                    Some(currency::visit_any_on_tickers(&leg.from, &leg.to.target, cmd).transpose())
                 },
             )
             .flatten()
@@ -158,10 +151,12 @@ mod test {
     }
 
     impl PriceQuerier for TestFeeds {
+        type CurrencyGroup = PriceCurrencies;
+
         fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
         where
-            B: Currency,
-            Q: Currency,
+            B: Currency + MemberOf<Self::CurrencyGroup>,
+            Q: Currency + MemberOf<Self::CurrencyGroup>,
         {
             Ok(self
                 .0

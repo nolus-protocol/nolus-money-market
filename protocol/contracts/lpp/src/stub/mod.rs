@@ -2,7 +2,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, error::CmdError, Currency, Group, SymbolSlice};
+use currency::{self, error::CmdError, Currency, Group, MemberOf, SymbolSlice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -31,14 +31,16 @@ pub struct LppRef<Lpn, Lpns> {
 
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
             .map_err(ContractError::from)
-            .and_then(|lpn: LpnResponse| currency::validate_ticker::<Lpn>(&lpn).map_err(Into::into))
+            .and_then(|lpn: LpnResponse| {
+                currency::validate_ticker(lpn, Lpn::TICKER).map_err(Into::into)
+            })
             .map(|()| Self {
                 addr,
                 _lpn: PhantomData,

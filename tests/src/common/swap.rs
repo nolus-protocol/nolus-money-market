@@ -146,7 +146,7 @@ where
     assert!(!request.swap_path.is_empty());
 
     let dex_denom_in: SymbolOwned =
-        Tickers::visit_any::<GIn, _>(request.token_in.ticker(), DexSymbols)
+        Tickers::visit_any(request.token_in.ticker(), DexSymbols::<GIn>::new())
             .expect("Expected `token_in`, parameterized by `GIn`, to belong to group `GIn`!")
             .into();
     let amount_in: u128 = request.token_in.amount();
@@ -160,7 +160,7 @@ where
 
     let (amount_out, dex_denom_out) = request.swap_path.iter().fold((amount_in, dex_denom_in.as_str()), |(amount_in, dex_denom_in), swap_target| {
         let dex_denom_out =
-            Tickers::visit_any::<GSwap, _>(&swap_target.target, DexSymbols)
+            Tickers::visit_any(&swap_target.target, DexSymbols::<GSwap>::new())
                 .expect("Expected all `swap_path` elements' target currencies to belong to the `GSwap` group!");
 
         let amount_out = price_f(

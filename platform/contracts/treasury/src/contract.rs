@@ -112,7 +112,7 @@ fn try_build_reward<'q>(
             .map(|protocol| {
                 PoolImpl::new(
                     lpp_platform::new_stub(protocol.contracts.lpp, querier, env),
-                    oracle_platform::new_unchecked_quote_currency_stub::<_, StableCurrencyGroup>(
+                    oracle_platform::new_unchecked_stable_quote_stub::<_, StableCurrencyGroup>(
                         protocol.contracts.oracle,
                         querier,
                     ),

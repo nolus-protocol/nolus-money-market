@@ -1,6 +1,6 @@
 use oracle_platform::OracleRef;
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr};
 
@@ -11,7 +11,7 @@ where
     AlarmCurrencies: Group,
     Self: Into<Batch> + Sized,
 {
-    type BaseC: Currency;
+    type BaseC: Currency + MemberOf<Self::BaseG>;
     type BaseG: Group;
 
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, Self::BaseG>) -> Result<()>;
@@ -19,7 +19,7 @@ where
 
 pub trait AsAlarms<OracleBase, OracleBaseG>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     fn as_alarms<AlarmCurrencies>(
@@ -32,7 +32,7 @@ where
 impl<OracleBase, OracleBaseG> AsAlarms<OracleBase, OracleBaseG>
     for OracleRef<OracleBase, OracleBaseG>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     fn as_alarms<AlarmCurrencies>(
@@ -71,7 +71,7 @@ impl<'a, AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies>
     for AlarmsStub<'a, OracleBase, OracleBaseG>
 where
     AlarmCurrencies: Group,
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     type BaseC = OracleBase;

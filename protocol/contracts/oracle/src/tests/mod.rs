@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
     PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -47,7 +47,7 @@ pub(crate) fn base_price<C>(
     is: Amount,
 ) -> BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>
 where
-    C: Currency,
+    C: Currency + MemberOf<PriceCurrencies>,
 {
     price::total_of(Coin::<C>::new(total_of))
         .is(Coin::new(is))

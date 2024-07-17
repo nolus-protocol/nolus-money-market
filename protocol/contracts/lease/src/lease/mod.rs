@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -7,6 +7,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
+    api::LeaseAssetCurrencies,
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, ReserveRef},
     loan::Loan,
@@ -53,7 +54,7 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
@@ -147,7 +148,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use currencies::{Lpn, PaymentC7};
-    use currency::{Currency, Group};
+    use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
     };
@@ -235,7 +236,7 @@ mod tests {
 
     pub struct OracleLocalStub<QuoteC, QuoteG>
     where
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
         ref_: OracleRef<QuoteC, QuoteG>,
@@ -243,7 +244,7 @@ mod tests {
 
     impl<QuoteC, QuoteG> From<Addr> for OracleLocalStub<QuoteC, QuoteG>
     where
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
         fn from(oracle: Addr) -> Self {
@@ -256,7 +257,7 @@ mod tests {
     impl<QuoteC, QuoteG> Oracle for OracleLocalStub<QuoteC, QuoteG>
     where
         Self: Into<OracleRef<QuoteC, QuoteG>>,
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
         type QuoteC = QuoteC;
@@ -272,7 +273,7 @@ mod tests {
 
     impl<QuoteC, QuoteG> AsRef<OracleRef<QuoteC, QuoteG>> for OracleLocalStub<QuoteC, QuoteG>
     where
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
         fn as_ref(&self) -> &OracleRef<QuoteC, QuoteG> {
@@ -282,7 +283,7 @@ mod tests {
 
     impl<QuoteC, QuoteG> From<OracleLocalStub<QuoteC, QuoteG>> for OracleRef<QuoteC, QuoteG>
     where
-        QuoteC: Currency,
+        QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
         fn from(stub: OracleLocalStub<QuoteC, QuoteG>) -> Self {

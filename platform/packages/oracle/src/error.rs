@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{Currency, SymbolOwned};
+use currency::{error::Error as CurrencyError, SymbolOwned};
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -11,6 +11,9 @@ pub type Result<T> = StdResult<T, Error>;
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
     StubConfigQuery(StdError),
+
+    #[error("[Oracle; Stub] Invalid configuration! Cause: {0}")]
+    StubConfigInvalid(CurrencyError),
 
     #[error("[Oracle] {0}")]
     Finance(#[from] finance::error::Error),
@@ -21,17 +24,4 @@ pub enum Error {
         to: SymbolOwned,
         error: StdError,
     },
-
-    #[error("[Oracle; Stub] Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
-}
-
-pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> Error
-where
-    ExpC: Currency,
-{
-    Error::CurrencyMismatch {
-        expected: ExpC::TICKER.into(),
-        found,
-    }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{Currency as CurrencyT, Group, SymbolOwned};
+use currency::{Currency as CurrencyT, Group, MemberOf, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -35,7 +35,7 @@ pub struct MigrateMsg {}
 )]
 pub enum ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>
 where
-    BaseCurrency: CurrencyT,
+    BaseCurrency: CurrencyT + MemberOf<BaseCurrencies>,
     BaseCurrencies: Group,
     AlarmCurrencies: Group,
     PriceCurrencies: Group,
@@ -190,7 +190,11 @@ pub struct SwapTreeResponse {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    bound(serialize = "", deserialize = "")
+)]
 pub struct PricesResponse<PriceCurrencies, BaseCurrencies>
 where
     PriceCurrencies: Group,

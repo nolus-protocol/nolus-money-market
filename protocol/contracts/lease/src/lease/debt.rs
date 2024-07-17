@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::{Oracle as OracleTrait, OracleRef};
@@ -19,7 +19,7 @@ impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     pub(crate) fn check_debt(
         &self,

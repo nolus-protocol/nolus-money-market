@@ -2,23 +2,26 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, SymbolOwned};
+use currency::{Currency, Group, MemberOf, SymbolOwned};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::error::{self, Error, Result};
+use crate::error::{Error, Result};
 
 use self::impl_::{BasePriceRequest, CheckedConverter, OracleStub, RequestBuilder};
 
 mod impl_;
 
-#[cfg(feature = "unchecked-quote-currency")]
-pub fn new_unchecked_quote_currency_stub<'a, StableC, StableG>(
+// TODO re-apply #30d5718df57154e98a8296dab9bd34638195801c once introduce CurrencyDTO. That would eliminate the Symbol
+// to Currency matching that is currently done when TryInto::<Coin<Stable>>. The PriceDTO deserialization check is
+//implemented with the 'match-any' ticker solution at StableCurrencyGroup
+#[cfg(feature = "unchecked-stable-quote")]
+pub fn new_unchecked_stable_quote_stub<'a, StableC, StableG>(
     oracle: Addr,
     querier: QuerierWrapper<'a>,
 ) -> impl Oracle<QuoteC = StableC, QuoteG = StableG> + 'a
 where
-    StableC: Currency,
+    StableC: Currency + MemberOf<StableG>,
     StableG: Group + 'a,
 {
     use self::impl_::QuoteCUncheckedConverter;
@@ -35,12 +38,12 @@ where
     Self:
         Into<OracleRef<Self::QuoteC, Self::QuoteG>> + AsRef<OracleRef<Self::QuoteC, Self::QuoteG>>,
 {
-    type QuoteC;
+    type QuoteC: MemberOf<Self::QuoteG>;
     type QuoteG: Group;
 
     fn price_of<C, G>(&self) -> Result<Price<C, Self::QuoteC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group;
 }
 
@@ -72,25 +75,11 @@ where
 
 impl<QuoteC, QuoteG> OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     pub fn try_from_base(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
         Self::try_from::<BasePriceRequest>(addr, querier)
-    }
-
-    pub fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
-    where
-        CurrencyReq: RequestBuilder,
-    {
-        querier
-            .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
-            .map_err(Error::StubConfigQuery)
-            .and_then(|base_c: SymbolOwned| {
-                currency::validate_ticker::<QuoteC>(&base_c)
-                    .map_err(|_e| error::currency_mismatch::<QuoteC>(base_c))
-            })
-            .map(|()| Self::unchecked(addr))
     }
 
     pub fn execute_as_oracle<V>(
@@ -104,6 +93,19 @@ where
     {
         cmd.exec(OracleStub::<_, QuoteG, BasePriceRequest, CheckedConverter>::new(self, querier))
     }
+
+    fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
+    where
+        CurrencyReq: RequestBuilder,
+    {
+        querier
+            .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
+            .map_err(Error::StubConfigQuery)
+            .and_then(|quote_c: SymbolOwned| {
+                currency::validate_ticker(quote_c, QuoteC::TICKER).map_err(Error::StubConfigInvalid)
+            })
+            .map(|()| Self::new_internal(addr))
+    }
 }
 
 impl<QuoteC, QuoteG> OracleRef<QuoteC, QuoteG>
@@ -111,12 +113,9 @@ where
     QuoteC: Currency,
     QuoteG: Group,
 {
+    #[cfg(any(test, feature = "testing", feature = "unchecked-stable-quote"))]
     pub fn unchecked(addr: Addr) -> Self {
-        Self {
-            addr,
-            _quote: PhantomData,
-            _quote_g: PhantomData,
-        }
+        Self::new_internal(addr)
     }
 
     pub fn addr(&self) -> &Addr {
@@ -125,5 +124,13 @@ where
 
     pub fn owned_by(&self, contract: &Addr) -> bool {
         self.addr == contract
+    }
+
+    fn new_internal(addr: Addr) -> Self {
+        Self {
+            addr,
+            _quote: PhantomData,
+            _quote_g: PhantomData,
+        }
     }
 }

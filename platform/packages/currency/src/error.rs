@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{Currency, Group, Symbol, SymbolOwned};
+use crate::{Currency, Group, Symbol, SymbolOwned, SymbolStatic};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -9,6 +9,12 @@ pub enum Error {
 
     #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
     NotInCurrencyGroup(String, String, String),
+
+    #[error("[Currency] Mismatch of curencies, expected {expected:?}, found {found:?}")]
+    CurrencyMismatch {
+        expected: SymbolStatic,
+        found: SymbolOwned,
+    },
 }
 
 impl Error {
@@ -28,6 +34,10 @@ impl Error {
         G: Group,
     {
         Self::NotInCurrencyGroup(symbol.into(), CS::DESCR.into(), G::DESCR.into())
+    }
+
+    pub fn currency_mismatch(expected: SymbolStatic, found: SymbolOwned) -> Error {
+        Error::CurrencyMismatch { expected, found }
     }
 }
 
