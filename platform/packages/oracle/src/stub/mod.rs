@@ -111,7 +111,7 @@ where
     QuoteC: Currency,
     QuoteG: Group,
 {
-    #[cfg(any(test, feature = "unchecked-stable-quote"))]
+    #[cfg(any(test, feature = "testing", feature = "unchecked-stable-quote"))]
     pub fn unchecked(addr: Addr) -> Self {
         Self::new_internal(addr)
     }
