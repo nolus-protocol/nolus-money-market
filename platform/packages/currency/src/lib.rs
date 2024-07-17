@@ -70,14 +70,6 @@ pub fn validate_ticker(got: SymbolOwned, expected: SymbolStatic) -> Result<()> {
     }
 }
 
-pub fn validate_member<C, G>() -> Result<()>
-where
-    C: Currency,
-    G: Group,
-{
-    validate::<G>(C::TICKER)
-}
-
 pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>
 where
     G: Group,

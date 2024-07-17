@@ -110,7 +110,7 @@ where
 
 impl<QuoteC, QuoteG> OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     #[cfg(any(test, feature = "testing", feature = "unchecked-stable-quote"))]

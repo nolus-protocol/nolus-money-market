@@ -119,7 +119,7 @@ where
         impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
             for StablePriceCalc<StableCurrency, BaseCurrency, G>
         where
-            StableCurrency: Currency,
+            StableCurrency: Currency + MemberOf<G>,
             BaseCurrency: Currency,
             G: Group,
         {
@@ -134,7 +134,7 @@ where
                 base_price: Price<BaseC, BaseCurrency>,
             ) -> Result<Self::Output, Self::Error>
             where
-                BaseC: Currency,
+                BaseC: Currency + MemberOf<Self::PriceG>,
             {
                 Ok((base_price * self.stable_to_base_price.inv()).into())
             }

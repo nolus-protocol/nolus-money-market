@@ -2,7 +2,7 @@ use currencies::{
     Lpn, Lpns as BaseCurrencies, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use platform::{contract, tests};
 use sdk::{
@@ -39,6 +39,7 @@ fn feed_direct_price() {
     fn generate_price<BaseG>() -> PriceDTO<PriceCurrencies, BaseG>
     where
         BaseG: Group,
+        Lpn: MemberOf<BaseG>,
     {
         price::total_of(Coin::<PaymentC4>::new(10))
             .is(Coin::<Lpn>::new(120))

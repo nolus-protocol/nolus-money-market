@@ -94,16 +94,12 @@ where
             }
         }
 
-        currency::validate_member::<QuoteC, QuoteG>()
-            .map_err(Into::into)
-            .and_then(|()| {
-                with_price::execute(
-                    self,
-                    InvariantCheck {
-                        price_g: PhantomData::<BaseG>,
-                    },
-                )
-            })
+        with_price::execute(
+            self,
+            InvariantCheck {
+                price_g: PhantomData::<BaseG>,
+            },
+        )
     }
 }
 

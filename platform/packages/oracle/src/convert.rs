@@ -43,9 +43,9 @@ mod impl_ {
 
     pub(super) struct PriceConvert<InC, InG, OutC, OutG>
     where
-        InC: Currency,
+        InC: Currency + MemberOf<InG>,
         InG: Group,
-        OutC: Currency,
+        OutC: Currency + MemberOf<OutG>,
         OutG: Group,
     {
         in_amount: Coin<InC>,

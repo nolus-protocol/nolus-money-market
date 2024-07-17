@@ -140,12 +140,12 @@ mod test {
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
-            B: Currency,
-            Q: Currency,
+            B: Currency + MemberOf<PriceCurrencies>,
+            Q: Currency + MemberOf<PriceCurrencies>,
         {
             self.0.insert(
                 (B::TICKER, Q::TICKER),
-                tests::dto_price::<B, _, Q, _>(total_of, is),
+                tests::dto_price::<B, PriceCurrencies, Q, PriceCurrencies>(total_of, is),
             );
         }
     }

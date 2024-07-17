@@ -4,7 +4,7 @@ use currency::test::{
     SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
     SuperGroupTestC4, SuperGroupTestC5, SuperGroupTestC6,
 };
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -276,8 +276,8 @@ fn feed_price<C1, C2, G>(
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
-    C1: Currency,
-    C2: Currency,
+    C1: Currency + MemberOf<G>,
+    C2: Currency + MemberOf<G>,
     G: Group,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();

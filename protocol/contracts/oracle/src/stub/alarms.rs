@@ -59,7 +59,7 @@ where
 
 impl<'a, OracleBase, OracleBaseG> AlarmsStub<'a, OracleBase, OracleBaseG>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     fn addr(&self) -> &Addr {

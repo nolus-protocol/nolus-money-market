@@ -32,9 +32,9 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
-    C: Currency,
+    C: Currency + MemberOf<G>,
     G: Group,
-    Q: Currency,
+    Q: Currency + MemberOf<LpnG>,
     LpnG: Group,
 {
     price::total_of(Coin::<C>::new(total_of))

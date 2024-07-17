@@ -76,8 +76,8 @@ impl<G, QuoteG, C, QuoteC> From<Price<C, QuoteC>> for PriceDTO<G, QuoteG>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency,
-    QuoteC: Currency,
+    C: Currency + MemberOf<G>,
+    QuoteC: Currency + MemberOf<QuoteG>,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
         Self::new(price.amount.into(), price.amount_quote.into())

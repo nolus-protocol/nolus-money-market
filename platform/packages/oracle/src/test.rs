@@ -15,7 +15,7 @@ use crate::{
 
 pub struct DummyOracle<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     price: Option<Amount>,
@@ -24,7 +24,7 @@ where
 
 impl<QuoteC, QuoteG> DummyOracle<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     pub fn with_price(c_in_base: Amount) -> Self {
@@ -56,7 +56,7 @@ where
 
     fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         G: Group,
     {
         self.price
@@ -73,7 +73,7 @@ where
 
 impl<QuoteC, QuoteG> From<DummyOracle<QuoteC, QuoteG>> for OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(value: DummyOracle<QuoteC, QuoteG>) -> Self {
@@ -83,7 +83,7 @@ where
 
 impl<QuoteC, QuoteG> AsRef<OracleRef<QuoteC, QuoteG>> for DummyOracle<QuoteC, QuoteG>
 where
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn as_ref(&self) -> &OracleRef<QuoteC, QuoteG> {

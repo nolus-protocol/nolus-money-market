@@ -1,4 +1,7 @@
-use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup, Lpn, Lpns, Nls};
+use currencies::{
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup, Lpn, Lpns, Nls,
+    PaymentGroup as PriceCurrencies,
+};
 use currency::{error::Error as CurrencyError, Currency, MemberOf, Tickers};
 use finance::{
     coin::{Amount, Coin},
@@ -532,9 +535,9 @@ fn open_loans_insufficient_asset() {
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
-    Lpn: Currency + MemberOf<Lpns>,
-    LeaseC: Currency,
-    DownpaymentC: Currency,
+    Lpn: Currency + MemberOf<Lpns> + MemberOf<PriceCurrencies>,
+    LeaseC: Currency + MemberOf<PriceCurrencies>,
+    DownpaymentC: Currency + MemberOf<PriceCurrencies>,
 {
     let user_addr = Addr::unchecked(USER);
 

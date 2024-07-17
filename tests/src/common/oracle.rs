@@ -2,7 +2,7 @@ use currencies::{
     LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency,
     Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
 };
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -146,8 +146,8 @@ pub(crate) fn feed_price_pair<
     price: Price<C1, C2>,
 ) -> AppResponse
 where
-    C1: Currency,
-    C2: Currency,
+    C1: Currency + MemberOf<PriceCurrencies>,
+    C2: Currency + MemberOf<PriceCurrencies>,
 {
     let oracle = test_case.address_book.oracle().clone();
 
@@ -194,8 +194,8 @@ pub(crate) fn feed_price<
     quote: Coin<C2>,
 ) -> AppResponse
 where
-    C1: Currency,
-    C2: Currency,
+    C1: Currency + MemberOf<PriceCurrencies>,
+    C2: Currency + MemberOf<PriceCurrencies>,
 {
     feed_price_pair(test_case, addr, price::total_of(base).is(quote))
 }

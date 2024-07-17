@@ -264,8 +264,8 @@ mod test {
     where
         G1: Group,
         G2: Group,
-        C1: 'static + Currency,
-        C2: 'static + Currency,
+        C1: Currency,
+        C2: Currency,
     {
         let v_c1_c2 = ExpectPair::<C1, G1, C2, G2>::default();
         assert!(super::visit_any_on_tickers::<G1, G2, _>(C1::TICKER, C2::TICKER, v_c1_c2).is_err());

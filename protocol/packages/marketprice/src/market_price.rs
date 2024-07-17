@@ -73,7 +73,7 @@ where
     where
         'm: 'a,
         G: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<G>,
         QuoteG: Group,
         Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
     {
@@ -122,8 +122,10 @@ where
 struct PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    C: Currency,
-    QuoteC: Currency,
+    C: Currency + MemberOf<G>,
+    G: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
 {
     currency_path: Iter,
     feeds: &'a PriceFeeds<'a, G>,
@@ -136,8 +138,10 @@ where
 impl<'a, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    C: Currency,
-    QuoteC: Currency,
+    C: Currency + MemberOf<G>,
+    G: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
 {
     fn do_collect(
         mut currency_path: Iter,
@@ -147,9 +151,6 @@ where
         total_feeders: usize,
         price: Price<C, QuoteC>,
     ) -> Result<PriceDTO<G, QuoteG>, PriceFeedsError>
-    where
-        G: Group,
-        QuoteG: Group,
     {
         if let Some(next_currency) = currency_path.next() {
             let next_collect = PriceCollect {
@@ -171,9 +172,9 @@ impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor
     for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
-    QuoteC: Currency,
+    QuoteC: Currency + MemberOf<G>,
     G: Group,
-    QuoteQuoteC: Currency,
+    QuoteQuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type VisitedG = G;
@@ -182,7 +183,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<Self::VisitedG>,
     {
         let next_price =
             self.feeds
@@ -261,7 +262,7 @@ mod test {
         SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
         SuperGroupTestC4, SuperGroupTestC5,
     };
-    use currency::{Currency, Group};
+    use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -314,6 +315,7 @@ mod test {
     fn feed_pair() {
         fn build_price<QuoteG>() -> PriceDTO<SuperGroup, QuoteG>
         where
+            SubGroupTestC1: MemberOf<QuoteG>,
             QuoteG: Group,
         {
             price::total_of(Coin::<SuperGroupTestC5>::new(1))

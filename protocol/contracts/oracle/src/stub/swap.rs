@@ -1,4 +1,4 @@
-use currency::{Currency, Group, SymbolOwned};
+use currency::{Currency, Group, MemberOf, SymbolOwned};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::QuerierWrapper;
 
@@ -15,7 +15,7 @@ pub trait SwapPath {
 
 impl<OracleBase, OracleBaseG> SwapPath for OracleRef<OracleBase, OracleBaseG>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     fn swap_path(
