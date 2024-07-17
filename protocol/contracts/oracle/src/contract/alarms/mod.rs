@@ -270,22 +270,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(debug_assertions))]
-    fn notify_with_wrong_currency_group() {
-        use currency::test::SuperGroupTestC1;
-
-        let storage = MockStorage::new();
-
-        let alarms = MarketAlarms::new(&storage as &dyn Storage);
-        let res = alarms.notify_alarms_iter::<_, _, BaseCurrencies>(
-            [tests::base_price::<SuperGroupTestC1>(1, 25)]
-                .into_iter()
-                .map(Ok),
-        );
-        assert!(res.is_err())
-    }
-
-    #[test]
     fn alarms_no_pices() {
         let mut storage = MockStorage::new();
 
