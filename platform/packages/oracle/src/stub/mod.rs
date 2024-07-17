@@ -8,13 +8,10 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::error::{Error, Result};
 
-use self::impl_::{BasePriceRequest, CheckedConverter, OracleStub, RequestBuilder};
+use self::impl_::{BasePriceRequest, OracleStub, RequestBuilder};
 
 mod impl_;
 
-// TODO re-apply #30d5718df57154e98a8296dab9bd34638195801c once introduce CurrencyDTO. That would eliminate the Symbol
-// to Currency matching that is currently done when TryInto::<Coin<Stable>>. The PriceDTO deserialization check is
-//implemented with the 'match-any' ticker solution at StableCurrencyGroup
 #[cfg(feature = "unchecked-stable-quote")]
 pub fn new_unchecked_stable_quote_stub<'a, G, StableC, StableG>(
     oracle: Addr,
@@ -25,10 +22,9 @@ where
     StableC: Currency + MemberOf<StableG>,
     StableG: Group + 'a,
 {
-    use self::impl_::QuoteCUncheckedConverter;
     use self::impl_::StablePriceRequest;
 
-    impl_::OracleStub::<G, StableC, StableG, StablePriceRequest, QuoteCUncheckedConverter>::new(
+    impl_::OracleStub::<G, StableC, StableG, StablePriceRequest>::new(
         OracleRef::unchecked(oracle),
         querier,
     )
@@ -102,7 +98,6 @@ where
             QuoteC,
             QuoteG,
             BasePriceRequest,
-            CheckedConverter,
         >::new(self, querier))
     }
 
