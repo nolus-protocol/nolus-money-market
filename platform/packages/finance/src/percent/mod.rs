@@ -11,7 +11,7 @@ use sdk::{
 };
 
 use crate::{
-    error::Result as FinanceResult,
+    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
@@ -43,7 +43,10 @@ impl Percent {
         Self(permille)
     }
 
-    pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
+    pub fn from_ratio<FractionUnit>(
+        nominator: FractionUnit,
+        denominator: FractionUnit,
+    ) -> FinanceResult<Self>
     where
         FractionUnit: Zero + Debug + Copy + PartialEq,
         Self: Fractionable<FractionUnit>,
@@ -80,11 +83,13 @@ impl Zero for Percent {
 
 impl Fraction<Units> for Percent {
     #[track_caller]
-    fn of<A>(&self, whole: A) -> A
+    fn of<A>(&self, whole: A) -> FinanceResult<A>
     where
         A: Fractionable<Units>,
     {
-        whole.safe_mul(self)
+        whole.checked_mul(self).ok_or(Error::MultiplicationOverflow(
+            "Overflow during percentage calculation",
+        ))
     }
 }
 
@@ -206,20 +211,20 @@ pub(super) mod test {
         let c1 = Coin::<SubGroupTestC1>::new(a1);
         let c2 = Coin::<SubGroupTestC1>::new(a2);
         let c3 = Coin::<SubGroupTestC1>::new(a3);
-        assert_eq!(Percent::ZERO, Percent::from_ratio(c1, c2));
+        assert_eq!(Percent::ZERO, Percent::from_ratio(c1, c2).unwrap());
 
-        assert_eq!(from_parts(a3, a2), Percent::from_ratio(c3, c2));
+        assert_eq!(from_parts(a3, a2), Percent::from_ratio(c3, c2).unwrap());
 
-        assert_eq!(Percent::HUNDRED, Percent::from_ratio(c3, c3));
+        assert_eq!(Percent::HUNDRED, Percent::from_ratio(c3, c3).unwrap());
 
-        assert_eq!(from_parts(a2, a3), Percent::from_ratio(c2, c3));
+        assert_eq!(from_parts(a2, a3), Percent::from_ratio(c2, c3).unwrap());
     }
 
     #[test]
     fn test_zero() {
         assert_eq!(
             Coin::<SubGroupTestC1>::new(0),
-            Percent::ZERO.of(Coin::<SubGroupTestC1>::new(10))
+            Percent::ZERO.of(Coin::<SubGroupTestC1>::new(10)).unwrap()
         )
     }
 
@@ -228,7 +233,9 @@ pub(super) mod test {
         let amount = 123;
         assert_eq!(
             Coin::<SubGroupTestC1>::new(amount),
-            Percent::HUNDRED.of(Coin::<SubGroupTestC1>::new(amount))
+            Percent::HUNDRED
+                .of(Coin::<SubGroupTestC1>::new(amount))
+                .unwrap()
         )
     }
 
@@ -303,14 +310,16 @@ pub(super) mod test {
     #[should_panic]
     fn of_overflow() {
         use crate::fraction::Fraction;
-        Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
+        Percent::from_permille(1001)
+            .of(Percent::from_permille(Units::MAX))
+            .unwrap();
     }
 
     #[test]
     fn rational_of_percents() {
         let v = 14u32;
         let r = Rational::new(Percent::HUNDRED, Percent::HUNDRED);
-        assert_eq!(v, Fraction::<u32>::of(&r, v));
+        assert_eq!(v, Fraction::<u32>::of(&r, v).unwrap());
     }
 
     #[test]
@@ -318,7 +327,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = Rational::new(n, d);
-        let res: Percent = Fraction::<Units>::of(&r, Percent::HUNDRED);
+        let res: Percent = Fraction::<Units>::of(&r, Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 
@@ -329,7 +338,7 @@ pub(super) mod test {
         let perm = Percent::from_permille(permille);
         assert_eq!(
             exp,
-            perm.of(quantity.clone()),
+            perm.of(quantity.clone()).unwrap(),
             "Calculating {} of {}",
             perm,
             quantity

@@ -1,6 +1,6 @@
 use finance::{coin::Coin, duration::Duration, zero::Zero};
 
-use crate::finance::LpnCoin;
+use crate::{error::ContractResult, finance::LpnCoin};
 
 /// Represent the due of a position
 pub trait Due {
@@ -15,7 +15,7 @@ pub trait Due {
     /// Usually, the interest is accrued as per a fixed interest rate.
     /// If the accrued interest is not paid until some configured amount of time elapses it becomes overdue.
     /// When overdue interest amount goes above a configured minimum then the interest becomes collectable.
-    fn overdue_collection(&self, min_amount: LpnCoin) -> OverdueCollection;
+    fn overdue_collection(&self, min_amount: LpnCoin) -> ContractResult<OverdueCollection>;
 }
 
 pub enum OverdueCollection {
