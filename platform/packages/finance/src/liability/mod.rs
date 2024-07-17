@@ -140,7 +140,7 @@ impl Liability {
                 let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
                 self.healthy.of(lease_amount).and_then(|healthy_lease| {
                     let extra_liability_lpn = total_due - total_due.min(healthy_lease);
-                    Fraction::<Units>::of(&multiplier, extra_liability_lpn).map(|res| res)
+                    Fraction::<Units>::of(&multiplier, extra_liability_lpn)
                 })
             }
         })

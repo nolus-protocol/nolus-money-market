@@ -20,8 +20,7 @@ impl Fractionable<Units> for Percent {
     where
         R: Ratio<Units>,
     {
-        Fractionable::<Units>::checked_mul(self.units(), ratio)
-            .and_then(|res| Some(Self::from_permille(res)))
+        Fractionable::<Units>::checked_mul(self.units(), ratio).map(Self::from_permille)
     }
 }
 
@@ -33,12 +32,8 @@ impl<C> Fractionable<Coin<C>> for Percent {
     {
         let p128: u128 = self.units().into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
-        Fractionable::<Coin<C>>::checked_mul(p128, fraction).and_then(|units| {
-            units
-                .try_into()
-                .ok()
-                .and_then(|res| Some(Self::from_permille(res)))
-        })
+        Fractionable::<Coin<C>>::checked_mul(p128, fraction)
+            .and_then(|units| units.try_into().ok().map(Self::from_permille))
     }
 }
 
