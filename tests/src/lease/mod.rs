@@ -28,7 +28,7 @@ mod open;
 mod repay;
 
 type LpnCurrency = Lpn;
-type Lpnoin = Coin<LpnCurrency>;
+type LpnCoin = Coin<LpnCurrency>;
 
 type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -240,7 +240,7 @@ pub(super) fn complete_init_lease<
         downpayment,
         max_ltd,
     );
-    let exp_borrow: Lpnoin = quote.borrow.try_into().unwrap();
+    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
     common::lease::complete_initialization(
         &mut test_case.app,
@@ -271,8 +271,8 @@ pub(super) fn quote_borrow<
         TimeAlarms,
     >,
     downpayment: PaymentCoin,
-) -> Lpnoin {
-    Lpnoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
+) -> LpnCoin {
+    LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
 pub(super) fn quote_query<

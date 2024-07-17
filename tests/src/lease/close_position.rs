@@ -28,7 +28,7 @@ use crate::common::{
 };
 
 use super::{
-    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, Lpnoin, PaymentCoin, PaymentCurrency,
+    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin, PaymentCurrency,
     DOWNPAYMENT,
 };
 
@@ -99,7 +99,7 @@ fn partial_close_loan_not_closed() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = false;
-    let exp_change = Lpnoin::ZERO;
+    let exp_change = LpnCoin::ZERO;
     let lease = do_close(
         &mut test_case,
         &customer,
@@ -129,7 +129,7 @@ fn partial_close_loan_not_closed() {
 
     assert_eq!(
         user_balance::<LpnCurrency>(&customer, &test_case),
-        Lpnoin::ZERO,
+        LpnCoin::ZERO,
     );
     assert_eq!(
         user_balance::<LeaseCurrency>(&customer, &test_case),
@@ -178,7 +178,7 @@ fn partial_close_loan_closed() {
     );
 
     assert_eq!(
-        Lpnoin::ZERO,
+        LpnCoin::ZERO,
         user_balance::<LpnCurrency>(&customer, &test_case)
     );
     assert_eq!(
@@ -270,7 +270,7 @@ fn do_close(
     close_amount: LeaseCoin,
     close_msg: PositionClose,
     exp_loan_close: bool,
-    exp_change: Lpnoin,
+    exp_change: LpnCoin,
     exp_lease_amount_after: LeaseCoin,
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
