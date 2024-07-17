@@ -28,7 +28,7 @@ use crate::common::{
 };
 
 use super::{
-    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, Lpnoin, PaymentCoin,
+    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
     PaymentCurrency, DOWNPAYMENT,
 };
 
@@ -80,7 +80,7 @@ fn partial_repay_after_time() {
 
     super::feed_price(&mut test_case);
 
-    let due_margin_to_pay: Lpnoin = Lpnoin::try_from(due_margin)
+    let due_margin_to_pay: LpnCoin = LpnCoin::try_from(due_margin)
         .unwrap()
         .checked_div(2)
         .unwrap();
@@ -89,8 +89,8 @@ fn partial_repay_after_time() {
         &mut test_case,
         lease_address.clone(),
         price::total(
-            Lpnoin::try_from(overdue_margin).unwrap()
-                + Lpnoin::try_from(overdue_interest).unwrap()
+            LpnCoin::try_from(overdue_margin).unwrap()
+                + LpnCoin::try_from(overdue_interest).unwrap()
                 + due_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
         )
@@ -186,8 +186,8 @@ fn full_repay_with_max_ltd() {
         overdue_margin: LpnCoin::ZERO.into(),
         overdue_interest: LpnCoin::ZERO.into(),
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
-        due_margin: Lpnoin::ZERO.into(),
-        due_interest: Lpnoin::ZERO.into(),
+        due_margin: LpnCoin::ZERO.into(),
+        due_interest: LpnCoin::ZERO.into(),
         validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
