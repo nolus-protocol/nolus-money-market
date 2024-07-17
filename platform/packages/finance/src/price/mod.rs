@@ -195,8 +195,7 @@ where
             .and_then(|total_self| {
                 total(factored_amount, rhs)
                     .ok()
-                    .map(|total_rhs| total_self.checked_add(total_rhs))
-                    .flatten()
+                    .and_then(|total_rhs| total_self.checked_add(total_rhs))
             })
             .map(|factored_total| total_of(factored_amount).is(factored_total))
     }
