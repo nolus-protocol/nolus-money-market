@@ -52,14 +52,14 @@ where
     /// Compute how much time is necessary for the due interest to become collectable
     ///
     /// If it is already enough to be collected then return zero.
-    pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
+    pub fn overdue_collection_in<Due>(&self, due: &Due) -> ContractResult<Duration>
     where
         Due: DueTrait,
     {
         self.spec.overdue_collection_in(due)
     }
 
-    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Debt<Asset>
+    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> ContractResult<Debt<Asset>>
     where
         Due: DueTrait,
     {
@@ -108,7 +108,11 @@ where
         debug_assert!(!total_due.is_zero());
         debug_assert!(!level.ltv().is_zero());
 
-        Ok(total_of(level.ltv().of(self.amount)).is(total_due))
+        level
+            .ltv()
+            .of(self.amount)
+            .map_err(Into::into)
+            .map(|amount| total_of(amount).is(total_due))
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

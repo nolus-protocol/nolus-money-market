@@ -84,15 +84,21 @@ where
 
         let samples_nb = config.samples_number().into();
 
-        samples
+        let mut sample_prices = samples
             .take(samples_nb)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
-            .map(|price| Option::expect(price, "sample prices should keep being present"))
-            .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + (Percent::HUNDRED - discount_factor).of(acc)
-            })
-            .ok_or(PriceFeedsError::NoPrice {})
+            .map(|price| price.expect("sample prices should keep being present"));
+
+        let first_price = sample_prices.next().ok_or(PriceFeedsError::NoPrice {})?;
+
+        let final_price = sample_prices.try_fold(first_price, |acc, sample_price| {
+            let discounted_price = discount_factor.of(sample_price)?;
+            let acc_part = (Percent::HUNDRED - discount_factor).of(acc)?;
+            Ok(discounted_price + acc_part) as Result<_, PriceFeedsError>
+        })?;
+
+        Ok(final_price)
     }
 
     fn has_enough_feeders(&self, since: Timestamp, config: &Config, total_feeders: usize) -> bool {

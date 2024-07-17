@@ -28,25 +28,26 @@ where
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<DebtStatus<Asset>> {
-        let due = self.loan.state(now);
-
-        let debt = self
-            .price_of_lease_currency()
-            .map(|asset_in_lpns| self.position.debt(&due, asset_in_lpns))?;
-        Ok(match debt {
-            Debt::No => DebtStatus::NoDebt,
-            Debt::Ok { zone, recheck_in } => DebtStatus::NewAlarms {
-                alarms: self.reschedule(
-                    now,
-                    recheck_in,
-                    &zone,
-                    due.total_due(),
-                    time_alarms,
-                    price_alarms,
-                )?,
-                current_liability: zone,
-            },
-            Debt::Bad(liquidation) => DebtStatus::NeedLiquidation(liquidation),
+        self.loan.state(now).and_then(|due| {
+            self.price_of_lease_currency()
+                .and_then(|asset_in_lpns| self.position.debt(&due, asset_in_lpns))
+                .and_then(|debt| match debt {
+                    Debt::No => Ok(DebtStatus::NoDebt),
+                    Debt::Ok { zone, recheck_in } => self
+                        .reschedule(
+                            now,
+                            recheck_in,
+                            &zone,
+                            due.total_due(),
+                            time_alarms,
+                            price_alarms,
+                        )
+                        .map(|alarms| DebtStatus::NewAlarms {
+                            alarms,
+                            current_liability: zone,
+                        }),
+                    Debt::Bad(liquidation) => Ok(DebtStatus::NeedLiquidation(liquidation)),
+                })
         })
     }
 

@@ -8,6 +8,8 @@ use finance::{
 };
 use sdk::schemars::{self, JsonSchema};
 
+use crate::error::ContractError;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "UncheckedInterestRate")]
 pub struct InterestRate {
@@ -56,23 +58,38 @@ impl InterestRate {
         self.addon_optimal_interest_rate
     }
 
-    pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent {
-        let utilization_max = Percent::from_ratio(
+    pub fn calculate<Lpn>(
+        &self,
+        total_liability: Coin<Lpn>,
+        balance: Coin<Lpn>,
+    ) -> Result<Percent, ContractError>
+    where
+        Lpn: PartialEq,
+    {
+        Percent::from_ratio(
             self.utilization_optimal.units(),
             (Percent::HUNDRED - self.utilization_optimal).units(),
-        );
-        let utilization = if balance.is_zero() {
-            utilization_max
-        } else {
-            Percent::from_ratio(total_liability, balance).min(utilization_max)
-        };
+        )
+        .map_err(Into::into)
+        .and_then(|utilization_max| {
+            let config = Rational::new(
+                self.addon_optimal_interest_rate.units(),
+                self.utilization_optimal.units(),
+            );
 
-        let config = Rational::new(
-            self.addon_optimal_interest_rate.units(),
-            self.utilization_optimal.units(),
-        );
-
-        self.base_interest_rate + Fraction::<Units>::of(&config, utilization)
+            if balance.is_zero() {
+                Ok(utilization_max)
+            } else {
+                Percent::from_ratio(total_liability, balance)
+                    .map_err(Into::into)
+                    .map(|utilization| utilization.min(utilization_max))
+            }
+            .and_then(|utilization| {
+                Fraction::<Units>::of(&config, utilization)
+                    .map_err(Into::into)
+                    .map(|res| self.base_interest_rate + res)
+            })
+        })
     }
 
     fn validate(&self) -> bool {
@@ -194,7 +211,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent {
-            Percent::from_ratio(n, d)
+            Percent::from_ratio(n, d).unwrap()
         }
 
         #[derive(Copy, Clone)]
@@ -207,7 +224,7 @@ mod tests {
         fn do_test_calculate(rate: InterestRate, in_out_set: &[InOut]) {
             for ((liability, balance), output) in in_out_set.iter().copied().map(in_out) {
                 assert_eq!(
-                    rate.calculate(liability, balance),
+                    rate.calculate(liability, balance).unwrap(),
                     output,
                     "Interest rate: {rate:?}\nLiability: {liability}\nBalance: {balance}",
                 );

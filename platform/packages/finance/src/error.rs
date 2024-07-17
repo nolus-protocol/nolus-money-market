@@ -16,6 +16,9 @@ pub enum Error {
     OverflowError(#[from] OverflowError),
 
     #[error("[Finance] {0}")]
+    MultiplicationOverflow(&'static str),
+
+    #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
 
     #[error(

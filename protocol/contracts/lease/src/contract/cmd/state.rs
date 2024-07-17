@@ -39,9 +39,9 @@ impl WithLease for LeaseState {
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
-        Ok(StateResponse::opened_from(
-            lease.state(self.now),
-            self.in_progress,
-        ))
+        lease
+            .state(self.now)
+            .map_err(Into::into)
+            .map(|open_lease| StateResponse::opened_from(open_lease, self.in_progress))
     }
 }

@@ -116,22 +116,26 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due: Coin<Lpn> = self.total_due(&env.block.time);
-
-            self.commited_balance(&env.contract.address, querier, pending_deposit)
-                .map(|balance: Coin<Lpn>| {
-                    if self.utilization(balance, total_due) > min_utilization {
-                        // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        Fraction::<Units>::of(
-                            &Rational::new(Percent::HUNDRED, min_utilization),
-                            total_due,
-                        ) - balance
-                            - total_due
-                    } else {
-                        Coin::ZERO
-                    }
-                })
-                .map(Some)
+            self.total_due(&env.block.time).and_then(|total_due| {
+                self.commited_balance(&env.contract.address, querier, pending_deposit)
+                    .and_then(|balance: Coin<Lpn>| {
+                        self.utilization(balance, total_due)
+                            .and_then(|utilization| {
+                                if utilization > min_utilization {
+                                    // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
+                                    Fraction::<Units>::of(
+                                        &Rational::new(Percent::HUNDRED, min_utilization),
+                                        total_due,
+                                    )
+                                    .map_err(Into::into)
+                                    .map(|res| res - balance - total_due)
+                                } else {
+                                    Ok(Coin::ZERO)
+                                }
+                            })
+                    })
+                    .map(Some)
+            })
         }
     }
 
@@ -140,13 +144,13 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(&env.block.time);
-
-        Ok(LppBalances {
-            balance,
-            total_principal_due,
-            total_interest_due,
-        })
+        self.total
+            .total_interest_due_by_now(&env.block.time)
+            .map(|total_interest_due| LppBalances {
+                balance,
+                total_principal_due,
+                total_interest_due,
+            })
     }
 
     pub fn calculate_price(
@@ -188,14 +192,18 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::ZERO)?.get();
-        let amount_lpn = price::total(amount_nlpn, price);
-
-        if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
-            return Err(ContractError::NoLiquidity {});
-        }
-
-        Ok(amount_lpn)
+        self.calculate_price(deps, env, Coin::ZERO)
+            .and_then(|price| price::total(amount_nlpn, price.get()).map_err(Into::into))
+            .and_then(|amount_lpn| {
+                self.balance(&env.contract.address, deps.querier)
+                    .and_then(|contract_balance| {
+                        if contract_balance < amount_lpn {
+                            Err(ContractError::NoLiquidity {})
+                        } else {
+                            Ok(amount_lpn)
+                        }
+                    })
+            })
     }
 
     pub fn query_quote(
@@ -205,21 +213,25 @@ where
         querier: QuerierWrapper<'_>,
         now: &Timestamp,
     ) -> Result<Option<Percent>> {
-        let balance = self.balance(account, querier)?;
+        self.balance(account, querier).and_then(|balance| {
+            if quote > balance {
+                Ok(None)
+            } else {
+                let total_principal_due = self.total.total_principal_due();
+                self.total
+                    .total_interest_due_by_now(now)
+                    .and_then(|total_interest| {
+                        let total_liability_past_quote =
+                            total_principal_due + quote + total_interest;
+                        let total_balance_past_quote = balance - quote;
 
-        if quote > balance {
-            return Ok(None);
-        }
-
-        let total_principal_due = self.total.total_principal_due();
-        let total_interest = self.total.total_interest_due_by_now(now);
-        let total_liability_past_quote = total_principal_due + quote + total_interest;
-        let total_balance_past_quote = balance - quote;
-
-        Ok(Some(self.config.borrow_rate().calculate(
-            total_liability_past_quote,
-            total_balance_past_quote,
-        )))
+                        self.config
+                            .borrow_rate()
+                            .calculate(total_liability_past_quote, total_balance_past_quote)
+                    })
+                    .map(Some)
+            }
+        })
     }
 
     pub(super) fn try_open_loan(
@@ -264,21 +276,27 @@ where
         lease_addr: Addr,
         repay_amount: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
-        let mut loan = Loan::load(deps.storage, lease_addr.clone())?;
-        let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(&env.block.time, repay_amount);
-        Loan::save(deps.storage, lease_addr, loan)?;
-
-        self.total
-            .repay(
-                env.block.time,
-                payment.interest,
-                payment.principal,
-                loan_annual_interest_rate,
-            )
-            .store(deps.storage)?;
-
-        Ok(payment.excess)
+        Loan::load(deps.storage, lease_addr.clone()).and_then(|mut loan| {
+            let loan_annual_interest_rate = loan.annual_interest_rate;
+            loan.repay(&env.block.time, repay_amount)
+                .and_then(|payment| {
+                    Loan::save(deps.storage, lease_addr, loan).and_then(|()| {
+                        self.total
+                            .repay(
+                                env.block.time,
+                                payment.interest,
+                                payment.principal,
+                                loan_annual_interest_rate,
+                            )
+                            .and_then(|total| {
+                                total
+                                    .store(deps.storage)
+                                    .map_err(Into::into)
+                                    .map(|()| payment.excess)
+                            })
+                    })
+                })
+        })
     }
 
     fn balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
@@ -305,8 +323,10 @@ where
         bank::balance::<_, Lpn::Group>(account, querier).map_err(Into::into)
     }
 
-    fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
-        self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
+    fn total_due(&self, now: &Timestamp) -> Result<Coin<Lpn>> {
+        self.total
+            .total_interest_due_by_now(now)
+            .map(|interest_due| self.total.total_principal_due() + interest_due)
     }
 
     fn total_lpn(
@@ -317,14 +337,14 @@ where
         pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
         self.commited_balance(account, querier, pending_deposit)
-            .map(|balance: Coin<Lpn>| balance + self.total_due(now))
+            .and_then(|balance: Coin<Lpn>| self.total_due(now).map(|total_due| balance + total_due))
     }
 
-    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
+    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Result<Percent> {
         if balance.is_zero() {
-            Percent::HUNDRED
+            Ok(Percent::HUNDRED)
         } else {
-            Percent::from_ratio(total_due, total_due + balance)
+            Percent::from_ratio(total_due, total_due + balance).map_err(Into::into)
         }
     }
 }
@@ -537,13 +557,13 @@ mod test {
         assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
+        assert_eq!(loan.interest_due(&env.block.time).unwrap(), 0u128.into());
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
 
         // pay interest for year/10
-        let payment = loan.interest_due(&env.block.time);
+        let payment = loan.interest_due(&env.block.time).unwrap();
 
         let repay = lpp
             .try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), payment)
@@ -558,7 +578,7 @@ mod test {
         assert_eq!(loan.principal_due, Coin::new(amount));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
+        assert_eq!(loan.interest_due(&env.block.time).unwrap(), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         lpp.try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), Coin::new(0))
@@ -572,6 +592,7 @@ mod test {
             .expect("can't query the loan")
             .expect("should exist")
             .interest_due(&env.block.time)
+            .unwrap()
             + Coin::new(amount)
             + Coin::new(100);
 
@@ -739,7 +760,8 @@ mod test {
         let payment = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
-            .interest_due(&env.block.time);
+            .interest_due(&env.block.time)
+            .unwrap();
         assert_eq!(payment, Coin::new(0));
 
         let repay = lpp

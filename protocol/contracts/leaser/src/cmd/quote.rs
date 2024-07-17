@@ -213,27 +213,40 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
+        total(
+            self.downpayment,
+            self.oracle.price_of::<Dpc, PaymentGroup>()?,
+        )
+        .map_err(ContractError::Finance)
+        .and_then(|downpayment_lpn| {
+            if downpayment_lpn.is_zero() {
+                return Err(ContractError::ZeroDownpayment {});
+            }
 
-        if downpayment_lpn.is_zero() {
-            return Err(ContractError::ZeroDownpayment {});
-        }
-
-        let borrow = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd);
-
-        let asset_price = self.oracle.price_of::<Asset>()?.inv();
-
-        let total_asset = total(downpayment_lpn + borrow, asset_price);
-
-        let annual_interest_rate = self.lpp_quote.with(borrow)?;
-
-        Ok(QuoteResponse {
-            total: total_asset.into(),
-            borrow: borrow.into(),
-            annual_interest_rate,
-            annual_interest_rate_margin: self.lease_interest_rate_margin,
+            self.liability
+                .init_borrow_amount(downpayment_lpn, self.max_ltd)
+                .map_err(ContractError::Finance)
+                .and_then(|borrow| {
+                    self.oracle
+                        .price_of::<Asset, LeaseGroup>()
+                        .map_err(ContractError::PriceOracle)
+                        .and_then(|price| {
+                            let asset_price = price.inv();
+                            total(downpayment_lpn + borrow, asset_price)
+                                .map_err(ContractError::Finance)
+                                .and_then(|total_asset| {
+                                    self.lpp_quote.with(borrow).map(|annual_interest_rate| {
+                                        QuoteResponse {
+                                            total: total_asset.into(),
+                                            borrow: borrow.into(),
+                                            annual_interest_rate,
+                                            annual_interest_rate_margin: self
+                                                .lease_interest_rate_margin,
+                                        }
+                                    })
+                                })
+                        })
+                })
         })
     }
 }

@@ -16,27 +16,29 @@ where
 
 impl Fractionable<Units> for Percent {
     #[track_caller]
-    fn safe_mul<R>(self, ratio: &R) -> Self
+    fn checked_mul<R>(self, ratio: &R) -> Option<Self>
     where
         R: Ratio<Units>,
     {
-        Percent::from_permille(self.units().safe_mul(ratio))
+        Fractionable::<Units>::checked_mul(self.units(), ratio)
+            .and_then(|res| Some(Self::from_permille(res)))
     }
 }
 
 impl<C> Fractionable<Coin<C>> for Percent {
     #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn checked_mul<F>(self, fraction: &F) -> Option<Self>
     where
         F: Ratio<Coin<C>>,
     {
         let p128: u128 = self.units().into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::from_permille(res)
+        Fractionable::<Coin<C>>::checked_mul(p128, fraction).and_then(|units| {
+            units
+                .try_into()
+                .ok()
+                .and_then(|res| Some(Self::from_permille(res)))
+        })
     }
 }
 
@@ -52,7 +54,9 @@ mod test {
         fn safe_mul() {
             assert_eq!(
                 Percent::from_permille(410 * 222222 / 1000),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(222222))
+                Percent::from_percent(41)
+                    .checked_mul(&Percent::from_permille(222222))
+                    .unwrap()
             );
 
             let p_units: Units = 410;
@@ -61,7 +65,9 @@ mod test {
             let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
             assert_eq!(
                 Percent::from_permille(p_units_res),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(41)
+                    .checked_mul(&Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
         }
 
@@ -69,18 +75,26 @@ mod test {
         fn safe_mul_hundred_percent() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(100)
+                    .checked_mul(&Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
             assert_eq!(
                 Percent::from_percent(u16::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_percent(u16::MAX))
+                Percent::from_percent(100)
+                    .checked_mul(&Percent::from_percent(u16::MAX))
+                    .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
         fn safe_mul_overflow() {
-            Percent::from_permille(1001).safe_mul(&Percent::from_permille(Units::MAX));
+            assert!(
+                Percent::from_permille(1001)
+                    .checked_mul(&Percent::from_permille(Units::MAX))
+                    .is_none(),
+                "Multiplication did not overflow as expected"
+            )
         }
     }
 
@@ -102,7 +116,11 @@ mod test {
             );
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Fractionable::<Coin<_>>::safe_mul(Percent::from_permille(Units::MAX), &ratio_one)
+                Fractionable::<Coin<_>>::checked_mul(
+                    Percent::from_permille(Units::MAX),
+                    &ratio_one
+                )
+                .unwrap()
             );
         }
     }

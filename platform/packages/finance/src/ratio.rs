@@ -4,7 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+use crate::{
+    error::{Error, Result as FinanceResult},
+    fraction::Fraction,
+    fractionable::Fractionable,
+    zero::Zero,
+};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -39,11 +44,13 @@ where
     Self: Ratio<U>,
 {
     #[track_caller]
-    fn of<A>(&self, whole: A) -> A
+    fn of<A>(&self, whole: A) -> FinanceResult<A>
     where
         A: Fractionable<U>,
     {
-        whole.safe_mul(self)
+        whole.checked_mul(self).ok_or(Error::MultiplicationOverflow(
+            "Overflow during rational multiplication",
+        ))
     }
 }
 

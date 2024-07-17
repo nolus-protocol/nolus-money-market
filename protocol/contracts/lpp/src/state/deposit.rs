@@ -8,7 +8,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
+    cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage},
     cw_storage_plus::{Item, Map},
 };
 
@@ -72,22 +72,33 @@ impl Deposit {
             return Err(ContractError::ZeroDepositFunds);
         }
 
-        let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        self.update_rewards(&globals);
+        Self::GLOBALS
+            .may_load(storage)
+            .map_err(Into::into)
+            .and_then(|may_globals| {
+                let mut globals = may_globals.unwrap_or_default();
+                self.update_rewards(&globals).and_then(|()| {
+                    price::total(amount_lpn, price.get().inv())
+                        .map_err(ContractError::Finance)
+                        .and_then(|deposited_nlpn| {
+                            self.data.deposited_nlpn += deposited_nlpn;
+                            Self::DEPOSITS
+                                .save(storage, self.addr.clone(), &self.data)
+                                .map_err(Into::into)
+                                .and_then(|()| {
+                                    globals.balance_nlpn = globals
+                                        .balance_nlpn
+                                        .checked_add(deposited_nlpn)
+                                        .ok_or(ContractError::OverflowError("Balance overflow"))?;
 
-        let deposited_nlpn = price::total(amount_lpn, price.get().inv());
-        self.data.deposited_nlpn += deposited_nlpn;
-
-        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-
-        globals.balance_nlpn = globals
-            .balance_nlpn
-            .checked_add(deposited_nlpn)
-            .ok_or(ContractError::OverflowError("Balance overflow"))?;
-
-        Self::GLOBALS.save(storage, &globals)?;
-
-        Ok(deposited_nlpn)
+                                    Self::GLOBALS
+                                        .save(storage, &globals)
+                                        .map_err(Into::into)
+                                        .map(|()| deposited_nlpn)
+                                })
+                        })
+                })
+            })
     }
 
     /// return optional reward payment msg in case of deleting account
@@ -101,7 +112,7 @@ impl Deposit {
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        self.update_rewards(&globals);
+        self.update_rewards(&globals)?;
 
         self.data.deposited_nlpn -= amount_nlpn;
         globals.balance_nlpn -= amount_nlpn;
@@ -141,44 +152,53 @@ impl Deposit {
         Ok(Self::GLOBALS.save(deps.storage, &globals)?)
     }
 
-    fn update_rewards(&mut self, globals: &DepositsGlobals) {
-        self.data.pending_rewards_nls = self.calculate_reward(globals);
-        self.data.reward_per_token = globals.reward_per_token;
+    fn update_rewards(&mut self, globals: &DepositsGlobals) -> Result<()> {
+        self.calculate_reward(globals).map(|reward| {
+            self.data.pending_rewards_nls = reward;
+            self.data.reward_per_token = globals.reward_per_token;
+        })
     }
 
-    fn calculate_reward(&self, globals: &DepositsGlobals) -> Coin<Nls> {
+    fn calculate_reward(&self, globals: &DepositsGlobals) -> Result<Coin<NlsPlatform>> {
         let deposit = &self.data;
 
-        let global_reward = globals
-            .reward_per_token
-            .map(|price| price::total(deposit.deposited_nlpn, price))
-            .unwrap_or_default();
+        let may_global_reward = globals.reward_per_token.map_or_else(
+            || Ok(Coin::ZERO),
+            |price| price::total(deposit.deposited_nlpn, price).map_err(Into::into),
+        );
 
-        let deposit_reward = deposit
-            .reward_per_token
-            .map(|price| price::total(deposit.deposited_nlpn, price))
-            .unwrap_or_default();
+        let may_deposit_reward = deposit.reward_per_token.map_or_else(
+            || Ok(Coin::ZERO),
+            |price| price::total(deposit.deposited_nlpn, price).map_err(Into::into),
+        );
 
-        deposit.pending_rewards_nls + global_reward - deposit_reward
+        may_global_reward.and_then(|global_reward| {
+            may_deposit_reward
+                .map(|deposit_reward| deposit.pending_rewards_nls + global_reward - deposit_reward)
+        })
     }
 
     /// query accounted rewards
     pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        Ok(self.calculate_reward(&globals))
+        self.calculate_reward(&globals)
+            .map_err(|err| StdError::generic_err(err.to_string()))
     }
 
     /// pay accounted rewards to the deposit owner or optional recipient
     pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        self.update_rewards(&globals);
+        self.update_rewards(&globals)
+            .map_err(|err| StdError::generic_err(err.to_string()))
+            .and_then(|()| {
+                let reward = self.data.pending_rewards_nls;
+                self.data.pending_rewards_nls = Coin::ZERO;
 
-        let reward = self.data.pending_rewards_nls;
-        self.data.pending_rewards_nls = Coin::ZERO;
-
-        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-
-        Ok(reward)
+                Self::DEPOSITS
+                    .save(storage, self.addr.clone(), &self.data)
+                    .map_err(Into::into)
+                    .map(|()| reward)
+            })
     }
 
     /// lpp derivative tokens balance

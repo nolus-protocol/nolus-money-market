@@ -45,14 +45,16 @@ where
         apr: Percent,
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
-        let reward_in_stable = interest::interest(apr, self.balance, period);
-
-        convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
-            .map_err(ContractError::ConvertRewardsToNLS)
-            .and_then(|rewards| {
-                self.lpp
-                    .distribute(rewards)
-                    .map_err(ContractError::DistributeLppReward)
+        interest::interest(apr, self.balance, period)
+            .map_err(ContractError::InterestCalculationError)
+            .and_then(|reward_in_stable| {
+                convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
+                    .map_err(ContractError::ConvertRewardsToNLS)
+                    .and_then(|rewards| {
+                        self.lpp
+                            .distribute(rewards)
+                            .map_err(ContractError::DistributeLppReward)
+                    })
             })
     }
 }
@@ -103,7 +105,11 @@ mod test {
         let lpp0_tvl: CoinStable = 15_000.into();
 
         let oracle = DummyOracle::with_price(4);
-        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
+        let exp_reward = price::total(
+            bar0_apr.of(lpp0_tvl).unwrap(),
+            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
+        )
+        .unwrap();
         let lpp = DummyLpp::failing_reward(lpp0_tvl, exp_reward);
 
         let pool = PoolImpl::new(lpp, oracle).unwrap();
@@ -120,7 +126,11 @@ mod test {
         let bar0_apr = Percent::from_percent(20);
         let lpp0_tvl: CoinStable = 23_000.into();
         let oracle = DummyOracle::with_price(2);
-        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
+        let exp_reward = price::total(
+            bar0_apr.of(lpp0_tvl).unwrap(),
+            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
+        )
+        .unwrap();
 
         let pool = PoolImpl::new(DummyLpp::with_balance(lpp0_tvl, exp_reward), oracle).unwrap();
         assert_eq!(lpp0_tvl, pool.balance());
