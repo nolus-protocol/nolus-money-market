@@ -324,8 +324,8 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Result<Coin<QuoteC>>
 where
-    C: ?Sized,
-    QuoteC: ?Sized,
+    C: 'static,
+    QuoteC: 'static,
 {
     let ratio_impl = Rational::new(of, price.amount);
     Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)

@@ -214,7 +214,7 @@ where
     {
         total(
             self.downpayment,
-            self.oracle.price_of::<Dpc, PaymentGroup>()?,
+            self.oracle.price_of::<Dpc, PaymentCurrencies>()?,
         )
         .map_err(ContractError::Finance)
         .and_then(|downpayment_lpn| {
@@ -227,7 +227,7 @@ where
                 .map_err(ContractError::Finance)
                 .and_then(|borrow| {
                     self.oracle
-                        .price_of::<Asset, LeaseGroup>()
+                        .price_of::<Asset, Self::VisitedG>()
                         .map_err(ContractError::PriceOracle)
                         .and_then(|price| {
                             let asset_price = price.inv();
