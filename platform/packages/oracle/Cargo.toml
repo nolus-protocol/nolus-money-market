@@ -9,8 +9,7 @@ license.workspace = true
 combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
 
 [features]
-# the 'unchecked-stable-quote' feature adds an ability to obtain a stub to oracle without checking the quote currency
-# designed for use by the platform to query for the stable prices of Nls
+# the 'unchecked-stable-quote' feature adds an ability to obtain price with quote currency not matching the oracle's quote currency
 unchecked-stable-quote = []
 testing = ["currency/testing"]
 
