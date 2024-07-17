@@ -150,8 +150,7 @@ where
         at: Timestamp,
         total_feeders: usize,
         price: Price<C, QuoteC>,
-    ) -> Result<PriceDTO<G, QuoteG>, PriceFeedsError>
-    {
+    ) -> Result<PriceDTO<G, QuoteG>, PriceFeedsError> {
         if let Some(next_currency) = currency_path.next() {
             let next_collect = PriceCollect {
                 currency_path,
