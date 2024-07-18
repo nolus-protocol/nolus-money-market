@@ -46,7 +46,7 @@ where
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
         interest::interest(apr, self.balance, period)
-            .map_err(ContractError::InterestCalculationError)
+            .map_err(ContractError::InterestCalculation)
             .and_then(|reward_in_stable| {
                 convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
                     .map_err(ContractError::ConvertRewardsToNLS)
