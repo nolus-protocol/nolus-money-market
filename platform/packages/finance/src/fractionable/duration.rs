@@ -20,7 +20,8 @@ impl<C> Fractionable<Coin<C>> for Duration {
     {
         // TODO re-assess the design of Ratio ... and whether it could be > 1
         let d128: u128 = self.into();
-        Fractionable::<Coin<C>>::checked_mul(d128, fraction).and_then(|units| units.try_into().ok())
+        Fractionable::<Coin<C>>::checked_mul(d128, fraction)
+            .and_then(|may_product| may_product.try_into().ok())
     }
 }
 

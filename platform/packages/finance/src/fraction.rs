@@ -1,7 +1,7 @@
-use crate::{error::Result as FinanceResult, fractionable::Fractionable};
+use crate::{error::Result, fractionable::Fractionable};
 
 pub trait Fraction<U> {
-    fn of<A>(&self, whole: A) -> FinanceResult<A>
+    fn of<A>(&self, whole: A) -> Result<A>
     where
         A: Fractionable<U>;
 }

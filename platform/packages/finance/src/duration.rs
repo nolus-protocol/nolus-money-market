@@ -97,9 +97,9 @@ impl Duration {
     where
         T: TimeSliceable,
     {
-        let period = Rational::new(self.nanos(), Self::YEAR.nanos());
+        let self_a_year = Rational::new(self.nanos(), Self::YEAR.nanos());
         annual_amount
-            .checked_mul(&period)
+            .checked_mul(&self_a_year)
             .ok_or(Error::MultiplicationOverflow(
                 "Overflow on calculating the accrued amount for the period",
             ))

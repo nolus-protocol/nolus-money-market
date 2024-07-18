@@ -54,7 +54,7 @@ where
             let res_double: D = self.into() * ratio.parts().into();
             let res_double = res_double / ratio.total().into();
             let res_intermediate: Option<DIntermediate> = res_double.try_into().ok();
-            res_intermediate.map(|val| val.into())
+            res_intermediate.map(Into::into)
         }
     }
 }

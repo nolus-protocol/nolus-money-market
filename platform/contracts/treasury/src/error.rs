@@ -68,5 +68,5 @@ pub enum ContractError {
     InvalidTimeConfiguration {},
 
     #[error("[Treasury] Error calculating interest: {0}")]
-    InterestCalculationError(#[from] finance::error::Error),
+    InterestCalculation(#[from] finance::error::Error),
 }
