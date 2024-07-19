@@ -62,7 +62,7 @@ mod test {
     };
 
     #[test]
-    #[should_panic = "MultiplicationOverflow"]
+    #[should_panic = "OverflowError"]
     fn test_large_interest_accrual_period() {
         let principal_due = 20.into();
         let due_interest = 5.into();

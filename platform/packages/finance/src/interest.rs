@@ -1,4 +1,8 @@
-use std::{cmp, fmt::Debug, ops::Sub};
+use std::{
+    cmp,
+    fmt::{Debug, Display},
+    ops::Sub,
+};
 
 use crate::{
     duration::Duration,
@@ -12,7 +16,7 @@ use crate::{
 pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> FinanceResult<P>
 where
     F: Fraction<U>,
-    P: Fractionable<U> + TimeSliceable,
+    P: Fractionable<U> + TimeSliceable + Display + Clone,
 {
     rate.of(principal)
         .and_then(|interest_per_year| period.annualized_slice_of(interest_per_year))
@@ -29,7 +33,7 @@ pub fn pay<U, F, P>(
 ) -> FinanceResult<(Duration, P)>
 where
     F: Fraction<U>,
-    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero,
+    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero + Display,
     Duration: Fractionable<P>,
 {
     interest(rate, principal, period).and_then(|interest_due_per_period| {

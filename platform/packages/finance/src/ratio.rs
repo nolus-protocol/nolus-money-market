@@ -1,11 +1,11 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    error::{Error, Result as FinanceResult},
+    error::{Error, OverflowError, OverflowOperation, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
     zero::Zero,
@@ -41,16 +41,22 @@ where
 
 impl<U, T> Fraction<U> for Rational<T>
 where
+    T: Display,
     Self: Ratio<U>,
 {
     #[track_caller]
     fn of<A>(&self, whole: A) -> FinanceResult<A>
     where
-        A: Fractionable<U>,
+        A: Fractionable<U> + Display + Clone,
     {
-        whole.checked_mul(self).ok_or(Error::MultiplicationOverflow(
-            "Overflow during rational multiplication",
-        ))
+        whole
+            .clone()
+            .checked_mul(self)
+            .ok_or(Error::OverflowError(OverflowError::new(
+                OverflowOperation::Mul,
+                whole,
+                self,
+            )))
     }
 }
 
@@ -64,5 +70,11 @@ where
 
     fn total(&self) -> U {
         self.denominator.into()
+    }
+}
+
+impl<T: Display> Display for Rational<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}/{}", self.nominator, self.denominator)
     }
 }

@@ -1,9 +1,12 @@
-use std::any::type_name;
+use std::{
+    any::type_name,
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
+};
 
 use thiserror::Error;
 
-use currency::error::Error as CurrencyError;
-use sdk::cosmwasm_std::{OverflowError, StdError};
+use currency::{error::Error as CurrencyError, Currency};
+use sdk::cosmwasm_std::StdError;
 
 use crate::percent::Units as PercentUnits;
 
@@ -14,9 +17,6 @@ pub enum Error {
 
     #[error("[Finance] [OverflowError] {0}")]
     OverflowError(#[from] OverflowError),
-
-    #[error("[Finance] {0}")]
-    MultiplicationOverflow(&'static str),
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
@@ -40,6 +40,41 @@ impl Error {
         } else {
             Ok(())
         }
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Eq)]
+#[error("Cannot {operation} with {operand1} and {operand2}")]
+pub struct OverflowError {
+    pub operation: OverflowOperation,
+    pub operand1: String,
+    pub operand2: String,
+}
+
+impl OverflowError {
+    pub fn new(
+        operation: OverflowOperation,
+        operand1: impl ToString,
+        operand2: impl ToString,
+    ) -> Self {
+        Self {
+            operation,
+            operand1: operand1.to_string(),
+            operand2: operand2.to_string(),
+        }
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum OverflowOperation {
+    Add,
+    Sub,
+    Mul,
+}
+
+impl Display for OverflowOperation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{self:?}")
     }
 }
 

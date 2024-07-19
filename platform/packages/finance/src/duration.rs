@@ -11,7 +11,7 @@ use sdk::{
 };
 
 use crate::{
-    error::{Error, Result as FinanceResult},
+    error::{Error, OverflowError, OverflowOperation, Result as FinanceResult},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
@@ -95,20 +95,23 @@ impl Duration {
     #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> FinanceResult<T>
     where
-        T: TimeSliceable,
+        T: TimeSliceable + Display + Clone,
     {
         let self_a_year = Rational::new(self.nanos(), Self::YEAR.nanos());
         annual_amount
+            .clone()
             .checked_mul(&self_a_year)
-            .ok_or(Error::MultiplicationOverflow(
-                "Overflow on calculating the accrued amount for the period",
-            ))
+            .ok_or(Error::OverflowError(OverflowError::new(
+                OverflowOperation::Mul,
+                annual_amount,
+                self_a_year,
+            )))
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> FinanceResult<Self>
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: Zero + Debug + PartialEq + Copy + Display,
     {
         Rational::new(amount, annual_amount).of(self)
     }

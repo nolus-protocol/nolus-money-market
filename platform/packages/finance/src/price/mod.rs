@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Add, AddAssign, Mul},
 };
 
@@ -9,7 +9,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::{Amount, Coin},
-    error::{Error, Result},
+    error::{Error, OverflowError, OverflowOperation, Result},
     fraction::Fraction,
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
@@ -188,16 +188,22 @@ where
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
     fn lossy_add(self, rhs: Self) -> Option<Self> {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = FACTOR.into();
-        total(factored_amount, self)
-            .ok()
+        let factor: Coin<C> = Coin::new(1_000_000_000_000_000_000); // 1*10^18
+
+        total(factor, self)
             .and_then(|total_self| {
-                total(factored_amount, rhs)
-                    .ok()
-                    .and_then(|total_rhs| total_self.checked_add(total_rhs))
+                total(factor, rhs).and_then(|total_rhs| {
+                    total_self.checked_add(total_rhs).ok_or_else(|| {
+                        Error::OverflowError(OverflowError::new(
+                            OverflowOperation::Add,
+                            total_self,
+                            total_rhs,
+                        ))
+                    })
+                })
             })
-            .map(|factored_total| total_of(factored_amount).is(factored_total))
+            .map(|factored_total| total_of(factor).is(factored_total))
+            .ok()
     }
 
     #[track_caller]
@@ -315,6 +321,12 @@ where
 
         Self::Output::new(self.amount, rhs.amount_quote)
             .lossy_mul(&Rational::new(self.amount_quote, rhs.amount))
+    }
+}
+
+impl<C, QuoteC> Display for Price<C, QuoteC> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}/{}", self.amount, self.amount_quote)
     }
 }
 
