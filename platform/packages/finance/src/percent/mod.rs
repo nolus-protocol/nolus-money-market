@@ -5,13 +5,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::{OverflowError, OverflowOperation},
-    schemars::{self, JsonSchema},
-};
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    error::{Error, Result as FinanceResult},
+    error::{OverflowError, OverflowOperation, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
@@ -48,7 +45,7 @@ impl Percent {
         denominator: FractionUnit,
     ) -> FinanceResult<Self>
     where
-        FractionUnit: Zero + Debug + Copy + PartialEq,
+        FractionUnit: Zero + Debug + Copy + PartialEq + Display,
         Self: Fractionable<FractionUnit>,
     {
         Rational::new(nominator, denominator).of(Percent::HUNDRED)
@@ -85,11 +82,12 @@ impl Fraction<Units> for Percent {
     #[track_caller]
     fn of<A>(&self, whole: A) -> FinanceResult<A>
     where
-        A: Fractionable<Units>,
+        A: Fractionable<Units> + Display + Clone,
     {
-        whole.checked_mul(self).ok_or(Error::MultiplicationOverflow(
-            "Overflow during percentage calculation",
-        ))
+        whole
+            .clone()
+            .checked_mul(self)
+            .ok_or_else(|| OverflowError::new(OverflowOperation::Mul, whole, self).into())
     }
 }
 

@@ -1,4 +1,4 @@
-use std::ops::Sub;
+use std::{fmt::Display, ops::Sub};
 
 use serde::{Deserialize, Serialize};
 
@@ -106,7 +106,7 @@ impl Liability {
 
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Result<P>
     where
-        P: Percentable + Ord + Copy,
+        P: Percentable + Ord + Copy + Display,
     {
         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
@@ -127,7 +127,7 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Result<P>
     where
-        P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
+        P: Percentable + Copy + Ord + Sub<Output = P> + Zero + Display,
     {
         self.max.of(lease_amount).and_then(|max_lease| {
             if total_due < max_lease {
