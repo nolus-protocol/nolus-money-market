@@ -107,6 +107,12 @@ where
         edge_min: usize,
         edge_value_min: Edge,
     ) {
+        debug_assert!(self
+            .edges
+            .get(edge_min)
+            .filter(|&&ConnectionIndexes { connected_to, .. }| connected_to == vertices.max().key())
+            .is_none());
+
         let vertex_min = vertices.min().key();
 
         let vertex_max = vertices.max().key();
@@ -135,8 +141,10 @@ where
     /// Creates edge and links the maximum vertex to the minimum vertex, while
     /// also adjusting all indexes after the maximum vertex.
     ///
+    /// # Panics
+    /// * When the maximum vertex edge to the minimum vertex already exists.
+    ///
     /// # Safety
-    /// * The maximum vertex edge to the minimum vertex must not already exist.
     /// * This method adjusts indexes up to the maximum vertex, included. It
     ///   needs to be called ***after*** [`Self::create_edge_from_min_unchecked`].
     fn create_edge_from_max_unchecked(
