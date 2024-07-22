@@ -19,7 +19,7 @@ where
         let vertex_max = vertices.max().key();
 
         debug_assert!(
-            self.check_for_cycle(vertex_min, vertex_max).is_err(),
+            self.check_for_cycle(vertex_min, vertex_max).is_ok(),
             "Cycle creation detected!"
         );
 
@@ -107,11 +107,16 @@ where
         edge_min: usize,
         edge_value_min: Edge,
     ) {
-        debug_assert!(self
-            .edges
-            .get(edge_min)
-            .filter(|&&ConnectionIndexes { connected_to, .. }| connected_to == vertices.max().key())
-            .is_none());
+        if cfg!(debug_assertions) {
+            if self.edges_ranges[vertices.min().key()].contains(&edge_min) {
+                assert!(self
+                    .edges
+                    .get(edge_min)
+                    .filter(|&&ConnectionIndexes { connected_to, .. }| connected_to
+                        == vertices.max().key())
+                    .is_none());
+            }
+        }
 
         let vertex_min = vertices.min().key();
 
