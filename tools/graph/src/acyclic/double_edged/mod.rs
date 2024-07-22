@@ -10,9 +10,32 @@ mod connected_vertices;
 mod insert;
 
 pub struct Graph<Vertex, Edge> {
+    /// Array that contains all vertices in sorted order. That allows performing
+    /// binary searches on the vertices, allowing faster access.
     vertices: Vec<Vertex>,
+    /// Array that provides the links between a vertex and its outgoing edges.
+    ///
+    /// Indexes between the vertices array and this field are identity mapped, a
+    /// `1:1` relation, meaning the index of the vertex `X` will point to the
+    /// element of this field containing the edges going out from the vertex
+    /// `X`. Because of this, the edge groups are in the same sorted order the
+    /// vertices are.
+    ///
+    /// The ranges stored for each vertex directly address a slice from the
+    /// array containing all edges.
     edges_ranges: Vec<Range<usize>>,
+    /// Array that contains the outgoing edges for all vertices. Edges are
+    /// grouped by the vertex from which they are going out from. Edge groups
+    /// are identity mapped, a `1:1` relation, to the vertex from which they
+    /// are going out. Because of this, the edge groups are in the same sorted
+    /// order the vertices are.
+    ///
+    /// Indexes are *not* identity mapped, a `1:1` relation, back to the array
+    /// of all vertices, but are rather defined as a `N:1` relation.
     edges: Vec<ConnectionIndexes>,
+    /// Array that contains values associated with edges. Edge values are not in
+    /// sorted order. They are in arbitrary order without any relation between
+    /// the indexes of the edges and the edge values arrays.
     edge_values: Vec<Edge>,
 }
 
