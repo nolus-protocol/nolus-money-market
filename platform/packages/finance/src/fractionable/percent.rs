@@ -111,7 +111,7 @@ mod test {
             );
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Fractionable::<Coin<_>>::checked_mul(
+                Fractionable::<Coin<SuperGroupTestC1>>::checked_mul(
                     Percent::from_permille(Units::MAX),
                     &ratio_one
                 )

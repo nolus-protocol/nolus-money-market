@@ -72,8 +72,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_mul(rhs);
-        may_amount.map(|amount| Self {
+        self.amount.checked_mul(rhs).map(|amount| Self {
             amount,
             ticker: self.ticker,
         })
