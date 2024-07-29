@@ -45,7 +45,8 @@ struct RepaymentHandler<Asset, LppLoan, Oracle> {
     lease: Lease<Asset, LppLoan, Oracle>,
 }
 
-impl<Asset, LppLoan, Oracle> WithCoin<LeasePaymentCurrencies> for RepaymentHandler<Asset, LppLoan, Oracle>
+impl<Asset, LppLoan, Oracle> WithCoin<LeasePaymentCurrencies>
+    for RepaymentHandler<Asset, LppLoan, Oracle>
 where
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,

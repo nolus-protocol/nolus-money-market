@@ -48,7 +48,7 @@ impl Group for LeaseGroup {
         M: Matcher<Group = Self>,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
-        TopG: Group
+        TopG: Group,
     {
         impl_mod::maybe_visit(matcher, visitor)
     }

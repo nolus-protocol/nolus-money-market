@@ -55,7 +55,7 @@ impl Group for PaymentGroup {
         M: Matcher<Group = Self>,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
-        TopG: Group
+        TopG: Group,
     {
         unreachable!()
     }

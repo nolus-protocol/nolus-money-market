@@ -4,7 +4,8 @@ use platform::{bank::BankAccount, batch::Batch};
 use crate::{
     api::LeaseAssetCurrencies,
     error::ContractError,
-    lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid}, position::Position,
+    lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid},
+    position::Position,
 };
 
 pub struct Close<Bank> {

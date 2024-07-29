@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use dex::{Account, ConnectionParams, DexConnectable};
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{error::ContractError, lease::{with_lease::WithLease, LeaseDTO}};
+use crate::{
+    error::ContractError,
+    lease::{with_lease::WithLease, LeaseDTO},
+};
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::FinalizerRef;
@@ -46,7 +49,8 @@ impl Lease {
     where
         Cmd: WithLease,
         Cmd::Output: SplitDTOOut,
-        Cmd::Error: From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
+        Cmd::Error:
+            From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,

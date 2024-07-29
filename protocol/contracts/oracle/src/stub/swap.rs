@@ -13,7 +13,7 @@ pub trait SwapPath {
     ) -> Result<Vec<SwapTarget>>;
 }
 
-impl<OracleBase, OracleBaseG> SwapPath for OracleRef< OracleBase, OracleBaseG>
+impl<OracleBase, OracleBaseG> SwapPath for OracleRef<OracleBase, OracleBaseG>
 where
     OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,

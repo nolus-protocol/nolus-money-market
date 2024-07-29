@@ -1,7 +1,10 @@
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, Tickers};
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeasePaymentCurrencies}, error::ContractError, finance::LpnCurrencies, position::{Position, WithPosition, WithPositionResult}
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    error::ContractError,
+    finance::LpnCurrencies,
+    position::{Position, WithPosition, WithPositionResult},
 };
 
 use super::LeaseDTO;
@@ -29,7 +32,8 @@ where
     ContractError: Into<Cmd::Error>,
 {
     lease_dto
-        .position.clone()
+        .position
+        .clone()
         .with_position(FactoryStage1 { lease_dto, cmd })
 }
 
