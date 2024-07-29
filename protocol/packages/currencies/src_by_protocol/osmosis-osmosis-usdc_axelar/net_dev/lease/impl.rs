@@ -88,7 +88,7 @@ where
     LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    use currency::maybe_visit_any as maybe_visit;
+    use currency::maybe_visit_member as maybe_visit;
     maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
         .or_else(|visitor| maybe_visit::<_, Osmo, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Weth, TopG, _>(matcher, visitor))
