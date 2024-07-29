@@ -1,5 +1,7 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
+use crate::PaymentOnlyGroup;
+
 pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher<Group = PaymentOnlyGroup>,
