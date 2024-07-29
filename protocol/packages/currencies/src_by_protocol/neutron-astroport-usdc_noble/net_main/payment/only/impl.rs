@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 
 use crate::PaymentOnlyGroup;
 
