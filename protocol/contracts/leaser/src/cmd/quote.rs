@@ -120,16 +120,17 @@ where
     Lpn: Currency + MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
+    type G = PaymentCurrencies;
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn exec<O>(self, oracle: O) -> Result<Self::Output, Self::Error>
     where
-        O: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
+        O: OracleTrait<Self::G, QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        Tickers::maybe_visit_any(
+        Tickers::maybe_visit_member_any(
             &downpayment,
             QuoteStage3 {
                 downpayment: self.downpayment,
@@ -150,7 +151,7 @@ where
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
@@ -161,22 +162,22 @@ where
     max_ltd: Option<Percent>,
 }
 
-impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, Oracle> AnyVisitor<PaymentCurrencies> for QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: Currency + MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type VisitedG = PaymentCurrencies;
+    type VisitorG = PaymentCurrencies;
 
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<PaymentCurrencies, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
-        Tickers::maybe_visit_any(
+        Tickers::maybe_visit_member_any(
             &self.lease_asset,
             QuoteStage4 {
                 downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
@@ -199,7 +200,7 @@ struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Dpc: Currency + MemberOf<PaymentCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: Coin<Dpc>,
     lpp_quote: LppQuote<Lpn, Lpp>,
@@ -209,26 +210,23 @@ where
     max_ltd: Option<Percent>,
 }
 
-impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor<LeaseCurrencies> for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Lpn: Currency + MemberOf<LpnCurrencies>,
     Dpc: Currency + MemberOf<PaymentCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = Lpn, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type VisitedG = LeaseCurrencies;
+    type VisitorG = PaymentCurrencies;
 
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<Asset>(self) -> AnyVisitorResult<Self>
+    fn on<Asset>(self) -> AnyVisitorResult<LeaseCurrencies, Self>
     where
-        Asset: Currency + MemberOf<Self::VisitedG>,
+        Asset: Currency + MemberOf<Self::VisitorG>,
     {
-        let downpayment_lpn = total(
-            self.downpayment,
-            self.oracle.price_of::<Dpc, PaymentCurrencies>()?,
-        );
+        let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
@@ -238,7 +236,7 @@ where
             .liability
             .init_borrow_amount(downpayment_lpn, self.max_ltd);
 
-        let asset_price = self.oracle.price_of::<Asset, LeaseCurrencies>()?.inv();
+        let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
         let total_asset = total(downpayment_lpn + borrow, asset_price);
 

@@ -3,8 +3,8 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
-    api::LeaseAssetCurrencies,
-    finance::{LpnCurrencies, LpnCurrency},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef},
 };
 
 use super::Lease;
@@ -18,7 +18,8 @@ pub trait WithLease {
         lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>;
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>;
 }

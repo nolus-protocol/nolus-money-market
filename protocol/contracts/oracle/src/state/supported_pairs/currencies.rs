@@ -1,9 +1,12 @@
+use std::marker::PhantomData;
+
 use currencies::{LeaseGroup, Lpns, Native, PaymentGroup, PaymentOnlyGroup};
 use tree::NodeRef;
 
 use currency::{
     never::{self, Never},
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, Tickers,
+    AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, MaybeAnyVisitResult, MemberOf,
+    Tickers,
 };
 
 use crate::api::{swap::SwapTarget, Currency as ApiCurrency, CurrencyGroup};
@@ -14,36 +17,48 @@ where
 {
     nodes.map(|node| {
         never::safe_unwrap(
-            Tickers::maybe_visit_any(&node.value().target, CurrencyVisitor()).unwrap_or_else(
-                |_err| unreachable!("The payment group does not cover all available currencies!"),
-            ),
+            map_from_group::<LeaseGroup>(node, CurrencyGroup::Lease)
+                .or_else(|_err| map_from_group::<Lpns>(node, CurrencyGroup::Lpn))
+                .or_else(|_err| map_from_group::<Native>(node, CurrencyGroup::Native))
+                .or_else(|_err| {
+                    map_from_group::<PaymentOnlyGroup>(node, CurrencyGroup::PaymentOnly)
+                })
+                .unwrap_or_else(|_err| {
+                    unreachable!("The payment group does not cover all available currencies!")
+                }),
         )
     })
 }
 
-struct CurrencyVisitor();
+fn map_from_group<G>(
+    node: NodeRef<'_, SwapTarget>,
+    api_group: CurrencyGroup,
+) -> MaybeAnyVisitResult<G, CurrencyVisitor<G>>
+where
+    G: Group + MemberOf<PaymentGroup>,
+{
+    Tickers::maybe_visit_member_any(
+        &node.value().target,
+        CurrencyVisitor::<G>(PhantomData, api_group),
+    )
+}
 
-impl AnyVisitor for CurrencyVisitor {
-    type VisitedG = PaymentGroup;
+struct CurrencyVisitor<VisitedG>(PhantomData<VisitedG>, CurrencyGroup);
+
+impl<VisitedG> AnyVisitor<VisitedG> for CurrencyVisitor<VisitedG>
+where
+    VisitedG: Group + MemberOf<PaymentGroup>,
+{
+    type VisitorG = PaymentGroup;
 
     type Output = ApiCurrency;
 
     type Error = Never;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
         C: Currency,
     {
-        let group = if currency::equal::<LeaseGroup, C::Group>() {
-            CurrencyGroup::Lease
-        } else if currency::equal::<Lpns, C::Group>() {
-            CurrencyGroup::Lpn
-        } else if currency::equal::<Native, C::Group>() {
-            CurrencyGroup::Native
-        } else {
-            debug_assert!(currency::equal::<PaymentOnlyGroup, C::Group>());
-            CurrencyGroup::PaymentOnly
-        };
-        Ok(ApiCurrency::new::<C>(group))
+        Ok(ApiCurrency::new::<C>(self.1))
     }
 }

@@ -17,6 +17,8 @@ pub(crate) type LeasePaymentCurrencies = PaymentGroup;
 pub type PaymentCoin = CoinDTO<LeasePaymentCurrencies>;
 pub type DownpaymentCoin = PaymentCoin;
 
+// TODO this type is used predominantly in the contract implementation so consider
+// deprecating it in favor of crate::finance::PriceG
 pub(crate) type LeaseAssetCurrencies = LeaseGroup;
 pub type LeaseCoin = CoinDTO<LeaseAssetCurrencies>;
 

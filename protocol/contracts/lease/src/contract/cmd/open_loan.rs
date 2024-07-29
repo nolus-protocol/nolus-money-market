@@ -79,16 +79,16 @@ struct DownpaymentHandler<'a> {
     oracle: OracleRef,
     querier: QuerierWrapper<'a>,
 }
-impl<'a> WithCoin for DownpaymentHandler<'a> {
-    type VisitedG = LeasePaymentCurrencies;
+impl<'a> WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'a> {
+    type VisitorG = LeasePaymentCurrencies;
 
     type Output = (DownpaymentCoin, LpnCoin);
 
     type Error = ContractError;
 
-    fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
         let downpayment_lpn = convert::to_quote::<
             C,

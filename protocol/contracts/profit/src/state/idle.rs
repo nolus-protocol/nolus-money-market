@@ -179,17 +179,17 @@ where
     FilterC: Currency,
     G: Group;
 
-impl<FilterC, G> WithCoin for CoinToDTO<FilterC, G>
+impl<FilterC, G> WithCoin<G> for CoinToDTO<FilterC, G>
 where
     FilterC: Currency,
     G: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
 
     type Output = SplitCoins<FilterC, G>;
     type Error = ContractError;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
     where
         C: Currency,
     {

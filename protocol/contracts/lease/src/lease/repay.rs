@@ -16,7 +16,7 @@ use crate::{
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     pub(crate) fn validate_repay<PaymentC>(&self, payment: Coin<PaymentC>) -> ContractResult<()>
@@ -24,7 +24,7 @@ where
         PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
     {
         self.oracle
-            .price_of::<PaymentC, LeasePaymentCurrencies>()
+            .price_of::<PaymentC>()
             .map_err(Into::into)
             .and_then(|price| self.position.validate_payment(payment, price))
     }

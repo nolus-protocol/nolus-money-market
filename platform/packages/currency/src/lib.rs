@@ -77,11 +77,11 @@ where
     struct SupportedLeaseCurrency<G> {
         expected_group: PhantomData<G>,
     }
-    impl<G> AnyVisitor for SupportedLeaseCurrency<G>
+    impl<G> AnyVisitor<G> for SupportedLeaseCurrency<G>
     where
         G: Group,
     {
-        type VisitedG = G;
+        type VisitorG = G;
         type Error = Error;
         type Output = ();
         fn on<C>(self) -> Result<Self::Output>
@@ -99,11 +99,22 @@ where
     )
 }
 
-pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
-    M: Matcher,
-    C: Currency + MemberOf<V::VisitedG> + MemberOf<M::Group>,
-    V: AnyVisitor,
+    M: Matcher<Group = C::Group>,
+    C: Currency + MemberOf<V::VisitorG>,
+    V: AnyVisitor<C::Group>,
+    C::Group: MemberOf<V::VisitorG>,
+{
+    maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
+}
+
+pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+where
+    M: Matcher<Group = C::Group>,
+    C: Currency + MemberOf<TopG> + MemberOf<V::VisitorG>,
+    V: AnyVisitor<TopG>,
+    TopG: Group + MemberOf<V::VisitorG>,
 {
     if matcher.r#match::<C>() {
         Ok(visitor.on::<C>())
@@ -112,9 +123,10 @@ where
     }
 }
 
-pub fn visit_noone<V>(visitor: V) -> MaybeAnyVisitResult<V>
+pub fn visit_noone<VisitedG, V>(visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
 where
-    V: AnyVisitor,
+    VisitedG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
 {
     Err(visitor)
 }

@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol, LeaseGroup};
@@ -292,33 +292,33 @@ where
     LeaseGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
 {
     use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, visitor)
-        .or_else(|visitor| maybe_visit::<_, StAtom, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StOsmo, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Axl, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, QAtom, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Strd, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Inj, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Secret, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Stars, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Cro, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Evmos, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Tia, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StTia, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Jkl, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, MilkTia, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Lvn, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Qsr, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Pica, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Dym, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Cudos, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Saga, _>(matcher, visitor))
+    maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, StAtom, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Osmo, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, StOsmo, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Weth, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Wbtc, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Akt, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Axl, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, QAtom, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Strd, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Inj, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Secret, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Stars, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cro, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Juno, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Evmos, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Mars, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Tia, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, StTia, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Jkl, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, MilkTia, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Lvn, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Qsr, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Pica, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Dym, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Cudos, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Saga, TopG, _>(matcher, visitor))
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -13,17 +13,17 @@ use crate::{
     result::Result,
 };
 
-pub type BalancesResult<Cmd> = StdResult<Option<WithCoinResult<Cmd>>, Error>;
+pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group,
-        Cmd: WithCoin + Clone,
+        G: Group + MemberOf<Cmd::VisitorG>,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -59,9 +59,13 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
+pub fn may_received<VisitedG, V>(
+    cw_amount: &Vec<CwCoin>,
+    mut cmd: V,
+) -> Option<WithCoinResult<VisitedG, V>>
 where
-    V: WithCoin,
+    VisitedG: Group + MemberOf<V::VisitorG>,
+    V: WithCoin<VisitedG>,
 {
     let mut may_res = None;
     for coin in cw_amount {
@@ -98,10 +102,10 @@ impl<'a> BankAccountView for BankView<'a> {
             .and_then(|coin| from_cosmwasm_impl(coin))
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group,
-        Cmd: WithCoin + Clone,
+        G: Group + MemberOf<Cmd::VisitorG>,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -164,10 +168,10 @@ where
         self.view.balance()
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group,
-        Cmd: WithCoin + Clone,
+        G: Group + MemberOf<Cmd::VisitorG>,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
@@ -523,15 +527,15 @@ mod test {
         }
     }
 
-    impl<G> WithCoin for Cmd<'_, G>
+    impl<G> WithCoin<G> for Cmd<'_, G>
     where
         G: Group,
     {
-        type VisitedG = G;
+        type VisitorG = G;
         type Output = ();
         type Error = Error;
 
-        fn on<C>(self, _: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, _: Coin<C>) -> WithCoinResult<G, Self>
         where
             C: Currency,
         {

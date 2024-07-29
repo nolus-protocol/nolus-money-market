@@ -8,9 +8,9 @@ use reserve::stub::Reserve as ReserveTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency, OracleRef},
     lease::Lease,
     loan::RepayReceipt,
 };
@@ -34,8 +34,9 @@ impl FullRepayReceipt {
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+        + Into<OracleRef>,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
         self.price_of_lease_currency()

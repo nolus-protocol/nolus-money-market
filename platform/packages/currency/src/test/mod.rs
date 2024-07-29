@@ -10,30 +10,31 @@ pub use self::group::*;
 mod group;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expect<C, G>(PhantomData<C>, PhantomData<G>);
+pub struct Expect<C>(PhantomData<C>);
 
-impl<C, G> Default for Expect<C, G> {
+impl<C> Default for Expect<C> {
     fn default() -> Self {
-        Self(PhantomData, PhantomData)
+        Self(PhantomData)
     }
 }
-impl<C, G> AnyVisitor for Expect<C, G>
+impl<C, G> AnyVisitor<G> for Expect<C>
 where
     C: Currency + MemberOf<G>,
     G: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
     type Output = bool;
     type Error = Error;
 
-    fn on<Cin>(self) -> AnyVisitorResult<Self>
+    // fn on<Cin>(self) -> AnyVisitorResult<G, Self>
+    fn on<Cin>(self) -> Result<bool, Error>
     where
         Cin: 'static,
     {
         Ok(crate::equal::<C, Cin>())
     }
 }
-impl<C, G> SingleVisitor<C> for Expect<C, G> {
+impl<C> SingleVisitor<C> for Expect<C> {
     type Output = bool;
     type Error = Error;
 
@@ -54,18 +55,15 @@ impl<G> ExpectUnknownCurrency<G> {
     }
 }
 
-impl<G> AnyVisitor for ExpectUnknownCurrency<G>
+impl<G> AnyVisitor<G> for ExpectUnknownCurrency<G>
 where
     G: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
     type Output = bool;
     type Error = Error;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency,
-    {
+    fn on<C>(self) -> AnyVisitorResult<G, Self> {
         unreachable!();
     }
 }

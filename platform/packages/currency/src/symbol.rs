@@ -8,6 +8,9 @@ pub trait Symbol {
     const DESCR: &'static str;
 
     type Group: Group;
+    type Symbol<SubG>: Symbol<Group = SubG>
+    where
+        SubG: Group;
 
     fn symbol<CD>() -> SymbolStatic
     where
@@ -30,6 +33,10 @@ where
     const DESCR: &'static str = "ticker";
 
     type Group = G;
+
+    type Symbol<SubG> = Tickers<SubG>
+    where
+    SubG: Group;
 
     fn symbol<CD>() -> SymbolStatic
     where
@@ -55,6 +62,10 @@ where
     const DESCR: &'static str = "bank symbol";
 
     type Group = G;
+
+    type Symbol<SubG> = BankSymbols<SubG>
+    where
+    SubG: Group;
 
     fn symbol<CD>() -> SymbolStatic
     where
@@ -82,6 +93,10 @@ where
 
     type Group = G;
 
+    type Symbol<SubG> = DexSymbols<SubG>
+    where
+    SubG: Group;
+
     fn symbol<CD>() -> SymbolStatic
     where
         CD: Currency,
@@ -90,17 +105,17 @@ where
     }
 }
 
-impl<T> AnyVisitor for T
+impl<T> AnyVisitor<T::Group> for T
 where
     T: Symbol,
 {
-    type VisitedG = T::Group;
+    type VisitorG = T::Group;
     type Output = SymbolStatic;
     type Error = Error;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<T::Group, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
         Ok(<Self as Symbol>::symbol::<C>())
     }

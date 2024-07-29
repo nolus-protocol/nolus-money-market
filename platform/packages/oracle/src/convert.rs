@@ -12,7 +12,7 @@ pub fn from_quote<QuoteC, QuoteG, OracleS, OutC, OutG>(
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
-    OracleS: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
+    OracleS: Oracle<OutG, QuoteC = QuoteC, QuoteG = QuoteG>,
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
@@ -28,7 +28,7 @@ where
     InG: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
-    OracleS: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
+    OracleS: Oracle<InG, QuoteC = QuoteC, QuoteG = QuoteG>,
 {
     PriceConvert::<InC, InG, QuoteC, QuoteG>::new(in_amount).with_quote_out(oracle)
 }
@@ -75,10 +75,10 @@ mod impl_ {
             oracle: &OracleImpl,
         ) -> Result<Coin<OutC>, Error>
         where
-            OracleImpl: Oracle<QuoteC = InC, QuoteG = InG>,
+            OracleImpl: Oracle<OutG, QuoteC = InC, QuoteG = InG>,
         {
             oracle
-                .price_of::<OutC, OutG>()
+                .price_of::<OutC>()
                 .map(|price| price::total(self.in_amount, price.inv()))
         }
 
@@ -87,10 +87,10 @@ mod impl_ {
             oracle: &OracleImpl,
         ) -> Result<Coin<OutC>, Error>
         where
-            OracleImpl: Oracle<QuoteC = OutC, QuoteG = OutG>,
+            OracleImpl: Oracle<InG, QuoteC = OutC, QuoteG = OutG>,
         {
             oracle
-                .price_of::<InC, InG>()
+                .price_of::<InC>()
                 .map(|price| price::total(self.in_amount, price))
         }
     }

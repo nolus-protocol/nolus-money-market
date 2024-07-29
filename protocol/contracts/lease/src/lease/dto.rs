@@ -7,10 +7,11 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::LoanDTO,
-    position::PositionDTO,
+    position::{Position, PositionDTO},
 };
 
 use super::{
@@ -60,17 +61,25 @@ impl LeaseDTO {
     ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLease,
-        Cmd::Error: From<lpp::error::ContractError>,
+        Cmd::Error:
+            From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,
     {
         let lease = self.addr.clone();
-        let asset = self.position.amount().ticker().clone();
+        let position = self.position.clone();
         let lpp = self.loan.lpp().clone();
         let oracle = self.oracle.clone();
 
-        with_lease_deps::execute(Factory::new(cmd, self), lease, &asset, lpp, oracle, querier)
+        with_lease_deps::execute(
+            Factory::new(cmd, self),
+            lease,
+            position,
+            lpp,
+            oracle,
+            querier,
+        )
     }
 }
 
@@ -93,16 +102,19 @@ where
 
     fn exec<Lpn, Asset, LppLoan, Oracle>(
         self,
+        position: Position<Asset>,
         lpp_loan: LppLoan,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
     {
         self.cmd.exec(Lease::<Asset, _, _>::from_dto(
             self.lease_dto,
+            position,
             lpp_loan,
             oracle,
         ))

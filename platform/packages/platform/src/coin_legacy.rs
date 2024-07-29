@@ -16,19 +16,30 @@ where
     BankSymbols::visit(&coin.denom, CoinTransformer(&coin))
 }
 
-pub(crate) fn from_cosmwasm_any<V>(coin: &CosmWasmCoin, v: V) -> StdResult<WithCoinResult<V>, V>
+pub(crate) fn from_cosmwasm_any<VisitedG, V>(
+    coin: &CosmWasmCoin,
+    v: V,
+) -> StdResult<WithCoinResult<VisitedG, V>, V>
 where
-    V: WithCoin,
+    VisitedG: Group + MemberOf<V::VisitorG>,
+    V: WithCoin<VisitedG>,
 {
-    BankSymbols::maybe_visit_any(&coin.denom, CoinTransformerAny(coin, v))
-        .map_err(|transformer| transformer.1)
+    BankSymbols::maybe_visit_member_any(
+        &coin.denom,
+        CoinTransformerAny(coin, PhantomData::<VisitedG>, v),
+    )
+    .map_err(|transformer| transformer.2)
 }
 
-pub(crate) fn maybe_from_cosmwasm_any<V>(coin: CosmWasmCoin, v: V) -> Option<WithCoinResult<V>>
+pub(crate) fn maybe_from_cosmwasm_any<VisitedG, V>(
+    coin: CosmWasmCoin,
+    v: V,
+) -> Option<WithCoinResult<VisitedG, V>>
 where
-    V: WithCoin,
+    VisitedG: Group + MemberOf<V::VisitorG>,
+    V: WithCoin<VisitedG>,
 {
-    BankSymbols::maybe_visit_any(&coin.denom, CoinTransformerAny(&coin, v)).ok()
+    BankSymbols::maybe_visit_member_any(&coin.denom, CoinTransformerAny(&coin, PhantomData, v)).ok()
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -66,17 +77,17 @@ where
     S: Symbol,
 {
     struct CoinTransformer<CM>(PhantomData<CM>);
-    impl<S> WithCoin for CoinTransformer<S>
+    impl<S> WithCoin<S::Group> for CoinTransformer<S>
     where
         S: Symbol,
     {
-        type VisitedG = S::Group;
+        type VisitorG = S::Group;
         type Output = CosmWasmCoin;
         type Error = Error;
 
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<S::Group, Self>
         where
-            C: Currency + MemberOf<Self::VisitedG>,
+            C: Currency + MemberOf<Self::VisitorG>,
         {
             Ok(to_cosmwasm_on_network_impl::<C, S>(coin))
         }
@@ -107,21 +118,22 @@ where
     }
 }
 
-struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
+struct CoinTransformerAny<'a, VisitedG, V>(&'a CosmWasmCoin, PhantomData<VisitedG>, V);
 
-impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
+impl<'a, VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'a, VisitedG, V>
 where
-    V: WithCoin,
+    VisitedG: Group + MemberOf<V::VisitorG>,
+    V: WithCoin<VisitedG>,
 {
-    type VisitedG = V::VisitedG;
+    type VisitorG = V::VisitorG;
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
     {
-        self.1.on::<C>(from_cosmwasm_internal(self.0))
+        self.2.on::<C>(from_cosmwasm_internal(self.0))
     }
 }
 

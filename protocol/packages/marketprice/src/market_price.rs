@@ -167,7 +167,7 @@ where
         }
     }
 }
-impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor
+impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
     for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a SymbolSlice>,
@@ -176,13 +176,13 @@ where
     QuoteQuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
     type Output = PriceDTO<G, QuoteG>;
     type Error = PriceFeedsError;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
         let next_price =
             self.feeds

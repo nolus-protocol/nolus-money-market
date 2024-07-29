@@ -38,14 +38,20 @@ where
         OutC: Currency + MemberOf<OutG>,
         OutG: Group,
     {
+        type G = OutG;
+
         type Output = Coin<OutC>;
         type Error = Error;
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
+            OracleImpl: Oracle<OutG, QuoteC = QuoteC, QuoteG = QuoteG>,
         {
-            oracle_platform::convert::from_quote::<_, _, _, _, OutG>(&oracle, self.in_amount)
+            //oracle_platform::convert::from_quote::<_, _, _, OutC, _>(
+            oracle_platform::convert::from_quote::<QuoteC, QuoteG, OracleImpl, OutC, OutG>(
+                &oracle,
+                self.in_amount,
+            )
         }
     }
 
@@ -88,12 +94,14 @@ where
         QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
+        type G = InG;
+
         type Output = Coin<QuoteC>;
         type Error = Error;
 
         fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
         where
-            OracleImpl: Oracle<QuoteC = QuoteC, QuoteG = QuoteG>,
+            OracleImpl: Oracle<Self::G, QuoteC = QuoteC, QuoteG = QuoteG>,
         {
             oracle_platform::convert::to_quote::<_, InG, _, _, _>(&oracle, self.in_amount)
         }

@@ -1,11 +1,11 @@
-use currency::MemberOf;
+use currency::{Currency, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
-    api::{position::PartialClose, LeaseAssetCurrencies},
+    api::{position::PartialClose, LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractError,
-    finance::{LpnCurrencies, LpnCurrency},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::{with_lease::WithLease, Lease},
 };
 
@@ -29,9 +29,10 @@ impl<'spec> WithLease for Cmd<'spec> {
         lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: currency::Currency + MemberOf<LeaseAssetCurrencies>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
     {
         (&self.spec.amount)
             .try_into()

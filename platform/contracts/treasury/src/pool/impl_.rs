@@ -1,7 +1,7 @@
 use currency::NativePlatform;
 use finance::{duration::Duration, interest, percent::Percent};
 use lpp_platform::{CoinStable, Lpp as LppTrait, Stable, StableCurrencyGroup};
-use oracle_platform::{convert, Oracle};
+use oracle_platform::{convert, Oracle, OracleRef};
 use platform::message::Response as MessageResponse;
 
 use crate::ContractError;
@@ -17,7 +17,8 @@ pub struct Pool<Lpp, StableOracle> {
 impl<Lpp, StableOracle> Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<QuoteC = Stable, QuoteG = StableCurrencyGroup>,
+    StableOracle: Oracle<NativePlatform, QuoteC = Stable, QuoteG = StableCurrencyGroup>
+        + AsRef<OracleRef<StableOracle::QuoteC, StableOracle::QuoteG>>,
 {
     pub fn new(lpp: Lpp, oracle: StableOracle) -> Result<Self, ContractError> {
         lpp.balance(oracle.as_ref().addr().clone())
@@ -33,7 +34,7 @@ where
 impl<Lpp, StableOracle> PoolTrait for Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<QuoteC = Stable, QuoteG = StableCurrencyGroup>,
+    StableOracle: Oracle<NativePlatform, QuoteC = Stable, QuoteG = StableCurrencyGroup>,
 {
     fn balance(&self) -> CoinStable {
         self.balance
@@ -58,7 +59,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::{NativePlatform, NlsPlatform};
+    use currency::NlsPlatform;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
     use lpp_platform::{test::DummyLpp, CoinStable};
     use oracle_platform::{test::DummyOracle, Oracle};
@@ -102,10 +103,7 @@ mod test {
         let lpp0_tvl: CoinStable = 15_000.into();
 
         let oracle = DummyOracle::with_price(4);
-        let exp_reward = price::total(
-            bar0_apr.of(lpp0_tvl),
-            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
-        );
+        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
         let lpp = DummyLpp::failing_reward(lpp0_tvl, exp_reward);
 
         let pool = PoolImpl::new(lpp, oracle).unwrap();
@@ -122,10 +120,7 @@ mod test {
         let bar0_apr = Percent::from_percent(20);
         let lpp0_tvl: CoinStable = 23_000.into();
         let oracle = DummyOracle::with_price(2);
-        let exp_reward = price::total(
-            bar0_apr.of(lpp0_tvl),
-            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
-        );
+        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
 
         let pool = PoolImpl::new(DummyLpp::with_balance(lpp0_tvl, exp_reward), oracle).unwrap();
         assert_eq!(lpp0_tvl, pool.balance());

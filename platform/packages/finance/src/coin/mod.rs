@@ -218,16 +218,19 @@ impl<C> From<Coin<C>> for Amount {
     }
 }
 
-pub type WithCoinResult<V> = Result<<V as WithCoin>::Output, <V as WithCoin>::Error>;
+pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoin<G>>::Error>;
 
-pub trait WithCoin {
-    type VisitedG: Group;
+pub trait WithCoin<VisitedG>
+where
+    VisitedG: Group + MemberOf<Self::VisitorG>,
+{
+    type VisitorG: Group;
     type Output;
     type Error;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>;
+        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>;
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>

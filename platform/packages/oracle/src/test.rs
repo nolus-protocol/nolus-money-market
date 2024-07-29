@@ -1,5 +1,7 @@
 #![cfg(feature = "testing")]
 
+use std::marker::PhantomData;
+
 use currency::{Currency, Group, MemberOf};
 use finance::{
     coin::Amount,
@@ -13,17 +15,20 @@ use crate::{
     OracleRef,
 };
 
-pub struct DummyOracle<QuoteC, QuoteG>
+pub struct DummyOracle<G, QuoteC, QuoteG>
 where
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     price: Option<Amount>,
     oracle_ref: OracleRef<QuoteC, QuoteG>,
+    _group: PhantomData<G>,
 }
 
-impl<QuoteC, QuoteG> DummyOracle<QuoteC, QuoteG>
+impl<G, QuoteC, QuoteG> DummyOracle<G, QuoteC, QuoteG>
 where
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
@@ -31,6 +36,7 @@ where
         Self {
             price: Some(c_in_base),
             oracle_ref: Self::ref_(),
+            _group: PhantomData,
         }
     }
 
@@ -38,6 +44,7 @@ where
         Self {
             price: None,
             oracle_ref: Self::ref_(),
+            _group: PhantomData,
         }
     }
 
@@ -46,18 +53,19 @@ where
     }
 }
 
-impl<QuoteC, QuoteG> Oracle for DummyOracle<QuoteC, QuoteG>
+impl<CurrencyG, G, QuoteC, QuoteG> Oracle<CurrencyG> for DummyOracle<G, QuoteC, QuoteG>
 where
+    CurrencyG: Group + MemberOf<G>,
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type QuoteC = QuoteC;
     type QuoteG = QuoteG;
 
-    fn price_of<C, G>(&self) -> Result<Price<C, QuoteC>>
+    fn price_of<C>(&self) -> Result<Price<C, QuoteC>>
     where
-        C: Currency + MemberOf<G>,
-        G: Group,
+        C: Currency + MemberOf<CurrencyG>,
     {
         self.price
             .map(|price| price::total_of(1.into()).is(price.into()))
@@ -71,18 +79,20 @@ where
     }
 }
 
-impl<QuoteC, QuoteG> From<DummyOracle<QuoteC, QuoteG>> for OracleRef<QuoteC, QuoteG>
+impl<G, QuoteC, QuoteG> From<DummyOracle<G, QuoteC, QuoteG>> for OracleRef<QuoteC, QuoteG>
 where
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn from(value: DummyOracle<QuoteC, QuoteG>) -> Self {
+    fn from(value: DummyOracle<G, QuoteC, QuoteG>) -> Self {
         value.oracle_ref
     }
 }
 
-impl<QuoteC, QuoteG> AsRef<OracleRef<QuoteC, QuoteG>> for DummyOracle<QuoteC, QuoteG>
+impl<G, QuoteC, QuoteG> AsRef<OracleRef<QuoteC, QuoteG>> for DummyOracle<G, QuoteC, QuoteG>
 where
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {

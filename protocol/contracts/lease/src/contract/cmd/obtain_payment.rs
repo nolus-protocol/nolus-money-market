@@ -34,7 +34,7 @@ impl WithLease for ObtainPayment {
     where
         Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         bank::may_received(&self.cw_amount, RepaymentHandler::<_, _, _> { lease })
             .ok_or_else(ContractError::NoPaymentError)?
@@ -45,19 +45,19 @@ struct RepaymentHandler<Asset, LppLoan, Oracle> {
     lease: Lease<Asset, LppLoan, Oracle>,
 }
 
-impl<Asset, LppLoan, Oracle> WithCoin for RepaymentHandler<Asset, LppLoan, Oracle>
+impl<Asset, LppLoan, Oracle> WithCoin<LeasePaymentCurrencies> for RepaymentHandler<Asset, LppLoan, Oracle>
 where
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
-    type VisitedG = LeasePaymentCurrencies;
+    type VisitorG = LeasePaymentCurrencies;
 
     type Output = PaymentCoin;
 
     type Error = ContractError;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
         C: Currency + MemberOf<LeasePaymentCurrencies>,
     {

@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol, PaymentOnlyGroup};
@@ -13,12 +13,13 @@ define_symbol! {
 }
 define_currency!(UsdcAxelar, USDC_AXELAR, PaymentOnlyGroup, 6);
 
-pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher,
-    V: AnyVisitor,
-    PaymentOnlyGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+    M: Matcher<Group = PaymentOnlyGroup LeaseGroup>,
+    V: AnyVisitor<TopG>,
+    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
+    TopG: Group + MemberOf<V::VisitorG>,
 {
-    use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, UsdcAxelar, _>(matcher, visitor)
+    use currency::maybe_visit_member as maybe_visit;
+    maybe_visit::<_, UsdcAxelar, TopG, _>(matcher, visitor)
 }

@@ -7,21 +7,33 @@ use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 pub trait Group: Copy + Clone + Debug + PartialEq + MemberOf<Self> {
     const DESCR: &'static str;
 
-    // Visit this group directly by a visitor
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    // [1] Visit this group directly by a visitor
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher<Group = Self>,
-        V: AnyVisitor<VisitedG = Self>;
+        V: AnyVisitor<Self, VisitorG = Self>;
 
-    // Visit this group since it is a member, or a sub-group, of another that is being visited
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    // [2] Visit this group with a super-group visitor
+    fn maybe_visit_super_visitor<M, V, TopG>(
+        matcher: &M,
+        visitor: V,
+    ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher,
-        V: AnyVisitor,
-        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>;
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<Self, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group;
+
+    // [3] Visit this group since it is a member, or a sub-group, of another that is being visited
+    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    where
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<TopG, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group;
 }
 
-pub type MaybeAnyVisitResult<V> = Result<AnyVisitorResult<V>, V>;
+pub type MaybeAnyVisitResult<VisitedG, V> = Result<AnyVisitorResult<VisitedG, V>, V>;
 
 pub trait MemberOf<G>
 where

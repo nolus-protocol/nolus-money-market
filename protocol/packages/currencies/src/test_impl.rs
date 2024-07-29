@@ -8,8 +8,8 @@ where
     C: Currency + MemberOf<G>,
     G: Group,
 {
-    let v = Expect::<C, G>::default();
-    assert_eq!(Tickers::maybe_visit_any(C::TICKER, v), Ok(Ok(true)));
+    let v = Expect::<C>::default();
+    assert_eq!(Tickers::maybe_visit_member_any(C::TICKER, v), Ok(Ok(true)));
 }
 
 #[track_caller]
@@ -18,8 +18,11 @@ where
     C: Currency + MemberOf<G>,
     G: Group,
 {
-    let v = Expect::<C, G>::default();
-    assert_eq!(Tickers::maybe_visit_any(unknown_ticker, v.clone()), Err(v));
+    let v = Expect::<C>::default();
+    assert_eq!(
+        Tickers::maybe_visit_member_any(unknown_ticker, v.clone()),
+        Err(v)
+    );
 }
 
 #[track_caller]
@@ -28,9 +31,9 @@ where
     C: Currency + MemberOf<G>,
     G: Group,
 {
-    let v = Expect::<C, G>::default();
+    let v = Expect::<C>::default();
     assert_eq!(
-        BankSymbols::maybe_visit_any(C::BANK_SYMBOL, v),
+        BankSymbols::maybe_visit_member_any(C::BANK_SYMBOL, v),
         Ok(Ok(true))
     );
 }
@@ -41,9 +44,9 @@ where
     C: Currency + MemberOf<G>,
     G: Group,
 {
-    let v = Expect::<C, G>::default();
+    let v = Expect::<C>::default();
     assert_eq!(
-        BankSymbols::maybe_visit_any(unknown_ticker, v.clone()),
+        BankSymbols::maybe_visit_member_any(unknown_ticker, v.clone()),
         Err(v)
     );
 }

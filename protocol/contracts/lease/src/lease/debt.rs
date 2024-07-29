@@ -1,15 +1,15 @@
 use currency::{Currency, MemberOf};
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle_platform::{Oracle as OracleTrait, OracleRef};
+use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
-    finance::{LpnCurrencies, LpnCurrency, Price},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef, Price},
     position::{Debt, DueTrait, Liquidation},
 };
 
@@ -17,15 +17,15 @@ use super::Lease;
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
+    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     pub(crate) fn check_debt(
         &self,
         now: &Timestamp,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef<LpnCurrency, LpnCurrencies>,
+        price_alarms: &OracleRef,
     ) -> ContractResult<DebtStatus<Asset>> {
         let due = self.loan.state(now);
 
@@ -50,9 +50,7 @@ where
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {
-        self.oracle
-            .price_of::<Asset, LeaseAssetCurrencies>()
-            .map_err(Into::into)
+        self.oracle.price_of::<Asset>().map_err(Into::into)
     }
 }
 
