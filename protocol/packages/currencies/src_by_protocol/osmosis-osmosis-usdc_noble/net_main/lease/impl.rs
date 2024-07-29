@@ -285,11 +285,12 @@ define_symbol! {
 }
 define_currency!(Saga, SAGA, LeaseGroup, 6);
 
-pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher,
-    V: AnyVisitor,
-    LeaseGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+    M: Matcher<Group = LeaseGroup>,
+    V: AnyVisitor<TopG>,
+    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
+    TopG: Group + MemberOf<V::VisitorG>,
 {
     use currency::maybe_visit_any as maybe_visit;
     maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
