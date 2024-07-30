@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -22,8 +22,8 @@ pub trait BankAccountView {
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group + MemberOf<Cmd::VisitorG>,
-        Cmd: WithCoin<G> + Clone,
+        G: Group,
+        Cmd: WithCoin<G, VisitorG = G> + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -104,8 +104,8 @@ impl<'a> BankAccountView for BankView<'a> {
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group + MemberOf<Cmd::VisitorG>,
-        Cmd: WithCoin<G> + Clone,
+        G: Group,
+        Cmd: WithCoin<G, VisitorG = G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -114,7 +114,7 @@ impl<'a> BankAccountView for BankView<'a> {
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
-                    .filter_map(|cw_coin| maybe_from_cosmwasm_any(cw_coin, cmd.clone()))
+                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone()))
                     .reduce_results(Aggregate::aggregate)
             })
             .map_err(Into::into)
@@ -170,8 +170,8 @@ where
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
-        G: Group + MemberOf<Cmd::VisitorG>,
-        Cmd: WithCoin<G> + Clone,
+        G: Group,
+        Cmd: WithCoin<G, VisitorG = G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)

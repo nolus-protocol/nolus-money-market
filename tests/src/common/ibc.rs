@@ -78,9 +78,9 @@ fn do_transfer_no_response(
     cw_coin: &CwCoin,
 ) {
     let new_symbol: SymbolStatic = if on_remote_chain {
-        DexSymbols::maybe_visit_member_any(&cw_coin.denom, BankSymbols::<PaymentGroup>::new()).ok()
+        DexSymbols::maybe_visit_any(&cw_coin.denom, BankSymbols::<PaymentGroup>::new()).ok()
     } else {
-        BankSymbols::maybe_visit_member_any(&cw_coin.denom, DexSymbols::<PaymentGroup>::new()).ok()
+        BankSymbols::maybe_visit_any(&cw_coin.denom, DexSymbols::<PaymentGroup>::new()).ok()
     }
     .unwrap()
     .unwrap();

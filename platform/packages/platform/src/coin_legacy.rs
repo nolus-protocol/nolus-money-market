@@ -36,10 +36,14 @@ pub(crate) fn maybe_from_cosmwasm_any<VisitedG, V>(
     v: V,
 ) -> Option<WithCoinResult<VisitedG, V>>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
-    V: WithCoin<VisitedG>,
+    VisitedG: Group,
+    V: WithCoin<VisitedG, VisitorG = VisitedG>,
 {
-    BankSymbols::maybe_visit_member_any(&coin.denom, CoinTransformerAny(&coin, PhantomData, v)).ok()
+    BankSymbols::maybe_visit_any(
+        &coin.denom,
+        CoinTransformerAny(&coin, PhantomData::<VisitedG>, v),
+    )
+    .ok()
 }
 
 #[cfg(any(test, feature = "testing"))]

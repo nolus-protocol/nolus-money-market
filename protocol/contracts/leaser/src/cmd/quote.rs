@@ -130,7 +130,7 @@ where
     {
         let downpayment = self.downpayment.ticker().clone();
 
-        Tickers::maybe_visit_member_any(
+        Tickers::maybe_visit_any(
             &downpayment,
             QuoteStage3 {
                 downpayment: self.downpayment,
