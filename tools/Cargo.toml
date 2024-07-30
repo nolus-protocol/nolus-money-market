@@ -4,6 +4,11 @@ exclude = ["target/**"]
 
 resolver = "2"
 
+[workspace.package]
+edition = "2021"
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
+license = "Apache-2.0"
+
 [workspace.dependencies]
 anyhow = "1"
 cargo_metadata = "0.18.1"
