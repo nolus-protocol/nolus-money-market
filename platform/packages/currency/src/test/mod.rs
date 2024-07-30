@@ -10,19 +10,24 @@ pub use self::group::*;
 mod group;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expect<C>(PhantomData<C>);
+pub struct Expect<C, VisitedG, VisitorG>(
+    PhantomData<C>,
+    PhantomData<VisitedG>,
+    PhantomData<VisitorG>,
+);
 
-impl<C> Default for Expect<C> {
+impl<C, VisitedG, VisitorG> Default for Expect<C, VisitedG, VisitorG> {
     fn default() -> Self {
-        Self(PhantomData)
+        Self(PhantomData, PhantomData, PhantomData)
     }
 }
-impl<C, G> AnyVisitor<G> for Expect<C>
+impl<C, VisitedG, VisitorG> AnyVisitor<VisitedG> for Expect<C, VisitedG, VisitorG>
 where
-    C: Currency + MemberOf<G>,
-    G: Group,
+    C: Currency + MemberOf<VisitedG>,
+    VisitedG: Group + MemberOf<VisitorG>,
+    VisitorG: Group,
 {
-    type VisitorG = G;
+    type VisitorG = VisitorG;
     type Output = bool;
     type Error = Error;
 
@@ -34,7 +39,7 @@ where
         Ok(crate::equal::<C, Cin>())
     }
 }
-impl<C> SingleVisitor<C> for Expect<C> {
+impl<C, VisitedG, VisitorG> SingleVisitor<C> for Expect<C, VisitedG, VisitorG> {
     type Output = bool;
     type Error = Error;
 
