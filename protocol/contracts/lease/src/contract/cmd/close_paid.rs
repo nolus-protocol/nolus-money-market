@@ -5,6 +5,7 @@ use crate::{
     api::LeaseAssetCurrencies,
     error::ContractError,
     lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid},
+    position::Position,
 };
 
 pub struct Close<Bank> {
@@ -25,11 +26,15 @@ where
 
     type Error = ContractError;
 
-    fn exec<Asset, Lpn>(self, dto: LeaseDTO) -> Result<Self::Output, Self::Error>
+    fn exec<Asset, Lpn>(
+        self,
+        dto: LeaseDTO,
+        position: Position<Asset>,
+    ) -> Result<Self::Output, Self::Error>
     where
         Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Lpn: Currency,
     {
-        LeasePaid::<Asset, Lpn>::from_dto(dto).close(self.lease_account)
+        LeasePaid::<Asset, Lpn>::from_dto(dto, position).close(self.lease_account)
     }
 }

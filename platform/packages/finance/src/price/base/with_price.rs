@@ -45,7 +45,7 @@ where
     cmd: Cmd,
 }
 
-impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
+impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor<G> for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
@@ -53,13 +53,13 @@ where
     Cmd: WithPrice<QuoteC, PriceG = G>,
     Error: Into<Cmd::Error>,
 {
-    type VisitedG = G;
+    type VisitorG = G;
     type Output = Cmd::Output;
     type Error = CmdError<Cmd::Error, Error>;
 
-    fn on<C>(self) -> currency::AnyVisitorResult<Self>
+    fn on<C>(self) -> currency::AnyVisitorResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
         self.price
             .try_into()

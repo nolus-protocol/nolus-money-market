@@ -4,6 +4,7 @@ use access_control::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
+use currency::NativePlatform;
 use finance::{duration::Duration, percent::Percent};
 use lpp_platform::StableCurrencyGroup;
 use platform::{batch::Batch, message::Response as MessageResponse, response};
@@ -112,10 +113,11 @@ fn try_build_reward<'q>(
             .map(|protocol| {
                 PoolImpl::new(
                     lpp_platform::new_stub(protocol.contracts.lpp, querier, env),
-                    oracle_platform::new_unchecked_stable_quote_stub::<_, StableCurrencyGroup>(
-                        protocol.contracts.oracle,
-                        querier,
-                    ),
+                    oracle_platform::new_unchecked_stable_quote_stub::<
+                        NativePlatform,
+                        _,
+                        StableCurrencyGroup,
+                    >(protocol.contracts.oracle, querier),
                 )
             })
             .collect();

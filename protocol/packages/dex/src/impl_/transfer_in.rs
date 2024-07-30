@@ -26,16 +26,16 @@ where
         querier: QuerierWrapper<'a>,
         currency_g: PhantomData<G>,
     }
-    impl<'a, G> WithCoin for CheckBalance<'a, G>
+    impl<'a, G> WithCoin<G> for CheckBalance<'a, G>
     where
         G: Group,
     {
-        type VisitedG = G;
+        type VisitorG = G;
 
         type Output = bool;
         type Error = Error;
 
-        fn on<C>(self, expected_payment: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, expected_payment: Coin<C>) -> WithCoinResult<G, Self>
         where
             C: Currency,
         {

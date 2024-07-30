@@ -22,19 +22,33 @@ pub struct LeaseGroup {}
 impl Group for LeaseGroup {
     const DESCR: &'static str = "lease";
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher<Group = Self>,
-        V: AnyVisitor<VisitedG = Self>,
+        V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_super_visitor<M, V, TopG>(
+        matcher: &M,
+        visitor: V,
+    ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher,
-        V: AnyVisitor,
-        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<Self, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group,
+    {
+        impl_mod::maybe_visit::<_, _, Self>(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    where
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<TopG, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group,
     {
         impl_mod::maybe_visit(matcher, visitor)
     }

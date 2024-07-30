@@ -50,7 +50,7 @@ where
 
 struct AlarmsStub<'a, OracleBase, OracleBaseG>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     oracle_ref: &'a OracleRef<OracleBase, OracleBaseG>,
@@ -93,7 +93,7 @@ where
 
 impl<'a, OracleBase, OracleBaseG> From<AlarmsStub<'a, OracleBase, OracleBaseG>> for Batch
 where
-    OracleBase: Currency,
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
     fn from(stub: AlarmsStub<'a, OracleBase, OracleBaseG>) -> Self {

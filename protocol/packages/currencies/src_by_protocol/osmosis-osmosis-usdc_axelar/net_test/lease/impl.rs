@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars;
 
 use crate::{define_currency, define_symbol, LeaseGroup};
@@ -81,20 +81,21 @@ define_symbol! {
 }
 define_currency!(Mars, MARS, LeaseGroup, 6);
 
-pub(super) fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher,
-    V: AnyVisitor,
-    LeaseGroup: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+    M: Matcher<Group = LeaseGroup>,
+    V: AnyVisitor<TopG>,
+    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
+    TopG: Group + MemberOf<V::VisitorG>,
 {
-    use currency::maybe_visit_any as maybe_visit;
-    maybe_visit::<_, Atom, _>(matcher, visitor)
-        .or_else(|visitor| maybe_visit::<_, Osmo, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Weth, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Wbtc, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Akt, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Juno, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Mars, _>(matcher, visitor))
+    use currency::maybe_visit_member as maybe_visit;
+    maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, Osmo, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Weth, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Wbtc, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Akt, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Juno, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Mars, TopG, _>(matcher, visitor))
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
@@ -29,9 +29,10 @@ pub(crate) trait RepayFn {
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
         Profit: FixedAddressSender;
 }
 
@@ -112,9 +113,10 @@ where
         mut lease: LeaseDO<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
     {
         let amount = self.amount.try_into()?;
         let mut profit_sender = self.profit.clone().into_stub();

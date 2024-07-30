@@ -23,16 +23,16 @@ pub mod coin {
     where
         CExp: Currency;
 
-    impl<CExp> WithCoin for Expect<CExp>
+    impl<CExp> WithCoin<CExp::Group> for Expect<CExp>
     where
         CExp: Currency,
     {
-        type VisitedG = CExp::Group;
+        type VisitorG = CExp::Group;
         type Output = bool;
 
         type Error = Error;
 
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self::VisitorG, Self>
         where
             C: Currency,
         {

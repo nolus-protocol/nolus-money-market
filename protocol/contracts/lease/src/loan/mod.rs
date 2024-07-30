@@ -261,7 +261,7 @@ mod tests {
     mod test_repay {
         use serde::{Deserialize, Serialize};
 
-        use currency::{Currency, Group};
+        use currency::{Currency, Group, MemberOf};
         use finance::{
             coin::{Amount, Coin, WithCoin},
             duration::Duration,
@@ -303,10 +303,10 @@ mod tests {
                 Ok(Coin::<C>::new(self.balance))
             }
 
-            fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<Cmd>
+            fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
             where
-                G: Group,
-                Cmd: WithCoin,
+                G: Group + MemberOf<Cmd::VisitorG>,
+                Cmd: WithCoin<G>,
                 Cmd::Output: Aggregate,
             {
                 unimplemented!()

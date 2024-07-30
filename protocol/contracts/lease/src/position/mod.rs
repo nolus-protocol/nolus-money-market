@@ -1,15 +1,14 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, Group, MemberOf};
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeaseCoin},
     error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
 };
 
-pub use dto::PositionDTO;
+pub use dto::{PositionDTO, WithPosition, WithPositionResult};
 pub use interest::{Due as DueTrait, OverdueCollection};
 pub use spec::Spec;
 pub use status::{Cause, Debt, Liquidation};
@@ -27,24 +26,20 @@ pub struct Position<Asset> {
 
 impl<Asset> Position<Asset>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: Currency,
 {
-    fn new_internal(amount: Coin<Asset>, spec: Spec) -> Self {
+    pub fn new(amount: Coin<Asset>, spec: Spec) -> Self {
         let obj = Self { amount, spec };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
     }
 
-    pub fn try_from(amount: LeaseCoin, spec: Spec) -> ContractResult<Self> {
-        amount
-            .try_into()
-            .map_err(Into::into)
-            .map(|amount| Self::new_internal(amount, spec))
-    }
-
-    #[cfg(test)]
-    pub fn new(amount: Coin<Asset>, spec: Spec) -> Self {
-        Self::new_internal(amount, spec)
+    pub fn as_member_of<SuperG>(&self) -> &Self
+    where
+        SuperG: Group,
+        Asset::Group: Group + MemberOf<SuperG>,
+    {
+        self
     }
 
     pub(crate) fn amount(&self) -> Coin<Asset> {

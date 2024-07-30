@@ -1,17 +1,16 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, MemberOf};
-use finance::coin::Coin;
 use platform::{bank::BankAccount, batch::Batch};
 use sdk::cosmwasm_std::Addr;
 
-use crate::{api::LeaseAssetCurrencies, error::ContractResult};
+use crate::{api::LeaseAssetCurrencies, error::ContractResult, position::Position};
 
 use super::LeaseDTO;
 
 pub struct Lease<Asset, Lpn> {
     customer: Addr,
-    amount: Coin<Asset>,
+    position: Position<Asset>,
     lpn: PhantomData<Lpn>,
 }
 
@@ -19,13 +18,10 @@ impl<Asset, Lpn> Lease<Asset, Lpn>
 where
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
-    pub(crate) fn from_dto(dto: LeaseDTO) -> Self {
-        let amount = dto.position.amount().try_into().expect(
-            "The DTO -> Lease conversion should have resulted in Asset == dto.position.amount().symbol()",
-        );
+    pub(crate) fn from_dto(dto: LeaseDTO, position: Position<Asset>) -> Self {
         Self {
             customer: dto.customer,
-            amount,
+            position,
             lpn: PhantomData,
         }
     }
@@ -46,7 +42,7 @@ where
             lease_account.send(surplus, self.customer.clone());
         }
 
-        lease_account.send(self.amount, self.customer);
+        lease_account.send(self.position.amount(), self.customer);
 
         Ok(lease_account.into())
     }
@@ -57,9 +53,12 @@ mod tests {
     use std::marker::PhantomData;
 
     use currencies::{Lpn, PaymentC3};
-    use currency::{Currency, Group};
+    use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::{Coin, WithCoin},
+        duration::Duration,
+        liability::Liability,
+        percent::Percent,
         zero::Zero,
     };
     use platform::{
@@ -71,6 +70,8 @@ mod tests {
         result::Result as PlatformResult,
     };
     use sdk::cosmwasm_std::Addr;
+
+    use crate::position::{Position, Spec};
 
     use super::Lease;
 
@@ -112,23 +113,38 @@ mod tests {
             }
         }
 
-        fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<Cmd>
+        fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
         where
-            G: Group,
-            Cmd: WithCoin,
+            G: Group + MemberOf<Cmd::VisitorG>,
+            Cmd: WithCoin<G>,
             Cmd::Output: Aggregate,
         {
             unimplemented!()
         }
     }
 
-    pub fn create_lease<Asset, Lpn>(amount: Coin<Asset>) -> Lease<Asset, Lpn>
+    fn create_lease<Asset, Lpn>(amount: Coin<Asset>) -> Lease<Asset, Lpn>
     where
         Asset: Currency,
     {
+        let liability = Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(70),
+            Percent::from_percent(72),
+            Percent::from_percent(74),
+            Percent::from_percent(77),
+            Percent::from_percent(80),
+            Duration::from_days(3),
+        );
+        let spec = Spec::new(
+            liability,
+            Coin::<TestLpn>::new(15_000_000),
+            Coin::<TestLpn>::new(10_000),
+        );
+
         Lease {
             customer: Addr::unchecked(CUSTOMER),
-            amount,
+            position: Position::new(amount, spec),
             lpn: PhantomData,
         }
     }

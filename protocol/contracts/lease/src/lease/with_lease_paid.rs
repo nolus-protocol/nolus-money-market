@@ -1,8 +1,11 @@
-use std::marker::PhantomData;
-
 use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, Tickers};
 
-use crate::{api::LeaseAssetCurrencies, finance::LpnCurrencies};
+use crate::{
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    error::ContractError,
+    finance::LpnCurrencies,
+    position::{Position, WithPosition, WithPositionResult},
+};
 
 use super::LeaseDTO;
 
@@ -10,7 +13,11 @@ pub trait WithLeaseTypes {
     type Output;
     type Error;
 
-    fn exec<Asset, Lpn>(self, lease_dto: LeaseDTO) -> Result<Self::Output, Self::Error>
+    fn exec<Asset, Lpn>(
+        self,
+        lease_dto: LeaseDTO,
+        position: Position<Asset>,
+    ) -> Result<Self::Output, Self::Error>
     where
         Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Lpn: Currency;
@@ -19,12 +26,15 @@ pub trait WithLeaseTypes {
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseTypes,
+    finance::error::Error: Into<Cmd::Error>,
     currency::error::Error: Into<Cmd::Error>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
+    ContractError: Into<Cmd::Error>,
 {
-    Tickers::visit_any(
-        &lease_dto.position.amount().ticker().clone(),
-        FactoryStage1 { lease_dto, cmd },
-    )
+    lease_dto
+        .position
+        .clone()
+        .with_position(FactoryStage1 { lease_dto, cmd })
 }
 
 struct FactoryStage1<Cmd> {
@@ -32,19 +42,19 @@ struct FactoryStage1<Cmd> {
     cmd: Cmd,
 }
 
-impl<Cmd> AnyVisitor for FactoryStage1<Cmd>
+impl<Cmd> WithPosition for FactoryStage1<Cmd>
 where
     Cmd: WithLeaseTypes,
+    // Cmd::Error: From<lpp::error::ContractError>,
     currency::error::Error: Into<Cmd::Error>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
 {
-    type VisitedG = LeaseAssetCurrencies;
-
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn on<Asset>(self) -> AnyVisitorResult<Self>
+    fn on<Asset>(self, position: Position<Asset>) -> WithPositionResult<Self>
     where
-        Asset: Currency + MemberOf<Self::VisitedG>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
         Tickers::visit_any(
@@ -52,7 +62,7 @@ where
             FactoryStage2 {
                 lease_dto: self.lease_dto,
                 cmd: self.cmd,
-                asset: PhantomData::<Asset>,
+                position,
             },
         )
     }
@@ -60,23 +70,23 @@ where
 struct FactoryStage2<Cmd, Asset> {
     lease_dto: LeaseDTO,
     cmd: Cmd,
-    asset: PhantomData<Asset>,
+    position: Position<Asset>,
 }
 
-impl<Cmd, Asset> AnyVisitor for FactoryStage2<Cmd, Asset>
+impl<Cmd, Asset> AnyVisitor<LpnCurrencies> for FactoryStage2<Cmd, Asset>
 where
     Cmd: WithLeaseTypes,
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
-    type VisitedG = LpnCurrencies;
+    type VisitorG = LpnCurrencies;
 
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn on<Lpn>(self) -> AnyVisitorResult<Self>
+    fn on<Lpn>(self) -> AnyVisitorResult<LpnCurrencies, Self>
     where
         Lpn: Currency,
     {
-        self.cmd.exec::<Asset, Lpn>(self.lease_dto)
+        self.cmd.exec::<Asset, Lpn>(self.lease_dto, self.position)
     }
 }

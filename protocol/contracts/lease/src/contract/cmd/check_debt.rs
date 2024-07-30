@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeaseCoin},
+    api::{LeaseAssetCurrencies, LeaseCoin, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
@@ -23,9 +23,9 @@ pub(crate) fn check_debt<Asset, Lpp, Oracle>(
     price_alarms: &OracleRef,
 ) -> ContractResult<DebtStatusDTO>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
         .check_debt(when, time_alarms, price_alarms)
@@ -121,9 +121,9 @@ impl<'a> WithLease for Cmd<'a> {
         lease: LeaseDO<Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
     }

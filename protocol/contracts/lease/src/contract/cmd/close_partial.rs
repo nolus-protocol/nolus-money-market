@@ -5,9 +5,9 @@ use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeaseCoin},
+    api::{LeaseAssetCurrencies, LeaseCoin, LeasePaymentCurrencies},
     error::ContractResult,
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency, OracleRef},
     lease::Lease,
     loan::RepayReceipt,
 };
@@ -31,9 +31,10 @@ impl RepayFn for CloseFn {
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
+        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-        Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
         Profit: FixedAddressSender,
     {
         self.asset

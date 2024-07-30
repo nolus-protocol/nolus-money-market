@@ -19,21 +19,35 @@ pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher<Group = Self>,
-        V: AnyVisitor<VisitedG = Self>,
+        V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_super_visitor<M, V, TopG>(
+        matcher: &M,
+        visitor: V,
+    ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher,
-        V: AnyVisitor,
-        Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<Self, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group,
     {
-        currency::maybe_visit_any::<_, Nls, _>(matcher, visitor)
+        currency::maybe_visit_member::<_, Nls, Self, _>(matcher, visitor)
+    }
+
+    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    where
+        M: Matcher<Group = Self>,
+        V: AnyVisitor<TopG, VisitorG = TopG>,
+        Self: MemberOf<TopG>,
+        TopG: Group,
+    {
+        currency::maybe_visit_member::<_, Nls, TopG, _>(matcher, visitor)
     }
 }
 

@@ -116,7 +116,7 @@ where
     price: &'price BasePrice<PriceG, BaseC, BaseG>,
 }
 
-impl<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG> AnyVisitor
+impl<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG> AnyVisitor<PriceG>
     for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
@@ -124,14 +124,14 @@ where
     BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
-    type VisitedG = PriceG;
+    type VisitorG = PriceG;
 
     type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<PriceG, Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>,
+        C: Currency + MemberOf<Self::VisitorG>,
     {
         Price::<C, BaseC>::try_from(self.price)
             .map(|price: Price<C, BaseC>| {

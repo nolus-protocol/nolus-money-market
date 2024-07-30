@@ -16,47 +16,50 @@ mod impl_;
 // to Currency matching that is currently done when TryInto::<Coin<Stable>>. The PriceDTO deserialization check is
 //implemented with the 'match-any' ticker solution at StableCurrencyGroup
 #[cfg(feature = "unchecked-stable-quote")]
-pub fn new_unchecked_stable_quote_stub<'a, StableC, StableG>(
+pub fn new_unchecked_stable_quote_stub<'a, G, StableC, StableG>(
     oracle: Addr,
     querier: QuerierWrapper<'a>,
-) -> impl Oracle<QuoteC = StableC, QuoteG = StableG> + 'a
+) -> impl Oracle<G, QuoteC = StableC, QuoteG = StableG> + AsRef<OracleRef<StableC, StableG>> + 'a
 where
+    G: Group + 'a,
     StableC: Currency + MemberOf<StableG>,
     StableG: Group + 'a,
 {
     use self::impl_::QuoteCUncheckedConverter;
     use self::impl_::StablePriceRequest;
 
-    impl_::OracleStub::<StableC, StableG, StablePriceRequest, QuoteCUncheckedConverter>::new(
+    impl_::OracleStub::<G, StableC, StableG, StablePriceRequest, QuoteCUncheckedConverter>::new(
         OracleRef::unchecked(oracle),
         querier,
     )
 }
 
-pub trait Oracle
+pub trait Oracle<G>
 where
-    Self:
-        Into<OracleRef<Self::QuoteC, Self::QuoteG>> + AsRef<OracleRef<Self::QuoteC, Self::QuoteG>>,
+    G: Group,
 {
-    type QuoteC: MemberOf<Self::QuoteG>;
+    type QuoteC: Currency + MemberOf<Self::QuoteG>;
     type QuoteG: Group;
 
-    fn price_of<C, G>(&self) -> Result<Price<C, Self::QuoteC>>
+    fn price_of<C>(&self) -> Result<Price<C, Self::QuoteC>>
     where
-        C: Currency + MemberOf<G>,
-        G: Group;
+        C: Currency + MemberOf<G>;
 }
 
 pub trait WithOracle<OracleBase, OracleBaseG>
 where
+    OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
+    type G: Group;
+
     type Output;
     type Error;
 
-    fn exec<O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
+    fn exec<OracleImpl>(self, oracle: OracleImpl) -> StdResult<Self::Output, Self::Error>
     where
-        O: Oracle<QuoteC = OracleBase, QuoteG = OracleBaseG>;
+        OracleImpl: Oracle<Self::G, QuoteC = OracleBase, QuoteG = OracleBaseG>
+            + Into<OracleRef<OracleBase, OracleBaseG>>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -64,6 +67,7 @@ where
 #[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC, QuoteG>
 where
+    QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     addr: Addr,
@@ -82,16 +86,24 @@ where
         Self::try_from::<BasePriceRequest>(addr, querier)
     }
 
-    pub fn execute_as_oracle<V>(
+    pub fn execute_as_oracle<V, G>(
         self,
         cmd: V,
         querier: QuerierWrapper<'_>,
     ) -> StdResult<V::Output, V::Error>
     where
-        V: WithOracle<QuoteC, QuoteG>,
+        V: WithOracle<QuoteC, QuoteG, G = G>,
+        G: Group,
         Error: Into<V::Error>,
     {
-        cmd.exec(OracleStub::<_, QuoteG, BasePriceRequest, CheckedConverter>::new(self, querier))
+        cmd.exec(OracleStub::<
+            '_,
+            G,
+            QuoteC,
+            QuoteG,
+            BasePriceRequest,
+            CheckedConverter,
+        >::new(self, querier))
     }
 
     fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>

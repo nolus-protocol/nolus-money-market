@@ -10,6 +10,10 @@ pub trait Matcher {
     fn r#match<C>(&self) -> bool
     where
         C: Currency + MemberOf<Self::Group>;
+
+    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
+    where
+        SubG: Group + MemberOf<Self::Group>;
 }
 
 pub(crate) fn symbol_matcher<'a, S>(symbol: &'a SymbolSlice) -> impl Matcher<Group = S::Group> + 'a
@@ -34,6 +38,13 @@ where
     {
         self.0 == S::symbol::<CD>()
     }
+
+    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
+    where
+        SubG: Group + MemberOf<Self::Group>,
+    {
+        SymbolMatcher(self.0, PhantomData::<S::Symbol<SubG>>)
+    }
 }
 
 #[derive(Debug)]
@@ -51,10 +62,18 @@ where
     G: Group,
 {
     type Group = G;
+
     fn r#match<C>(&self) -> bool
     where
         C: 'static,
     {
         TypeId::of::<C>() == self.0
+    }
+
+    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
+    where
+        SubG: Group,
+    {
+        TypeMatcher(self.0, PhantomData)
     }
 }

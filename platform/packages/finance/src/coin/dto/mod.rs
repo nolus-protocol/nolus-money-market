@@ -7,10 +7,11 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, MemberOf, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
+    error::CmdError, never::Never, Currency, CurrencyVisit, Group, GroupVisit, MemberOf,
+    SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::schemars::{self, JsonSchema};
+use transformer::CoinTransformerAny;
 
 use crate::{
     coin::Amount,
@@ -19,6 +20,7 @@ use crate::{
 
 use super::{Coin, WithCoin};
 
+mod transformer;
 mod unchecked;
 
 /// A type designed to be used in the init, execute and query incoming messages
@@ -81,32 +83,20 @@ where
 
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
-        V: WithCoin<VisitedG = G>,
+        V: WithCoin<G, VisitorG = G>,
         Error: Into<V::Error>,
     {
-        struct CoinTransformerAny<'a, V>(&'a CoinDTO<V::VisitedG>, V)
-        where
-            V: WithCoin;
+        Tickers::<G>::visit_any(&self.ticker, CoinTransformerAny::new(self, cmd))
+            .map_err(CmdError::into_customer_err)
+    }
 
-        impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
-        where
-            V: WithCoin,
-        {
-            type VisitedG = V::VisitedG;
-            type Output = V::Output;
-            type Error = CmdError<V::Error, Error>;
-
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Currency + MemberOf<Self::VisitedG>,
-            {
-                self.1
-                    .on::<C>(self.0.amount().into())
-                    .map_err(Self::Error::from_customer_err)
-            }
-        }
-
-        Tickers::<G>::visit_any(&self.ticker, CoinTransformerAny(self, cmd))
+    pub fn with_super_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
+    where
+        V: WithCoin<G>,
+        G: MemberOf<V::VisitorG>,
+        Error: Into<V::Error>,
+    {
+        Tickers::<G>::visit_member_any(&self.ticker, CoinTransformerAny::new(self, cmd))
             .map_err(CmdError::into_customer_err)
     }
 
@@ -224,15 +214,15 @@ impl<G> Default for IntoDTO<G> {
     }
 }
 
-impl<G> WithCoin for IntoDTO<G>
+impl<G> WithCoin<G> for IntoDTO<G>
 where
     G: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
     type Output = CoinDTO<G>;
     type Error = Never;
 
-    fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<Self>
+    fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<G, Self>
     where
         C: Currency,
     {
@@ -278,19 +268,33 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
             M: Matcher<Group = Self>,
-            V: AnyVisitor<VisitedG = Self>,
+            V: AnyVisitor<Self, VisitorG = Self>,
         {
             Self::maybe_visit_member(matcher, visitor)
         }
 
-        fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<V>
+        fn maybe_visit_super_visitor<M, V, TopG>(
+            _matcher: &M,
+            _visitor: V,
+        ) -> MaybeAnyVisitResult<Self, V>
         where
-            M: Matcher,
-            V: AnyVisitor,
-            Self: MemberOf<V::VisitedG> + MemberOf<M::Group>,
+            M: Matcher<Group = Self>,
+            V: AnyVisitor<Self, VisitorG = TopG>,
+            Self: MemberOf<TopG>,
+            TopG: Group,
+        {
+            unreachable!("There is no parent group of this group")
+        }
+
+        fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+        where
+            M: Matcher<Group = Self>,
+            V: AnyVisitor<TopG, VisitorG = TopG>,
+            Self: MemberOf<TopG>,
+            TopG: Group,
         {
             assert!(matcher.r#match::<MyTestCurrency>());
             Ok(visitor.on::<MyTestCurrency>())

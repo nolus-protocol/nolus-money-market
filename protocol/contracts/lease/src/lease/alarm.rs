@@ -5,22 +5,22 @@ use oracle::{
     api::alarms::Alarm,
     stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
 };
-use oracle_platform::{Oracle as OracleTrait, OracleRef};
+use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency, OracleRef},
     lease::Lease,
 };
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     pub(super) fn reschedule(
@@ -30,7 +30,7 @@ where
         liquidation_zone: &Zone,
         total_due: LpnCoin,
         time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef<LpnCurrency, LpnCurrencies>,
+        price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
 
@@ -65,7 +65,10 @@ where
             .transpose()?;
 
         price_alarms
-            .add_alarm(Alarm::new(below, above_or_equal))
+            .add_alarm(Alarm::<LeaseAssetCurrencies, _, _>::new(
+                below,
+                above_or_equal,
+            ))
             .map_err(Into::into)
     }
 }

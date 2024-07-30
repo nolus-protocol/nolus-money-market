@@ -59,16 +59,16 @@ where
     _group: PhantomData<G>,
 }
 
-impl<G> AnyVisitor for ConstructDto<G>
+impl<G> AnyVisitor<G> for ConstructDto<G>
 where
     G: Group,
 {
-    type VisitedG = G;
+    type VisitorG = G;
 
     type Output = CoinDTO<G>;
     type Error = currency::error::Error;
 
-    fn on<C>(self) -> AnyVisitorResult<Self>
+    fn on<C>(self) -> AnyVisitorResult<G, Self>
     where
         C: Currency,
     {

@@ -7,9 +7,9 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::LeaseAssetCurrencies,
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency, ReserveRef},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::Loan,
     position::Position,
 };
@@ -54,9 +54,9 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     pub(super) fn new(
         addr: Addr,
@@ -77,8 +77,12 @@ where
         }
     }
 
-    pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
-        let position = dto.position.try_into().expect("The DTO -> Lease conversion should have resulted in Asset == dto.position.amount.symbol() and Lpn == dto.position.min_asset.symbol()");
+    pub(super) fn from_dto(
+        dto: LeaseDTO,
+        position: Position<Asset>,
+        lpp_loan: LppLoan,
+        oracle: Oracle,
+    ) -> Self {
         Self::new(
             dto.addr,
             dto.customer,
@@ -109,10 +113,11 @@ where
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
-    Oracle: OracleTrait<QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
+    Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+        + Into<OracleRef>,
 {
     pub(super) fn try_into_dto(
         self,
@@ -147,7 +152,9 @@ mod tests {
 
     use serde::{Deserialize, Serialize};
 
+    pub(super) use currencies::PaymentGroup as PriceG;
     use currencies::{Lpn, PaymentC7};
+
     use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
@@ -158,12 +165,12 @@ mod tests {
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
-    use oracle_platform::{error::Result as PriceOracleResult, Oracle, OracleRef};
+    use oracle_platform::{error::Result as PriceOracleResult, Oracle};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        finance::LpnCurrencies,
+        finance::{LpnCurrencies, OracleRef},
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };
@@ -182,8 +189,7 @@ mod tests {
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
     pub(super) type TestLpn = Lpn;
     pub(super) type TestCurrency = PaymentC7;
-    pub(super) type TestLease =
-        Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub<TestLpn, LpnCurrencies>>;
+    pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn> {
         LoanResponse {
@@ -234,19 +240,11 @@ mod tests {
         }
     }
 
-    pub struct OracleLocalStub<QuoteC, QuoteG>
-    where
-        QuoteC: Currency + MemberOf<QuoteG>,
-        QuoteG: Group,
-    {
-        ref_: OracleRef<QuoteC, QuoteG>,
+    pub struct OracleLocalStub {
+        ref_: OracleRef,
     }
 
-    impl<QuoteC, QuoteG> From<Addr> for OracleLocalStub<QuoteC, QuoteG>
-    where
-        QuoteC: Currency + MemberOf<QuoteG>,
-        QuoteG: Group,
-    {
+    impl From<Addr> for OracleLocalStub {
         fn from(oracle: Addr) -> Self {
             Self {
                 ref_: OracleRef::unchecked(oracle),
@@ -254,16 +252,15 @@ mod tests {
         }
     }
 
-    impl<QuoteC, QuoteG> Oracle for OracleLocalStub<QuoteC, QuoteG>
+    impl<OracleG> Oracle<OracleG> for OracleLocalStub
     where
-        Self: Into<OracleRef<QuoteC, QuoteG>>,
-        QuoteC: Currency + MemberOf<QuoteG>,
-        QuoteG: Group,
+        OracleG: Group + MemberOf<PriceG>,
+        Self: Into<OracleRef>,
     {
-        type QuoteC = QuoteC;
-        type QuoteG = QuoteG;
+        type QuoteC = TestLpn;
+        type QuoteG = LpnCurrencies;
 
-        fn price_of<C, G>(&self) -> PriceOracleResult<Price<C, QuoteC>>
+        fn price_of<C>(&self) -> PriceOracleResult<Price<C, TestLpn>>
         where
             C: Currency,
         {
@@ -271,22 +268,14 @@ mod tests {
         }
     }
 
-    impl<QuoteC, QuoteG> AsRef<OracleRef<QuoteC, QuoteG>> for OracleLocalStub<QuoteC, QuoteG>
-    where
-        QuoteC: Currency + MemberOf<QuoteG>,
-        QuoteG: Group,
-    {
-        fn as_ref(&self) -> &OracleRef<QuoteC, QuoteG> {
+    impl AsRef<OracleRef> for OracleLocalStub {
+        fn as_ref(&self) -> &OracleRef {
             &self.ref_
         }
     }
 
-    impl<QuoteC, QuoteG> From<OracleLocalStub<QuoteC, QuoteG>> for OracleRef<QuoteC, QuoteG>
-    where
-        QuoteC: Currency + MemberOf<QuoteG>,
-        QuoteG: Group,
-    {
-        fn from(stub: OracleLocalStub<QuoteC, QuoteG>) -> Self {
+    impl From<OracleLocalStub> for OracleRef {
+        fn from(stub: OracleLocalStub) -> Self {
             stub.ref_
         }
     }
@@ -311,7 +300,7 @@ mod tests {
         due_period: Duration,
     ) -> TestLease {
         let lease = Addr::unchecked(LEASE_ADDR);
-        let oracle: OracleLocalStub<TestLpn, LpnCurrencies> = Addr::unchecked(ORACLE_ADDR).into();
+        let oracle: OracleLocalStub = Addr::unchecked(ORACLE_ADDR).into();
 
         let loan = loan.into();
         let loan = Loan::new(loan, LEASE_START, MARGIN_INTEREST_RATE, due_period);
