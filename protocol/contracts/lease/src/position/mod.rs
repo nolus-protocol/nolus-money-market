@@ -1,4 +1,4 @@
-use currency::{Currency, Group, MemberOf};
+use currency::Currency;
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
@@ -32,14 +32,6 @@ where
         let obj = Self { amount, spec };
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
-    }
-
-    pub fn as_member_of<SuperG>(&self) -> &Self
-    where
-        SuperG: Group,
-        Asset::Group: Group + MemberOf<SuperG>,
-    {
-        self
     }
 
     pub(crate) fn amount(&self) -> Coin<Asset> {
