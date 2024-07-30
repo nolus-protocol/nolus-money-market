@@ -7,13 +7,13 @@ use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 pub trait Group: Copy + Clone + Debug + PartialEq + MemberOf<Self> {
     const DESCR: &'static str;
 
-    // [1] Visit this group directly by a visitor
+    // Visit this group directly by a visitor
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher<Group = Self>,
         V: AnyVisitor<Self, VisitorG = Self>;
 
-    // [2] Visit this group with a super-group visitor
+    // Visit this group with a super-group visitor
     fn maybe_visit_super_visitor<M, V, TopG>(
         matcher: &M,
         visitor: V,
@@ -24,7 +24,7 @@ pub trait Group: Copy + Clone + Debug + PartialEq + MemberOf<Self> {
         Self: MemberOf<TopG>,
         TopG: Group;
 
-    // [3] Visit this group since it is a member, or a sub-group, of another that is being visited
+    // Visit this group since it is a member, or a sub-group, of another that is being visited
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
         M: Matcher<Group = Self>,

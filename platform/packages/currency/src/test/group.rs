@@ -79,9 +79,7 @@ impl Group for SubGroup {
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, SubGroupTestC1, Self, _>(matcher, visitor).or_else(
-            |visitor| crate::maybe_visit_member::<_, SuperGroupTestC6, Self, _>(matcher, visitor),
-        )
+        maybe_visit::<_, Self, _>(matcher, visitor)
     }
 
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
@@ -91,13 +89,23 @@ impl Group for SubGroup {
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, SubGroupTestC1, TopG, _>(matcher, visitor).or_else(
-            |visitor| crate::maybe_visit_member::<_, SuperGroupTestC6, TopG, _>(matcher, visitor),
-        )
+        maybe_visit::<_, TopG, _>(matcher, visitor)
     }
 }
 impl MemberOf<Self> for SubGroup {}
 impl MemberOf<SuperGroup> for SubGroup {}
+
+fn maybe_visit<M, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+where
+    M: Matcher<Group = SubGroup>,
+    V: AnyVisitor<TopG>,
+    SubGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
+    TopG: Group + MemberOf<V::VisitorG>,
+{
+    crate::maybe_visit_member::<_, SubGroupTestC1, TopG, _>(matcher, visitor).or_else(|visitor| {
+        crate::maybe_visit_member::<_, SuperGroupTestC6, TopG, _>(matcher, visitor)
+    })
+}
 
 mod impl_ {
     use serde::{Deserialize, Serialize};
