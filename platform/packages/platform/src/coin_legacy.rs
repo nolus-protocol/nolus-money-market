@@ -21,10 +21,10 @@ pub(crate) fn from_cosmwasm_any<VisitedG, V>(
     v: V,
 ) -> StdResult<WithCoinResult<VisitedG, V>, V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
-    V: WithCoin<VisitedG>,
+    VisitedG: Group,
+    V: WithCoin<VisitedG, VisitorG = VisitedG>,
 {
-    BankSymbols::maybe_visit_member_any(
+    BankSymbols::maybe_visit_any(
         &coin.denom,
         CoinTransformerAny(coin, PhantomData::<VisitedG>, v),
     )

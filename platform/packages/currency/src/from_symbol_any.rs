@@ -43,10 +43,17 @@ pub trait GroupVisit: Symbol {
         V: AnyVisitor<Self::Group, VisitorG = Self::Group>,
         Error: Into<V::Error>,
     {
-        let matcher = matcher::symbol_matcher::<Self>(symbol);
-        Self::Group::maybe_visit(&matcher, visitor).unwrap_or_else(|_| {
+        Self::maybe_visit_any(symbol, visitor).unwrap_or_else(|_| {
             Err(Error::not_in_currency_group::<_, Self, Self::Group>(symbol).into())
         })
+    }
+
+    fn maybe_visit_any<V>(symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
+    where
+        V: AnyVisitor<Self::Group, VisitorG = Self::Group>,
+    {
+        let matcher = matcher::symbol_matcher::<Self>(symbol);
+        Self::Group::maybe_visit(&matcher, visitor)
     }
 
     fn visit_member_any<V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
@@ -192,13 +199,17 @@ mod test {
 
     #[test]
     fn visit_any() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
         assert_eq!(
             Ok(true),
-            Tickers::<SuperGroup>::visit_any(SuperGroupTestC1::TICKER, v_usdc)
+            Tickers::<SuperGroup>::visit_any(SuperGroupTestC1::TICKER, v_usdc.clone())
+        );
+        assert_eq!(
+            Ok(Ok(true)),
+            Tickers::<SuperGroup>::maybe_visit_any(SuperGroupTestC1::TICKER, v_usdc)
         );
 
-        let v_nls = Expect::<SuperGroupTestC2>::default();
+        let v_nls = Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::default();
         assert_eq!(
             Ok(true),
             Tickers::<<SuperGroupTestC2 as Currency>::Group>::visit_any(
@@ -218,11 +229,35 @@ mod test {
                 ExpectUnknownCurrency::<SuperGroup>::new()
             )
         );
+        let v = ExpectUnknownCurrency::<SuperGroup>::new();
+        assert_eq!(
+            Err(v.clone()),
+            Tickers::<SuperGroup>::maybe_visit_any(SubGroupTestC1::BANK_SYMBOL, v)
+        );
+    }
+
+    #[test]
+    fn visit_super_group() {
+        assert_eq!(
+            Ok(true),
+            Tickers::<SuperGroup>::visit_any(
+                SubGroupTestC1::TICKER,
+                Expect::<SubGroupTestC1, SuperGroup, SuperGroup>::default()
+            )
+        );
+
+        assert_eq!(
+            Ok(true),
+            Tickers::<SubGroup>::visit_member_any(
+                SubGroupTestC1::TICKER,
+                Expect::<SubGroupTestC1, SubGroup, SuperGroup>::default()
+            )
+        );
     }
 
     #[test]
     fn visit_any_not_in_group() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
         assert_eq!(
             Ok(false),
             Tickers::<SuperGroup>::visit_any(SubGroupTestC1::TICKER, v_usdc)

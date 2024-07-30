@@ -7,10 +7,11 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    error::CmdError, never::Never, AnyVisitor, AnyVisitorResult, Currency, CurrencyVisit, Group,
-    GroupVisit, MemberOf, SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
+    error::CmdError, never::Never, Currency, CurrencyVisit, Group, GroupVisit, MemberOf,
+    SingleVisitor, SymbolOwned, SymbolSlice, Tickers,
 };
 use sdk::schemars::{self, JsonSchema};
+use transformer::CoinTransformerAny;
 
 use crate::{
     coin::Amount,
@@ -19,6 +20,7 @@ use crate::{
 
 use super::{Coin, WithCoin};
 
+mod transformer;
 mod unchecked;
 
 /// A type designed to be used in the init, execute and query incoming messages
@@ -81,39 +83,21 @@ where
 
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
+        V: WithCoin<G, VisitorG = G>,
+        Error: Into<V::Error>,
+    {
+        Tickers::<G>::visit_any(&self.ticker, CoinTransformerAny::new(self, cmd))
+            .map_err(CmdError::into_customer_err)
+    }
+
+    pub fn with_super_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
+    where
         V: WithCoin<G>,
         G: MemberOf<V::VisitorG>,
         Error: Into<V::Error>,
     {
-        struct CoinTransformerAny<'a, G, V>(&'a CoinDTO<G>, PhantomData<G>, V)
-        where
-            G: Group + MemberOf<V::VisitorG>,
-            V: WithCoin<G>;
-
-        impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, G, V>
-        where
-            G: Group + MemberOf<V::VisitorG>,
-            V: WithCoin<G>,
-        {
-            type VisitorG = V::VisitorG;
-            type Output = V::Output;
-            type Error = CmdError<V::Error, Error>;
-
-            fn on<C>(self) -> AnyVisitorResult<G, Self>
-            where
-                C: Currency + MemberOf<G> + MemberOf<Self::VisitorG>,
-            {
-                self.2
-                    .on::<C>(self.0.amount().into())
-                    .map_err(Self::Error::from_customer_err)
-            }
-        }
-
-        Tickers::<G>::visit_member_any(
-            &self.ticker,
-            CoinTransformerAny(self, PhantomData::<G>, cmd),
-        )
-        .map_err(CmdError::into_customer_err)
+        Tickers::<G>::visit_member_any(&self.ticker, CoinTransformerAny::new(self, cmd))
+            .map_err(CmdError::into_customer_err)
     }
 
     fn new_raw(amount: Amount, ticker: SymbolOwned) -> CoinDTO<G> {

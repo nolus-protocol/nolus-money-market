@@ -64,8 +64,8 @@ pub fn may_received<VisitedG, V>(
     mut cmd: V,
 ) -> Option<WithCoinResult<VisitedG, V>>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
-    V: WithCoin<VisitedG>,
+    VisitedG: Group,
+    V: WithCoin<VisitedG, VisitorG = VisitedG>,
 {
     let mut may_res = None;
     for coin in cw_amount {

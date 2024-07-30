@@ -48,7 +48,7 @@ impl<C, VisitedG, VisitorG> SingleVisitor<C> for Expect<C, VisitedG, VisitorG> {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ExpectUnknownCurrency<G> {
     visited_group: PhantomData<G>,
 }

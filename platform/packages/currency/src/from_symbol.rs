@@ -43,14 +43,14 @@ mod test {
 
     #[test]
     fn visit_on_ticker() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
         Tickers::<SuperGroup>::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc.clone()).unwrap_err();
         assert_eq!(
             Tickers::<SuperGroup>::visit(SuperGroupTestC1::TICKER, v_usdc),
             Ok(true)
         );
 
-        let v_nls = Expect::<SuperGroupTestC2>::default();
+        let v_nls = Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::default();
         assert_eq!(
             Tickers::<SuperGroup>::visit(SuperGroupTestC2::TICKER, v_nls),
             Ok(true)
@@ -88,13 +88,13 @@ mod test {
 
     #[test]
     fn visit_on_bank_symbol() {
-        let v_usdc = Expect::<SuperGroupTestC1>::default();
+        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
         assert_eq!(
             BankSymbols::<SuperGroup>::visit(SuperGroupTestC1::BANK_SYMBOL, v_usdc),
             Ok(true)
         );
 
-        let v_nls = Expect::<SuperGroupTestC2>::default();
+        let v_nls = Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::default();
         assert_eq!(
             BankSymbols::<SuperGroup>::visit(SuperGroupTestC2::BANK_SYMBOL, v_nls),
             Ok(true)
