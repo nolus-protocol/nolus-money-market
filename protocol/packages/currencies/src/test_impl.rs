@@ -77,10 +77,7 @@ where
     ));
 
     assert!(matches!(
-        Symbols::visit_member_any(
-            unknown_symbol,
-            Expect::<C, C::Group, VisitorG>::default()
-        ),
+        Symbols::visit_member_any(unknown_symbol, Expect::<C, C::Group, VisitorG>::default()),
         Err(Error::NotInCurrencyGroup(_, _, _))
     ));
 
