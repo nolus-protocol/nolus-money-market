@@ -102,7 +102,7 @@ impl Ibc {
 
         symbol.push_str(Self::SYMBOL_PREFIX);
 
-        let digest: [u8; Self::SHA2_256_OUTPUT_SIZE] = Sha256::digest(&path).into();
+        let digest: [u8; Self::SHA2_256_OUTPUT_SIZE] = Sha256::digest(path).into();
 
         Self::map_into_hex_iter(digest).for_each(|ch| symbol.push(ch));
 

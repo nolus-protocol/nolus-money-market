@@ -300,7 +300,7 @@ impl Topology {
     fn traverse_and_extract_currency_path<'self_, 'currency>(
         &'self_ self,
         channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_to_dex_path: &[HostToDexPathChannel],
+        host_to_dex_path: &[HostToDexPathChannel<'_>],
         dex_symbol: &mut SymbolBuilder,
         traversed_networks: &mut Vec<&'currency str>,
         mut currency: &'currency Currency,
@@ -419,7 +419,7 @@ impl Topology {
 
     fn get_bank_symbol_traversal_start(
         &self,
-        host_to_dex_path: &[HostToDexPathChannel],
+        host_to_dex_path: &[HostToDexPathChannel<'_>],
         traversed_networks: &[&str],
         bank_symbol: &mut SymbolBuilder,
     ) -> usize {
