@@ -425,7 +425,7 @@ impl Topology {
         &self,
         host_to_dex_path: &[HostToDexPathChannel],
         traversed_networks: &[&str],
-        mut bank_symbol: &mut SymbolBuilder,
+        bank_symbol: &mut SymbolBuilder,
     ) -> usize {
         traversed_networks
             .iter()
