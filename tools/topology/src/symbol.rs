@@ -182,21 +182,69 @@ fn test_into_byte_halves() {
 
     let byte_halves = Ibc::map_into_byte_halves(INPUT_VALUES);
 
-    assert_eq!(byte_halves[0x01], ByteHalves { low: 0x1, high: 0x0 });
+    assert_eq!(
+        byte_halves[0x01],
+        ByteHalves {
+            low: 0x1,
+            high: 0x0
+        }
+    );
 
-    assert_eq!(byte_halves[0x0F], ByteHalves { low: 0xF, high: 0x0 });
+    assert_eq!(
+        byte_halves[0x0F],
+        ByteHalves {
+            low: 0xF,
+            high: 0x0
+        }
+    );
 
-    assert_eq!(byte_halves[0x10], ByteHalves { low: 0x0, high: 0x1 });
+    assert_eq!(
+        byte_halves[0x10],
+        ByteHalves {
+            low: 0x0,
+            high: 0x1
+        }
+    );
 
-    assert_eq!(byte_halves[0x11], ByteHalves { low: 0x1, high: 0x1 });
+    assert_eq!(
+        byte_halves[0x11],
+        ByteHalves {
+            low: 0x1,
+            high: 0x1
+        }
+    );
 
-    assert_eq!(byte_halves[0x1F], ByteHalves { low: 0xF, high: 0x1 });
+    assert_eq!(
+        byte_halves[0x1F],
+        ByteHalves {
+            low: 0xF,
+            high: 0x1
+        }
+    );
 
-    assert_eq!(byte_halves[0xF0], ByteHalves { low: 0x0, high: 0xF });
+    assert_eq!(
+        byte_halves[0xF0],
+        ByteHalves {
+            low: 0x0,
+            high: 0xF
+        }
+    );
 
-    assert_eq!(byte_halves[0xF1], ByteHalves { low: 0x1, high: 0xF });
+    assert_eq!(
+        byte_halves[0xF1],
+        ByteHalves {
+            low: 0x1,
+            high: 0xF
+        }
+    );
 
-    assert_eq!(byte_halves[0xFF], ByteHalves { low: 0xF, high: 0xF });
+    assert_eq!(
+        byte_halves[0xFF],
+        ByteHalves {
+            low: 0xF,
+            high: 0xF
+        }
+    );
 
     assert_eq!(byte_halves, OUTPUT_VALUES);
 }
