@@ -142,3 +142,83 @@ const _: () = {
         panic!("Output symbol length didn't match well-known value!")
     };
 };
+
+#[test]
+fn test_into_byte_halves() {
+    const VALUES_ARRAY_LENGTH: usize = 256;
+
+    const fn values() -> [u8; VALUES_ARRAY_LENGTH] {
+        let mut values = [0; VALUES_ARRAY_LENGTH];
+
+        let mut index = 0;
+
+        while index != values.len() {
+            values[index] = index as u8;
+
+            index += 1;
+        }
+
+        values
+    }
+
+    const INPUT_VALUES: [u8; VALUES_ARRAY_LENGTH] = values();
+
+    const OUTPUT_VALUES: [ByteHalves; VALUES_ARRAY_LENGTH] = {
+        let mut values = [ByteHalves { low: 0, high: 0 }; VALUES_ARRAY_LENGTH];
+
+        let mut index = 0;
+
+        while index != values.len() {
+            values[index] = ByteHalves {
+                low: INPUT_VALUES[index] % 16,
+                high: INPUT_VALUES[index] / 16,
+            };
+
+            index += 1;
+        }
+
+        values
+    };
+
+    let byte_halves = Ibc::map_into_byte_halves(INPUT_VALUES);
+
+    assert_eq!(byte_halves[0x01], ByteHalves { low: 0x1, high: 0x0 });
+
+    assert_eq!(byte_halves[0x0F], ByteHalves { low: 0xF, high: 0x0 });
+
+    assert_eq!(byte_halves[0x10], ByteHalves { low: 0x0, high: 0x1 });
+
+    assert_eq!(byte_halves[0x11], ByteHalves { low: 0x1, high: 0x1 });
+
+    assert_eq!(byte_halves[0x1F], ByteHalves { low: 0xF, high: 0x1 });
+
+    assert_eq!(byte_halves[0xF0], ByteHalves { low: 0x0, high: 0xF });
+
+    assert_eq!(byte_halves[0xF1], ByteHalves { low: 0x1, high: 0xF });
+
+    assert_eq!(byte_halves[0xFF], ByteHalves { low: 0xF, high: 0xF });
+
+    assert_eq!(byte_halves, OUTPUT_VALUES);
+}
+
+#[test]
+fn test_into_hex_iter() {
+    assert_eq!(
+        &*Ibc::map_into_hex_iter([
+            0x0, 0x1, 0xA, 0xB, 0x10, 0x11, 0x1A, 0x1B, 0xA0, 0xA1, 0xAA, 0xAB
+        ])
+        .collect::<Box<[char]>>(),
+        &b"00010A0B10111A1BA0A1AAAB".map(char::from),
+    );
+}
+
+#[test]
+fn test_digest_symbol() {
+    assert_eq!(
+        &*Ibc::digest_symbol(
+            "transfer/channel-10001/transfer/channel-1001/transfer/\
+                channel-101/transfer/channel-11/chostc"
+        ),
+        "ibc/127DE8C2179188419C34E69BFF735D4D2D443C31F39272DF5970DAFFEF5CCBC0",
+    );
+}
