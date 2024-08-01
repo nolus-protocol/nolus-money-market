@@ -170,10 +170,10 @@ impl Topology {
                 if next_network == dex_network {
                     walked_channels.push(channel);
 
-                    Some(mem::replace(walked_channels, vec![]).into_boxed_slice())
+                    Some(mem::take(walked_channels).into_boxed_slice())
                 } else {
                     let mut walked_channels = if is_last {
-                        mem::replace(walked_channels, vec![])
+                        mem::take(walked_channels)
                     } else {
                         walked_channels.clone()
                     };
@@ -187,15 +187,11 @@ impl Topology {
             })
     }
 
-    fn initial_host_to_dex_paths<'r, 't, 'u>(
-        channels: &'r BTreeMap<&str, BTreeMap<&'t str, &'u str>>,
+    fn initial_host_to_dex_paths<'channels, 'connected_network, 'endpoint>(
+        channels: &'channels BTreeMap<&str, BTreeMap<&'connected_network str, &'endpoint str>>,
         host_network: &str,
     ) -> Result<
-        VecDeque<(
-            &'r str,
-            &'r BTreeMap<&'t str, &'u str>,
-            Vec<HostToDexPathChannel<'r>>,
-        )>,
+        InitialHostToDexPaths<'channels, 'connected_network, 'endpoint>,
         error::CurrencyDefinitions,
     > {
         channels
@@ -440,6 +436,12 @@ impl Topology {
             })
     }
 }
+
+type InitialHostToDexPaths<'channels, 'connected_network, 'endpoint> = VecDeque<(
+    &'channels str,
+    &'channels BTreeMap<&'connected_network str, &'endpoint str>,
+    Vec<HostToDexPathChannel<'channels>>,
+)>;
 
 #[derive(Clone, Copy)]
 struct HostToDexPathChannel<'r> {
