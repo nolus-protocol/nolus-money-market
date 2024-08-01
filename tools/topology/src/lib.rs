@@ -283,12 +283,39 @@ impl Topology {
 
         let mut traversed_networks = vec![dex_network];
 
-        let mut currency = currency;
+        let native_currency = self.traverse_and_extract_currency_path(
+            channels,
+            host_to_dex_path,
+            &mut dex_symbol,
+            &mut traversed_networks,
+            currency,
+        )?;
 
-        let native_currency = 'resolve_currency: loop {
+        self.finalize_currency_resolution(
+            channels,
+            host_to_dex_path,
+            ticker,
+            dex_symbol,
+            &traversed_networks,
+            native_currency,
+        )
+    }
+
+    fn traverse_and_extract_currency_path<'self_, 'currency>(
+        &'self_ self,
+        channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
+        host_to_dex_path: &[HostToDexPathChannel],
+        dex_symbol: &mut SymbolBuilder,
+        traversed_networks: &mut Vec<&'currency str>,
+        mut currency: &'currency Currency,
+    ) -> Result<&'currency NativeCurrency, error::ResolveCurrency>
+    where
+        'self_: 'currency,
+    {
+        Ok(loop {
             match currency {
                 Currency::Native(native) => {
-                    break 'resolve_currency native;
+                    break native;
                 }
                 Currency::Ibc(ibc) if ibc.network == self.host_network.name => {
                     if traversed_networks.contains(&&*ibc.network) {
@@ -304,36 +331,27 @@ impl Topology {
 
                     dex_symbol.add_channel(host_to_dex_path[0].inverse_endpoint);
 
-                    break 'resolve_currency &self.host_network.currency.native;
+                    break &self.host_network.currency.native;
                 }
                 Currency::Ibc(ibc) => {
                     currency = self.resolve_non_host_ibc_currency(
                         channels,
-                        &mut dex_symbol,
-                        &mut traversed_networks,
+                        dex_symbol,
+                        traversed_networks,
                         ibc,
                     )?;
                 }
             }
-        };
-
-        self.finalize_currency_resolution(
-            channels,
-            host_to_dex_path,
-            ticker,
-            dex_symbol,
-            &traversed_networks,
-            native_currency,
-        )
+        })
     }
 
-    fn resolve_non_host_ibc_currency<'r, 't>(
-        &'r self,
+    fn resolve_non_host_ibc_currency<'self_, 'currency>(
+        &'self_ self,
         channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
         dex_symbol: &mut SymbolBuilder,
-        traversed_networks: &mut Vec<&'t str>,
-        ibc: &'t IbcCurrency,
-    ) -> Result<&'r Currency, error::ResolveCurrency> {
+        traversed_networks: &mut Vec<&'currency str>,
+        ibc: &'currency IbcCurrency,
+    ) -> Result<&'self_ Currency, error::ResolveCurrency> {
         if traversed_networks.contains(&&*ibc.network) {
             return Err(error::ResolveCurrency::CycleCreated);
         }
@@ -372,23 +390,17 @@ impl Topology {
     ) -> Result<CurrencyDefinition, error::ResolveCurrency> {
         let mut bank_symbol = SymbolBuilder::NEW;
 
-        let bank_symbol_traversal_start = traversed_networks
-            .iter()
-            .enumerate()
-            .find_map(|(index, &network)| (*network == *self.host_network.name).then_some(index))
-            .unwrap_or_else(|| {
-                host_to_dex_path
-                    .iter()
-                    .for_each(|&channel| bank_symbol.add_channel(channel.endpoint));
-
-                0
-            });
+        let bank_symbol_traversal_start = self.get_bank_symbol_traversal_start(
+            host_to_dex_path,
+            traversed_networks,
+            &mut bank_symbol,
+        );
 
         traversed_networks[bank_symbol_traversal_start..]
             .windows(2)
-            .try_for_each(|networks_window| {
-                let [from, to] = networks_window else {
-                    unreachable!()
+            .try_for_each(|networks| {
+                let [from, to] = networks else {
+                    unreachable!("Window slice should be exactly two elements.");
                 };
 
                 channels
@@ -406,6 +418,25 @@ impl Topology {
                     dex_symbol.add_symbol(&native_currency.symbol),
                     native_currency.decimal_digits,
                 )
+            })
+    }
+
+    fn get_bank_symbol_traversal_start(
+        &self,
+        host_to_dex_path: &[HostToDexPathChannel],
+        traversed_networks: &[&str],
+        mut bank_symbol: &mut SymbolBuilder,
+    ) -> usize {
+        traversed_networks
+            .iter()
+            .enumerate()
+            .find_map(|(index, &network)| (*network == *self.host_network.name).then_some(index))
+            .unwrap_or_else(|| {
+                host_to_dex_path
+                    .iter()
+                    .for_each(|&channel| bank_symbol.add_channel(channel.endpoint));
+
+                0
             })
     }
 }
