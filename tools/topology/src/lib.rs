@@ -292,7 +292,10 @@ impl Topology {
                 }
                 Currency::Ibc(ibc) if ibc.network == self.host_network.name => {
                     if traversed_networks.contains(&&*ibc.network) {
-                        unreachable!("Host network should not have been already traversed!");
+                        unreachable!(
+                            "Host network should not have been already \
+                                traversed!"
+                        );
                     }
 
                     assert_eq!(ibc.currency, self.host_network.currency.id);
