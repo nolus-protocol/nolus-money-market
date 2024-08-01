@@ -5,7 +5,7 @@ use serde::Deserialize;
 pub use self::currency_definition::CurrencyDefinition;
 use self::{
     inner_structure::{Channel, Currency, HostNetwork, IbcCurrency, NativeCurrency, Network},
-    symbol::Builder,
+    symbol::Builder as SymbolBuilder,
 };
 
 mod currency_definition;
@@ -196,7 +196,7 @@ impl Topology {
         ticker: &str,
         currency: &Currency,
     ) -> Result<CurrencyDefinition, error::ResolveCurrency> {
-        let mut dex_symbol = Builder::NEW;
+        let mut dex_symbol = SymbolBuilder::NEW;
 
         let mut traversed_networks = vec![dex_network];
 
@@ -244,7 +244,7 @@ impl Topology {
     fn resolve_non_host_ibc_currency<'r, 't>(
         &'r self,
         channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
-        dex_symbol: &mut Builder,
+        dex_symbol: &mut SymbolBuilder,
         traversed_networks: &mut Vec<&'t str>,
         ibc: &'t IbcCurrency,
     ) -> Result<&'r Currency, error::ResolveCurrency> {
@@ -280,11 +280,11 @@ impl Topology {
         channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
         host_to_dex_path: &[HostToDexPathChannel<'_>],
         ticker: &str,
-        dex_symbol: Builder,
+        dex_symbol: SymbolBuilder,
         traversed_networks: &[&str],
         native_currency: &NativeCurrency,
     ) -> Result<CurrencyDefinition, error::ResolveCurrency> {
-        let mut bank_symbol = Builder::NEW;
+        let mut bank_symbol = SymbolBuilder::NEW;
 
         let bank_symbol_traversal_start = traversed_networks
             .iter()
