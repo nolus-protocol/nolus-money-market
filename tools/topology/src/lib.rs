@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    mem,
+};
 
 use serde::Deserialize;
 
@@ -52,105 +55,185 @@ impl Topology {
     }
 
     fn host_to_dex_path<'r>(
-        channels: &BTreeMap<&str, BTreeMap<&str, &'r str>>,
+        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
         host_network: &str,
         dex_network: &str,
     ) -> Result<Box<[HostToDexPathChannel<'r>]>, error::CurrencyDefinitions> {
-        let mut endpoints_deque: VecDeque<_> = channels
-            .get(host_network)
-            .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)?
-            .iter()
-            .map(|(&network, &endpoint)| {
-                let Some((endpoints, inverse_endpoint)) =
-                    channels.get(&network).and_then(|endpoints| {
-                        endpoints
-                            .get(host_network)
-                            .map(|&inverse_endpoint| (endpoints, inverse_endpoint))
-                    })
-                else {
-                    unreachable!("Inverse channel endpoint has to be defined!")
+        Self::direct_host_to_dex_path(channels, host_network, dex_network).map_or_else(
+            || Self::indirect_host_to_dex_path(channels, host_network, dex_network),
+            |channel| Ok(Box::new([channel]) as Box<[_]>),
+        )
+    }
+
+    fn direct_host_to_dex_path<'r>(
+        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
+        host_network: &str,
+        dex_network: &str,
+    ) -> Option<HostToDexPathChannel<'r>> {
+        channels.get(host_network).and_then(|connected_networks| {
+            connected_networks.get(dex_network).map(|&endpoint| {
+                let Some(connected_networks) = channels.get(dex_network) else {
+                    Self::unreachable_inverse_should_be_filled_in();
                 };
 
-                (
-                    network,
-                    endpoints,
-                    vec![HostToDexPathChannel {
-                        endpoint,
-                        inverse_endpoint,
-                    }],
-                )
+                let Some(&inverse_endpoint) = connected_networks.get(host_network) else {
+                    Self::unreachable_inverse_should_be_filled_in();
+                };
+
+                HostToDexPathChannel {
+                    endpoint,
+                    inverse_endpoint,
+                }
             })
-            .collect();
+        })
+    }
+
+    fn indirect_host_to_dex_path<'r>(
+        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
+        host_network: &str,
+        dex_network: &str,
+    ) -> Result<Box<[HostToDexPathChannel<'r>]>, error::CurrencyDefinitions> {
+        let mut endpoints_deque = Self::initial_host_to_dex_paths(channels, host_network)?;
 
         let mut traversed_networks = BTreeSet::from([host_network]);
 
-        Ok('find_connection: loop {
-            let Some((network, endpoints, mut walked_endpoints)) = endpoints_deque.pop_front()
+        loop {
+            let Some((network, endpoints, mut walked_channels)) = endpoints_deque.pop_front()
             else {
-                return Err(error::CurrencyDefinitions::HostNotConnectedToDex);
+                break Err(error::CurrencyDefinitions::HostNotConnectedToDex);
             };
 
-            if network == dex_network {
-                break 'find_connection walked_endpoints;
+            if let Some(path) = Self::explore_path_breath_first(
+                channels,
+                dex_network,
+                &mut endpoints_deque,
+                &mut traversed_networks,
+                network,
+                endpoints,
+                &mut walked_channels,
+            ) {
+                break Ok(path);
             }
-
-            let mut endpoints = endpoints
-                .iter()
-                .filter(|&(network, _)| traversed_networks.insert(network));
-
-            let Some((&next_network, &endpoint)) = endpoints.next() else {
-                continue;
-            };
-
-            if next_network != dex_network {
-                for (&next_network, &endpoint) in endpoints {
-                    let Some(endpoints) = channels.get(next_network) else {
-                        unreachable!()
-                    };
-
-                    let Some(&inverse_endpoint) = endpoints.get(network) else {
-                        unreachable!()
-                    };
-
-                    let host_dex_path_channel = HostToDexPathChannel {
-                        endpoint,
-                        inverse_endpoint,
-                    };
-
-                    if next_network == dex_network {
-                        walked_endpoints.push(host_dex_path_channel);
-
-                        break 'find_connection walked_endpoints;
-                    }
-
-                    let mut walked_endpoints = walked_endpoints.clone();
-
-                    walked_endpoints.push(host_dex_path_channel);
-
-                    endpoints_deque.push_back((next_network, endpoints, walked_endpoints));
-                }
-            }
-
-            let Some(endpoints) = channels.get(next_network) else {
-                unreachable!()
-            };
-
-            let Some(&inverse_endpoint) = endpoints.get(network) else {
-                unreachable!()
-            };
-
-            walked_endpoints.push(HostToDexPathChannel {
-                endpoint,
-                inverse_endpoint,
-            });
-
-            if next_network == dex_network {
-                break 'find_connection walked_endpoints;
-            }
-
-            endpoints_deque.push_back((next_network, endpoints, walked_endpoints));
         }
-        .into_boxed_slice())
+    }
+
+    fn explore_path_breath_first<
+        'channels_map,
+        'source_network,
+        'connected_network,
+        'endpoint,
+        'network,
+    >(
+        channels: &'channels_map BTreeMap<
+            &'source_network str,
+            BTreeMap<&'connected_network str, &'endpoint str>,
+        >,
+        dex_network: &str,
+        endpoints_deque: &mut VecDeque<(
+            &'network str,
+            &'channels_map BTreeMap<&'connected_network str, &'endpoint str>,
+            Vec<HostToDexPathChannel<'channels_map>>,
+        )>,
+        traversed_networks: &mut BTreeSet<&'network str>,
+        network: &'network str,
+        endpoints: &BTreeMap<&'connected_network str, &'endpoint str>,
+        walked_channels: &mut Vec<HostToDexPathChannel<'endpoint>>,
+    ) -> Option<Box<[HostToDexPathChannel<'channels_map>]>>
+    where
+        'endpoint: 'channels_map,
+        'connected_network: 'network,
+    {
+        let mut endpoints = endpoints
+            .iter()
+            .map(|(&connected_network, &endpoint)| (connected_network, endpoint))
+            .filter(|&(network, _)| traversed_networks.insert(network));
+
+        let last = endpoints.next_back();
+
+        endpoints
+            .map(|tuple| (false, tuple))
+            .chain(last.map(|tuple| (true, tuple)))
+            .find_map(move |(is_last, (next_network, endpoint))| {
+                let Some(endpoints) = channels.get(next_network) else {
+                    Self::unreachable_inverse_should_be_filled_in();
+                };
+
+                let Some(&inverse_endpoint) = endpoints.get(network) else {
+                    Self::unreachable_inverse_should_be_filled_in();
+                };
+
+                let channel = HostToDexPathChannel {
+                    endpoint,
+                    inverse_endpoint,
+                };
+
+                if next_network == dex_network {
+                    walked_channels.push(channel);
+
+                    Some(mem::replace(walked_channels, vec![]).into_boxed_slice())
+                } else {
+                    let mut walked_channels = if is_last {
+                        mem::replace(walked_channels, vec![])
+                    } else {
+                        walked_channels.clone()
+                    };
+
+                    walked_channels.push(channel);
+
+                    endpoints_deque.push_back((next_network, endpoints, walked_channels));
+
+                    None
+                }
+            })
+    }
+
+    fn initial_host_to_dex_paths<'r, 't, 'u>(
+        channels: &'r BTreeMap<&str, BTreeMap<&'t str, &'u str>>,
+        host_network: &str,
+    ) -> Result<
+        VecDeque<(
+            &'r str,
+            &'r BTreeMap<&'t str, &'u str>,
+            Vec<HostToDexPathChannel<'r>>,
+        )>,
+        error::CurrencyDefinitions,
+    > {
+        channels
+            .get(host_network)
+            .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)
+            .map(|connected_networks| {
+                connected_networks
+                    .iter()
+                    .map(|(&network, &endpoint)| {
+                        let Some(endpoints) = channels.get(&network) else {
+                            Self::unreachable_inverse_should_be_filled_in();
+                        };
+
+                        let Some(&inverse_endpoint) = endpoints.get(host_network) else {
+                            Self::unreachable_inverse_should_be_filled_in();
+                        };
+
+                        (
+                            network,
+                            endpoints,
+                            vec![HostToDexPathChannel {
+                                endpoint,
+                                inverse_endpoint,
+                            }],
+                        )
+                    })
+                    .collect()
+            })
+    }
+
+    #[cold]
+    #[inline]
+    #[track_caller]
+    fn unreachable_inverse_should_be_filled_in() -> ! {
+        unreachable!(
+            "Inverse channel endpoint should be filled in during channels \
+                processing!"
+        );
     }
 
     fn process_channels(
