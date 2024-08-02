@@ -1,7 +1,7 @@
 use std::slice;
 
 use currencies::PaymentGroup;
-use currency::{BankSymbols, DexSymbols, GroupVisit, SymbolStatic};
+use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolSlice, SymbolStatic};
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin,
@@ -78,12 +78,10 @@ fn do_transfer_no_response(
     cw_coin: &CwCoin,
 ) {
     let new_symbol: SymbolStatic = if on_remote_chain {
-        DexSymbols::maybe_visit_any(&cw_coin.denom, BankSymbols::<PaymentGroup>::new()).ok()
+        dex_to_bank(&cw_coin.denom)
     } else {
-        BankSymbols::maybe_visit_any(&cw_coin.denom, DexSymbols::<PaymentGroup>::new()).ok()
-    }
-    .unwrap()
-    .unwrap();
+        bank_to_dex(&cw_coin.denom)
+    };
 
     app.send_tokens(
         sender.clone(),
@@ -150,4 +148,22 @@ pub(super) fn send_error(
 
 fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     send_response(app, addr, Binary(Vec::new()))
+}
+
+fn dex_to_bank(symbol: &SymbolSlice) -> SymbolStatic {
+    symbol_net_to_net::<DexSymbols<PaymentGroup>, BankSymbols<PaymentGroup>>(symbol)
+}
+
+fn bank_to_dex(symbol: &SymbolSlice) -> SymbolStatic {
+    symbol_net_to_net::<BankSymbols<PaymentGroup>, DexSymbols<PaymentGroup>>(symbol)
+}
+
+fn symbol_net_to_net<FromS, IntoS>(symbol: &SymbolSlice) -> SymbolStatic
+where
+    FromS: Symbol<Group = PaymentGroup>,
+    IntoS: Symbol<Group = PaymentGroup>,
+{
+    CurrencyDTO::<PaymentGroup>::from_symbol::<FromS>(symbol)
+        .unwrap()
+        .into_symbol::<IntoS>()
 }

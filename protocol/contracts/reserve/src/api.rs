@@ -9,8 +9,8 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-pub(crate) type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
-pub(crate) type LpnCoin = CoinDTO<LpnCurrencies>;
+pub type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
+pub type LpnCoin = CoinDTO<LpnCurrencies>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

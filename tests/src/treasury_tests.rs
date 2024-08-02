@@ -1,5 +1,5 @@
 use currencies::{Lpn, Nls};
-use currency::{Currency, NlsPlatform};
+use currency::{Definition, NlsPlatform};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

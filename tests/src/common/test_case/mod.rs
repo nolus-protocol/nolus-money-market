@@ -1,8 +1,8 @@
 use currencies::{
-    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Lpns,
-    PaymentGroup as PriceCurrencies,
+    LeaseGroup as AlarmCurrencies, LeaseGroup as AssetCurrencies, Lpn as BaseCurrency,
+    Lpns as BaseCurrencies, Lpns, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, SymbolSlice};
+use currency::{Currency, CurrencyDTO};
 use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::Code;
 use sdk::{
@@ -43,11 +43,11 @@ type OptionalOracleWrapper = Option<
     CwContractWrapper<
         oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
         oracle::ContractError,
-        oracle::api::InstantiateMsg,
+        oracle::api::InstantiateMsg<PriceCurrencies>,
         oracle::ContractError,
-        oracle::api::QueryMsg,
+        oracle::api::QueryMsg<PriceCurrencies>,
         oracle::ContractError,
-        oracle::api::SudoMsg,
+        oracle::api::SudoMsg<PriceCurrencies>,
         oracle::ContractError,
         oracle::ContractError,
     >,
@@ -122,7 +122,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlar
 impl<ProtocolsRegistry, Treasury>
     TestCase<ProtocolsRegistry, Treasury, Addr, Addr, Addr, Addr, Addr, Addr>
 {
-    pub fn open_lease<D>(&mut self, lease_currency: &SymbolSlice) -> Addr
+    pub fn open_lease<D>(&mut self, lease_currency: CurrencyDTO<AssetCurrencies>) -> Addr
     where
         D: Currency,
     {

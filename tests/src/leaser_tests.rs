@@ -1,8 +1,8 @@
 use currencies::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup, Lpn, Lpns, Nls,
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup as LeaseCurrencies, Lpn, Lpns,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{error::Error as CurrencyError, Currency, MemberOf, Tickers};
+use currency::{Currency, Definition, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
@@ -24,7 +24,7 @@ use crate::common::{
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
     },
-    CwCoin, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Lpn;
@@ -56,56 +56,6 @@ fn init_lpp_with_unknown_currency() {
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-    );
-}
-
-#[test]
-fn open_lease_not_in_lease_currency() {
-    let lease_currency = Nls::TICKER;
-
-    let user_addr = Addr::unchecked(USER);
-
-    let mut test_case = TestCaseBuilder::<Lpn>::new()
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-        )
-        .init_time_alarms()
-        .init_oracle(None)
-        .init_protocols_registry(Registry::NoProtocol)
-        .init_treasury()
-        .init_profit(24)
-        .init_reserve()
-        .init_leaser()
-        .into_generic();
-
-    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
-
-    let downpayment: CwCoin = cwcoin::<Lpn, _>(3);
-
-    let err = test_case
-        .app
-        .execute(
-            user_addr,
-            test_case.address_book.leaser().clone(),
-            &leaser::msg::ExecuteMsg::OpenLease {
-                currency: lease_currency.into(),
-                max_ltd: None,
-            },
-            &[downpayment],
-        )
-        .unwrap_err();
-
-    assert_eq!(
-        Some(&CurrencyError::not_in_currency_group::<
-            _,
-            Tickers::<LeaseGroup>,
-            LeaseGroup,
-        >(lease_currency)),
-        err.root_cause().downcast_ref::<CurrencyError>()
     );
 }
 
@@ -150,7 +100,7 @@ fn open_multiple_loans() {
                 user_addr.clone(),
                 test_case.address_book.leaser().clone(),
                 &leaser::msg::ExecuteMsg::OpenLease {
-                    currency: LeaseCurrency::TICKER.into(),
+                    currency: currency::dto::<LeaseCurrency, _>(),
                     max_ltd: None,
                 },
                 &[cwcoin::<Lpn, _>(75)],
@@ -177,7 +127,7 @@ fn open_multiple_loans() {
             other_user_addr.clone(),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::TICKER.into(),
+                currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd: None,
             },
             &[cwcoin::<Lpn, _>(78)],
@@ -512,7 +462,7 @@ fn open_loans_lpp_fails() {
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::TICKER.into(),
+                currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd: None,
             },
             &[downpayment],
@@ -535,8 +485,8 @@ fn open_loans_insufficient_asset() {
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
-    Lpn: Currency + MemberOf<Lpns> + MemberOf<PriceCurrencies>,
-    LeaseC: Currency + MemberOf<PriceCurrencies>,
+    Lpn: Currency + MemberOf<Lpns> + MemberOf<PriceCurrencies> + Definition,
+    LeaseC: Currency + MemberOf<LeaseCurrencies> + MemberOf<PriceCurrencies>,
     DownpaymentC: Currency + MemberOf<PriceCurrencies>,
 {
     let user_addr = Addr::unchecked(USER);
@@ -614,7 +564,7 @@ where
             user_addr,
             leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseC::TICKER.into(),
+                currency: currency::dto::<LeaseC, _>(),
                 max_ltd: None,
             },
             &[cwcoin(downpayment)],
@@ -680,7 +630,7 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::TICKER.into(),
+                currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd: None,
             },
             &[downpayment_amount],

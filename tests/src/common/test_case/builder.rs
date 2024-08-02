@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
@@ -293,7 +293,7 @@ where
 impl<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
     Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, (), Oracle, TimeAlarms>
 where
-    Lpn: Currency,
+    Lpn: Definition,
 {
     pub fn init_lpp(
         self,

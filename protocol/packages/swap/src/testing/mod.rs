@@ -4,7 +4,6 @@ use currency::{
     AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, DexSymbols, Group, GroupVisit as _,
     MemberOf,
 };
-use dex::swap::Error;
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
 use sdk::cosmos_sdk_proto::Any;
@@ -49,28 +48,11 @@ where
     .expect("Expected swap-in token to be part of selected group!")
 }
 
-pub(crate) fn from_dex_symbol<G>(ticker: &str) -> dex::swap::Result<CurrencyDTO<G>>
+pub fn from_dex_symbol<G>(symbol: &str) -> dex::swap::Result<CurrencyDTO<G>>
 where
     G: Group,
 {
-    struct TypeToCurrency<G>(PhantomData<G>);
-    impl<G> AnyVisitor<G> for TypeToCurrency<G>
-    where
-        G: Group,
-    {
-        type VisitorG = G;
-        type Output = CurrencyDTO<G>;
-
-        type Error = Error;
-
-        fn on<C>(self) -> AnyVisitorResult<G, Self>
-        where
-            C: Currency + MemberOf<G>,
-        {
-            Ok(currency::dto::<C, G>())
-        }
-    }
-    DexSymbols::visit_any(ticker, TypeToCurrency(PhantomData)).map_err(Error::from)
+    CurrencyDTO::<G>::from_symbol::<DexSymbols<G>>(symbol).map_err(Into::into)
 }
 
 #[cold]

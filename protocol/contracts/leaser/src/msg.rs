@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
-use currency::{CurrencyDTO, SymbolOwned};
+use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
     open::{ConnectionParams, PositionSpecDTO},
@@ -114,7 +114,7 @@ pub enum QueryMsg {
     Config {},
     Quote {
         downpayment: DownpaymentCoin,
-        lease_asset: SymbolOwned,
+        lease_asset: CurrencyDTO<LeaseCurrencies>,
         // TODO get rid of the default-ness
         #[serde(default)]
         max_ltd: Option<Percent>,

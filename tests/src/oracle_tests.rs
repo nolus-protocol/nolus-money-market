@@ -5,7 +5,7 @@ use currencies::{
     PaymentGroup, PaymentGroup as PriceCurrencies,
     {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn},
 };
-use currency::Currency;
+use currency::Definition;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -288,7 +288,7 @@ fn open_lease<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAla
             customer.clone(),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::TICKER.into(),
+                currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd: None,
             },
             &[cw_coin(downpayment)],
@@ -361,8 +361,8 @@ fn test_config_update() {
         .query()
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
-            &OracleQ::BasePrice {
-                currency: BaseC::TICKER.into(),
+            &OracleQ::<PriceCurrencies>::BasePrice {
+                currency: currency::dto::<BaseC, _>(),
             },
         )
         .unwrap();
@@ -378,7 +378,7 @@ fn test_config_update() {
         .app
         .sudo(
             test_case.address_book.oracle().clone(),
-            &SudoMsg::UpdateConfig(PriceConfig::new(
+            &SudoMsg::<PriceCurrencies>::UpdateConfig(PriceConfig::new(
                 Percent::from_percent(100),
                 Duration::from_secs(5),
                 12,
@@ -395,15 +395,15 @@ fn test_config_update() {
 
     let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
         test_case.address_book.oracle().clone(),
-        &OracleQ::BasePrice {
-            currency: BaseC::TICKER.into(),
+        &OracleQ::<PriceCurrencies>::BasePrice {
+            currency: currency::dto::<BaseC, _>(),
         },
     );
 
     assert!(price.is_err());
 }
 
-fn swap_tree() -> HumanReadableTree<SwapTarget> {
+fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
     cosmwasm_std::from_json(format!(
         r#"{{
                 "value":[0,"{usdc}"],
@@ -443,14 +443,14 @@ fn test_swap_path() {
         &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
-    let resp: SwapPath = test_case
+    let resp: SwapPath<PriceCurrencies> = test_case
         .app
         .query()
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
-            &OracleQ::SwapPath {
-                from: LeaseC2::TICKER.into(),
-                to: LeaseC5::TICKER.into(),
+            &OracleQ::<PriceCurrencies>::SwapPath {
+                from: currency::dto::<LeaseC2, _>(),
+                to: currency::dto::<LeaseC5, _>(),
             },
         )
         .unwrap();
@@ -458,11 +458,11 @@ fn test_swap_path() {
     let expect = vec![
         SwapTarget {
             pool_id: 3,
-            target: BaseC::TICKER.into(),
+            target: currency::dto::<BaseC, _>(),
         },
         SwapTarget {
             pool_id: 2,
-            target: LeaseC5::TICKER.into(),
+            target: currency::dto::<LeaseC5, _>(),
         },
     ];
 
@@ -473,7 +473,7 @@ fn test_swap_path() {
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
 
-    let tree: HumanReadableTree<SwapTarget> = swap_tree();
+    let tree: HumanReadableTree<SwapTarget<PaymentGroup>> = swap_tree();
 
     let response: AppResponse = test_case
         .app
@@ -489,12 +489,12 @@ fn test_query_swap_tree() {
         &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 
-    let resp: SwapTreeResponse = test_case
+    let resp: SwapTreeResponse<PaymentGroup> = test_case
         .app
         .query()
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
-            &OracleQ::SwapTree {},
+            &OracleQ::<PriceCurrencies>::SwapTree {},
         )
         .unwrap();
 

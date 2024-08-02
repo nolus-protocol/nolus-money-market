@@ -1,9 +1,8 @@
 use currencies::Lpn;
-use currency::Currency;
 use finance::coin::{Amount, Coin};
 use platform::{contract::Code, error::Error as PlatformError};
 use reserve::{
-    api::{ConfigResponse, LpnQueryResponse, QueryMsg},
+    api::{ConfigResponse, LpnCurrencyDTO, QueryMsg},
     error::Error as ReserveError,
 };
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
@@ -28,11 +27,7 @@ type ReserveTest = TestCase<(), (), (), Addr, (), (), (), ()>;
 fn instantiate() {
     let test_case = TestCaseBuilder::<Lpn>::new().init_reserve().into_generic();
     let reserve = test_case.address_book.reserve().clone();
-    assert_lpn(
-        &test_case,
-        reserve.clone(),
-        &LpnQueryResponse::from(Lpn::TICKER),
-    );
+    assert_lpn(&test_case, reserve.clone(), &currency::dto::<Lpn, _>());
     assert_config(
         &test_case,
         reserve,
@@ -67,11 +62,7 @@ fn new_lease_code() {
     .unwrap_response();
     assert_eq!(AppResponse::default().data, resp.data);
 
-    assert_lpn(
-        &test_case,
-        reserve.clone(),
-        &LpnQueryResponse::from(Lpn::TICKER),
-    );
+    assert_lpn(&test_case, reserve.clone(), &currency::dto::<Lpn, _>());
     assert_config(&test_case, reserve, &ConfigResponse::new(new_lease_code));
 }
 
@@ -184,8 +175,8 @@ fn assert_config(test: &ReserveTest, reserve: Addr, exp_config: &ConfigResponse)
     assert_eq!(exp_config, &cfg);
 }
 
-fn assert_lpn(test: &ReserveTest, reserve: Addr, exp_lpn: &LpnQueryResponse) {
-    let cfg: LpnQueryResponse = test
+fn assert_lpn(test: &ReserveTest, reserve: Addr, exp_lpn: &LpnCurrencyDTO) {
+    let cfg: LpnCurrencyDTO = test
         .app
         .query()
         .query_wasm_smart(reserve, &QueryMsg::ReserveLpn())

@@ -7,11 +7,14 @@ use std::{
 use sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
 
+#[cfg(any(test, feature = "testing"))]
+use crate::SymbolSlice;
 use crate::{
     error::{Error, Result},
     group::MemberOf,
     never::{self, Never},
-    Currency, Definition, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
+    Currency, Definition, Group, GroupVisit as _, MaybeAnyVisitResult, Symbol, SymbolStatic,
+    Tickers, TypeMatcher,
 };
 
 use super::{AnyVisitor, AnyVisitorResult};
@@ -127,6 +130,31 @@ where
         } else {
             Err(Error::currency_mismatch::<C, _>(self))
         }
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<G>>
+    where
+        S: Symbol<Group = G>,
+    {
+        struct TypeToCurrency<G>(PhantomData<G>);
+        impl<G> AnyVisitor<G> for TypeToCurrency<G>
+        where
+            G: Group,
+        {
+            type VisitorG = G;
+            type Output = CurrencyDTO<G>;
+
+            type Error = Error;
+
+            fn on<C>(self) -> AnyVisitorResult<G, Self>
+            where
+                C: Currency + MemberOf<G>,
+            {
+                Ok(dto::<C, G>())
+            }
+        }
+        S::visit_any(symbol, TypeToCurrency(PhantomData))
     }
 
     fn unexpected<V>(self) -> AnyVisitorResult<G, V>

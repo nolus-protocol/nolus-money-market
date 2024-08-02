@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use currency::Currency;
+use currencies::{LeaseGroup, PaymentGroup};
+use currency::{Currency, MemberOf};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{
     open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
@@ -118,15 +119,15 @@ pub(crate) fn query_quote<DownpaymentC, LeaseC>(
     max_ltd: Option<Percent>,
 ) -> QuoteResponse
 where
-    DownpaymentC: Currency,
-    LeaseC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    LeaseC: Currency + MemberOf<LeaseGroup>,
 {
     app.query()
         .query_wasm_smart(
             leaser,
             &QueryMsg::Quote {
                 downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
-                lease_asset: LeaseC::TICKER.into(),
+                lease_asset: currency::dto::<LeaseC, _>(),
                 max_ltd,
             },
         )

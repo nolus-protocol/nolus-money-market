@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use currencies::PaymentGroup;
-use currency::{DexSymbols, Group, GroupVisit as _, SymbolOwned, Tickers};
+use currency::{DexSymbols, Group, MemberOf, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
     cosmos_sdk_proto::Any as CosmosAny,
@@ -49,7 +49,7 @@ pub(crate) fn expect_swap(
     response: &mut ResponseWithInterChainMsgs<'_, ()>,
     connection_id: &str,
     ica_id: &str,
-) -> Vec<SwapRequest<PaymentGroup>> {
+) -> Vec<SwapRequest<PaymentGroup, PaymentGroup>> {
     expect_swap_with::<PaymentGroup, PaymentGroup>(response, connection_id, ica_id)
 }
 
@@ -57,12 +57,12 @@ pub(crate) fn expect_swap_with<GIn, GSwap>(
     response: &mut ResponseWithInterChainMsgs<'_, ()>,
     connection_id: &str,
     ica_id: &str,
-) -> Vec<SwapRequest<GIn>>
+) -> Vec<SwapRequest<GIn, GSwap>>
 where
-    GIn: Group,
+    GIn: Group + MemberOf<GSwap>,
     GSwap: Group,
 {
-    let requests: Vec<SwapRequest<GIn>> = response
+    let requests: Vec<SwapRequest<GIn, GSwap>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(
@@ -91,7 +91,7 @@ pub(crate) fn do_swap<I, F>(
     price_f: F,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
-    I: Iterator<Item = SwapRequest<PaymentGroup>>,
+    I: Iterator<Item = SwapRequest<PaymentGroup, PaymentGroup>>,
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     do_swap_with::<PaymentGroup, PaymentGroup, I, F>(
@@ -113,11 +113,11 @@ pub(crate) fn do_swap_with<GIn, GSwap, I, F>(
 where
     GIn: Group,
     GSwap: Group,
-    I: Iterator<Item = SwapRequest<GIn>>,
+    I: Iterator<Item = SwapRequest<GIn, GSwap>>,
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     let amounts: Vec<Amount> = requests
-        .map(|request: SwapRequest<GIn>| {
+        .map(|request: SwapRequest<GIn, GSwap>| {
             do_swap_internal::<GIn, GSwap, _>(app, ica_addr.clone(), request, &mut price_f)
         })
         .collect();
@@ -135,7 +135,7 @@ pub(crate) fn do_swap_with_error(
 fn do_swap_internal<GIn, GSwap, F>(
     app: &mut App,
     ica_addr: Addr,
-    request: SwapRequest<GIn>,
+    request: SwapRequest<GIn, GSwap>,
     price_f: &mut F,
 ) -> Amount
 where
@@ -145,32 +145,26 @@ where
 {
     assert!(!request.swap_path.is_empty());
 
-    let dex_denom_in: SymbolOwned =
-        Tickers::visit_any(request.token_in.ticker(), DexSymbols::<GIn>::new())
-            .expect("Expected `token_in`, parameterized by `GIn`, to belong to group `GIn`!")
-            .into();
+    let dex_denom_in: SymbolStatic = request.token_in.currency().into_symbol::<DexSymbols<GIn>>();
     let amount_in: u128 = request.token_in.amount();
 
     app.send_tokens(
         ica_addr.clone(),
         Addr::unchecked(ADMIN),
-        &[CwCoin::new(amount_in, dex_denom_in.clone())],
+        &[CwCoin::new(amount_in, dex_denom_in)],
     )
     .unwrap();
 
-    let (amount_out, dex_denom_out) = request.swap_path.iter().fold((amount_in, dex_denom_in.as_str()), |(amount_in, dex_denom_in), swap_target| {
-        let dex_denom_out =
-            Tickers::visit_any(&swap_target.target, DexSymbols::<GSwap>::new())
-                .expect("Expected all `swap_path` elements' target currencies to belong to the `GSwap` group!");
+    let (amount_out, dex_denom_out) = request.swap_path.iter().fold(
+        (amount_in, dex_denom_in),
+        |(amount_in, dex_denom_in), swap_target| {
+            let dex_denom_out = swap_target.target.into_symbol::<DexSymbols<GSwap>>();
 
-        let amount_out = price_f(
-            amount_in,
-            DexDenom(dex_denom_in),
-            DexDenom(dex_denom_out),
-        );
+            let amount_out = price_f(amount_in, DexDenom(dex_denom_in), DexDenom(dex_denom_out));
 
-        (amount_out, dex_denom_out)
-    });
+            (amount_out, dex_denom_out)
+        },
+    );
 
     app.send_tokens(
         Addr::unchecked(ADMIN),

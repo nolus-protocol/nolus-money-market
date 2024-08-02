@@ -1,5 +1,5 @@
 use currencies::PaymentGroup;
-use currency::Currency;
+use currency::Definition;
 use finance::{coin::Amount, percent::Percent};
 use lease::api::{query::StateResponse, ExecuteMsg};
 use platform::coin_legacy::to_cosmwasm_on_dex;
@@ -16,7 +16,7 @@ use crate::{
         test_case::{response::ResponseWithInterChainMsgs, TestCase},
         CwCoin, ADMIN, USER,
     },
-    lease::{self as lease_mod, LeaseTestCase, Lpnurrency},
+    lease::{self as lease_mod, LeaseTestCase, LpnCurrency},
 };
 
 use super::{LeaseCoin, LeaseCurrency, Lpnoin, PaymentCurrency, DOWNPAYMENT};
@@ -83,7 +83,7 @@ fn full_liquidation() {
     let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
     test_case.send_funds_from_admin(
         reserve.clone(),
-        &[cwcoin::<Lpnurrency, _>(borrowed_amount - liq_outcome)],
+        &[cwcoin::<LpnCurrency, _>(borrowed_amount - liq_outcome)],
     );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
@@ -95,7 +95,7 @@ fn full_liquidation() {
     )
     .ignore_response();
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -144,7 +144,7 @@ fn full_liquidation() {
             .add_attribute("loan-close", "true"),
     );
     assert!(
-        platform::bank::balance::<Lpnurrency>(&reserve, test_case.app.query())
+        platform::bank::balance::<LpnCurrency>(&reserve, test_case.app.query())
             .unwrap()
             .is_zero()
     );
