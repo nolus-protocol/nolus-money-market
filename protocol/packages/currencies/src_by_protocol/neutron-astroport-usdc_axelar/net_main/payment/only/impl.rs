@@ -26,7 +26,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Currency;
+    use currency::Definition;
 
     use crate::{
         lpn::{Lpn, Lpns},

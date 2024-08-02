@@ -157,8 +157,8 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            below: self.below.clone(),
-            above: self.above.clone(),
+            below: self.below,
+            above: self.above,
         }
     }
 }
