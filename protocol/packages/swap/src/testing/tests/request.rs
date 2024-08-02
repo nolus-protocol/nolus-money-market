@@ -28,7 +28,7 @@ fn build_and_parse() {
         },
     ];
 
-    let request: CosmosAny = build_request(expected_token_in.clone(), expected_swap_path.clone());
+    let request: CosmosAny = build_request(expected_token_in, expected_swap_path.clone());
 
     let SwapRequest {
         token_in,
