@@ -6,7 +6,7 @@ use astroport::{
 };
 use serde::{Deserialize, Serialize};
 
-use currency::{self, BankSymbols, DexSymbols, Group, SymbolSlice};
+use currency::{self, DexSymbols, Group, SymbolSlice};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
@@ -130,7 +130,7 @@ where
 
     swap_path
         .iter()
-        .map(|swap_target| swap_target.target.into_symbol::<BankSymbols<G>>())
+        .map(|swap_target| swap_target.target.into_symbol::<DexSymbols<G>>())
         .scan(scanner, |scanner, next_denom| {
             Some({
                 let op = SwapOperation::AstroSwap {
