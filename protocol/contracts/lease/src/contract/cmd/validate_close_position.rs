@@ -1,4 +1,5 @@
 use currency::{Currency, MemberOf};
+use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
@@ -34,6 +35,8 @@ impl<'spec> WithLease for Cmd<'spec> {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {
-        lease.validate_close(self.spec.amount.as_specific())
+        Coin::<Asset>::try_from(self.spec.amount)
+            .map_err(Into::into)
+            .and_then(|amount| lease.validate_close(amount))
     }
 }

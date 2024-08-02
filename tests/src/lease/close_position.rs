@@ -206,11 +206,12 @@ fn partial_close_invalid_currency() {
 
     assert_eq!(
         err.root_cause().downcast_ref::<currency::error::Error>(),
-        Some(&currency::error::Error::UnexpectedSymbol(
-            PaymentCurrency::TICKER.into(),
-            "ticker".to_owned(),
-            LeaseCurrency::TICKER.into(),
-        ))
+        Some(
+            &currency::error::Error::currency_mismatch::<LeaseCurrency, _>(&currency::dto::<
+                PaymentCurrency,
+                PaymentGroup,
+            >())
+        )
     );
 }
 
