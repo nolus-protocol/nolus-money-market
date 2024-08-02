@@ -12,7 +12,7 @@ pub enum Error {
     #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
     NotInCurrencyGroup(String, String, String),
 
-    #[error("[Finance] Expected currency {expected}, found {found}")]
+    #[error("[Currency] Expected currency {expected}, found {found}")]
     CurrencyMismatch {
         expected: String,
         found: SymbolStatic,

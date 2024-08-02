@@ -38,6 +38,6 @@ where
     where
         C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
     {
-        self.2.on::<C>(self.0.amount().into())
+        self.2.on::<C>(self.0.as_specific::<C>())
     }
 }

@@ -275,8 +275,8 @@ mod tests {
         assert_eq!(
             SupportedPairs::new::<Lpn>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
-                LeaseC1::TICKER,
-                Lpn::TICKER.into()
+                Lpn::TICKER,
+                LeaseC1::TICKER.into(),
             ))
         );
     }

@@ -262,7 +262,7 @@ mod test {
         let below = BasePriceTest::new(Coin::<LeaseC1>::new(2).into(), Coin::<Lpn>::new(10));
         let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
 
-        let msg = "Mismatch of above alarm and below alarm currencies";
+        let msg = "Expected currency";
 
         assert_err(from_both(below, above), msg);
 
