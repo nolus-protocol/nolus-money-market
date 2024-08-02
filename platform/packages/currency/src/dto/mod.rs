@@ -7,15 +7,14 @@ use std::{
 use sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-#[cfg(any(test, feature = "testing"))]
-use crate::SymbolSlice;
 use crate::{
     error::{Error, Result},
     group::MemberOf,
     never::{self, Never},
-    Currency, Definition, Group, GroupVisit as _, MaybeAnyVisitResult, Symbol, SymbolStatic,
-    Tickers, TypeMatcher,
+    Currency, Definition, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
 };
+#[cfg(any(test, feature = "testing"))]
+use crate::{GroupVisit as _, SymbolSlice};
 
 use super::{AnyVisitor, AnyVisitorResult};
 
