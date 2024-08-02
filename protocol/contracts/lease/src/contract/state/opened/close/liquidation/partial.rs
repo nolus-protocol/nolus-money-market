@@ -38,7 +38,7 @@ impl Closable for Spec {
 
     fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
         OngoingTrx::Liquidation {
-            liquidation: self.amount(lease).clone(),
+            liquidation: *self.amount(lease),
             in_progress,
         }
     }
@@ -54,10 +54,10 @@ impl RepayAlgo for Spec {
     type PaymentEmitter<'liq, 'env> = LiquidationEmitter<'liq, 'env>;
 
     fn repay_fn(&self) -> Self::RepayFn {
-        Self::RepayFn::new(self.amount.clone())
+        Self::RepayFn::new(self.amount)
     }
 
     fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env> {
-        Self::PaymentEmitter::new(&self.cause, self.amount.clone(), env)
+        Self::PaymentEmitter::new(&self.cause, self.amount, env)
     }
 }

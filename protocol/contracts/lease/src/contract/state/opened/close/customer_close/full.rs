@@ -40,7 +40,7 @@ impl Closable for Spec {
 
     fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
         OngoingTrx::Close {
-            close: self.amount(lease).clone(),
+            close: *self.amount(lease),
             in_progress,
         }
     }
@@ -79,6 +79,6 @@ impl CloseAlgo for Spec {
         'env: 'this,
         'this: 'lease,
     {
-        Self::PaymentEmitter::new(self.amount(lease).clone(), env)
+        Self::PaymentEmitter::new(*self.amount(lease), env)
     }
 }

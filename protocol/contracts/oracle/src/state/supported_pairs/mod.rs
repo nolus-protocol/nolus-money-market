@@ -28,12 +28,12 @@ where
     _type: PhantomData<BaseC>,
 }
 
-impl<'a, PriceG, BaseC> SupportedPairs<PriceG, BaseC>
+impl<PriceG, BaseC> SupportedPairs<PriceG, BaseC>
 where
     PriceG: Group,
     BaseC: Currency + MemberOf<PriceG>,
 {
-    const DB_ITEM: Item<'a, SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
+    const DB_ITEM: Item<'static, SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
 
     pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, ContractError>
     where
@@ -94,7 +94,7 @@ where
                 .filter_map(|node| {
                     Some(SwapTarget {
                         pool_id: node.value().pool_id,
-                        target: node.parent()?.value().target.clone(),
+                        target: node.parent()?.value().target,
                     })
                 }),
         );
@@ -122,7 +122,7 @@ where
                     from: child,
                     to: SwapTarget {
                         pool_id,
-                        target: parent.value().target.clone(),
+                        target: parent.value().target,
                     },
                 })
             })
@@ -173,7 +173,7 @@ where
     }
 }
 
-impl<'a, PriceG, BaseC> SupportedPairs<PriceG, BaseC>
+impl<PriceG, BaseC> SupportedPairs<PriceG, BaseC>
 where
     PriceG: Group,
     BaseC: Currency + MemberOf<PriceG>,
@@ -275,7 +275,7 @@ mod tests {
         assert_eq!(
             SupportedPairs::new::<Lpn>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
-                LeaseC1::TICKER.into(),
+                LeaseC1::TICKER,
                 Lpn::TICKER.into()
             ))
         );

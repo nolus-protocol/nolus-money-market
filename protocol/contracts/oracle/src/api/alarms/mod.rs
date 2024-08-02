@@ -186,7 +186,7 @@ mod test {
     fn new_valid() {
         let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
         let above = BasePriceTest::new(Coin::<LeaseC2>::new(1).into(), Coin::<Lpn>::new(12));
-        let exp = Alarm::new(below.clone(), Some(above.clone()));
+        let exp = Alarm::new(below, Some(above));
 
         let below_json =
             alarm_half_to_json(AlarmPrice::Below, below).expect("Serialization failed");
@@ -202,7 +202,7 @@ mod test {
     #[test]
     fn below_price_ok() {
         let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
-        let exp_res = Ok(Alarm::new(exp_price.clone(), None));
+        let exp_res = Ok(Alarm::new(exp_price, None));
         assert_eq!(exp_res, from_below(exp_price))
     }
 
@@ -264,7 +264,7 @@ mod test {
 
         let msg = "Mismatch of above alarm and below alarm currencies";
 
-        assert_err(from_both(below.clone(), above.clone()), msg);
+        assert_err(from_both(below, above), msg);
 
         let full_json = format!(
             r#"{{"below": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}, "above": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}}}"#,
@@ -291,10 +291,10 @@ mod test {
     #[test]
     fn below_price_eq_above() {
         let price = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
-        let alarm = Alarm::new(price.clone(), Some(price.clone()));
+        let alarm = Alarm::new(price, Some(price));
         let msg = "valid alarm with equal above_or_equal and below prices";
 
-        assert_eq!(alarm, from_both(price.clone(), price).expect(msg));
+        assert_eq!(alarm, from_both(price, price).expect(msg));
     }
 
     #[test]
@@ -302,7 +302,7 @@ mod test {
         let price_below = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
         let price_above_or_equal =
             BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(11));
-        let alarm = Alarm::new(price_below.clone(), Some(price_above_or_equal.clone()));
+        let alarm = Alarm::new(price_below, Some(price_above_or_equal));
         let msg = "valid alarm";
 
         assert_eq!(

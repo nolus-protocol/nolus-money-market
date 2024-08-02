@@ -1,15 +1,12 @@
-use std::{any::type_name, marker::PhantomData};
+use std::any::type_name;
 
 use astroport::{
     asset::AssetInfo,
     router::{ExecuteMsg, SwapOperation, SwapResponseData},
 };
 
-use currency::{
-    AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, DexSymbols, Group, GroupVisit as _,
-    MemberOf, SymbolSlice,
-};
-use dex::swap::{Error, ExactAmountIn};
+use currency::{CurrencyDTO, Group, MemberOf};
+use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use sdk::{
@@ -21,7 +18,7 @@ use sdk::{
     cosmwasm_std,
 };
 
-use crate::testing::{pattern_match_else, ExactAmountInSkel, SwapRequest};
+use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{RequestMsg, ResponseMsg, Router, RouterImpl};
 
@@ -62,7 +59,7 @@ where
             )
         })
         else {
-            pattern_match_else("ExecuteSwapOperations");
+            testing::pattern_match_else("ExecuteSwapOperations");
         };
 
         let swap_path =
@@ -115,9 +112,9 @@ where
                     );
                 };
 
-                let offer_currency = from_dex_symbol::<GSwap>(&offer_dex_denom)
+                let offer_currency = testing::from_dex_symbol::<GSwap>(&offer_dex_denom)
                     .expect("Offered asset doesn't belong to swapping currency group!");
-                let ask_currency = from_dex_symbol::<GSwap>(&ask_dex_denom)
+                let ask_currency = testing::from_dex_symbol::<GSwap>(&ask_dex_denom)
                     .expect("Asked asset doesn't belong to swapping currency group!")
                     .to_owned();
 
@@ -135,30 +132,6 @@ where
             },
         )
         .collect()
-}
-
-fn from_dex_symbol<G>(ticker: &SymbolSlice) -> dex::swap::Result<CurrencyDTO<G>>
-where
-    G: Group,
-{
-    struct TypeToCurrency<G>(PhantomData<G>);
-    impl<G> AnyVisitor<G> for TypeToCurrency<G>
-    where
-        G: Group,
-    {
-        type VisitorG = G;
-        type Output = CurrencyDTO<G>;
-
-        type Error = Error;
-
-        fn on<C>(self) -> AnyVisitorResult<G, Self>
-        where
-            C: Currency + MemberOf<G>,
-        {
-            Ok(currency::dto::<C, G>())
-        }
-    }
-    DexSymbols::visit_any(ticker, TypeToCurrency(PhantomData)).map_err(Error::from)
 }
 
 fn parse_request_from_any(request: CosmosAny) -> RequestMsg {

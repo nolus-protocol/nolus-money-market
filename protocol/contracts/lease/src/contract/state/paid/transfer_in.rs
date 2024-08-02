@@ -53,7 +53,7 @@ pub(in super::super) type DexState = dex::StateLocalOut<
 
 pub(in super::super) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);
-    let amount_in = transfer.amount().clone();
+    let amount_in = *transfer.amount();
     StartState::new(transfer, amount_in)
 }
 

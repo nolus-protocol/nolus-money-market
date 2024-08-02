@@ -1,16 +1,13 @@
 use currency::{
     test::{SuperGroup, SuperGroupTestC1},
-    Currency as _, SymbolStatic,
+    Definition as _,
 };
-use dex::swap::Error;
 use finance::coin::Coin;
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::testing;
 
 use super::{SwapAmountInRoute, SwapTarget};
-
-const INVALID_TICKER: SymbolStatic = "NotATicker";
 
 #[test]
 fn to_dex_cwcoin() {
@@ -25,25 +22,13 @@ fn to_dex_cwcoin() {
 fn into_route() {
     let path = vec![SwapTarget {
         pool_id: 2,
-        target: SuperGroupTestC1::TICKER.into(),
+        target: currency::dto::<SuperGroupTestC1, _>(),
     }];
     let expected = vec![SwapAmountInRoute {
         pool_id: 2,
         token_out_denom: SuperGroupTestC1::DEX_SYMBOL.into(),
     }];
-    assert_eq!(Ok(expected), super::to_route::<SuperGroup>(&path));
-}
-
-#[test]
-fn into_route_err() {
-    let path = vec![SwapTarget {
-        pool_id: 2,
-        target: INVALID_TICKER.into(),
-    }];
-    assert!(matches!(
-        super::to_route::<SuperGroup>(&path),
-        Err(Error::Platform(_))
-    ));
+    assert_eq!(expected, super::to_route::<SuperGroup>(&path));
 }
 
 #[test]
