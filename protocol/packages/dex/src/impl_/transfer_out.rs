@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     never::{self, Never},
-    Group,
+    Group, MemberOf,
 };
 use finance::{coin::CoinDTO, zero::Zero};
 use platform::{
@@ -74,26 +74,39 @@ where
     }
 
     fn enter_state(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
-        struct SendWorker<'a>(TransferOutTrx<'a>, bool);
-        impl<'a> CoinVisitor for SendWorker<'a> {
+        struct SendWorker<'a, G> {
+            trx: TransferOutTrx<'a>,
+            sent: bool,
+            _group: PhantomData<G>,
+        }
+        impl<'a, GIn> CoinVisitor for SendWorker<'a, GIn>
+        where
+            GIn: Group,
+        {
+            type GIn = GIn;
+
             type Result = ();
             type Error = Error;
 
             fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
             where
-                G: Group,
+                G: Group + MemberOf<Self::GIn>,
             {
-                debug_assert!(!self.1, "already visited");
-                self.1 = true;
-                self.0.send(coin)
+                debug_assert!(!self.sent, "already visited");
+                self.sent = true;
+                self.trx.send(coin)
             }
         }
 
-        let mut sender = SendWorker(self.spec.dex_account().transfer_to(now), false);
+        let mut sender = SendWorker {
+            trx: self.spec.dex_account().transfer_to(now),
+            sent: false,
+            _group: PhantomData::<SwapTask::InG>,
+        };
         let iter_state = coin_index::visit_at_index(&self.spec, self.coin_index, &mut sender)?;
-        debug_assert!(sender.1, "the coin index is invalid");
+        debug_assert!(sender.sent, "the coin index is invalid");
         debug_assert_eq!(iter_state == IterState::Complete, self.last_coin());
-        Ok(sender.0.into())
+        Ok(sender.trx.into())
     }
 
     fn on_response<NextState, Label>(
@@ -139,7 +152,7 @@ where
     }
 
     fn last_coin_index(spec: &SwapTask) -> CoinsNb {
-        let mut counter = Counter::default();
+        let mut counter = Counter::<SwapTask::InG>::default();
         let _res = never::safe_unwrap(spec.on_coins(&mut counter));
 
         #[cfg(debug_assertions)]
@@ -266,28 +279,47 @@ impl<SwapTask, R, SEnum, SwapGroup, SwapClient> InspectSpec<SwapTask, R>
     }
 }
 
-#[derive(Default)]
-struct Counter(Option<CoinsNb>);
-impl Counter {
+struct Counter<G> {
+    last_index: Option<CoinsNb>,
+    _group: PhantomData<G>,
+}
+impl<G> Counter<G> {
     fn last_index(&self) -> CoinsNb {
-        self.0.expect("The swap task did not provide any coins")
+        self.last_index
+            .expect("The swap task did not provide any coins")
     }
 }
-impl CoinVisitor for Counter {
+impl<GIn> CoinVisitor for Counter<GIn>
+where
+    GIn: Group,
+{
+    type GIn = GIn;
     type Result = IterNext;
     type Error = Never;
 
     fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> StdResult<Self::Result, Self::Error>
     where
-        G: Group,
+        G: Group + MemberOf<Self::GIn>,
     {
-        let next_idx = self.0.map_or(CoinsNb::ZERO, |prev_idx| {
+        let next_idx = self.last_index.map_or(CoinsNb::ZERO, |prev_idx| {
             prev_idx
                 .checked_add(1)
                 .expect("The swap task exceeds the max number of coins `CoinsNb::MAX`")
         });
-        self.0 = Some(next_idx);
+        self.last_index = Some(next_idx);
         Ok(IterNext::Continue)
+    }
+}
+
+impl<G> Default for Counter<G>
+where
+    G: Group,
+{
+    fn default() -> Self {
+        Self {
+            last_index: Default::default(),
+            _group: Default::default(),
+        }
     }
 }
 
@@ -306,27 +338,27 @@ mod test {
 
     #[test]
     fn index_zero() {
-        let mut c = Counter::default();
-        let r = c.visit::<SuperGroup>(&coin()).unwrap();
+        let mut c = Counter::<SuperGroup>::default();
+        let r = c.visit(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
         assert_eq!(c.last_index(), 0);
     }
 
     #[test]
     fn index_one() {
-        let mut c = Counter::default();
-        let r = c.visit::<SuperGroup>(&coin()).unwrap();
+        let mut c = Counter::<SuperGroup>::default();
+        let r = c.visit(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
-        let r = c.visit::<SuperGroup>(&coin()).unwrap();
+        let r = c.visit(&coin()).unwrap();
         assert_eq!(r, IterNext::Continue);
         assert_eq!(c.last_index(), 1);
     }
 
     #[test]
     fn index_max() {
-        let mut c = Counter::default();
+        let mut c = Counter::<SuperGroup>::default();
         for _i in 0..=CoinsNb::MAX {
-            let r = c.visit::<SuperGroup>(&coin()).unwrap();
+            let r = c.visit(&coin()).unwrap();
             assert_eq!(r, IterNext::Continue);
         }
         assert_eq!(c.last_index(), CoinsNb::MAX);

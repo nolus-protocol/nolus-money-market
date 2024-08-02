@@ -27,7 +27,7 @@ pub(super) fn emit_lease_opened(
             "air",
             loan.annual_interest_rate + lease.loan.annual_margin_interest(),
         )
-        .emit("currency", lease.position.amount().ticker())
+        .emit_currency_dto("currency", &lease.position.amount().currency())
         .emit("loan-pool-id", lease.loan.lpp().addr())
         .emit_coin_dto("loan", &loan.principal)
         .emit_coin_dto("downpayment", &downpayment)
@@ -55,5 +55,5 @@ fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {
     emitter
         .emit("customer", lease.customer.clone())
         .emit("lease", lease.addr.clone())
-        .emit_currency_symbol("lease-asset", lease.position.amount().ticker())
+        .emit_currency_dto("lease-asset", &lease.position.amount().currency())
 }

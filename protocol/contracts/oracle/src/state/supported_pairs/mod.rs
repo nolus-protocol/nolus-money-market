@@ -1,9 +1,9 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use ::currencies::PaymentGroup;
+use ::currencies::{LeaseGroup, Lpns, Native, PaymentOnlyGroup};
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, SymbolSlice};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
@@ -15,24 +15,29 @@ use crate::{
 
 mod currencies;
 
-type Tree = tree::Tree<SwapTarget>;
+type Tree<G> = tree::Tree<SwapTarget<G>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SupportedPairs<BaseC> {
-    tree: Tree,
+#[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
+pub(crate) struct SupportedPairs<PriceG, BaseC>
+where
+    PriceG: Group,
+{
+    tree: Tree<PriceG>,
     #[serde(skip)]
     _type: PhantomData<BaseC>,
 }
 
-impl<'a, BaseC> SupportedPairs<BaseC>
+impl<'a, PriceG, BaseC> SupportedPairs<PriceG, BaseC>
 where
-    BaseC: Currency,
+    PriceG: Group,
+    BaseC: Currency + MemberOf<PriceG>,
 {
-    const DB_ITEM: Item<'a, SupportedPairs<BaseC>> = Item::new("supported_pairs");
+    const DB_ITEM: Item<'a, SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
 
-    pub fn new<StableC>(tree: Tree) -> Result<Self, ContractError>
+    pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, ContractError>
     where
-        StableC: Currency,
+        StableC: Currency + MemberOf<PriceG>,
     {
         Self::check_tree::<StableC>(&tree).map(|()| SupportedPairs {
             tree,
@@ -54,17 +59,17 @@ where
 
     pub fn load_path(
         &self,
-        query: &SymbolSlice,
-    ) -> Result<impl DoubleEndedIterator<Item = &SymbolSlice> + '_, ContractError> {
-        self.internal_load_path(query)
-            .map(|iter| iter.map(|node| node.value().target.as_str()))
+        currency: &CurrencyDTO<PriceG>,
+    ) -> Result<impl DoubleEndedIterator<Item = &CurrencyDTO<PriceG>> + '_, ContractError> {
+        self.internal_load_path(currency)
+            .map(|iter| iter.map(|node| &node.value().target))
     }
 
     pub fn load_swap_path(
         &self,
-        from: &SymbolSlice,
-        to: &SymbolSlice,
-    ) -> Result<Vec<SwapTarget>, ContractError> {
+        from: &CurrencyDTO<PriceG>,
+        to: &CurrencyDTO<PriceG>,
+    ) -> Result<Vec<SwapTarget<PriceG>>, ContractError> {
         let path_from = self.internal_load_path(from)?;
 
         let mut path_to: Vec<_> = self.internal_load_path(to)?.collect();
@@ -102,11 +107,11 @@ where
         Ok(path)
     }
 
-    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
+    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> + '_ {
         self.tree
             .iter()
-            .filter_map(|node: NodeRef<'_, SwapTarget>| {
-                let parent: NodeRef<'_, SwapTarget> = node.parent()?;
+            .filter_map(|node: NodeRef<'_, SwapTarget<PriceG>>| {
+                let parent: NodeRef<'_, SwapTarget<PriceG>> = node.parent()?;
 
                 let SwapTarget {
                     pool_id,
@@ -123,43 +128,36 @@ where
             })
     }
 
-    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
-        currencies::currencies(self.tree.iter())
-    }
-
-    pub fn query_swap_tree(self) -> Tree {
+    pub fn query_swap_tree(self) -> Tree<PriceG> {
         self.tree
     }
 
     fn internal_load_path(
         &self,
-        query: &SymbolSlice,
-    ) -> Result<impl DoubleEndedIterator<Item = NodeRef<'_, SwapTarget>> + '_, ContractError> {
+        query: &CurrencyDTO<PriceG>,
+    ) -> Result<impl DoubleEndedIterator<Item = NodeRef<'_, SwapTarget<PriceG>>> + '_, ContractError>
+    {
         self.tree
-            .find_by(|target| target.target == query)
+            .find_by(|target| &target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
-            .ok_or_else(|| error::unsupported_currency::<BaseC>(query))
+            .ok_or_else(|| error::unsupported_currency::<PriceG, BaseC>(query))
     }
 
-    fn check_tree<StableC>(tree: &Tree) -> Result<(), ContractError>
+    fn check_tree<StableC>(tree: &Tree<PriceG>) -> Result<(), ContractError>
     where
-        StableC: Currency,
+        StableC: Currency + MemberOf<PriceG>,
     {
-        if tree.root().value().target != BaseC::TICKER {
-            Err(ContractError::InvalidBaseCurrency(
-                tree.root().value().target.clone(),
-                ToOwned::to_owned(BaseC::TICKER),
-            ))
+        let root_currency = tree.root().value().target;
+        if root_currency != currency::dto::<BaseC, PriceG>() {
+            Err(error::invalid_base_currency::<_, BaseC>(&root_currency))
         } else {
-            let mut supported_currencies: Vec<_> = tree
-                .iter()
-                .map(|node| node.value().target.as_ref())
-                .collect();
+            let mut supported_currencies: Vec<&CurrencyDTO<PriceG>> =
+                tree.iter().map(|ref node| &node.value().target).collect();
 
             supported_currencies.sort_unstable();
 
             if supported_currencies
-                .binary_search(&StableC::TICKER)
+                .binary_search(&&currency::dto::<StableC, PriceG>())
                 .is_err()
             {
                 Err(ContractError::StableCurrencyNotInTree {})
@@ -169,12 +167,23 @@ where
             {
                 Err(ContractError::DuplicatedNodes {})
             } else {
-                tree.iter()
-                    .map(|node| node.value().target.as_ref())
-                    .try_for_each(currency::validate::<PaymentGroup>)
-                    .map_err(Into::into)
+                Ok(())
             }
         }
+    }
+}
+
+impl<'a, PriceG, BaseC> SupportedPairs<PriceG, BaseC>
+where
+    PriceG: Group,
+    BaseC: Currency + MemberOf<PriceG>,
+    LeaseGroup: MemberOf<PriceG>,
+    Lpns: MemberOf<PriceG>,
+    Native: MemberOf<PriceG>,
+    PaymentOnlyGroup: MemberOf<PriceG>,
+{
+    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
+        currencies::currencies(self.tree.iter())
     }
 }
 
@@ -182,16 +191,24 @@ where
 mod tests {
     use std::cmp::Ordering;
 
-    use ::currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4};
-    use currency::Currency;
+    use ::currencies::{
+        LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4,
+        PaymentGroup as PriceCurrencies,
+    };
+    use currency::{Currency, CurrencyDTO, Definition, MemberOf};
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
-    use super::*;
+    use crate::{
+        api::{self, swap::SwapTarget, SwapLeg},
+        ContractError,
+    };
+
+    type SupportedPairs = super::SupportedPairs<PriceCurrencies, TheCurrency>;
 
     type TheCurrency = Lpn;
 
-    fn test_case() -> HumanReadableTree<SwapTarget> {
+    fn test_case() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
         cosmwasm_std::from_json(format!(
             r#"{{
                 "value":[0,"{base}"],
@@ -230,7 +247,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let tree = test_case();
-        let sp = SupportedPairs::<Lpn>::new::<Lpn>(tree.into_tree()).unwrap();
+        let sp = SupportedPairs::new::<Lpn>(tree.into_tree()).unwrap();
         let mut deps = testing::mock_dependencies();
 
         sp.save(deps.as_mut().storage).unwrap();
@@ -256,7 +273,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<Lpn>::new::<Lpn>(tree.into_tree()),
+            SupportedPairs::new::<Lpn>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
                 LeaseC1::TICKER.into(),
                 Lpn::TICKER.into()
@@ -290,7 +307,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<TheCurrency>::new::<TheCurrency>(tree.into_tree()),
+            SupportedPairs::new::<TheCurrency>(tree.into_tree()),
             Err(ContractError::DuplicatedNodes {})
         );
     }
@@ -312,82 +329,85 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SupportedPairs::<TheCurrency>::new::<PaymentC4>(tree.into_tree()),
+            SupportedPairs::new::<PaymentC4>(tree.into_tree()),
             Err(ContractError::StableCurrencyNotInTree {})
         );
     }
 
     #[test]
     fn test_load_path() {
-        let tree =
-            SupportedPairs::<TheCurrency>::new::<TheCurrency>(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::new::<TheCurrency>(test_case().into_tree()).unwrap();
 
-        let resp: Vec<_> = tree.load_path(LeaseC5::TICKER).unwrap().collect();
+        let resp: Vec<_> = tree
+            .load_path(&currency_dto::<LeaseC5>())
+            .unwrap()
+            .collect();
         assert_eq!(
             resp,
             vec![
-                LeaseC5::TICKER,
-                LeaseC1::TICKER,
-                LeaseC2::TICKER,
-                TheCurrency::TICKER,
+                &currency_dto::<LeaseC5>(),
+                &currency_dto::<LeaseC1>(),
+                &currency_dto::<LeaseC2>(),
+                &currency_dto::<TheCurrency>(),
             ]
         );
     }
 
     #[test]
     fn test_load_swap_path() {
-        let tree =
-            SupportedPairs::<TheCurrency>::new::<TheCurrency>(test_case().into_tree()).unwrap();
+        let tree = SupportedPairs::new::<TheCurrency>(test_case().into_tree()).unwrap();
 
         assert!(tree
-            .load_swap_path(LeaseC5::TICKER, LeaseC5::TICKER)
+            .load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<LeaseC5>())
             .unwrap()
             .is_empty());
 
         let resp = tree
-            .load_swap_path(LeaseC5::TICKER, TheCurrency::TICKER)
+            .load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<TheCurrency>())
             .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 5,
-                target: LeaseC1::TICKER.into(),
+                target: currency_dto::<LeaseC1>(),
             },
             SwapTarget {
                 pool_id: 1,
-                target: LeaseC2::TICKER.into(),
+                target: currency_dto::<LeaseC2>(),
             },
             SwapTarget {
                 pool_id: 2,
-                target: TheCurrency::TICKER.into(),
+                target: currency_dto::<TheCurrency>(),
             },
         ];
 
         assert_eq!(resp, expect);
 
-        let resp = tree.load_swap_path(Nls::TICKER, LeaseC5::TICKER).unwrap();
+        let resp = tree
+            .load_swap_path(&currency_dto::<Nls>(), &currency_dto::<LeaseC5>())
+            .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 6,
-                target: LeaseC1::TICKER.into(),
+                target: currency_dto::<LeaseC1>(),
             },
             SwapTarget {
                 pool_id: 5,
-                target: LeaseC5::TICKER.into(),
+                target: currency_dto::<LeaseC5>(),
             },
         ];
         assert_eq!(resp, expect);
 
         let resp = tree
-            .load_swap_path(LeaseC2::TICKER, LeaseC4::TICKER)
+            .load_swap_path(&currency_dto::<LeaseC2>(), &currency_dto::<LeaseC4>())
             .unwrap();
         let expect = vec![
             SwapTarget {
                 pool_id: 2,
-                target: TheCurrency::TICKER.into(),
+                target: currency_dto::<TheCurrency>(),
             },
             SwapTarget {
                 pool_id: 4,
-                target: LeaseC4::TICKER.into(),
+                target: currency_dto::<LeaseC4>(),
             },
         ];
         assert_eq!(resp, expect);
@@ -396,9 +416,9 @@ mod tests {
     #[test]
     fn test_query_supported_pairs() {
         let paths = test_case();
-        let tree = SupportedPairs::<TheCurrency>::new::<TheCurrency>(paths.into_tree()).unwrap();
+        let tree = SupportedPairs::new::<TheCurrency>(paths.into_tree()).unwrap();
 
-        fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
+        fn leg_cmp(a: &SwapLeg<PriceCurrencies>, b: &SwapLeg<PriceCurrencies>) -> Ordering {
             a.from.cmp(&b.from)
         }
 
@@ -407,45 +427,45 @@ mod tests {
 
         let mut expected = vec![
             SwapLeg {
-                from: LeaseC2::TICKER.into(),
+                from: currency_dto::<LeaseC2>(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: TheCurrency::TICKER.into(),
+                    target: currency_dto::<TheCurrency>(),
                 },
             },
             SwapLeg {
-                from: LeaseC4::TICKER.into(),
+                from: currency_dto::<LeaseC4>(),
                 to: SwapTarget {
                     pool_id: 4,
-                    target: TheCurrency::TICKER.into(),
+                    target: currency_dto::<TheCurrency>(),
                 },
             },
             SwapLeg {
-                from: LeaseC1::TICKER.into(),
+                from: currency_dto::<LeaseC1>(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: LeaseC2::TICKER.into(),
+                    target: currency_dto::<LeaseC2>(),
                 },
             },
             SwapLeg {
-                from: Nls::TICKER.into(),
+                from: currency_dto::<Nls>(),
                 to: SwapTarget {
                     pool_id: 6,
-                    target: LeaseC1::TICKER.into(),
+                    target: currency_dto::<LeaseC1>(),
                 },
             },
             SwapLeg {
-                from: LeaseC5::TICKER.into(),
+                from: currency_dto::<LeaseC5>(),
                 to: SwapTarget {
                     pool_id: 5,
-                    target: LeaseC1::TICKER.into(),
+                    target: currency_dto::<LeaseC1>(),
                 },
             },
             SwapLeg {
-                from: LeaseC3::TICKER.into(),
+                from: currency_dto::<LeaseC3>(),
                 to: SwapTarget {
                     pool_id: 3,
-                    target: LeaseC4::TICKER.into(),
+                    target: currency_dto::<LeaseC4>(),
                 },
             },
         ];
@@ -456,7 +476,7 @@ mod tests {
 
     #[test]
     fn currencies() {
-        let listed_currencies: Vec<_> = SupportedPairs::<TheCurrency>::new::<TheCurrency>(
+        let listed_currencies: Vec<_> = SupportedPairs::new::<TheCurrency>(
             cosmwasm_std::from_json::<HumanReadableTree<_>>(format!(
                 r#"{{
                     "value":[0,{0:?}],
@@ -491,5 +511,12 @@ mod tests {
                 api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),
             ]
         );
+    }
+
+    fn currency_dto<C>() -> CurrencyDTO<PriceCurrencies>
+    where
+        C: Currency + MemberOf<PriceCurrencies>,
+    {
+        currency::dto::<C, _>()
     }
 }

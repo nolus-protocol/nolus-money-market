@@ -2,13 +2,13 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, error::CmdError, Currency, Group, MemberOf, SymbolSlice};
+use currency::{self, Currency, CurrencyDTO, Group, MemberOf};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{ContractError, Result},
-    msg::{LoanResponse, LpnResponse, QueryLoanResponse, QueryMsg},
+    msg::{LoanResponse, QueryLoanResponse, QueryMsg},
 };
 
 use self::{
@@ -38,8 +38,9 @@ where
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
             .map_err(ContractError::from)
-            .and_then(|lpn: LpnResponse| {
-                currency::validate_ticker(lpn, Lpn::TICKER).map_err(Into::into)
+            .and_then(|lpn: CurrencyDTO<Lpns>| {
+                lpn.of_currency::<Lpn>()
+                    .map_err(ContractError::UnknownCurrency)
             })
             .map(|()| Self {
                 addr,
@@ -48,8 +49,9 @@ where
             })
     }
 
-    pub fn lpn(&self) -> &SymbolSlice {
-        Lpn::TICKER
+    // DEPRECATED since the Lpn type is statically known TODO remove
+    pub fn lpn(&self) -> CurrencyDTO<Lpns> {
+        currency::dto::<Lpn, Lpns>()
     }
 
     pub fn addr(&self) -> &Addr {
@@ -67,9 +69,8 @@ where
         ContractError: Into<Cmd::Error>,
     {
         self.into_loan(lease, querier)
-            .map_err(CmdError::from_api_err)
-            .and_then(|lpp_loan| cmd.exec(lpp_loan).map_err(CmdError::from_customer_err))
-            .map_err(CmdError::into_customer_err)
+            .map_err(Into::into)
+            .and_then(|lpp_loan| cmd.exec(lpp_loan))
     }
 
     pub fn execute_lender<Cmd>(

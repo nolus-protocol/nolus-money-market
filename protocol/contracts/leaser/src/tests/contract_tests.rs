@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::Lpn;
-use currency::{Currency, SymbolStatic};
+use currencies::{LeaseC1, LeaseGroup, Lpn};
+use currency::{CurrencyDTO, Definition as _};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -41,7 +41,10 @@ const PROTOCOLS_REGISTRY_ADDR: &str = "protocols";
 
 type TheCurrency = Lpn;
 
-const DENOM: SymbolStatic = TheCurrency::TICKER;
+fn lease_currency() -> CurrencyDTO<LeaseGroup> {
+    currency::dto::<LeaseC1, _>()
+}
+
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::InstantiateMsg {
@@ -73,11 +76,11 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
 }
 
 fn owner() -> MessageInfo {
-    mock_info(CREATOR, &coins(2, DENOM))
+    mock_info(CREATOR, &[])
 }
 
 fn customer() -> MessageInfo {
-    mock_info("addr0000", &coins(2, DENOM))
+    mock_info("addr0000", &coins(2, TheCurrency::DEX_SYMBOL))
 }
 
 fn setup_test_case(deps: DepsMut<'_>) {
@@ -207,7 +210,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
     let config = query_config(deps.as_ref());
 
     let msg = ExecuteMsg::OpenLease {
-        currency: DENOM.to_string(),
+        currency: lease_currency(),
         max_ltd,
     };
     let info = customer();
@@ -216,7 +219,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
     let finalizer = admin.clone();
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd, finalizer);
+    let msg = Borrow::open_lease_msg(info.sender, config, lease_currency(), max_ltd, finalizer);
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(

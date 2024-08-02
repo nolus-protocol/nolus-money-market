@@ -1,4 +1,4 @@
-use currency::Group;
+use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
 use super::swap_task::{CoinVisitor, IterNext, IterState};
@@ -11,7 +11,7 @@ pub fn on_coin<G, Visitor>(
     visitor: &mut Visitor,
 ) -> Result<IterState, Visitor::Error>
 where
-    G: Group,
+    G: Group + MemberOf<Visitor::GIn>,
     Visitor: CoinVisitor,
 {
     visitor.visit(coin).map(|_iter_next| IterState::Complete)
@@ -23,8 +23,8 @@ pub fn on_coins<G1, G2, Visitor>(
     visitor: &mut Visitor,
 ) -> Result<IterState, Visitor::Error>
 where
-    G1: Group,
-    G2: Group,
+    G1: Group + MemberOf<Visitor::GIn>,
+    G2: Group + MemberOf<Visitor::GIn>,
     Visitor: CoinVisitor<Result = IterNext>,
 {
     visitor.visit(coin1).and_then(|next| match next {
@@ -35,10 +35,12 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::marker::PhantomData;
+
     use currency::{
         never::{self, Never},
-        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1},
-        Group,
+        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1},
+        Group, MemberOf,
     };
 
     use finance::coin::{Amount, Coin, CoinDTO};
@@ -49,12 +51,17 @@ mod test {
         Coin::<SuperGroupTestC1>::new(32).into()
     }
 
-    fn coin2() -> CoinDTO<SubGroup> {
+    fn coin2() -> CoinDTO<SuperGroup> {
         Coin::<SubGroupTestC1>::new(28).into()
     }
 
-    pub struct TestVisitor<R>(Option<Amount>, R, Option<Amount>, R);
-    impl<R> TestVisitor<R> {
+    pub struct TestVisitor<GTop, R>(Option<Amount>, R, Option<Amount>, R, PhantomData<GTop>)
+    where
+        GTop: Group;
+    impl<GTop, R> TestVisitor<GTop, R>
+    where
+        GTop: Group,
+    {
         pub fn first_visited(&self, a: Amount) -> bool {
             self.0.map_or(false, |a_visit| a == a_visit)
         }
@@ -68,26 +75,34 @@ mod test {
             self.2.is_none()
         }
     }
-    impl TestVisitor<IterNext> {
-        pub fn new(r1: IterNext, r2: IterNext) -> Self {
-            Self(None, r1, None, r2)
-        }
-    }
-    impl TestVisitor<()> {
-        pub fn new() -> Self {
-            Self(None, (), None, ())
-        }
-    }
-    impl<R> CoinVisitor for TestVisitor<R>
+    impl<GTop> TestVisitor<GTop, IterNext>
     where
+        GTop: Group,
+    {
+        pub fn new(r1: IterNext, r2: IterNext) -> Self {
+            Self(None, r1, None, r2, PhantomData::<GTop>)
+        }
+    }
+    impl<GTop> TestVisitor<GTop, ()>
+    where
+        GTop: Group,
+    {
+        pub fn new() -> Self {
+            Self(None, (), None, (), PhantomData::<GTop>)
+        }
+    }
+    impl<G, R> CoinVisitor for TestVisitor<G, R>
+    where
+        G: Group,
         R: Clone,
     {
+        type GIn = G;
         type Result = R;
         type Error = Never;
 
-        fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+        fn visit<GG>(&mut self, coin: &CoinDTO<GG>) -> Result<Self::Result, Self::Error>
         where
-            G: Group,
+            GG: Group + MemberOf<Self::GIn>,
         {
             assert!(self.2.is_none());
             let res = if self.0.is_none() {
@@ -103,7 +118,7 @@ mod test {
 
     #[test]
     fn visit_one() {
-        let mut v = TestVisitor::<()>::new();
+        let mut v = TestVisitor::<SuperGroup, ()>::new();
         let iter_res = never::safe_unwrap(super::on_coin(&coin1(), &mut v));
         assert_eq!(iter_res, IterState::Complete);
         assert!(v.first_visited(coin1().amount()));
@@ -112,7 +127,7 @@ mod test {
 
     #[test]
     fn visit_two_stop_one() {
-        let mut v = TestVisitor::<IterNext>::new(IterNext::Stop, IterNext::Continue);
+        let mut v = TestVisitor::<SuperGroup, IterNext>::new(IterNext::Stop, IterNext::Continue);
 
         let iter_res = never::safe_unwrap(super::on_coins(&coin1(), &coin2(), &mut v));
         assert_eq!(iter_res, IterState::Incomplete);
@@ -122,7 +137,7 @@ mod test {
 
     #[test]
     fn visit_two_stop_two() {
-        let mut v = TestVisitor::<IterNext>::new(IterNext::Continue, IterNext::Stop);
+        let mut v = TestVisitor::<SuperGroup, IterNext>::new(IterNext::Continue, IterNext::Stop);
 
         let iter_res = never::safe_unwrap(super::on_coins(&coin2(), &coin1(), &mut v));
         assert_eq!(iter_res, IterState::Complete);
@@ -132,7 +147,8 @@ mod test {
 
     #[test]
     fn visit_two_continue() {
-        let mut v = TestVisitor::<IterNext>::new(IterNext::Continue, IterNext::Continue);
+        let mut v =
+            TestVisitor::<SuperGroup, IterNext>::new(IterNext::Continue, IterNext::Continue);
 
         let iter_res = never::safe_unwrap(super::on_coins(&coin1(), &coin2(), &mut v));
         assert_eq!(iter_res, IterState::Complete);

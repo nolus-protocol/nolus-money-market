@@ -3,7 +3,7 @@ use std::slice::Iter as SliceIter;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
-use currency::{Currency, SymbolSlice};
+use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
     StateLocalOut, SwapTask,
@@ -45,10 +45,10 @@ impl BuyBack {
         coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
         debug_assert!(
-            coins.iter().all(
-                |coin_dto: &CoinDTO<PaymentGroup>| currency::validate::<Native>(coin_dto.ticker())
-                    .is_err()
-            ),
+            coins
+                .iter()
+                .all(|not_native: &CoinDTO<PaymentGroup>| not_native.currency()
+                    != currency::dto::<Nls, PaymentGroup>()),
             "{:?}",
             coins
         );
@@ -63,7 +63,9 @@ impl BuyBack {
 }
 
 impl SwapTask for BuyBack {
+    type InG = PaymentGroup;
     type OutG = Native;
+    type InOutG = PaymentGroup;
     type Label = String;
     type StateResponse = ConfigResponse;
     type Result = ContractResult<DexResponse<State>>;
@@ -76,7 +78,7 @@ impl SwapTask for BuyBack {
         &self.account
     }
 
-    fn oracle(&self) -> &impl SwapPath {
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
         self.config.oracle()
     }
 
@@ -84,17 +86,17 @@ impl SwapTask for BuyBack {
         self.config.time_alarms()
     }
 
-    fn out_currency(&self) -> &SymbolSlice {
-        Nls::TICKER
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
+        currency::dto::<Nls, Self::OutG>()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>,
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
-        let mut coins_iter: SliceIter<'_, CoinDTO<PaymentGroup>> = self.coins.iter();
+        let mut coins_iter: SliceIter<'_, CoinDTO<_>> = self.coins.iter();
 
-        TryFind::try_find(&mut coins_iter, |coin: &&CoinDTO<PaymentGroup>| {
+        TryFind::try_find(&mut coins_iter, |coin: &&CoinDTO<Self::InG>| {
             visitor
                 .visit(coin)
                 .map(|result: IterNext| matches!(result, IterNext::Stop))
@@ -179,7 +181,7 @@ mod tests {
     use currencies::{
         Lpns, PaymentGroup, {Lpn, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     };
-    use currency::never::Never;
+    use currency::{never::Never, Group, MemberOf};
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
 
@@ -229,13 +231,14 @@ mod tests {
     }
 
     impl CoinVisitor for Visitor {
+        type GIn = PaymentGroup;
         type Result = IterNext;
 
         type Error = Never;
 
         fn visit<G>(&mut self, _: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
         where
-            G: currency::Group,
+            G: Group + MemberOf<Self::GIn>,
         {
             if let Some(stop_after) = &mut self.stop_after {
                 if *stop_after == 0 {

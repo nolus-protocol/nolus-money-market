@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
     PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, Definition, Group, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -57,8 +57,8 @@ where
 pub(crate) fn dummy_instantiate_msg(
     price_feed_period_secs: u32,
     expected_feeders: Percent,
-    swap_tree: HumanReadableTree<SwapTarget>,
-) -> InstantiateMsg {
+    swap_tree: HumanReadableTree<SwapTarget<PriceCurrencies>>,
+) -> InstantiateMsg<PriceCurrencies> {
     InstantiateMsg {
         config: Config {
             price_config: PriceConfig::new(
@@ -72,7 +72,7 @@ pub(crate) fn dummy_instantiate_msg(
     }
 }
 
-pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
+pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg<PriceCurrencies> {
     dummy_instantiate_msg(
         60,
         Percent::from_percent(50),
@@ -131,7 +131,7 @@ pub(crate) fn dummy_feed_prices_msg(
 }
 
 pub(crate) fn setup_test(
-    msg: InstantiateMsg,
+    msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
     let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));

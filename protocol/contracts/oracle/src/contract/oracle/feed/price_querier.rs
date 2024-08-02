@@ -51,8 +51,8 @@ where
 
     fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
     where
-        B: Currency,
-        Q: Currency,
+        B: Currency + MemberOf<Self::CurrencyGroup>,
+        Q: Currency + MemberOf<Self::CurrencyGroup>,
     {
         let price = self
             .feeds

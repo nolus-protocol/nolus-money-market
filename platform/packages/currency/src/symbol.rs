@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{
-    error::Error, group::MemberOf, AnyVisitor, AnyVisitorResult, Currency, Group, SymbolStatic,
-};
+use crate::{Definition, Group, SymbolStatic};
 
 pub trait Symbol {
     const DESCR: &'static str;
@@ -14,7 +12,7 @@ pub trait Symbol {
 
     fn symbol<CD>() -> SymbolStatic
     where
-        CD: Currency + MemberOf<Self::Group>;
+        CD: Definition;
 }
 
 #[derive(Clone, Copy, Default)]
@@ -40,7 +38,7 @@ where
 
     fn symbol<CD>() -> SymbolStatic
     where
-        CD: Currency,
+        CD: Definition,
     {
         CD::TICKER
     }
@@ -69,7 +67,7 @@ where
 
     fn symbol<CD>() -> SymbolStatic
     where
-        CD: Currency,
+        CD: Definition,
     {
         CD::BANK_SYMBOL
     }
@@ -99,24 +97,8 @@ where
 
     fn symbol<CD>() -> SymbolStatic
     where
-        CD: Currency,
+        CD: Definition,
     {
         CD::DEX_SYMBOL
-    }
-}
-
-impl<T> AnyVisitor<T::Group> for T
-where
-    T: Symbol,
-{
-    type VisitorG = T::Group;
-    type Output = SymbolStatic;
-    type Error = Error;
-
-    fn on<C>(self) -> AnyVisitorResult<T::Group, Self>
-    where
-        C: Currency + MemberOf<Self::VisitorG>,
-    {
-        Ok(<Self as Symbol>::symbol::<C>())
     }
 }

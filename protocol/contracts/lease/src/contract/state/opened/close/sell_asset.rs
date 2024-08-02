@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::SymbolSlice;
+use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, SwapState, SwapTask,
     TransferInFinishState, TransferInInitState, TransferOutState,
@@ -11,7 +11,10 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
+    api::{
+        query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
+        LeaseAssetCurrencies, LeasePaymentCurrencies,
+    },
     contract::{
         state::{
             opened::{self, payment::Repayable},
@@ -57,7 +60,9 @@ impl<RepayableT> SwapTask for SellAsset<RepayableT>
 where
     RepayableT: Closable + Repayable,
 {
+    type InG = LeaseAssetCurrencies;
     type OutG = LpnCurrencies;
+    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -70,7 +75,7 @@ where
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &impl SwapPath {
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
         &self.lease.lease.oracle
     }
 
@@ -78,13 +83,13 @@ where
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> &SymbolSlice {
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
         self.lease.lease.loan.lpp().lpn()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>,
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
         dex::on_coin(self.repayable.amount(&self.lease), visitor)
     }

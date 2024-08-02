@@ -13,7 +13,9 @@ mod only;
 #[cfg(feature = "testing")]
 mod testing;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,
+)]
 pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {

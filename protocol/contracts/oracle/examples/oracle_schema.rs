@@ -9,12 +9,12 @@ use versioning::SemVer;
 fn main() {
     let out_dir = schema::prep_out_dir().expect("The output directory should be valid");
 
-    export_schema(&schema_for!(InstantiateMsg), &out_dir);
+    export_schema(&schema_for!(InstantiateMsg::<PriceCurrencies>), &out_dir);
     export_schema(
         &schema_for!(ExecuteMsg::<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>),
         &out_dir,
     );
-    export_schema(&schema_for!(QueryMsg), &out_dir);
+    export_schema(&schema_for!(QueryMsg::<PriceCurrencies>), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
     export_schema(&schema_for!(SemVer), &out_dir);
 }

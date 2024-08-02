@@ -8,8 +8,8 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 
 #[cfg(test)]
 mod tests {
-    use currencies::{Lpn, PaymentC3, PaymentC6};
-    use currency::Currency;
+    use currencies::{Lpn, PaymentC3, PaymentC6, PaymentGroup as PriceCurrencies};
+    use currency::{CurrencyDTO, Definition};
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -88,22 +88,22 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let mut value: Vec<SwapLeg> = from_json(res).unwrap();
+        let mut value: Vec<SwapLeg<PriceCurrencies>> = from_json(res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![
             SwapLeg {
-                from: PaymentC3::TICKER.into(),
+                from: CurrencyDTO::from_currency_type::<PaymentC3>(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: Lpn::TICKER.into(),
+                    target: CurrencyDTO::from_currency_type::<Lpn>(),
                 },
             },
             SwapLeg {
-                from: PaymentC6::TICKER.into(),
+                from: CurrencyDTO::from_currency_type::<PaymentC6>(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: Lpn::TICKER.into(),
+                    target: CurrencyDTO::from_currency_type::<Lpn>(),
                 },
             },
         ];

@@ -1,20 +1,19 @@
-use std::cmp::Ordering;
-
 use serde::{Deserialize, Serialize};
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{Currency, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::CoinDTO,
-    error::{Error, Result as FinanceResult},
+    error::{Error, Result},
     price::Price,
 };
 
 mod unchecked;
 pub mod with_price;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(
     try_from = "unchecked::PriceDTO<G, QuoteG>",
     bound(serialize = "", deserialize = "")
@@ -33,13 +32,21 @@ where
     G: Group,
     QuoteG: Group,
 {
-    pub fn new(base: CoinDTO<G>, quote: CoinDTO<QuoteG>) -> Self {
+    pub(super) fn new_unchecked(base: CoinDTO<G>, quote: CoinDTO<QuoteG>) -> Self {
         let res = Self {
             amount: base,
             amount_quote: quote,
         };
-        debug_assert_eq!(Ok(()), res.invariant_held());
+        debug_assert!(res.invariant_held().is_ok());
         res
+    }
+
+    fn try_new(base: CoinDTO<G>, quote: CoinDTO<QuoteG>) -> Result<Self> {
+        Self {
+            amount: base,
+            amount_quote: quote,
+        }
+        .invariant_held()
     }
 
     pub const fn base(&self) -> &CoinDTO<G> {
@@ -50,25 +57,62 @@ where
         &self.amount_quote
     }
 
-    fn invariant_held(&self) -> FinanceResult<()> {
-        Self::check(!self.base().is_zero(), "The amount should not be zero")
-            .and_then(|_| {
-                Self::check(
-                    !self.quote().is_zero(),
-                    "The quote amount should not be zero",
-                )
-            })
-            .and_then(|_| {
-                Self::check(
-                    self.amount.ticker() != self.amount_quote.ticker()
-                        || self.amount.amount() == self.amount_quote.amount(),
-                    "The price should be equal to the identity if the currencies match",
-                )
-            })
+    fn invariant_held(self) -> Result<Self> {
+        struct InvariantCheck<G, QuoteG> {
+            g: PhantomData<G>,
+            quote_g: PhantomData<QuoteG>,
+        }
+
+        impl<G, QuoteG> WithPrice for InvariantCheck<G, QuoteG>
+        where
+            G: Group,
+            QuoteG: Group,
+        {
+            type G = G;
+            type QuoteG = QuoteG;
+
+            type Output = ();
+
+            type Error = Error;
+
+            fn exec<C, QuoteC>(self, converted: Price<C, QuoteC>) -> Result<Self::Output>
+            where
+                C: Currency + MemberOf<G>,
+                QuoteC: Currency + MemberOf<QuoteG>,
+            {
+                converted.invariant_held()
+            }
+        }
+
+        with_price::execute_with_coins(
+            self.amount,
+            self.amount_quote,
+            InvariantCheck {
+                g: PhantomData::<G>,
+                quote_g: PhantomData::<QuoteG>,
+            },
+        )
+        .map(|()| self)
     }
 
-    fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
-        Error::broken_invariant_if::<Self>(!invariant, msg)
+    /// Intended in scenarios when the currencies are known in advance.
+    fn as_specific<C, QuoteC>(&self) -> Price<C, QuoteC>
+    where
+        C: Currency + MemberOf<G>,
+        QuoteC: Currency + MemberOf<QuoteG>,
+    {
+        super::total_of(self.amount.as_specific()).is(self.amount_quote.as_specific())
+    }
+
+    fn of_currencies<C, QuoteC>(&self) -> Result<()>
+    where
+        C: Currency + MemberOf<G>,
+        QuoteC: Currency + MemberOf<QuoteG>,
+    {
+        self.amount
+            .of_currency::<C>()
+            .and_then(|()| self.amount_quote.of_currency::<QuoteC>())
+            .map_err(Into::into)
     }
 }
 
@@ -80,21 +124,7 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
-        Self::new(price.amount.into(), price.amount_quote.into())
-    }
-}
-
-impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
-where
-    G: Group,
-    QuoteG: Group,
-    C: Currency + MemberOf<G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
-{
-    type Error = Error;
-
-    fn try_from(value: &PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        Ok(super::total_of((&value.amount).try_into()?).is((&value.amount_quote).try_into()?))
+        Self::new_unchecked(price.amount.into(), price.amount_quote.into())
     }
 }
 
@@ -107,46 +137,63 @@ where
 {
     type Error = Error;
 
-    fn try_from(value: PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        Self::try_from(&value)
+    fn try_from(price: PriceDTO<G, QuoteG>) -> StdResult<Self, Self::Error> {
+        Self::try_from(&price)
     }
 }
 
-impl<G, QuoteG> PartialOrd for PriceDTO<G, QuoteG>
+impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
+    C: Currency + MemberOf<G>,
+    QuoteC: Currency + MemberOf<QuoteG>,
 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        struct Comparator<'a, G, QuoteG>
-        where
-            G: Group,
-            QuoteG: Group,
-        {
-            other: &'a PriceDTO<G, QuoteG>,
-        }
+    type Error = Error;
 
-        impl<'a, G, QuoteG> WithPrice for Comparator<'a, G, QuoteG>
-        where
-            G: Group,
-            QuoteG: Group,
-        {
-            type G = G;
-            type QuoteG = QuoteG;
-            type Output = Option<Ordering>;
-            type Error = Error;
-
-            fn exec<C, QuoteC>(self, lhs: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency + MemberOf<Self::G>,
-                QuoteC: Currency + MemberOf<Self::QuoteG>,
-            {
-                Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
-            }
-        }
-        with_price::execute(self, Comparator { other }).unwrap_or(None) //intentionally used the explicit form rather than the `unwrap_or_default`
+    fn try_from(price: &PriceDTO<G, QuoteG>) -> StdResult<Self, Self::Error> {
+        price
+            .of_currencies::<C, QuoteC>()
+            .map(|()| price.as_specific())
     }
 }
+
+// TODO revisit if this is required, if yes return None when the price types mismatch
+// impl<G, QuoteG> PartialOrd for PriceDTO<G, QuoteG>
+// where
+//     G: Group,
+//     QuoteG: Group,
+// {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         struct Comparator<'a, G, QuoteG>
+//         where
+//             G: Group,
+//             QuoteG: Group,
+//         {
+//             other: &'a PriceDTO<G, QuoteG>,
+//         }
+
+//         impl<'a, G, QuoteG> WithPrice for Comparator<'a, G, QuoteG>
+//         where
+//             G: Group,
+//             QuoteG: Group,
+//         {
+//             type G = G;
+//             type QuoteG = QuoteG;
+//             type Output = Option<Ordering>;
+//             type Error = Error;
+
+//             fn exec<C, QuoteC>(self, lhs: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+//             where
+//                 C: Currency + MemberOf<Self::G>,
+//                 QuoteC: Currency + MemberOf<Self::QuoteG>,
+//             {
+//                 Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
+//             }
+//         }
+//         with_price::execute(self, Comparator { other }).unwrap_or(None) //intentionally used the explicit form rather than the `unwrap_or_default`
+//     }
+// }
 
 pub trait WithPrice {
     type G: Group;
@@ -155,7 +202,7 @@ pub trait WithPrice {
     type Output;
     type Error;
 
-    fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+    fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> StdResult<Self::Output, Self::Error>
     where
         C: Currency + MemberOf<Self::G>,
         QuoteC: Currency + MemberOf<Self::QuoteG>;
@@ -168,94 +215,99 @@ where
     type Output;
     type Error;
 
-    fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+    fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> StdResult<Self::Output, Self::Error>
     where
         QuoteC: Currency;
 }
 
-#[cfg(test)]
-mod test {
-    use std::cmp::Ordering;
+// #[cfg(test)]
+// mod test {
+//     use std::cmp::Ordering;
 
-    use currency::test::{
-        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
-    };
+//     use currency::test::{
+//         SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+//     };
 
-    use crate::{
-        coin::Coin,
-        price::{self, dto::PriceDTO, Price},
-    };
+//     use crate::{
+//         coin::Coin,
+//         price::{self, dto::PriceDTO, Price},
+//     };
 
-    type TestPriceDTO = PriceDTO<SubGroup, SuperGroup>;
+// type TestPriceDTO = PriceDTO<SubGroup, SuperGroup>;
 
-    #[test]
-    fn test_cmp() {
-        let p1: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(20))
-            .is(Coin::<SuperGroupTestC1>::new(5000))
-            .into();
-        assert!(p1 == p1);
-        assert_eq!(Some(Ordering::Equal), p1.partial_cmp(&p1));
+// #[test]
+// fn test_cmp() {
+//     let p1: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(20))
+//         .is(Coin::<SuperGroupTestC1>::new(5000))
+//         .into();
+//     assert!(p1 == p1);
+//     assert_eq!(Some(Ordering::Equal), p1.partial_cmp(&p1));
 
-        let p2 = price::total_of(Coin::<SubGroupTestC1>::new(20))
-            .is(Coin::<SuperGroupTestC1>::new(5001))
-            .into();
-        assert!(p1 < p2);
+//     let p2 = price::total_of(Coin::<SubGroupTestC1>::new(20))
+//         .is(Coin::<SuperGroupTestC1>::new(5001))
+//         .into();
+//     assert!(p1 < p2);
 
-        let p3: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-            .is(Coin::<SuperGroupTestC1>::new(789456))
-            .into();
-        let p4 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-            .is(Coin::<SuperGroupTestC1>::new(123456))
-            .into();
-        assert!(p3 >= p4);
+//     let p3: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+//         .is(Coin::<SuperGroupTestC1>::new(789456))
+//         .into();
+//     let p4 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+//         .is(Coin::<SuperGroupTestC1>::new(123456))
+//         .into();
+//     assert!(p3 >= p4);
 
-        let p5 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-            .is(Coin::<SuperGroupTestC1>::new(3456))
-            .into();
-        assert!(p3 >= p5);
+//     let p5 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+//         .is(Coin::<SuperGroupTestC1>::new(3456))
+//         .into();
+//     assert!(p3 >= p5);
 
-        let p6 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-            .is(Coin::<SuperGroupTestC1>::new(3456))
-            .into();
-        assert!(p3 >= p6);
-    }
+//     let p6 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
+//         .is(Coin::<SuperGroupTestC1>::new(3456))
+//         .into();
+//     assert!(p3 >= p6);
+// }
 
-    #[test]
-    fn test_cmp_currencies_mismatch() {
-        let p1: PriceDTO<SuperGroup, SuperGroup> = Price::new(
-            Coin::<SuperGroupTestC1>::new(20),
-            Coin::<SuperGroupTestC2>::new(5000),
-        )
-        .into();
-        let p2: PriceDTO<SuperGroup, SuperGroup> = Price::new(
-            Coin::<SuperGroupTestC1>::new(20),
-            Coin::<SubGroupTestC1>::new(5000),
-        )
-        .into();
-        assert_eq!(None, p1.partial_cmp(&p2));
-        assert_eq!(None, p2.partial_cmp(&p1));
-    }
-}
+// #[test]
+// fn test_cmp_currencies_mismatch() {
+//     let p1: PriceDTO<SuperGroup, SuperGroup> = Price::new(
+//         Coin::<SuperGroupTestC1>::new(20),
+//         Coin::<SuperGroupTestC2>::new(5000),
+//     )
+//     .into();
+//     let p2: PriceDTO<SuperGroup, SuperGroup> = Price::new(
+//         Coin::<SuperGroupTestC1>::new(20),
+//         Coin::<SubGroupTestC1>::new(5000),
+//     )
+//     .into();
+//     assert_eq!(None, p1.partial_cmp(&p2));
+//     assert_eq!(None, p2.partial_cmp(&p1));
+// }
+// }
 
 #[cfg(test)]
 mod test_invariant {
 
     use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, Group};
-    use sdk::cosmwasm_std::{from_json, StdError, StdResult};
+    use currency::{Currency, Definition, Group, MemberOf};
+    use sdk::cosmwasm_std::{from_json, StdError as CWError, StdResult as CWResult};
 
-    use crate::coin::{Coin, CoinDTO};
+    use crate::{
+        coin::{Coin, CoinDTO},
+        error::Result,
+    };
 
     use super::PriceDTO;
 
     type TC = SuperGroup;
 
     #[test]
-    #[should_panic = "zero"]
     fn base_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(0),
-            Coin::<SuperGroupTestC2>::new(5),
+        assert_err(
+            new_invalid(
+                Coin::<SuperGroupTestC1>::new(0),
+                Coin::<SuperGroupTestC2>::new(5),
+            ),
+            "zero",
         );
     }
 
@@ -266,16 +318,18 @@ mod test_invariant {
             SuperGroupTestC1::TICKER,
             SuperGroupTestC2::TICKER
         );
-        assert_err(load(&json.into_bytes()), "not be zero");
+        assert_load_err(load(&json.into_bytes()), "not be zero");
     }
 
     #[test]
-    #[should_panic = "zero"]
     fn quote_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(10),
-            Coin::<SuperGroupTestC2>::new(0),
-        );
+        assert_err(
+            new_invalid(
+                Coin::<SuperGroupTestC1>::new(10),
+                Coin::<SuperGroupTestC2>::new(0),
+            ),
+            "zero",
+        )
     }
 
     #[test]
@@ -285,15 +339,17 @@ mod test_invariant {
             SuperGroupTestC1::TICKER,
             SuperGroupTestC2::TICKER
         );
-        assert_err(load(&json.into_bytes()), "not be zero");
+        assert_load_err(load(&json.into_bytes()), "not be zero");
     }
 
     #[test]
-    #[should_panic = "should be equal to the identity if the currencies match"]
     fn currencies_match() {
-        new_invalid(
-            Coin::<SuperGroupTestC2>::new(4),
-            Coin::<SuperGroupTestC2>::new(5),
+        assert_err(
+            new_invalid(
+                Coin::<SuperGroupTestC2>::new(4),
+                Coin::<SuperGroupTestC2>::new(5),
+            ),
+            "should be equal to the identity if the currencies match",
         );
     }
 
@@ -304,7 +360,7 @@ mod test_invariant {
             SuperGroupTestC1::TICKER,
             SuperGroupTestC1::TICKER
         );
-        assert_err(
+        assert_load_err(
             load(&json.into_bytes()),
             "should be equal to the identity if the currencies match",
         );
@@ -312,7 +368,7 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_ok() {
-        let p = PriceDTO::<TC, TC>::new(
+        let p = PriceDTO::<TC, TC>::new_unchecked(
             Coin::<SuperGroupTestC2>::new(4).into(),
             Coin::<SuperGroupTestC2>::new(4).into(),
         );
@@ -342,26 +398,22 @@ mod test_invariant {
             SuperGroupTestC1::TICKER,
             SuperGroupTestC2::TICKER
         ).into_bytes());
-        assert_err(r, "pretending to be ticker of a currency pertaining to");
+        assert_load_err(r, "pretending to be ticker of a currency pertaining to");
     }
 
-    fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
+    fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>) -> Result<PriceDTO<TC, TC>>
     where
-        C: Currency,
-        QuoteC: Currency,
+        C: Currency + MemberOf<TC>,
+        QuoteC: Currency + MemberOf<TC>,
     {
-        let _p = PriceDTO::<TC, TC>::new(base.into(), quote.into());
-        #[cfg(not(debug_assertions))]
-        {
-            _p.invariant_held().expect("should have returned an error");
-        }
+        PriceDTO::<TC, TC>::try_new(base.into(), quote.into())
     }
 
-    fn load(json: &[u8]) -> StdResult<PriceDTO<TC, TC>> {
+    fn load(json: &[u8]) -> CWResult<PriceDTO<TC, TC>> {
         load_with_groups::<TC, TC>(json)
     }
 
-    fn load_with_groups<G, QuoteG>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
+    fn load_with_groups<G, QuoteG>(json: &[u8]) -> CWResult<PriceDTO<G, QuoteG>>
     where
         G: Group,
         QuoteG: Group,
@@ -369,17 +421,25 @@ mod test_invariant {
         from_json::<PriceDTO<G, QuoteG>>(json)
     }
 
-    fn assert_err<G, QuoteG>(r: Result<PriceDTO<G, QuoteG>, StdError>, msg: &str)
+    fn assert_load_err<G, QuoteG>(r: CWResult<PriceDTO<G, QuoteG>>, msg: &str)
     where
         G: Group,
         QuoteG: Group,
     {
         assert!(matches!(
             r,
-            Err(StdError::ParseErr {
+            Err(CWError::ParseErr {
                 target_type,
                 msg: real_msg
             }) if target_type.contains("PriceDTO") && real_msg.contains(msg)
         ));
+    }
+
+    fn assert_err<G, QuoteG>(r: Result<PriceDTO<G, QuoteG>>, msg: &str)
+    where
+        G: Group,
+        QuoteG: Group,
+    {
+        assert!(r.expect_err("expected an error").to_string().contains(msg));
     }
 }

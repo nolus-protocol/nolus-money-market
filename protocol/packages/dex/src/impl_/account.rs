@@ -1,3 +1,4 @@
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 use oracle::stub::SwapPath;
@@ -59,11 +60,15 @@ impl Account {
         )
     }
 
-    pub(super) fn swap<'a>(
+    pub(super) fn swap<'a, SwapGroup, SwapPathImpl>(
         &'a self,
-        swap_path: &'a dyn SwapPath,
+        swap_path: &'a SwapPathImpl,
         querier: QuerierWrapper<'a>,
-    ) -> SwapTrx<'a> {
+    ) -> SwapTrx<'a, SwapGroup, SwapPathImpl>
+    where
+        SwapGroup: Group,
+        SwapPathImpl: SwapPath<SwapGroup>,
+    {
         SwapTrx::new(&self.dex.connection_id, &self.host, swap_path, querier)
     }
 

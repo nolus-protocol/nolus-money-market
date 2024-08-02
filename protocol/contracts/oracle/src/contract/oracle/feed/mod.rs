@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group, MemberOf, SymbolSlice};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -45,14 +45,14 @@ where
         sender_raw: &Addr,
         prices: &[PriceDTO<PriceG, PriceG>],
     ) -> Result<(), ContractError> {
-        let tree = SupportedPairs::<BaseC>::load(storage)?;
+        let tree = SupportedPairs::<PriceG, BaseC>::load(storage)?;
         if prices.iter().any(|price| {
             !tree.swap_pairs_df().any(
                 |SwapLeg {
                      from,
                      to: SwapTarget { target: to, .. },
                  }| {
-                    price.base().ticker() == &from && price.quote().ticker() == &to
+                    price.base().currency() == from && price.quote().currency() == to
                 },
             )
         }) {
@@ -74,7 +74,7 @@ where
     where
         'self_: 'r,
         'storage: 'r,
-        I: Iterator<Item = SwapLeg> + 'r,
+        I: Iterator<Item = SwapLeg<PriceG>> + 'r,
     {
         let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
@@ -84,8 +84,11 @@ where
         swap_pairs_df
             .scan(
                 cmd,
-                |cmd: &mut LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>>, leg: SwapLeg| {
-                    Some(currency::visit_any_on_tickers(&leg.from, &leg.to.target, cmd).transpose())
+                |cmd: &mut LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>>,
+                 leg: SwapLeg<PriceG>| {
+                    Some(
+                        currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose(),
+                    )
                 },
             )
             .flatten()
@@ -94,8 +97,8 @@ where
     pub fn calc_base_price(
         &self,
         storage: &dyn Storage,
-        tree: &SupportedPairs<BaseC>,
-        currency: &SymbolSlice,
+        tree: &SupportedPairs<PriceG, BaseC>,
+        currency: &CurrencyDTO<PriceG>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
@@ -115,13 +118,14 @@ mod test {
         Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
         PaymentGroup as PriceCurrencies,
     };
-    use currency::SymbolStatic;
+    use currency::{Definition, SymbolStatic};
     use finance::{
         coin::Amount,
         duration::Duration,
         percent::Percent,
         price::{dto::PriceDTO, Price},
     };
+    use marketprice::alarms::prefix::Prefix;
     use price_querier::PriceQuerier;
     use sdk::cosmwasm_std::{
         self,
@@ -140,8 +144,8 @@ mod test {
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
-            B: Currency + MemberOf<PriceCurrencies>,
-            Q: Currency + MemberOf<PriceCurrencies>,
+            B: Currency + MemberOf<PriceCurrencies> + Definition,
+            Q: Currency + MemberOf<PriceCurrencies> + Definition,
         {
             self.0.insert(
                 (B::TICKER, Q::TICKER),
@@ -160,13 +164,16 @@ mod test {
         {
             Ok(self
                 .0
-                .get(&(B::TICKER, Q::TICKER))
+                .get(&(
+                    currency::dto::<B, Self::CurrencyGroup>().first_key(),
+                    currency::dto::<Q, Self::CurrencyGroup>().first_key(),
+                ))
                 .map(Price::try_from)
                 .transpose()?)
         }
     }
 
-    fn test_case() -> HumanReadableTree<SwapTarget> {
+    fn test_case() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
         let base = BaseCurrency::TICKER;
         let osmo = PaymentC5::TICKER;
         let nls = PaymentC1::TICKER;
@@ -215,8 +222,10 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree =
-                SupportedPairs::<BaseCurrency>::new::<BaseCurrency>(tree.into_tree()).unwrap();
+            let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
+                tree.into_tree(),
+            )
+            .unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
@@ -266,8 +275,10 @@ mod test {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
             let tree = test_case();
-            let tree =
-                SupportedPairs::<BaseCurrency>::new::<BaseCurrency>(tree.into_tree()).unwrap();
+            let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
+                tree.into_tree(),
+            )
+            .unwrap();
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(

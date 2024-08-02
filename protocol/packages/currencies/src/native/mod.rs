@@ -14,7 +14,7 @@ mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
 pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";

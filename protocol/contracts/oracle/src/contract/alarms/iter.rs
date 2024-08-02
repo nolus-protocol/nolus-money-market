@@ -1,7 +1,7 @@
-use std::{iter, ops::Deref};
+use std::{iter, marker::PhantomData, ops::Deref};
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, MemberOf, Tickers};
-use finance::price::{base::BasePrice, Price};
+use currency::{Currency, Group, MemberOf};
+use finance::price::{self, base::with_price::WithPrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
 
@@ -57,11 +57,11 @@ where
             .next()
             .map(|price_result: PriceResult<PriceG, BaseC, BaseG>| {
                 price_result.and_then(|ref price| {
-                    Tickers::visit_any(
-                        price.base_ticker(),
+                    price::base::with_price::execute(
+                        price,
                         Cmd {
                             alarms: self.alarms,
-                            price,
+                            _base_c: PhantomData::<BaseC>,
                         },
                     )
                 })
@@ -105,42 +105,37 @@ where
     }
 }
 
-struct Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
+struct Cmd<'storage, 'alarms, S, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group + Clone,
-    BaseC: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    BaseC: Currency,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
-    price: &'price BasePrice<PriceG, BaseC, BaseG>,
+    _base_c: PhantomData<BaseC>,
 }
 
-impl<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG> AnyVisitor<PriceG>
-    for Cmd<'storage, 'alarms, 'price, S, PriceG, BaseC, BaseG>
+impl<'storage, 'alarms, S, PriceG, BaseC> WithPrice<BaseC>
+    for Cmd<'storage, 'alarms, S, PriceG, BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    BaseC: Currency,
 {
-    type VisitorG = PriceG;
+    type PriceG = PriceG;
 
     type Output = AlarmIter<'alarms, PriceG>;
     type Error = ContractError;
 
-    fn on<C>(self) -> AnyVisitorResult<PriceG, Self>
+    fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: Currency + MemberOf<Self::PriceG>,
     {
-        Price::<C, BaseC>::try_from(self.price)
-            .map(|price: Price<C, BaseC>| {
-                self.alarms
-                    .alarms(price)
-                    .map::<ContractResult<Addr>, AlarmIterMapFn>(
-                        |result: Result<Addr, AlarmError>| result.map_err(Into::into),
-                    )
-            })
-            .map_err(ContractError::from)
+        Ok(self
+            .alarms
+            .alarms(price)
+            .map::<ContractResult<Addr>, AlarmIterMapFn>(|result: Result<Addr, AlarmError>| {
+                result.map_err(Into::into)
+            }))
     }
 }

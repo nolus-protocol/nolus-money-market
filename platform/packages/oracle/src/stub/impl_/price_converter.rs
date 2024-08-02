@@ -5,7 +5,7 @@ use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::{Error, Result},
+    error::{self, Result},
     Oracle, OracleRef,
 };
 
@@ -29,7 +29,9 @@ impl PriceConverter for CheckedConverter {
         BaseC: Currency + MemberOf<BaseG>,
         BaseG: Group,
     {
-        price.try_into().map_err(Into::into)
+        let try_into: std::result::Result<Price<C, BaseC>, finance::error::Error> =
+            Price::<C, BaseC>::try_from(price);
+        try_into.map_err(Into::into)
     }
 }
 
@@ -44,13 +46,7 @@ impl PriceConverter for QuoteCUncheckedConverter {
         BaseC: Currency + MemberOf<BaseG>,
         BaseG: Group,
     {
-        use finance::{coin::Coin, price};
-
-        price
-            .base()
-            .try_into()
-            .map_err(Into::into)
-            .map(|base| price::total_of(base).is(Into::<Coin<BaseC>>::into(price.quote().amount())))
+        price.try_into().map_err(Into::into)
     }
 }
 
@@ -113,10 +109,12 @@ where
         let msg = PriceReqT::price::<C>();
         self.querier
             .query_wasm_smart(self.addr(), &msg)
-            .map_err(|error| Error::FailedToFetchPrice {
-                from: C::TICKER.into(),
-                to: QuoteC::TICKER.into(),
-                error,
+            .map_err(|error| {
+                error::failed_to_fetch_price(
+                    currency::dto::<C, CurrencyG>(),
+                    currency::dto::<QuoteC, QuoteG>(),
+                    error,
+                )
             })
             .and_then(PriceConverterT::try_convert::<C, CurrencyG, QuoteC, QuoteG>)
     }

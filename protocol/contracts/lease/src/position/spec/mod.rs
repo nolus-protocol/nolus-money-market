@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -10,6 +10,7 @@ use finance::{
 };
 
 use crate::{
+    api::LeasePaymentCurrencies,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
     position::{Cause, Debt, Liquidation},
@@ -107,7 +108,7 @@ impl Spec {
         payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
-        PaymentC: Currency,
+        PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
     {
         if self.valid_transaction(payment, payment_currency_in_lpns) {
             Ok(())

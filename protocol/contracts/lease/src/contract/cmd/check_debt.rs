@@ -65,7 +65,7 @@ pub(crate) struct FullLiquidationDTO {
 
 impl<Asset> From<DebtStatus<Asset>> for DebtStatusDTO
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     fn from(value: DebtStatus<Asset>) -> Self {
         match value {
@@ -84,7 +84,7 @@ where
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
 where
-    Asset: Currency,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {
     fn from(value: Liquidation<Asset>) -> Self {
         match value {

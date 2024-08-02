@@ -34,9 +34,6 @@ impl<'spec> WithLease for Cmd<'spec> {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {
-        (&self.spec.amount)
-            .try_into()
-            .map_err(Into::into)
-            .and_then(|amount| lease.validate_close(amount))
+        lease.validate_close(self.spec.amount.as_specific())
     }
 }

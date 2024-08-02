@@ -1,4 +1,6 @@
-use currency::{Group, NlsPlatform, SymbolSlice};
+use std::marker::PhantomData;
+
+use currency::{CurrencyDTO, Group, MemberOf, NlsPlatform};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -63,19 +65,24 @@ impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
     }
 }
 
-pub(super) struct SwapTrx<'a> {
+pub(super) struct SwapTrx<'a, SwapGroup, SwapPathImpl> {
     conn: &'a str,
     ica_account: &'a HostAccount,
     trx: Transaction,
-    oracle: &'a dyn SwapPath,
+    swap_path: &'a SwapPathImpl,
     querier: QuerierWrapper<'a>,
+    _group: PhantomData<SwapGroup>,
 }
 
-impl<'a> SwapTrx<'a> {
+impl<'a, SwapGroup, SwapPathImpl> SwapTrx<'a, SwapGroup, SwapPathImpl>
+where
+    SwapGroup: Group,
+    SwapPathImpl: SwapPath<SwapGroup>,
+{
     pub(super) fn new(
         conn: &'a str,
         ica_account: &'a HostAccount,
-        swap_path: &'a dyn SwapPath,
+        swap_path: &'a SwapPathImpl,
         querier: QuerierWrapper<'a>,
     ) -> Self {
         let trx = Transaction::default();
@@ -83,29 +90,35 @@ impl<'a> SwapTrx<'a> {
             conn,
             ica_account,
             trx,
-            oracle: swap_path,
+            swap_path,
             querier,
+            _group: PhantomData::<SwapGroup>,
         }
     }
 
-    pub fn swap_exact_in<GIn, GSwap, SwapClient>(
+    pub fn swap_exact_in<GIn, SwapGIn, SwapGOut, SwapClient>(
         &mut self,
-        amount: &CoinDTO<GIn>,
-        currency_out: &SymbolSlice,
+        amount: CoinDTO<GIn>,
+        currency_out: CurrencyDTO<SwapGOut>,
     ) -> Result<()>
     where
-        GIn: Group,
-        GSwap: Group,
+        GIn: Group + MemberOf<SwapGIn>,
+        SwapGIn: Group + MemberOf<SwapGroup>,
+        SwapGOut: Group + MemberOf<SwapGroup>,
         SwapClient: ExactAmountIn,
     {
-        self.oracle
-            .swap_path(amount.ticker().into(), currency_out.into(), self.querier)
+        self.swap_path
+            .swap_path(
+                amount.currency().into_super_group::<SwapGIn>(),
+                currency_out,
+                self.querier,
+            )
             .map_err(Into::into)
             .and_then(|swap_path| {
-                SwapClient::build_request::<GIn, GSwap>(
+                SwapClient::build_request(
                     &mut self.trx,
                     self.ica_account.clone(),
-                    amount,
+                    &amount,
                     &swap_path,
                 )
                 .map_err(Into::into)
@@ -113,8 +126,8 @@ impl<'a> SwapTrx<'a> {
     }
 }
 
-impl From<SwapTrx<'_>> for LocalBatch {
-    fn from(value: SwapTrx<'_>) -> Self {
+impl<SwapGroup, SwapPathImpl> From<SwapTrx<'_, SwapGroup, SwapPathImpl>> for LocalBatch {
+    fn from(value: SwapTrx<'_, SwapGroup, SwapPathImpl>) -> Self {
         ica::submit_transaction(
             value.conn,
             value.trx,

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf, SymbolSlice};
+use currency::{Currency, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 use with_price::WithPrice;
 
@@ -16,7 +16,7 @@ use super::{dto::PriceDTO, Price};
 mod unchecked;
 pub mod with_price;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Eq, JsonSchema)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(
     try_from = "unchecked::BasePrice<BaseG, QuoteG>",
     into = "unchecked::BasePrice<BaseG, QuoteG>",
@@ -55,11 +55,6 @@ where
 
         debug_assert_eq!(Ok(()), res.invariant_held());
         res
-    }
-
-    // TODO use with_price instead
-    pub fn base_ticker(&self) -> &SymbolSlice {
-        self.amount.ticker()
     }
 
     fn new_raw(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
@@ -103,10 +98,13 @@ where
     }
 }
 
-impl<C, BaseG, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC, QuoteG>
+//
+// Price related transformations
+//
+impl<C, G, QuoteC, QuoteG> From<Price<C, QuoteC>> for BasePrice<G, QuoteC, QuoteG>
 where
-    C: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    C: Currency + MemberOf<G>,
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
@@ -115,23 +113,40 @@ where
     }
 }
 
-impl<C, BaseG, QuoteC, QuoteG> TryFrom<&BasePrice<BaseG, QuoteC, QuoteG>> for Price<C, QuoteC>
+impl<C, G, QuoteC, QuoteG> TryFrom<BasePrice<G, QuoteC, QuoteG>> for Price<C, QuoteC>
 where
-    C: Currency + MemberOf<BaseG>,
-    BaseG: Group,
+    C: Currency + MemberOf<G>,
+    G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
 
-    fn try_from(base: &BasePrice<BaseG, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
-        (&base.amount)
-            .try_into()
-            .map(|amount| super::total_of(amount).is(base.amount_quote))
-            .map_err(Into::into)
+    fn try_from(base: BasePrice<G, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
+        Self::try_from(&base)
     }
 }
 
+impl<C, G, QuoteC, QuoteG> TryFrom<&BasePrice<G, QuoteC, QuoteG>> for Price<C, QuoteC>
+where
+    C: Currency + MemberOf<G>,
+    G: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    type Error = Error;
+
+    fn try_from(base: &BasePrice<G, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
+        base.amount
+            .try_into()
+            .map_err(Into::into)
+            .map(|amount| super::total_of(amount).is(base.amount_quote))
+    }
+}
+
+//
+// PriceDTO related transformations
+//
 impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC, QuoteG>> for PriceDTO<BaseG, QuoteG>
 where
     BaseG: Group,
@@ -139,10 +154,9 @@ where
     QuoteG: Group,
 {
     fn from(base: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
-        Self::new(base.amount, base.amount_quote.into())
+        Self::new_unchecked(base.amount, base.amount_quote.into())
     }
 }
-
 impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
@@ -152,29 +166,15 @@ where
     type Error = Error;
 
     fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-        price
-            .quote()
-            .try_into()
-            .and_then(|amount_quote| Self::new_checked(price.base().clone(), amount_quote))
+        Coin::<QuoteC>::try_from(*(price.quote()))
+            .and_then(|amount_quote| Self::new_checked(*price.base(), amount_quote))
     }
 }
-
-impl<BaseG, QuoteC, QuoteG> Clone for BasePrice<BaseG, QuoteC, QuoteG>
-where
-    BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    fn clone(&self) -> Self {
-        Self::new_raw(self.amount.clone(), self.amount_quote)
-    }
-}
-
 #[cfg(test)]
 mod test_invariant {
     use currency::{
         test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Group, MemberOf,
+        Currency, Definition, Group, MemberOf,
     };
     use sdk::cosmwasm_std::{from_json, to_json_string, StdResult};
 

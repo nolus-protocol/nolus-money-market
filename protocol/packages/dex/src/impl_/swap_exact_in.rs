@@ -3,9 +3,10 @@ use std::{
     marker::PhantomData,
 };
 
+use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{Group, SymbolSlice};
+use currency::{CurrencyDTO, Group, MemberOf};
 use finance::{
     coin::{self, Amount, CoinDTO},
     zero::Zero,
@@ -78,37 +79,47 @@ where
     ) -> Result<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'a, SwapGroup, SwapClient>(
-            SwapTrx<'a>,
-            &'a SymbolSlice,
-            PhantomData<SwapGroup>,
+        struct SwapWorker<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>(
+            SwapTrx<'a, SwapInOut, SwapPathImpl>,
+            PhantomData<SwapIn>,
+            CurrencyDTO<SwapOut>,
             PhantomData<SwapClient>,
-        );
-        impl<'a, SwapGroup, SwapClient> CoinVisitor for SwapWorker<'a, SwapGroup, SwapClient>
+        )
         where
-            SwapGroup: Group,
+            SwapOut: Group;
+
+        impl<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient> CoinVisitor
+            for SwapWorker<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
+        where
+            SwapPathImpl: SwapPath<SwapInOut>,
+            SwapIn: Group + MemberOf<SwapInOut>,
+            SwapOut: Group + MemberOf<SwapInOut>,
+            SwapInOut: Group,
             SwapClient: ExactAmountIn,
         {
+            type GIn = SwapIn;
+
             type Result = IterNext;
             type Error = Error;
 
             fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
             where
-                G: Group,
+                G: Group + MemberOf<Self::GIn>,
             {
                 self.0
-                    .swap_exact_in::<_, SwapGroup, SwapClient>(coin, self.1)?;
+                    .swap_exact_in::<_, SwapIn, SwapOut, SwapClient>(*coin, self.2)?;
                 Ok(IterNext::Continue)
             }
         }
 
         let mut swapper = SwapWorker(
             swap_trx,
+            PhantomData::<SwapTask::InG>,
             self.spec.out_currency(),
-            PhantomData::<SwapGroup>,
             PhantomData::<SwapClient>,
         );
-        let mut filtered_swapper = CurrencyFilter::new(&mut swapper, self.spec.out_currency());
+        let mut filtered_swapper =
+            CurrencyFilter::<_, _, _>::new(&mut swapper, self.spec.out_currency());
         let _res = self.spec.on_coins(&mut filtered_swapper)?;
 
         #[cfg(debug_assertions)]
@@ -118,18 +129,26 @@ where
     }
 
     fn decode_response(&self, resp: &[u8], spec: &SwapTask) -> Result<CoinDTO<SwapTask::OutG>> {
-        struct ExactInResponse<I, SwapClient>(I, Amount, PhantomData<SwapClient>);
-        impl<I, SwapClient> CoinVisitor for ExactInResponse<I, SwapClient>
+        struct ExactInResponse<I, SwapIn, SwapClient>(
+            I,
+            Amount,
+            PhantomData<SwapIn>,
+            PhantomData<SwapClient>,
+        );
+        impl<I, SwapIn, SwapClient> CoinVisitor for ExactInResponse<I, SwapIn, SwapClient>
         where
+            SwapIn: Group,
             I: Iterator<Item = Any>,
             SwapClient: ExactAmountIn,
         {
+            type GIn = SwapIn;
+
             type Result = IterNext;
             type Error = Error;
 
             fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> Result<Self::Result>
             where
-                G: Group,
+                G: Group + MemberOf<Self::GIn>,
             {
                 self.1 += SwapClient::parse_response(&mut self.0)?;
                 Ok(IterNext::Continue)
@@ -138,24 +157,28 @@ where
         let mut resp = ExactInResponse(
             trx::decode_msg_responses(resp)?,
             Amount::ZERO,
+            PhantomData::<SwapTask::InG>,
             PhantomData::<SwapClient>,
         );
+
         let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
         let _res = self.spec.on_coins(&mut filtered_resp)?;
 
         #[cfg(debug_assertions)]
         self.debug_check(&filtered_resp, _res);
 
-        coin::from_amount_ticker(
+        Ok(coin::from_amount_ticker(
             filtered_resp.filtered() + resp.1,
-            spec.out_currency().into(),
-        )
-        .map_err(Into::into)
+            spec.out_currency(),
+        ))
     }
 
     #[cfg(debug_assertions)]
-    fn debug_check<V>(&self, filter: &CurrencyFilter<'_, V>, res: IterState)
-    where
+    fn debug_check<V>(
+        &self,
+        filter: &CurrencyFilter<'_, V, SwapTask::InG, SwapTask::OutG>,
+        res: IterState,
+    ) where
         V: CoinVisitor,
     {
         debug_assert!(

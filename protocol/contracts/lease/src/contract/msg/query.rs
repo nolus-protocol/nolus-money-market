@@ -1,7 +1,10 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 
 use crate::{
-    api::query::{opened, paid, StateResponse},
+    api::{
+        query::{opened, paid, StateResponse},
+        LeaseAssetCurrencies,
+    },
     lease::{LeaseDTO, State},
 };
 
@@ -11,7 +14,7 @@ impl StateResponse {
         in_progress: Option<opened::OngoingTrx>,
     ) -> Self
     where
-        Asset: Currency,
+        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     {
         Self::Opened {
             amount: open_lease.amount.into(),

@@ -1,3 +1,4 @@
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Lpn as QuoteC, Lpns as QuoteG};
@@ -47,7 +48,10 @@ impl Config {
         &self.treasury
     }
 
-    pub fn oracle(&self) -> &impl SwapPath {
+    pub fn oracle<GSwap>(&self) -> &impl SwapPath<GSwap>
+    where
+        GSwap: Group,
+    {
         &self.oracle
     }
 

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit as _, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
 use sdk::cosmos_sdk_proto::Any;
@@ -11,20 +11,21 @@ pub(crate) use tests::validate_a_response;
 mod tests;
 
 pub trait ExactAmountInSkel {
-    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn>
+    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn, GSwap>
     where
-        GIn: Group,
+        GIn: Group + MemberOf<GSwap>,
         GSwap: Group;
 
     fn build_response(amount_out: Amount) -> Any;
 }
 
-pub struct SwapRequest<GIn>
+pub struct SwapRequest<GIn, GSwap>
 where
     GIn: Group,
+    GSwap: Group,
 {
     pub token_in: CoinDTO<GIn>,
-    pub swap_path: SwapPath,
+    pub swap_path: SwapPath<GSwap>,
 }
 
 pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::CoinDTO<G>
@@ -70,7 +71,7 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<G, Self>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
     {
         Ok(Coin::<C>::new(self.amount).into())
     }

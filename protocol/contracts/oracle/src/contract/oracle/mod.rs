@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use currency::{Currency, Group, MemberOf, SymbolOwned, SymbolSlice};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -42,7 +42,7 @@ where
     BaseG: Group,
 {
     storage: S,
-    tree: SupportedPairs<BaseC>,
+    tree: SupportedPairs<PriceG, BaseC>,
     feeders: usize,
     feeds: Feeds<PriceG, BaseC, BaseG>,
 }
@@ -97,7 +97,7 @@ where
     pub(super) fn try_query_base_price(
         &self,
         at: Timestamp,
-        currency: &SymbolSlice,
+        currency: &CurrencyDTO<PriceG>,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
         self.feeds
             .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
@@ -106,7 +106,7 @@ where
     pub(super) fn try_query_stable_price<StableCurrency>(
         &self,
         at: Timestamp,
-        currency: &SymbolOwned,
+        currency: &CurrencyDTO<PriceG>,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
     where
         StableCurrency: Currency + MemberOf<PriceG>,
@@ -139,7 +139,7 @@ where
                 Ok((base_price * self.stable_to_base_price.inv()).into())
             }
         }
-        self.try_query_base_price(at, StableCurrency::TICKER)
+        self.try_query_base_price(at, &currency::dto::<StableCurrency, PriceG>())
             .and_then(|stable_price| {
                 Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
             })
@@ -230,7 +230,7 @@ mod test_normalized_price_not_found {
         Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
         PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
-    use currency::Currency as _;
+    use currency::Definition;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
     use sdk::cosmwasm_std::{
@@ -292,7 +292,7 @@ mod test_normalized_price_not_found {
 
         Config::new(price_config.clone()).store(storage).unwrap();
 
-        SupportedPairs::<BaseCurrency>::new::<StableCurrency>(
+        SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(
             swap_tree!({ base: BaseCurrency::TICKER }, (1, Nls::TICKER), (10, PaymentC3::TICKER))
                 .into_tree(),
         )

@@ -1,7 +1,9 @@
 use currency::MemberOf;
-use currency::{error::CmdError, AnyVisitor, Currency, Group, GroupVisit, Tickers};
+use currency::{Currency, Group};
 
-use crate::{error::Error, price::Price};
+use crate::coin::{Coin, WithCoin, WithCoinResult};
+use crate::price;
+use crate::price::Price;
 
 use crate::price::base::BasePrice;
 
@@ -28,13 +30,11 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
-    Error: Into<Cmd::Error>,
 {
-    Tickers::<BaseG>::visit_any(price.base_ticker(), CurrencyResolve { price, cmd })
-        .map_err(CmdError::into_customer_err)
+    price.amount.with_coin(CoinResolve { price, cmd })
 }
 
-struct CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
+struct CoinResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
@@ -45,29 +45,24 @@ where
     cmd: Cmd,
 }
 
-impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor<G> for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
+impl<'a, G, QuoteC, QuoteG, Cmd> WithCoin<G> for CoinResolve<'a, G, QuoteC, QuoteG, Cmd>
 where
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = G>,
-    Error: Into<Cmd::Error>,
 {
     type VisitorG = G;
-    type Output = Cmd::Output;
-    type Error = CmdError<Cmd::Error, Error>;
 
-    fn on<C>(self) -> currency::AnyVisitorResult<G, Self>
+    type Output = Cmd::Output;
+
+    type Error = Cmd::Error;
+
+    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
         C: Currency + MemberOf<Self::VisitorG>,
     {
-        self.price
-            .try_into()
-            .map_err(Self::Error::from_api_err)
-            .and_then(|price| {
-                self.cmd
-                    .exec::<C>(price)
-                    .map_err(Self::Error::from_customer_err)
-            })
+        self.cmd
+            .exec(price::total_of(amount).is(self.price.amount_quote))
     }
 }

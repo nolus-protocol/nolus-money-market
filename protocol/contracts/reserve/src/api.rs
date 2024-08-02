@@ -1,5 +1,5 @@
 pub(crate) use currencies::Lpns as LpnCurrencies;
-pub use currency::SymbolOwned as LpnQueryResponse;
+use currency::CurrencyDTO;
 use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +9,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+pub(crate) type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
 pub(crate) type LpnCoin = CoinDTO<LpnCurrencies>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -41,7 +42,7 @@ pub enum SudoMsg {}
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Return a [LpnQueryResponse] of the Lpn this reserve holds
+    /// Return a [LpnCurrencyDTO] of the Lpn this reserve holds
     ReserveLpn(), // the name contains the contract name to help distinguish from simmilar queries to other contracts
     /// Return a [ConfigResponse]
     Config(),

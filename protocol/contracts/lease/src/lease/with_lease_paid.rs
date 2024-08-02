@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, Tickers};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, MemberOf};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -57,14 +57,11 @@ where
         Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        Tickers::visit_any(
-            &lpn,
-            FactoryStage2 {
-                lease_dto: self.lease_dto,
-                cmd: self.cmd,
-                position,
-            },
-        )
+        lpn.into_currency_type(FactoryStage2 {
+            lease_dto: self.lease_dto,
+            cmd: self.cmd,
+            position,
+        })
     }
 }
 struct FactoryStage2<Cmd, Asset> {

@@ -128,11 +128,10 @@ where
     where
         O: OracleTrait<Self::G, QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
-        let downpayment = self.downpayment.ticker().clone();
-
-        Tickers::maybe_visit_any(
-            &downpayment,
-            QuoteStage3 {
+        // TODO use CoinDTO::with_coin instead
+        self.downpayment
+            .currency()
+            .into_currency_type(QuoteStage3 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
                 lpp_quote: self.lpp_quote,
@@ -140,11 +139,10 @@ where
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
-            },
-        )
-        .map_err(|_| ContractError::UnknownCurrency {
-            symbol: downpayment,
-        })?
+            })
+            .map_err(|_| ContractError::UnknownCurrency {
+                symbol: self.downpayment.currency().to_string(),
+            })
     }
 }
 
@@ -224,7 +222,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<LeaseCurrencies, Self>
     where
-        Asset: Currency + MemberOf<Self::VisitorG>,
+        Asset: Currency + MemberOf<LeaseCurrencies> + MemberOf<Self::VisitorG>,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 

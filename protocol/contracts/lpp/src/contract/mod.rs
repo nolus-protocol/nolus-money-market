@@ -42,8 +42,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    // TODO move these checks on deserialization
-    currency::validate::<LpnCurrencies>(&msg.lpn_ticker)?;
+    // TODO change the InstantiateMsg::lpn_ticker type to CurrencyDTO to allow proper checks on deserialization
+    // currency::validate::<LpnCurrencies>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
     versioning::initialize(deps.storage, CONTRACT_VERSION)?;

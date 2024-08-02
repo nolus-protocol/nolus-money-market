@@ -2,7 +2,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-use currency::SymbolOwned;
+use currency::CurrencyDTO;
 pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
@@ -13,6 +13,8 @@ use sdk::{
 use crate::finance::LpnCoinDTO;
 #[cfg(feature = "skel")]
 use crate::{error::ContractError, error::ContractResult};
+
+use super::LeaseAssetCurrencies;
 
 #[cfg(feature = "skel")]
 mod unchecked;
@@ -40,7 +42,7 @@ pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: Addr,
     /// Ticker of the currency this lease will be about.
-    pub currency: SymbolOwned,
+    pub currency: CurrencyDTO<LeaseAssetCurrencies>,
     /// Maximum Loan-to-Downpayment percentage of the new lease, optional.
     pub max_ltd: Option<Percent>,
     /// Position parameters
@@ -172,8 +174,8 @@ impl PositionSpecDTO {
             "Min transaction amount should be positive",
         ))
         .and(Self::check(
-            self.min_asset.ticker() == self.min_transaction.ticker(),
-            "The ticker of min asset should be the same as the ticker of min transaction",
+            self.min_asset.currency() == self.min_transaction.currency(),
+            "The currency of min asset should be the same as the currency of min transaction",
         ))
     }
 
@@ -223,7 +225,7 @@ mod test_invariant {
 #[cfg(all(test, feature = "skel"))]
 mod test_position_spec {
     use currencies::Lpn;
-    use currency::Currency;
+    use currency::Definition;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_json, StdError};
 

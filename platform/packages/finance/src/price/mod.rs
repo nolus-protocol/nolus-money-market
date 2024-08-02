@@ -60,21 +60,36 @@ where
     C: 'static,
     QuoteC: 'static,
 {
+    /// Constructor intended to be used when the preconditions have already been met,
+    /// for example when converting from another Price family instance, e.g. PriceDTO
     #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         debug_assert_eq!(Ok(()), Self::precondition_check(amount, amount_quote));
 
-        let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
-            amount.into_coprime_with(amount_quote);
-
-        let res: Self = Self {
-            amount: amount_normalized,
-            amount_quote: amount_quote_normalized,
-        };
+        let res = Self::new_inner(amount, amount_quote);
 
         debug_assert_eq!(Ok(()), res.invariant_held());
 
         res
+    }
+
+    /// Contructor intended to be used with non-validated input,
+    /// for example when deserializing from an user request
+    #[track_caller]
+    fn try_new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<Self> {
+        Self::precondition_check(amount, amount_quote)
+            .map(|()| Self::new_inner(amount, amount_quote))
+            .and_then(|may_price| may_price.invariant_held().map(|()| may_price))
+    }
+
+    fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+        let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
+            amount.into_coprime_with(amount_quote);
+
+        Self {
+            amount: amount_normalized,
+            amount_quote: amount_quote_normalized,
+        }
     }
 
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.

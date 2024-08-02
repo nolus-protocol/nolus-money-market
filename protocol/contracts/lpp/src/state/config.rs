@@ -2,7 +2,7 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, SymbolSlice};
+use currency::{Definition, SymbolSlice};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
@@ -26,7 +26,7 @@ impl Config {
 
     pub fn try_new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Result<Self>
     where
-        Lpn: Currency,
+        Lpn: Definition,
     {
         if msg.lpn_ticker == Self::lpn_ticker::<Lpn>() {
             Ok(Self {
@@ -56,7 +56,7 @@ impl Config {
 
     pub fn lpn_ticker<Lpn>() -> &'static SymbolSlice
     where
-        Lpn: Currency,
+        Lpn: Definition,
     {
         Lpn::TICKER
     }

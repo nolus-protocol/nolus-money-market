@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, MemberOf, SymbolOwned,
-    SymbolSlice, Tickers,
+    self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, Group, MemberOf, SymbolOwned,
 };
 use finance::price::{
     dto::{with_price, PriceDTO, WithPrice},
@@ -13,18 +12,18 @@ use sdk::{
     cw_storage_plus::Map,
 };
 
-use crate::{config::Config, error::PriceFeedsError, feed::PriceFeed};
+use crate::{alarms::prefix::Prefix, config::Config, error::PriceFeedsError, feed::PriceFeed};
 
 pub type PriceFeedBin = Vec<u8>;
-pub struct PriceFeeds<'m, G> {
+pub struct PriceFeeds<'m, PriceG> {
     storage: Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>,
     config: Config,
-    _g: PhantomData<G>,
+    _g: PhantomData<PriceG>,
 }
 
-impl<'m, G> PriceFeeds<'m, G>
+impl<'m, PriceG> PriceFeeds<'m, PriceG>
 where
-    G: Group,
+    PriceG: Group,
 {
     pub const fn new(namespace: &'m str, config: Config) -> Self {
         Self {
@@ -39,21 +38,21 @@ where
         storage: &mut dyn Storage,
         at: Timestamp,
         sender_raw: &Addr,
-        prices: &[PriceDTO<G, G>],
+        prices: &[PriceDTO<PriceG, PriceG>],
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
             self.storage.update(
                 storage,
                 (
-                    price.base().ticker().to_string(),
-                    price.quote().ticker().to_string(),
+                    price.base().currency().to_string(),
+                    price.quote().currency().to_string(),
                 ),
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
                     add_observation(
                         feed,
                         sender_raw,
                         at,
-                        price,
+                        *price,
                         self.config.feed_valid_since(at),
                     )
                 },
@@ -69,17 +68,17 @@ where
         at: Timestamp,
         total_feeders: usize,
         leaf_to_root: Iter,
-    ) -> Result<PriceDTO<G, QuoteG>, PriceFeedsError>
+    ) -> Result<PriceDTO<PriceG, QuoteG>, PriceFeedsError>
     where
         'm: 'a,
-        G: Group,
-        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<G>,
+        PriceG: Group,
+        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<PriceG>,
         QuoteG: Group,
-        Iter: Iterator<Item = &'a SymbolSlice> + DoubleEndedIterator,
+        Iter: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
-        debug_assert_eq!(_root, Some(QuoteC::TICKER));
+        debug_assert_eq!(_root, Some(&currency::dto::<QuoteC, PriceG>()));
         PriceCollect::do_collect(
             root_to_leaf,
             self,
@@ -97,12 +96,16 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
-        C: Currency,
-        QuoteC: Currency,
+        C: Currency + MemberOf<PriceG>,
+        QuoteC: Currency + MemberOf<PriceG>,
     {
-        let feed_bin = self
-            .storage
-            .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
+        let feed_bin = self.storage.may_load(
+            storage,
+            (
+                currency::dto::<C, PriceG>().first_key().into(),
+                currency::dto::<QuoteC, PriceG>().first_key().into(),
+            ),
+        )?;
         load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at, total_feeders))
     }
 }
@@ -121,7 +124,7 @@ where
 }
 struct PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
-    Iter: Iterator<Item = &'a SymbolSlice>,
+    Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: Currency + MemberOf<G>,
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
@@ -137,7 +140,7 @@ where
 }
 impl<'a, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
-    Iter: Iterator<Item = &'a SymbolSlice>,
+    Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: Currency + MemberOf<G>,
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
@@ -161,7 +164,7 @@ where
                 price,
                 _quote_g: PhantomData,
             };
-            Tickers::visit_any(next_currency, next_collect)
+            next_currency.into_currency_type(next_collect)
         } else {
             Ok(price.into())
         }
@@ -170,7 +173,7 @@ where
 impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
     for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
-    Iter: Iterator<Item = &'a SymbolSlice>,
+    Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: Currency + MemberOf<G>,
     G: Group,
     QuoteQuoteC: Currency + MemberOf<QuoteG>,
@@ -203,7 +206,7 @@ fn add_observation<G, QuoteG>(
     feed_bin: Option<PriceFeedBin>,
     from: &Addr,
     at: Timestamp,
-    price: &PriceDTO<G, QuoteG>,
+    price: PriceDTO<G, QuoteG>,
     valid_since: Timestamp,
 ) -> Result<PriceFeedBin, PriceFeedsError>
 where
@@ -261,7 +264,7 @@ mod test {
         SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
         SuperGroupTestC4, SuperGroupTestC5,
     };
-    use currency::{Currency, Group, MemberOf};
+    use currency::{Group, MemberOf};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -295,7 +298,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC1::TICKER].into_iter()
+                [&currency::dto::<SuperGroupTestC1, SuperGroup>()].into_iter()
             )
         );
 
@@ -305,7 +308,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
     }
@@ -340,7 +347,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC1::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
@@ -349,7 +360,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SubGroupTestC1::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
     }
@@ -380,7 +395,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC2::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC2, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
@@ -389,7 +408,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
@@ -398,7 +421,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC3::TICKER, SuperGroupTestC4::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC4, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
@@ -407,7 +434,11 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC3::TICKER, SubGroupTestC1::TICKER].into_iter()
+                [
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                ]
+                .into_iter()
             )
         );
         assert_eq!(
@@ -417,9 +448,9 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    SuperGroupTestC5::TICKER,
-                    SuperGroupTestC3::TICKER,
-                    SuperGroupTestC4::TICKER
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC4, SuperGroup>()
                 ]
                 .into_iter()
             )
@@ -431,9 +462,9 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    SuperGroupTestC5::TICKER,
-                    SuperGroupTestC3::TICKER,
-                    SubGroupTestC1::TICKER
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
                 ]
                 .into_iter()
             )

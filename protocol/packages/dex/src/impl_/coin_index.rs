@@ -1,4 +1,4 @@
-use currency::Group;
+use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
 use super::swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask};
@@ -10,7 +10,7 @@ pub(super) fn visit_at_index<T, V>(
 ) -> Result<IterState, V::Error>
 where
     T: SwapTask,
-    V: CoinVisitor<Result = ()>,
+    V: CoinVisitor<GIn = T::InG, Result = ()>,
 {
     let mut coins_visitor = CoinsIndexVisitor(coin_index, visitor);
     spec.on_coins(&mut coins_visitor)
@@ -31,12 +31,13 @@ impl<'a, V> CoinVisitor for CoinsIndexVisitor<'a, V>
 where
     V: CoinVisitor<Result = ()>,
 {
+    type GIn = V::GIn;
     type Result = IterNext;
     type Error = V::Error;
 
     fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
     where
-        G: Group,
+        G: Group + MemberOf<Self::GIn>,
     {
         let res = if self.at_coin() {
             self.1.visit(coin)?;
@@ -51,7 +52,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1};
+    use currency::test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
     use crate::impl_::{
@@ -64,13 +65,13 @@ mod test {
         Coin::<SuperGroupTestC1>::new(32).into()
     }
 
-    fn coin2() -> CoinDTO<SubGroup> {
+    fn coin2() -> CoinDTO<SuperGroup> {
         Coin::<SubGroupTestC1>::new(28).into()
     }
 
     #[test]
     fn visit_first_index() {
-        let mut v = TestVisitor::<()>::new();
+        let mut v = TestVisitor::<SuperGroup, ()>::new();
         {
             let mut v_idx = CoinsIndexVisitor(0, &mut v);
             let v_res = v_idx.visit(&coin1()).unwrap();
@@ -82,7 +83,7 @@ mod test {
 
     #[test]
     fn visit_second_index() {
-        let mut v = TestVisitor::<()>::new();
+        let mut v = TestVisitor::<SuperGroup, ()>::new();
         {
             let mut v_idx = CoinsIndexVisitor(1, &mut v);
             let v_res = v_idx.visit(&coin1()).unwrap();
@@ -96,7 +97,7 @@ mod test {
 
     #[test]
     fn visit_bigger_index() {
-        let mut v = TestVisitor::<()>::new();
+        let mut v = TestVisitor::<SuperGroup, ()>::new();
         {
             let mut v_idx = CoinsIndexVisitor(2, &mut v);
             let v_res = v_idx.visit(&coin1()).unwrap();

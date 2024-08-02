@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{group::MemberOf, AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
+use crate::{group::MemberOf, AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -11,8 +11,10 @@ pub type SuperGroupTestC6 = impl_::TestC6;
 
 pub type SubGroupTestC1 = impl_::TestC10;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SuperGroup {}
+pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
+
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
 
@@ -56,8 +58,10 @@ impl Group for SuperGroup {
 }
 impl MemberOf<Self> for SuperGroup {}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SubGroup {}
+pub type SubGroupCurrency = CurrencyDTO<SubGroup>;
+
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
 
@@ -110,7 +114,7 @@ where
 mod impl_ {
     use serde::{Deserialize, Serialize};
 
-    use crate::{Currency, SymbolStatic};
+    use crate::{Currency, Definition, SymbolStatic};
 
     use super::{SubGroup, SuperGroup};
 
@@ -121,7 +125,9 @@ mod impl_ {
 
     impl Currency for TestC1 {
         type Group = SuperGroup;
+    }
 
+    impl Definition for TestC1 {
         const TICKER: SymbolStatic = "ticker#1";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
@@ -138,7 +144,9 @@ mod impl_ {
 
     impl Currency for TestC2 {
         type Group = SuperGroup;
+    }
 
+    impl Definition for TestC2 {
         const TICKER: SymbolStatic = "ticker#2";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
@@ -155,7 +163,9 @@ mod impl_ {
 
     impl Currency for TestC3 {
         type Group = SuperGroup;
+    }
 
+    impl Definition for TestC3 {
         const TICKER: SymbolStatic = "ticker#3";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
@@ -172,7 +182,9 @@ mod impl_ {
 
     impl Currency for TestC4 {
         type Group = SuperGroup;
+    }
 
+    impl Definition for TestC4 {
         const TICKER: SymbolStatic = "ticker#4";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
@@ -189,7 +201,9 @@ mod impl_ {
 
     impl Currency for TestC5 {
         type Group = SuperGroup;
+    }
 
+    impl Definition for TestC5 {
         const TICKER: SymbolStatic = "ticker#5";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
@@ -206,7 +220,9 @@ mod impl_ {
 
     impl Currency for TestC6 {
         type Group = SubGroup;
+    }
 
+    impl Definition for TestC6 {
         const TICKER: SymbolStatic = "ticker#6";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
@@ -222,7 +238,9 @@ mod impl_ {
     pub struct TestC10;
     impl Currency for TestC10 {
         type Group = SubGroup;
+    }
 
+    impl Definition for TestC10 {
         const TICKER: SymbolStatic = "ticker#10";
 
         const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";

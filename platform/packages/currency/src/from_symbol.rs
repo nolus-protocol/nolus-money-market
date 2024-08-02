@@ -2,12 +2,10 @@ use crate::{
     error::Error,
     matcher::{self, Matcher},
     symbol::Symbol,
-    MemberOf, SymbolSlice,
+    Definition, MemberOf, SymbolSlice,
 };
 
-use super::Currency;
-
-pub trait SingleVisitor<C> {
+pub trait SingleVisitor<CDef> {
     type Output;
     type Error;
 
@@ -17,7 +15,7 @@ pub trait SingleVisitor<C> {
 pub trait CurrencyVisit: Symbol {
     fn visit<CDef, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
-        CDef: Currency + MemberOf<Self::Group>,
+        CDef: Definition + MemberOf<Self::Group>,
         V: SingleVisitor<CDef>,
         Error: Into<V::Error>,
     {
@@ -37,7 +35,7 @@ mod test {
         error::Error,
         from_symbol::CurrencyVisit,
         test::{Expect, ExpectUnknownCurrency, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
+        Definition,
     };
     use crate::{BankSymbols, Tickers};
 

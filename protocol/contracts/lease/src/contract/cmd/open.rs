@@ -28,7 +28,7 @@ pub(crate) fn open_lease(
     querier: QuerierWrapper<'_>,
     deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> ContractResult<IntoDTOResult> {
-    debug_assert_eq!(asset.ticker(), &form.currency);
+    debug_assert_eq!(asset.currency(), form.currency);
     debug_assert!(asset.amount() > 0);
 
     let position = PositionDTO::new(asset, form.position_spec.clone());

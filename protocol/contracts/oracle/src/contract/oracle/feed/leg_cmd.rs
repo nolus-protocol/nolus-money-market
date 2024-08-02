@@ -1,4 +1,4 @@
-use currency::{AnyVisitorPair, Currency, Group, MemberOf};
+use currency::{AnyVisitorPair, Currency, Definition, Group, MemberOf};
 use finance::price::{base::BasePrice, Price};
 
 use crate::ContractError;
@@ -47,8 +47,8 @@ where
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
     where
-        B: Currency + MemberOf<Self::VisitedG1>,
-        Q: Currency + MemberOf<Self::VisitedG2>,
+        B: Currency + MemberOf<Self::VisitedG1> + Definition,
+        Q: Currency + MemberOf<Self::VisitedG2> + Definition,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases

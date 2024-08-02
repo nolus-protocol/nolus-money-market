@@ -1,7 +1,4 @@
-use currency::{
-    test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC2, SuperGroupTestC3},
-    Currency as _,
-};
+use currency::test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC2, SuperGroupTestC3};
 use dex::swap::ExactAmountIn;
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
@@ -23,11 +20,11 @@ fn build_and_parse() {
     let expected_swap_path = vec![
         SwapTarget {
             pool_id: 0,
-            target: SuperGroupTestC2::TICKER.into(),
+            target: currency::dto::<SuperGroupTestC2, _>(),
         },
         SwapTarget {
             pool_id: 0,
-            target: SuperGroupTestC3::TICKER.into(),
+            target: currency::dto::<SuperGroupTestC3, _>(),
         },
     ];
 
@@ -44,7 +41,7 @@ fn build_and_parse() {
 
 fn build_request(
     expected_token_in: CoinDTO<SubGroup>,
-    expected_swap_path: Vec<SwapTarget>,
+    expected_swap_path: Vec<SwapTarget<SuperGroup>>,
 ) -> CosmosAny {
     let mut tx = Transaction::default();
 

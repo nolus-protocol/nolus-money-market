@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::SymbolSlice;
+use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
     SwapTask, TransferOutState,
@@ -107,14 +107,12 @@ impl BuyAsset {
             in_progress: in_progress_fn(HostAccount::from(self.dex_account).into()),
         })
     }
-
-    // fn emit_ok(&self) -> Emitter {
-    //     Emitter::of_type(Type::OpeningTransferOut)
-    // }
 }
 
 impl SwapTask for BuyAsset {
+    type InG = LeasePaymentCurrencies;
     type OutG = AssetGroup;
+    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -127,7 +125,7 @@ impl SwapTask for BuyAsset {
         &self.dex_account
     }
 
-    fn oracle(&self) -> &impl SwapPath {
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
         &self.deps.1
     }
 
@@ -135,13 +133,13 @@ impl SwapTask for BuyAsset {
         &self.deps.2
     }
 
-    fn out_currency(&self) -> &SymbolSlice {
-        &self.form.currency
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
+        self.form.currency
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>,
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
         dex::on_coins(&self.downpayment, &self.loan.principal, visitor)
     }

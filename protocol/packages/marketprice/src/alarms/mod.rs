@@ -3,9 +3,10 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use prefix::Prefix;
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, SymbolOwned};
+use currency::{Currency, Group, MemberOf, SymbolOwned};
 use finance::{
     coin::{Amount, CoinDTO},
     price::{self, Price},
@@ -21,6 +22,7 @@ use sdk::{
 use self::errors::AlarmError;
 
 pub mod errors;
+pub mod prefix;
 
 pub type AlarmsCount = u32;
 
@@ -57,7 +59,7 @@ where
 {
     fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         BaseC: Currency,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
@@ -76,7 +78,7 @@ where
 
     fn key(&self) -> Vec<Key<'_>> {
         vec![
-            Key::Ref(self.0.ticker().as_bytes()),
+            Key::Ref(self.first_key().as_bytes()),
             Key::Val128(self.0.amount().to_cw_bytes()),
         ]
     }
@@ -153,14 +155,14 @@ where
 
     pub fn alarms<C, BaseC>(&self, price: Price<C, BaseC>) -> AlarmsIterator<'_, G>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         BaseC: Currency,
     {
         let norm_price = NormalizedPrice::new(&price);
 
         AlarmsIterator(
-            self.iter_below::<C>(&norm_price)
-                .chain(self.iter_above_or_equal::<C>(&norm_price)),
+            self.iter_below(&norm_price)
+                .chain(self.iter_above_or_equal(&norm_price)),
         )
     }
 
@@ -174,26 +176,24 @@ where
         }
     }
 
-    fn iter_below<C>(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G>
-    where
-        C: Currency,
-    {
-        self.alarms_below.idx.0.sub_prefix(C::TICKER.into()).range(
-            self.storage.deref(),
-            None,
-            Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
-            Order::Ascending,
-        )
+    fn iter_below(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G> {
+        self.alarms_below
+            .idx
+            .0
+            .sub_prefix(price.first_key().into())
+            .range(
+                self.storage.deref(),
+                None,
+                Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
+                Order::Ascending,
+            )
     }
 
-    fn iter_above_or_equal<C>(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G>
-    where
-        C: Currency,
-    {
+    fn iter_above_or_equal(&self, price: &NormalizedPrice<G>) -> BoxedIter<'_, G> {
         self.alarms_above_or_equal
             .idx
             .0
-            .sub_prefix(C::TICKER.into())
+            .sub_prefix(price.first_key().into())
             .range(
                 self.storage.deref(),
                 Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
@@ -215,7 +215,7 @@ where
         above_or_equal: Option<Price<C, BaseC>>,
     ) -> Result<(), AlarmError>
     where
-        C: Currency,
+        C: Currency + MemberOf<G>,
         BaseC: Currency,
     {
         self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below))

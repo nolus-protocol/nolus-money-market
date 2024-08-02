@@ -17,7 +17,9 @@ mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,
+)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Lpns {}
 
@@ -61,7 +63,7 @@ impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {
-    use currency::Currency;
+    use currency::Definition;
 
     use crate::{
         lpn::{Lpn, Lpns},

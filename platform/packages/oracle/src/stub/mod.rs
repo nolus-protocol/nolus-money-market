@@ -2,7 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf, SymbolOwned};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -94,7 +94,6 @@ where
     where
         V: WithOracle<QuoteC, QuoteG, G = G>,
         G: Group,
-        Error: Into<V::Error>,
     {
         cmd.exec(OracleStub::<
             '_,
@@ -111,10 +110,12 @@ where
         CurrencyReq: RequestBuilder,
     {
         querier
-            .query_wasm_smart(addr.clone(), &CurrencyReq::currency())
+            .query_wasm_smart(addr.clone(), &CurrencyReq::currency::<QuoteG>())
             .map_err(Error::StubConfigQuery)
-            .and_then(|quote_c: SymbolOwned| {
-                currency::validate_ticker(quote_c, QuoteC::TICKER).map_err(Error::StubConfigInvalid)
+            .and_then(|quote_c: CurrencyDTO<QuoteG>| {
+                quote_c
+                    .of_currency::<QuoteC>()
+                    .map_err(Error::StubConfigInvalid)
             })
             .map(|()| Self::new_internal(addr))
     }

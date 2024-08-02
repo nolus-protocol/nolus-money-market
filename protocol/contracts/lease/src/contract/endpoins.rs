@@ -10,9 +10,7 @@ use sdk::{
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{
-        open::NewLeaseContract, query::StateQuery, ExecuteMsg, LeaseAssetCurrencies, MigrateMsg,
-    },
+    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
     contract::api::Contract,
     error::ContractResult,
 };
@@ -33,7 +31,6 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     //TODO move the following validations into the deserialization
     deps.api.addr_validate(new_lease.finalizer.as_str())?;
-    currency::validate::<LeaseAssetCurrencies>(&new_lease.form.currency)?;
     deps.api.addr_validate(new_lease.form.customer.as_str())?;
 
     platform::contract::validate_addr(deps.querier, &new_lease.form.time_alarms)?;

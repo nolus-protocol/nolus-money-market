@@ -1,12 +1,12 @@
 use currency::{
-    error::Error, test::Expect, BankSymbols, Currency, Group, GroupVisit, MemberOf, Symbol,
-    SymbolSlice, Tickers,
+    error::Error, test::Expect, BankSymbols, Currency, Definition, Group, GroupVisit, MemberOf,
+    Symbol, SymbolSlice, Tickers,
 };
 
 #[track_caller]
 pub fn maybe_visit_on_ticker_impl<C, VisitorG>()
 where
-    C: Currency,
+    C: Currency + Definition,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
@@ -26,7 +26,7 @@ where
 #[track_caller]
 pub fn maybe_visit_on_bank_symbol_impl<C, VisitorG>()
 where
-    C: Currency,
+    C: Currency + Definition,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {

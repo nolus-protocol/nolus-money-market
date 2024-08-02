@@ -1,14 +1,12 @@
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, Group};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, Definition, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     batch::Batch,
-    coin_legacy::{
-        from_cosmwasm_any, from_cosmwasm_impl, maybe_from_cosmwasm_any, to_cosmwasm_impl,
-    },
+    coin_legacy::{self, from_cosmwasm_any, maybe_from_cosmwasm_any, to_cosmwasm_impl},
     error::Error,
     result::Result,
 };
@@ -48,14 +46,14 @@ where
 /// Ensure a single coin of the specified currency is received by a contract and return it
 pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
-    C: Currency,
+    C: Currency + Definition,
 {
     received_one_impl(
         cw_amount,
         Error::no_funds::<C>,
         Error::unexpected_funds::<C>,
     )
-    .and_then(from_cosmwasm_impl)
+    .and_then(coin_legacy::from_cosmwasm::<C>)
 }
 
 /// Run a command on the first coin of the specified group
@@ -96,10 +94,37 @@ impl<'a> BankAccountView for BankView<'a> {
     where
         C: Currency,
     {
-        self.querier
-            .query_balance(self.account, C::BANK_SYMBOL)
-            .map_err(Error::CosmWasmQueryBalance)
-            .and_then(|coin| from_cosmwasm_impl(coin))
+        struct QueryBankBalance<'a, C> {
+            c: PhantomData<C>,
+            account: &'a Addr,
+            querier: QuerierWrapper<'a>,
+        }
+        impl<'a, C> AnyVisitor<C::Group> for QueryBankBalance<'a, C>
+        where
+            C: Currency,
+        {
+            type VisitorG = C::Group;
+
+            type Output = Coin<C>;
+
+            type Error = Error;
+
+            fn on<CC>(self) -> AnyVisitorResult<C::Group, Self>
+            where
+                CC: Currency + Definition + MemberOf<Self::VisitorG>,
+            {
+                debug_assert!(currency::equal::<C, CC>());
+                self.querier
+                    .query_balance(self.account, CC::BANK_SYMBOL)
+                    .map_err(Error::CosmWasmQueryBalance)
+                    .and_then(coin_legacy::from_cosmwasm_currency_not_definition::<CC, C>)
+            }
+        }
+        currency::dto::<C, C::Group>().into_currency_type(QueryBankBalance {
+            c: PhantomData,
+            account: self.account,
+            querier: self.querier,
+        })
     }
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
@@ -356,11 +381,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::marker::PhantomData;
 
     use currency::{
         test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
-        Currency, Group,
+        Currency, CurrencyDTO, Definition, Group, MemberOf,
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -513,21 +537,43 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct Cmd<'r, G> {
-        group: PhantomData<G>,
-        expected: &'r [&'static str],
+    struct Cmd<G>
+    where
+        G: Group,
+    {
+        expected: Option<CurrencyDTO<G>>,
     }
 
-    impl<'r, G> Cmd<'r, G> {
-        pub const fn new(expected: &'r [&'static str]) -> Self {
+    impl<G> Cmd<G>
+    where
+        G: Group,
+    {
+        pub fn expected<C>() -> Self
+        where
+            C: Currency + MemberOf<G>,
+        {
             Self {
-                group: PhantomData,
-                expected,
+                expected: Some(currency::dto::<C, G>()),
+            }
+        }
+
+        pub const fn expected_none() -> Self {
+            Self { expected: None }
+        }
+
+        fn validate(&self, balances_result: Option<Result<(), Error>>)
+        where
+            G: Group,
+        {
+            if self.expected.is_some() {
+                assert_eq!(Some(Ok(())), balances_result)
+            } else {
+                assert_eq!(None, balances_result)
             }
         }
     }
 
-    impl<G> WithCoin<G> for Cmd<'_, G>
+    impl<G> WithCoin<G> for Cmd<G>
     where
         G: Group,
     {
@@ -537,15 +583,15 @@ mod test {
 
         fn on<C>(self, _: Coin<C>) -> WithCoinResult<G, Self>
         where
-            C: Currency,
+            C: Currency + MemberOf<G>,
         {
-            assert!(self.expected.contains(&C::BANK_SYMBOL));
+            assert_eq!(Some(currency::dto::<C, G>()), self.expected);
 
             Ok(())
         }
     }
 
-    fn total_balance_tester<G>(coins: Vec<CwCoin>, expected: &[&'static str])
+    fn total_balance_tester<G>(coins: Vec<CwCoin>, mock: Cmd<G>)
     where
         G: Group,
     {
@@ -558,30 +604,29 @@ mod test {
 
         let bank_view: BankView<'_> = BankView::account(&addr, querier);
 
-        let cmd = Cmd::<G>::new(expected);
-
-        assert_eq!(
-            bank_view.balances::<G, _>(cmd).unwrap().is_none(),
-            expected.is_empty()
-        );
+        let result = bank_view.balances::<G, _>(mock.clone()).unwrap();
+        mock.validate(result);
     }
 
     #[test]
     fn total_balance_empty() {
-        total_balance_tester::<SubGroup>(vec![], &[]);
+        total_balance_tester::<SubGroup>(vec![], Cmd::expected_none());
     }
 
     #[test]
     fn total_balance_same_group() {
         total_balance_tester::<SubGroup>(
             vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)],
-            &[SubGroupTestC1::BANK_SYMBOL],
+            Cmd::expected::<SubGroupTestC1>(),
         );
     }
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<SubGroup>(vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)], &[]);
+        total_balance_tester::<SubGroup>(
+            vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)],
+            Cmd::expected_none(),
+        );
     }
 
     #[test]
@@ -591,7 +636,7 @@ mod test {
                 cw_coin(100, SuperGroupTestC1::TICKER),
                 cw_coin(100, SubGroupTestC1::BANK_SYMBOL),
             ],
-            &[SubGroupTestC1::BANK_SYMBOL],
+            Cmd::expected::<SubGroupTestC1>(),
         );
     }
 }

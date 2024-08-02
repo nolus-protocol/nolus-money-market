@@ -42,13 +42,10 @@ pub enum Error {
     StubAddAlarm(CosmWasmError),
 
     #[error("[PriceAlarms] {0}")]
-    AlarmError(String),
-}
+    FinanceError(#[from] error::Error),
 
-impl From<error::Error> for Error {
-    fn from(err: error::Error) -> Self {
-        Self::AlarmError(err.to_string())
-    }
+    #[error("[PriceAlarms] {0}")]
+    InvariantBroken(&'static str),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -91,12 +88,6 @@ where
 
     fn invariant_held(&self) -> Result<()> {
         if let Some(above_or_equal) = &self.above {
-            if self.below.base_ticker() != above_or_equal.base_ticker() {
-                return Err(Error::AlarmError(
-                    "Mismatch of above alarm and below alarm currencies".to_string(),
-                ));
-            }
-
             struct BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
@@ -125,9 +116,9 @@ where
                 where
                     C: Currency + MemberOf<BaseG>,
                 {
-                    Price::<C, QuoteC>::try_from(self.below_price).map_err(Into::into).and_then(|below_price| {
+                    Price::<C, QuoteC>::try_from(self.below_price).map_err(Error::FinanceError).and_then(|below_price| {
                             if below_price > above_or_equal {
-                                Err(Error::AlarmError("The below alarm price should be less than or equal to the above_or_equal alarm price".to_string()))
+                                Err(Error::InvariantBroken("The below alarm price should be less than or equal to the above_or_equal alarm price"))
                             } else {
                                 Ok(())
                             }
@@ -180,10 +171,10 @@ mod test {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, LeaseC2, LeaseC3, Lpn},
     };
-    use currency::{Currency, Group, MemberOf};
+    use currency::{Currency, Definition, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},
-        price::{base::BasePrice, dto::PriceDTO},
+        price::base::BasePrice,
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
@@ -420,8 +411,7 @@ mod test {
         QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
-        let price_dto = PriceDTO::from(price);
-        as_json(&price_dto).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
+        as_json(&price).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
     }
 
     fn alarm_half_coins_to_json<C, Q>(
@@ -430,8 +420,8 @@ mod test {
         amount_quote: Coin<Q>,
     ) -> Result<String, StdError>
     where
-        C: Currency,
-        Q: Currency,
+        C: Currency + MemberOf<LeaseGroup>,
+        Q: Currency + MemberOf<Lpns>,
     {
         as_json(&CoinDTO::<LeaseGroup>::from(amount)).and_then(|amount_str| {
             as_json(&CoinDTO::<Lpns>::from(amount_quote)).map(|amount_quote_str| {
