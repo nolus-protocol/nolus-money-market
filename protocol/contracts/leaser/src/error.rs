@@ -36,9 +36,6 @@ pub enum ContractError {
     #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},
 
-    #[error("[Leaser] Unknown currency symbol: {symbol:?}")]
-    UnknownCurrency { symbol: String },
-
     #[error("[Leaser] No Liquidity")]
     NoLiquidity {},
 

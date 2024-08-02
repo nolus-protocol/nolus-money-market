@@ -127,20 +127,15 @@ where
         O: OracleTrait<Self::G, QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
         // TODO use CoinDTO::with_coin instead
-        self.downpayment
-            .currency()
-            .into_currency_type(QuoteStage3 {
-                downpayment: self.downpayment,
-                lease_asset: self.lease_asset,
-                lpp_quote: self.lpp_quote,
-                oracle,
-                liability: self.liability,
-                lease_interest_rate_margin: self.lease_interest_rate_margin,
-                max_ltd: self.max_ltd,
-            })
-            .map_err(|_| ContractError::UnknownCurrency {
-                symbol: self.downpayment.currency().to_string(),
-            })
+        self.downpayment.currency().into_currency_type(QuoteStage3 {
+            downpayment: self.downpayment,
+            lease_asset: self.lease_asset,
+            lpp_quote: self.lpp_quote,
+            oracle,
+            liability: self.liability,
+            lease_interest_rate_margin: self.lease_interest_rate_margin,
+            max_ltd: self.max_ltd,
+        })
     }
 }
 
