@@ -24,17 +24,17 @@ pub enum ResolveCurrency {
         "Network defining IBC currency not connected with the source network! \
         Networks: {0:?} & {1:?}"
     )]
-    NetworksNotConnected(Box<str>, Box<str>),
+    NetworksNotConnected(String, String),
     #[error(
         "Network defining IBC currency points to a previously traversed IBC \
         currency, creating a cycle!"
     )]
     CycleCreated,
     #[error("Defined IBC currency points to non-existent network! Network: {0}")]
-    NoSuchNetwork(Box<str>),
+    NoSuchNetwork(String),
     #[error(
         "Defined IBC currency points to a non-existent currency on the remote \
         network! Currency: {0}"
     )]
-    NoSuchCurrency(Box<str>),
+    NoSuchCurrency(String),
 }

@@ -10,6 +10,6 @@ pub(crate) struct Channel {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) struct ChannelEndpoint {
-    pub network: Box<str>,
-    pub ch: Box<str>,
+    pub network: String,
+    pub ch: String,
 }

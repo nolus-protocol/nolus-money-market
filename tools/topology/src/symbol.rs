@@ -2,8 +2,8 @@ use sha2::{Digest as _, Sha256};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Symbol {
-    path: Box<str>,
-    symbol: Box<str>,
+    path: String,
+    symbol: String,
 }
 
 impl Symbol {
@@ -90,12 +90,12 @@ impl Ibc {
         let symbol = Self::digest_symbol(&self.path);
 
         Symbol {
-            path: self.path.into_boxed_str(),
+            path: self.path,
             symbol,
         }
     }
 
-    fn digest_symbol(path: &str) -> Box<str> {
+    fn digest_symbol(path: &str) -> String {
         let mut symbol = String::new();
 
         symbol.reserve_exact(Self::OUTPUT_SYMBOL_LENGTH);
@@ -106,7 +106,7 @@ impl Ibc {
 
         Self::map_into_hex_iter(digest).for_each(|ch| symbol.push(ch));
 
-        symbol.into()
+        symbol
     }
 
     fn map_into_hex_iter<const N: usize>(digest: [u8; N]) -> impl Iterator<Item = char> {
@@ -255,7 +255,7 @@ fn test_into_hex_iter() {
         &*Ibc::map_into_hex_iter([
             0x0, 0x1, 0xA, 0xB, 0x10, 0x11, 0x1A, 0x1B, 0xA0, 0xA1, 0xAA, 0xAB
         ])
-        .collect::<Box<[char]>>(),
+        .collect::<Vec<_>>(),
         &b"00010A0B10111A1BA0A1AAAB".map(char::from),
     );
 }

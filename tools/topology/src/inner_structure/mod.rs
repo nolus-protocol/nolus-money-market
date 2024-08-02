@@ -18,10 +18,10 @@ mod network;
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) struct Raw {
     host_network: HostNetwork,
-    networks: BTreeMap<Box<str>, Network>,
-    channels: Box<[Channel]>,
+    networks: BTreeMap<String, Network>,
+    channels: Vec<Channel>,
     #[serde(rename = "definitions")]
-    _definitions: Option<Box<[Box<str>]>>,
+    _definitions: Option<Vec<String>>,
 }
 
 impl From<Raw> for super::Topology {

@@ -2,19 +2,14 @@ use crate::symbol::Symbol;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CurrencyDefinition {
-    ticker: Box<str>,
+    ticker: String,
     host: Symbol,
     dex: Symbol,
     decimal_digits: u8,
 }
 
 impl CurrencyDefinition {
-    pub(crate) const fn new(
-        ticker: Box<str>,
-        host: Symbol,
-        dex: Symbol,
-        decimal_digits: u8,
-    ) -> Self {
+    pub(crate) const fn new(ticker: String, host: Symbol, dex: Symbol, decimal_digits: u8) -> Self {
         Self {
             ticker,
             host,

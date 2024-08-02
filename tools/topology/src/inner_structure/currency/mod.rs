@@ -28,7 +28,7 @@ struct Raw {
     #[serde(flatten)]
     currency: CurrencyRaw,
     #[serde(rename = "icon")]
-    _icon: Option<Box<str>>,
+    _icon: Option<String>,
 }
 
 #[derive(Deserialize)]

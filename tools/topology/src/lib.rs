@@ -20,15 +20,15 @@ mod symbol;
 #[serde(from = "self::inner_structure::Raw")]
 pub struct Topology {
     host_network: HostNetwork,
-    networks: BTreeMap<Box<str>, Network>,
-    channels: Box<[Channel]>,
+    networks: BTreeMap<String, Network>,
+    channels: Vec<Channel>,
 }
 
 impl Topology {
     pub fn currency_definitions(
         &self,
         dex_network: &str,
-    ) -> Result<Box<[CurrencyDefinition]>, error::CurrencyDefinitions> {
+    ) -> Result<Vec<CurrencyDefinition>, error::CurrencyDefinitions> {
         let dex_currencies = &self
             .networks
             .get(dex_network)
@@ -50,7 +50,7 @@ impl Topology {
                 self.resolve_currency(dex_network, &channels, &host_to_dex_path, ticker, currency)
                     .map(|currency| currencies.push(currency))
             })
-            .map(|()| currencies.into_boxed_slice())
+            .map(|()| currencies)
             .map_err(Into::into)
     }
 
@@ -58,10 +58,10 @@ impl Topology {
         channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
         host_network: &str,
         dex_network: &str,
-    ) -> Result<Box<[HostToDexPathChannel<'r>]>, error::CurrencyDefinitions> {
+    ) -> Result<Vec<HostToDexPathChannel<'r>>, error::CurrencyDefinitions> {
         Self::direct_host_to_dex_path(channels, host_network, dex_network).map_or_else(
             || Self::indirect_host_to_dex_path(channels, host_network, dex_network),
-            |channel| Ok(Box::new([channel]) as Box<[_]>),
+            |channel| Ok(vec![channel]),
         )
     }
 
@@ -92,7 +92,7 @@ impl Topology {
         channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
         host_network: &str,
         dex_network: &str,
-    ) -> Result<Box<[HostToDexPathChannel<'r>]>, error::CurrencyDefinitions> {
+    ) -> Result<Vec<HostToDexPathChannel<'r>>, error::CurrencyDefinitions> {
         let mut endpoints_deque = Self::initial_host_to_dex_paths(channels, host_network)?;
 
         let mut traversed_networks = BTreeSet::from([host_network]);
@@ -138,7 +138,7 @@ impl Topology {
         network: &'network str,
         endpoints: &BTreeMap<&'connected_network str, &'endpoint str>,
         walked_channels: &mut Vec<HostToDexPathChannel<'endpoint>>,
-    ) -> Option<Box<[HostToDexPathChannel<'channels_map>]>>
+    ) -> Option<Vec<HostToDexPathChannel<'channels_map>>>
     where
         'endpoint: 'channels_map,
         'connected_network: 'network,
@@ -170,7 +170,7 @@ impl Topology {
                 if next_network == dex_network {
                     walked_channels.push(channel);
 
-                    Some(mem::take(walked_channels).into_boxed_slice())
+                    Some(mem::take(walked_channels))
                 } else {
                     let mut walked_channels = if is_last {
                         mem::take(walked_channels)

@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(try_from = "self::Raw")]
 pub(crate) struct Native {
-    pub symbol: Box<str>,
+    pub symbol: String,
     pub decimal_digits: u8,
 }
 
@@ -28,7 +28,7 @@ impl TryFrom<Raw> for Native {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 struct Raw {
     #[serde(rename = "name")]
-    _name: Box<str>,
-    symbol: Box<str>,
-    decimal_digits: Box<str>,
+    _name: String,
+    symbol: String,
+    decimal_digits: String,
 }

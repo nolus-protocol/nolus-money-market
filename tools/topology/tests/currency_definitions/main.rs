@@ -4,12 +4,10 @@ fn currency_definitions_generator(
     source: &str,
     dex: &str,
 ) -> impl Iterator<Item = CurrencyDefinition> {
-    // TODO remove `Box<[T]>::into_vec` invocation after upgrade to Rust 1.79+.
     serde_json::from_str::<'_, Topology>(source)
         .expect("Failed to deserialize testing JSON!")
         .currency_definitions(dex)
         .expect("Failed to create currency definitions!")
-        .into_vec()
         .into_iter()
 }
 
