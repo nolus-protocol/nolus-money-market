@@ -78,7 +78,7 @@ where
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
-        debug_assert_eq!(_root, Some(&currency::dto::<QuoteC, PriceG>()));
+        debug_assert_eq!(_root, Some(&currency::dto::<QuoteC, _>()));
         PriceCollect::do_collect(
             root_to_leaf,
             self,
@@ -362,7 +362,7 @@ mod test {
                 TOTAL_FEEDERS,
                 [
                     &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                    &currency::dto::<SubGroupTestC1, SuperGroup>()
                 ]
                 .into_iter()
             )
@@ -436,7 +436,7 @@ mod test {
                 TOTAL_FEEDERS,
                 [
                     &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                    &currency::dto::<SubGroupTestC1, SuperGroup>()
                 ]
                 .into_iter()
             )
@@ -464,7 +464,7 @@ mod test {
                 [
                     &currency::dto::<SuperGroupTestC5, SuperGroup>(),
                     &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                    &currency::dto::<SubGroupTestC1, SuperGroup>()
                 ]
                 .into_iter()
             )
