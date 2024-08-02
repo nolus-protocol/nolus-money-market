@@ -142,5 +142,5 @@ where
 
     emitter
         .emit_coin_amount(amount_key, amount)
-        .emit_currency_dto(symbol_key, &currency)
+        .emit_currency_dto(symbol_key, currency)
 }
