@@ -152,10 +152,14 @@ fn test_into_byte_halves() {
 
         let mut index = 0;
 
+        let mut value: u8 = 0;
+
         while index != values.len() {
-            values[index] = index as u8;
+            values[index] = value;
 
             index += 1;
+
+            value = value.wrapping_add(1);
         }
 
         values
