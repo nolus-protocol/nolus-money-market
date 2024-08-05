@@ -98,7 +98,7 @@ impl Topology {
         let mut traversed_networks = BTreeSet::from([host_network]);
 
         loop {
-            let Some((network, endpoints, mut walked_channels)) = endpoints_deque.pop_front()
+            let Some((network, endpoints, walked_channels)) = endpoints_deque.pop_front()
             else {
                 break Err(error::CurrencyDefinitions::HostNotConnectedToDex);
             };
@@ -110,7 +110,7 @@ impl Topology {
                 &mut traversed_networks,
                 network,
                 endpoints,
-                &mut walked_channels,
+                walked_channels,
             ) {
                 break Ok(path);
             }
@@ -137,7 +137,7 @@ impl Topology {
         traversed_networks: &mut BTreeSet<&'network str>,
         network: &'network str,
         endpoints: &BTreeMap<&'connected_network str, &'endpoint str>,
-        walked_channels: &mut Vec<HostToDexPathChannel<'endpoint>>,
+        mut walked_channels: Vec<HostToDexPathChannel<'endpoint>>,
     ) -> Option<Vec<HostToDexPathChannel<'channels_map>>>
     where
         'endpoint: 'channels_map,
@@ -170,10 +170,10 @@ impl Topology {
                 if next_network == dex_network {
                     walked_channels.push(channel);
 
-                    Some(mem::take(walked_channels))
+                    Some(mem::take(&mut walked_channels))
                 } else {
                     let mut walked_channels = if is_last {
-                        mem::take(walked_channels)
+                        mem::take(&mut walked_channels)
                     } else {
                         walked_channels.clone()
                     };
