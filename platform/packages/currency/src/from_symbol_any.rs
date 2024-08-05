@@ -34,8 +34,8 @@ pub trait AnyVisitorPair {
 
     fn on<C1, C2>(self) -> AnyVisitorPairResult<Self>
     where
-        C1: Currency + MemberOf<Self::VisitedG1> + Definition,
-        C2: Currency + MemberOf<Self::VisitedG2> + Definition;
+        C1: Currency + MemberOf<Self::VisitedG1>,
+        C2: Currency + MemberOf<Self::VisitedG2>;
 }
 
 pub trait GroupVisit: Symbol {
@@ -98,7 +98,7 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use crate::{Currency, CurrencyDTO, Definition, Group, MemberOf};
+    use crate::{Currency, CurrencyDTO, Group, MemberOf};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult};
 
@@ -137,7 +137,7 @@ mod impl_any_tickers {
 
         fn on<C1>(self) -> AnyVisitorResult<G1, Self>
         where
-            C1: Currency + MemberOf<G1> + Definition,
+            C1: Currency + MemberOf<G1>,
         {
             self.currency2.into_currency_type(SecondTickerVisitor {
                 currency1: PhantomData::<C1>,
@@ -158,7 +158,7 @@ mod impl_any_tickers {
     }
     impl<C1, G2, V> AnyVisitor<G2> for SecondTickerVisitor<C1, G2, V>
     where
-        C1: Currency + MemberOf<V::VisitedG1> + Definition,
+        C1: Currency + MemberOf<V::VisitedG1>,
         G2: Group,
         V: AnyVisitorPair<VisitedG2 = G2>,
     {
@@ -169,7 +169,7 @@ mod impl_any_tickers {
 
         fn on<C2>(self) -> AnyVisitorResult<G2, Self>
         where
-            C2: Currency + MemberOf<Self::VisitorG> + Definition,
+            C2: Currency + MemberOf<Self::VisitorG>,
         {
             self.visitor.on::<C1, C2>()
         }
