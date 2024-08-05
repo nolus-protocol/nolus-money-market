@@ -103,7 +103,7 @@ impl Topology {
                 break Err(error::CurrencyDefinitions::HostNotConnectedToDex);
             };
 
-            if let Some(path) = Self::explore_path_breath_first(
+            if let Some(path) = Self::explore_path_breadth_first(
                 channels,
                 dex_network,
                 &mut endpoints_deque,
@@ -117,7 +117,7 @@ impl Topology {
         }
     }
 
-    fn explore_path_breath_first<
+    fn explore_path_breadth_first<
         'channels_map,
         'source_network,
         'connected_network,
