@@ -10,6 +10,7 @@ use crate::{
 
 use super::{PriceDTO, WithPrice};
 
+/// Execute the provided price command on a valid price
 pub fn execute<G, QuoteG, Cmd>(
     price: PriceDTO<G, QuoteG>,
     cmd: Cmd,
@@ -30,7 +31,9 @@ where
     )
 }
 
-pub fn execute_with_coins<G, QuoteG, Cmd>(
+/// Execute the provided price command on a non-validated price
+/// Intended mainly for invariant validation purposes.
+pub(super) fn execute_with_coins<G, QuoteG, Cmd>(
     amount: CoinDTO<G>,
     amount_quote: CoinDTO<QuoteG>,
     cmd: Cmd,
@@ -51,7 +54,7 @@ where
     )
 }
 
-trait PriceFactory {
+pub trait PriceFactory {
     type G: Group;
     type QuoteG: Group;
 

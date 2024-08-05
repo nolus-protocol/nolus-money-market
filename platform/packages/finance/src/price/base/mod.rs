@@ -89,8 +89,9 @@ where
             }
         }
 
-        with_price::execute(
-            self,
+        with_price::execute_with_coins(
+            self.amount,
+            self.amount_quote,
             InvariantCheck {
                 price_g: PhantomData::<BaseG>,
             },
@@ -167,7 +168,7 @@ where
 
     fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
         Coin::<QuoteC>::try_from(*(price.quote()))
-            .and_then(|amount_quote| Self::new_checked(*price.base(), amount_quote))
+            .map(|amount_quote| Self::new_unchecked(*price.base(), amount_quote))
     }
 }
 #[cfg(test)]
