@@ -176,7 +176,7 @@ mod test_invariant {
         test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         Currency, Definition, Group, MemberOf,
     };
-    use sdk::cosmwasm_std::{from_json, to_json_string, StdResult};
+    use sdk::cosmwasm_std::{from_json, to_json_string, StdError, StdResult};
 
     use crate::coin::Coin;
 
@@ -192,7 +192,6 @@ mod test_invariant {
     }
 
     #[test]
-    #[should_panic = "zero"]
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "3", "ticker": "{}"}}}}"#,
@@ -200,12 +199,10 @@ mod test_invariant {
             SuperGroupTestC2::TICKER
         );
 
-        let _loaded = load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes());
-
-        #[cfg(not(debug_assertions))]
-        {
-            _loaded.expect("should have returned an error");
-        }
+        assert_load_err(
+            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
+            "zero",
+        );
     }
 
     #[test]
@@ -218,7 +215,6 @@ mod test_invariant {
     }
 
     #[test]
-    #[should_panic = "zero"]
     fn quote_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "6", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
@@ -226,12 +222,10 @@ mod test_invariant {
             SuperGroupTestC2::TICKER
         );
 
-        let _loaded = load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes());
-
-        #[cfg(not(debug_assertions))]
-        {
-            _loaded.expect("should have returned an error");
-        }
+        assert_load_err(
+            load::<SuperGroup, SuperGroupTestC2, SuperGroup>(&json.into_bytes()),
+            "zero",
+        );
     }
 
     #[test]
@@ -252,6 +246,8 @@ mod test_invariant {
         BaseC: Currency + MemberOf<SuperGroup>,
         QuoteC: Currency + MemberOf<SuperGroup>,
     {
+        assert!(BasePrice::new_checked(amount.into(), amount_quote).is_err());
+
         let _base_price: BasePrice<SuperGroup, QuoteC, SuperGroup> =
             BasePrice::new_unchecked(amount.into(), amount_quote);
 
@@ -261,6 +257,21 @@ mod test_invariant {
                 .invariant_held()
                 .expect("should have returned an error");
         }
+    }
+
+    fn assert_load_err<G, QuoteC, QuoteG>(r: StdResult<BasePrice<G, QuoteC, QuoteG>>, msg: &str)
+    where
+        G: Group,
+        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteG: Group,
+    {
+        assert!(matches!(
+            r,
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("BasePrice") && real_msg.contains(msg)
+        ));
     }
 
     fn load<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>
