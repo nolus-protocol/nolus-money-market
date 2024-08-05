@@ -117,6 +117,41 @@ impl Topology {
         }
     }
 
+    fn initial_host_to_dex_paths<'channels, 'connected_network, 'endpoint>(
+        channels: &'channels BTreeMap<&str, BTreeMap<&'connected_network str, &'endpoint str>>,
+        host_network: &str,
+    ) -> Result<
+        InitialHostToDexPaths<'channels, 'connected_network, 'endpoint>,
+        error::CurrencyDefinitions,
+    > {
+        channels
+            .get(host_network)
+            .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)
+            .map(|connected_networks| {
+                connected_networks
+                    .iter()
+                    .map(|(&network, &endpoint)| {
+                        let Some(endpoints) = channels.get(&network) else {
+                            Self::unreachable_inverse_should_be_filled_in();
+                        };
+
+                        let Some(&inverse_endpoint) = endpoints.get(host_network) else {
+                            Self::unreachable_inverse_should_be_filled_in();
+                        };
+
+                        (
+                            network,
+                            endpoints,
+                            vec![HostToDexPathChannel {
+                                endpoint,
+                                inverse_endpoint,
+                            }],
+                        )
+                    })
+                    .collect()
+            })
+    }
+
     fn explore_path_breadth_first<
         'channels_map,
         'source_network,
@@ -184,41 +219,6 @@ impl Topology {
 
                     None
                 }
-            })
-    }
-
-    fn initial_host_to_dex_paths<'channels, 'connected_network, 'endpoint>(
-        channels: &'channels BTreeMap<&str, BTreeMap<&'connected_network str, &'endpoint str>>,
-        host_network: &str,
-    ) -> Result<
-        InitialHostToDexPaths<'channels, 'connected_network, 'endpoint>,
-        error::CurrencyDefinitions,
-    > {
-        channels
-            .get(host_network)
-            .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)
-            .map(|connected_networks| {
-                connected_networks
-                    .iter()
-                    .map(|(&network, &endpoint)| {
-                        let Some(endpoints) = channels.get(&network) else {
-                            Self::unreachable_inverse_should_be_filled_in();
-                        };
-
-                        let Some(&inverse_endpoint) = endpoints.get(host_network) else {
-                            Self::unreachable_inverse_should_be_filled_in();
-                        };
-
-                        (
-                            network,
-                            endpoints,
-                            vec![HostToDexPathChannel {
-                                endpoint,
-                                inverse_endpoint,
-                            }],
-                        )
-                    })
-                    .collect()
             })
     }
 
