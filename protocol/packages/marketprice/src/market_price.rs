@@ -44,8 +44,8 @@ where
             self.storage.update(
                 storage,
                 (
-                    price.base().currency().to_string(),
-                    price.quote().currency().to_string(),
+                    price.base().currency().first_key().into(),
+                    price.quote().currency().first_key().into(),
                 ),
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
                     add_observation(

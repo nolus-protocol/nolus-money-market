@@ -2,7 +2,7 @@ use currency::MemberOf;
 use currency::{Currency, Group};
 
 use crate::coin::{Coin, WithCoin, WithCoinResult};
-use crate::price;
+use crate::error::Error;
 use crate::price::Price;
 
 use crate::price::base::BasePrice;
@@ -30,6 +30,7 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
+    Cmd::Error: From<Error>,
 {
     price.amount.with_coin(CoinResolve { price, cmd })
 }
@@ -51,6 +52,7 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = G>,
+    Cmd::Error: From<Error>,
 {
     type VisitorG = G;
 
@@ -62,7 +64,8 @@ where
     where
         C: Currency + MemberOf<Self::VisitorG>,
     {
-        self.cmd
-            .exec(price::total_of(amount).is(self.price.amount_quote))
+        Price::try_new(amount, self.price.amount_quote)
+            .map_err(Into::into)
+            .and_then(|price| self.cmd.exec(price))
     }
 }

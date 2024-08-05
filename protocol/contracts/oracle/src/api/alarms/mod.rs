@@ -51,8 +51,8 @@ pub enum Error {
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(
-    try_from = "unchecked::Alarm<G, Lpns>",
-    into = "unchecked::Alarm<G, Lpns>",
+    try_from = "unchecked::Alarm<G, Lpn, Lpns>",
+    into = "unchecked::Alarm<G, Lpn, Lpns>",
     bound(serialize = "", deserialize = "")
 )]
 pub struct Alarm<G, Lpn, Lpns>

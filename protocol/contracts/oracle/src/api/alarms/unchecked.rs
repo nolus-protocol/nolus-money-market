@@ -1,21 +1,22 @@
 use currency::{Currency, Group, MemberOf};
-use finance::price::dto::PriceDTO;
+use finance::price::base::BasePrice;
 use serde::{Deserialize, Serialize};
 
 use super::{Alarm as ValidatedAlarm, Error};
 
 #[derive(Deserialize, Serialize)]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub(super) struct Alarm<G, Lpns>
+pub(super) struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
+    Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
-    below: PriceDTO<G, Lpns>,
-    above: Option<PriceDTO<G, Lpns>>,
+    below: BasePrice<G, Lpn, Lpns>,
+    above: Option<BasePrice<G, Lpn, Lpns>>,
 }
 
-impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
+impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpn, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: Currency + MemberOf<Lpns>,
@@ -23,23 +24,16 @@ where
 {
     type Error = Error;
 
-    fn try_from(unchecked: Alarm<G, Lpns>) -> Result<Self, Self::Error> {
-        unchecked
-            .below
-            .try_into()
-            .map_err(Into::into)
-            .and_then(|below| {
-                unchecked
-                    .above
-                    .map(|above_dto| above_dto.try_into().map_err(Into::into))
-                    .transpose()
-                    .map(|above| Self { below, above })
-                    .and_then(|alarm| alarm.invariant_held().map(|()| alarm))
-            })
+    fn try_from(unchecked: Alarm<G, Lpn, Lpns>) -> Result<Self, Self::Error> {
+        let validated = Self {
+            below: unchecked.below,
+            above: unchecked.above,
+        };
+        validated.invariant_held().map(|()| validated)
     }
 }
 
-impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpns>
+impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: Currency + MemberOf<Lpns>,
@@ -47,8 +41,8 @@ where
 {
     fn from(validated: ValidatedAlarm<G, Lpn, Lpns>) -> Self {
         Self {
-            below: validated.below.into(),
-            above: validated.above.map(|base_price| base_price.into()),
+            below: validated.below,
+            above: validated.above,
         }
     }
 }

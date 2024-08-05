@@ -158,43 +158,6 @@ where
     }
 }
 
-// TODO revisit if this is required, if yes return None when the price types mismatch
-// impl<G, QuoteG> PartialOrd for PriceDTO<G, QuoteG>
-// where
-//     G: Group,
-//     QuoteG: Group,
-// {
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//         struct Comparator<'a, G, QuoteG>
-//         where
-//             G: Group,
-//             QuoteG: Group,
-//         {
-//             other: &'a PriceDTO<G, QuoteG>,
-//         }
-
-//         impl<'a, G, QuoteG> WithPrice for Comparator<'a, G, QuoteG>
-//         where
-//             G: Group,
-//             QuoteG: Group,
-//         {
-//             type G = G;
-//             type QuoteG = QuoteG;
-//             type Output = Option<Ordering>;
-//             type Error = Error;
-
-//             fn exec<C, QuoteC>(self, lhs: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-//             where
-//                 C: Currency + MemberOf<Self::G>,
-//                 QuoteC: Currency + MemberOf<Self::QuoteG>,
-//             {
-//                 Price::<C, QuoteC>::try_from(self.other).map(|rhs| lhs.partial_cmp(&rhs))
-//             }
-//         }
-//         with_price::execute(self, Comparator { other }).unwrap_or(None) //intentionally used the explicit form rather than the `unwrap_or_default`
-//     }
-// }
-
 pub trait WithPrice {
     type G: Group;
     type QuoteG: Group;
@@ -219,70 +182,6 @@ where
     where
         QuoteC: Currency;
 }
-
-// #[cfg(test)]
-// mod test {
-//     use std::cmp::Ordering;
-
-//     use currency::test::{
-//         SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
-//     };
-
-//     use crate::{
-//         coin::Coin,
-//         price::{self, dto::PriceDTO, Price},
-//     };
-
-// type TestPriceDTO = PriceDTO<SubGroup, SuperGroup>;
-
-// #[test]
-// fn test_cmp() {
-//     let p1: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(20))
-//         .is(Coin::<SuperGroupTestC1>::new(5000))
-//         .into();
-//     assert!(p1 == p1);
-//     assert_eq!(Some(Ordering::Equal), p1.partial_cmp(&p1));
-
-//     let p2 = price::total_of(Coin::<SubGroupTestC1>::new(20))
-//         .is(Coin::<SuperGroupTestC1>::new(5001))
-//         .into();
-//     assert!(p1 < p2);
-
-//     let p3: TestPriceDTO = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-//         .is(Coin::<SuperGroupTestC1>::new(789456))
-//         .into();
-//     let p4 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-//         .is(Coin::<SuperGroupTestC1>::new(123456))
-//         .into();
-//     assert!(p3 >= p4);
-
-//     let p5 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-//         .is(Coin::<SuperGroupTestC1>::new(3456))
-//         .into();
-//     assert!(p3 >= p5);
-
-//     let p6 = price::total_of(Coin::<SubGroupTestC1>::new(1000000))
-//         .is(Coin::<SuperGroupTestC1>::new(3456))
-//         .into();
-//     assert!(p3 >= p6);
-// }
-
-// #[test]
-// fn test_cmp_currencies_mismatch() {
-//     let p1: PriceDTO<SuperGroup, SuperGroup> = Price::new(
-//         Coin::<SuperGroupTestC1>::new(20),
-//         Coin::<SuperGroupTestC2>::new(5000),
-//     )
-//     .into();
-//     let p2: PriceDTO<SuperGroup, SuperGroup> = Price::new(
-//         Coin::<SuperGroupTestC1>::new(20),
-//         Coin::<SubGroupTestC1>::new(5000),
-//     )
-//     .into();
-//     assert_eq!(None, p1.partial_cmp(&p2));
-//     assert_eq!(None, p2.partial_cmp(&p1));
-// }
-// }
 
 #[cfg(test)]
 mod test_invariant {
