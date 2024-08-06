@@ -73,7 +73,7 @@ where
                     error,
                 )
             })
-            .and_then(|price: PriceDTO<G, QuoteG>| price.try_into().map_err(Into::into))
+            .and_then(|price: PriceDTO<CurrencyG, QuoteG>| price.try_into().map_err(Into::into))
     }
 }
 
