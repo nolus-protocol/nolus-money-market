@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::SymbolSlice;
+use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
@@ -53,7 +53,7 @@ pub(in super::super) type DexState = dex::StateLocalOut<
 
 pub(in super::super) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);
-    let amount_in = transfer.amount().clone();
+    let amount_in = *transfer.amount();
     StartState::new(transfer, amount_in)
 }
 
@@ -86,7 +86,9 @@ impl TransferIn {
 }
 
 impl SwapTask for TransferIn {
+    type InG = AssetGroup;
     type OutG = AssetGroup;
+    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -99,7 +101,7 @@ impl SwapTask for TransferIn {
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &impl SwapPath {
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
         &self.lease.lease.oracle
     }
 
@@ -107,13 +109,13 @@ impl SwapTask for TransferIn {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> &SymbolSlice {
-        self.amount().ticker()
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
+        self.amount().currency()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>,
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
         dex::on_coin(self.amount(), visitor)
     }

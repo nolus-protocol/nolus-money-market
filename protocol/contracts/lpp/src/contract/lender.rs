@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
@@ -24,7 +24,7 @@ pub(super) fn try_deposit<Lpn>(
     info: MessageInfo,
 ) -> Result<MessageResponse>
 where
-    Lpn: 'static + Currency + Serialize,
+    Lpn: 'static + Currency + Definition,
 {
     let lender_addr = info.sender;
     let pending_deposit = bank::received_one(info.funds)?;
@@ -65,7 +65,7 @@ pub(super) fn try_withdraw<Lpn>(
     amount_nlpn: Uint128,
 ) -> Result<MessageResponse>
 where
-    Lpn: 'static + Currency + Serialize,
+    Lpn: 'static + Currency + Definition,
 {
     if amount_nlpn.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);

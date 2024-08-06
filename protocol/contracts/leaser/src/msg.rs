@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
-use currency::SymbolOwned;
+use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
     open::{ConnectionParams, PositionSpecDTO},
@@ -12,6 +12,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
+use crate::finance::LeaseCurrencies;
 pub use crate::state::config::Config;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
@@ -44,7 +45,7 @@ pub type MaxLeases = u32;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     OpenLease {
-        currency: SymbolOwned,
+        currency: CurrencyDTO<LeaseCurrencies>,
         #[serde(default)]
         max_ltd: Option<Percent>,
     },
@@ -113,7 +114,7 @@ pub enum QueryMsg {
     Config {},
     Quote {
         downpayment: DownpaymentCoin,
-        lease_asset: SymbolOwned,
+        lease_asset: CurrencyDTO<LeaseCurrencies>,
         // TODO get rid of the default-ness
         #[serde(default)]
         max_ltd: Option<Percent>,

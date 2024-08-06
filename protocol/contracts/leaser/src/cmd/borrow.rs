@@ -1,4 +1,4 @@
-use currency::SymbolOwned;
+use currency::CurrencyDTO;
 use finance::percent::Percent;
 use lease::api::open::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
@@ -6,6 +6,7 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Coin, Storage};
 
 use crate::{
+    finance::LeaseCurrencies,
     state::{config::Config, leases::Leases},
     ContractError,
 };
@@ -18,7 +19,7 @@ impl Borrow {
         customer: Addr,
         admin: Addr,
         finalizer: Addr,
-        currency: SymbolOwned,
+        currency: CurrencyDTO<LeaseCurrencies>,
         max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
         Leases::cache_open_req(storage, &customer)
@@ -43,7 +44,7 @@ impl Borrow {
     pub(crate) fn open_lease_msg(
         customer: Addr,
         config: Config,
-        currency: SymbolOwned,
+        currency: CurrencyDTO<LeaseCurrencies>,
         max_ltd: Option<Percent>,
         finalizer: Addr,
     ) -> NewLeaseContract {

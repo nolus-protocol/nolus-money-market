@@ -67,7 +67,11 @@ fn marketprice_add_feed_expect_err() {
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
-            [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
+            [
+                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+            ]
+            .into_iter(),
         )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -96,14 +100,9 @@ fn marketprice_add_feed() {
     let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let price1 =
-        price::total_of(Coin::<SuperGroupTestC5>::new(10)).is(Coin::<SuperGroupTestC3>::new(5));
-    let price2 =
-        price::total_of(Coin::<SuperGroupTestC5>::new(10000000000))
-            .is(Coin::<SubGroupTestC1>::new(1000000009));
-    let price3 =
-        price::total_of(Coin::<SuperGroupTestC5>::new(10000000000000))
-            .is(Coin::<SuperGroupTestC4>::new(100000000000002));
+    let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
+    let price2 = price::<SuperGroupTestC5, SubGroupTestC1, _, _>(10000000000, 1000000009);
+    let price3 = price::<SuperGroupTestC5, SuperGroupTestC4, _, _>(10000000000000, 100000000000002);
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
@@ -120,7 +119,11 @@ fn marketprice_add_feed() {
             &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
-            [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
+            [
+                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+            ]
+            .into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
@@ -131,7 +134,11 @@ fn marketprice_add_feed() {
                 &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
-                [SuperGroupTestC5::TICKER, SuperGroupTestC3::TICKER].into_iter(),
+                [
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                ]
+                .into_iter(),
             )
             .unwrap();
 
@@ -147,68 +154,68 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SubGroupTestC1>::new(1)),
+        price::<SuperGroupTestC3, SubGroupTestC1, _, _>(1, 1),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
-    )
-    .unwrap();
-
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SubGroupTestC1>::new(3)),
+        price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC5>::new(1)),
+        price::<SuperGroupTestC1, SubGroupTestC1, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
-    )
-    .unwrap();
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<SuperGroupTestC5>::new(1)).is(Coin::<SuperGroupTestC1>::new(2)),
+        price::<SuperGroupTestC3, SuperGroupTestC5, _, _>(1, 1),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC1>::new(1)).is(Coin::<SuperGroupTestC5>::new(3)),
+        price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
+    )
+    .unwrap();
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::<SuperGroupTestC5, SuperGroupTestC1, _, _>(1, 2),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<SubGroupTestC1>::new(3)),
+        price::<SuperGroupTestC1, SuperGroupTestC5, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<SuperGroupTestC3>::new(3)),
+        price::<SuperGroupTestC4, SubGroupTestC1, _, _>(1, 3),
+    )
+    .unwrap();
+
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::<SuperGroupTestC2, SuperGroupTestC3, _, _>(1, 3),
     )
     .unwrap();
 
     let last_feed_time = feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<SuperGroupTestC6>::new(1)).is(Coin::<SuperGroupTestC2>::new(3)),
+        price::<SuperGroupTestC6, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
 
@@ -218,16 +225,15 @@ fn marketprice_follow_the_path() {
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                SuperGroupTestC3::TICKER,
-                SuperGroupTestC5::TICKER,
-                SuperGroupTestC1::TICKER,
-                SuperGroupTestC2::TICKER,
+                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC1, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC2, SuperGroup>(),
             ]
             .into_iter(),
         )
         .unwrap();
-    let expected =
-        price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC2>::new(6));
+    let expected = price::<SuperGroupTestC3, SuperGroupTestC2, _, _>(1, 6);
     let expected_dto = PriceDTO::from(expected);
 
     assert_eq!(expected_dto, price_resp);
@@ -238,7 +244,11 @@ fn marketprice_follow_the_path() {
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
-            [SuperGroupTestC3::TICKER, SuperGroupTestC2::TICKER].into_iter(),
+            [
+                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                &currency::dto::<SuperGroupTestC2, SuperGroup>(),
+            ]
+            .into_iter(),
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -250,7 +260,11 @@ fn marketprice_follow_the_path() {
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [SubGroupTestC1::TICKER, SuperGroupTestC2::TICKER].into_iter(),
+                [
+                    &currency::dto::<SubGroupTestC1, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC2, SuperGroup>()
+                ]
+                .into_iter(),
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -263,7 +277,11 @@ fn marketprice_follow_the_path() {
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
-                [SubGroupTestC1::TICKER, SuperGroupTestC5::TICKER].into_iter()
+                [
+                    &currency::dto::<SubGroupTestC1, SuperGroup>(),
+                    &currency::dto::<SuperGroupTestC5, SuperGroup>()
+                ]
+                .into_iter()
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}
@@ -300,4 +318,14 @@ fn config() -> Config {
         SAMPLES_NUMBER,
         DISCOUNTING_FACTOR,
     )
+}
+
+fn price<C1, C2, CoinC1, CoinC2>(coin1: CoinC1, coin2: CoinC2) -> Price<C1, C2>
+where
+    C1: 'static,
+    CoinC1: Into<Coin<C1>>,
+    C2: 'static,
+    CoinC2: Into<Coin<C2>>,
+{
+    price::total_of(coin1.into()).is(coin2.into())
 }

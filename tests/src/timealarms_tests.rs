@@ -1,7 +1,7 @@
 use std::array::from_fn;
 
 use currencies::{Lpn, Nls};
-use currency::Currency;
+use currency::Definition;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
 use sdk::{

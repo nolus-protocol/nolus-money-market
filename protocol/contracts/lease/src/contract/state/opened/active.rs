@@ -56,7 +56,7 @@ impl Active {
         match may_lpn_payment {
             Some(lpn_payment) => {
                 let payment = never::safe_unwrap(lpn_payment);
-                debug_assert_eq!(payment.ticker(), self.lease.lease.loan.lpp().lpn());
+                debug_assert_eq!(payment.currency(), self.lease.lease.loan.lpp().lpn());
                 repay::repay(self.lease, payment, env, querier)
             }
             None => self.start_swap(info.funds, env.block.time, querier),

@@ -1,12 +1,11 @@
-use std::{any::TypeId, fmt::Debug, marker::PhantomData};
+use std::{any::TypeId, fmt::Debug};
 
-use crate::error::{Error, Result};
-
-pub use self::{
+pub use crate::{
+    dto::{dto, symbol, to_string, CurrencyDTO},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
-        visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
-        GroupVisit,
+        visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
+        AnyVisitorResult, GroupVisit,
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
@@ -14,6 +13,7 @@ pub use self::{
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
+mod dto;
 pub mod error;
 mod from_symbol;
 mod from_symbol_any;
@@ -37,7 +37,9 @@ pub type SymbolOwned = String;
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
     /// The group this currency belongs to
     type Group: Group;
+}
 
+pub trait Definition: 'static {
     /// Identifier of the currency
     const TICKER: SymbolStatic;
 
@@ -62,47 +64,10 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate_ticker(got: SymbolOwned, expected: SymbolStatic) -> Result<()> {
-    if expected == got {
-        Ok(())
-    } else {
-        Err(Error::currency_mismatch(expected, got))
-    }
-}
-
-pub fn validate<G>(ticker: &SymbolSlice) -> Result<()>
-where
-    G: Group,
-{
-    struct SupportedLeaseCurrency<G> {
-        expected_group: PhantomData<G>,
-    }
-    impl<G> AnyVisitor<G> for SupportedLeaseCurrency<G>
-    where
-        G: Group,
-    {
-        type VisitorG = G;
-        type Error = Error;
-        type Output = ();
-        fn on<C>(self) -> Result<Self::Output>
-        where
-            C: Currency,
-        {
-            Ok(())
-        }
-    }
-    Tickers::<G>::visit_any(
-        ticker,
-        SupportedLeaseCurrency {
-            expected_group: PhantomData::<G>,
-        },
-    )
-}
-
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
     M: Matcher<Group = C::Group>,
-    C: Currency + MemberOf<V::VisitorG>,
+    C: Currency + MemberOf<V::VisitorG> + Definition,
     V: AnyVisitor<C::Group>,
     C::Group: MemberOf<V::VisitorG>,
 {
@@ -112,7 +77,7 @@ where
 pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher<Group = C::Group>,
-    C: Currency + MemberOf<TopG> + MemberOf<V::VisitorG>,
+    C: Currency + MemberOf<TopG> + MemberOf<V::VisitorG> + Definition,
     V: AnyVisitor<TopG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
@@ -129,34 +94,4 @@ where
     V: AnyVisitor<VisitedG>,
 {
     Err(visitor)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        error::Error,
-        test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Tickers,
-    };
-
-    #[test]
-    fn validate() {
-        assert_eq!(
-            Ok(()),
-            super::validate::<SuperGroup>(SuperGroupTestC1::TICKER)
-        );
-        assert_eq!(
-            Ok(()),
-            super::validate::<SuperGroup>(SuperGroupTestC2::TICKER)
-        );
-        assert_eq!(
-            Err(Error::not_in_currency_group::<
-                _,
-                Tickers::<SubGroup>,
-                SubGroup,
-            >(SuperGroupTestC1::TICKER)),
-            super::validate::<SubGroup>(SuperGroupTestC1::TICKER)
-        );
-        assert_eq!(Ok(()), super::validate::<SubGroup>(SubGroupTestC1::TICKER));
-    }
 }

@@ -1,5 +1,5 @@
 use currencies::Lpns;
-use currency::Currency;
+use currency::Definition;
 use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::{
     borrow::InterestRate,
@@ -32,7 +32,7 @@ impl Instantiator {
         min_utilization: BoundToHundredPercent,
     ) -> Addr
     where
-        Lpn: Currency,
+        Lpn: Definition,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(
@@ -62,7 +62,7 @@ impl Instantiator {
         min_utilization: BoundToHundredPercent,
     ) -> Addr
     where
-        Lpn: Currency,
+        Lpn: Definition,
     {
         let lpp_id = app.store_code(endpoints);
         let lease_code_admin = LeaserInstantiator::expected_addr();

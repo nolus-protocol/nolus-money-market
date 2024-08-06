@@ -3,7 +3,6 @@ use std::ops::DerefMut;
 use access_control::SingleUserAccess;
 use cosmwasm_std::{Addr, QuerierWrapper};
 use currencies::Lpn as LpnCurrency;
-use currency::Currency;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
@@ -104,7 +103,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
             .map(ConfigResponse::from)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),
         QueryMsg::ReserveLpn() => {
-            cosmwasm_std::to_json_binary(&LpnCurrency::TICKER).map_err(Into::into)
+            cosmwasm_std::to_json_binary(&currency::to_string::<LpnCurrency>()).map_err(Into::into)
         }
     }
     .map_err(Into::into)

@@ -20,18 +20,21 @@ where
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    struct PriceConvert<QuoteC, OutC, OutG>
+    struct PriceConvert<QuoteC, QuoteG, OutC, OutG>
     where
         QuoteC: Currency,
+        QuoteG: Group,
         OutC: Currency,
         OutG: Group,
     {
         in_amount: Coin<QuoteC>,
+        in_group: PhantomData<QuoteG>,
         _out: PhantomData<OutC>,
         _out_group: PhantomData<OutG>,
     }
 
-    impl<QuoteC, QuoteG, OutC, OutG> WithOracle<QuoteC, QuoteG> for PriceConvert<QuoteC, OutC, OutG>
+    impl<QuoteC, QuoteG, OutC, OutG> WithOracle<QuoteC, QuoteG>
+        for PriceConvert<QuoteC, QuoteG, OutC, OutG>
     where
         QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
@@ -58,6 +61,7 @@ where
     oracle_ref.execute_as_oracle(
         PriceConvert {
             in_amount,
+            in_group: PhantomData::<QuoteG>,
             _out: PhantomData::<OutC>,
             _out_group: PhantomData::<OutG>,
         },
@@ -76,18 +80,20 @@ where
     InC: Currency + MemberOf<InG>,
     InG: Group,
 {
-    struct PriceConvert<InC, InG, QuoteC>
+    struct PriceConvert<InC, InG, QuoteC, QuoteG>
     where
         InC: Currency + MemberOf<InG>,
         InG: Group,
         QuoteC: Currency,
+        QuoteG: Group,
     {
         in_amount: Coin<InC>,
         _in_group: PhantomData<InG>,
         _out: PhantomData<QuoteC>,
+        _out_group: PhantomData<QuoteG>,
     }
 
-    impl<InC, InG, QuoteC, QuoteG> WithOracle<QuoteC, QuoteG> for PriceConvert<InC, InG, QuoteC>
+    impl<InC, InG, QuoteC, QuoteG> WithOracle<QuoteC, QuoteG> for PriceConvert<InC, InG, QuoteC, QuoteG>
     where
         InC: Currency + MemberOf<InG>,
         InG: Group,
@@ -112,6 +118,7 @@ where
             in_amount,
             _in_group: PhantomData::<InG>,
             _out: PhantomData::<QuoteC>,
+            _out_group: PhantomData::<QuoteG>,
         },
         querier,
     )

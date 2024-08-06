@@ -30,7 +30,7 @@ impl ExactAmountIn for Impl {
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath,
+        swap_path: &SwapPath<GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
@@ -42,7 +42,7 @@ impl ExactAmountIn for Impl {
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
         const MIN_OUT_AMOUNT: &str = "1";
-        let routes = to_route::<GSwap>(swap_path)?;
+        let routes = to_route::<GSwap>(swap_path);
         let token_in = Some(to_dex_cwcoin(token_in)?);
         let token_out_min_amount = MIN_OUT_AMOUNT.into();
         let msg = RequestMsg {
@@ -74,19 +74,15 @@ impl ExactAmountIn for Impl {
     }
 }
 
-fn to_route<G>(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>>
+fn to_route<GSwap>(swap_path: &[SwapTarget<GSwap>]) -> Vec<SwapAmountInRoute>
 where
-    G: Group,
+    GSwap: Group,
 {
     swap_path
         .iter()
-        .map(|swap_target| {
-            coin_legacy::to_cosmwasm_on_dex_symbol::<G>(&swap_target.target)
-                .map_err(Into::into)
-                .map(|dex_symbol| SwapAmountInRoute {
-                    pool_id: swap_target.pool_id,
-                    token_out_denom: dex_symbol.into(),
-                })
+        .map(|swap_target| SwapAmountInRoute {
+            pool_id: swap_target.pool_id,
+            token_out_denom: swap_target.target.into_symbol::<DexSymbols<GSwap>>().into(),
         })
         .collect()
 }

@@ -1,5 +1,5 @@
-use currencies::PaymentGroup;
-use currency::Currency;
+use currencies::{LeaseGroup, PaymentGroup};
+use currency::{Currency, CurrencyDTO};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     api::{
@@ -45,7 +45,7 @@ impl Instantiator {
         app: &mut App,
         code: Code,
         addresses: InstantiatorAddresses,
-        lease_config: InitConfig<'_, D>,
+        lease_config: InitConfig<D>,
         config: InstantiatorConfig,
         dex_connection_id: &str,
         lease_ica_id: &str,
@@ -77,7 +77,7 @@ impl Instantiator {
     }
 
     fn lease_instantiate_msg(
-        lease_currency: &str,
+        lease_currency: CurrencyDTO<LeaseGroup>,
         addresses: InstantiatorAddresses,
         config: InstantiatorConfig,
         max_ltd: Option<Percent>,
@@ -85,7 +85,7 @@ impl Instantiator {
         NewLeaseContract {
             form: NewLeaseForm {
                 customer: config.customer,
-                currency: lease_currency.into(),
+                currency: lease_currency,
                 max_ltd,
                 position_spec: PositionSpecDTO::new(
                     Liability::new(
@@ -116,20 +116,24 @@ impl Instantiator {
     }
 }
 
-pub(crate) struct InitConfig<'r, D>
+pub(crate) struct InitConfig<D>
 where
     D: Currency,
 {
-    lease_currency: &'r str,
+    lease_currency: CurrencyDTO<LeaseGroup>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
 }
 
-impl<'r, D> InitConfig<'r, D>
+impl<D> InitConfig<D>
 where
     D: Currency,
 {
-    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_ltd: Option<Percent>) -> Self {
+    pub fn new(
+        lease_currency: CurrencyDTO<LeaseGroup>,
+        downpayment: Coin<D>,
+        max_ltd: Option<Percent>,
+    ) -> Self {
         Self {
             lease_currency,
             downpayment,
@@ -216,7 +220,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (downpayment, exp_borrow),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = super::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = super::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

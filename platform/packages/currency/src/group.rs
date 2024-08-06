@@ -4,7 +4,7 @@ use crate::Currency;
 
 use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 
-pub trait Group: Copy + Clone + Debug + PartialEq + MemberOf<Self> {
+pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
     const DESCR: &'static str;
 
     // Visit this group directly by a visitor

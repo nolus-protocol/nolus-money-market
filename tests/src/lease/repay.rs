@@ -3,7 +3,7 @@ use std::slice;
 use ::lease::api::{query::StateResponse, ExecuteMsg};
 use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -28,7 +28,7 @@ use crate::common::{
 };
 
 use super::{
-    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, Lpnoin, Lpnurrency, PaymentCoin,
+    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, Lpnoin, PaymentCoin,
     PaymentCurrency, DOWNPAYMENT,
 };
 
@@ -227,7 +227,7 @@ fn full_repay_with_excess() {
             .query()
             .query_all_balances(lease_address.clone())
             .unwrap(),
-        &[cwcoin::<Lpnurrency, Amount>(overpayment.into())],
+        &[cwcoin::<LpnCurrency, Amount>(overpayment.into())],
     );
 
     assert_eq!(
@@ -287,7 +287,7 @@ where
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_payment_and_transfer(test_case, lease_addr.clone(), payment);
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -309,7 +309,7 @@ where
         |amount: Amount, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
             assert_eq!(amount, payment.into());
             assert_eq!(in_denom, PaymentCurrency::DEX_SYMBOL);
-            assert_eq!(out_denom, Lpnurrency::DEX_SYMBOL);
+            assert_eq!(out_denom, LpnCurrency::DEX_SYMBOL);
 
             swap_out_lpn.into()
         },

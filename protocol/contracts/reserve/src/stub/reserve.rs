@@ -1,8 +1,11 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::coin::Coin;
 use platform::batch::Batch;
 
-use crate::{api::ExecuteMsg, error::Error};
+use crate::{
+    api::{ExecuteMsg, LpnCurrencies},
+    error::Error,
+};
 
 use super::Ref;
 
@@ -26,7 +29,7 @@ impl<Lpn> Impl<Lpn> {
 
 impl<Lpn> Reserve<Lpn> for Impl<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
 {
     fn cover_liquidation_losses(&mut self, amount: Coin<Lpn>) {
         debug_assert!(self.amount.is_none());
@@ -36,7 +39,7 @@ where
 
 impl<Lpn> TryFrom<Impl<Lpn>> for Batch
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
 {
     type Error = Error;
 

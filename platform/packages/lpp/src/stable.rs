@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, MemberOf, SymbolStatic};
+use currency::{
+    AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult, MemberOf, SymbolStatic,
+};
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
 
@@ -11,7 +13,9 @@ pub struct Stable;
 
 impl Currency for Stable {
     type Group = StableCurrencyGroup;
+}
 
+impl Definition for Stable {
     // should not be visible
     const TICKER: SymbolStatic = "STABLE";
 
@@ -24,7 +28,7 @@ impl Currency for Stable {
 
 pub type CoinStable = Coin<Stable>;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct StableCurrencyGroup;
 impl Group for StableCurrencyGroup {
     const DESCR: &'static str = "stable currency";

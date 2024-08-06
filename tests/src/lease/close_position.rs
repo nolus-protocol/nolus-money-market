@@ -1,5 +1,5 @@
 use currencies::PaymentGroup;
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::{
     coin::{Amount, Coin},
     price,
@@ -28,7 +28,7 @@ use crate::common::{
 };
 
 use super::{
-    LeaseCoin, LeaseCurrency, LeaseTestCase, Lpnoin, Lpnurrency, PaymentCoin, PaymentCurrency,
+    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, Lpnoin, PaymentCoin, PaymentCurrency,
     DOWNPAYMENT,
 };
 
@@ -83,7 +83,7 @@ fn full_close() {
 
     assert_eq!(
         exp_change,
-        user_balance::<Lpnurrency>(&customer, &test_case)
+        user_balance::<LpnCurrency>(&customer, &test_case)
     );
 }
 
@@ -128,7 +128,7 @@ fn partial_close_loan_not_closed() {
     );
 
     assert_eq!(
-        user_balance::<Lpnurrency>(&customer, &test_case),
+        user_balance::<LpnCurrency>(&customer, &test_case),
         Lpnoin::ZERO,
     );
     assert_eq!(
@@ -178,7 +178,7 @@ fn partial_close_loan_closed() {
 
     assert_eq!(
         Lpnoin::ZERO,
-        user_balance::<Lpnurrency>(&customer, &test_case)
+        user_balance::<LpnCurrency>(&customer, &test_case)
     );
     assert_eq!(
         LeaseCoin::ZERO,
@@ -206,11 +206,12 @@ fn partial_close_invalid_currency() {
 
     assert_eq!(
         err.root_cause().downcast_ref::<currency::error::Error>(),
-        Some(&currency::error::Error::UnexpectedSymbol(
-            PaymentCurrency::TICKER.into(),
-            "ticker".to_owned(),
-            LeaseCurrency::TICKER.into(),
-        ))
+        Some(
+            &currency::error::Error::currency_mismatch::<LeaseCurrency, _>(&currency::dto::<
+                PaymentCurrency,
+                PaymentGroup,
+            >())
+        )
     );
 }
 
@@ -276,7 +277,7 @@ fn do_close(
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
 
     assert!(matches!(
-        super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<Lpnurrency>::ZERO),
+        super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<LpnCurrency>::ZERO),
         StateResponse::Opened { .. }
     ));
 
@@ -287,7 +288,7 @@ fn do_close(
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
         &mut response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -330,7 +331,7 @@ fn do_close(
                 "payment-amount",
                 Amount::from(close_amount_in_lpn).to_string(),
             )
-            .add_attribute("payment-symbol", Lpnurrency::TICKER)
+            .add_attribute("payment-symbol", LpnCurrency::TICKER)
             .add_attribute("loan-close", exp_loan_close.to_string())
             .add_attribute(
                 "principal",

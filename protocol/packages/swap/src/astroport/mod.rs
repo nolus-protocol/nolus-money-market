@@ -68,7 +68,7 @@ where
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath,
+        swap_path: &SwapPath<GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
@@ -77,23 +77,22 @@ where
         debug_assert!(!swap_path.is_empty());
         let token_in = to_dex_proto_coin(token_in)?;
 
-        to_operations::<GSwap>(&token_in.denom, swap_path)
-            .map(|operations| ExecuteMsg::ExecuteSwapOperations {
-                operations,
-                minimum_receive: None, // disable checks on the received amount
-                to: None,              // means the sender
-                max_spread: Some(Self::MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
-            })
-            .and_then(|swap_msg| cosmwasm_std::to_json_vec(&swap_msg).map_err(Into::into))
-            .map(|msg| RequestMsg {
-                sender: sender.into(),
-                contract: R::ROUTER_ADDR.into(),
-                msg,
-                funds: vec![token_in],
-            })
-            .map(|req| {
-                trx.add_message(RequestMsg::type_url(), req);
-            })
+        cosmwasm_std::to_json_vec(&ExecuteMsg::ExecuteSwapOperations {
+            operations: to_operations::<GSwap>(&token_in.denom, swap_path),
+            minimum_receive: None, // disable checks on the received amount
+            to: None,              // means the sender
+            max_spread: Some(Self::MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
+        })
+        .map_err(Into::into)
+        .map(|msg| RequestMsg {
+            sender: sender.into(),
+            contract: R::ROUTER_ADDR.into(),
+            msg,
+            funds: vec![token_in],
+        })
+        .map(|req| {
+            trx.add_message(RequestMsg::type_url(), req);
+        })
     }
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
@@ -116,8 +115,8 @@ where
 
 fn to_operations<'a, G>(
     token_in_denom: &'a SymbolSlice,
-    swap_path: &'a [SwapTarget],
-) -> Result<Vec<SwapOperation>>
+    swap_path: &'a [SwapTarget<G>],
+) -> Vec<SwapOperation>
 where
     G: Group,
 {
@@ -131,10 +130,9 @@ where
 
     swap_path
         .iter()
-        .map(|swap_target| swap_target.target.as_ref())
-        .map(|ticker| coin_legacy::to_cosmwasm_on_dex_symbol::<G>(ticker).map_err(Into::into))
-        .scan(scanner, |scanner, may_next_denom| {
-            Some(may_next_denom.map(|next_denom| {
+        .map(|swap_target| swap_target.target.into_symbol::<DexSymbols<G>>())
+        .scan(scanner, |scanner, next_denom| {
+            Some({
                 let op = SwapOperation::AstroSwap {
                     offer_asset_info: AssetInfo::NativeToken {
                         denom: scanner.last_denom.into(),
@@ -145,7 +143,7 @@ where
                 };
                 scanner.last_denom = next_denom;
                 op
-            }))
+            })
         })
         .collect()
 }

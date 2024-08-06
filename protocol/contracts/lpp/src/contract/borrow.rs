@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
@@ -43,7 +43,7 @@ pub(super) fn try_repay_loan<Lpn>(
     info: MessageInfo,
 ) -> Result<(Coin<Lpn>, MessageResponse)>
 where
-    Lpn: 'static + Currency,
+    Lpn: 'static + Definition + Currency,
 {
     let lease_addr = info.sender;
     let repay_amount = bank::received_one(info.funds)?;

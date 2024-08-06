@@ -97,7 +97,7 @@ impl<'c> From<Sender<'c>> for Transaction {
 mod test {
     use currency::{
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency,
+        Currency, Definition,
     };
     use finance::coin::{Amount, Coin};
     use prost::Name;
@@ -156,7 +156,7 @@ mod test {
 
     fn into_cosmos_sdk_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
     where
-        C: Currency,
+        C: Currency + Definition,
     {
         CosmosSdkCoin {
             amount: Amount::from(coin).to_string(),

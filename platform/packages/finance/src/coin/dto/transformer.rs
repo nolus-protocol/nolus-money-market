@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use currency::{error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, MemberOf};
 
-use crate::{coin::WithCoin, error::Error};
+use crate::coin::WithCoin;
 
 use super::CoinDTO;
 
@@ -32,14 +32,12 @@ where
 {
     type VisitorG = V::VisitorG;
     type Output = V::Output;
-    type Error = CmdError<V::Error, Error>;
+    type Error = V::Error;
 
     fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
         C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
     {
-        self.2
-            .on::<C>(self.0.amount().into())
-            .map_err(Self::Error::from_customer_err)
+        self.2.on::<C>(self.0.as_specific::<C>())
     }
 }

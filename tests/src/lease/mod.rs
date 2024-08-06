@@ -1,5 +1,5 @@
-use currencies::{LeaseC1, LeaseC2, LeaseGroup, Lpn};
-use currency::{Currency, MemberOf};
+use currencies::{LeaseC1, LeaseC2, LeaseGroup, Lpn, PaymentGroup};
+use currency::{Currency, Definition, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -27,8 +27,8 @@ mod liquidation;
 mod open;
 mod repay;
 
-type Lpnurrency = Lpn;
-type Lpnoin = Coin<Lpnurrency>;
+type LpnCurrency = Lpn;
+type Lpnoin = Coin<LpnCurrency>;
 
 type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -44,7 +44,7 @@ pub(super) fn create_payment_coin(amount: Amount) -> PaymentCoin {
     PaymentCoin::new(amount)
 }
 
-pub(super) fn price_lpn_of<C>() -> Price<C, Lpnurrency>
+pub(super) fn price_lpn_of<C>() -> Price<C, LpnCurrency>
 where
     C: Currency,
 {
@@ -74,11 +74,11 @@ pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCaseBuilder::<Lpnurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
+    let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<Lpnurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<Lpnurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin_dex::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
@@ -88,7 +88,7 @@ where
         None,
         &[coin(
             5_000_000_000_000_000_000_000_000_000,
-            Lpnurrency::BANK_SYMBOL,
+            LpnCurrency::BANK_SYMBOL,
         )],
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -117,10 +117,10 @@ where
 }
 
 pub(super) fn calculate_interest(
-    principal: Coin<Lpnurrency>,
+    principal: Coin<LpnCurrency>,
     interest_rate: Percent,
     duration: Duration,
-) -> Coin<Lpnurrency> {
+) -> Coin<LpnCurrency> {
     interest::interest(interest_rate, principal, duration)
 }
 
@@ -148,7 +148,7 @@ pub(super) fn open_lease<
     max_ltd: Option<Percent>,
 ) -> Addr
 where
-    DownpaymentC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
 {
     let lease = try_init_lease(test_case, downpayment, max_ltd);
     complete_init_lease(test_case, downpayment, max_ltd, &lease);
@@ -189,7 +189,7 @@ where
             Addr::unchecked(USER),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::TICKER.into(),
+                currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd,
             },
             downpayment.as_ref().map_or(&[], std::slice::from_ref),
@@ -230,7 +230,7 @@ pub(super) fn complete_init_lease<
     max_ltd: Option<Percent>,
     lease: &Addr,
 ) where
-    DownpaymentC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
 {
     let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
         &test_case.app,
@@ -296,7 +296,7 @@ pub(super) fn quote_query<
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
 where
-    DownpaymentC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
 {
     common::leaser::query_quote::<_, LeaseCurrency>(
         &test_case.app,
@@ -363,8 +363,8 @@ pub(super) fn expected_open_state<
     max_due: Duration,
 ) -> StateResponse
 where
-    DownpaymentC: Currency,
-    PaymentC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    PaymentC: Currency + MemberOf<PaymentGroup>,
     AssetC: Currency + MemberOf<LeaseGroup>,
 {
     let now = test_case.app.block_info().time;
@@ -444,8 +444,8 @@ pub(super) fn expected_newly_opened_state<
     payments: Coin<PaymentC>,
 ) -> StateResponse
 where
-    DownpaymentC: Currency,
-    PaymentC: Currency,
+    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    PaymentC: Currency + MemberOf<PaymentGroup>,
 {
     expected_open_state(
         test_case,

@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
-use currency::SymbolOwned;
+use currencies::LeaseGroup;
+use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
@@ -46,7 +47,7 @@ impl<'a> Leaser<'a> {
     pub fn quote(
         &self,
         downpayment: DownpaymentCoin,
-        lease_asset: SymbolOwned,
+        lease_asset: CurrencyDTO<LeaseGroup>,
         max_ltd: Option<Percent>,
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;

@@ -15,7 +15,7 @@ pub trait ExactAmountIn {
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath,
+        swap_path: &SwapPath<GSwap>,
     ) -> Result<()>
     where
         GIn: Group,

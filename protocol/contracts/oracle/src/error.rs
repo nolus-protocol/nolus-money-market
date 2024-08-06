@@ -2,9 +2,9 @@ use std::{num::TryFromIntError, result::Result as StdResult};
 
 use thiserror::Error;
 
-use currency::SymbolOwned;
 #[cfg(feature = "contract")]
-use currency::{Currency, SymbolSlice};
+use currency::{Currency, CurrencyDTO, Group};
+use currency::{SymbolOwned, SymbolStatic};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -70,8 +70,8 @@ pub enum ContractError {
     #[error("[Oracle] Invalid denom pair ({0}, {1})")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
 
-    #[error("[Oracle] Invalid base currency ({0} != {1})")]
-    InvalidBaseCurrency(SymbolOwned, SymbolOwned),
+    #[error("[Oracle][Base='{0}'] Invalid base currency '{1}'")]
+    InvalidBaseCurrency(SymbolStatic, SymbolOwned),
 
     #[error("[Oracle] Specified stable currency is not in the currency tree")]
     StableCurrencyNotInTree {},
@@ -90,7 +90,7 @@ pub enum ContractError {
 
     #[error("[Oracle][Base='{base}'] Unsupported currency '{unsupported}'")]
     UnsupportedCurrency {
-        base: SymbolOwned,
+        base: SymbolStatic,
         unsupported: SymbolOwned,
     },
 
@@ -99,12 +99,22 @@ pub enum ContractError {
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn unsupported_currency<C>(unsupported: &SymbolSlice) -> ContractError
+pub(crate) fn unsupported_currency<G, BaseC>(unsupported: &CurrencyDTO<G>) -> ContractError
 where
-    C: Currency,
+    G: Group,
+    BaseC: Currency,
 {
     ContractError::UnsupportedCurrency {
-        base: C::TICKER.into(),
-        unsupported: unsupported.into(),
+        base: currency::to_string::<BaseC>(),
+        unsupported: unsupported.to_string(),
     }
+}
+
+#[cfg(feature = "contract")]
+pub(crate) fn invalid_base_currency<G, BaseC>(configured_base: &CurrencyDTO<G>) -> ContractError
+where
+    G: Group,
+    BaseC: Currency,
+{
+    ContractError::InvalidBaseCurrency(currency::to_string::<BaseC>(), configured_base.to_string())
 }

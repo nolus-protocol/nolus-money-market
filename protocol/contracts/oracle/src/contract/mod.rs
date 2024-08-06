@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use currency::Currency;
+use currency::Definition;
 use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},
@@ -45,7 +45,7 @@ pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: InstantiateMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, CONTRACT_VERSION)
         .map_err(ContractError::InitializeVersioning)?;
@@ -53,7 +53,9 @@ pub fn instantiate(
     msg.config
         .store(deps.storage)
         .and_then(|()| {
-            SupportedPairs::<BaseCurrency>::new::<StableCurrency>(msg.swap_tree.into_tree())
+            SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(
+                msg.swap_tree.into_tree(),
+            )
         })
         .and_then(|supported_pairs| supported_pairs.save(deps.storage))
         .map(|()| response::empty_response())
@@ -75,7 +77,7 @@ pub fn migrate(
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     type QueryOracle<'storage, S> =
         Oracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
 
@@ -91,12 +93,12 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::TICKER),
         QueryMsg::StableCurrency {} => to_json_binary(StableCurrency::TICKER),
         QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
-            &SupportedPairs::<BaseCurrency>::load(deps.storage)?
+            &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .swap_pairs_df()
                 .collect::<Vec<_>>(),
         ),
         QueryMsg::Currencies {} => to_json_binary(
-            &SupportedPairs::<BaseCurrency>::load(deps.storage)?
+            &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .currencies()
                 .collect::<Vec<_>>(),
         ),
@@ -115,10 +117,11 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             to_json_binary(&PricesResponse { prices })
         }
         QueryMsg::SwapPath { from, to } => to_json_binary(
-            &SupportedPairs::<BaseCurrency>::load(deps.storage)?.load_swap_path(&from, &to)?,
+            &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
+                .load_swap_path(&from, &to)?,
         ),
-        QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse {
-            tree: SupportedPairs::<BaseCurrency>::load(deps.storage)?
+        QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse::<PriceCurrencies> {
+            tree: SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .query_swap_tree()
                 .into_human_readable(),
         }),
@@ -139,13 +142,17 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+pub fn sudo(
+    deps: DepsMut<'_>,
+    _env: Env,
+    msg: SudoMsg<PriceCurrencies>,
+) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
         SudoMsg::SwapTree { tree } => {
-            SupportedPairs::<BaseCurrency>::new::<StableCurrency>(tree.into_tree())
+            SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
         }
     }
@@ -189,7 +196,7 @@ mod tests {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
     };
-    use currency::Currency;
+    use currency::{CurrencyDTO, Definition};
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
@@ -232,13 +239,13 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let value: Vec<SwapLeg> = cosmwasm_std::from_json(res).unwrap();
+        let value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: PaymentC5::TICKER.into(),
+            from: CurrencyDTO::from_currency_type::<PaymentC5>(),
             to: SwapTarget {
                 pool_id: 1,
-                target: Lpn::TICKER.into(),
+                target: CurrencyDTO::from_currency_type::<Lpn>(),
             },
         }];
 
@@ -249,23 +256,14 @@ mod tests {
     fn impl_swap_path() {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
-        let from = PaymentC1::TICKER;
-        let to = Lpn::TICKER;
-        let query_impl = QueryMsg::SwapPath {
-            from: from.into(),
-            to: to.into(),
-        };
-        let query_api = cosmwasm_std::from_json::<QueryMsgApi>(
+        let from = currency::dto::<PaymentC1, PriceCurrencies>();
+        let to = currency::dto::<Lpn, PriceCurrencies>();
+        let query_impl = QueryMsg::SwapPath { from, to };
+        let query_api = cosmwasm_std::from_json::<QueryMsgApi<PriceCurrencies>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
         )
         .unwrap();
-        assert_eq!(
-            QueryMsgApi::SwapPath {
-                from: from.into(),
-                to: to.into(),
-            },
-            query_api
-        );
+        assert_eq!(QueryMsgApi::SwapPath { from, to }, query_api);
     }
 
     #[test]

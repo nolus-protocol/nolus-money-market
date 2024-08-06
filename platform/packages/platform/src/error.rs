@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use prost::DecodeError;
 use thiserror::Error;
 
-use currency::Currency;
+use currency::{Currency, SymbolStatic};
 use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
@@ -11,13 +11,13 @@ use crate::contract::CodeId;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Platform] Expecting funds of {0} but found none")]
-    NoFunds(String),
+    NoFunds(SymbolStatic),
 
     #[error("[Platform] Expecting funds but found none")]
     NoFundsAny(),
 
     #[error("[Platform] Expecting funds of {0} but found extra ones")]
-    UnexpectedFunds(String),
+    UnexpectedFunds(SymbolStatic),
 
     #[error("[Platform] Expecting funds consisting of a single coin but found more coins")]
     UnexpectedFundsAny(),
@@ -73,14 +73,14 @@ impl Error {
     where
         C: Currency,
     {
-        Self::NoFunds(C::TICKER.into())
+        Self::NoFunds(currency::to_string::<C>())
     }
 
     pub fn unexpected_funds<C>() -> Self
     where
         C: Currency,
     {
-        Self::UnexpectedFunds(C::TICKER.into())
+        Self::UnexpectedFunds(currency::to_string::<C>())
     }
 
     pub fn unexpected_code<A>(exp_code_id: CodeId, instance: A) -> Self

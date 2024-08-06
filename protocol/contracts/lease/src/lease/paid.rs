@@ -109,7 +109,11 @@ mod tests {
             } else if currency::equal::<C, TestLpn>() {
                 Ok(Coin::<C>::new(self.balance_surplus.into()))
             } else {
-                unreachable!("Expected {}, found {}", TestAsset::TICKER, C::TICKER);
+                unreachable!(
+                    "Expected {}, found {}",
+                    currency::to_string::<TestAsset>(),
+                    currency::to_string::<C>()
+                );
             }
         }
 

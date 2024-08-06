@@ -1,5 +1,4 @@
 use currencies::{LeaseC1, Lpn, Lpns, Nls};
-use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -191,7 +190,7 @@ fn open_loan_no_liquidity() {
         .init_leaser()
         .into_generic();
 
-    let lease_addr: Addr = test_case.open_lease::<Lpn>(LeaseCurrency::TICKER);
+    let lease_addr: Addr = test_case.open_lease::<Lpn>(currency::dto::<LeaseCurrency, _>());
 
     () = test_case
         .app
@@ -366,7 +365,7 @@ fn deposit_and_withdraw() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(LeaseCurrency::TICKER, loan.into(), None),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan.into(), None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -621,7 +620,7 @@ fn loan_open_and_repay() {
         &mut test_case.app,
         test_case.address_book.lease_code(),
         lease_addresses.clone(),
-        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -684,7 +683,7 @@ fn loan_open_and_repay() {
         &mut test_case.app,
         test_case.address_book.lease_code(),
         lease_addresses,
-        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -986,7 +985,7 @@ fn compare_lpp_states() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -1055,7 +1054,7 @@ fn compare_lpp_states() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()

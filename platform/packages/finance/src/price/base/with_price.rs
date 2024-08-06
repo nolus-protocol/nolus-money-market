@@ -1,7 +1,11 @@
-use currency::MemberOf;
-use currency::{error::CmdError, AnyVisitor, Currency, Group, GroupVisit, Tickers};
+use std::marker::PhantomData;
 
-use crate::{error::Error, price::Price};
+use currency::MemberOf;
+use currency::{Currency, Group};
+
+use crate::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
+use crate::error::Error;
+use crate::price::Price;
 
 use crate::price::base::BasePrice;
 
@@ -19,6 +23,7 @@ where
         C: Currency + MemberOf<Self::PriceG>;
 }
 
+/// Execute the provided price command on a valid base price
 pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
     price: &BasePrice<BaseG, QuoteC, QuoteG>,
     cmd: Cmd,
@@ -28,46 +33,131 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
-    Error: Into<Cmd::Error>,
+    Cmd::Error: From<Error>,
 {
-    Tickers::<BaseG>::visit_any(price.base_ticker(), CurrencyResolve { price, cmd })
-        .map_err(CmdError::into_customer_err)
+    price.amount.with_coin(CoinResolve {
+        price: UncheckedConversion(price),
+        cmd,
+    })
 }
 
-struct CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
+/// Execute the provided price command on a non-validated price
+/// Intended mainly for invariant validation purposes.
+pub(super) fn execute_with_coins<BaseG, QuoteC, QuoteG, Cmd>(
+    amount: CoinDTO<BaseG>,
+    amount_quote: Coin<QuoteC>,
+    cmd: Cmd,
+) -> Result<Cmd::Output, Cmd::Error>
 where
+    BaseG: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+    Cmd: WithPrice<QuoteC, PriceG = BaseG>,
+    Cmd::Error: From<Error>,
+{
+    amount.with_coin(CoinResolve {
+        price: CheckedConversion::<BaseG, QuoteC, QuoteG>(amount_quote, PhantomData, PhantomData),
+        cmd,
+    })
+}
+
+trait PriceFactory {
+    type G: Group;
+    type QuoteC: Currency + MemberOf<Self::QuoteG>;
+    type QuoteG: Group;
+
+    fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
+    where
+        C: Currency + MemberOf<Self::G>;
+}
+
+struct UncheckedConversion<'price, BaseG, QuoteC, QuoteG>(&'price BasePrice<BaseG, QuoteC, QuoteG>)
+where
+    BaseG: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group;
+
+impl<'price, BaseG, QuoteC, QuoteG> PriceFactory
+    for UncheckedConversion<'price, BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    type G = BaseG;
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+
+    fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
+    where
+        C: Currency + MemberOf<Self::G>,
+    {
+        Ok(Price::new(amount, self.0.amount_quote))
+    }
+}
+
+struct CheckedConversion<BaseG, QuoteC, QuoteG>(
+    Coin<QuoteC>,
+    PhantomData<BaseG>,
+    PhantomData<QuoteG>,
+)
+where
+    BaseG: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group;
+
+impl<BaseG, QuoteC, QuoteG> PriceFactory for CheckedConversion<BaseG, QuoteC, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    type G = BaseG;
+    type QuoteC = QuoteC;
+    type QuoteG = QuoteG;
+
+    fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
+    where
+        C: Currency + MemberOf<Self::G>,
+    {
+        Price::try_new(amount, self.0)
+    }
+}
+
+struct CoinResolve<Price, G, QuoteC, QuoteG, Cmd>
+where
+    Price: PriceFactory<G = G, QuoteC = QuoteC, QuoteG = QuoteG>,
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = G>,
 {
-    price: &'a BasePrice<G, QuoteC, QuoteG>,
+    price: Price,
     cmd: Cmd,
 }
 
-impl<'a, G, QuoteC, QuoteG, Cmd> AnyVisitor<G> for CurrencyResolve<'a, G, QuoteC, QuoteG, Cmd>
+impl<Price, G, QuoteC, QuoteG, Cmd> WithCoin<G> for CoinResolve<Price, G, QuoteC, QuoteG, Cmd>
 where
+    Price: PriceFactory<G = G, QuoteC = QuoteC, QuoteG = QuoteG>,
     G: Group,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = G>,
-    Error: Into<Cmd::Error>,
+    Cmd::Error: From<Error>,
 {
     type VisitorG = G;
-    type Output = Cmd::Output;
-    type Error = CmdError<Cmd::Error, Error>;
 
-    fn on<C>(self) -> currency::AnyVisitorResult<G, Self>
+    type Output = Cmd::Output;
+
+    type Error = Cmd::Error;
+
+    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
         C: Currency + MemberOf<Self::VisitorG>,
     {
         self.price
-            .try_into()
-            .map_err(Self::Error::from_api_err)
-            .and_then(|price| {
-                self.cmd
-                    .exec::<C>(price)
-                    .map_err(Self::Error::from_customer_err)
-            })
+            .try_obtain_price(amount)
+            .map_err(Into::into)
+            .and_then(|price| self.cmd.exec(price))
     }
 }

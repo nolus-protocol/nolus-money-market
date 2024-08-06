@@ -1,4 +1,4 @@
-use currency::{Group, SymbolSlice};
+use currency::{CurrencyDTO, Group, MemberOf};
 use finance::coin::CoinDTO;
 use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
@@ -12,16 +12,18 @@ pub type CoinsNb = u8;
 ///
 /// Supports up to `CoinsNb::MAX` coins.
 pub trait SwapTask {
-    type OutG: Group;
+    type InG: Group + MemberOf<Self::InOutG>;
+    type OutG: Group + MemberOf<Self::InOutG>;
+    type InOutG: Group;
     type Label: Into<String>;
     type StateResponse;
     type Result;
 
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
-    fn oracle(&self) -> &impl SwapPath;
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
-    fn out_currency(&self) -> &SymbolSlice;
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG>;
 
     /// Call back the worker with each coin this swap is about.
     /// The iteration is done over the coins always in the same order.
@@ -30,7 +32,7 @@ pub trait SwapTask {
     /// There should be at least one coin.
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>;
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>;
 
     fn finish(
         self,
@@ -55,10 +57,12 @@ pub enum IterNext {
 }
 
 pub trait CoinVisitor {
+    type GIn: Group;
+
     type Result;
     type Error;
 
     fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
     where
-        G: Group;
+        G: Group + MemberOf<Self::GIn>;
 }

@@ -10,7 +10,7 @@ use finance::{
 use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
-    error::{Error, Result},
+    error::{self, Result},
     stub::Oracle,
     OracleRef,
 };
@@ -69,12 +69,14 @@ where
     {
         self.price
             .map(|price| price::total_of(1.into()).is(price.into()))
-            .ok_or_else(|| Error::FailedToFetchPrice {
-                from: C::TICKER.into(),
-                to: QuoteC::TICKER.into(),
-                error: StdError::GenericErr {
-                    msg: "Test failing Oracle::price_of()".into(),
-                },
+            .ok_or_else(|| {
+                error::failed_to_fetch_price(
+                    currency::dto::<C, CurrencyG>(),
+                    currency::dto::<QuoteC, QuoteG>(),
+                    StdError::GenericErr {
+                        msg: "Test failing Oracle::price_of()".into(),
+                    },
+                )
             })
     }
 }

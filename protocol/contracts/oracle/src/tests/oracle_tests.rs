@@ -1,8 +1,8 @@
 use currencies::{
-    Lpn, Lpns as BaseCurrencies, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
+    Lpn, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Group, MemberOf};
+use currency::{Group, MemberOf};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use platform::{contract, tests};
 use sdk::{
@@ -58,7 +58,7 @@ fn feed_direct_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: PaymentC4::TICKER.to_string(),
+            currency: currency::dto::<PaymentC4, _>(),
         },
     )
     .unwrap();
@@ -88,7 +88,7 @@ fn feed_indirect_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: PaymentC5::TICKER.to_string(),
+            currency: currency::dto::<PaymentC5, _>(),
         },
     )
     .unwrap();
@@ -109,7 +109,7 @@ fn query_prices_unsupported_denom() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: "dummy".to_string(),
+            currency: currency::dto::<PaymentC1, _>(),
         },
     )
     .unwrap();

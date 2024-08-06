@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    api::{LpnQueryResponse, QueryMsg},
+    api::{LpnCurrencies, LpnCurrencyDTO, QueryMsg},
     error::{Error, Result},
 };
 
@@ -25,15 +25,13 @@ pub struct Ref<Lpn> {
 
 impl<Lpn> Ref<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<LpnCurrencies>,
 {
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
             .map_err(Error::QueryReserveFailure)
-            .and_then(|lpn: LpnQueryResponse| {
-                currency::validate_ticker(lpn, Lpn::TICKER).map_err(Error::UnexpectedLpn)
-            })
+            .and_then(|lpn: LpnCurrencyDTO| lpn.of_currency::<Lpn>().map_err(Error::UnexpectedLpn))
             .map(|()| Self {
                 contract,
                 _lpns: PhantomData,

@@ -42,20 +42,17 @@ pub enum Error {
     StubAddAlarm(CosmWasmError),
 
     #[error("[PriceAlarms] {0}")]
-    AlarmError(String),
-}
+    FinanceError(#[from] error::Error),
 
-impl From<error::Error> for Error {
-    fn from(err: error::Error) -> Self {
-        Self::AlarmError(err.to_string())
-    }
+    #[error("[PriceAlarms] {0}")]
+    InvariantBroken(&'static str),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(
-    try_from = "unchecked::Alarm<G, Lpns>",
-    into = "unchecked::Alarm<G, Lpns>",
+    try_from = "unchecked::Alarm<G, Lpn, Lpns>",
+    into = "unchecked::Alarm<G, Lpn, Lpns>",
     bound(serialize = "", deserialize = "")
 )]
 pub struct Alarm<G, Lpn, Lpns>
@@ -74,7 +71,6 @@ where
     Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
-    // TODO take Price<C, Q>-es instead
     pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn, Lpns>
     where
         P: Into<BasePrice<G, Lpn, Lpns>>,
@@ -90,13 +86,7 @@ where
     }
 
     fn invariant_held(&self) -> Result<()> {
-        if let Some(above_or_equal) = &self.above {
-            if self.below.base_ticker() != above_or_equal.base_ticker() {
-                return Err(Error::AlarmError(
-                    "Mismatch of above alarm and below alarm currencies".to_string(),
-                ));
-            }
-
+        self.above.map_or(Ok(()), |ref above_or_equal|{
             struct BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
@@ -125,24 +115,23 @@ where
                 where
                     C: Currency + MemberOf<BaseG>,
                 {
-                    Price::<C, QuoteC>::try_from(self.below_price).map_err(Into::into).and_then(|below_price| {
+                    Price::<C, QuoteC>::try_from(self.below_price).map_err(Error::FinanceError).and_then(|below_price| {
                             if below_price > above_or_equal {
-                                Err(Error::AlarmError("The below alarm price should be less than or equal to the above_or_equal alarm price".to_string()))
+                                Err(Error::InvariantBroken("The below alarm price should be less than or equal to the above_or_equal alarm price"))
                             } else {
                                 Ok(())
                             }
                         })
                 }
             }
-            return with_price::execute(
+            with_price::execute(
                 above_or_equal,
                 BaseCurrencyType {
                     below_price: &self.below,
                 },
             )
-            .map_err(Into::into);
-        }
-        Ok(())
+            .map_err(Into::into)
+        })
     }
 }
 
@@ -166,8 +155,8 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            below: self.below.clone(),
-            above: self.above.clone(),
+            below: self.below,
+            above: self.above,
         }
     }
 }
@@ -180,10 +169,10 @@ mod test {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, LeaseC2, LeaseC3, Lpn},
     };
-    use currency::{Currency, Group, MemberOf};
+    use currency::{Currency, Definition, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},
-        price::{base::BasePrice, dto::PriceDTO},
+        price::base::BasePrice,
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
 
@@ -195,7 +184,7 @@ mod test {
     fn new_valid() {
         let below = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
         let above = BasePriceTest::new(Coin::<LeaseC2>::new(1).into(), Coin::<Lpn>::new(12));
-        let exp = Alarm::new(below.clone(), Some(above.clone()));
+        let exp = Alarm::new(below, Some(above));
 
         let below_json =
             alarm_half_to_json(AlarmPrice::Below, below).expect("Serialization failed");
@@ -211,7 +200,7 @@ mod test {
     #[test]
     fn below_price_ok() {
         let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
-        let exp_res = Ok(Alarm::new(exp_price.clone(), None));
+        let exp_res = Ok(Alarm::new(exp_price, None));
         assert_eq!(exp_res, from_below(exp_price))
     }
 
@@ -271,9 +260,9 @@ mod test {
         let below = BasePriceTest::new(Coin::<LeaseC1>::new(2).into(), Coin::<Lpn>::new(10));
         let above = BasePriceTest::new(Coin::<LeaseC2>::new(2).into(), Coin::<Lpn>::new(10));
 
-        let msg = "Mismatch of above alarm and below alarm currencies";
+        let msg = "Expected currency";
 
-        assert_err(from_both(below.clone(), above.clone()), msg);
+        assert_err(from_both(below, above), msg);
 
         let full_json = format!(
             r#"{{"below": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}, "above": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}}}"#,
@@ -300,10 +289,10 @@ mod test {
     #[test]
     fn below_price_eq_above() {
         let price = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
-        let alarm = Alarm::new(price.clone(), Some(price.clone()));
+        let alarm = Alarm::new(price, Some(price));
         let msg = "valid alarm with equal above_or_equal and below prices";
 
-        assert_eq!(alarm, from_both(price.clone(), price).expect(msg));
+        assert_eq!(alarm, from_both(price, price).expect(msg));
     }
 
     #[test]
@@ -311,7 +300,7 @@ mod test {
         let price_below = BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(10));
         let price_above_or_equal =
             BasePriceTest::new(Coin::<LeaseC3>::new(1).into(), Coin::<Lpn>::new(11));
-        let alarm = Alarm::new(price_below.clone(), Some(price_above_or_equal.clone()));
+        let alarm = Alarm::new(price_below, Some(price_above_or_equal));
         let msg = "valid alarm";
 
         assert_eq!(
@@ -420,8 +409,7 @@ mod test {
         QuoteC: Currency + MemberOf<QuoteG>,
         QuoteG: Group,
     {
-        let price_dto = PriceDTO::from(price);
-        as_json(&price_dto).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
+        as_json(&price).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
     }
 
     fn alarm_half_coins_to_json<C, Q>(
@@ -430,8 +418,8 @@ mod test {
         amount_quote: Coin<Q>,
     ) -> Result<String, StdError>
     where
-        C: Currency,
-        Q: Currency,
+        C: Currency + MemberOf<LeaseGroup>,
+        Q: Currency + MemberOf<Lpns>,
     {
         as_json(&CoinDTO::<LeaseGroup>::from(amount)).and_then(|amount_str| {
             as_json(&CoinDTO::<Lpns>::from(amount_quote)).map(|amount_quote_str| {

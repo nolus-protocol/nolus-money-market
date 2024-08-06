@@ -1,11 +1,11 @@
-use currency::{Currency, Group};
+use currency::{Currency, Group, MemberOf};
 
 use crate::coin::{Coin, CoinDTO};
 
 pub fn funds<G, C>(amount: u128) -> CoinDTO<G>
 where
     G: Group,
-    C: Currency,
+    C: Currency + MemberOf<G>,
 {
     Coin::<C>::new(amount).into()
 }

@@ -1,15 +1,13 @@
 use std::{any::TypeId, marker::PhantomData};
 
-use crate::{symbol::Symbol, Group, MemberOf, SymbolSlice};
-
-use super::Currency;
+use crate::{symbol::Symbol, Definition, Group, MemberOf, SymbolSlice};
 
 pub trait Matcher {
     type Group: Group;
 
     fn r#match<C>(&self) -> bool
     where
-        C: Currency + MemberOf<Self::Group>;
+        C: Definition + MemberOf<Self::Group>;
 
     fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
     where
@@ -34,7 +32,7 @@ where
 
     fn r#match<CD>(&self) -> bool
     where
-        CD: Currency + MemberOf<Self::Group>,
+        CD: Definition,
     {
         self.0 == S::symbol::<CD>()
     }

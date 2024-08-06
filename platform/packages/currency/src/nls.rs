@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    group::MemberOf, AnyVisitor, Currency, Group, Matcher, MaybeAnyVisitResult, SymbolStatic,
+    group::MemberOf, AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult,
+    SymbolStatic,
 };
 
 #[derive(
@@ -18,7 +19,9 @@ pub struct NlsPlatform;
 
 impl Currency for NlsPlatform {
     type Group = Native;
+}
 
+impl Definition for NlsPlatform {
     const TICKER: SymbolStatic = "NLS";
 
     const BANK_SYMBOL: SymbolStatic = "unls";
@@ -30,7 +33,7 @@ impl Currency for NlsPlatform {
     const DECIMAL_DIGITS: u8 = 6;
 }
 
-#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Deserialize, Ord, PartialOrd, PartialEq, Eq)]
 pub struct Native {}
 
 impl Group for Native {

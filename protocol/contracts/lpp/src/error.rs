@@ -31,8 +31,8 @@ pub enum ContractError {
     #[error("[Lpp] Invalid config parameter! {0}")]
     InvalidConfigParameter(String),
 
-    #[error("[Lpp] Unknown currency")]
-    UnknownCurrency {},
+    #[error("[Lpp] Unknown currency, details '{0}'")]
+    UnknownCurrency(currency::error::Error),
 
     #[error("[Lpp] No liquidity")]
     NoLiquidity {},

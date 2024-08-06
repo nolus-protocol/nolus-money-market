@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{Currency as CurrencyT, Group, MemberOf, SymbolOwned};
+use currency::{Currency as CurrencyT, CurrencyDTO, Definition, Group, MemberOf, SymbolOwned};
 use finance::price::dto::PriceDTO;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -17,9 +17,12 @@ pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct InstantiateMsg {
+pub struct InstantiateMsg<PriceCurrencies>
+where
+    PriceCurrencies: Group,
+{
     pub config: Config,
-    pub swap_tree: HumanReadableTree<SwapTarget>,
+    pub swap_tree: HumanReadableTree<SwapTarget<PriceCurrencies>>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -53,17 +56,29 @@ where
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum SudoMsg {
-    RegisterFeeder { feeder_address: String },
-    RemoveFeeder { feeder_address: String },
+pub enum SudoMsg<PriceCurrencies>
+where
+    PriceCurrencies: Group,
+{
+    RegisterFeeder {
+        feeder_address: String,
+    },
+    RemoveFeeder {
+        feeder_address: String,
+    },
     UpdateConfig(PriceConfig),
-    SwapTree { tree: HumanReadableTree<SwapTarget> },
+    SwapTree {
+        tree: HumanReadableTree<SwapTarget<PriceCurrencies>>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum QueryMsg {
+pub enum QueryMsg<PriceCurrencies>
+where
+    PriceCurrencies: Group,
+{
     // Returns contract's semantic version as a package, which is set in `Cargo.toml`.
     ContractVersion {},
 
@@ -93,7 +108,7 @@ pub enum QueryMsg {
     ///
     /// Implementation of [crate::api::price::QueryMsg::BasePrice]
     BasePrice {
-        currency: SymbolOwned,
+        currency: CurrencyDTO<PriceCurrencies>,
     },
 
     /// Implementation of [oracle_platform::msg::QueryMsg::StableCurrency]
@@ -101,7 +116,7 @@ pub enum QueryMsg {
 
     /// Implementation of [oracle_platform::msg::QueryMsg::StablePrice]
     StablePrice {
-        currency: SymbolOwned,
+        currency: CurrencyDTO<PriceCurrencies>,
     },
 
     /// Lists configured swap pairs
@@ -115,8 +130,8 @@ pub enum QueryMsg {
     /// Returns `oracle::api::swap::SwapPath`
     /// Implementation of [crate::api::swap::QueryMsg::SwapPath]
     SwapPath {
-        from: SymbolOwned,
-        to: SymbolOwned,
+        from: CurrencyDTO<PriceCurrencies>,
+        to: CurrencyDTO<PriceCurrencies>,
     },
     /// Returns [`Status`] as response data.
     AlarmsStatus {},
@@ -141,7 +156,7 @@ pub enum ExecuteAlarmMsg {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
-pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
+pub type SupportedCurrencyPairsResponse<PriceCurrencies> = Vec<SwapLeg<PriceCurrencies>>;
 
 pub type CurrenciesResponse = Vec<Currency>;
 
@@ -159,7 +174,7 @@ pub struct Currency {
 impl Currency {
     pub fn new<C>(group: CurrencyGroup) -> Self
     where
-        C: currency::Currency,
+        C: Definition,
     {
         Self {
             ticker: C::TICKER.into(),
@@ -184,8 +199,11 @@ pub enum CurrencyGroup {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct SwapTreeResponse {
-    pub tree: HumanReadableTree<SwapTarget>,
+pub struct SwapTreeResponse<G>
+where
+    G: Group,
+{
+    pub tree: HumanReadableTree<SwapTarget<G>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
@@ -211,12 +229,18 @@ pub struct AlarmsStatusResponse {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SwapLeg {
-    pub from: SymbolOwned,
-    pub to: SwapTarget,
+pub struct SwapLeg<G>
+where
+    G: Group,
+{
+    pub from: CurrencyDTO<G>,
+    pub to: SwapTarget<G>,
 }
 
-impl Serialize for SwapLeg {
+impl<G> Serialize for SwapLeg<G>
+where
+    G: Group,
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -225,7 +249,10 @@ impl Serialize for SwapLeg {
     }
 }
 
-impl<'de> Deserialize<'de> for SwapLeg {
+impl<'de, G> Deserialize<'de> for SwapLeg<G>
+where
+    G: Group,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

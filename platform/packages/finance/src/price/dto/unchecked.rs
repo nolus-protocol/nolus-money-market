@@ -30,11 +30,6 @@ where
     type Error = Error;
 
     fn try_from(dto: PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        let res = Self {
-            amount: dto.amount,
-            amount_quote: dto.amount_quote,
-        };
-        res.invariant_held()?;
-        Ok(res)
+        Self::try_new(dto.amount, dto.amount_quote)
     }
 }

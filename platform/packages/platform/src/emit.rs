@@ -1,4 +1,4 @@
-use currency::{Currency, Group, SymbolSlice};
+use currency::{Currency, CurrencyDTO, Definition, Group};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     percent::Percent,
@@ -44,17 +44,18 @@ where
     fn emit_currency<K, C>(self, event_key: K) -> Self
     where
         K: Into<String>,
-        C: Currency,
+        C: Definition,
     {
-        self.emit_currency_symbol(event_key, C::TICKER)
+        self.emit(event_key, C::TICKER)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
-    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: &SymbolSlice) -> Self
+    fn emit_currency_dto<K, G>(self, event_key: K, currency: &CurrencyDTO<G>) -> Self
     where
         K: Into<String>,
+        G: Group,
     {
-        self.emit(event_key, currency_symbol)
+        self.emit(event_key, currency.to_string())
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
@@ -70,7 +71,7 @@ where
         K: Into<String>,
         C: Currency,
     {
-        emit_coinable(self, event_key, coin.into(), C::TICKER)
+        self.emit_coin_dto(event_key, &CoinDTO::<C::Group>::from(coin))
     }
 
     fn emit_coin_dto<K, G>(self, event_key: K, coin: &CoinDTO<G>) -> Self
@@ -78,7 +79,7 @@ where
         K: Into<String>,
         G: Group,
     {
-        emit_coinable(self, event_key, coin.amount(), coin.ticker())
+        emit_coinable(self, event_key, coin.amount(), &coin.currency())
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {
@@ -129,10 +130,11 @@ impl From<Emitter> for Event {
     }
 }
 
-fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: &SymbolSlice) -> E
+fn emit_coinable<E, K, G>(emitter: E, event_key: K, amount: Amount, currency: &CurrencyDTO<G>) -> E
 where
     E: Emit,
     K: Into<String>,
+    G: Group,
 {
     let key = event_key.into();
     let amount_key = key.clone() + "-amount";
@@ -140,5 +142,5 @@ where
 
     emitter
         .emit_coin_amount(amount_key, amount)
-        .emit_currency_symbol(symbol_key, ticker)
+        .emit_currency_dto(symbol_key, currency)
 }

@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::SymbolSlice;
+use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
@@ -77,7 +77,9 @@ impl BuyLpn {
 }
 
 impl SwapTask for BuyLpn {
+    type InG = LeasePaymentCurrencies;
     type OutG = LpnCurrencies;
+    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -90,7 +92,7 @@ impl SwapTask for BuyLpn {
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &impl SwapPath {
+    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
         &self.lease.lease.oracle
     }
 
@@ -98,13 +100,13 @@ impl SwapTask for BuyLpn {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> &SymbolSlice {
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
         self.lease.lease.loan.lpp().lpn()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
     where
-        Visitor: CoinVisitor<Result = IterNext>,
+        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
         dex::on_coin(&self.payment, visitor)
     }

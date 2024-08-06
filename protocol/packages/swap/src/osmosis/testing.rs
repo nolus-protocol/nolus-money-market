@@ -2,17 +2,17 @@ use std::any::type_name;
 
 use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
-use currency::{DexSymbols, Group, GroupVisit as _, Tickers};
+use currency::Group;
 use finance::coin::Amount;
 use oracle::api::swap::SwapTarget;
 use sdk::{cosmos_sdk_proto::prost::Message as _, cosmos_sdk_proto::Any as CosmosAny};
 
-use crate::testing::{parse_dex_token, pattern_match_else, ExactAmountInSkel, SwapRequest};
+use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{Impl, RequestMsg, ResponseMsg};
 
 impl ExactAmountInSkel for Impl {
-    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn>
+    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group,
         GSwap: Group,
@@ -24,12 +24,12 @@ impl ExactAmountInSkel for Impl {
             token_out_min_amount,
         } = parse_request_from_any_and_type_url(request)
         else {
-            pattern_match_else(type_name::<RequestMsg>())
+            testing::pattern_match_else(type_name::<RequestMsg>())
         };
 
         assert_eq!({ token_out_min_amount }, "1");
 
-        let token_in = parse_dex_token(&token_in.amount, &token_in.denom);
+        let token_in = testing::parse_dex_token(&token_in.amount, &token_in.denom);
 
         SwapRequest {
             token_in,
@@ -42,9 +42,8 @@ impl ExactAmountInSkel for Impl {
                      }| {
                         SwapTarget {
                             pool_id,
-                            target: DexSymbols::visit_any(&target, Tickers::<GSwap>::new())
-                                .expect("Asked asset doesn't belong to swapping currency group!")
-                                .into(),
+                            target: testing::from_dex_symbol(&target)
+                                .expect("Asked asset doesn't belong to swapping currency group!"),
                         }
                     },
                 )

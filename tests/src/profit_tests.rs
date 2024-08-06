@@ -1,7 +1,7 @@
 use std::slice;
 
 use currencies::{Lpn, Nls};
-use currency::Currency;
+use currency::{Currency, Definition};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -215,7 +215,7 @@ fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracl
     lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Nls>)>,
 ) -> SendAlarmAndMaybeSwapResult
 where
-    Lpn: Currency,
+    Lpn: Definition,
 {
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
@@ -426,7 +426,7 @@ fn on_time_alarm_do_transfers<Lpn>(
     native_profit: Coin<Nls>,
     lpn_profit: Option<(Coin<Lpn>, Coin<Nls>)>,
 ) where
-    Lpn: Currency,
+    Lpn: Definition + Currency,
 {
     let mut test_case = test_case_with::<Lpn>(
         2,

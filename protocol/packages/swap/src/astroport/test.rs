@@ -2,9 +2,8 @@ use astroport::{asset::AssetInfo, router::SwapOperation};
 
 use currency::{
     test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC6},
-    Currency as _, SymbolStatic,
+    Definition,
 };
-use dex::swap::Error;
 use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
 use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::Decimal};
@@ -12,8 +11,6 @@ use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_s
 use crate::testing;
 
 use super::{Main, RouterImpl};
-
-const INVALID_TICKER: SymbolStatic = "NotATicker";
 
 #[test]
 fn const_eq_max_allowed_slippage() {
@@ -44,11 +41,11 @@ fn to_operations() {
     let path = vec![
         SwapTarget {
             pool_id: 2,
-            target: SuperGroupTestC1::TICKER.into(),
+            target: currency::dto::<SuperGroupTestC1, _>(),
         },
         SwapTarget {
             pool_id: 12,
-            target: SuperGroupTestC6::TICKER.into(),
+            target: currency::dto::<SuperGroupTestC6, _>(),
         },
     ];
     let expected = vec![
@@ -70,29 +67,17 @@ fn to_operations() {
         },
     ];
     assert_eq!(
-        Ok(vec![]),
-        super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0])
+        super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0]),
+        vec![]
     );
     assert_eq!(
-        Ok(expected[0..1].to_vec()),
+        expected[0..1].to_vec(),
         super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
     );
     assert_eq!(
-        Ok(expected),
+        expected,
         super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path)
     );
-}
-
-#[test]
-fn to_operations_err() {
-    let path = vec![SwapTarget {
-        pool_id: 2,
-        target: INVALID_TICKER.into(),
-    }];
-    assert!(matches!(
-        super::to_operations::<SuperGroup>(SuperGroupTestC1::DEX_SYMBOL, &path),
-        Err(Error::Platform(_))
-    ));
 }
 
 #[test]

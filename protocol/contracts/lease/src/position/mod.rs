@@ -1,9 +1,10 @@
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
 
 use crate::{
+    api::LeasePaymentCurrencies,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
 };
@@ -74,7 +75,7 @@ where
         payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
-        PaymentC: Currency,
+        PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
     {
         self.spec
             .validate_payment(payment, payment_currency_in_lpns)

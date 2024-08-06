@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, Group, MemberOf,
-    SingleVisitor,
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, Definition, Group,
+    MemberOf, SingleVisitor,
 };
 
 pub use self::group::*;
@@ -31,7 +31,6 @@ where
     type Output = bool;
     type Error = Error;
 
-    // fn on<Cin>(self) -> AnyVisitorResult<G, Self>
     fn on<Cin>(self) -> Result<bool, Error>
     where
         Cin: 'static,
@@ -39,7 +38,8 @@ where
         Ok(crate::equal::<C, Cin>())
     }
 }
-impl<C, VisitedG, VisitorG> SingleVisitor<C> for Expect<C, VisitedG, VisitorG> {
+
+impl<CDef, VisitedG, VisitorG> SingleVisitor<CDef> for Expect<CDef, VisitedG, VisitorG> {
     type Output = bool;
     type Error = Error;
 
@@ -73,7 +73,10 @@ where
     }
 }
 
-impl<C, G> SingleVisitor<C> for ExpectUnknownCurrency<G> {
+impl<CDef, G> SingleVisitor<CDef> for ExpectUnknownCurrency<G>
+where
+    CDef: Definition,
+{
     type Output = bool;
     type Error = Error;
 
@@ -82,10 +85,10 @@ impl<C, G> SingleVisitor<C> for ExpectUnknownCurrency<G> {
     }
 }
 
-pub struct ExpectPair<C1, VisitedG1, C2, VisitedG2>(
-    PhantomData<C1>,
+pub struct ExpectPair<CDef1, VisitedG1, CDef2, VisitedG2>(
+    PhantomData<CDef1>,
     PhantomData<VisitedG1>,
-    PhantomData<C2>,
+    PhantomData<CDef2>,
     PhantomData<VisitedG2>,
 );
 impl<C1, VisitedG1, C2, VisitedG2> AnyVisitorPair for ExpectPair<C1, VisitedG1, C2, VisitedG2>
@@ -102,8 +105,8 @@ where
 
     fn on<C1in, C2in>(self) -> Result<Self::Output, Self::Error>
     where
-        C1in: Currency + MemberOf<Self::VisitedG1>,
-        C2in: Currency + MemberOf<Self::VisitedG2>,
+        C1in: Currency,
+        C2in: Currency,
     {
         Ok(crate::equal::<C1, C1in>() && crate::equal::<C2, C2in>())
     }

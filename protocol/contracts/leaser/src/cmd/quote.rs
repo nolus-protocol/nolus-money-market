@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{
-    AnyVisitor, AnyVisitorResult, Currency, GroupVisit, MemberOf, SymbolOwned, Tickers,
-};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, MemberOf};
 use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
 use lpp::{
@@ -20,7 +18,7 @@ use crate::{
 
 pub struct Quote<'r> {
     querier: QuerierWrapper<'r>,
-    lease_asset: SymbolOwned,
+    lease_asset: CurrencyDTO<LeaseCurrencies>,
     downpayment: DownpaymentCoin,
     oracle: OracleRef,
     liability: Liability,
@@ -32,7 +30,7 @@ impl<'r> Quote<'r> {
     pub fn new(
         querier: QuerierWrapper<'r>,
         downpayment: DownpaymentCoin,
-        lease_asset: SymbolOwned,
+        lease_asset: CurrencyDTO<LeaseCurrencies>,
         oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
@@ -108,7 +106,7 @@ where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
-    lease_asset: SymbolOwned,
+    lease_asset: CurrencyDTO<LeaseCurrencies>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
     lease_interest_rate_margin: Percent,
@@ -128,23 +126,16 @@ where
     where
         O: OracleTrait<Self::G, QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
-        let downpayment = self.downpayment.ticker().clone();
-
-        Tickers::maybe_visit_any(
-            &downpayment,
-            QuoteStage3 {
-                downpayment: self.downpayment,
-                lease_asset: self.lease_asset,
-                lpp_quote: self.lpp_quote,
-                oracle,
-                liability: self.liability,
-                lease_interest_rate_margin: self.lease_interest_rate_margin,
-                max_ltd: self.max_ltd,
-            },
-        )
-        .map_err(|_| ContractError::UnknownCurrency {
-            symbol: downpayment,
-        })?
+        // TODO use CoinDTO::with_coin instead
+        self.downpayment.currency().into_currency_type(QuoteStage3 {
+            downpayment: self.downpayment,
+            lease_asset: self.lease_asset,
+            lpp_quote: self.lpp_quote,
+            oracle,
+            liability: self.liability,
+            lease_interest_rate_margin: self.lease_interest_rate_margin,
+            max_ltd: self.max_ltd,
+        })
     }
 }
 
@@ -154,7 +145,7 @@ where
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: DownpaymentCoin,
-    lease_asset: SymbolOwned,
+    lease_asset: CurrencyDTO<LeaseCurrencies>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
@@ -177,22 +168,15 @@ where
     where
         C: Currency + MemberOf<Self::VisitorG>,
     {
-        Tickers::maybe_visit_member_any(
-            &self.lease_asset,
-            QuoteStage4 {
+        self.lease_asset
+            .into_currency_super_group_type(QuoteStage4 {
                 downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
                 lpp_quote: self.lpp_quote,
                 oracle: self.oracle,
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
-            },
-        )
-        .map_err({
-            let symbol = self.lease_asset;
-
-            |_| ContractError::UnknownCurrency { symbol }
-        })?
+            })
     }
 }
 
@@ -224,7 +208,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<LeaseCurrencies, Self>
     where
-        Asset: Currency + MemberOf<Self::VisitorG>,
+        Asset: Currency + MemberOf<LeaseCurrencies> + MemberOf<Self::VisitorG>,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 

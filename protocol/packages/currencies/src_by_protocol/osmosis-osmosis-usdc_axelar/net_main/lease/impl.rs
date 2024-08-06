@@ -314,7 +314,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Currency;
+    use currency::Definition;
 
     use crate::{
         test_impl::{

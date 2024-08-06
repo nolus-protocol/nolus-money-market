@@ -1,5 +1,5 @@
 use currencies::Lpns;
-use currency::Currency;
+use currency::{Currency, MemberOf};
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -33,7 +33,7 @@ impl<Lpn> LppBalances<Lpn> {
 
 impl<Lpn> LppBalances<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + MemberOf<Lpns>,
 {
     pub(crate) fn into_response(self, total_rewards: Coin<NLpn>) -> LppBalanceResponse<Lpns> {
         LppBalanceResponse {

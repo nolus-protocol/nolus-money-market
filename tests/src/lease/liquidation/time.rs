@@ -57,7 +57,7 @@ fn liquidation_time_alarm(
         return;
     };
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = crate::common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = crate::common::swap::expect_swap(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

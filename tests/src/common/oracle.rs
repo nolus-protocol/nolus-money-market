@@ -2,7 +2,7 @@ use currencies::{
     LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency,
     Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, MemberOf};
+use currency::{Currency, Definition, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -74,7 +74,11 @@ impl Instantiator {
     }
 }
 
-pub(crate) fn mock_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_query(
+    deps: Deps<'_>,
+    env: Env,
+    msg: QueryMsg<PriceCurrencies>,
+) -> Result<Binary, ContractError> {
     let price =
         price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
@@ -106,7 +110,7 @@ pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
         .app
         .sudo(
             oracle,
-            &SudoMsg::RegisterFeeder {
+            &SudoMsg::<PriceCurrencies>::RegisterFeeder {
                 feeder_address: addr.into(),
             },
         )
