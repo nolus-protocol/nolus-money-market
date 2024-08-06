@@ -1,6 +1,7 @@
 use currency::{Currency, MemberOf};
 use finance::{
-    coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
+    coin::Coin, duration::Duration, error::Error as FinanceError, fraction::Fraction,
+    liability::Level, price::total_of,
 };
 
 use crate::{
@@ -110,7 +111,11 @@ where
         level
             .ltv()
             .of(self.amount)
-            .map_err(Into::into)
+            .ok_or(ContractError::FinanceError(FinanceError::overflow_err(
+                "in fraction calculation",
+                level.ltv(),
+                self.amount,
+            )))
             .map(|amount| total_of(amount).is(total_due))
     }
 

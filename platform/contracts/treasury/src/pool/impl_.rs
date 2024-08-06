@@ -107,7 +107,7 @@ mod test {
         let oracle = DummyOracle::with_price(4);
         let exp_reward = price::total(
             bar0_apr.of(lpp0_tvl).unwrap(),
-            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
+            oracle.price_of().unwrap().inv(),
         )
         .unwrap();
         let lpp = DummyLpp::failing_reward(lpp0_tvl, exp_reward);
@@ -128,7 +128,7 @@ mod test {
         let oracle = DummyOracle::with_price(2);
         let exp_reward = price::total(
             bar0_apr.of(lpp0_tvl).unwrap(),
-            oracle.price_of::<_, NativePlatform>().unwrap().inv(),
+            oracle.price_of().unwrap().inv(),
         )
         .unwrap();
 

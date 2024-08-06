@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
+    error::Error as FinanceError,
     fraction::Fraction,
     percent::{Percent, Units},
     ratio::Rational,
@@ -86,7 +87,11 @@ impl InterestRate {
             }
             .and_then(|utilization| {
                 Fraction::<Units>::of(&config, utilization)
-                    .map_err(Into::into)
+                    .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                        "in fraction calculation",
+                        config,
+                        utilization,
+                    )))
                     .map(|res| self.base_interest_rate + res)
             })
         })

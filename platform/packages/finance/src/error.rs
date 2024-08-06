@@ -1,7 +1,4 @@
-use std::{
-    any::type_name,
-    fmt::{Debug, Display, Formatter, Result as FmtResult},
-};
+use std::{any::type_name, fmt::Debug};
 
 use thiserror::Error;
 
@@ -15,8 +12,12 @@ pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 
-    #[error("[Finance] [OverflowError] {0}")]
-    OverflowError(#[from] OverflowError),
+    #[error("[Finance] Overflow {operation}: {operand1} and {operand2}")]
+    OverflowError {
+        operation: String,
+        operand1: String,
+        operand2: String,
+    },
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
@@ -41,40 +42,31 @@ impl Error {
             Ok(())
         }
     }
-}
 
-#[derive(Error, Debug, PartialEq, Eq)]
-#[error("Cannot {operation} with {operand1} and {operand2}")]
-pub struct OverflowError {
-    pub operation: OverflowOperation,
-    pub operand1: String,
-    pub operand2: String,
-}
-
-impl OverflowError {
-    pub fn new(
-        operation: OverflowOperation,
+    pub fn overflow_err(
+        operation: impl ToString,
         operand1: impl ToString,
         operand2: impl ToString,
     ) -> Self {
-        Self {
-            operation,
+        Self::OverflowError {
+            operation: operation.to_string(),
             operand1: operand1.to_string(),
             operand2: operand2.to_string(),
         }
     }
-}
 
-#[derive(Error, Debug, PartialEq, Eq)]
-pub enum OverflowOperation {
-    Add,
-    Sub,
-    Mul,
-}
+    pub fn no_funds<C>() -> Self
+    where
+        C: Currency,
+    {
+        Self::NoFunds(C::TICKER.into())
+    }
 
-impl Display for OverflowOperation {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{self:?}")
+    pub fn unexpected_funds<C>() -> Self
+    where
+        C: Currency,
+    {
+        Self::UnexpectedFunds(C::TICKER.into())
     }
 }
 

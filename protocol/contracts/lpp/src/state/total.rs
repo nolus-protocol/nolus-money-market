@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
+    error::Error as FinanceError,
     fraction::Fraction,
     interest,
     percent::Percent,
@@ -74,24 +75,38 @@ impl<Lpn> Total<Lpn> {
     ) -> Result<&Self> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime)?;
 
-        let new_total_principal_due = self
-            .total_principal_due
-            .checked_add(amount)
-            .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
+        let new_total_principal_due =
+            self.total_principal_due
+                .checked_add(amount)
+                .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                    "while calculating the total principal due",
+                    self.total_principal_due,
+                    amount,
+                )))?;
 
         // TODO: get rid of fully qualified syntax
         let new_annual_interest =
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                .map_err(Into::into)
+                .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                    "in fraction calculation",
+                    self.annual_interest_rate,
+                    self.total_principal_due,
+                )))
                 .and_then(|current_annual_interest| {
                     loan_interest_rate
                         .of(amount)
-                        .map_err(Into::into)
+                        .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                            "in fraction calculation",
+                            loan_interest_rate,
+                            amount,
+                        )))
                         .and_then(|loan_interest| {
                             current_annual_interest.checked_add(loan_interest).ok_or(
-                                ContractError::OverflowError(
-                                    "Annual interest calculation overflow",
-                                ),
+                                ContractError::Finance(FinanceError::overflow_err(
+                                    "while calculating the annual interest",
+                                    current_annual_interest,
+                                    loan_interest,
+                                )),
                             )
                         })
                 })?;
@@ -123,9 +138,11 @@ impl<Lpn> Total<Lpn> {
         let new_total_principal_due = self
             .total_principal_due
             .checked_sub(loan_principal_payment)
-            .ok_or_else(|| {
-                ContractError::OverflowError("Unexpected overflow when subtracting loan principal payment from total principal due")
-            })?;
+            .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                "while adding",
+                self.total_principal_due,
+                loan_principal_payment,
+            )))?;
 
         self.annual_interest_rate = if new_total_principal_due.is_zero() {
             Ok(zero_interest_rate())
@@ -133,9 +150,19 @@ impl<Lpn> Total<Lpn> {
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+                .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                    "in fraction calculation",
+                    self.annual_interest_rate,
+                    self.total_principal_due,
+                )))
                 .and_then(|annual_interest| {
                     loan_interest_rate
                         .of(loan_principal_payment)
+                        .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                            "in fraction calculation",
+                            loan_interest_rate,
+                            loan_principal_payment,
+                        )))
                         .map(|loan_interest| {
                             Rational::new(
                                 annual_interest.saturating_sub(loan_interest),
