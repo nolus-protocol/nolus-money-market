@@ -168,26 +168,6 @@ define_symbol! {
 define_currency!(Juno, JUNO, LeaseGroup, 6);
 
 define_symbol! {
-    EVMOS {
-        // full ibc route: transfer/channel-0/transfer/channel-204/aevmos
-        bank: "ibc/A59A9C955F1AB8B76671B00C1A0482C64A6590352944BB5880E5122358F7E1CE",
-        // full ibc route: transfer/channel-204/aevmos
-        dex: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
-    }
-}
-define_currency!(Evmos, EVMOS, LeaseGroup, 18);
-
-define_symbol! {
-    MARS {
-        // full ibc route: transfer/channel-0/transfer/channel-557/umars
-        bank: "ibc/783F5F8F6B41874487C3B09A2306FD5E59B9B740F930A39DD55B08CF7CB8CBF0",
-        // full ibc route: transfer/channel-557/umars
-        dex: "ibc/573FCD90FACEE750F55A8864EF7D38265F07E5A9273FA0E8DAFD39951332B580",
-    }
-}
-define_currency!(Mars, MARS, LeaseGroup, 6);
-
-define_symbol! {
     TIA {
         // full ibc route: transfer/channel-0/transfer/channel-6994/utia
         bank: "ibc/6C349F0EB135C5FA99301758F35B87DB88403D690E5E314AB080401FEE4066E5",
@@ -234,16 +214,6 @@ define_symbol! {
     }
 }
 define_currency!(Lvn, LVN, LeaseGroup, 6);
-
-define_symbol! {
-    QSR {
-        // full ibc route: transfer/channel-0/transfer/channel-688/uqsr
-        bank: "ibc/FF456FD21AA44251D2122BF19B20C5FE717A1EBD054A59FA1CA4B21742048CA0",
-        // full ibc route: transfer/channel-688/uqsr
-        dex: "ibc/1B708808D372E959CD4839C594960309283424C775F4A038AAEBE7F83A988477",
-    }
-}
-define_currency!(Qsr, QSR, LeaseGroup, 6);
 
 define_symbol! {
     PICA {
@@ -299,14 +269,11 @@ where
         .or_else(|visitor| maybe_visit::<_, Stars, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cro, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Juno, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Evmos, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Mars, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Tia, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, StTia, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Jkl, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, MilkTia, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Lvn, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Qsr, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cudos, TopG, _>(matcher, visitor))
@@ -328,7 +295,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, Qsr, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -360,7 +327,6 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Pica, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Qsr, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Dym, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);

@@ -71,16 +71,6 @@ define_symbol! {
 }
 define_currency!(Juno, JUNO, LeaseGroup, 6);
 
-define_symbol! {
-    MARS {
-        // full ibc route: transfer/channel-0/transfer/channel-24/umars
-        bank: "ibc/1CC042AD599E184C0F77DC5D89443C82F8A16B6E13DEC650A7A50A5D0AA330C3",
-        // full ibc route: transfer/channel-24/umars
-        dex: "ibc/2E7368A14AC9AB7870F32CFEA687551C5064FA861868EDF7437BC877358A81F9",
-    }
-}
-define_currency!(Mars, MARS, LeaseGroup, 6);
-
 pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher<Group = LeaseGroup>,
@@ -95,7 +85,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Wbtc, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Akt, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Juno, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Mars, TopG, _>(matcher, visitor))
 }
 
 #[cfg(test)]
@@ -114,7 +103,7 @@ mod test {
         },
     };
 
-    use super::{Akt, Atom, Juno, Mars, Osmo, Wbtc, Weth};
+    use super::{Akt, Atom, Juno, Osmo, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -122,9 +111,8 @@ mod test {
         maybe_visit_on_ticker_impl::<Osmo, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Akt, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Mars, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Akt, LeaseGroup>();
 
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::DEX_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
@@ -139,9 +127,8 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Osmo, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Mars, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
