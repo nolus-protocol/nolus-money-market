@@ -71,7 +71,6 @@ where
     Lpn: Currency + MemberOf<Lpns>,
     Lpns: Group,
 {
-    // TODO take Price<C, Q>-es instead
     pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn, Lpns>
     where
         P: Into<BasePrice<G, Lpn, Lpns>>,
@@ -87,7 +86,7 @@ where
     }
 
     fn invariant_held(&self) -> Result<()> {
-        if let Some(above_or_equal) = &self.above {
+        self.above.map_or(Ok(()), |ref above_or_equal|{
             struct BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
@@ -125,15 +124,14 @@ where
                         })
                 }
             }
-            return with_price::execute(
+            with_price::execute(
                 above_or_equal,
                 BaseCurrencyType {
                     below_price: &self.below,
                 },
             )
-            .map_err(Into::into);
-        }
-        Ok(())
+            .map_err(Into::into)
+        })
     }
 }
 

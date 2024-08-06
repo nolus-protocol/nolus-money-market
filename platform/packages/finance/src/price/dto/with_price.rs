@@ -21,6 +21,8 @@ where
     Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Cmd::Error: From<Error>,
 {
+    // the refactored code that substituted the Price generic parameter with an enum Price got worse in the size of the output .wasm
+    // trait objects are not possible here due to the generic function parameters
     price.amount.with_coin(PriceAmountVisitor {
         _amount_g: PhantomData::<G>,
         amount_quote: &price.amount_quote,
@@ -30,7 +32,6 @@ where
         },
         cmd,
     })
-    // TODO try using `dyn PriceFactory`
 }
 
 /// Execute the provided price command on a non-validated price
