@@ -173,7 +173,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
                         .map_err(ContractError::InvalidOracleBaseCurrency)
                         .and_then(|oracle_ref| to_stable(oracle_ref, total, deps.querier))
                 })
-                .map(CoinDTO::<LpnCurrencies>::from)
+                .map(CoinDTO::<PaymentGroup>::from)
                 .and_then(|ref resp| to_json_binary(resp))
         }
         QueryMsg::Price() => lender::query_ntoken_price::<LpnCurrency>(deps, env)
