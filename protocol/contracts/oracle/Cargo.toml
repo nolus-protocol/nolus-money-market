@@ -9,6 +9,7 @@ license.workspace = true
 combinations = [
     { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
     { tags = ["build", "net_main", "neutron-astroport-usdc_noble"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false },
+    { tags = ["build", "net_main", "osmosis-osmosis-statom"], always-on = ["net_main", "osmosis-osmosis-statom"], include-rest = false },
     { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol", "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } },
     { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], feature-groups = ["$[contract-and-testing]-or-stubs"], always-on = ["net_main", "neutron-astroport-usdc_noble"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } },
     { tags = ["ci", "net_main", "osmosis-osmosis-statom"], feature-groups = ["$[contract-and-testing]-or-stubs"], always-on = ["net_main", "osmosis-osmosis-statom"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } }

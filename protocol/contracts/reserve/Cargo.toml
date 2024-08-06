@@ -25,6 +25,14 @@ combinations = [
         "neutron-astroport-usdc_noble",
     ], include-rest = false },
     { tags = [
+        "build",
+        "net_main",
+        "osmosis-osmosis-statom",
+    ], always-on = [
+        "net_main",
+        "osmosis-osmosis-statom",
+    ], include-rest = false },
+    { tags = [
         "ci",
         "$net",
         "$protocol",
