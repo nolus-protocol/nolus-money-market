@@ -9,7 +9,7 @@ license.workspace = true
 combinations = [
     { tags = ["ci", "net_dev", "net_test", "net_main", "neutron-astroport-usdc_axelar"], feature-groups = ["dex", "astroport-net"], always-on = ["astroport"], include-rest = true },
     { tags = ["ci", "net_main", "neutron-astroport-usdc_noble"], feature-groups = ["testing"], always-on = ["main", "astroport"], include-rest = false },
-    { tags = ["ci", "net_dev", "net_test", "net_main", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], feature-groups = ["dex", "osmosis-and-astroport-net"], always-on = ["osmosis"], include-rest = true }
+    { tags = ["ci", "net_dev", "net_test", "net_main", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], feature-groups = ["dex", "osmosis-and-astroport-net"], always-on = ["osmosis"], include-rest = true }
 ]
 feature-groups = { astroport-net = { members = ["test", "main"], at-least-one = true, mutually-exclusive = true }, dex = { members = ["astroport", "osmosis"], at-least-one = true, mutually-exclusive = true }, osmosis-and-astroport-net = { members = ["osmosis", "test", "main"], at-least-one = true, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 

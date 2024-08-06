@@ -47,6 +47,16 @@ combinations = [
         "net_main",
         "neutron-astroport-usdc_noble",
     ], include-rest = false },
+    { tags = [
+        "ci",
+        "net_main",
+        "osmosis-osmosis-statom",
+    ], feature-groups = [
+        "testing",
+    ], always-on = [
+        "net_main",
+        "osmosis-osmosis-statom",
+    ], include-rest = false },
 ]
 # TODO add "stub" when feature is added
 feature-groups = { net = { members = [
@@ -73,6 +83,7 @@ net_main = ["contract"]
 
 neutron-astroport-usdc_axelar = ["contract"]
 neutron-astroport-usdc_noble = ["contract"]
+osmosis-osmosis-statom = ["contract"]
 osmosis-osmosis-usdc_axelar = ["contract"]
 osmosis-osmosis-usdc_noble = ["contract"]
 
