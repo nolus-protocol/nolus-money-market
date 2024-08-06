@@ -1,7 +1,12 @@
 use std::marker::PhantomData;
 
 use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, MemberOf};
-use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
+use finance::{
+    coin::{Coin, WithCoin, WithCoinResult},
+    liability::Liability,
+    percent::Percent,
+    price::total,
+};
 use lease::api::DownpaymentCoin;
 use lpp::{
     msg::QueryQuoteResponse,
@@ -126,9 +131,7 @@ where
     where
         O: OracleTrait<Self::G, QuoteC = Lpn, QuoteG = LpnCurrencies>,
     {
-        // TODO use CoinDTO::with_coin instead
-        self.downpayment.currency().into_currency_type(QuoteStage3 {
-            downpayment: self.downpayment,
+        self.downpayment.with_coin(QuoteStage3 {
             lease_asset: self.lease_asset,
             lpp_quote: self.lpp_quote,
             oracle,
@@ -144,7 +147,6 @@ where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    downpayment: DownpaymentCoin,
     lease_asset: CurrencyDTO<LeaseCurrencies>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
@@ -153,7 +155,7 @@ where
     max_ltd: Option<Percent>,
 }
 
-impl<Lpn, Lpp, Oracle> AnyVisitor<PaymentCurrencies> for QuoteStage3<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, Oracle> WithCoin<PaymentCurrencies> for QuoteStage3<Lpn, Lpp, Oracle>
 where
     Lpn: Currency + MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
@@ -164,13 +166,13 @@ where
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<C>(self) -> AnyVisitorResult<PaymentCurrencies, Self>
+    fn on<Dpc>(self, downpayment: Coin<Dpc>) -> WithCoinResult<PaymentCurrencies, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        Dpc: Currency + MemberOf<Self::VisitorG>,
     {
         self.lease_asset
             .into_currency_super_group_type(QuoteStage4 {
-                downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
+                downpayment,
                 lpp_quote: self.lpp_quote,
                 oracle: self.oracle,
                 liability: self.liability,

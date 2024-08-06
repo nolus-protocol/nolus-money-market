@@ -294,9 +294,7 @@ mod test {
         },
     };
 
-    use super::{
-        Atom, Cudos, Dym, Lvn, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth,
-    };
+    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
