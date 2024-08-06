@@ -213,40 +213,37 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        total(
-            self.downpayment,
-            self.oracle.price_of::<Dpc, PaymentCurrencies>()?,
-        )
-        .map_err(ContractError::Finance)
-        .and_then(|downpayment_lpn| {
-            if downpayment_lpn.is_zero() {
-                return Err(ContractError::ZeroDownpayment {});
-            }
+        total(self.downpayment, self.oracle.price_of::<Dpc>()?)
+            .map_err(ContractError::Finance)
+            .and_then(|downpayment_lpn| {
+                if downpayment_lpn.is_zero() {
+                    return Err(ContractError::ZeroDownpayment {});
+                }
 
-            self.liability
-                .init_borrow_amount(downpayment_lpn, self.max_ltd)
-                .map_err(ContractError::Finance)
-                .and_then(|borrow| {
-                    self.oracle
-                        .price_of::<Asset, Self::VisitedG>()
-                        .map_err(ContractError::PriceOracle)
-                        .and_then(|price| {
-                            let asset_price = price.inv();
-                            total(downpayment_lpn + borrow, asset_price)
-                                .map_err(ContractError::Finance)
-                                .and_then(|total_asset| {
-                                    self.lpp_quote.with(borrow).map(|annual_interest_rate| {
-                                        QuoteResponse {
-                                            total: total_asset.into(),
-                                            borrow: borrow.into(),
-                                            annual_interest_rate,
-                                            annual_interest_rate_margin: self
-                                                .lease_interest_rate_margin,
-                                        }
+                self.liability
+                    .init_borrow_amount(downpayment_lpn, self.max_ltd)
+                    .map_err(ContractError::Finance)
+                    .and_then(|borrow| {
+                        self.oracle
+                            .price_of::<Asset>()
+                            .map_err(ContractError::PriceOracle)
+                            .and_then(|price| {
+                                let asset_price = price.inv();
+                                total(downpayment_lpn + borrow, asset_price)
+                                    .map_err(ContractError::Finance)
+                                    .and_then(|total_asset| {
+                                        self.lpp_quote.with(borrow).map(|annual_interest_rate| {
+                                            QuoteResponse {
+                                                total: total_asset.into(),
+                                                borrow: borrow.into(),
+                                                annual_interest_rate,
+                                                annual_interest_rate_margin: self
+                                                    .lease_interest_rate_margin,
+                                            }
+                                        })
                                     })
-                                })
-                        })
-                })
-        })
+                            })
+                    })
+            })
     }
 }

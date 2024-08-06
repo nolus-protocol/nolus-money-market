@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::platform::Nls;
 use finance::{
     coin::Coin,
+    error::Error as FinanceError,
     price::{self, Price},
     zero::Zero,
 };
@@ -79,17 +80,21 @@ impl Deposit {
                 let mut globals = may_globals.unwrap_or_default();
                 self.update_rewards(&globals).and_then(|()| {
                     price::total(amount_lpn, price.get().inv())
-                        .map_err(ContractError::Finance)
+                        .map_err(Into::into)
                         .and_then(|deposited_nlpn| {
                             self.data.deposited_nlpn += deposited_nlpn;
                             Self::DEPOSITS
                                 .save(storage, self.addr.clone(), &self.data)
                                 .map_err(Into::into)
                                 .and_then(|()| {
-                                    globals.balance_nlpn = globals
-                                        .balance_nlpn
-                                        .checked_add(deposited_nlpn)
-                                        .ok_or(ContractError::OverflowError("Balance overflow"))?;
+                                    globals.balance_nlpn =
+                                        globals.balance_nlpn.checked_add(deposited_nlpn).ok_or(
+                                            ContractError::Finance(FinanceError::overflow_err(
+                                                "while calculating the balance",
+                                                globals.balance_nlpn,
+                                                deposited_nlpn,
+                                            )),
+                                        )?;
 
                                     Self::GLOBALS
                                         .save(storage, &globals)

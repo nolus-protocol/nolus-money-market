@@ -112,15 +112,25 @@ impl Liability {
         debug_assert!(self.initial < Percent::HUNDRED);
 
         let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
-        default_ltd.of(downpayment).and_then(|default_borrow| {
-            may_max_ltd
-                .map(|max_ltd| {
+        default_ltd
+            .of(downpayment)
+            .ok_or(Error::overflow_err(
+                "in fraction calculation",
+                default_ltd,
+                downpayment,
+            ))
+            .and_then(|default_borrow| {
+                may_max_ltd.map_or(Ok(default_borrow), |max_ltd| {
                     max_ltd
                         .of(downpayment)
+                        .ok_or(Error::overflow_err(
+                            "in fraction calculation",
+                            max_ltd,
+                            downpayment,
+                        ))
                         .map(|requested_borrow| requested_borrow.min(default_borrow))
                 })
-                .unwrap_or(Ok(default_borrow))
-        })
+            })
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
@@ -129,21 +139,42 @@ impl Liability {
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero + Display,
     {
-        self.max.of(lease_amount).and_then(|max_lease| {
-            if total_due < max_lease {
-                Ok(P::ZERO)
-            } else if lease_amount <= total_due {
-                Ok(lease_amount)
-            } else {
-                // from 'due - liquidation = healthy% of (lease - liquidation)' follows
-                // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-                let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
-                self.healthy.of(lease_amount).and_then(|healthy_lease| {
-                    let extra_liability_lpn = total_due - total_due.min(healthy_lease);
-                    Fraction::<Units>::of(&multiplier, extra_liability_lpn)
-                })
-            }
-        })
+        self.max
+            .of(lease_amount)
+            .ok_or(Error::overflow_err(
+                "in fraction calculation",
+                self.max,
+                lease_amount,
+            ))
+            .and_then(|max_lease| {
+                if total_due < max_lease {
+                    Ok(P::ZERO)
+                } else if lease_amount <= total_due {
+                    Ok(lease_amount)
+                } else {
+                    // from 'due - liquidation = healthy% of (lease - liquidation)' follows
+                    // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+                    let multiplier =
+                        Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
+                    self.healthy
+                        .of(lease_amount)
+                        .ok_or(Error::overflow_err(
+                            "in fraction calculation",
+                            self.healthy,
+                            lease_amount,
+                        ))
+                        .and_then(|healthy_lease| {
+                            let extra_liability_lpn = total_due - total_due.min(healthy_lease);
+                            Fraction::<Units>::of(&multiplier, extra_liability_lpn).ok_or(
+                                Error::overflow_err(
+                                    "in fraction calculation",
+                                    multiplier,
+                                    extra_liability_lpn,
+                                ),
+                            )
+                        })
+                }
+            })
     }
 
     fn invariant_held(&self) -> Result<()> {

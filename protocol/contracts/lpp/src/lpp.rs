@@ -2,6 +2,7 @@ use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
+    error::Error as FinanceError,
     fraction::Fraction,
     percent::{Percent, Units},
     price::{self, Price},
@@ -123,12 +124,15 @@ where
                             .and_then(|utilization| {
                                 if utilization > min_utilization {
                                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                                    Fraction::<Units>::of(
-                                        &Rational::new(Percent::HUNDRED, min_utilization),
-                                        total_due,
-                                    )
-                                    .map_err(Into::into)
-                                    .map(|res| res - balance - total_due)
+                                    let utilization_ratio =
+                                        Rational::new(Percent::HUNDRED, min_utilization);
+                                    Fraction::<Units>::of(&utilization_ratio, total_due)
+                                        .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                                            "in fraction calculation",
+                                            utilization_ratio,
+                                            total_due,
+                                        )))
+                                        .map(|res| res - balance - total_due)
                                 } else {
                                     Ok(Coin::ZERO)
                                 }

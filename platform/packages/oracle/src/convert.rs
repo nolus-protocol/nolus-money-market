@@ -84,7 +84,7 @@ mod impl_ {
             OracleImpl: Oracle<OutG, QuoteC = InC, QuoteG = InG>,
         {
             oracle
-                .price_of::<OutC, OutG>()
+                .price_of::<OutC>()
                 .and_then(|price| price::total(self.in_amount, price.inv()).map_err(Into::into))
         }
 
@@ -96,7 +96,7 @@ mod impl_ {
             OracleImpl: Oracle<InG, QuoteC = OutC, QuoteG = OutG>,
         {
             oracle
-                .price_of::<InC, InG>()
+                .price_of::<InC>()
                 .and_then(|price| price::total(self.in_amount, price).map_err(Into::into))
         }
     }

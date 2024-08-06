@@ -43,6 +43,6 @@ mod test {
 
     #[test]
     fn overflow() {
-        assert!(Percent::from_permille(1001).of(usize::MAX).is_err())
+        assert!(Percent::from_permille(1001).of(usize::MAX).is_none())
     }
 }

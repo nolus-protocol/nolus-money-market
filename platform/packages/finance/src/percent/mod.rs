@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    error::{OverflowError, OverflowOperation, Result as FinanceResult},
+    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
@@ -48,7 +48,13 @@ impl Percent {
         FractionUnit: Zero + Debug + Copy + PartialEq + Display,
         Self: Fractionable<FractionUnit>,
     {
-        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        let ratio = Rational::new(nominator, denominator);
+
+        ratio.of(Percent::HUNDRED).ok_or(Error::overflow_err(
+            "while converting ratio to percent",
+            ratio,
+            Percent::HUNDRED,
+        ))
     }
 
     pub const fn units(&self) -> Units {
@@ -63,14 +69,14 @@ impl Percent {
         self.0
             .checked_add(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Add, self, other).into())
+            .ok_or(Error::overflow_err("while adding", self, other))
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_sub(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
+            .ok_or(Error::overflow_err("while subtracting", self, other))
     }
 }
 
@@ -80,14 +86,11 @@ impl Zero for Percent {
 
 impl Fraction<Units> for Percent {
     #[track_caller]
-    fn of<A>(&self, whole: A) -> FinanceResult<A>
+    fn of<A>(&self, whole: A) -> Option<A>
     where
         A: Fractionable<Units> + Display + Clone,
     {
-        whole
-            .clone()
-            .checked_mul(self)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Mul, whole, self).into())
+        whole.clone().checked_mul(self)
     }
 }
 

@@ -4,12 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{
-    error::{Error, OverflowError, OverflowOperation, Result as FinanceResult},
-    fraction::Fraction,
-    fractionable::Fractionable,
-    zero::Zero,
-};
+use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -45,18 +40,11 @@ where
     Self: Ratio<U>,
 {
     #[track_caller]
-    fn of<A>(&self, whole: A) -> FinanceResult<A>
+    fn of<A>(&self, whole: A) -> Option<A>
     where
         A: Fractionable<U> + Display + Clone,
     {
-        whole
-            .clone()
-            .checked_mul(self)
-            .ok_or(Error::OverflowError(OverflowError::new(
-                OverflowOperation::Mul,
-                whole,
-                self,
-            )))
+        whole.clone().checked_mul(self)
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use currency::Currency;
-use finance::{fraction::Fraction, percent::Percent, price::Price};
+use finance::{error::Error as FinanceError, fraction::Fraction, percent::Percent, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
@@ -93,8 +93,22 @@ where
         let first_price = sample_prices.next().ok_or(PriceFeedsError::NoPrice {})?;
 
         let final_price = sample_prices.try_fold(first_price, |acc, sample_price| {
-            let discounted_price = discount_factor.of(sample_price)?;
-            let acc_part = (Percent::HUNDRED - discount_factor).of(acc)?;
+            let discounted_price =
+                discount_factor
+                    .of(sample_price)
+                    .ok_or(PriceFeedsError::Finance(FinanceError::overflow_err(
+                        "in fraction calculation",
+                        discount_factor,
+                        sample_price,
+                    )))?;
+            let remaining_percentage = Percent::HUNDRED - discount_factor;
+            let acc_part = remaining_percentage
+                .of(acc)
+                .ok_or(PriceFeedsError::Finance(FinanceError::overflow_err(
+                    "in fraction calculation",
+                    remaining_percentage,
+                    acc,
+                )))?;
             Ok(discounted_price + acc_part) as Result<_, PriceFeedsError>
         })?;
 

@@ -9,7 +9,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::{Amount, Coin},
-    error::{Error, OverflowError, OverflowOperation, Result},
+    error::{Error, Result},
     fraction::Fraction,
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
@@ -187,23 +187,20 @@ where
     /// value of the prices. The rounding would be done by shifting to
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Option<Self> {
+    fn lossy_add(self, rhs: Self) -> Result<Self> {
         let factor: Coin<C> = Coin::new(1_000_000_000_000_000_000); // 1*10^18
 
         total(factor, self)
             .and_then(|total_self| {
                 total(factor, rhs).and_then(|total_rhs| {
-                    total_self.checked_add(total_rhs).ok_or_else(|| {
-                        Error::OverflowError(OverflowError::new(
-                            OverflowOperation::Add,
-                            total_self,
-                            total_rhs,
-                        ))
-                    })
+                    total_self.checked_add(total_rhs).ok_or(Error::overflow_err(
+                        "while adding",
+                        total_self,
+                        total_rhs,
+                    ))
                 })
             })
             .map(|factored_total| total_of(factor).is(factored_total))
-            .ok()
     }
 
     #[track_caller]
@@ -288,7 +285,7 @@ where
 
     fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
         self.checked_add(rhs)
-            .or_else(|| self.lossy_add(rhs))
+            .or_else(|| self.lossy_add(rhs).ok())
             .expect("should not observe huge prices")
     }
 }
@@ -339,7 +336,11 @@ where
     QuoteC: 'static,
 {
     let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote).ok_or(Error::overflow_err(
+        "in currency convertion",
+        ratio_impl,
+        price.amount_quote,
+    ))
 }
 
 #[cfg(test)]
@@ -603,11 +604,11 @@ mod test {
         assert_eq!(exp, price1.add(price2));
         assert!({
             price1.checked_add(price2).map_or_else(
-                || Some(exp) == price1.lossy_add(price2),
+                || Ok(exp) == price1.lossy_add(price2),
                 |v| v == price1.add(price2),
             )
         });
-        assert!(Some(exp) == price1.lossy_add(price2));
+        assert!(Ok(exp) == price1.lossy_add(price2));
         assert!(exp >= price1);
         assert!(exp >= price2);
 
@@ -628,7 +629,7 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Some(exp), price1.lossy_add(price2));
+        assert_eq!(Ok(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
     }
 

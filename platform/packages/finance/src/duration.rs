@@ -11,7 +11,7 @@ use sdk::{
 };
 
 use crate::{
-    error::{Error, OverflowError, OverflowOperation, Result as FinanceResult},
+    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
@@ -101,11 +101,11 @@ impl Duration {
         annual_amount
             .clone()
             .checked_mul(&self_a_year)
-            .ok_or(Error::OverflowError(OverflowError::new(
-                OverflowOperation::Mul,
+            .ok_or(Error::overflow_err(
+                "while multiplying",
                 annual_amount,
                 self_a_year,
-            )))
+            ))
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> FinanceResult<Self>
@@ -113,7 +113,10 @@ impl Duration {
         Self: Fractionable<U>,
         U: Zero + Debug + PartialEq + Copy + Display,
     {
-        Rational::new(amount, annual_amount).of(self)
+        let ratio = Rational::new(amount, annual_amount);
+        ratio
+            .of(self)
+            .ok_or(Error::overflow_err(" in fraction calculation", ratio, self))
     }
 }
 
