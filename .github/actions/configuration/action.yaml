@@ -80,6 +80,7 @@ runs:
                 "protocols": [
                   "neutron-astroport-usdc_axelar",
                   "neutron-astroport-usdc_noble",
+                  "osmosis-osmosis-stosmo",
                   "osmosis-osmosis-usdc_axelar",
                   "osmosis-osmosis-usdc_noble"
                 ]
@@ -89,6 +90,7 @@ runs:
               "net_main": [
                 "neutron-astroport-usdc_axelar",
                 "neutron-astroport-usdc_noble",
+                "osmosis-osmosis-stosmo",
                 "osmosis-osmosis-usdc_axelar",
                 "osmosis-osmosis-usdc_noble"
               ]
