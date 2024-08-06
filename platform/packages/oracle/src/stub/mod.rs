@@ -92,13 +92,9 @@ where
         V: WithOracle<QuoteC, QuoteG, G = G>,
         G: Group,
     {
-        cmd.exec(OracleStub::<
-            '_,
-            G,
-            QuoteC,
-            QuoteG,
-            BasePriceRequest,
-        >::new(self, querier))
+        cmd.exec(OracleStub::<'_, G, QuoteC, QuoteG, BasePriceRequest>::new(
+            self, querier,
+        ))
     }
 
     fn try_from<CurrencyReq>(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self>
