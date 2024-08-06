@@ -49,8 +49,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_add(rhs.amount);
-        may_amount.map(|amount| Self {
+        self.amount.checked_add(rhs.amount).map(|amount| Self {
             amount,
             ticker: self.ticker,
         })
@@ -63,8 +62,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_sub(rhs.amount);
-        may_amount.map(|amount| Self {
+        self.amount.checked_sub(rhs.amount).map(|amount| Self {
             amount,
             ticker: self.ticker,
         })
@@ -80,8 +78,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_div(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_div(rhs);
-        may_amount.map(|amount| Self {
+        self.amount.checked_div(rhs).map(|amount| Self {
             amount,
             ticker: self.ticker,
         })
