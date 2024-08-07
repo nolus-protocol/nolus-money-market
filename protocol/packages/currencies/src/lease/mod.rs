@@ -6,14 +6,14 @@ use sdk::schemars::{self, JsonSchema};
 use crate::PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
-use self::r#impl as impl_mod;
+pub(crate) use self::r#impl as impl_mod;
 #[cfg(feature = "testing")]
-use self::testing as impl_mod;
+pub(crate) use self::testing as impl_mod;
 
 #[cfg(not(feature = "testing"))]
-mod r#impl;
+pub(crate) mod r#impl;
 #[cfg(feature = "testing")]
-pub mod testing;
+pub(crate) mod testing;
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,
