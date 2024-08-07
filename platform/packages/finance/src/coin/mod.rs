@@ -254,7 +254,10 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::percent::test::test_of;
+    use crate::{
+        fraction::Fraction,
+        percent::{test::test_of, Percent},
+    };
 
     use super::{Amount, Coin};
 
@@ -365,6 +368,8 @@ mod test {
 
         assert_eq!(Some(coin1(Amount::MAX)), coin1(Amount::MAX).checked_mul(1));
 
+        assert_eq!(None, coin1(Amount::MAX).checked_mul(2));
+
         assert_eq!(
             Some(coin1(Amount::MAX)),
             coin1(Amount::MAX / 5).checked_mul(5)
@@ -374,10 +379,8 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn of_overflow() {
-        let max_amount = coin1(Amount::MAX);
-        test_of(1001, max_amount, max_amount);
+        assert_eq!(None, Percent::from_permille(1001).of(coin1(Amount::MAX)));
     }
 
     #[test]

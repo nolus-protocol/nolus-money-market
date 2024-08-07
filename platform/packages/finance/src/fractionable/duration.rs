@@ -32,7 +32,7 @@ mod tests {
     use crate::{coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Rational};
 
     #[test]
-    fn safe_mul() {
+    fn checked_mul() {
         let d = Duration::from_secs(10);
         let res = d
             .checked_mul(&Rational::new(
@@ -44,7 +44,7 @@ mod tests {
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn checked_mul_max() {
         let d = Duration::from_secs(10);
         let res = d
             .checked_mul(&Rational::new(
@@ -53,5 +53,16 @@ mod tests {
             ))
             .unwrap();
         assert_eq!(Duration::from_secs(20), res);
+    }
+
+    #[test]
+    fn checked_mul_overflow() {
+        let d = Duration::from_secs(10);
+        let res = d.checked_mul(&Rational::new(
+            Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
+            Coin::<SuperGroupTestC1>::new(1),
+        ));
+
+        assert_eq!(None, res);
     }
 }

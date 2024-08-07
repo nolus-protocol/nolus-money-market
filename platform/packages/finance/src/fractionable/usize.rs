@@ -24,7 +24,12 @@ impl Fractionable<PercentUnits> for usize {
 
 #[cfg(test)]
 mod test {
-    use crate::{fraction::Fraction, percent::Percent};
+    use crate::{
+        fraction::Fraction,
+        fractionable::Fractionable,
+        percent::{Percent, Units as PercentUnits},
+        ratio::Rational,
+    };
 
     #[test]
     fn ok() {
@@ -42,7 +47,24 @@ mod test {
     }
 
     #[test]
-    fn overflow() {
-        assert!(Percent::from_permille(1001).of(usize::MAX).is_none())
+    fn of_overflow() {
+        assert_eq!(None, Percent::from_permille(1001).of(usize::MAX))
+    }
+
+    #[test]
+    fn checked_mul_overflow() {
+        let ratio = Rational::new(u32::MAX, 1);
+        assert_eq!(
+            None,
+            Fractionable::<PercentUnits>::checked_mul(usize::MAX, &ratio)
+        );
+    }
+
+    #[test]
+    fn checked_mul() {
+        let ratio: Rational<PercentUnits> = Rational::new(50, 100);
+        let result: Option<PercentUnits> = Fractionable::<PercentUnits>::checked_mul(100, &ratio);
+
+        assert_eq!(Some(100 * 50 / 100), result);
     }
 }

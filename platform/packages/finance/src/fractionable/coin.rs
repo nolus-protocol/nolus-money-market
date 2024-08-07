@@ -65,5 +65,21 @@ mod test {
             )
             .unwrap()
         );
+
+        assert_eq!(
+            None,
+            Fractionable::<u128>::checked_mul(
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+                &Rational::new(2, 1u128)
+            )
+        );
+
+        assert_eq!(
+            None,
+            Fractionable::<u128>::checked_mul(
+                Coin::<SuperGroupTestC1>::new(3),
+                &Rational::new(u128::MAX, 2u128)
+            )
+        );
     }
 }

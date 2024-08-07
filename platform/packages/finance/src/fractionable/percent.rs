@@ -46,7 +46,7 @@ mod test {
         };
 
         #[test]
-        fn safe_mul() {
+        fn checked_mul() {
             assert_eq!(
                 Percent::from_permille(410 * 222222 / 1000),
                 Percent::from_percent(41)
@@ -67,7 +67,7 @@ mod test {
         }
 
         #[test]
-        fn safe_mul_hundred_percent() {
+        fn checked_mul_hundred_percent() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
                 Percent::from_percent(100)
@@ -83,12 +83,10 @@ mod test {
         }
 
         #[test]
-        fn safe_mul_overflow() {
-            assert!(
-                Percent::from_permille(1001)
-                    .checked_mul(&Percent::from_permille(Units::MAX))
-                    .is_none(),
-                "Multiplication did not overflow as expected"
+        fn checked_mul_overflow() {
+            assert_eq!(
+                None,
+                Percent::from_permille(1001).checked_mul(&Percent::from_permille(Units::MAX))
             )
         }
     }
@@ -104,7 +102,7 @@ mod test {
         };
 
         #[test]
-        fn safe_mul() {
+        fn checked_mul() {
             let ratio_one = Rational::new(
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
@@ -116,6 +114,21 @@ mod test {
                     &ratio_one
                 )
                 .unwrap()
+            );
+        }
+
+        #[test]
+        fn checked_mul_overflow() {
+            let ratio_max = Rational::new(
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+                Coin::<SuperGroupTestC1>::new(1),
+            );
+            assert_eq!(
+                None,
+                Fractionable::<Coin<SuperGroupTestC1>>::checked_mul(
+                    Percent::from_permille(Units::MAX),
+                    &ratio_max
+                )
             );
         }
     }
