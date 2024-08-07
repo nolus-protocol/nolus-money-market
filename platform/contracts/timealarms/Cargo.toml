@@ -8,7 +8,7 @@ license.workspace = true
 [package.metadata.cargo-each]
 combinations = [
     { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
-    { tags = ["ci", "@agnostic"], feature-groups = ["contract-and-stub"], include-rest = true }
+    { tags = ["ci", "@agnostic"], feature-groups = ["contract-and-stub"], include-rest = true },
 ]
 feature-groups = { contract-and-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true } }
 
