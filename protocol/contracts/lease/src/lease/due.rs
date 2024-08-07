@@ -29,7 +29,9 @@ impl DueTrait for State {
             if total_interest_a_year.is_zero() {
                 Duration::MAX
             } else {
-                Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)?
+                Duration::YEAR
+                    .into_slice_per_ratio(overdue_left, total_interest_a_year)
+                    .unwrap_or(Duration::MAX)
             }
         };
 
@@ -58,11 +60,10 @@ mod test {
 
     use crate::{
         loan::{Overdue, State},
-        position::DueTrait,
+        position::{DueTrait, OverdueCollection},
     };
 
     #[test]
-    #[should_panic = "OverflowError"]
     fn test_large_interest_accrual_period() {
         let principal_due = 20.into();
         let due_interest = 5.into();
@@ -76,7 +77,10 @@ mod test {
             due_margin_interest,
             overdue: Overdue::StartIn(till_due_end),
         };
-        let _ = s.overdue_collection(1_800.into()).unwrap();
+        assert_eq!(
+            OverdueCollection::StartIn(Duration::MAX),
+            s.overdue_collection(1_800.into()).unwrap()
+        );
     }
 
     #[test]

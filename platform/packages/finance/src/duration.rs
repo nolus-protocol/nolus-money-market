@@ -116,7 +116,7 @@ impl Duration {
         let ratio = Rational::new(amount, annual_amount);
         ratio
             .of(self)
-            .ok_or(Error::overflow_err(" in fraction calculation", ratio, self))
+            .ok_or(Error::overflow_err("in fraction calculation", ratio, self))
     }
 }
 
@@ -216,9 +216,16 @@ impl Display for Duration {
 
 #[cfg(test)]
 mod tests {
+    use std::u64;
+
+    use currency::test::SubGroupTestC1;
     use sdk::cosmwasm_std::Timestamp as T;
 
-    use crate::duration::{Duration as D, Units};
+    use crate::{
+        coin::Coin,
+        duration::{Duration as D, Units},
+        error::{Error, Result},
+    };
 
     #[test]
     fn add() {
@@ -332,5 +339,50 @@ mod tests {
             None,
             D::from_nanos(Units::MAX / Units::from(u16::MAX) + 1).checked_mul(u16::MAX)
         );
+    }
+
+    #[test]
+    fn annualized_slice_of() {
+        let duration = D::from_nanos(D::YEAR.nanos());
+        let res = duration.annualized_slice_of(u64::MAX).unwrap();
+
+        assert_eq!(u64::MAX, res);
+    }
+
+    #[test]
+    fn annualized_slice_of_err() {
+        let duration = D::from_nanos(D::YEAR.nanos() + 1);
+        let res = duration.annualized_slice_of(u64::MAX);
+
+        assert_err(res, "while multiplying");
+    }
+
+    #[test]
+    fn into_slice_per_ratio() {
+        let duration = D::from_nanos(D::YEAR.nanos());
+        let res = duration
+            .into_slice_per_ratio::<Coin<SubGroupTestC1>>(584.into(), 1.into())
+            .unwrap();
+
+        assert_eq!(
+            D::from_nanos(D::YEAR.nanos().checked_mul(584).unwrap()),
+            res
+        );
+    }
+
+    #[test]
+    fn into_slice_per_ratio_err() {
+        let duration = D::from_nanos(D::YEAR.nanos());
+        let res = duration.into_slice_per_ratio::<Coin<SubGroupTestC1>>(585.into(), 1.into());
+
+        assert_err(res, "in fraction calculation");
+    }
+
+    fn assert_err<T>(r: Result<T>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(Error::OverflowError { operation, operand1: _, operand2: _ })
+            if operation.contains(msg)
+        ));
     }
 }
