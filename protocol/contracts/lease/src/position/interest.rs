@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result};
+
 use finance::{coin::Coin, duration::Duration, zero::Zero};
 
 use crate::{error::ContractResult, finance::LpnCoin};
@@ -18,6 +20,7 @@ pub trait Due {
     fn overdue_collection(&self, min_amount: LpnCoin) -> ContractResult<OverdueCollection>;
 }
 
+#[derive(PartialEq, Debug)]
 pub enum OverdueCollection {
     /// No collectable overdue interest yet
     ///
@@ -43,6 +46,19 @@ impl OverdueCollection {
         match self {
             OverdueCollection::StartIn(_) => Coin::ZERO,
             OverdueCollection::Overdue(amount) => *amount,
+        }
+    }
+}
+
+impl Display for OverdueCollection {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            OverdueCollection::StartIn(duration) => {
+                write!(f, "Start in: {}", duration)
+            }
+            OverdueCollection::Overdue(coin) => {
+                write!(f, "Overdue amount: {}", coin)
+            }
         }
     }
 }
