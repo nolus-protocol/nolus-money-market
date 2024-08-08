@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Add, AddAssign, Mul},
 };
 
@@ -153,6 +153,7 @@ where
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
+    // TODO consider using 'checked_add' when adding prices to ensure that any potential overflow is safely handled.
     fn checked_add(self, rhs: Self) -> Option<Self> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
@@ -186,12 +187,20 @@ where
     /// value of the prices. The rounding would be done by shifting to
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Option<Self> {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = FACTOR.into();
-        let may_factored_total =
-            total(factored_amount, self).checked_add(total(factored_amount, rhs));
-        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
+    fn lossy_add(self, rhs: Self) -> Result<Self> {
+        let factor: Coin<C> = Coin::new(1_000_000_000_000_000_000); // 1*10^18
+
+        total(factor, self)
+            .and_then(|total_self| {
+                total(factor, rhs).and_then(|total_rhs| {
+                    total_self.checked_add(total_rhs).ok_or(Error::overflow_err(
+                        "while adding",
+                        total_self,
+                        total_rhs,
+                    ))
+                })
+            })
+            .map(|factored_total| total_of(factor).is(factored_total))
     }
 
     #[track_caller]
@@ -276,7 +285,7 @@ where
 
     fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
         self.checked_add(rhs)
-            .or_else(|| self.lossy_add(rhs))
+            .or_else(|| self.lossy_add(rhs).ok())
             .expect("should not observe huge prices")
     }
 }
@@ -312,12 +321,26 @@ where
     }
 }
 
+impl<C, QuoteC> Display for Price<C, QuoteC> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}/{}", self.amount, self.amount_quote)
+    }
+}
+
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Result<Coin<QuoteC>>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
     let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote).ok_or(Error::overflow_err(
+        "in currency convertion",
+        ratio_impl,
+        price.amount_quote,
+    ))
 }
 
 #[cfg(test)]
@@ -329,6 +352,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
+        error::{Error, Result},
         price::{self, Price},
         ratio::Rational,
     };
@@ -395,8 +419,8 @@ mod test {
         let coin_quote = QuoteCoin::new(amount_quote * factor);
         let coin = Coin::new(amount * factor);
 
-        assert_eq!(coin_quote, super::total(coin, price));
-        assert_eq!(coin, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_quote, super::total(coin, price).unwrap());
+        assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -408,11 +432,11 @@ mod test {
 
         // 47 * 647 / 48 -> 633.5208333333334
         let coin_in = Coin::new(47);
-        assert_eq!(coin_quote, super::total(coin_in, price));
+        assert_eq!(coin_quote, super::total(coin_in, price).unwrap());
 
         // 633 * 48 / 647 -> 46.9613601236476
         let coin_out = Coin::new(46);
-        assert_eq!(coin_out, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_out, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -423,11 +447,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn total_overflow() {
+    fn total_err() {
         let price = price::total_of::<SuperGroupTestC2>(1.into())
             .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
-        super::total(2.into(), price);
+        assert_err(super::total(2.into(), price), "in currency convertion");
     }
 
     #[test]
@@ -478,12 +501,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn lossy_add_overflow() {
+    fn lossy_add_err() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        p1.lossy_add(p2);
+        assert_err(p1.lossy_add(p2), "in currency convertion");
     }
 
     #[test]
@@ -547,8 +569,9 @@ mod test {
         let price2 = Price::new(amount.into(), QuoteCoin::new(amount_quote + 1));
         assert!(price1 < price2);
 
-        let total1 = super::total(Coin::new(amount), price1);
-        assert!(total1 < super::total(Coin::new(amount), price2));
+        let total1 = super::total(Coin::new(amount), price1).unwrap();
+        let total2 = super::total(Coin::new(amount), price2).unwrap();
+        assert!(total1 < total2);
         assert_eq!(QuoteCoin::new(amount_quote), total1);
     }
 
@@ -562,8 +585,8 @@ mod test {
         let expected = QuoteCoin::new(expected);
         let input = Coin::new(amount);
 
-        assert_eq!(expected, super::total(input, price));
-        assert_eq!(input, super::total(expected, price.inv()));
+        assert_eq!(expected, super::total(input, price).unwrap());
+        assert_eq!(input, super::total(expected, price.inv()).unwrap());
     }
 
     fn add_impl(
@@ -580,11 +603,11 @@ mod test {
         assert_eq!(exp, price1.add(price2));
         assert!({
             price1.checked_add(price2).map_or_else(
-                || Some(exp) == price1.lossy_add(price2),
+                || Ok(exp) == price1.lossy_add(price2),
                 |v| v == price1.add(price2),
             )
         });
-        assert!(Some(exp) == price1.lossy_add(price2));
+        assert!(Ok(exp) == price1.lossy_add(price2));
         assert!(exp >= price1);
         assert!(exp >= price2);
 
@@ -605,7 +628,7 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Some(exp), price1.lossy_add(price2));
+        assert_eq!(Ok(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
     }
 
@@ -651,6 +674,14 @@ mod test {
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
         lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+    }
+
+    fn assert_err<T>(r: Result<T>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(Error::OverflowError { operation, operand1: _, operand2: _ })
+            if operation.contains(msg)
+        ));
     }
 }
 

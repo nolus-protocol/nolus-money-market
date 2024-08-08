@@ -131,11 +131,13 @@ where
     where
         C: Currency + MemberOf<Self::PriceG>,
     {
-        Ok(self
-            .alarms
+        self.alarms
             .alarms(price)
-            .map::<ContractResult<Addr>, AlarmIterMapFn>(|result: Result<Addr, AlarmError>| {
-                result.map_err(Into::into)
-            }))
+            .map_err(ContractError::AlarmError)
+            .map(|alarms_iter| {
+                alarms_iter.map::<ContractResult<Addr>, AlarmIterMapFn>(
+                    |result: Result<Addr, AlarmError>| result.map_err(Into::into),
+                )
+            })
     }
 }

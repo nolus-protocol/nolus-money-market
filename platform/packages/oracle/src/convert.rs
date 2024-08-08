@@ -79,7 +79,7 @@ mod impl_ {
         {
             oracle
                 .price_of::<OutC>()
-                .map(|price| price::total(self.in_amount, price.inv()))
+                .and_then(|price| price::total(self.in_amount, price.inv()).map_err(Into::into))
         }
 
         pub(super) fn with_quote_out<OracleImpl>(
@@ -91,7 +91,7 @@ mod impl_ {
         {
             oracle
                 .price_of::<InC>()
-                .map(|price| price::total(self.in_amount, price))
+                .and_then(|price| price::total(self.in_amount, price).map_err(Into::into))
         }
     }
 }

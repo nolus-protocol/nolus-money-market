@@ -1,9 +1,9 @@
-use std::any::type_name;
+use std::{any::type_name, fmt::Debug};
 
 use thiserror::Error;
 
 use currency::error::Error as CurrencyError;
-use sdk::cosmwasm_std::{OverflowError, StdError};
+use sdk::cosmwasm_std::StdError;
 
 use crate::percent::Units as PercentUnits;
 
@@ -12,8 +12,12 @@ pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 
-    #[error("[Finance] [OverflowError] {0}")]
-    OverflowError(#[from] OverflowError),
+    #[error("[Finance] Overflow {operation}: {operand1} and {operand2}")]
+    OverflowError {
+        operation: String,
+        operand1: String,
+        operand2: String,
+    },
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
@@ -36,6 +40,18 @@ impl Error {
             Err(Self::BrokenInvariant(type_name::<T>().into(), msg.into()))
         } else {
             Ok(())
+        }
+    }
+
+    pub fn overflow_err(
+        operation: impl ToString,
+        operand1: impl ToString,
+        operand2: impl ToString,
+    ) -> Self {
+        Self::OverflowError {
+            operation: operation.to_string(),
+            operand1: operand1.to_string(),
+            operand2: operand2.to_string(),
         }
     }
 }
