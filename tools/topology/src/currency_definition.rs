@@ -9,6 +9,7 @@ pub struct CurrencyDefinition {
 }
 
 impl CurrencyDefinition {
+    #[inline]
     pub(crate) const fn new(ticker: String, host: Symbol, dex: Symbol, decimal_digits: u8) -> Self {
         Self {
             ticker,

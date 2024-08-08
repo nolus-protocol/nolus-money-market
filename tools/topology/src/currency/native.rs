@@ -1,10 +1,22 @@
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(try_from = "self::Raw")]
 pub(crate) struct Native {
-    pub symbol: String,
-    pub decimal_digits: u8,
+    symbol: super::Id,
+    decimal_digits: u8,
+}
+
+impl Native {
+    #[inline]
+    pub const fn symbol(&self) -> &super::Id {
+        &self.symbol
+    }
+
+    #[inline]
+    pub const fn decimal_digits(&self) -> u8 {
+        self.decimal_digits
+    }
 }
 
 impl TryFrom<Raw> for Native {
@@ -29,6 +41,6 @@ impl TryFrom<Raw> for Native {
 struct Raw {
     #[serde(rename = "name")]
     _name: String,
-    symbol: String,
+    symbol: super::Id,
     decimal_digits: String,
 }

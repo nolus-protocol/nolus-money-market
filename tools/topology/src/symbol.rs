@@ -1,4 +1,8 @@
+use std::borrow::Borrow;
+
 use sha2::{Digest as _, Sha256};
+
+use crate::{channel, currency};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Symbol {
@@ -27,18 +31,18 @@ impl Builder {
     //  }
     pub const NEW: Self = Self(Inner::Native);
 
-    pub fn add_channel(&mut self, channel: &str) {
+    pub fn add_channel(&mut self, channel: &channel::Id) {
         match &mut self.0 {
             Inner::Native => self.0 = Inner::Ibc(Ibc::new(channel)),
             Inner::Ibc(ibc_symbol) => ibc_symbol.add_channel(channel),
         }
     }
 
-    pub fn add_symbol(self, symbol: &str) -> Symbol {
+    pub fn add_symbol(self, symbol: &currency::Id) -> Symbol {
         match self.0 {
             Inner::Native => Symbol {
-                path: symbol.into(),
-                symbol: symbol.into(),
+                path: Borrow::<str>::borrow(symbol).into(),
+                symbol: Borrow::<str>::borrow(symbol).into(),
             },
             Inner::Ibc(ibc_symbol) => ibc_symbol.add_symbol(symbol),
         }
@@ -66,7 +70,7 @@ impl Ibc {
     const OUTPUT_SYMBOL_LENGTH: usize =
         Self::SYMBOL_PREFIX.len() + (Self::SHA2_256_OUTPUT_SIZE * Self::BYTE_HALVES_PER_CHAR);
 
-    fn new(outmost_channel: &str) -> Self {
+    fn new(outmost_channel: &channel::Id) -> Self {
         let mut instance = Self {
             path: String::new(),
         };
@@ -76,16 +80,16 @@ impl Ibc {
         instance
     }
 
-    fn add_channel(&mut self, channel: &str) {
+    fn add_channel(&mut self, channel: &channel::Id) {
         self.path.push_str("transfer/");
 
-        self.path.push_str(channel);
+        self.path.push_str(Borrow::<str>::borrow(channel));
 
         self.path.push('/');
     }
 
-    fn add_symbol(mut self, symbol: &str) -> Symbol {
-        self.path.push_str(symbol);
+    fn add_symbol(mut self, symbol: &currency::Id) -> Symbol {
+        self.path.push_str(Borrow::<str>::borrow(symbol));
 
         let symbol = Self::digest_symbol(&self.path);
 

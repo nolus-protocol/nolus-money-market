@@ -1,26 +1,30 @@
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    mem,
-};
+use std::borrow::Borrow;
 
 use serde::Deserialize;
 
 pub use self::currency_definition::CurrencyDefinition;
 use self::{
-    inner_structure::{Channel, Currency, HostNetwork, IbcCurrency, NativeCurrency, Network},
+    channel::Channel, currency::Currency, network::HostNetwork, networks::Networks,
     symbol::Builder as SymbolBuilder,
 };
 
+mod channel;
+mod channels;
+mod currencies;
+mod currency;
 mod currency_definition;
 pub mod error;
-mod inner_structure;
+mod host_to_dex;
+mod network;
+mod networks;
+mod newtype;
 mod symbol;
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(from = "self::inner_structure::Raw")]
+#[serde(from = "self::Raw")]
 pub struct Topology {
     host_network: HostNetwork,
-    networks: BTreeMap<String, Network>,
+    networks: Networks,
     channels: Vec<Channel>,
 }
 
@@ -29,20 +33,20 @@ impl Topology {
         &self,
         dex_network: &str,
     ) -> Result<Vec<CurrencyDefinition>, error::CurrencyDefinitions> {
-        let dex_currencies = &self
+        let &(dex_network, dex_currencies) = &self
             .networks
-            .get(dex_network)
-            .ok_or(error::CurrencyDefinitions::NonExistentDexNetwork)?
-            .currencies;
+            .get_id_and_network(dex_network)
+            .map(|(id, network)| (id, network.currencies()))
+            .ok_or(error::CurrencyDefinitions::NonExistentDexNetwork)?;
 
         let channels = self.process_channels()?;
-
-        let host_to_dex_path =
-            Self::host_to_dex_path(&channels, &self.host_network.name, dex_network)?;
 
         let mut currencies = vec![];
 
         currencies.reserve_exact(dex_currencies.len());
+
+        let host_to_dex_path =
+            host_to_dex::find_path(&channels, self.host_network.name(), dex_network)?;
 
         dex_currencies
             .iter()
@@ -54,225 +58,30 @@ impl Topology {
             .map_err(Into::into)
     }
 
-    fn host_to_dex_path<'r>(
-        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_network: &str,
-        dex_network: &str,
-    ) -> Result<Vec<HostToDexPathChannel<'r>>, error::CurrencyDefinitions> {
-        Self::direct_host_to_dex_path(channels, host_network, dex_network).map_or_else(
-            || Self::indirect_host_to_dex_path(channels, host_network, dex_network),
-            |channel| Ok(vec![channel]),
-        )
-    }
-
-    fn direct_host_to_dex_path<'r>(
-        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_network: &str,
-        dex_network: &str,
-    ) -> Option<HostToDexPathChannel<'r>> {
-        channels.get(host_network).and_then(|connected_networks| {
-            connected_networks.get(dex_network).map(|&endpoint| {
-                let Some(connected_networks) = channels.get(dex_network) else {
-                    Self::unreachable_inverse_should_be_filled_in();
-                };
-
-                let Some(&inverse_endpoint) = connected_networks.get(host_network) else {
-                    Self::unreachable_inverse_should_be_filled_in();
-                };
-
-                HostToDexPathChannel {
-                    endpoint,
-                    inverse_endpoint,
-                }
-            })
-        })
-    }
-
-    fn indirect_host_to_dex_path<'r>(
-        channels: &'r BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_network: &str,
-        dex_network: &str,
-    ) -> Result<Vec<HostToDexPathChannel<'r>>, error::CurrencyDefinitions> {
-        let mut endpoints_deque = Self::initial_host_to_dex_paths(channels, host_network)?;
-
-        let mut traversed_networks = BTreeSet::from([host_network]);
-
-        loop {
-            let Some((network, endpoints, walked_channels)) = endpoints_deque.pop_front()
-            else {
-                break Err(error::CurrencyDefinitions::HostNotConnectedToDex);
-            };
-
-            if let Some(path) = Self::explore_path_breadth_first(
-                channels,
-                dex_network,
-                &mut endpoints_deque,
-                &mut traversed_networks,
-                network,
-                endpoints,
-                walked_channels,
-            ) {
-                break Ok(path);
-            }
-        }
-    }
-
-    fn initial_host_to_dex_paths<'channels, 'connected_network, 'endpoint>(
-        channels: &'channels BTreeMap<&str, BTreeMap<&'connected_network str, &'endpoint str>>,
-        host_network: &str,
-    ) -> Result<
-        InitialHostToDexPaths<'channels, 'connected_network, 'endpoint>,
-        error::CurrencyDefinitions,
-    > {
-        channels
-            .get(host_network)
-            .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)
-            .map(|connected_networks| {
-                connected_networks
-                    .iter()
-                    .map(|(&network, &endpoint)| {
-                        let Some(endpoints) = channels.get(&network) else {
-                            Self::unreachable_inverse_should_be_filled_in();
-                        };
-
-                        let Some(&inverse_endpoint) = endpoints.get(host_network) else {
-                            Self::unreachable_inverse_should_be_filled_in();
-                        };
-
-                        (
-                            network,
-                            endpoints,
-                            vec![HostToDexPathChannel {
-                                endpoint,
-                                inverse_endpoint,
-                            }],
-                        )
-                    })
-                    .collect()
-            })
-    }
-
-    fn explore_path_breadth_first<
-        'channels_map,
-        'source_network,
-        'connected_network,
-        'endpoint,
-        'network,
-    >(
-        channels: &'channels_map BTreeMap<
-            &'source_network str,
-            BTreeMap<&'connected_network str, &'endpoint str>,
-        >,
-        dex_network: &str,
-        endpoints_deque: &mut VecDeque<(
-            &'network str,
-            &'channels_map BTreeMap<&'connected_network str, &'endpoint str>,
-            Vec<HostToDexPathChannel<'channels_map>>,
-        )>,
-        traversed_networks: &mut BTreeSet<&'network str>,
-        network: &'network str,
-        endpoints: &BTreeMap<&'connected_network str, &'endpoint str>,
-        mut walked_channels: Vec<HostToDexPathChannel<'endpoint>>,
-    ) -> Option<Vec<HostToDexPathChannel<'channels_map>>>
-    where
-        'endpoint: 'channels_map,
-        'connected_network: 'network,
-    {
-        let mut endpoints = endpoints
-            .iter()
-            .map(|(&connected_network, &endpoint)| (connected_network, endpoint))
-            .filter(|&(network, _)| traversed_networks.insert(network));
-
-        let last = endpoints.next_back();
-
-        endpoints
-            .map(|tuple| (false, tuple))
-            .chain(last.map(|tuple| (true, tuple)))
-            .find_map(move |(is_last, (next_network, endpoint))| {
-                let Some(endpoints) = channels.get(next_network) else {
-                    Self::unreachable_inverse_should_be_filled_in();
-                };
-
-                let Some(&inverse_endpoint) = endpoints.get(network) else {
-                    Self::unreachable_inverse_should_be_filled_in();
-                };
-
-                let channel = HostToDexPathChannel {
-                    endpoint,
-                    inverse_endpoint,
-                };
-
-                if next_network == dex_network {
-                    walked_channels.push(channel);
-
-                    Some(mem::take(&mut walked_channels))
-                } else {
-                    let mut walked_channels = if is_last {
-                        mem::take(&mut walked_channels)
-                    } else {
-                        walked_channels.clone()
-                    };
-
-                    walked_channels.push(channel);
-
-                    endpoints_deque.push_back((next_network, endpoints, walked_channels));
-
-                    None
-                }
-            })
-    }
-
-    #[cold]
-    #[inline]
-    #[track_caller]
-    fn unreachable_inverse_should_be_filled_in() -> ! {
-        unreachable!(
-            "Inverse channel endpoint should be filled in during channels \
-                processing!"
-        );
-    }
-
-    fn process_channels(
-        &self,
-    ) -> Result<BTreeMap<&str, BTreeMap<&str, &str>>, error::ProcessChannels> {
-        let mut channels: BTreeMap<_, BTreeMap<_, _>> = BTreeMap::new();
-
-        let mut assigned_channels_set: BTreeMap<_, BTreeSet<_>> = BTreeMap::new();
+    fn process_channels(&self) -> Result<channels::Map<'_, '_>, error::ProcessChannels> {
+        let mut channels = channels::MutableMap::EMPTY;
 
         self.channels
             .iter()
             .try_for_each(|channel| {
-                [
-                    (&channel.a, &*channel.b.network),
-                    (&channel.b, &*channel.a.network),
-                ]
-                .into_iter()
-                .try_for_each(|(endpoint, remote_network)| {
-                    if assigned_channels_set
-                        .entry(&*endpoint.network)
-                        .or_default()
-                        .insert(&*endpoint.ch)
-                        && channels
-                            .entry(&*endpoint.network)
-                            .or_default()
-                            .insert(remote_network, &*endpoint.ch)
-                            .is_none()
-                    {
-                        Ok(())
-                    } else {
-                        Err(error::ProcessChannels::DuplicateChannel)
-                    }
-                })
+                let endpoint_a = channel.a();
+
+                let endpoint_b = channel.b();
+
+                channels.insert(
+                    (endpoint_a.network(), endpoint_a.channel_id()),
+                    (endpoint_b.network(), endpoint_b.channel_id()),
+                )
             })
-            .map(|()| channels)
+            .map(|()| channels.into())
     }
 
     fn resolve_currency(
         &self,
-        dex_network: &str,
-        channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_to_dex_path: &[HostToDexPathChannel<'_>],
-        ticker: &str,
+        dex_network: &network::Id,
+        channels: &channels::Map<'_, '_>,
+        host_to_dex_path: &[host_to_dex::Channel<'_>],
+        ticker: &currency::Id,
         currency: &Currency,
     ) -> Result<CurrencyDefinition, error::ResolveCurrency> {
         let mut dex_symbol = SymbolBuilder::NEW;
@@ -297,37 +106,38 @@ impl Topology {
         )
     }
 
-    fn traverse_and_extract_currency_path<'self_, 'currency>(
+    fn traverse_and_extract_currency_path<'self_, 'network, 'currency>(
         &'self_ self,
-        channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_to_dex_path: &[HostToDexPathChannel<'_>],
+        channels: &channels::Map<'_, '_>,
+        host_to_dex_path: &[host_to_dex::Channel<'_>],
         dex_symbol: &mut SymbolBuilder,
-        traversed_networks: &mut Vec<&'currency str>,
+        traversed_networks: &mut Vec<&'network network::Id>,
         mut currency: &'currency Currency,
-    ) -> Result<&'currency NativeCurrency, error::ResolveCurrency>
+    ) -> Result<&'currency currency::Native, error::ResolveCurrency>
     where
         'self_: 'currency,
+        'currency: 'network,
     {
         Ok(loop {
             match currency {
                 Currency::Native(native) => {
                     break native;
                 }
-                Currency::Ibc(ibc) if ibc.network == self.host_network.name => {
-                    if traversed_networks.contains(&&*ibc.network) {
+                Currency::Ibc(ibc) if ibc.network() == self.host_network.name() => {
+                    if traversed_networks.contains(&ibc.network()) {
                         unreachable!(
                             "Host network should not have been already \
                                 traversed!"
                         );
                     }
 
-                    assert_eq!(ibc.currency, self.host_network.currency.id);
+                    assert_eq!(ibc.currency(), self.host_network.currency().id());
 
-                    traversed_networks.push(&self.host_network.name);
+                    traversed_networks.push(self.host_network.name());
 
-                    dex_symbol.add_channel(host_to_dex_path[0].inverse_endpoint);
+                    dex_symbol.add_channel(host_to_dex_path[0].counterpart_channel_id());
 
-                    break &self.host_network.currency.native;
+                    break self.host_network.currency().native();
                 }
                 Currency::Ibc(ibc) => {
                     currency = self.resolve_non_host_ibc_currency(
@@ -341,48 +151,57 @@ impl Topology {
         })
     }
 
-    fn resolve_non_host_ibc_currency<'self_, 'currency>(
+    fn resolve_non_host_ibc_currency<'self_, 'network, 'currency>(
         &'self_ self,
-        channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
+        channels: &channels::Map<'_, '_>,
         dex_symbol: &mut SymbolBuilder,
-        traversed_networks: &mut Vec<&'currency str>,
-        ibc: &'currency IbcCurrency,
-    ) -> Result<&'self_ Currency, error::ResolveCurrency> {
-        if traversed_networks.contains(&&*ibc.network) {
+        traversed_networks: &mut Vec<&'network network::Id>,
+        ibc: &'currency currency::Ibc,
+    ) -> Result<&'currency Currency, error::ResolveCurrency>
+    where
+        'self_: 'currency,
+        'currency: 'network,
+    {
+        if traversed_networks.contains(&ibc.network()) {
             return Err(error::ResolveCurrency::CycleCreated);
         }
 
-        if let Some(&endpoint) = channels
+        if let Some(&channel_id) = channels
             .get(traversed_networks.last().unwrap_or_else(
                 #[inline]
                 || unreachable!(),
             ))
-            .and_then(|endpoints| endpoints.get(&*ibc.network))
+            .and_then(|connected_networks| connected_networks.get(ibc.network()))
         {
-            dex_symbol.add_channel(endpoint);
+            dex_symbol.add_channel(channel_id);
         }
 
-        traversed_networks.push(&ibc.network);
+        traversed_networks.push(ibc.network());
 
         self.networks
-            .get(&*ibc.network)
-            .ok_or_else(|| error::ResolveCurrency::NoSuchNetwork((&*ibc.network).into()))
+            .get(ibc.network())
+            .ok_or_else(|| {
+                error::ResolveCurrency::NoSuchNetwork(
+                    Borrow::<str>::borrow(ibc.network()).to_string(),
+                )
+            })
             .and_then(|network| {
-                network
-                    .currencies
-                    .get(&*ibc.currency)
-                    .ok_or_else(|| error::ResolveCurrency::NoSuchCurrency((&*ibc.currency).into()))
+                network.currencies().get(ibc.currency()).ok_or_else(|| {
+                    error::ResolveCurrency::NoSuchCurrency(
+                        Borrow::<str>::borrow(ibc.currency()).to_string(),
+                    )
+                })
             })
     }
 
     fn finalize_currency_resolution(
         &self,
-        channels: &BTreeMap<&str, BTreeMap<&str, &str>>,
-        host_to_dex_path: &[HostToDexPathChannel<'_>],
-        ticker: &str,
+        channels: &channels::Map<'_, '_>,
+        host_to_dex_path: &[host_to_dex::Channel<'_>],
+        ticker: &currency::Id,
         dex_symbol: SymbolBuilder,
-        traversed_networks: &[&str],
-        native_currency: &NativeCurrency,
+        traversed_networks: &[&network::Id],
+        native_currency: &currency::Native,
     ) -> Result<CurrencyDefinition, error::ResolveCurrency> {
         let mut bank_symbol = SymbolBuilder::NEW;
 
@@ -395,56 +214,74 @@ impl Topology {
         traversed_networks[bank_symbol_traversal_start..]
             .windows(2)
             .try_for_each(|networks| {
-                let [from, to] = networks else {
+                let &[source_network, remote_network] = networks else {
                     unreachable!("Window slice should be exactly two elements.");
                 };
 
                 channels
-                    .get(from)
-                    .and_then(|endpoints| endpoints.get(to))
+                    .get(source_network)
+                    .and_then(|connected_networks| connected_networks.get(remote_network))
                     .ok_or_else(|| {
-                        error::ResolveCurrency::NetworksNotConnected((*from).into(), (*to).into())
+                        error::ResolveCurrency::NetworksNotConnected(
+                            Borrow::<str>::borrow(source_network).to_string(),
+                            Borrow::<str>::borrow(remote_network).to_string(),
+                        )
                     })
-                    .map(|&endpoint| bank_symbol.add_channel(endpoint))
+                    .map(|&channel_id| bank_symbol.add_channel(channel_id))
             })
             .map(|()| {
                 CurrencyDefinition::new(
-                    ticker.into(),
-                    bank_symbol.add_symbol(&native_currency.symbol),
-                    dex_symbol.add_symbol(&native_currency.symbol),
-                    native_currency.decimal_digits,
+                    Borrow::<str>::borrow(ticker).to_string(),
+                    bank_symbol.add_symbol(native_currency.symbol()),
+                    dex_symbol.add_symbol(native_currency.symbol()),
+                    native_currency.decimal_digits(),
                 )
             })
     }
 
     fn get_bank_symbol_traversal_start(
         &self,
-        host_to_dex_path: &[HostToDexPathChannel<'_>],
-        traversed_networks: &[&str],
+        host_to_dex_path: &[host_to_dex::Channel<'_>],
+        traversed_networks: &[&network::Id],
         bank_symbol: &mut SymbolBuilder,
     ) -> usize {
         traversed_networks
             .iter()
             .enumerate()
-            .find_map(|(index, &network)| (*network == *self.host_network.name).then_some(index))
+            .find_map(|(index, &network)| (*network == *self.host_network.name()).then_some(index))
             .unwrap_or_else(|| {
                 host_to_dex_path
                     .iter()
-                    .for_each(|&channel| bank_symbol.add_channel(channel.endpoint));
+                    .for_each(|&channel| bank_symbol.add_channel(channel.channel_id()));
 
                 0
             })
     }
 }
 
-type InitialHostToDexPaths<'channels, 'connected_network, 'endpoint> = VecDeque<(
-    &'channels str,
-    &'channels BTreeMap<&'connected_network str, &'endpoint str>,
-    Vec<HostToDexPathChannel<'channels>>,
-)>;
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+struct Raw {
+    host_network: HostNetwork,
+    networks: Networks,
+    channels: Vec<Channel>,
+    #[serde(rename = "definitions")]
+    _definitions: Option<Vec<String>>,
+}
 
-#[derive(Clone, Copy)]
-struct HostToDexPathChannel<'r> {
-    endpoint: &'r str,
-    inverse_endpoint: &'r str,
+impl From<Raw> for Topology {
+    fn from(
+        Raw {
+            host_network,
+            networks,
+            channels,
+            ..
+        }: Raw,
+    ) -> Self {
+        Self {
+            host_network,
+            networks,
+            channels,
+        }
+    }
 }
