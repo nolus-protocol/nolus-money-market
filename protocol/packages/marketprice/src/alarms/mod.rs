@@ -167,8 +167,8 @@ where
     {
         NormalizedPrice::new(&price).map(|norm_price| {
             AlarmsIterator(
-                self.iter_below::<C>(&norm_price)
-                    .chain(self.iter_above_or_equal::<C>(&norm_price)),
+                self.iter_below(&norm_price)
+                    .chain(self.iter_above_or_equal(&norm_price)),
             )
         })
     }
