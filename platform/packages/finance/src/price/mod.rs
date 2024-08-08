@@ -352,6 +352,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
+        error::{Error, Result},
         price::{self, Price},
         ratio::Rational,
     };
@@ -446,11 +447,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn total_overflow() {
+    fn total_err() {
         let price = price::total_of::<SuperGroupTestC2>(1.into())
             .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
-        super::total(2.into(), price).unwrap();
+        assert_err(super::total(2.into(), price), "in currency convertion");
     }
 
     #[test]
@@ -501,12 +501,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn lossy_add_overflow() {
+    fn lossy_add_err() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        p1.lossy_add(p2).unwrap();
+        assert_err(p1.lossy_add(p2), "in currency convertion");
     }
 
     #[test]
@@ -675,6 +674,14 @@ mod test {
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
         lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+    }
+
+    fn assert_err<T>(r: Result<T>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(Error::OverflowError { operation, operand1: _, operand2: _ })
+            if operation.contains(msg)
+        ));
     }
 }
 
