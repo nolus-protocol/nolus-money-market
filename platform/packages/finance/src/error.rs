@@ -2,7 +2,7 @@ use std::{any::type_name, fmt::Debug};
 
 use thiserror::Error;
 
-use currency::{error::Error as CurrencyError, Currency};
+use currency::error::Error as CurrencyError;
 use sdk::cosmwasm_std::StdError;
 
 use crate::percent::Units as PercentUnits;
@@ -53,20 +53,6 @@ impl Error {
             operand1: operand1.to_string(),
             operand2: operand2.to_string(),
         }
-    }
-
-    pub fn no_funds<C>() -> Self
-    where
-        C: Currency,
-    {
-        Self::NoFunds(C::TICKER.into())
-    }
-
-    pub fn unexpected_funds<C>() -> Self
-    where
-        C: Currency,
-    {
-        Self::UnexpectedFunds(C::TICKER.into())
     }
 }
 
