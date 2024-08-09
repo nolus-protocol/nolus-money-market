@@ -1,0 +1,181 @@
+{
+  "host_network": {
+    "name": "Host",
+    "currency": {
+      "id": "HOST_C",
+      "native": {
+        "name": "Host Currency",
+        "symbol": "chostc",
+        "decimal_digits": "2"
+      }
+    }
+  },
+  "networks": {
+    "DexIntermediate1": {
+      "currencies": {
+        "HOST_NET_C": {
+          "ibc": {
+            "network": "Host",
+            "currency": "HOST_C"
+          }
+        }
+      }
+    },
+    "DexIntermediate2": {
+      "currencies": {
+        "HOST_NET_C": {
+          "ibc": {
+            "network": "DexIntermediate1",
+            "currency": "HOST_NET_C"
+          }
+        }
+      }
+    },
+    "DexIntermediate3": {
+      "currencies": {
+        "HOST_NET_C": {
+          "ibc": {
+            "network": "DexIntermediate2",
+            "currency": "HOST_NET_C"
+          }
+        }
+      }
+    },
+    "Dex": {
+      "currencies": {
+        "DexC": {
+          "native": {
+            "name": "DEX Native Currency",
+            "symbol": "mdexc",
+            "decimal_digits": "3"
+          }
+        },
+        "HostC": {
+          "ibc": {
+            "network": "DexIntermediate3",
+            "currency": "HOST_NET_C"
+          }
+        },
+        "FarC": {
+          "ibc": {
+            "network": "FarIntermediate1",
+            "currency": "FarC"
+          }
+        }
+      }
+    },
+    "FarIntermediate1": {
+      "currencies": {
+        "FarC": {
+          "ibc": {
+            "network": "FarIntermediate2",
+            "currency": "FarC"
+          }
+        }
+      }
+    },
+    "FarIntermediate2": {
+      "currencies": {
+        "FarC": {
+          "ibc": {
+            "network": "FarIntermediate3",
+            "currency": "FarC"
+          }
+        }
+      }
+    },
+    "FarIntermediate3": {
+      "currencies": {
+        "FarC": {
+          "ibc": {
+            "network": "FarNet",
+            "currency": "FarNetC"
+          }
+        }
+      }
+    },
+    "FarNet": {
+      "currencies": {
+        "FarNetC": {
+          "native": {
+            "name": "Far Network Currency",
+            "symbol": "ufarc",
+            "decimal_digits": "6"
+          }
+        }
+      }
+    }
+  },
+  "channels": [
+    {
+      "a": {
+        "network": "Host",
+        "ch": "channel-0"
+      },
+      "b": {
+        "network": "DexIntermediate1",
+        "ch": "channel-11"
+      }
+    },
+    {
+      "a": {
+        "network": "DexIntermediate1",
+        "ch": "channel-10"
+      },
+      "b": {
+        "network": "DexIntermediate2",
+        "ch": "channel-101"
+      }
+    },
+    {
+      "a": {
+        "network": "DexIntermediate3",
+        "ch": "channel-1000"
+      },
+      "b": {
+        "network": "Dex",
+        "ch": "channel-10001"
+      }
+    },
+    {
+      "a": {
+        "network": "Dex",
+        "ch": "channel-10000"
+      },
+      "b": {
+        "network": "FarIntermediate1",
+        "ch": "channel-100001"
+      }
+    },
+    {
+      "a": {
+        "network": "FarIntermediate1",
+        "ch": "channel-100000"
+      },
+      "b": {
+        "network": "FarIntermediate2",
+        "ch": "channel-1000001"
+      }
+    },
+    {
+      "a": {
+        "network": "FarIntermediate2",
+        "ch": "channel-1000000"
+      },
+      "b": {
+        "network": "FarIntermediate3",
+        "ch": "channel-10000001"
+      }
+    },
+    {
+      "a": {
+        "network": "FarIntermediate3",
+        "ch": "channel-10000000"
+      },
+      "b": {
+        "network": "FarNet",
+        "ch": "channel-100000001"
+      }
+    }
+  ]
+}
