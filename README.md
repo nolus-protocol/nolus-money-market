@@ -57,7 +57,7 @@ or builds the contracts of the workspace from within which it is ran:
 
 ```sh
 
-RELEASE_VERSION='dev-release' cargo each run -x -t ci -- cargo build --target=wasm32-unknown-unknown
+RELEASE_VERSION='dev-release' cargo each run -x -t build -t <protocol> -t <net> --exact -- cargo build --profile "production_nets_release" --lib --locked --target=wasm32-unknown-unknown
 ```
 
 One way to avoid having to set those environment variables is to
@@ -141,6 +141,26 @@ passed to the container are the exact same. If it is desired to build
 a verification copy of the contracts, one must set the `RELEASE_VERSION`
 environment variable to the one used to build the original instead.
 
+##### A non-Docker optimizer
+First, install `Binaryen`:
+```sh
+pacman -S binaryen
+```
+then
+```sh
+for wasm_path in $(find "target/wasm32-unknown-unknown/production_nets_release/" -maxdepth 1 -name "*.wasm" | sort)
+do
+  wasm_name="$(basename "${wasm_path}")"
+
+  echo "Optimizing: ${wasm_name}"
+#-O4 - worse size but less total function parameters
+  wasm-opt -Os --inlining-optimizing --signext-lowering -o "../artifacts/${wasm_name}" \
+    "${wasm_path}"
+
+  echo "Finished optimizing: ${wasm_name}"
+done
+```
+
 ### Test
 
 Run the following in a package directory or any workspace.
@@ -161,6 +181,40 @@ Run the following in the `protocol` and `tests` workspaces.
 
 ```sh
 ./lint.sh "net_${NET},${PROTOCOL}"
+```
+
+### Troubleshoot
+
+#### Explore the number and size of instantiations of each generic function
+```sh
+RELEASE_VERSION=dev cargo llvm-lines -p <package> --features net_main,osmosis-osmosis-usdc_axelar  --profile production_nets_release --target "wasm32-unknown-unknown"
+```
+#### Check the generated WASM code
+First, install the checker:
+```sh
+cargo install cosmwasm-check
+```
+then
+```sh
+cosmwasm-check --available-capabilities "cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate" ../artifacts/*.wasm
+```
+#### List the WASM functions and their number
+
+Install `wasm-tools`:
+```sh
+cargo install wasm-tool
+```
+then
+```sh
+wasm-tools demangle ../artifacts/<name>.wasm | wasm-tools print -o ../artifacts/<name>.wat
+file="../artifacts/<name>.wat"
+for fn_index in $(seq 0 36)
+do
+  fn_signature="type (;${fn_index};) (func"
+  fn_type=$(grep "${fn_signature}" "${file}")
+  num=$(grep "(func (" ${file} | grep "(type ${fn_index})" | wc -l)
+  echo "Fn type ${fn_type} instances = ${num}"
+done
 ```
 
 ### New contracts - genesis
