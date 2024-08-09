@@ -1,18 +1,20 @@
 use serde::Deserialize;
 
-use crate::newtype;
-
 pub(crate) use self::{ibc::Ibc, native::Native};
 
 mod ibc;
 mod native;
 
-newtype::define!(
-    #[derive(Debug, Clone, Deserialize)]
-    #[serde(transparent)]
-    pub(crate) Id(String)
-    as [String, str]
-);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(transparent)]
+pub(crate) struct Id(String);
+
+impl AsRef<str> for Id {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(from = "self::RawWithIcon")]

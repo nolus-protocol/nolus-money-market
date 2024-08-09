@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use sha2::{Digest as _, Sha256};
 
 use crate::{channel, currency};
@@ -41,8 +39,8 @@ impl Builder {
     pub fn add_symbol(self, symbol: &currency::Id) -> Symbol {
         match self.0 {
             Inner::Native => Symbol {
-                path: Borrow::<str>::borrow(symbol).into(),
-                symbol: Borrow::<str>::borrow(symbol).into(),
+                path: symbol.as_ref().into(),
+                symbol: symbol.as_ref().into(),
             },
             Inner::Ibc(ibc_symbol) => ibc_symbol.add_symbol(symbol),
         }
@@ -83,13 +81,13 @@ impl Ibc {
     fn add_channel(&mut self, channel: &channel::Id) {
         self.path.push_str("transfer/");
 
-        self.path.push_str(Borrow::<str>::borrow(channel));
+        self.path.push_str(channel.as_ref());
 
         self.path.push('/');
     }
 
     fn add_symbol(mut self, symbol: &currency::Id) -> Symbol {
-        self.path.push_str(Borrow::<str>::borrow(symbol));
+        self.path.push_str(symbol.as_ref());
 
         let symbol = Self::digest_symbol(&self.path);
 

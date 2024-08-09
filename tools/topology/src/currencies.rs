@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
@@ -21,6 +21,6 @@ impl Currencies {
 
     #[inline]
     pub fn get<'self_>(&'self_ self, currency: &currency::Id) -> Option<&'self_ Currency> {
-        self.0.get(Borrow::<str>::borrow(currency))
+        self.0.get(currency)
     }
 }

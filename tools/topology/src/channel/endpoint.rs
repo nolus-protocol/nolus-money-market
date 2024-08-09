@@ -1,17 +1,17 @@
 use serde::Deserialize;
 
-use crate::network::Id as Network;
+use crate::network;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 pub(crate) struct Endpoint {
-    network: Network,
+    network: network::Id,
     #[serde(rename = "ch")]
     channel_id: super::Id,
 }
 
 impl Endpoint {
     #[inline]
-    pub const fn network(&self) -> &Network {
+    pub const fn network(&self) -> &network::Id {
         &self.network
     }
 

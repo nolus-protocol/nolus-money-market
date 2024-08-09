@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use serde::Deserialize;
 
 pub use self::currency_definition::CurrencyDefinition;
@@ -17,7 +15,6 @@ pub mod error;
 mod host_to_dex;
 mod network;
 mod networks;
-mod newtype;
 mod symbol;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -180,16 +177,10 @@ impl Topology {
 
         self.networks
             .get(ibc.network())
-            .ok_or_else(|| {
-                error::ResolveCurrency::NoSuchNetwork(
-                    Borrow::<str>::borrow(ibc.network()).to_string(),
-                )
-            })
+            .ok_or_else(|| error::ResolveCurrency::NoSuchNetwork(ibc.network().as_ref().into()))
             .and_then(|network| {
                 network.currencies().get(ibc.currency()).ok_or_else(|| {
-                    error::ResolveCurrency::NoSuchCurrency(
-                        Borrow::<str>::borrow(ibc.currency()).to_string(),
-                    )
+                    error::ResolveCurrency::NoSuchCurrency(ibc.currency().as_ref().into())
                 })
             })
     }
@@ -223,15 +214,15 @@ impl Topology {
                     .and_then(|connected_networks| connected_networks.get(remote_network))
                     .ok_or_else(|| {
                         error::ResolveCurrency::NetworksNotConnected(
-                            Borrow::<str>::borrow(source_network).to_string(),
-                            Borrow::<str>::borrow(remote_network).to_string(),
+                            source_network.as_ref().into(),
+                            remote_network.as_ref().into(),
                         )
                     })
                     .map(|&channel_id| bank_symbol.add_channel(channel_id))
             })
             .map(|()| {
                 CurrencyDefinition::new(
-                    Borrow::<str>::borrow(ticker).to_string(),
+                    ticker.as_ref().into(),
                     bank_symbol.add_symbol(native_currency.symbol()),
                     dex_symbol.add_symbol(native_currency.symbol()),
                     native_currency.decimal_digits(),
