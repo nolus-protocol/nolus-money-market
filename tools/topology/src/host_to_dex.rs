@@ -85,7 +85,7 @@ fn indirect_host_to_dex_path<'channels_map>(
     host_network: &network::Id,
     dex_network: &network::Id,
 ) -> Result<Vec<Channel<'channels_map>>, error::CurrencyDefinitions> {
-    let mut path_to_explore = initial_host_to_dex_paths(channels, host_network)?;
+    let mut paths_to_explore = initial_host_to_dex_paths(channels, host_network)?;
 
     let mut set_traversed = {
         let mut traversed_networks = BTreeSet::from([host_network]);
@@ -100,14 +100,14 @@ fn indirect_host_to_dex_path<'channels_map>(
     };
 
     loop {
-        let Some(exploration_path) = path_to_explore.pop_front() else {
+        let Some(exploration_path) = paths_to_explore.pop_front() else {
             break Err(error::CurrencyDefinitions::HostNotConnectedToDex);
         };
 
         if let Some(channels) = explore_path_breadth_first(
             channels,
             dex_network,
-            |discovered_path| path_to_explore.push_back(discovered_path),
+            |discovered_path| paths_to_explore.push_back(discovered_path),
             &mut set_traversed,
             exploration_path,
         ) {
