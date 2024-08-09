@@ -65,13 +65,9 @@ fn direct_host_to_dex_path<'channels_map>(
     })
 }
 
-// type PathsDeque<'network, 'channels_map, 'channels_network, 'channel_id> =
-//     VecDeque<Path<'network, 'channels_map, 'channels_network, 'channel_id>>;
-
 struct Path<'network, 'channels_map, 'channels_network, 'channel_id>
 where
-    'channels_network: 'channels_map + 'network,
-    'channel_id: 'channels_map,
+    'channels_network: 'network,
 {
     pub network: &'network network::Id,
     pub connected_networks:
@@ -168,7 +164,6 @@ fn explore_path_breadth_first<
 ) -> Option<Vec<Channel<'channel_id>>>
 where
     'channels_network: 'network,
-    'channel_id: 'channels_map,
 {
     let mut connected_networks = path
         .connected_networks
