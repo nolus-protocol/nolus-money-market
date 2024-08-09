@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use currency::Definition;
+use currency::Definition as _;
 use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},

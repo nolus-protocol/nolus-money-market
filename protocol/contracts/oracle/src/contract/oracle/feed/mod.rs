@@ -76,21 +76,13 @@ where
         'storage: 'r,
         I: Iterator<Item = SwapLeg<PriceG>> + 'r,
     {
-        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>> = LegCmd::new(
-            FedPrices::new(storage, &self.feeds, at, total_feeders),
-            vec![],
-        );
+        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>> =
+            LegCmd::new(FedPrices::new(storage, &self.feeds, at, total_feeders));
 
         swap_pairs_df
-            .scan(
-                cmd,
-                |cmd: &mut LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>>,
-                 leg: SwapLeg<PriceG>| {
-                    Some(
-                        currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose(),
-                    )
-                },
-            )
+            .scan(cmd, |cmd, leg: SwapLeg<PriceG>| {
+                Some(currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose())
+            })
             .flatten()
     }
 
