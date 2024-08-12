@@ -21,7 +21,7 @@ impl Host {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Currency {
     id: currency::Id,
     native: currency::Native,

@@ -251,7 +251,7 @@ impl Topology {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 struct Raw {
     host_network: HostNetwork,
     networks: Networks,
