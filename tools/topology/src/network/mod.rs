@@ -9,6 +9,9 @@ use crate::currencies::Currencies;
 
 pub(crate) use self::host::Host as HostNetwork;
 
+use self::amm_pool::AmmPool;
+
+mod amm_pool;
 mod host;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
@@ -35,7 +38,7 @@ impl AsRef<str> for Id {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(from = "self::Raw")]
 pub(crate) struct Network {
     currencies: Currencies,
 }
@@ -45,4 +48,19 @@ impl Network {
     pub const fn currencies(&self) -> &Currencies {
         &self.currencies
     }
+}
+
+impl From<Raw> for Network {
+    #[inline]
+    fn from(Raw { currencies, .. }: Raw) -> Self {
+        Self { currencies }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub(crate) struct Raw {
+    currencies: Currencies,
+    #[serde(default, rename = "amm_pools")]
+    _amm_pools: Vec<AmmPool>,
 }
