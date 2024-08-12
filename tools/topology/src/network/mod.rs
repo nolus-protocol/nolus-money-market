@@ -35,6 +35,7 @@ impl AsRef<str> for Id {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Network {
     currencies: Currencies,
 }

@@ -3,6 +3,7 @@ use serde::Deserialize;
 use crate::currency;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Host {
     name: super::Id,
     currency: Currency,

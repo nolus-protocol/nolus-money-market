@@ -3,6 +3,7 @@ use serde::Deserialize;
 use crate::network;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Endpoint {
     network: network::Id,
     #[serde(rename = "ch")]
