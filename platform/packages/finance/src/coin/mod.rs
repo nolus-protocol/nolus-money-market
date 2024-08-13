@@ -230,7 +230,8 @@ where
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>;
+        C: Currency + MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<VisitedG>;
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>

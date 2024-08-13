@@ -36,7 +36,8 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
+        C: Currency + MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<VisitedG>,
     {
         self.2.on::<C>(self.0.as_specific::<C>())
     }

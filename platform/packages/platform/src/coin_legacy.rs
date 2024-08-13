@@ -141,7 +141,8 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG> + Definition,
+        C: Currency + MemberOf<Self::VisitorG> + Definition,
+        C::Group: MemberOf<VisitedG>,
     {
         self.2.on::<C>(from_cosmwasm_internal::<C, C>(self.0))
     }
