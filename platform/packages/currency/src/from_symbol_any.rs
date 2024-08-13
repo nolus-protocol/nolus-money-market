@@ -23,7 +23,8 @@ where
 
     fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG> + Definition;
+        C: Currency + MemberOf<VisitedG> + MemberOf<Self::VisitorG> + Definition,
+        C::Group: MemberOf<VisitedG>;
 }
 pub trait AnyVisitorPair {
     type VisitedG1: Group;

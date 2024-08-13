@@ -78,6 +78,7 @@ pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVis
 where
     M: Matcher<Group = C::Group>,
     C: Currency + MemberOf<TopG> + MemberOf<V::VisitorG> + Definition,
+    C::Group: MemberOf<TopG>,
     V: AnyVisitor<TopG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
