@@ -16,21 +16,21 @@ use crate::{
 /// - LP rewards
 /// - Relayers' tips
 pub struct NlsPlatform(CurrencyDTO<Native>);
-const NLS_PLATFORM_DEFINITION: Definition = Definition::new(
-    "NLS",
-    "unls",
-    // TODO Define trait PlatformCurrency as a super trait of Currency and
-    // merge NlsPlatform and Nls
-    "N/A_N/A_N/A",
-    6,
-);
-const NLS_PLATFORM: NlsPlatform = NlsPlatform(CurrencyDTO::new(&NLS_PLATFORM_DEFINITION));
 
 impl CurrencyDef for NlsPlatform {
     type Group = Native;
 
     fn definition() -> &'static Self {
-        &NLS_PLATFORM
+        const INSTANCE: &NlsPlatform = &NlsPlatform(CurrencyDTO::new(&Definition::new(
+            "NLS",
+            "unls",
+            // TODO Define trait PlatformCurrency as a super trait of Currency and
+            // merge NlsPlatform and Nls
+            "N/A_N/A_N/A",
+            6,
+        )));
+
+        INSTANCE
     }
 
     fn dto(&self) -> &CurrencyDTO<Self::Group> {
@@ -62,7 +62,11 @@ impl Group for Native {
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, NlsPlatform, Self, _>(&NLS_PLATFORM, matcher, visitor)
+        crate::maybe_visit_member::<_, NlsPlatform, Self, _>(
+            NlsPlatform::definition(),
+            matcher,
+            visitor,
+        )
     }
 
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
@@ -72,7 +76,11 @@ impl Group for Native {
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(&NLS_PLATFORM, matcher, visitor)
+        crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(
+            NlsPlatform::definition(),
+            matcher,
+            visitor,
+        )
     }
 }
 
