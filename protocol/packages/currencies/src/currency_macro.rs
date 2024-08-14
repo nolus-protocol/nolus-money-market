@@ -8,8 +8,9 @@ pub use currency::{CurrencyDTO, CurrencyDef, Definition, SymbolStatic};
 macro_rules! define_currency {
     (
         $ident:ident,
-        $ticker:path,
-        $group:ident,
+        $bank_symbol: literal,
+        $dex_symbol: literal,
+        $group:ty,
         $decimal_digits:literal $(,)?
     ) => {
         #[derive(
@@ -27,26 +28,35 @@ macro_rules! define_currency {
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
         pub struct $ident($crate::currency_macro::CurrencyDTO<$group>);
 
-        const $ticker_DEFINITION: Definition = Definition::new(
-            ::core::stringify!($ticker),
-            $ticker.bank,
-            $ticker.dex,
-            $decimal_digits,
-        );
-
-        const $ticker: $ident = $ident($crate::currency_macro::CurrencyDTO::new(&$ticker_DEFINITION))
-
         impl $crate::currency_macro::CurrencyDef for $ident {
             type Group = $group;
 
             fn definition() -> &'static Self {
-                &$ticker
+                const INSTANCE: &$ident = &$ident(
+                    $crate::currency_macro::CurrencyDTO::new(
+                        &Definition::new(
+                            ::core::stringify!($ticker),
+                            $bank_symbol,
+                            $dex_symbol,
+                            $decimal_digits,
+                        ),
+                    ),
+                );
+
+                INSTANCE
             }
 
             fn dto(&self) -> &CurrencyDTO<Self::Group> {
                 &self.0
             }
         }
-
     };
+}
+
+define_currency! {
+    Nls,
+    "unls",
+    "ibc/unls",
+    crate::lease::LeaseGroup,
+    6,
 }
