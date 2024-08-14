@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use prost::DecodeError;
 use thiserror::Error;
 
-use currency::{Currency, SymbolStatic};
+use currency::{CurrencyDef, SymbolStatic};
 use sdk::cosmwasm_std::{Addr, Api, StdError};
 
 use crate::contract::CodeId;
@@ -69,18 +69,18 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn no_funds<C>() -> Self
+    pub fn no_funds<C>(def: &C) -> Self
     where
-        C: Currency,
+        C: CurrencyDef,
     {
-        Self::NoFunds(currency::to_string::<C>())
+        Self::NoFunds(currency::to_string::<C>(def))
     }
 
-    pub fn unexpected_funds<C>() -> Self
+    pub fn unexpected_funds<C>(def: &C) -> Self
     where
-        C: Currency,
+        C: CurrencyDef,
     {
-        Self::UnexpectedFunds(currency::to_string::<C>())
+        Self::UnexpectedFunds(currency::to_string::<C>(def))
     }
 
     pub fn unexpected_code<A>(exp_code_id: CodeId, instance: A) -> Self

@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::Amount,
     price::{self, Price},
@@ -57,7 +57,8 @@ impl<CurrencyG, G, QuoteC, QuoteG> Oracle<CurrencyG> for DummyOracle<G, QuoteC, 
 where
     CurrencyG: Group + MemberOf<G>,
     G: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type QuoteC = QuoteC;
@@ -65,14 +66,15 @@ where
 
     fn price_of<C>(&self) -> Result<Price<C, QuoteC>>
     where
-        C: Currency + MemberOf<CurrencyG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<CurrencyG>,
     {
         self.price
             .map(|price| price::total_of(1.into()).is(price.into()))
             .ok_or_else(|| {
                 error::failed_to_fetch_price(
-                    currency::dto::<C, CurrencyG>(),
-                    currency::dto::<QuoteC, QuoteG>(),
+                    C::definition().dto(),
+                    QuoteC::definition().dto(),
                     StdError::GenericErr {
                         msg: "Test failing Oracle::price_of()".into(),
                     },

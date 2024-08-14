@@ -11,7 +11,7 @@ use std::{
 
 use ::serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::zero::Zero;
@@ -28,8 +28,11 @@ pub type NonZeroAmount = NonZeroU128;
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C> {
     amount: Amount,
+    // TODO rename to currency
     #[serde(skip)]
     ticker: PhantomData<C>,
+    // TODO
+    // def: &'static Definition
 }
 
 impl<C> Coin<C> {
@@ -230,7 +233,7 @@ where
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef + MemberOf<Self::VisitorG>,
         C::Group: MemberOf<VisitedG>;
 }
 

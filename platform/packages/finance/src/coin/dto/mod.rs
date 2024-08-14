@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{never::Never, Currency, CurrencyDTO, Group, MemberOf};
+use currency::{never::Never, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 use transformer::CoinTransformerAny;
 
@@ -82,18 +82,27 @@ where
     /// Intended in scenarios when the currency is known in advance.
     pub fn as_specific<C>(&self) -> Coin<C>
     where
-        C: Currency + MemberOf<G>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
     {
-        assert!(self.of_currency::<C>().is_ok());
+        debug_assert!(self.of_currency::<C>().is_ok());
 
         Coin::new(self.amount)
     }
 
+    pub fn of_currency_dto<SubG>(&self, dto: &CurrencyDTO<SubG>) -> Result<()>
+    where
+        SubG: Group + MemberOf<G>,
+    {
+        self.currency.of_currency(dto).map_err(Into::into)
+    }
+
     pub fn of_currency<C>(&self) -> Result<()>
     where
-        C: Currency + MemberOf<G>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
     {
-        self.currency.of_currency::<C>().map_err(Into::into)
+        self.of_currency_dto(C::definition().dto())
     }
 }
 
@@ -109,7 +118,8 @@ where
 impl<G, C> TryFrom<CoinDTO<G>> for Coin<C>
 where
     G: Group,
-    C: Currency + MemberOf<G>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
 {
     type Error = Error;
 
@@ -121,10 +131,11 @@ where
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: Currency + MemberOf<G>,
+    C: CurrencyDef, // consider turning it into Currency not CurrencyDef to facilitate Rust Optimizer
+    C::Group: MemberOf<G>,
 {
     fn from(coin: Coin<C>) -> Self {
-        Self::new(coin.amount, currency::dto::<C, G>())
+        Self::new(coin.amount, C::definition().dto().into_super_group::<G>())
     }
 }
 
@@ -163,7 +174,8 @@ where
 
     fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         Ok(coin.into())
     }
@@ -175,44 +187,42 @@ mod test {
 
     use currency::{
         test::{
-            SubGroup, SubGroupTestC1, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
-            SuperGroupTestC2,
+            SubGroup, SubGroupTestC10, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
+            SuperGroupTestC2, TESTC1_DEFINITION, TESTC2_DEFINITION,
         },
-        AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult, MemberOf,
-        SymbolStatic,
+        AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
+        MemberOf,
     };
     use sdk::cosmwasm_std;
 
     use crate::coin::{Amount, Coin, CoinDTO};
 
-    #[derive(
-        Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize,
-    )]
-    struct MyTestCurrency;
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
+    pub struct MyTestCurrency(CurrencyDTO<MyTestGroup>);
+    pub const MY_TESTC_DEFINITION: Definition = Definition::new("qwerty", "ibc/1", "ibc/2", 6);
+    pub const MY_TESTC: MyTestCurrency = MyTestCurrency(CurrencyDTO::new(&MY_TESTC_DEFINITION));
 
-    impl Currency for MyTestCurrency {
+    impl CurrencyDef for MyTestCurrency {
         type Group = MyTestGroup;
-    }
 
-    impl Definition for MyTestCurrency {
-        const TICKER: SymbolStatic = "qwerty";
+        fn definition() -> &'static Self {
+            &MY_TESTC
+        }
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/1";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/2";
-
-        const DECIMAL_DIGITS: u8 = 0;
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
     #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-    struct MyTestGroup {}
+    pub struct MyTestGroup {}
 
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 
         fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
-            M: Matcher<Group = Self>,
+            M: Matcher,
             V: AnyVisitor<Self, VisitorG = Self>,
         {
             Self::maybe_visit_member(matcher, visitor)
@@ -223,7 +233,7 @@ mod test {
             _visitor: V,
         ) -> MaybeAnyVisitResult<Self, V>
         where
-            M: Matcher<Group = Self>,
+            M: Matcher,
             V: AnyVisitor<Self, VisitorG = TopG>,
             Self: MemberOf<TopG>,
             TopG: Group,
@@ -233,13 +243,13 @@ mod test {
 
         fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
         where
-            M: Matcher<Group = Self>,
+            M: Matcher,
             V: AnyVisitor<TopG, VisitorG = TopG>,
             Self: MemberOf<TopG>,
             TopG: Group,
         {
-            assert!(matcher.r#match::<MyTestCurrency>());
-            Ok(visitor.on::<MyTestCurrency>())
+            assert!(matcher.r#match(&MY_TESTC_DEFINITION));
+            Ok(visitor.on::<MyTestCurrency>(&MY_TESTC))
         }
     }
     impl MemberOf<Self> for MyTestGroup {}
@@ -270,24 +280,21 @@ mod test {
         let amount = 20;
         type TheCurrency = SuperGroupTestC1;
         type TheCurrencyDTO = SuperGroupCurrency;
-        type TheGroup = <TheCurrency as Currency>::Group;
+        type TheGroup = <TheCurrency as CurrencyDef>::Group;
         assert_eq!(
             CoinDTO::<TheGroup>::from(Coin::<TheCurrency>::from(amount)),
-            super::from_amount_ticker::<TheGroup>(
-                amount,
-                TheCurrencyDTO::from_currency_type::<TheCurrency>()
-            )
+            super::from_amount_ticker::<TheGroup>(amount, TheCurrencyDTO::new(&TESTC1_DEFINITION))
         );
     }
 
     #[test]
     fn display() {
         assert_eq!(
-            format!("25 {}", SuperGroupTestC1::TICKER),
+            format!("25 {}", TESTC1_DEFINITION.ticker),
             test_coin::<SuperGroupTestC1, SuperGroup>(25).to_string()
         );
         assert_eq!(
-            format!("0 {}", SuperGroupTestC2::TICKER),
+            format!("0 {}", TESTC2_DEFINITION.ticker),
             test_coin::<SuperGroupTestC2, SuperGroup>(0).to_string()
         );
     }
@@ -311,7 +318,7 @@ mod test {
 
     #[test]
     fn deser_parent_group() {
-        type CoinCurrency = SubGroupTestC1;
+        type CoinCurrency = SubGroupTestC10;
         type DirectGroup = SubGroup;
         type ParentGroup = SuperGroup;
 
@@ -335,7 +342,8 @@ mod test {
 
     fn test_coin<C, G>(amount: Amount) -> CoinDTO<G>
     where
-        C: Currency + MemberOf<G>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
         G: Group,
     {
         CoinDTO::<G>::from(Coin::<C>::new(amount))

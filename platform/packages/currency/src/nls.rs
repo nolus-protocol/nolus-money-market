@@ -3,34 +3,39 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    group::MemberOf, AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult,
-    SymbolStatic,
+    group::MemberOf, AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher,
+    MaybeAnyVisitResult,
 };
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, JsonSchema,
 )]
 /// A 'local'-only 'dex-independent' representation of Nls.
 ///
 /// Intended to be used *only* until the TODO below gets done, and *only* in dex-independent usecases:
 /// - LP rewards
 /// - Relayers' tips
-pub struct NlsPlatform;
-
-impl Currency for NlsPlatform {
-    type Group = Native;
-}
-
-impl Definition for NlsPlatform {
-    const TICKER: SymbolStatic = "NLS";
-
-    const BANK_SYMBOL: SymbolStatic = "unls";
-
+pub struct NlsPlatform(CurrencyDTO<Native>);
+const NLS_PLATFORM_DEFINITION: Definition = Definition::new(
+    "NLS",
+    "unls",
     // TODO Define trait PlatformCurrency as a super trait of Currency and
     // merge NlsPlatform and Nls
-    const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
+    "N/A_N/A_N/A",
+    6,
+);
+const NLS_PLATFORM: NlsPlatform = NlsPlatform(CurrencyDTO::new(&NLS_PLATFORM_DEFINITION));
 
-    const DECIMAL_DIGITS: u8 = 6;
+impl CurrencyDef for NlsPlatform {
+    type Group = Native;
+
+    fn definition() -> &'static Self {
+        &NLS_PLATFORM
+    }
+
+    fn dto(&self) -> &CurrencyDTO<Self::Group> {
+        &self.0
+    }
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Ord, PartialOrd, PartialEq, Eq)]
@@ -41,7 +46,7 @@ impl Group for Native {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member::<_, _, Self>(matcher, visitor)
@@ -52,22 +57,22 @@ impl Group for Native {
         visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, NlsPlatform, Self, _>(matcher, visitor)
+        crate::maybe_visit_member::<_, NlsPlatform, Self, _>(&NLS_PLATFORM, matcher, visitor)
     }
 
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(matcher, visitor)
+        crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(&NLS_PLATFORM, matcher, visitor)
     }
 }
 

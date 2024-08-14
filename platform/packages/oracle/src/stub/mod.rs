@@ -2,7 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -19,7 +19,8 @@ pub fn new_unchecked_stable_quote_stub<'a, G, StableC, StableG>(
 ) -> impl Oracle<G, QuoteC = StableC, QuoteG = StableG> + AsRef<OracleRef<StableC, StableG>> + 'a
 where
     G: Group + 'a,
-    StableC: Currency + MemberOf<StableG>,
+    StableC: CurrencyDef,
+    StableC::Group: MemberOf<StableG>,
     StableG: Group + 'a,
 {
     use self::impl_::StablePriceRequest;
@@ -39,7 +40,8 @@ where
 
     fn price_of<C>(&self) -> Result<Price<C, Self::QuoteC>>
     where
-        C: Currency + MemberOf<G>;
+        C: CurrencyDef,
+        C::Group: MemberOf<G>;
 }
 
 pub trait WithOracle<OracleBase, OracleBaseG>
@@ -76,7 +78,8 @@ where
 
 impl<QuoteC, QuoteG> OracleRef<QuoteC, QuoteG>
 where
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     pub fn try_from_base(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
@@ -106,7 +109,7 @@ where
             .map_err(Error::StubConfigQuery)
             .and_then(|quote_c: CurrencyDTO<QuoteG>| {
                 quote_c
-                    .of_currency::<QuoteC>()
+                    .of_currency(QuoteC::definition().dto())
                     .map_err(Error::StubConfigInvalid)
             })
             .map(|()| Self::new_internal(addr))

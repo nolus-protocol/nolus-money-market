@@ -1,4 +1,4 @@
-use currency::{Currency, CurrencyDTO, Group};
+use currency::{CurrencyDef, Group};
 use serde::Serialize;
 
 use crate::msg::{BaseCurrencyQueryMsg, StableCurrencyQueryMsg};
@@ -10,7 +10,7 @@ pub trait RequestBuilder {
 
     fn price<C>() -> impl Serialize
     where
-        C: Currency;
+        C: CurrencyDef;
 }
 
 pub struct BasePriceRequest {}
@@ -24,10 +24,10 @@ impl RequestBuilder for BasePriceRequest {
 
     fn price<C>() -> impl Serialize
     where
-        C: Currency,
+        C: CurrencyDef,
     {
         BaseCurrencyQueryMsg::BasePrice {
-            currency: CurrencyDTO::<C::Group>::from_currency_type::<C>(),
+            currency: *C::definition().dto(),
         }
     }
 }
@@ -43,10 +43,10 @@ impl RequestBuilder for StablePriceRequest {
 
     fn price<C>() -> impl Serialize
     where
-        C: Currency,
+        C: CurrencyDef,
     {
         StableCurrencyQueryMsg::StablePrice {
-            currency: CurrencyDTO::<C::Group>::from_currency_type::<C>(),
+            currency: *C::definition().dto(),
         }
     }
 }

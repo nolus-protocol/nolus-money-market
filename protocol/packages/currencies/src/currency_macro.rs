@@ -2,7 +2,7 @@ pub use serde::{Deserialize, Serialize};
 
 pub use sdk::schemars::JsonSchema;
 
-pub use currency::{Currency, Definition, SymbolStatic};
+pub use currency::{CurrencyDTO, CurrencyDef, Definition, SymbolStatic};
 
 #[macro_export]
 macro_rules! define_currency {
@@ -20,26 +20,33 @@ macro_rules! define_currency {
             Eq,
             PartialOrd,
             Ord,
-            Default,
             $crate::currency_macro::Serialize,
             $crate::currency_macro::Deserialize,
             $crate::currency_macro::JsonSchema,
         )]
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
-        pub struct $ident {}
+        pub struct $ident($crate::currency_macro::CurrencyDTO<$group>);
 
-        impl $crate::currency_macro::Currency for $ident {
+        const $ticker_DEFINITION: Definition = Definition::new(
+            ::core::stringify!($ticker),
+            $ticker.bank,
+            $ticker.dex,
+            $decimal_digits,
+        );
+
+        const $ticker: $ident = $ident($crate::currency_macro::CurrencyDTO::new(&$ticker_DEFINITION))
+
+        impl $crate::currency_macro::CurrencyDef for $ident {
             type Group = $group;
+
+            fn definition() -> &'static Self {
+                &$ticker
+            }
+
+            fn dto(&self) -> &CurrencyDTO<Self::Group> {
+                &self.0
+            }
         }
 
-        impl $crate::currency_macro::Definition for $ident {
-            const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
-
-            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
-
-            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
-
-            const DECIMAL_DIGITS: u8 = $decimal_digits;
-        }
     };
 }

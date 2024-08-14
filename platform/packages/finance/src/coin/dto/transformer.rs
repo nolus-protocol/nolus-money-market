@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Group, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, CurrencyDef, Group, MemberOf};
 
 use crate::coin::WithCoin;
 
@@ -34,9 +34,9 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, _def: &C) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef + MemberOf<Self::VisitorG>,
         C::Group: MemberOf<VisitedG>,
     {
         self.2.on::<C>(self.0.as_specific::<C>())

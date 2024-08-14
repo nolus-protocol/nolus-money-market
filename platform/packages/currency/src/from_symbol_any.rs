@@ -1,9 +1,9 @@
 use crate::{
-    error::Error, group::MemberOf, matcher, CurrencyDTO, Definition, MaybeAnyVisitResult, Symbol,
+    error::Error, group::MemberOf, matcher, CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol,
     SymbolSlice,
 };
 
-use super::{Currency, Group};
+use super::Group;
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
@@ -21,9 +21,9 @@ where
     type Output;
     type Error;
 
-    fn on<C>(self) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG> + Definition,
+        C: CurrencyDef + MemberOf<Self::VisitorG>,
         C::Group: MemberOf<VisitedG>;
 }
 pub trait AnyVisitorPair {
@@ -33,10 +33,12 @@ pub trait AnyVisitorPair {
     type Output;
     type Error;
 
-    fn on<C1, C2>(self) -> AnyVisitorPairResult<Self>
+    fn on<C1, C2>(self, def1: &C1, def2: &C2) -> AnyVisitorPairResult<Self>
     where
-        C1: Currency + MemberOf<Self::VisitedG1>,
-        C2: Currency + MemberOf<Self::VisitedG2>;
+        C1: CurrencyDef + MemberOf<Self::VisitedG1>,
+        C1::Group: MemberOf<Self::VisitedG1>,
+        C2: CurrencyDef + MemberOf<Self::VisitedG2>,
+        C2::Group: MemberOf<Self::VisitedG2>;
 }
 
 pub trait GroupVisit: Symbol {
@@ -99,7 +101,7 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use crate::{Currency, CurrencyDTO, Group, MemberOf};
+    use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult};
 
@@ -136,30 +138,32 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C1>(self) -> AnyVisitorResult<G1, Self>
+        fn on<C1>(self, def1: &C1) -> AnyVisitorResult<G1, Self>
         where
-            C1: Currency + MemberOf<G1>,
+            C1: CurrencyDef,
+            C1::Group: MemberOf<G1>,
         {
             self.currency2.into_currency_type(SecondTickerVisitor {
-                currency1: PhantomData::<C1>,
+                def1,
                 group2: PhantomData::<G2>,
                 visitor: self.visitor,
             })
         }
     }
 
-    struct SecondTickerVisitor<C1, G2, V>
+    struct SecondTickerVisitor<'def1, C1, G2, V>
     where
-        C1: Currency,
+        C1: CurrencyDef,
         V: AnyVisitorPair,
     {
-        currency1: PhantomData<C1>,
+        def1: &'def1 C1,
         group2: PhantomData<G2>,
         visitor: V,
     }
-    impl<C1, G2, V> AnyVisitor<G2> for SecondTickerVisitor<C1, G2, V>
+    impl<'def1, C1, G2, V> AnyVisitor<G2> for SecondTickerVisitor<'def1, C1, G2, V>
     where
-        C1: Currency + MemberOf<V::VisitedG1>,
+        C1: CurrencyDef,
+        C1::Group: MemberOf<V::VisitedG1>,
         G2: Group,
         V: AnyVisitorPair<VisitedG2 = G2>,
     {
@@ -168,11 +172,12 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C2>(self) -> AnyVisitorResult<G2, Self>
+        fn on<C2>(self, def2: &C2) -> AnyVisitorResult<G2, Self>
         where
-            C2: Currency + MemberOf<Self::VisitorG>,
+            C2: CurrencyDef,
+            C2::Group: MemberOf<Self::VisitorG>,
         {
-            self.visitor.on::<C1, C2>()
+            self.visitor.on::<C1, C2>(self.def1, def2)
         }
     }
 }
@@ -183,29 +188,29 @@ mod test {
         error::Error,
         from_symbol_any::GroupVisit,
         test::{
-            Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC1, SuperGroup,
-            SuperGroupTestC1, SuperGroupTestC2,
+            Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SuperGroup, SuperGroupTestC2,
+            TESTC1, TESTC10, TESTC10_DEFINITION, TESTC1_DEFINITION, TESTC2, TESTC2_DEFINITION,
         },
-        Currency, CurrencyDTO, Definition, Group, MemberOf, Tickers,
+        CurrencyDef, Group, MemberOf, Tickers,
     };
 
     #[test]
     fn visit_any() {
-        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
+        let v_usdc = Expect::<_, SuperGroup, SuperGroup>::new(&TESTC1);
         assert_eq!(
             Ok(true),
-            Tickers::<SuperGroup>::visit_any(SuperGroupTestC1::TICKER, v_usdc.clone())
+            Tickers::<SuperGroup>::visit_any(TESTC1_DEFINITION.ticker, v_usdc.clone())
         );
         assert_eq!(
             Ok(Ok(true)),
-            Tickers::<SuperGroup>::maybe_visit_any(SuperGroupTestC1::TICKER, v_usdc)
+            Tickers::<SuperGroup>::maybe_visit_any(TESTC1_DEFINITION.ticker, v_usdc)
         );
 
-        let v_nls = Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::default();
+        let v_nls = Expect::<_, SuperGroup, SuperGroup>::new(&TESTC2);
         assert_eq!(
             Ok(true),
-            Tickers::<<SuperGroupTestC2 as Currency>::Group>::visit_any(
-                SuperGroupTestC2::TICKER,
+            Tickers::<<SuperGroupTestC2 as CurrencyDef>::Group>::visit_any(
+                TESTC2_DEFINITION.ticker,
                 v_nls
             )
         );
@@ -215,16 +220,16 @@ mod test {
                 _,
                 Tickers::<SubGroup>,
                 SuperGroup,
-            >(SubGroupTestC1::BANK_SYMBOL)),
+            >(TESTC10_DEFINITION.bank_symbol)),
             Tickers::<SuperGroup>::visit_any(
-                SubGroupTestC1::BANK_SYMBOL,
+                TESTC10_DEFINITION.bank_symbol,
                 ExpectUnknownCurrency::<SuperGroup>::new()
             )
         );
         let v = ExpectUnknownCurrency::<SuperGroup>::new();
         assert_eq!(
             Err(v.clone()),
-            Tickers::<SuperGroup>::maybe_visit_any(SubGroupTestC1::BANK_SYMBOL, v)
+            Tickers::<SuperGroup>::maybe_visit_any(TESTC10_DEFINITION.bank_symbol, v)
         );
     }
 
@@ -233,26 +238,26 @@ mod test {
         assert_eq!(
             Ok(true),
             Tickers::<SuperGroup>::visit_any(
-                SubGroupTestC1::TICKER,
-                Expect::<SubGroupTestC1, SuperGroup, SuperGroup>::default()
+                TESTC10_DEFINITION.ticker,
+                Expect::<_, SuperGroup, SuperGroup>::new(&TESTC10)
             )
         );
 
         assert_eq!(
             Ok(true),
             Tickers::<SubGroup>::visit_member_any(
-                SubGroupTestC1::TICKER,
-                Expect::<SubGroupTestC1, SubGroup, SuperGroup>::default()
+                TESTC10_DEFINITION.ticker,
+                Expect::<_, SubGroup, SuperGroup>::new(&TESTC10)
             )
         );
     }
 
     #[test]
     fn visit_any_not_in_group() {
-        let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::default();
+        let v_usdc = Expect::<_, SuperGroup, SuperGroup>::new(&TESTC1);
         assert_eq!(
             Ok(false),
-            Tickers::<SuperGroup>::visit_any(SubGroupTestC1::TICKER, v_usdc)
+            Tickers::<SuperGroup>::visit_any(TESTC10_DEFINITION.ticker, v_usdc)
         );
 
         let v_usdc = ExpectUnknownCurrency::<SubGroup>::new();
@@ -261,8 +266,8 @@ mod test {
                 _,
                 Tickers::<SuperGroup>,
                 SubGroup,
-            >(SuperGroupTestC1::TICKER)),
-            Tickers::<SubGroup>::visit_any(SuperGroupTestC1::TICKER, v_usdc)
+            >(TESTC1_DEFINITION.ticker)),
+            Tickers::<SubGroup>::visit_any(TESTC1_DEFINITION.ticker, v_usdc)
         );
     }
 
@@ -282,28 +287,30 @@ mod test {
 
     #[test]
     fn visit_any_currencies() {
-        visit_any_currencies_ok::<SuperGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
-        visit_any_currencies_ok::<SuperGroup, SuperGroup, SuperGroupTestC2, SuperGroupTestC2>();
-        visit_any_currencies_ok::<SubGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC1>();
-        visit_any_currencies_ok::<SuperGroup, SubGroup, SuperGroupTestC2, SubGroupTestC1>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroup, _, _>(&TESTC1, &TESTC2);
+        visit_any_currencies_ok::<SuperGroup, SuperGroup, _, _>(&TESTC2, &TESTC2);
+        visit_any_currencies_ok::<SubGroup, SuperGroup, _, _>(&TESTC10, &TESTC1);
+        visit_any_currencies_ok::<SuperGroup, SubGroup, _, _>(&TESTC2, &TESTC10);
 
-        visit_any_currencies_ok::<SuperGroup, SuperGroup, SubGroupTestC1, SuperGroupTestC2>();
-        visit_any_currencies_ok::<SuperGroup, SuperGroup, SubGroupTestC1, SubGroupTestC1>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroup, _, _>(&TESTC10, &TESTC2);
+        visit_any_currencies_ok::<SuperGroup, SuperGroup, _, _>(&TESTC10, &TESTC10);
     }
 
-    fn visit_any_currencies_ok<G1, G2, C1, C2>()
+    fn visit_any_currencies_ok<VisitedG1, VisitedG2, CDef1, CDef2>(def1: &CDef1, def2: &CDef2)
     where
-        G1: Group,
-        G2: Group,
-        C1: Currency + MemberOf<G1>,
-        C2: Currency + MemberOf<G2>,
+        VisitedG1: Group,
+        VisitedG2: Group,
+        CDef1: CurrencyDef,
+        CDef1::Group: MemberOf<VisitedG1>,
+        CDef2: CurrencyDef,
+        CDef2::Group: MemberOf<VisitedG2>,
     {
-        let v_c1_c2 = ExpectPair::<C1, G1, C2, G2>::default();
+        let v_c1_c2 = ExpectPair::<VisitedG1, VisitedG2, _, _>::new(def1.dto(), def2.dto());
         assert_eq!(
             Ok(true),
-            super::visit_any_on_currencies::<G1, G2, _>(
-                CurrencyDTO::<G1>::from_currency_type::<C1>(),
-                CurrencyDTO::<G2>::from_currency_type::<C2>(),
+            super::visit_any_on_currencies::<VisitedG1, VisitedG2, _>(
+                def1.dto().into_super_group::<VisitedG1>(),
+                def2.dto().into_super_group::<VisitedG2>(),
                 v_c1_c2
             )
         );

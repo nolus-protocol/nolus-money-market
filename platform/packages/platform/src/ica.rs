@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
+use currency::CurrencyDef;
 use finance::{coin::Coin, duration::Duration};
 use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
 
@@ -77,7 +77,7 @@ pub fn submit_transaction<Conn, M, C>(
 where
     Conn: Into<String>,
     M: Into<String>,
-    C: Currency,
+    C: CurrencyDef,
 {
     let mut batch = Batch::default();
 

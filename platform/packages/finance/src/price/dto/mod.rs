@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -98,16 +98,20 @@ where
     /// Intended in scenarios when the currencies are known in advance.
     fn as_specific<C, QuoteC>(&self) -> Price<C, QuoteC>
     where
-        C: Currency + MemberOf<G>,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
     {
         super::total_of(self.amount.as_specific()).is(self.amount_quote.as_specific())
     }
 
     fn of_currencies<C, QuoteC>(&self) -> Result<()>
     where
-        C: Currency + MemberOf<G>,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
     {
         self.amount
             .of_currency::<C>()
@@ -120,8 +124,10 @@ impl<G, QuoteG, C, QuoteC> From<Price<C, QuoteC>> for PriceDTO<G, QuoteG>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency + MemberOf<G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
         Self::new_unchecked(price.amount.into(), price.amount_quote.into())
@@ -132,8 +138,10 @@ impl<G, QuoteG, C, QuoteC> TryFrom<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency + MemberOf<G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
 {
     type Error = Error;
 
@@ -146,8 +154,10 @@ impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
     QuoteG: Group,
-    C: Currency + MemberOf<G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
 {
     type Error = Error;
 
@@ -186,8 +196,11 @@ where
 #[cfg(test)]
 mod test_invariant {
 
-    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
-    use currency::{Currency, Definition, Group, MemberOf};
+    use currency::test::{
+        SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, TESTC1_DEFINITION,
+        TESTC2_DEFINITION,
+    };
+    use currency::{CurrencyDef, Group, MemberOf};
     use sdk::cosmwasm_std::{from_json, StdError as CWError, StdResult as CWResult};
 
     use crate::{
@@ -214,8 +227,7 @@ mod test_invariant {
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::TICKER,
-            SuperGroupTestC2::TICKER
+            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
         );
         assert_load_err(load(&json.into_bytes()), "not be zero");
     }
@@ -235,8 +247,7 @@ mod test_invariant {
     fn quote_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::TICKER,
-            SuperGroupTestC2::TICKER
+            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
         );
         assert_load_err(load(&json.into_bytes()), "not be zero");
     }
@@ -256,8 +267,7 @@ mod test_invariant {
     fn currencies_match_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::TICKER,
-            SuperGroupTestC1::TICKER
+            TESTC1_DEFINITION.ticker, TESTC1_DEFINITION.ticker
         );
         assert_load_err(
             load(&json.into_bytes()),
@@ -281,8 +291,7 @@ mod test_invariant {
     fn currencies_match_ok_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "4", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::TICKER,
-            SuperGroupTestC1::TICKER
+            TESTC1_DEFINITION.ticker, TESTC1_DEFINITION.ticker
         );
         assert_eq!(
             load(&json.into_bytes()).unwrap().base(),
@@ -294,16 +303,18 @@ mod test_invariant {
     fn group_mismatch_json() {
         let r = load_with_groups::<TC, SubGroup>(&format!(
             r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::TICKER,
-            SuperGroupTestC2::TICKER
+            TESTC1_DEFINITION.ticker,
+            TESTC2_DEFINITION.ticker
         ).into_bytes());
         assert_load_err(r, "pretending to be ticker of a currency pertaining to");
     }
 
     fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>) -> Result<PriceDTO<TC, TC>>
     where
-        C: Currency + MemberOf<TC>,
-        QuoteC: Currency + MemberOf<TC>,
+        C: CurrencyDef,
+        C::Group: MemberOf<TC>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<TC>,
     {
         PriceDTO::<TC, TC>::try_new(base.into(), quote.into())
     }

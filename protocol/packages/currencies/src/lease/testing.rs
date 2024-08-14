@@ -69,8 +69,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
-
     use crate::{
         lease::LeaseGroup,
         lpn::Lpn,

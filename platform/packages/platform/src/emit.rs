@@ -1,4 +1,4 @@
-use currency::{Currency, CurrencyDTO, Definition, Group};
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     percent::Percent,
@@ -44,9 +44,9 @@ where
     fn emit_currency<K, C>(self, event_key: K) -> Self
     where
         K: Into<String>,
-        C: Definition,
+        C: CurrencyDef,
     {
-        self.emit(event_key, C::TICKER)
+        self.emit(event_key, C::definition().dto().definition().ticker)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
@@ -69,7 +69,7 @@ where
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
     where
         K: Into<String>,
-        C: Currency,
+        C: CurrencyDef,
     {
         self.emit_coin_dto(event_key, &CoinDTO::<C::Group>::from(coin))
     }

@@ -52,7 +52,7 @@ pub fn from_dex_symbol<G>(symbol: &str) -> dex::swap::Result<CurrencyDTO<G>>
 where
     G: Group,
 {
-    CurrencyDTO::<G>::from_symbol::<DexSymbols<G>>(symbol).map_err(Into::into)
+    CurrencyDTO::<G>::from_symbol_testing::<DexSymbols<G>>(symbol).map_err(Into::into)
 }
 
 #[cold]

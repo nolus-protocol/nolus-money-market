@@ -324,7 +324,7 @@ pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
 mod test {
     use std::ops::{Add, AddAssign, Mul};
 
-    use currency::test::{SubGroupTestC1, SuperGroupTestC1, SuperGroupTestC2};
+    use currency::test::{SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2};
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -333,7 +333,7 @@ mod test {
         ratio::Rational,
     };
 
-    type QuoteQuoteCoin = CoinT<SubGroupTestC1>;
+    type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
     type QuoteCoin = CoinT<SuperGroupTestC1>;
     type Coin = CoinT<SuperGroupTestC2>;
 

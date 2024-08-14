@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::Currency;
+use crate::CurrencyDef;
 
 use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 
@@ -10,7 +10,7 @@ pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
     // Visit this group directly by a visitor
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>;
 
     // Visit this group with a super-group visitor
@@ -19,7 +19,7 @@ pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
         visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group;
@@ -27,7 +27,7 @@ pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
     // Visit this group since it is a member, or a sub-group, of another that is being visited
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group;
@@ -43,7 +43,7 @@ where
 
 impl<G, C> MemberOf<G> for C
 where
-    C: Currency,
+    C: CurrencyDef,
     C::Group: MemberOf<G>,
     G: Group,
 {

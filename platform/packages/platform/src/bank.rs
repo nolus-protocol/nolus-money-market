@@ -1,6 +1,6 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::result::Result as StdResult;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, Definition, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -14,9 +14,11 @@ use crate::{
 pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
-    fn balance<C>(&self) -> Result<Coin<C>>
+    fn balance<C, G>(&self) -> Result<Coin<C>>
     where
-        C: Currency;
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        G: Group;
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
@@ -31,7 +33,7 @@ where
 {
     fn send<C>(&mut self, amount: Coin<C>, to: Addr)
     where
-        C: Currency;
+        C: CurrencyDef;
 }
 
 pub trait FixedAddressSender
@@ -40,18 +42,18 @@ where
 {
     fn send<C>(&mut self, amount: Coin<C>)
     where
-        C: Currency;
+        C: CurrencyDef;
 }
 
 /// Ensure a single coin of the specified currency is received by a contract and return it
 pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
-    C: Currency + Definition,
+    C: CurrencyDef,
 {
     received_one_impl(
         cw_amount,
-        Error::no_funds::<C>,
-        Error::unexpected_funds::<C>,
+        || Error::no_funds::<C>(C::definition()),
+        || Error::unexpected_funds::<C>(C::definition()),
     )
     .and_then(coin_legacy::from_cosmwasm::<C>)
 }
@@ -90,41 +92,16 @@ impl<'a> BankView<'a> {
 }
 
 impl<'a> BankAccountView for BankView<'a> {
-    fn balance<C>(&self) -> Result<Coin<C>>
+    fn balance<C, G>(&self) -> Result<Coin<C>>
     where
-        C: Currency,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        G: Group,
     {
-        struct QueryBankBalance<'a, C> {
-            c: PhantomData<C>,
-            account: &'a Addr,
-            querier: QuerierWrapper<'a>,
-        }
-        impl<'a, C> AnyVisitor<C::Group> for QueryBankBalance<'a, C>
-        where
-            C: Currency,
-        {
-            type VisitorG = C::Group;
-
-            type Output = Coin<C>;
-
-            type Error = Error;
-
-            fn on<CC>(self) -> AnyVisitorResult<C::Group, Self>
-            where
-                CC: Currency + Definition + MemberOf<Self::VisitorG>,
-            {
-                debug_assert!(currency::equal::<C, CC>());
-                self.querier
-                    .query_balance(self.account, CC::BANK_SYMBOL)
-                    .map_err(Error::CosmWasmQueryBalance)
-                    .and_then(coin_legacy::from_cosmwasm_currency_not_definition::<CC, C>)
-            }
-        }
-        currency::dto::<C, C::Group>().into_currency_type(QueryBankBalance {
-            c: PhantomData,
-            account: self.account,
-            querier: self.querier,
-        })
+        self.querier
+            .query_balance(self.account, C::definition().dto().definition().bank_symbol)
+            .map_err(Error::CosmWasmQueryBalance)
+            .and_then(coin_legacy::from_cosmwasm_currency_not_definition::<C, C>)
     }
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
@@ -175,9 +152,11 @@ pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> BankStub<B
     BankStub::new(BankView::account(account, querier))
 }
 
-pub fn balance<'a, C>(account: &'a Addr, querier: QuerierWrapper<'a>) -> Result<Coin<C>>
+pub fn balance<'a, C, G>(account: &'a Addr, querier: QuerierWrapper<'a>) -> Result<Coin<C>>
 where
-    C: Currency,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    G: Group,
 {
     BankView { account, querier }.balance()
 }
@@ -186,9 +165,11 @@ impl<View> BankAccountView for BankStub<View>
 where
     View: BankAccountView,
 {
-    fn balance<C>(&self) -> Result<Coin<C>>
+    fn balance<C, G>(&self) -> Result<Coin<C>>
     where
-        C: Currency,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        G: Group,
     {
         self.view.balance()
     }
@@ -210,7 +191,7 @@ where
 {
     fn send<C>(&mut self, amount: Coin<C>, to: Addr)
     where
-        C: Currency,
+        C: CurrencyDef,
     {
         debug_assert!(!amount.is_zero());
         bank_send_impl(&mut self.batch, to, &[amount])
@@ -250,7 +231,7 @@ where
 
 fn bank_send_impl<C>(batch: &mut Batch, to: Addr, amount: &[Coin<C>])
 where
-    C: Currency,
+    C: CurrencyDef,
 {
     bank_send_cosmwasm(
         batch,
@@ -289,7 +270,7 @@ where
 {
     fn send<C>(&mut self, amount: Coin<C>)
     where
-        C: Currency,
+        C: CurrencyDef,
     {
         if !amount.is_zero() {
             self.amounts.push(to_cosmwasm_impl(amount));
@@ -372,7 +353,7 @@ where
 #[cfg(feature = "testing")]
 pub fn bank_send<C>(to: Addr, amount: Coin<C>) -> Batch
 where
-    C: Currency,
+    C: CurrencyDef,
 {
     let mut batch = Batch::default();
     bank_send_impl(&mut batch, to, &[amount]);
@@ -383,8 +364,10 @@ where
 mod test {
 
     use currency::{
-        test::{SubGroup, SubGroupTestC1, SuperGroupTestC1},
-        Currency, CurrencyDTO, Definition, Group, MemberOf,
+        test::{
+            SubGroup, SubGroupTestC10, SuperGroupTestC1, TESTC10_DEFINITION, TESTC1_DEFINITION,
+        },
+        CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
@@ -399,7 +382,7 @@ mod test {
 
     use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
-    type TheCurrency = SubGroupTestC1;
+    type TheCurrency = SubGroupTestC10;
     type ExtraCurrency = SuperGroupTestC1;
 
     const AMOUNT: Amount = 42;
@@ -548,12 +531,12 @@ mod test {
     where
         G: Group,
     {
-        pub fn expected<C>() -> Self
+        pub fn expected<C>() -> Cmd<G>
         where
-            C: Currency + MemberOf<G>,
+            C: CurrencyDef<Group = G>,
         {
-            Self {
-                expected: Some(currency::dto::<C, G>()),
+            Cmd::<C::Group> {
+                expected: Some(*C::definition().dto()),
             }
         }
 
@@ -583,9 +566,13 @@ mod test {
 
         fn on<C>(self, _: Coin<C>) -> WithCoinResult<G, Self>
         where
-            C: Currency + MemberOf<G>,
+            C: CurrencyDef,
+            C::Group: MemberOf<G>,
         {
-            assert_eq!(Some(currency::dto::<C, G>()), self.expected);
+            assert_eq!(
+                Some(C::definition().dto().into_super_group::<G>()),
+                self.expected
+            );
 
             Ok(())
         }
@@ -616,15 +603,15 @@ mod test {
     #[test]
     fn total_balance_same_group() {
         total_balance_tester::<SubGroup>(
-            vec![cw_coin(100, SubGroupTestC1::BANK_SYMBOL)],
-            Cmd::expected::<SubGroupTestC1>(),
+            vec![cw_coin(100, TESTC10_DEFINITION.bank_symbol)],
+            Cmd::<SubGroup>::expected::<SubGroupTestC10>(),
         );
     }
 
     #[test]
     fn total_balance_different_group() {
         total_balance_tester::<SubGroup>(
-            vec![cw_coin(100, SuperGroupTestC1::BANK_SYMBOL)],
+            vec![cw_coin(100, TESTC1_DEFINITION.bank_symbol)],
             Cmd::expected_none(),
         );
     }
@@ -633,10 +620,10 @@ mod test {
     fn total_balance_mixed_group() {
         total_balance_tester::<SubGroup>(
             vec![
-                cw_coin(100, SuperGroupTestC1::TICKER),
-                cw_coin(100, SubGroupTestC1::BANK_SYMBOL),
+                cw_coin(100, TESTC1_DEFINITION.ticker),
+                cw_coin(100, TESTC10_DEFINITION.bank_symbol),
             ],
-            Cmd::expected::<SubGroupTestC1>(),
+            Cmd::<SubGroup>::expected::<SubGroupTestC10>(),
         );
     }
 }
