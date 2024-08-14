@@ -166,10 +166,8 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{
-            SuperGroup, SuperGroupTestC1, SuperGroupTestC2, TESTC1_DEFINITION, TESTC2_DEFINITION,
-        },
-        BankSymbols,
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        BankSymbols, CurrencyDef,
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -190,7 +188,7 @@ mod test {
     fn from_cosmwasm() {
         let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
             12,
-            TESTC2_DEFINITION.bank_symbol,
+            SuperGroupTestC2::bank(),
         ));
         assert_eq!(Ok(Coin::<SuperGroupTestC2>::new(12)), c1);
     }
@@ -198,30 +196,30 @@ mod test {
     fn from_cosmwasm_unexpected() {
         let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
             12,
-            TESTC1_DEFINITION.bank_symbol,
+            SuperGroupTestC1::bank(),
         ));
 
         assert_eq!(
             c1,
             Err(Error::Currency(
                 currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-                    TESTC1_DEFINITION.bank_symbol,
-                    &TESTC2_DEFINITION
+                    SuperGroupTestC1::bank(),
+                    SuperGroupTestC2::definition().dto().definition()
                 )
             )),
         );
 
         let c2 = super::from_cosmwasm::<SuperGroupTestC1>(CosmWasmCoin::new(
             12,
-            TESTC2_DEFINITION.bank_symbol,
+            SuperGroupTestC2::bank(),
         ));
 
         assert_eq!(
             c2,
             Err(Error::Currency(
                 currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-                    TESTC2_DEFINITION.bank_symbol,
-                    &TESTC1_DEFINITION
+                    SuperGroupTestC2::bank(),
+                    SuperGroupTestC1::definition().dto().definition()
                 )
             )),
         );
@@ -234,7 +232,7 @@ mod test {
         assert_eq!(
             Ok(Ok(true)),
             super::from_cosmwasm_any(
-                &CosmWasmCoin::new(amount, TESTC1_DEFINITION.bank_symbol),
+                &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
@@ -248,14 +246,14 @@ mod test {
         assert_eq!(
             Ok(Ok(false)),
             super::from_cosmwasm_any(
-                &CosmWasmCoin::new(amount + 1, TESTC1_DEFINITION.bank_symbol),
+                &CosmWasmCoin::new(amount + 1, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
             Ok(Ok(false)),
             super::from_cosmwasm_any(
-                &CosmWasmCoin::new(amount, TESTC1_DEFINITION.bank_symbol),
+                &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
         );
@@ -263,7 +261,7 @@ mod test {
         assert_eq!(
             Err(with_coin.clone()),
             super::from_cosmwasm_any(
-                &CosmWasmCoin::new(amount, TESTC1_DEFINITION.dex_symbol),
+                &CosmWasmCoin::new(amount, SuperGroupTestC1::dex()),
                 with_coin
             )
         );
@@ -273,11 +271,11 @@ mod test {
     fn to_cosmwasm() {
         let amount = 326;
         assert_eq!(
-            CosmWasmCoin::new(amount, TESTC2_DEFINITION.bank_symbol),
+            CosmWasmCoin::new(amount, SuperGroupTestC2::bank()),
             to_cosmwasm_impl(Coin::<SuperGroupTestC2>::new(amount))
         );
         assert_eq!(
-            CosmWasmCoin::new(amount, TESTC1_DEFINITION.bank_symbol),
+            CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
             to_cosmwasm_impl(Coin::<SuperGroupTestC1>::new(amount))
         );
     }

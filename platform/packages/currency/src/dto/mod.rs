@@ -192,45 +192,42 @@ where
 mod test {
 
     use crate::{
-        test::{
-            self, SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, TESTC1, TESTC10,
-            TESTC10_DEFINITION, TESTC1_DEFINITION, TESTC2, TESTC2_DEFINITION,
-        },
-        BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Tickers,
+        test::{self, SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, MemberOf, Tickers,
     };
 
     #[test]
     fn eq_same_type() {
         assert_eq!(
-            CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION),
-            CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION)
+            dto::<SuperGroup, SuperGroupTestC1>(),
+            dto::<SuperGroup, SuperGroupTestC1>()
         );
 
         assert_ne!(
-            CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION),
-            CurrencyDTO::<SuperGroup>::new(&TESTC2_DEFINITION)
+            dto::<SuperGroup, SuperGroupTestC1>(),
+            dto::<SuperGroup, SuperGroupTestC2>()
         );
     }
 
     #[test]
     fn into_currency_type() {
-        let c1 = CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION);
+        let c1 = dto::<SuperGroup, SuperGroupTestC1>();
         assert_eq!(
             Ok(true),
-            c1.into_currency_type(test::Expect::<_, SuperGroup, SuperGroup>::new(&TESTC1))
+            c1.into_currency_type(test::Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new())
         );
 
         assert_eq!(
             Ok(false),
-            c1.into_currency_type(test::Expect::<_, SuperGroup, SuperGroup>::new(&TESTC2))
+            c1.into_currency_type(test::Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new())
         );
     }
 
     #[test]
     fn into_super_group() {
-        let sub_currency = CurrencyDTO::<SubGroup>::new(&TESTC10_DEFINITION);
+        let sub_currency = dto::<SubGroup, SubGroupTestC10>();
         assert_eq!(
-            CurrencyDTO::<SuperGroup>::new(&TESTC10_DEFINITION),
+            dto::<SubGroup, SubGroupTestC10>(),
             sub_currency.into_super_group::<SuperGroup>()
         )
     }
@@ -238,30 +235,29 @@ mod test {
     #[test]
     fn from_super_group() {
         assert_eq!(
-            CurrencyDTO::<SubGroup>::new(&TESTC10_DEFINITION),
-            CurrencyDTO::<SuperGroup>::new(&TESTC10_DEFINITION),
+            dto::<SubGroup, SubGroupTestC10>(),
+            dto::<SuperGroup, SubGroupTestC10>(),
         );
 
         assert_eq!(
-            CurrencyDTO::<<SubGroupTestC10 as CurrencyDef>::Group>::new(&TESTC10_DEFINITION),
-            CurrencyDTO::<SubGroup>::new(&TESTC10_DEFINITION)
+            dto::<<SubGroupTestC10 as CurrencyDef>::Group, SubGroupTestC10>(),
+            dto::<SubGroup, SubGroupTestC10>()
         );
     }
 
     #[test]
     fn eq_other_type() {
         assert_ne!(
-            CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION),
-            CurrencyDTO::<SubGroup>::new(&TESTC10_DEFINITION)
+            dto::<SuperGroup, SuperGroupTestC1>(),
+            dto::<SubGroup, SubGroupTestC10>(),
         );
     }
 
     #[test]
     fn to_string() {
         assert_eq!(
-            CurrencyDTO::<<SubGroupTestC10 as CurrencyDef>::Group>::new(&TESTC10_DEFINITION)
-                .to_string(),
-            super::to_string(&TESTC10)
+            dto::<<SubGroupTestC10 as CurrencyDef>::Group, SubGroupTestC10>().to_string(),
+            super::to_string(SubGroupTestC10::definition())
         );
     }
 
@@ -270,20 +266,31 @@ mod test {
         type TheC = SuperGroupTestC1;
         type TheG = <TheC as CurrencyDef>::Group;
 
+        let c1_def = SuperGroupTestC1::definition().dto().definition();
         assert_eq!(
-            TESTC1.dto().definition().bank_symbol,
-            TESTC1.dto().into_symbol::<BankSymbols::<TheG>>()
+            c1_def.bank_symbol,
+            dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<BankSymbols::<TheG>>()
         );
         assert_eq!(
-            TESTC1.dto().definition().dex_symbol,
-            TESTC1.dto().into_symbol::<DexSymbols::<TheG>>()
+            c1_def.dex_symbol,
+            dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<DexSymbols::<TheG>>()
         );
         assert_eq!(
-            TESTC1.dto().definition().ticker,
-            TESTC1.dto().into_symbol::<Tickers::<TheG>>()
+            c1_def.ticker,
+            dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<Tickers::<TheG>>()
         );
 
-        let c = CurrencyDTO::<SuperGroup>::new(&TESTC1_DEFINITION);
+        let c = dto::<SuperGroup, SuperGroupTestC1>();
         assert_eq!(c.to_string(), c.into_symbol::<Tickers::<TheG>>());
+    }
+
+    fn dto<G, C>() -> CurrencyDTO<G>
+    where
+        G: Group,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+    {
+        // deliberately not just C::definition().dto() to test the ctor
+        CurrencyDTO::<G>::new(C::definition().dto().definition())
     }
 }

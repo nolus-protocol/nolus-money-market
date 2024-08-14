@@ -38,7 +38,7 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount)
+        dbg!(coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount))
             .map(into_cosmos_sdk_coin)
             .map(|cosmos_sdk_coin| {
                 self.amounts.push(cosmos_sdk_coin);
@@ -136,7 +136,7 @@ mod test {
                     channel,
                     sender.clone(),
                     receiver.clone(),
-                    into_cosmos_sdk_coin(coin1),
+                    into_dex_coin(coin1),
                     timeout,
                 ),
             );
@@ -146,7 +146,7 @@ mod test {
                     channel,
                     sender,
                     receiver,
-                    into_cosmos_sdk_coin(coin2),
+                    into_dex_coin(coin2),
                     timeout,
                 ),
             );
@@ -154,13 +154,13 @@ mod test {
         });
     }
 
-    fn into_cosmos_sdk_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
+    fn into_dex_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
     where
         C: CurrencyDef,
     {
         CosmosSdkCoin {
             amount: Amount::from(coin).to_string(),
-            denom: C::definition().dto().definition().bank_symbol.into(),
+            denom: C::definition().dto().definition().dex_symbol.into(),
         }
     }
 }

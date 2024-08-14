@@ -10,12 +10,6 @@ pub type SuperGroupTestC5 = impl_::TestC5;
 pub type SubGroupTestC6 = impl_::TestC6;
 pub type SubGroupTestC10 = impl_::TestC10;
 
-pub use impl_::{
-    TESTC1, TESTC10, TESTC10_DEFINITION, TESTC1_DEFINITION, TESTC2, TESTC2_DEFINITION, TESTC3,
-    TESTC3_DEFINITION, TESTC4, TESTC4_DEFINITION, TESTC5, TESTC5_DEFINITION, TESTC6,
-    TESTC6_DEFINITION,
-};
-
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SuperGroup {}
 pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
@@ -28,19 +22,11 @@ impl Group for SuperGroup {
         M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(&TESTC1, matcher, visitor)
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC2, _>(&TESTC2, matcher, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC3, _>(&TESTC3, matcher, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC4, _>(&TESTC4, matcher, visitor)
-            })
-            .or_else(|visitor| {
-                crate::maybe_visit_any::<_, SuperGroupTestC5, _>(&TESTC5, matcher, visitor)
-            })
+        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
             .or_else(|visitor| SubGroup::maybe_visit_member::<_, _, Self>(matcher, visitor))
     }
 
@@ -117,11 +103,9 @@ where
     SubGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(&TESTC10, matcher, visitor).or_else(
-        |visitor| {
-            crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(&TESTC6, matcher, visitor)
-        },
-    )
+    crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(matcher, visitor).or_else(|visitor| {
+        crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(matcher, visitor)
+    })
 }
 
 mod impl_ {
@@ -168,9 +152,9 @@ mod impl_ {
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC3(CurrencyDTO<SuperGroup>);
-    pub const TESTC3_DEFINITION: Definition =
+    const TESTC3_DEFINITION: Definition =
         Definition::new("ticker#3", "ibc/bank_ticker#3", "ibc/dex_ticker#3", 6);
-    pub const TESTC3: TestC3 = TestC3(CurrencyDTO::new(&TESTC3_DEFINITION));
+    const TESTC3: TestC3 = TestC3(CurrencyDTO::new(&TESTC3_DEFINITION));
 
     impl CurrencyDef for TestC3 {
         type Group = SuperGroup;

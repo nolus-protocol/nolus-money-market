@@ -196,10 +196,7 @@ where
 #[cfg(test)]
 mod test_invariant {
 
-    use currency::test::{
-        SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, TESTC1_DEFINITION,
-        TESTC2_DEFINITION,
-    };
+    use currency::test::{SubGroup, SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
     use currency::{CurrencyDef, Group, MemberOf};
     use sdk::cosmwasm_std::{from_json, StdError as CWError, StdResult as CWResult};
 
@@ -227,7 +224,8 @@ mod test_invariant {
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
+            SuperGroupTestC1::ticker(),
+            SuperGroupTestC2::ticker()
         );
         assert_load_err(load(&json.into_bytes()), "not be zero");
     }
@@ -247,7 +245,8 @@ mod test_invariant {
     fn quote_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
+            SuperGroupTestC1::ticker(),
+            SuperGroupTestC2::ticker()
         );
         assert_load_err(load(&json.into_bytes()), "not be zero");
     }
@@ -267,7 +266,8 @@ mod test_invariant {
     fn currencies_match_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "10", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC1_DEFINITION.ticker
+            SuperGroupTestC1::ticker(),
+            SuperGroupTestC1::ticker()
         );
         assert_load_err(
             load(&json.into_bytes()),
@@ -291,7 +291,8 @@ mod test_invariant {
     fn currencies_match_ok_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "4", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC1_DEFINITION.ticker
+            SuperGroupTestC1::ticker(),
+            SuperGroupTestC1::ticker()
         );
         assert_eq!(
             load(&json.into_bytes()).unwrap().base(),
@@ -303,8 +304,8 @@ mod test_invariant {
     fn group_mismatch_json() {
         let r = load_with_groups::<TC, SubGroup>(&format!(
             r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker,
-            TESTC2_DEFINITION.ticker
+            SuperGroupTestC1::ticker(),
+            SuperGroupTestC2::ticker()
         ).into_bytes());
         assert_load_err(r, "pretending to be ticker of a currency pertaining to");
     }

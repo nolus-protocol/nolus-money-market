@@ -44,13 +44,16 @@ where
 mod test {
     use sdk::cosmwasm_std;
 
-    use crate::test::{
-        SubGroupCurrency, SuperGroupCurrency, TESTC10_DEFINITION, TESTC1_DEFINITION,
+    use crate::{
+        test::{
+            SubGroupCurrency, SubGroupTestC10, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
+        },
+        CurrencyDef,
     };
 
     #[test]
     fn deser_same_group() {
-        let coin: SuperGroupCurrency = SuperGroupCurrency::new(&TESTC1_DEFINITION);
+        let coin: SuperGroupCurrency = *SuperGroupTestC1::definition().dto();
         let coin_deser: SuperGroupCurrency = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -59,20 +62,19 @@ mod test {
 
     #[test]
     fn deser_parent_group() {
-        type DirectGroup = SubGroupCurrency;
         type ParentGroup = SuperGroupCurrency;
 
-        let coin = DirectGroup::new(&TESTC10_DEFINITION);
+        let coin = *SubGroupTestC10::definition().dto();
         let coin_deser: ParentGroup = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
-        let coin_exp = ParentGroup::new(&TESTC10_DEFINITION);
+        let coin_exp = coin.into_super_group::<SuperGroup>();
         assert_eq!(coin_exp, coin_deser);
     }
 
     #[test]
     fn deser_wrong_group() {
-        let coin = SuperGroupCurrency::new(&TESTC1_DEFINITION);
+        let coin = *SuperGroupTestC1::definition().dto();
         let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
         assert!(cosmwasm_std::from_json::<SubGroupCurrency>(&coin_raw).is_err());

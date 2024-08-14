@@ -186,10 +186,7 @@ mod test {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        test::{
-            SubGroup, SubGroupTestC10, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
-            SuperGroupTestC2, TESTC1_DEFINITION, TESTC2_DEFINITION,
-        },
+        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
         MemberOf,
     };
@@ -279,22 +276,27 @@ mod test {
     fn from_amount_ticker_ok() {
         let amount = 20;
         type TheCurrency = SuperGroupTestC1;
-        type TheCurrencyDTO = SuperGroupCurrency;
         type TheGroup = <TheCurrency as CurrencyDef>::Group;
         assert_eq!(
             CoinDTO::<TheGroup>::from(Coin::<TheCurrency>::from(amount)),
-            super::from_amount_ticker::<TheGroup>(amount, TheCurrencyDTO::new(&TESTC1_DEFINITION))
+            super::from_amount_ticker::<TheGroup>(amount, *TheCurrency::definition().dto())
         );
     }
 
     #[test]
     fn display() {
         assert_eq!(
-            format!("25 {}", TESTC1_DEFINITION.ticker),
+            format!(
+                "25 {}",
+                SuperGroupTestC1::definition().dto().definition().ticker
+            ),
             test_coin::<SuperGroupTestC1, SuperGroup>(25).to_string()
         );
         assert_eq!(
-            format!("0 {}", TESTC2_DEFINITION.ticker),
+            format!(
+                "0 {}",
+                SuperGroupTestC2::definition().dto().definition().ticker
+            ),
             test_coin::<SuperGroupTestC2, SuperGroup>(0).to_string()
         );
     }

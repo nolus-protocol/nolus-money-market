@@ -47,6 +47,21 @@ pub trait CurrencyDef: Currency {
     fn definition() -> &'static Self;
 
     fn dto(&self) -> &CurrencyDTO<Self::Group>;
+
+    #[cfg(any(test, feature = "testing"))]
+    fn ticker() -> SymbolStatic {
+        Self::definition().dto().definition().ticker
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    fn bank() -> SymbolStatic {
+        Self::definition().dto().definition().bank_symbol
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    fn dex() -> SymbolStatic {
+        Self::definition().dto().definition().dex_symbol
+    }
 }
 
 impl<T> Currency for T where T: CurrencyDef {}
@@ -59,25 +74,17 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn maybe_visit_any<M, C, V>(
-    def: &C,
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<C::Group, V>
+pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
     M: Matcher,
     C: CurrencyDef + MemberOf<V::VisitorG>,
     V: AnyVisitor<C::Group>,
     C::Group: MemberOf<V::VisitorG>,
 {
-    maybe_visit_member::<_, C, C::Group, _>(def, matcher, visitor)
+    maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
 
-pub fn maybe_visit_member<M, C, TopG, V>(
-    currency: &C,
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<TopG, V>
+pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher,
     C: CurrencyDef + MemberOf<TopG> + MemberOf<V::VisitorG>,
@@ -85,8 +92,8 @@ where
     V: AnyVisitor<TopG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    if matcher.r#match(currency.dto().definition()) {
-        Ok(visitor.on::<C>(currency))
+    if matcher.r#match(C::definition().dto().definition()) {
+        Ok(visitor.on::<C>(C::definition()))
     } else {
         Err(visitor)
     }

@@ -364,9 +364,7 @@ where
 mod test {
 
     use currency::{
-        test::{
-            SubGroup, SubGroupTestC10, SuperGroupTestC1, TESTC10_DEFINITION, TESTC1_DEFINITION,
-        },
+        test::{SubGroup, SubGroupTestC10, SuperGroupTestC1},
         CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
     use finance::{
@@ -603,7 +601,7 @@ mod test {
     #[test]
     fn total_balance_same_group() {
         total_balance_tester::<SubGroup>(
-            vec![cw_coin(100, TESTC10_DEFINITION.bank_symbol)],
+            vec![cw_coin(100, SubGroupTestC10::bank())],
             Cmd::<SubGroup>::expected::<SubGroupTestC10>(),
         );
     }
@@ -611,7 +609,7 @@ mod test {
     #[test]
     fn total_balance_different_group() {
         total_balance_tester::<SubGroup>(
-            vec![cw_coin(100, TESTC1_DEFINITION.bank_symbol)],
+            vec![cw_coin(100, SuperGroupTestC1::bank())],
             Cmd::expected_none(),
         );
     }
@@ -620,8 +618,8 @@ mod test {
     fn total_balance_mixed_group() {
         total_balance_tester::<SubGroup>(
             vec![
-                cw_coin(100, TESTC1_DEFINITION.ticker),
-                cw_coin(100, TESTC10_DEFINITION.bank_symbol),
+                cw_coin(100, SuperGroupTestC1::ticker()),
+                cw_coin(100, SubGroupTestC10::bank()),
             ],
             Cmd::<SubGroup>::expected::<SubGroupTestC10>(),
         );

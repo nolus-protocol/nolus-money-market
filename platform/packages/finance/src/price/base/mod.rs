@@ -184,11 +184,8 @@ where
 #[cfg(test)]
 mod test_invariant {
     use currency::{
-        test::{
-            SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
-            TESTC1_DEFINITION, TESTC2_DEFINITION,
-        },
-        CurrencyDef, Group, MemberOf,
+        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        CurrencyDef, Group, MemberOf, SymbolStatic,
     };
     use sdk::cosmwasm_std::{from_json, to_json_string, StdError, StdResult};
 
@@ -209,7 +206,8 @@ mod test_invariant {
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "3", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
+            SuperGroupTestC1::definition().dto().definition().ticker,
+            ticker::<SuperGroupTestC2>()
         );
 
         assert_load_err(
@@ -231,7 +229,8 @@ mod test_invariant {
     fn quote_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "6", "ticker": "{}"}}, "amount_quote": {{"amount": "0", "ticker": "{}"}}}}"#,
-            TESTC1_DEFINITION.ticker, TESTC2_DEFINITION.ticker
+            ticker::<SuperGroupTestC1>(),
+            ticker::<SuperGroupTestC2>()
         );
 
         assert_load_err(
@@ -307,5 +306,12 @@ mod test_invariant {
         QuoteG: Group,
     {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
+    }
+
+    fn ticker<C>() -> SymbolStatic
+    where
+        C: CurrencyDef,
+    {
+        C::definition().dto().definition().ticker
     }
 }

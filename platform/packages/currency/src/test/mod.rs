@@ -10,18 +10,33 @@ pub use self::group::*;
 mod group;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expect<'dto, CDef, VisitedG, VisitorG>(
-    &'dto CDef,
+pub struct Expect<CDef, VisitedG, VisitorG>(
+    &'static CDef,
     PhantomData<VisitedG>,
     PhantomData<VisitorG>,
-);
+)
+where
+    CDef: 'static;
 
-impl<'dto, CDef, VisitedG, VisitorG> Expect<'dto, CDef, VisitedG, VisitorG> {
-    pub fn new(dto: &'dto CDef) -> Self {
-        Self(dto, PhantomData, PhantomData)
+impl<CDef, VisitedG, VisitorG> Expect<CDef, VisitedG, VisitorG>
+where
+    CDef: CurrencyDef,
+{
+    pub fn new() -> Self {
+        Self(CDef::definition(), PhantomData, PhantomData)
     }
 }
-impl<'dto, CDef, VisitedG, VisitorG> AnyVisitor<VisitedG> for Expect<'dto, CDef, VisitedG, VisitorG>
+
+impl<CDef, VisitedG, VisitorG> Default for Expect<CDef, VisitedG, VisitorG>
+where
+    CDef: CurrencyDef,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<CDef, VisitedG, VisitorG> AnyVisitor<VisitedG> for Expect<CDef, VisitedG, VisitorG>
 where
     CDef: CurrencyDef,
     CDef::Group: Group + MemberOf<VisitedG>,
@@ -40,9 +55,7 @@ where
     }
 }
 
-impl<'dto, CDef, VisitedG, VisitorG> SingleVisitor<CDef>
-    for Expect<'dto, CDef, VisitedG, VisitorG>
-{
+impl<CDef, VisitedG, VisitorG> SingleVisitor<CDef> for Expect<CDef, VisitedG, VisitorG> {
     type Output = bool;
     type Error = Error;
 
