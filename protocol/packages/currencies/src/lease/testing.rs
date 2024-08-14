@@ -54,13 +54,13 @@ define_currency!(LeaseC5, LC5, LeaseGroup, 6);
 
 pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher<Group = LeaseGroup>,
+    M: Matcher,
     V: AnyVisitor<TopG>,
     LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, LeaseC1, TopG, _>(matcher, visitor)
+    maybe_visit::<_, LeaseC1, TopG, _>(&LEASEC1, matcher, visitor)
         .or_else(|visitor| maybe_visit::<_, LeaseC2, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC3, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC4, TopG, _>(matcher, visitor))

@@ -15,7 +15,7 @@ define_currency!(UsdcAxelar, USDC_AXELAR, PaymentOnlyGroup, 6);
 
 pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher<Group = PaymentOnlyGroup>,
+    M: Matcher,
     V: AnyVisitor<TopG>,
     PaymentOnlyGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
