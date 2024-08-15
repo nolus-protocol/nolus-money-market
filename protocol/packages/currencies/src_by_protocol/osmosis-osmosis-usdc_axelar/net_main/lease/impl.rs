@@ -169,14 +169,6 @@ define_currency!(
 );
 
 define_currency!(
-    Lvn,
-    "ibc/4786BEBBFDD989C467C4552AD73065D8B2578230B8428B3B9275D540EB04C851", // transfer/channel-0/factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn
-    "factory/osmo1mlng7pz4pnyxtpq0akfwall37czyk9lukaucsrn30ameplhhshtqdvfm5c/ulvn",
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Pica,
     "ibc/7F2DC2A595EDCAEC1C03D607C6DC3C79EDDC029A53D16C0788835C1A9AA06306", // transfer/channel-0/transfer/channel-1279/ppica
     "ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516", // transfer/channel-1279/ppica
@@ -228,7 +220,6 @@ where
         .or_else(|visitor| maybe_visit::<_, StTia, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Jkl, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, MilkTia, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Lvn, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cudos, TopG, _>(matcher, visitor))
@@ -250,7 +241,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Cudos, Dym, Lvn, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Cudos, Dym, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -262,7 +253,6 @@ mod test {
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Lvn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Cudos, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::dex());
