@@ -142,13 +142,7 @@ mod test {
             );
             trx.add_message(
                 MsgTransfer::type_url(),
-                new_msg(
-                    channel,
-                    sender,
-                    receiver,
-                    into_dex_coin(coin2),
-                    timeout,
-                ),
+                new_msg(channel, sender, receiver, into_dex_coin(coin2), timeout),
             );
             trx
         });

@@ -72,8 +72,8 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Group, MemberOf,
+        test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
+        CurrencyDef, Group, MemberOf,
     };
     use finance::coin::{Amount, Coin, CoinDTO};
 
@@ -83,7 +83,7 @@ mod test {
 
     type FilterCurrency = SuperGroupTestC1;
     type AnotherCurrency = SuperGroupTestC2;
-    type YetAnotherCurrency = SubGroupTestC1;
+    type YetAnotherCurrency = SubGroupTestC10;
     const AMOUNT1: Amount = 24;
     const AMOUNT2: Amount = 28;
 
@@ -181,7 +181,8 @@ mod test {
 
     fn coin<C>(amount: Amount) -> CoinDTO<SuperGroup>
     where
-        C: Currency + MemberOf<SuperGroup>,
+        C: CurrencyDef,
+        C::Group: MemberOf<SuperGroup>,
     {
         Coin::<C>::new(amount).into()
     }

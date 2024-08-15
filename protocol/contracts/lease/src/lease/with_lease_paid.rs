@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, AnyVisitorResult, Currency, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, CurrencyDef, MemberOf};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -19,8 +19,10 @@ pub trait WithLeaseTypes {
         position: Position<Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
-        Lpn: Currency;
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies>,
+        Lpn: CurrencyDef,
+        Lpn::Group: MemberOf<LpnCurrencies>;
 }
 
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
@@ -54,7 +56,8 @@ where
 
     fn on<Asset>(self, position: Position<Asset>) -> WithPositionResult<Self>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
         lpn.into_currency_type(FactoryStage2 {
@@ -73,16 +76,18 @@ struct FactoryStage2<Cmd, Asset> {
 impl<Cmd, Asset> AnyVisitor<LpnCurrencies> for FactoryStage2<Cmd, Asset>
 where
     Cmd: WithLeaseTypes,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
     type VisitorG = LpnCurrencies;
 
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn on<Lpn>(self) -> AnyVisitorResult<LpnCurrencies, Self>
+    fn on<Lpn>(self, _def: &Lpn) -> AnyVisitorResult<LpnCurrencies, Self>
     where
-        Lpn: Currency,
+        Lpn: CurrencyDef,
+        Lpn::Group: MemberOf<LpnCurrencies>,
     {
         self.cmd.exec::<Asset, Lpn>(self.lease_dto, self.position)
     }

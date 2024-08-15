@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     percent::Percent,
@@ -88,7 +88,8 @@ impl<'a> WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'a> {
 
     fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         let downpayment_lpn = convert::to_quote::<
             C,

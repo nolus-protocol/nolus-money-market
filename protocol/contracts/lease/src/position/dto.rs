@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
     error::Error as FinanceError,
@@ -28,9 +28,10 @@ pub trait WithPosition {
     type Output;
     type Error;
 
-    fn on<C>(self, position: Position<C>) -> WithPositionResult<Self>
+    fn on<Asset>(self, position: Position<Asset>) -> WithPositionResult<Self>
     where
-        C: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>;
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>;
 }
 
 impl PositionDTO {
@@ -64,12 +65,13 @@ impl PositionDTO {
 
             type Error = V::Error;
 
-            fn on<C>(self, amount: Coin<C>) -> WithCoinResult<LeaseAssetCurrencies, Self>
+            fn on<Asset>(self, amount: Coin<Asset>) -> WithCoinResult<LeaseAssetCurrencies, Self>
             where
-                C: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<Self::VisitorG>,
+                Asset: CurrencyDef,
+                Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<Self::VisitorG>,
             {
                 Spec::try_from(self.spec)
-                    .map(|spec| Position::<C>::new(amount, spec))
+                    .map(|spec| Position::<Asset>::new(amount, spec))
                     .map_err(Into::into)
                     .and_then(|position| self.cmd.on(position))
             }
@@ -83,7 +85,8 @@ impl PositionDTO {
 
 impl<Asset> From<Position<Asset>> for PositionDTO
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
     fn from(value: Position<Asset>) -> Self {
         Self {

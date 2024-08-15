@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currencies::{Nls, PaymentGroup};
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
     Account, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
     Result as DexResult, StartLocalLocalState,
@@ -191,7 +191,8 @@ where
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
     where
-        C: Currency + MemberOf<G>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
     {
         Ok(if currency::equal::<C, FilterC>() {
             SplitCoins {

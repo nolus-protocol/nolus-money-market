@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -17,7 +17,8 @@ use super::Lease;
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {

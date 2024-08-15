@@ -2,7 +2,7 @@ use finance::coin::Coin;
 use lpp_platform::NLpn;
 use serde::Serialize;
 
-use currency::Currency;
+use currency::CurrencyDef;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -56,7 +56,7 @@ pub(super) fn try_claim_rewards(
 
 pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalances<Lpn>>
 where
-    Lpn: 'static + Currency + Serialize,
+    Lpn: 'static + CurrencyDef + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
 }

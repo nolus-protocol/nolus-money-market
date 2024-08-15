@@ -1,5 +1,5 @@
 use currencies::Lpns;
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     fraction::Fraction,
@@ -33,7 +33,8 @@ impl<Lpn> LppBalances<Lpn> {
 
 impl<Lpn> LppBalances<Lpn>
 where
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     pub(crate) fn into_response(self, total_rewards: Coin<NLpn>) -> LppBalanceResponse<Lpns> {
         LppBalanceResponse {
@@ -102,7 +103,7 @@ where
 
 impl<Lpn> LiquidityPool<Lpn>
 where
-    Lpn: 'static + Currency,
+    Lpn: 'static + CurrencyDef,
 {
     pub fn deposit_capacity(
         &self,

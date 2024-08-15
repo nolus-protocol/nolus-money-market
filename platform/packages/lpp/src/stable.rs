@@ -10,8 +10,7 @@ use sdk::schemars::{self, JsonSchema};
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, JsonSchema,
 )]
 pub struct Stable(CurrencyDTO<StableCurrencyGroup>);
-const STABLE_DEFINITION: Definition =
-    Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0);
+const STABLE_DEFINITION: Definition = Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0);
 const STABLE: Stable = Stable(CurrencyDTO::new(&STABLE_DEFINITION));
 
 impl CurrencyDef for Stable {

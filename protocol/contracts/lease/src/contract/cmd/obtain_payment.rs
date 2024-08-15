@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -60,7 +60,8 @@ where
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
-        C: Currency + MemberOf<LeasePaymentCurrencies>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         self.lease.validate_repay(coin).map(|()| coin.into())
     }

@@ -35,8 +35,7 @@ impl Definition {
     }
 }
 
-impl PartialEq for Definition
-{
+impl PartialEq for Definition {
     fn eq(&self, other: &Self) -> bool {
         self.ticker.eq(other.ticker)
     }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseC1, LeaseGroup, Lpn};
-use currency::{CurrencyDTO, Definition as _};
+use currency::{CurrencyDTO, CurrencyDef as _};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -80,7 +80,7 @@ fn owner() -> MessageInfo {
 }
 
 fn customer() -> MessageInfo {
-    mock_info("addr0000", &coins(2, TheCurrency::DEX_SYMBOL))
+    mock_info("addr0000", &coins(2, TheCurrency::dex()))
 }
 
 fn setup_test_case(deps: DepsMut<'_>) {

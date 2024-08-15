@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{
@@ -29,7 +29,8 @@ pub(crate) trait RepayFn {
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
@@ -113,7 +114,8 @@ where
         mut lease: LeaseDO<Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,

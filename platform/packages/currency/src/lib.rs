@@ -2,7 +2,7 @@ use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
     definition::Definition,
-    dto::{to_string, CurrencyDTO},
+    dto::{dto, to_string, CurrencyDTO},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
@@ -87,8 +87,8 @@ where
 pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher,
-    C: CurrencyDef + MemberOf<TopG> + MemberOf<V::VisitorG>,
-    C::Group: MemberOf<TopG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<TopG> + MemberOf<V::VisitorG>,
     V: AnyVisitor<TopG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {

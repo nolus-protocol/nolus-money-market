@@ -166,6 +166,15 @@ where
     Tickers::<C::Group>::symbol(def.dto().definition())
 }
 
+pub fn dto<C, G>() -> CurrencyDTO<G>
+where
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    G: Group,
+{
+    C::definition().dto().into_super_group::<G>()
+}
+
 impl<G> Display for CurrencyDTO<G>
 where
     G: Group,

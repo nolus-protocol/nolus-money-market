@@ -1,4 +1,4 @@
-use currency::test::{SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC2, SuperGroupTestC3};
+use currency::test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC2, SuperGroupTestC3};
 use dex::swap::ExactAmountIn;
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
@@ -15,7 +15,7 @@ use crate::{
 
 #[test]
 fn build_and_parse() {
-    let expected_token_in: CoinDTO<SubGroup> = Coin::<SubGroupTestC1>::new(20).into();
+    let expected_token_in: CoinDTO<SubGroup> = Coin::<SubGroupTestC10>::new(20).into();
 
     let expected_swap_path = vec![
         SwapTarget {

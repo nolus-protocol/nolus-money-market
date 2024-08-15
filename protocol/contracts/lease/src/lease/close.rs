@@ -1,6 +1,6 @@
 use platform::{bank::FixedAddressSender, batch::Batch};
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -36,7 +36,8 @@ where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
         + Into<OracleRef>,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
         self.price_of_lease_currency()

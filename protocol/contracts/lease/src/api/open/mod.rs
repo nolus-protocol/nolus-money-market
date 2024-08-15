@@ -225,7 +225,7 @@ mod test_invariant {
 #[cfg(all(test, feature = "skel"))]
 mod test_position_spec {
     use currencies::Lpn;
-    use currency::{CurrencyDef, Definition};
+    use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_json, StdError};
 

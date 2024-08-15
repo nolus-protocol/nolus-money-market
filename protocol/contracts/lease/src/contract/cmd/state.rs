@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -34,7 +34,8 @@ impl WithLease for LeaseState {
         lease: Lease<Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

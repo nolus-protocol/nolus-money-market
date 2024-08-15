@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     liability::Liability,
@@ -120,7 +120,8 @@ where
 
 impl<Lpn, Lpp> WithOracle<Lpn, LpnCurrencies> for QuoteStage2<Lpn, Lpp>
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
     type G = PaymentCurrencies;
@@ -157,7 +158,8 @@ where
 
 impl<Lpn, Lpp, Oracle> WithCoin<PaymentCurrencies> for QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
@@ -168,7 +170,8 @@ where
 
     fn on<Dpc>(self, downpayment: Coin<Dpc>) -> WithCoinResult<PaymentCurrencies, Self>
     where
-        Dpc: Currency + MemberOf<Self::VisitorG>,
+        Dpc: CurrencyDef,
+        Dpc::Group: MemberOf<Self::VisitorG>,
     {
         self.lease_asset
             .into_currency_super_group_type(QuoteStage4 {
@@ -198,8 +201,10 @@ where
 
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor<LeaseCurrencies> for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
-    Dpc: Currency + MemberOf<PaymentCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
+    Dpc: CurrencyDef,
+    Dpc::Group: MemberOf<PaymentCurrencies>,
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
@@ -208,9 +213,10 @@ where
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<Asset>(self) -> AnyVisitorResult<LeaseCurrencies, Self>
+    fn on<Asset>(self, _def: &Asset) -> AnyVisitorResult<LeaseCurrencies, Self>
     where
-        Asset: Currency + MemberOf<LeaseCurrencies> + MemberOf<Self::VisitorG>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<Self::VisitorG>,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 

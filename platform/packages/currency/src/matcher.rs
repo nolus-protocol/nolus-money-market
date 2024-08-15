@@ -32,8 +32,7 @@ impl TypeMatcher {
         Self(def)
     }
 }
-impl Matcher for TypeMatcher
-{
+impl Matcher for TypeMatcher {
     fn r#match(&self, def: DefinitionRef) -> bool {
         def == self.0
     }

@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -113,7 +113,8 @@ where
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>

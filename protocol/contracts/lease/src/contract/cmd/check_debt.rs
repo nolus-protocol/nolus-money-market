@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -23,7 +23,8 @@ pub(crate) fn check_debt<Asset, Lpp, Oracle>(
     price_alarms: &OracleRef,
 ) -> ContractResult<DebtStatusDTO>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
@@ -65,7 +66,8 @@ pub(crate) struct FullLiquidationDTO {
 
 impl<Asset> From<DebtStatus<Asset>> for DebtStatusDTO
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
     fn from(value: DebtStatus<Asset>) -> Self {
         match value {
@@ -84,7 +86,8 @@ where
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
     fn from(value: Liquidation<Asset>) -> Self {
         match value {
@@ -121,7 +124,8 @@ impl<'a> WithLease for Cmd<'a> {
         lease: LeaseDO<Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {

@@ -1,4 +1,4 @@
-use currency::{self, Currency, MemberOf};
+use currency::{self, CurrencyDef, MemberOf};
 use lpp::stub::loan::{LppLoan as LppLoanTrait, WithLppLoan};
 use oracle_platform::{Oracle as OracleTrait, WithOracle};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -21,7 +21,8 @@ pub trait WithLeaseDeps {
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>;
@@ -68,7 +69,8 @@ where
 
     fn on<Asset>(self, position: Position<Asset>) -> WithPositionResult<Self>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         self.lpp.execute_loan(
             FactoryStage2 {
@@ -92,7 +94,8 @@ struct FactoryStage2<'r, Cmd, Asset> {
 impl<'r, Cmd, Asset> WithLppLoan<LpnCurrency, LpnCurrencies> for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     lpp::error::ContractError: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
@@ -124,7 +127,8 @@ impl<Cmd, Asset, LppLoan> WithOracle<LpnCurrency, LpnCurrencies>
     for FactoryStage4<Cmd, Asset, LppLoan>
 where
     Cmd: WithLeaseDeps,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
 {
     type G = LeasePaymentCurrencies;
