@@ -1,7 +1,7 @@
 use std::array::from_fn;
 
 use currencies::{Lpn, Nls};
-use currency::Definition;
+use currency::CurrencyDef;
 use finance::{coin::Coin, duration::Duration};
 use platform::tests;
 use sdk::{
@@ -208,7 +208,7 @@ fn test_lease_serde() {
 fn test_case() -> TestCase<(), (), (), (), (), (), (), Addr> {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
         10_000_000_000_000_000_000_000_000_000,
-        Lpn::BANK_SYMBOL,
+        Lpn::bank(),
     )])
     .init_time_alarms()
     .into_generic();

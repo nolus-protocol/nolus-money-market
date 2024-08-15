@@ -1,5 +1,5 @@
 use currencies::{LeaseC1, LeaseC2, LeaseGroup, Lpn, PaymentGroup};
-use currency::{Currency, Definition, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -72,7 +72,7 @@ pub(super) fn feed_price<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
 
 pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
 where
-    InitFundsC: Currency,
+    InitFundsC: CurrencyDef,
 {
     let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
@@ -88,7 +88,7 @@ where
         None,
         &[coin(
             5_000_000_000_000_000_000_000_000_000,
-            LpnCurrency::BANK_SYMBOL,
+            LpnCurrency::bank(),
         )],
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -148,7 +148,8 @@ pub(super) fn open_lease<
     max_ltd: Option<Percent>,
 ) -> Addr
 where
-    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
 {
     let lease = try_init_lease(test_case, downpayment, max_ltd);
     complete_init_lease(test_case, downpayment, max_ltd, &lease);
@@ -179,7 +180,7 @@ pub(super) fn try_init_lease<
     max_ltd: Option<Percent>,
 ) -> Addr
 where
-    D: Currency,
+    D: CurrencyDef,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
 
@@ -230,7 +231,8 @@ pub(super) fn complete_init_lease<
     max_ltd: Option<Percent>,
     lease: &Addr,
 ) where
-    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
 {
     let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
         &test_case.app,
@@ -296,7 +298,8 @@ pub(super) fn quote_query<
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
 where
-    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
 {
     common::leaser::query_quote::<_, LeaseCurrency>(
         &test_case.app,
@@ -363,9 +366,11 @@ pub(super) fn expected_open_state<
     max_due: Duration,
 ) -> StateResponse
 where
-    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
     PaymentC: Currency + MemberOf<PaymentGroup>,
-    AssetC: Currency + MemberOf<LeaseGroup>,
+    AssetC: CurrencyDef,
+    AssetC::Group: MemberOf<LeaseGroup>,
 {
     let now = test_case.app.block_info().time;
     let last_paid = now;
@@ -444,7 +449,8 @@ pub(super) fn expected_newly_opened_state<
     payments: Coin<PaymentC>,
 ) -> StateResponse
 where
-    DownpaymentC: Currency + MemberOf<PaymentGroup>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
     PaymentC: Currency + MemberOf<PaymentGroup>,
 {
     expected_open_state(

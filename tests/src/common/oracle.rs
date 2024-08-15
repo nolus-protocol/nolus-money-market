@@ -2,7 +2,7 @@ use currencies::{
     LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency,
     Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Definition, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -11,15 +11,16 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
+    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
+    cosmwasm_std::{self, to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::AppResponse,
     testing::{CwContract, CwContractWrapper},
 };
+use tree::HumanReadableTree;
 
 use super::{
     test_case::{app::App, TestCase},
@@ -42,6 +43,8 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr {
         let code_id = app.store_code(endpoints);
+        let tree = cosmwasm_std::from_json::<HumanReadableTree<SwapTarget<currencies::PaymentGroup>>>("{"value":[0, {$base}],
+        }");
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
@@ -51,13 +54,14 @@ impl Instantiator {
                     Percent::from_percent(75),
                 ),
             },
+            {"value":[0,"$ticker"],"children":[{"value":[1,"$ticker"]},{"value":[3,"$ticker"]},{"value":[7,"$ticker"]},{"value":[11,"$ticker"]},{"value":[13,"$ticker"]}]}
             swap_tree: oracle::swap_tree!(
-                { base: BaseCurrency::TICKER },
-                (1, LeaseC2::TICKER),
-                (3, LeaseC3::TICKER),
-                (7, LeaseC4::TICKER),
-                (11, Nls::TICKER),
-                (13, LeaseC1::TICKER),
+                { base: BaseCurrency::ticker() },
+                (1, LeaseC2::ticker()),
+                (3, LeaseC3::ticker()),
+                (7, LeaseC4::ticker()),
+                (11, Nls::ticker()),
+                (13, LeaseC1::ticker()),
             ),
         };
 
@@ -83,10 +87,14 @@ pub(crate) fn mock_query(
         price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => to_json_binary(&PricesResponse::<PriceCurrencies, BaseCurrencies> {
-            prices: vec![price.into()],
-        })
-        .map_err(ContractError::ConvertToBinary),
+        QueryMsg::Prices {} => {
+            to_json_binary(
+                &PricesResponse::<PriceCurrencies, BaseCurrency, BaseCurrencies> {
+                    prices: vec![price.into()],
+                },
+            )
+            .map_err(ContractError::ConvertToBinary)
+        }
         _ => query(deps, env, msg),
     }
 }
@@ -150,8 +158,10 @@ pub(crate) fn feed_price_pair<
     price: Price<C1, C2>,
 ) -> AppResponse
 where
-    C1: Currency + MemberOf<PriceCurrencies>,
-    C2: Currency + MemberOf<PriceCurrencies>,
+    C1: CurrencyDef,
+    C1::Group: MemberOf<PriceCurrencies>,
+    C2: CurrencyDef,
+    C2::Group: MemberOf<PriceCurrencies>,
 {
     let oracle = test_case.address_book.oracle().clone();
 
@@ -198,8 +208,10 @@ pub(crate) fn feed_price<
     quote: Coin<C2>,
 ) -> AppResponse
 where
-    C1: Currency + MemberOf<PriceCurrencies>,
-    C2: Currency + MemberOf<PriceCurrencies>,
+    C1: CurrencyDef,
+    C1::Group: MemberOf<PriceCurrencies>,
+    C2: CurrencyDef,
+    C2::Group: MemberOf<PriceCurrencies>,
 {
     feed_price_pair(test_case, addr, price::total_of(base).is(quote))
 }

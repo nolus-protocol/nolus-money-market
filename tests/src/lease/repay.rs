@@ -3,7 +3,7 @@ use std::slice;
 use ::lease::api::{query::StateResponse, ExecuteMsg};
 use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
-use currency::{Currency, Definition};
+use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -308,8 +308,8 @@ where
         requests.into_iter(),
         |amount: Amount, in_denom: DexDenom<'_>, out_denom: DexDenom<'_>| {
             assert_eq!(amount, payment.into());
-            assert_eq!(in_denom, PaymentCurrency::DEX_SYMBOL);
-            assert_eq!(out_denom, LpnCurrency::DEX_SYMBOL);
+            assert_eq!(in_denom, PaymentCurrency::dex());
+            assert_eq!(out_denom, LpnCurrency::dex());
 
             swap_out_lpn.into()
         },
@@ -377,7 +377,7 @@ fn send_payment_and_transfer<
     payment: Coin<PaymentC>,
 ) -> ResponseWithInterChainMsgs<'_, ()>
 where
-    PaymentC: Currency,
+    PaymentC: CurrencyDef,
 {
     let payment_cw: CwCoin = common::cwcoin(payment);
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case

@@ -1,5 +1,5 @@
-use currencies::PaymentGroup;
-use currency::Definition;
+use currencies::{Lpns, PaymentGroup};
+use currency::CurrencyDef as _;
 use finance::{coin::Amount, percent::Percent};
 use lease::api::{query::StateResponse, ExecuteMsg};
 use platform::coin_legacy::to_cosmwasm_on_dex;
@@ -144,7 +144,7 @@ fn full_liquidation() {
             .add_attribute("loan-close", "true"),
     );
     assert!(
-        platform::bank::balance::<LpnCurrency>(&reserve, test_case.app.query())
+        platform::bank::balance::<LpnCurrency, Lpns>(&reserve, test_case.app.query())
             .unwrap()
             .is_zero()
     );
@@ -213,7 +213,7 @@ fn liquidation_warning(base: LeaseCoin, quote: Lpnoin, liability: Percent, level
         .find(|attribute| attribute.key == "lease-asset")
         .expect("Lease Asset attribute not present!");
 
-    assert_eq!(&attribute.value, LeaseCurrency::TICKER);
+    assert_eq!(&attribute.value, LeaseCurrency::ticker());
 }
 
 fn deliver_new_price(

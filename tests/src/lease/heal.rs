@@ -1,3 +1,4 @@
+use currencies::Lpns;
 use lease::{api::ExecuteMsg, error::ContractError};
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 
@@ -30,7 +31,7 @@ fn active_state() {
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
     heal_ok(&mut test_case.app, lease.clone()).expect_empty();
     assert!(
-        platform::bank::balance::<LpnCurrency>(&lease, test_case.app.query())
+        platform::bank::balance::<LpnCurrency, Lpns>(&lease, test_case.app.query())
             .unwrap()
             .is_zero()
     );

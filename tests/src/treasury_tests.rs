@@ -1,5 +1,5 @@
 use currencies::{Lpn, Nls};
-use currency::{Definition, NlsPlatform};
+use currency::{CurrencyDef, NlsPlatform};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -213,7 +213,7 @@ fn check_events(
                     "rewards-amount",
                     &Into::<Amount>::into(exp_reward).to_string()
                 ),
-                ("rewards-symbol", Nls::TICKER),
+                ("rewards-symbol", Nls::ticker()),
             ]
         );
     });
