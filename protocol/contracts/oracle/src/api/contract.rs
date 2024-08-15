@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::{CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, SymbolOwned};
-use finance::price::dto::PriceDTO;
+use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_std::Addr,
@@ -212,12 +212,14 @@ where
     rename_all = "snake_case",
     bound(serialize = "", deserialize = "")
 )]
-pub struct PricesResponse<PriceCurrencies, BaseCurrencies>
+pub struct PricesResponse<PriceCurrencies, BaseC, BaseCurrencies>
 where
     PriceCurrencies: Group,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseCurrencies>,
     BaseCurrencies: Group,
 {
-    pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencies>>,
+    pub prices: Vec<BasePrice<PriceCurrencies, BaseC, BaseCurrencies>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

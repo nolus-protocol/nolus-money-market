@@ -28,9 +28,10 @@ where
     C: Currency,
     QuoteC: Currency,
 {
-    
     fn default() -> Self {
-        Self { observations: vec![] }
+        Self {
+            observations: vec![],
+        }
     }
 }
 

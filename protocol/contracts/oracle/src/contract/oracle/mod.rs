@@ -9,7 +9,6 @@ use finance::price::{
         with_price::{self, WithPrice},
         BasePrice,
     },
-    dto::PriceDTO,
     Price,
 };
 use platform::{
@@ -81,18 +80,8 @@ where
     pub(super) fn try_query_prices(
         &self,
         block_time: Timestamp,
-    ) -> Result<Vec<PriceDTO<PriceG, BaseG>>, ContractError> {
-        self.calc_all_prices(block_time).try_fold(
-            vec![],
-            |mut v: Vec<PriceDTO<PriceG, BaseG>>,
-             price: Result<BasePrice<PriceG, BaseC, BaseG>, ContractError>| {
-                price.map(|price| {
-                    v.push(price.into()); // TODO keep using BasePrice
-
-                    v
-                })
-            },
-        )
+    ) -> Result<Vec<BasePrice<PriceG, BaseC, BaseG>>, ContractError> {
+        self.calc_all_prices(block_time).collect()
     }
 
     pub(super) fn try_query_base_price(
@@ -108,27 +97,28 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
+    ) -> Result<BasePrice<PriceG, StableCurrency, PriceG>, ContractError>
     where
         StableCurrency: CurrencyDef,
         StableCurrency::Group: MemberOf<PriceG>,
     {
-        struct StablePriceCalc<StableCurrency, BaseCurrency, G> {
+        struct StablePriceCalc<G, StableCurrency, StableG, BaseCurrency> {
             _currency_group: PhantomData<G>,
-            stable_to_base_price: Price<StableCurrency, BaseCurrency>,
-            _stable: PhantomData<StableCurrency>,
+            stable_to_base: Price<StableCurrency, BaseCurrency>,
+            _quote_group: PhantomData<StableG>,
         }
-        impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
-            for StablePriceCalc<StableCurrency, BaseCurrency, G>
+        impl<G, StableCurrency, StableG, BaseCurrency> WithPrice<BaseCurrency>
+            for StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
         where
             StableCurrency: CurrencyDef,
-            StableCurrency::Group: MemberOf<G>,
-            BaseCurrency: Currency,
+            StableCurrency::Group: MemberOf<StableG>,
+            BaseCurrency: CurrencyDef,
             G: Group,
+            StableG: Group,
         {
             type PriceG = G;
 
-            type Output = PriceDTO<G, G>;
+            type Output = BasePrice<G, StableCurrency, StableG>;
 
             type Error = ContractError;
 
@@ -140,7 +130,7 @@ where
                 BaseC: CurrencyDef,
                 BaseC::Group: MemberOf<Self::PriceG>,
             {
-                Ok((base_price * self.stable_to_base_price.inv()).into())
+                Ok((base_price * self.stable_to_base.inv()).into())
             }
         }
         self.try_query_base_price(at, &StableCurrency::definition().dto().into_super_group())
@@ -153,9 +143,9 @@ where
                         with_price::execute(
                             base_price,
                             StablePriceCalc {
-                                _currency_group: PhantomData,
-                                stable_to_base_price: stable_price,
-                                _stable: PhantomData,
+                                _currency_group: PhantomData::<PriceG>,
+                                stable_to_base: stable_price,
+                                _quote_group: PhantomData::<PriceG>,
                             },
                         )
                     })
