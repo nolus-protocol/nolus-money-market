@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     error,
     price::{
@@ -28,7 +28,8 @@ mod unchecked;
 pub enum ExecuteMsg<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     AddPriceAlarm { alarm: Alarm<G, Lpn, Lpns> },
@@ -58,7 +59,8 @@ pub enum Error {
 pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -68,7 +70,8 @@ where
 impl<G, Lpn, Lpns> Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn, Lpns>
@@ -90,7 +93,8 @@ where
             struct BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
-                QuoteC: Currency + MemberOf<QuoteG>,
+                QuoteC: CurrencyDef,
+                QuoteC::Group: MemberOf<QuoteG>,
                 QuoteG: Group,
             {
                 below_price: &'a BasePrice<BaseG, QuoteC, QuoteG>,
@@ -99,7 +103,8 @@ where
             impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
-                QuoteC: Currency + MemberOf<QuoteG>,
+                QuoteC: CurrencyDef,
+                QuoteC::Group: MemberOf<QuoteG>,
                 QuoteG: Group,
             {
                 type PriceG = BaseG;
@@ -113,7 +118,8 @@ where
                     above_or_equal: Price<C, QuoteC>,
                 ) -> StdResult<Self::Output, Self::Error>
                 where
-                    C: Currency + MemberOf<BaseG>,
+                    C: CurrencyDef,
+                    C::Group: MemberOf<BaseG>,
                 {
                     Price::<C, QuoteC>::try_from(self.below_price).map_err(Error::FinanceError).and_then(|below_price| {
                             if below_price > above_or_equal {
@@ -139,7 +145,8 @@ impl<G, Lpn, Lpns> From<Alarm<G, Lpn, Lpns>>
     for (BasePrice<G, Lpn, Lpns>, Option<BasePrice<G, Lpn, Lpns>>)
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     fn from(value: Alarm<G, Lpn, Lpns>) -> Self {
@@ -150,7 +157,8 @@ where
 impl<G, Lpn, Lpns> Clone for Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     fn clone(&self) -> Self {
@@ -169,7 +177,7 @@ mod test {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, LeaseC2, LeaseC3, Lpn},
     };
-    use currency::{Currency, Definition, Group, MemberOf};
+    use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},
         price::base::BasePrice,
@@ -266,10 +274,10 @@ mod test {
 
         let full_json = format!(
             r#"{{"below": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}, "above": {{"amount": {{"amount": "2", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}}}"#,
-            LeaseC3::TICKER,
-            Lpn::TICKER,
-            LeaseC1::TICKER,
-            Lpn::TICKER
+            LeaseC3::ticker(),
+            Lpn::ticker(),
+            LeaseC1::ticker(),
+            Lpn::ticker()
         );
 
         assert_err::<LeaseGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
@@ -313,7 +321,8 @@ mod test {
     fn assert_err<G, QuoteC, QuoteG>(r: Result<Alarm<G, QuoteC, QuoteG>, StdError>, msg: &str)
     where
         G: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         assert!(r.is_err());
@@ -331,7 +340,8 @@ mod test {
     ) -> Result<Alarm<G, QuoteC, QuoteG>, StdError>
     where
         G: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         from_both_impl::<G, QuoteC, QuoteG, QuoteC, QuoteG>(below, None)
@@ -343,9 +353,11 @@ mod test {
     ) -> Result<Alarm<G, QuoteC1, QuoteG1>, StdError>
     where
         G: Group,
-        QuoteC1: Currency + MemberOf<QuoteG1>,
+        QuoteC1: CurrencyDef,
+        QuoteC1::Group: MemberOf<QuoteG1>,
         QuoteG1: Group,
-        QuoteC2: Currency + MemberOf<QuoteG2>,
+        QuoteC2: CurrencyDef,
+        QuoteC2::Group: MemberOf<QuoteG2>,
         QuoteG2: Group,
     {
         from_both_impl(below, Some(above))
@@ -357,9 +369,11 @@ mod test {
     ) -> Result<Alarm<G, QuoteC1, QuoteG1>, StdError>
     where
         G: Group,
-        QuoteC1: Currency + MemberOf<QuoteG1>,
+        QuoteC1: CurrencyDef,
+        QuoteC1::Group: MemberOf<QuoteG1>,
         QuoteG1: Group,
-        QuoteC2: Currency + MemberOf<QuoteG2>,
+        QuoteC2: CurrencyDef,
+        QuoteC2::Group: MemberOf<QuoteG2>,
         QuoteG2: Group,
     {
         let above_str = above
@@ -377,7 +391,8 @@ mod test {
         Str1: AsRef<str>,
         Str2: AsRef<str>,
         G: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         let full_json = above.map_or_else(
@@ -406,7 +421,8 @@ mod test {
     ) -> Result<String, StdError>
     where
         G: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         as_json(&price).map(|string_price| alarm_half_to_json_str(price_type, &string_price))
@@ -418,8 +434,10 @@ mod test {
         amount_quote: Coin<Q>,
     ) -> Result<String, StdError>
     where
-        C: Currency + MemberOf<LeaseGroup>,
-        Q: Currency + MemberOf<Lpns>,
+        C: CurrencyDef,
+        C::Group: MemberOf<LeaseGroup>,
+        Q: CurrencyDef,
+        Q::Group: MemberOf<Lpns>,
     {
         as_json(&CoinDTO::<LeaseGroup>::from(amount)).and_then(|amount_str| {
             as_json(&CoinDTO::<Lpns>::from(amount_quote)).map(|amount_quote_str| {

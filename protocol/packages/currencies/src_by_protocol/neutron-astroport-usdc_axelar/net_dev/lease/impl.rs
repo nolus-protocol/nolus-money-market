@@ -41,7 +41,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         test_impl::{
@@ -64,12 +64,12 @@ mod test {
         maybe_visit_on_ticker_impl::<Ntrn, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Atom, PaymentGroup>();
         maybe_visit_on_ticker_impl::<Ntrn, PaymentGroup>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::DEX_SYMBOL);
-        maybe_visit_on_ticker_err::<Ntrn, LeaseGroup>(Ntrn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Ntrn, LeaseGroup>(Ntrn::DEX_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::bank());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::ticker());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::dex());
+        maybe_visit_on_ticker_err::<Ntrn, LeaseGroup>(Ntrn::bank());
+        maybe_visit_on_ticker_err::<Ntrn, LeaseGroup>(Ntrn::dex());
     }
 
     #[test]
@@ -78,10 +78,10 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Ntrn, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Atom, PaymentGroup>();
         maybe_visit_on_bank_symbol_impl::<Ntrn, PaymentGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::DEX_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Ntrn, LeaseGroup>(Ntrn::DEX_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::ticker());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::dex());
+        maybe_visit_on_bank_symbol_err::<Ntrn, LeaseGroup>(Ntrn::dex());
     }
 }

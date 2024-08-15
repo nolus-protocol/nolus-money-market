@@ -20,7 +20,8 @@ where
 
     fn exec<C>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + MemberOf<Self::PriceG>;
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::PriceG>;
 }
 
 /// Execute the provided price command on a valid base price
@@ -156,7 +157,8 @@ where
 
     fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         self.price
             .try_obtain_price(amount)

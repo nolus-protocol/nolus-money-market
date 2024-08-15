@@ -26,7 +26,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         lpn::{Lpn, Lpns},
@@ -43,16 +43,16 @@ mod test {
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<UsdcNoble, PaymentOnlyGroup>();
-        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::TICKER);
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(UsdcNoble::TICKER);
+        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::bank());
+        maybe_visit_on_ticker_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::ticker());
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(UsdcNoble::ticker());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<UsdcNoble, PaymentOnlyGroup>();
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::TICKER);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(UsdcNoble::ticker());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Nls::bank());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, PaymentOnlyGroup>(Lpn::bank());
     }
 }

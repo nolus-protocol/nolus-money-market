@@ -63,7 +63,7 @@ impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         lpn::{Lpn, Lpns},
@@ -77,14 +77,14 @@ mod test {
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Lpn, Lpns>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::ticker());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<Lpn, Lpns>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::bank());
     }
 }

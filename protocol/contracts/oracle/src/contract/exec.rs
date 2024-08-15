@@ -1,6 +1,6 @@
 use finance::price::dto::PriceDTO;
 
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use platform::{contract, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -23,7 +23,8 @@ pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrenci
     sender: Addr,
 ) -> ContractResult<CwResponse>
 where
-    BaseCurrency: Currency + MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
+    BaseCurrency: CurrencyDef,
+    BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
     BaseCurrencies: Group,
     AlarmCurrencies: Group,
     PriceCurrencies: Group,
@@ -67,7 +68,8 @@ fn try_feed_prices<G, BaseC, BaseG>(
 ) -> ContractResult<()>
 where
     G: Group,
-    BaseC: Currency + MemberOf<BaseG> + MemberOf<G>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
     BaseG: Group,
 {
     Config::load(storage)

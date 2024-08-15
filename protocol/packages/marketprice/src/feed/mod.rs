@@ -13,7 +13,7 @@ use self::observation::Observation;
 mod observation;
 mod sample;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct PriceFeed<C, QuoteC>
 where
@@ -21,6 +21,17 @@ where
     QuoteC: Currency,
 {
     observations: Vec<Observation<C, QuoteC>>,
+}
+
+impl<C, QuoteC> Default for PriceFeed<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    
+    fn default() -> Self {
+        Self { observations: vec![] }
+    }
 }
 
 impl<C, QuoteC> PriceFeed<C, QuoteC>

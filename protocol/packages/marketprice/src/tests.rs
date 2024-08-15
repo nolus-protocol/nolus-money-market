@@ -1,10 +1,10 @@
 use std::time::SystemTime;
 
 use currency::test::{
-    SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
-    SuperGroupTestC4, SuperGroupTestC5, SuperGroupTestC6,
+    SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+    SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -68,8 +68,8 @@ fn marketprice_add_feed_expect_err() {
             ts,
             TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                SuperGroupTestC5::definition().dto(),
+                SuperGroupTestC3::definition().dto(),
             ]
             .into_iter(),
         )
@@ -101,7 +101,7 @@ fn marketprice_add_feed() {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
-    let price2 = price::<SuperGroupTestC5, SubGroupTestC1, _, _>(10000000000, 1000000009);
+    let price2 = price::<SuperGroupTestC5, SubGroupTestC10, _, _>(10000000000, 1000000009);
     let price3 = price::<SuperGroupTestC5, SuperGroupTestC4, _, _>(10000000000000, 100000000000002);
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
@@ -120,8 +120,8 @@ fn marketprice_add_feed() {
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                SuperGroupTestC5::definition().dto(),
+                SuperGroupTestC3::definition().dto(),
             ]
             .into_iter(),
         )
@@ -135,8 +135,8 @@ fn marketprice_add_feed() {
                 ts,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC3::definition().dto(),
                 ]
                 .into_iter(),
             )
@@ -154,7 +154,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::<SuperGroupTestC3, SubGroupTestC1, _, _>(1, 1),
+        price::<SuperGroupTestC3, SubGroupTestC10, _, _>(1, 1),
     )
     .unwrap();
     feed_price(
@@ -167,7 +167,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::<SuperGroupTestC1, SubGroupTestC1, _, _>(1, 3),
+        price::<SuperGroupTestC1, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
@@ -201,7 +201,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::<SuperGroupTestC4, SubGroupTestC1, _, _>(1, 3),
+        price::<SuperGroupTestC4, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
@@ -215,7 +215,7 @@ fn marketprice_follow_the_path() {
     let last_feed_time = feed_price(
         deps.as_mut(),
         &market,
-        price::<SuperGroupTestC6, SuperGroupTestC2, _, _>(1, 3),
+        price::<SubGroupTestC6, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
 
@@ -225,10 +225,10 @@ fn marketprice_follow_the_path() {
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC1, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC2, SuperGroup>(),
+                SuperGroupTestC3::definition().dto(),
+                SuperGroupTestC5::definition().dto(),
+                SuperGroupTestC1::definition().dto(),
+                SuperGroupTestC2::definition().dto(),
             ]
             .into_iter(),
         )
@@ -245,8 +245,8 @@ fn marketprice_follow_the_path() {
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                &currency::dto::<SuperGroupTestC2, SuperGroup>(),
+                SuperGroupTestC3::definition().dto(),
+                SuperGroupTestC2::definition().dto(),
             ]
             .into_iter(),
         )
@@ -261,8 +261,8 @@ fn marketprice_follow_the_path() {
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SubGroupTestC1, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC2, SuperGroup>()
+                    &SubGroupTestC10::definition().dto().into_super_group(),
+                    SuperGroupTestC2::definition().dto()
                 ]
                 .into_iter(),
             )
@@ -278,8 +278,8 @@ fn marketprice_follow_the_path() {
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SubGroupTestC1, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>()
+                    &SuperGroupTestC3::definition().dto().into_super_group(),
+                    SuperGroupTestC5::definition().dto()
                 ]
                 .into_iter()
             )
@@ -294,8 +294,10 @@ fn feed_price<C1, C2, G>(
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
-    C1: Currency + MemberOf<G>,
-    C2: Currency + MemberOf<G>,
+    C1: CurrencyDef,
+    C1::Group: MemberOf<G>,
+    C2: CurrencyDef,
+    C2::Group: MemberOf<G>,
     G: Group,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();

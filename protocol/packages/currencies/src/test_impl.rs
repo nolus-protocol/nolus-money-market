@@ -1,22 +1,22 @@
 use currency::{
-    error::Error, test::Expect, BankSymbols, Currency, Definition, Group, GroupVisit, MemberOf,
-    Symbol, SymbolSlice, Tickers,
+    error::Error, test::Expect, BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol,
+    SymbolSlice, Tickers,
 };
 
 #[track_caller]
 pub fn maybe_visit_on_ticker_impl<C, VisitorG>()
 where
-    C: Currency + Definition,
+    C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    visit_on_symbol::<C, VisitorG, Tickers<C::Group>>(C::TICKER)
+    visit_on_symbol::<C, VisitorG, Tickers<C::Group>>(C::ticker())
 }
 
 #[track_caller]
 pub fn maybe_visit_on_ticker_err<C, VisitorG>(unknown_ticker: &SymbolSlice)
 where
-    C: Currency,
+    C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
@@ -26,17 +26,17 @@ where
 #[track_caller]
 pub fn maybe_visit_on_bank_symbol_impl<C, VisitorG>()
 where
-    C: Currency + Definition,
+    C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    visit_on_symbol::<C, VisitorG, BankSymbols<C::Group>>(C::BANK_SYMBOL)
+    visit_on_symbol::<C, VisitorG, BankSymbols<C::Group>>(C::bank())
 }
 
 #[track_caller]
 pub fn maybe_visit_on_bank_symbol_err<C, VisitorG>(unknown_ticker: &SymbolSlice)
 where
-    C: Currency,
+    C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
@@ -45,8 +45,8 @@ where
 
 fn visit_on_symbol<C, VisitorG, Symbols>(symbol: &SymbolSlice)
 where
-    C: Currency + MemberOf<C::Group>,
-    C::Group: Group + MemberOf<VisitorG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<VisitorG>,
     VisitorG: Group,
     Symbols: Symbol<Group = C::Group>,
 {
@@ -66,8 +66,8 @@ where
 
 fn visit_on_symbol_err<C, VisitorG, Symbols>(unknown_symbol: &SymbolSlice)
 where
-    C: Currency,
-    C::Group: Group + MemberOf<VisitorG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<VisitorG>,
     VisitorG: Group,
     Symbols: Symbol<Group = C::Group>,
 {

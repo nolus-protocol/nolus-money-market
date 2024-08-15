@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
@@ -63,7 +63,8 @@ where
 }
 impl<Lpn, Lpns> LppLoan<Lpn, Lpns> for LppLoanImpl<Lpn, Lpns>
 where
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     fn principal_due(&self) -> Coin<Lpn> {
@@ -86,7 +87,8 @@ where
 
 impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>>
 where
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     type Error = ContractError;

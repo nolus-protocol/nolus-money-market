@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, ReplyId},
@@ -67,7 +67,8 @@ where
 
 impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
 where
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {

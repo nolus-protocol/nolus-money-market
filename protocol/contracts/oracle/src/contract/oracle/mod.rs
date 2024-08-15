@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -51,7 +51,8 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
@@ -86,7 +87,7 @@ where
             |mut v: Vec<PriceDTO<PriceG, BaseG>>,
              price: Result<BasePrice<PriceG, BaseC, BaseG>, ContractError>| {
                 price.map(|price| {
-                    v.push(price.into());
+                    v.push(price.into()); // TODO keep using BasePrice
 
                     v
                 })
@@ -109,7 +110,8 @@ where
         currency: &CurrencyDTO<PriceG>,
     ) -> Result<PriceDTO<PriceG, PriceG>, ContractError>
     where
-        StableCurrency: Currency + MemberOf<PriceG>,
+        StableCurrency: CurrencyDef,
+        StableCurrency::Group: MemberOf<PriceG>,
     {
         struct StablePriceCalc<StableCurrency, BaseCurrency, G> {
             _currency_group: PhantomData<G>,
@@ -119,7 +121,8 @@ where
         impl<StableCurrency, BaseCurrency, G> WithPrice<BaseCurrency>
             for StablePriceCalc<StableCurrency, BaseCurrency, G>
         where
-            StableCurrency: Currency + MemberOf<G>,
+            StableCurrency: CurrencyDef,
+            StableCurrency::Group: MemberOf<G>,
             BaseCurrency: Currency,
             G: Group,
         {
@@ -134,12 +137,13 @@ where
                 base_price: Price<BaseC, BaseCurrency>,
             ) -> Result<Self::Output, Self::Error>
             where
-                BaseC: Currency + MemberOf<Self::PriceG>,
+                BaseC: CurrencyDef,
+                BaseC::Group: MemberOf<Self::PriceG>,
             {
                 Ok((base_price * self.stable_to_base_price.inv()).into())
             }
         }
-        self.try_query_base_price(at, &currency::dto::<StableCurrency, PriceG>())
+        self.try_query_base_price(at, &StableCurrency::definition().dto().into_super_group())
             .and_then(|stable_price| {
                 Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
             })
@@ -175,7 +179,8 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     PriceG: Group + Clone,
-    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     const REPLY_ID: Id = 0;
@@ -230,7 +235,7 @@ mod test_normalized_price_not_found {
         Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
         PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
-    use currency::Definition;
+    use currency::CurrencyDef as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
     use sdk::cosmwasm_std::{
@@ -293,7 +298,7 @@ mod test_normalized_price_not_found {
         Config::new(price_config.clone()).store(storage).unwrap();
 
         SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(
-            swap_tree!({ base: BaseCurrency::TICKER }, (1, Nls::TICKER), (10, PaymentC3::TICKER))
+            swap_tree!({ base: BaseCurrency::ticker() }, (1, Nls::ticker()), (10, PaymentC3::ticker()))
                 .into_tree(),
         )
         .unwrap()

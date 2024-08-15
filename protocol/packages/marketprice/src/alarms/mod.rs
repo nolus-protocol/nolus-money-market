@@ -6,7 +6,7 @@ use std::{
 use prefix::Prefix;
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf, SymbolOwned};
+use currency::{CurrencyDef, Group, MemberOf, SymbolOwned};
 use finance::{
     coin::{Amount, CoinDTO},
     price::{self, Price},
@@ -59,8 +59,9 @@ where
 {
     fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
     where
-        C: Currency + MemberOf<G>,
-        BaseC: Currency,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        BaseC: CurrencyDef,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
         NormalizedPrice::<G>(price::total(NORM_SCALE.into(), price.inv()).into())
@@ -155,8 +156,9 @@ where
 
     pub fn alarms<C, BaseC>(&self, price: Price<C, BaseC>) -> AlarmsIterator<'_, G>
     where
-        C: Currency + MemberOf<G>,
-        BaseC: Currency,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        BaseC: CurrencyDef,
     {
         let norm_price = NormalizedPrice::new(&price);
 
@@ -215,8 +217,9 @@ where
         above_or_equal: Option<Price<C, BaseC>>,
     ) -> Result<(), AlarmError>
     where
-        C: Currency + MemberOf<G>,
-        BaseC: Currency,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
+        BaseC: CurrencyDef,
     {
         self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below))
             .and_then(|()| match above_or_equal {

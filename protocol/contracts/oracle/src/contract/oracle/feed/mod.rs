@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -27,7 +27,8 @@ pub struct Feeds<PriceG, BaseC, BaseG> {
 impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
 where
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,
 {
     pub(crate) fn with(config: Config) -> Self {
@@ -110,7 +111,7 @@ mod test {
         Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
         PaymentGroup as PriceCurrencies,
     };
-    use currency::{Definition, SymbolStatic};
+    use currency::SymbolStatic;
     use finance::{
         coin::Amount,
         duration::Duration,
@@ -136,11 +137,13 @@ mod test {
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
-            B: Currency + MemberOf<PriceCurrencies> + Definition,
-            Q: Currency + MemberOf<PriceCurrencies> + Definition,
+            B: CurrencyDef,
+            B::Group: MemberOf<PriceCurrencies>,
+            Q: CurrencyDef,
+            Q::Group: MemberOf<PriceCurrencies>,
         {
             self.0.insert(
-                (B::TICKER, Q::TICKER),
+                (B::ticker(), Q::ticker()),
                 tests::dto_price::<B, PriceCurrencies, Q, PriceCurrencies>(total_of, is),
             );
         }
@@ -151,14 +154,16 @@ mod test {
 
         fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
         where
-            B: Currency + MemberOf<Self::CurrencyGroup>,
-            Q: Currency + MemberOf<Self::CurrencyGroup>,
+            B: CurrencyDef,
+            B::Group: MemberOf<Self::CurrencyGroup>,
+            Q: CurrencyDef,
+            Q::Group: MemberOf<Self::CurrencyGroup>,
         {
             Ok(self
                 .0
                 .get(&(
-                    currency::dto::<B, Self::CurrencyGroup>().first_key(),
-                    currency::dto::<Q, Self::CurrencyGroup>().first_key(),
+                    B::definition().dto().first_key(),
+                    Q::definition().dto().first_key(),
                 ))
                 .map(Price::try_from)
                 .transpose()?)
@@ -166,13 +171,13 @@ mod test {
     }
 
     fn test_case() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-        let base = BaseCurrency::TICKER;
-        let osmo = PaymentC5::TICKER;
-        let nls = PaymentC1::TICKER;
-        let weth = PaymentC7::TICKER;
-        let atom = PaymentC3::TICKER;
-        let axl = PaymentC4::TICKER;
-        let cro = PaymentC6::TICKER;
+        let base = BaseCurrency::ticker();
+        let osmo = PaymentC5::ticker();
+        let nls = PaymentC1::ticker();
+        let weth = PaymentC7::ticker();
+        let atom = PaymentC3::ticker();
+        let axl = PaymentC4::ticker();
+        let cro = PaymentC6::ticker();
 
         cosmwasm_std::from_json(format!(
             r#"

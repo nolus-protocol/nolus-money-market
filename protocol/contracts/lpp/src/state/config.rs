@@ -58,7 +58,7 @@ impl Config {
     where
         Lpn: Definition,
     {
-        Lpn::TICKER
+        Lpn::ticker()
     }
 
     pub const fn lease_code(&self) -> Code {

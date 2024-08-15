@@ -1,8 +1,8 @@
 pub use serde::{Deserialize, Serialize};
 
-pub use sdk::schemars::JsonSchema;
+pub use sdk::schemars::{self, JsonSchema};
 
-pub use currency::{CurrencyDTO, CurrencyDef, Definition, SymbolStatic};
+pub use currency::{CurrencyDTO, CurrencyDef, Definition};
 
 #[macro_export]
 macro_rules! define_currency {
@@ -32,21 +32,19 @@ macro_rules! define_currency {
             type Group = $group;
 
             fn definition() -> &'static Self {
-                const INSTANCE: &$ident = &$ident(
-                    $crate::currency_macro::CurrencyDTO::new(
-                        &Definition::new(
-                            ::core::stringify!($ticker),
-                            $bank_symbol,
-                            $dex_symbol,
-                            $decimal_digits,
-                        ),
+                const INSTANCE: &$ident = &$ident($crate::currency_macro::CurrencyDTO::new(
+                    &$crate::currency_macro::Definition::new(
+                        ::core::stringify!($ticker),
+                        $bank_symbol,
+                        $dex_symbol,
+                        $decimal_digits,
                     ),
-                );
+                ));
 
                 INSTANCE
             }
 
-            fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            fn dto(&self) -> &$crate::currency_macro::CurrencyDTO<Self::Group> {
                 &self.0
             }
         }

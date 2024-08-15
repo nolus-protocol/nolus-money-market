@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
     PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Definition, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -32,9 +32,11 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
 where
-    C: Currency + MemberOf<G>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
     G: Group,
-    Q: Currency + MemberOf<LpnG>,
+    Q: CurrencyDef,
+    Q::Group: MemberOf<LpnG>,
     LpnG: Group,
 {
     price::total_of(Coin::<C>::new(total_of))
@@ -47,7 +49,8 @@ pub(crate) fn base_price<C>(
     is: Amount,
 ) -> BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>
 where
-    C: Currency + MemberOf<PriceCurrencies>,
+    C: CurrencyDef,
+    C::Group: MemberOf<PriceCurrencies>,
 {
     price::total_of(Coin::<C>::new(total_of))
         .is(Coin::new(is))
@@ -99,12 +102,12 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg<PriceCurrencies>
                     }}
                 ]
             }}"#,
-            usdc = BaseCurrency::TICKER,
-            weth = PaymentC7::TICKER,
-            atom = PaymentC3::TICKER,
-            osmo = PaymentC5::TICKER,
-            axl = PaymentC4::TICKER,
-            cro = PaymentC6::TICKER,
+            usdc = BaseCurrency::ticker(),
+            weth = PaymentC7::ticker(),
+            atom = PaymentC3::ticker(),
+            osmo = PaymentC5::ticker(),
+            axl = PaymentC4::ticker(),
+            cro = PaymentC6::ticker(),
         ))
         .unwrap(),
     )
@@ -134,7 +137,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
+    let info = mock_info(CREATOR, &coins(1000, Nls::ticker()));
     let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 

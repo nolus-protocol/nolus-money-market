@@ -31,7 +31,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         test_impl::{
@@ -51,19 +51,19 @@ mod test {
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<UsdcNoble, LeaseGroup>();
 
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcNoble, LeaseGroup>(UsdcNoble::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<UsdcNoble, LeaseGroup>(UsdcNoble::DEX_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        maybe_visit_on_ticker_err::<UsdcNoble, LeaseGroup>(UsdcNoble::bank());
+        maybe_visit_on_ticker_err::<UsdcNoble, LeaseGroup>(UsdcNoble::dex());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<UsdcNoble, LeaseGroup>();
 
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(UsdcNoble::TICKER);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(UsdcNoble::ticker());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Nls::bank());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(Nls::ticker());
     }
 }

@@ -100,7 +100,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         test_impl::{
@@ -125,11 +125,11 @@ mod test {
         maybe_visit_on_ticker_impl::<Akt, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Mars, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Lpn::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::bank());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::ticker());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::bank());
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Lpn::bank());
     }
 
     #[test]
@@ -141,10 +141,10 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Akt, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Mars, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::DEX_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
-        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::dex());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::ticker());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::bank());
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::ticker());
     }
 }

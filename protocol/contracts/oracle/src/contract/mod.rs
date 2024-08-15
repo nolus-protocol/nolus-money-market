@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use currency::Definition as _;
+use currency::CurrencyDef as _;
 use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},
@@ -90,8 +90,8 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
         QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
             .map_err(ContractError::LoadFeeders)
             .and_then(|ref f| to_json_binary(&f)),
-        QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::TICKER),
-        QueryMsg::StableCurrency {} => to_json_binary(StableCurrency::TICKER),
+        QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::definition().dto()),
+        QueryMsg::StableCurrency {} => to_json_binary(StableCurrency::definition().dto()),
         QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
             &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .swap_pairs_df()
@@ -196,7 +196,7 @@ mod tests {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
     };
-    use currency::{CurrencyDTO, Definition};
+    use currency::CurrencyDef as _;
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
@@ -215,7 +215,7 @@ mod tests {
         let msg = dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Lpn::TICKER }, (1, PaymentC5::TICKER)),
+            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC5::ticker())),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -242,10 +242,10 @@ mod tests {
         let value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: CurrencyDTO::from_currency_type::<PaymentC5>(),
+            from: PaymentC5::definition().dto().into_super_group(),
             to: SwapTarget {
                 pool_id: 1,
-                target: CurrencyDTO::from_currency_type::<Lpn>(),
+                target: Lpn::definition().dto().into_super_group(),
             },
         }];
 
@@ -256,8 +256,8 @@ mod tests {
     fn impl_swap_path() {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
-        let from = currency::dto::<PaymentC1, PriceCurrencies>();
-        let to = currency::dto::<Lpn, PriceCurrencies>();
+        let from = PaymentC1::definition().dto().into_super_group();
+        let to = Lpn::definition().dto().into_super_group();
         let query_impl = QueryMsg::SwapPath { from, to };
         let query_api = cosmwasm_std::from_json::<QueryMsgApi<PriceCurrencies>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),

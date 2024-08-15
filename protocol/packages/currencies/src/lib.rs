@@ -12,7 +12,6 @@ mod lpn;
 mod native;
 mod payment;
 mod stable;
-mod symbols_macro;
 
 #[cfg(test)]
 mod test_impl;

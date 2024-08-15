@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, Group, MemberOf, SymbolOwned,
+    self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
+    SymbolStatic,
 };
 use finance::price::{
     dto::{with_price, PriceDTO, WithPrice},
@@ -16,7 +17,7 @@ use crate::{alarms::prefix::Prefix, config::Config, error::PriceFeedsError, feed
 
 pub type PriceFeedBin = Vec<u8>;
 pub struct PriceFeeds<'m, PriceG> {
-    storage: Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>,
+    storage: Map<'m, (SymbolStatic, SymbolStatic), PriceFeedBin>,
     config: Config,
     _g: PhantomData<PriceG>,
 }
@@ -44,8 +45,8 @@ where
             self.storage.update(
                 storage,
                 (
-                    price.base().currency().first_key().into(),
-                    price.quote().currency().first_key().into(),
+                    price.base().currency().first_key(),
+                    price.quote().currency().first_key(),
                 ),
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
                     add_observation(
@@ -72,13 +73,17 @@ where
     where
         'm: 'a,
         PriceG: Group,
-        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<PriceG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<PriceG>,
         QuoteG: Group,
         Iter: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
-        debug_assert_eq!(_root, Some(&currency::dto::<QuoteC, _>()));
+        debug_assert_eq!(
+            _root,
+            Some(&QuoteC::definition().dto().into_super_group::<PriceG>())
+        );
         PriceCollect::do_collect(
             root_to_leaf,
             self,
@@ -96,14 +101,16 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
-        C: Currency + MemberOf<PriceG>,
-        QuoteC: Currency + MemberOf<PriceG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<PriceG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<PriceG>,
     {
         let feed_bin = self.storage.may_load(
             storage,
             (
-                currency::dto::<C, PriceG>().first_key().into(),
-                currency::dto::<QuoteC, PriceG>().first_key().into(),
+                C::definition().dto().first_key(),
+                QuoteC::definition().dto().first_key(),
             ),
         )?;
         load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at, total_feeders))
@@ -141,9 +148,11 @@ where
 impl<'a, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, Iter, C, G, QuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    C: Currency + MemberOf<G>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
     G: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn do_collect(
@@ -174,22 +183,25 @@ impl<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
     for PriceCollect<'a, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    QuoteC: Currency + MemberOf<G>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<G>,
     G: Group,
-    QuoteQuoteC: Currency + MemberOf<QuoteG>,
+    QuoteQuoteC: CurrencyDef,
+    QuoteQuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type VisitorG = G;
     type Output = PriceDTO<G, QuoteG>;
     type Error = PriceFeedsError;
 
-    fn on<C>(self) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         let next_price =
             self.feeds
-                .price_of_feed::<C, _>(self.storage, self.at, self.total_feeders)?;
+                .price_of_feed::<C, QuoteC>(self.storage, self.at, self.total_feeders)?;
         let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
@@ -261,10 +273,10 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{
-        SubGroup, SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
-        SuperGroupTestC4, SuperGroupTestC5,
+        SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+        SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
     };
-    use currency::{Group, MemberOf};
+    use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -298,7 +310,7 @@ mod test {
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
-                [&currency::dto::<SuperGroupTestC1, SuperGroup>()].into_iter()
+                [SuperGroupTestC1::definition().dto()].into_iter()
             )
         );
 
@@ -309,8 +321,8 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC1::definition().dto()
                 ]
                 .into_iter()
             )
@@ -321,11 +333,11 @@ mod test {
     fn feed_pair() {
         fn build_price<QuoteG>() -> PriceDTO<SuperGroup, QuoteG>
         where
-            SubGroupTestC1: MemberOf<QuoteG>,
+            SubGroup: MemberOf<QuoteG>,
             QuoteG: Group,
         {
             price::total_of(Coin::<SuperGroupTestC5>::new(1))
-                .is(Coin::<SubGroupTestC1>::new(18500))
+                .is(Coin::<SubGroupTestC10>::new(18500))
                 .into()
         }
 
@@ -348,21 +360,21 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC1, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC1::definition().dto()
                 ]
                 .into_iter()
             )
         );
         assert_eq!(
             Ok(build_price()),
-            feeds.price::<SubGroupTestC1, SubGroup, _>(
+            feeds.price::<SubGroupTestC10, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SubGroupTestC1, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    &SubGroupTestC10::definition().dto().into_super_group()
                 ]
                 .into_iter()
             )
@@ -378,7 +390,7 @@ mod test {
         let new_price56 =
             price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SuperGroupTestC4>::new(3));
         let new_price51 =
-            price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SubGroupTestC1>::new(4));
+            price::total_of(Coin::<SuperGroupTestC3>::new(1)).is(Coin::<SubGroupTestC10>::new(4));
 
         feeds
             .feed(
@@ -396,8 +408,8 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC2, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC2::definition().dto()
                 ]
                 .into_iter()
             )
@@ -409,8 +421,8 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC3::definition().dto()
                 ]
                 .into_iter()
             )
@@ -422,21 +434,21 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC4, SuperGroup>()
+                    SuperGroupTestC3::definition().dto(),
+                    SuperGroupTestC4::definition().dto()
                 ]
                 .into_iter()
             )
         );
         assert_eq!(
             Ok(new_price51.into()),
-            feeds.price::<SubGroupTestC1, SubGroup, _>(
+            feeds.price::<SubGroupTestC10, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SubGroupTestC1, SuperGroup>()
+                    SuperGroupTestC3::definition().dto(),
+                    &SubGroupTestC10::definition().dto().into_super_group()
                 ]
                 .into_iter()
             )
@@ -448,23 +460,23 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC4, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC3::definition().dto(),
+                    SuperGroupTestC4::definition().dto()
                 ]
                 .into_iter()
             )
         );
         assert_eq!(
             Ok((new_price75 * new_price51).into()),
-            feeds.price::<SubGroupTestC1, SubGroup, _>(
+            feeds.price::<SubGroupTestC10, SubGroup, _>(
                 &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, SuperGroup>(),
-                    &currency::dto::<SuperGroupTestC3, SuperGroup>(),
-                    &currency::dto::<SubGroupTestC1, SuperGroup>()
+                    SuperGroupTestC5::definition().dto(),
+                    SuperGroupTestC3::definition().dto(),
+                    &SubGroupTestC10::definition().dto().into_super_group()
                 ]
                 .into_iter()
             )
