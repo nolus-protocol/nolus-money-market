@@ -1,6 +1,6 @@
 use crate::SymbolStatic;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd)]
 pub struct Definition {
     /// Identifier of the currency
     pub ticker: SymbolStatic,
@@ -32,5 +32,12 @@ impl Definition {
             dex_symbol: dex,
             decimal_digits,
         }
+    }
+}
+
+impl PartialEq for Definition
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.ticker.eq(other.ticker)
     }
 }
