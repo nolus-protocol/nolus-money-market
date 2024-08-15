@@ -11,16 +11,15 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
+    api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{self, to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
+    cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::AppResponse,
     testing::{CwContract, CwContractWrapper},
 };
-use tree::HumanReadableTree;
 
 use super::{
     test_case::{app::App, TestCase},
@@ -43,8 +42,6 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr {
         let code_id = app.store_code(endpoints);
-        let tree = cosmwasm_std::from_json::<HumanReadableTree<SwapTarget<currencies::PaymentGroup>>>("{"value":[0, {$base}],
-        }");
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
@@ -54,7 +51,7 @@ impl Instantiator {
                     Percent::from_percent(75),
                 ),
             },
-            {"value":[0,"$ticker"],"children":[{"value":[1,"$ticker"]},{"value":[3,"$ticker"]},{"value":[7,"$ticker"]},{"value":[11,"$ticker"]},{"value":[13,"$ticker"]}]}
+            
             swap_tree: oracle::swap_tree!(
                 { base: BaseCurrency::ticker() },
                 (1, LeaseC2::ticker()),

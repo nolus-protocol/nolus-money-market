@@ -8,6 +8,7 @@ pub use currency::{CurrencyDTO, CurrencyDef, Definition};
 macro_rules! define_currency {
     (
         $ident:ident,
+        $ticker: literal,
         $bank_symbol: literal,
         $dex_symbol: literal,
         $group:ty,
@@ -34,7 +35,7 @@ macro_rules! define_currency {
             fn definition() -> &'static Self {
                 const INSTANCE: &$ident = &$ident($crate::currency_macro::CurrencyDTO::new(
                     &$crate::currency_macro::Definition::new(
-                        ::core::stringify!($ticker),
+                        $ticker,
                         $bank_symbol,
                         $dex_symbol,
                         $decimal_digits,
@@ -53,6 +54,7 @@ macro_rules! define_currency {
 
 define_currency! {
     Nls,
+    "NLS",
     "unls",
     "ibc/unls",
     crate::lease::LeaseGroup,
