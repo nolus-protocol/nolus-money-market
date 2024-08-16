@@ -35,13 +35,13 @@ impl Error {
         Self::NotInCurrencyGroup(symbol.into(), CS::DESCR, G::DESCR)
     }
 
-    pub fn currency_mismatch<G, SubG>(expected: &CurrencyDTO<G>, found: &CurrencyDTO<SubG>) -> Self
+    pub fn currency_mismatch<ExpG, G>(expected: &CurrencyDTO<ExpG>, found: &CurrencyDTO<G>) -> Self
     where
+        ExpG: Group + MemberOf<G>,
         G: Group,
-        SubG: Group + MemberOf<G>,
     {
         Self::CurrencyMismatch {
-            expected: expected.into_symbol::<Tickers<G>>(),
+            expected: expected.into_symbol::<Tickers<ExpG>>(),
             found: found.into_symbol::<Tickers<G>>(),
         }
     }

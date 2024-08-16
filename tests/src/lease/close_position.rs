@@ -1,4 +1,4 @@
-use currencies::PaymentGroup;
+use currencies::{LeaseGroup, PaymentGroup};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
@@ -207,7 +207,7 @@ fn partial_close_invalid_currency() {
     assert_eq!(
         err.root_cause().downcast_ref::<currency::error::Error>(),
         Some(&currency::error::Error::currency_mismatch(
-            &currency::dto::<LeaseCurrency, _>(),
+            &currency::dto::<LeaseCurrency, LeaseGroup>(),
             &currency::dto::<PaymentCurrency, PaymentGroup>()
         ))
     );

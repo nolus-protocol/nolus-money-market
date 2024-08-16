@@ -51,7 +51,7 @@ impl Instantiator {
                     Percent::from_percent(75),
                 ),
             },
-            
+
             swap_tree: oracle::swap_tree!(
                 { base: BaseCurrency::ticker() },
                 (1, LeaseC2::ticker()),

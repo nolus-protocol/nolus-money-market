@@ -98,7 +98,7 @@ where
         if self == def {
             Ok(())
         } else {
-            Err(Error::currency_mismatch(self, def))
+            Err(Error::currency_mismatch(def, self))
         }
     }
 
