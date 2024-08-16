@@ -117,7 +117,7 @@ define_currency!(
 );
 
 define_currency!(
-    Secret,
+    Scrt,
     "SCRT",
     "ibc/EA00FFF0335B07B5CD1530B7EB3D2C710620AE5B168C71AFF7B50532D690E107", // transfer/channel-0/transfer/channel-88/uscrt
     "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A", // transfer/channel-88/uscrt
@@ -234,7 +234,7 @@ where
         .or_else(|visitor| maybe_visit::<_, QAtom, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Strd, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Inj, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Secret, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Scrt, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Stars, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cro, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Juno, TopG, _>(matcher, visitor))
