@@ -278,8 +278,26 @@ fn marketprice_follow_the_path() {
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &SuperGroupTestC3::definition().dto().into_super_group(),
+                    &SubGroupTestC10::definition().dto().into_super_group(),
                     SuperGroupTestC5::definition().dto()
+                ]
+                .into_iter()
+            )
+            .unwrap_err(),
+        PriceFeedsError::NoPrice {}
+    );
+
+    // the second leg doesn't exists in the storage
+    assert_eq!(
+        market
+            .price::<SuperGroupTestC2, SuperGroup, _>(
+                &deps.storage,
+                last_feed_time,
+                TOTAL_FEEDERS,
+                [
+                    SuperGroupTestC3::definition().dto(),
+                    &SubGroupTestC10::definition().dto().into_super_group(),
+                    SuperGroupTestC2::definition().dto()
                 ]
                 .into_iter()
             )
