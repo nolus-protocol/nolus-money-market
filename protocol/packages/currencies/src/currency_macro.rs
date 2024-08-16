@@ -8,9 +8,9 @@ pub use currency::{CurrencyDTO, CurrencyDef, Definition};
 macro_rules! define_currency {
     (
         $ident:ident,
-        $ticker: literal,
-        $bank_symbol: literal,
-        $dex_symbol: literal,
+        $ticker:expr,
+        $bank_symbol:literal,
+        $dex_symbol:literal,
         $group:ty,
         $decimal_digits:literal $(,)?
     ) => {

@@ -10,6 +10,7 @@ use crate::{define_currency, LeaseGroup};
 
 define_currency!(
     Atom,
+    "ATOM",
     "ibc/ECFDE61B64BB920E087E7448C4C3FE356B7BD13A1C2153119E98816C964FE196", // transfer/channel-0/transfer/channel-12/uatom
     "ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477", // transfer/channel-12/uatom
     LeaseGroup,
@@ -18,6 +19,7 @@ define_currency!(
 
 define_currency!(
     Osmo,
+    "OSMO",
     "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518", // transfer/channel-0/uosmo
     "uosmo",
     LeaseGroup,
@@ -26,6 +28,7 @@ define_currency!(
 
 define_currency!(
     Weth,
+    "WETH",
     "ibc/98CD37B180F06F954AFC71804049BE6EEA2A3B0CCEA1F425D141245BCFFBBD33", // transfer/channel-0/transfer/channel-3/eth-wei
     "ibc/29320BE25C3BF64A2355344625410899C1EB164038E328531C36095B0AA8BBFC", // transfer/channel-3/eth-wei
     // channel-3 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
@@ -36,6 +39,7 @@ define_currency!(
 
 define_currency!(
     Wbtc,
+    "WBTC",
     "ibc/680E95D3CEA378B7302926B8A5892442F1F7DF78E22199AE248DCBADC9A0C1A2", // transfer/channel-0/transfer/channel-3/btc-satoshi
     "ibc/CEDA3AFF171E72ACB689B7B64E988C0077DA7D4BF157637FFBDEB688D205A473", // transfer/channel-3/btc-satoshi
     // channel-3 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
@@ -46,6 +50,7 @@ define_currency!(
 
 define_currency!(
     Akt,
+    "AKT",
     "ibc/1064EED4A8E99F9C1158680236D0C5C3EA6B8BB65C9F87DAC6BC759DD904D818", // transfer/channel-0/transfer/channel-73/uakt
     "ibc/7153C8C55DB988805FAC69E449B680A8BAAC15944B87CF210ADCD1A3A9542857", // transfer/channel-73/uakt
     LeaseGroup,
@@ -54,6 +59,7 @@ define_currency!(
 
 define_currency!(
     Juno,
+    "JUNO",
     "ibc/8FB044422997A8A77891DE729EC28638DDE4C81A54398F68149A058AA9B74D9F", // transfer/channel-0/transfer/channel-1/ujunox
     "ibc/8E2FEFCBD754FA3C97411F0126B9EC76191BAA1B3959CB73CECF396A4037BBF0", // transfer/channel-1/ujunox
     LeaseGroup,
