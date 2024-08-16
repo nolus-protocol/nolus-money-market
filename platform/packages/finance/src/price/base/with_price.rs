@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use currency::MemberOf;
 use currency::{Currency, Group};
+use currency::{CurrencyDef, MemberOf};
 
 use crate::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
 use crate::error::Error;
@@ -20,7 +20,8 @@ where
 
     fn exec<C>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + MemberOf<Self::PriceG>;
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::PriceG>;
 }
 
 /// Execute the provided price command on a valid base price
@@ -30,7 +31,8 @@ pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
@@ -74,14 +76,16 @@ trait PriceFactory {
 struct UncheckedConversion<'price, BaseG, QuoteC, QuoteG>(&'price BasePrice<BaseG, QuoteC, QuoteG>)
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group;
 
 impl<'price, BaseG, QuoteC, QuoteG> PriceFactory
     for UncheckedConversion<'price, BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type G = BaseG;
@@ -153,7 +157,8 @@ where
 
     fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::VisitorG>,
     {
         self.price
             .try_obtain_price(amount)

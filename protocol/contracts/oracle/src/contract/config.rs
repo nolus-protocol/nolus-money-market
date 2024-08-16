@@ -9,7 +9,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 #[cfg(test)]
 mod tests {
     use currencies::{Lpn, PaymentC3, PaymentC6, PaymentGroup as PriceCurrencies};
-    use currency::{CurrencyDTO, Definition};
+    use currency::CurrencyDef as _;
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -29,7 +29,7 @@ mod tests {
         let msg = dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Lpn::TICKER }, (1, PaymentC3::TICKER)),
+            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker())),
         );
         let (mut deps, _info) = setup_test(msg);
 
@@ -73,7 +73,7 @@ mod tests {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree =
-            swap_tree!({ base: Lpn::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC6::TICKER));
+            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC6::ticker()));
 
         let res = sudo(
             deps.as_mut(),
@@ -92,18 +92,18 @@ mod tests {
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![
-            SwapLeg {
-                from: CurrencyDTO::from_currency_type::<PaymentC3>(),
+            SwapLeg::<PriceCurrencies> {
+                from: PaymentC3::definition().dto().into_super_group(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: CurrencyDTO::from_currency_type::<Lpn>(),
+                    target: Lpn::definition().dto().into_super_group(),
                 },
             },
             SwapLeg {
-                from: CurrencyDTO::from_currency_type::<PaymentC6>(),
+                from: PaymentC6::definition().dto().into_super_group(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: CurrencyDTO::from_currency_type::<Lpn>(),
+                    target: Lpn::definition().dto().into_super_group(),
                 },
             },
         ];
@@ -118,7 +118,7 @@ mod tests {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree =
-            swap_tree!({ base: Lpn::TICKER }, (1, PaymentC3::TICKER), (2, PaymentC3::TICKER));
+            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC3::ticker()));
 
         let Response {
             messages,

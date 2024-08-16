@@ -52,7 +52,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1};
+    use currency::test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
     use crate::impl_::{
@@ -66,7 +66,7 @@ mod test {
     }
 
     fn coin2() -> CoinDTO<SuperGroup> {
-        Coin::<SubGroupTestC1>::new(28).into()
+        Coin::<SubGroupTestC10>::new(28).into()
     }
 
     #[test]

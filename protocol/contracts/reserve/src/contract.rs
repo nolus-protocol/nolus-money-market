@@ -2,7 +2,8 @@ use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::{Addr, QuerierWrapper};
-use currencies::Lpn as LpnCurrency;
+use currencies::{Lpn as LpnCurrency, Lpns};
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
@@ -102,9 +103,10 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::Config() => Config::load(deps.storage)
             .map(ConfigResponse::from)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),
-        QueryMsg::ReserveLpn() => {
-            cosmwasm_std::to_json_binary(&currency::to_string::<LpnCurrency>()).map_err(Into::into)
-        }
+        QueryMsg::ReserveLpn() => cosmwasm_std::to_json_binary(
+            &currency::to_string::<LpnCurrency>(LpnCurrency::definition()),
+        )
+        .map_err(Into::into),
     }
     .map_err(Into::into)
     .inspect_err(platform_error::log(deps.api))
@@ -117,7 +119,7 @@ fn do_cover_losses(
     querier: QuerierWrapper<'_>,
 ) -> Result<PlatformResponse> {
     let mut bank = bank::account(this_contract, querier);
-    bank.balance::<LpnCurrency>()
+    bank.balance::<LpnCurrency, Lpns>()
         .map_err(Into::into)
         .and_then(|balance| {
             if balance < amount {

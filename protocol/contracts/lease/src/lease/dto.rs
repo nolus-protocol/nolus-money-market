@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -107,7 +107,8 @@ where
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,

@@ -1,8 +1,8 @@
 use astroport::{asset::AssetInfo, router::SwapOperation};
 
 use currency::{
-    test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1, SuperGroupTestC6},
-    Definition,
+    test::{SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1},
+    CurrencyDef as _,
 };
 use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
@@ -28,7 +28,7 @@ fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = coin_amount.into();
     assert_eq!(
         ProtoCoin {
-            denom: SuperGroupTestC1::DEX_SYMBOL.into(),
+            denom: SuperGroupTestC1::dex().into(),
             amount: coin_amount.to_string(),
         },
         super::to_dex_proto_coin::<SuperGroup>(&coin.into()).unwrap()
@@ -37,7 +37,7 @@ fn to_dex_cwcoin() {
 
 #[test]
 fn to_operations() {
-    type StartSwapCurrency = SubGroupTestC1;
+    type StartSwapCurrency = SubGroupTestC10;
     let path = vec![
         SwapTarget {
             pool_id: 2,
@@ -45,38 +45,38 @@ fn to_operations() {
         },
         SwapTarget {
             pool_id: 12,
-            target: currency::dto::<SuperGroupTestC6, _>(),
+            target: currency::dto::<SubGroupTestC6, _>(),
         },
     ];
     let expected = vec![
         SwapOperation::AstroSwap {
             offer_asset_info: AssetInfo::NativeToken {
-                denom: StartSwapCurrency::DEX_SYMBOL.into(),
+                denom: StartSwapCurrency::dex().into(),
             },
             ask_asset_info: AssetInfo::NativeToken {
-                denom: SuperGroupTestC1::DEX_SYMBOL.into(),
+                denom: SuperGroupTestC1::dex().into(),
             },
         },
         SwapOperation::AstroSwap {
             offer_asset_info: AssetInfo::NativeToken {
-                denom: SuperGroupTestC1::DEX_SYMBOL.into(),
+                denom: SuperGroupTestC1::dex().into(),
             },
             ask_asset_info: AssetInfo::NativeToken {
-                denom: SuperGroupTestC6::DEX_SYMBOL.into(),
+                denom: SubGroupTestC6::dex().into(),
             },
         },
     ];
     assert_eq!(
-        super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..0]),
+        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path[0..0]),
         vec![]
     );
     assert_eq!(
         expected[0..1].to_vec(),
-        super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path[0..1])
+        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path[0..1])
     );
     assert_eq!(
         expected,
-        super::to_operations::<SuperGroup>(StartSwapCurrency::DEX_SYMBOL, &path)
+        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path)
     );
 }
 

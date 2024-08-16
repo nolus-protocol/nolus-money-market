@@ -1,6 +1,6 @@
 use currency::{
     test::{SuperGroup, SuperGroupTestC1},
-    Definition as _,
+    CurrencyDef as _,
 };
 use finance::coin::Coin;
 use sdk::cosmwasm_std::Coin as CwCoin;
@@ -13,7 +13,7 @@ use super::{SwapAmountInRoute, SwapTarget};
 fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = 3541415.into();
     assert_eq!(
-        CwCoin::new(coin.into(), SuperGroupTestC1::DEX_SYMBOL),
+        CwCoin::new(coin.into(), SuperGroupTestC1::dex()),
         super::to_dex_cwcoin::<SuperGroup>(&coin.into()).unwrap()
     );
 }
@@ -26,7 +26,7 @@ fn into_route() {
     }];
     let expected = vec![SwapAmountInRoute {
         pool_id: 2,
-        token_out_denom: SuperGroupTestC1::DEX_SYMBOL.into(),
+        token_out_denom: SuperGroupTestC1::dex().into(),
     }];
     assert_eq!(expected, super::to_route::<SuperGroup>(&path));
 }

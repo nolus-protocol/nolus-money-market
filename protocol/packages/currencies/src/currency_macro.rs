@@ -1,15 +1,17 @@
 pub use serde::{Deserialize, Serialize};
 
-pub use sdk::schemars::JsonSchema;
+pub use sdk::schemars::{self, JsonSchema};
 
-pub use currency::{Currency, Definition, SymbolStatic};
+pub use currency::{CurrencyDTO, CurrencyDef, Definition};
 
 #[macro_export]
 macro_rules! define_currency {
     (
         $ident:ident,
-        $ticker:path,
-        $group:ident,
+        $ticker:expr,
+        $bank_symbol:literal,
+        $dex_symbol:literal,
+        $group:ty,
         $decimal_digits:literal $(,)?
     ) => {
         #[derive(
@@ -20,26 +22,41 @@ macro_rules! define_currency {
             Eq,
             PartialOrd,
             Ord,
-            Default,
             $crate::currency_macro::Serialize,
             $crate::currency_macro::Deserialize,
             $crate::currency_macro::JsonSchema,
         )]
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
-        pub struct $ident {}
+        pub struct $ident($crate::currency_macro::CurrencyDTO<$group>);
 
-        impl $crate::currency_macro::Currency for $ident {
+        impl $crate::currency_macro::CurrencyDef for $ident {
             type Group = $group;
-        }
 
-        impl $crate::currency_macro::Definition for $ident {
-            const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
+            fn definition() -> &'static Self {
+                const INSTANCE: &$ident = &$ident($crate::currency_macro::CurrencyDTO::new(
+                    &$crate::currency_macro::Definition::new(
+                        $ticker,
+                        $bank_symbol,
+                        $dex_symbol,
+                        $decimal_digits,
+                    ),
+                ));
 
-            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
+                INSTANCE
+            }
 
-            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
-
-            const DECIMAL_DIGITS: u8 = $decimal_digits;
+            fn dto(&self) -> &$crate::currency_macro::CurrencyDTO<Self::Group> {
+                &self.0
+            }
         }
     };
+}
+
+define_currency! {
+    Nls,
+    "NLS",
+    "unls",
+    "ibc/unls",
+    crate::lease::LeaseGroup,
+    6,
 }

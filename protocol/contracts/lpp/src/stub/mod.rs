@@ -2,7 +2,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{self, Currency, CurrencyDTO, Group, MemberOf};
+use currency::{self, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -31,7 +31,8 @@ pub struct LppRef<Lpn, Lpns> {
 
 impl<Lpn, Lpns> LppRef<Lpn, Lpns>
 where
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
@@ -39,7 +40,7 @@ where
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
             .map_err(ContractError::from)
             .and_then(|lpn: CurrencyDTO<Lpns>| {
-                lpn.of_currency::<Lpn>()
+                lpn.of_currency(Lpn::definition().dto())
                     .map_err(ContractError::UnknownCurrency)
             })
             .map(|()| Self {
@@ -49,9 +50,9 @@ where
             })
     }
 
-    // DEPRECATED since the Lpn type is statically known TODO remove
+    // TODO DEPRECATED since the Lpn type is statically known TODO remove
     pub fn lpn(&self) -> CurrencyDTO<Lpns> {
-        currency::dto::<Lpn, Lpns>()
+        Lpn::definition().dto().into_super_group()
     }
 
     pub fn addr(&self) -> &Addr {

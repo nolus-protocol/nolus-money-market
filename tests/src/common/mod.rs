@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use ::lease::api::LpnCoinDTO;
 use currencies::{Lpn, Nls};
-use currency::Currency;
+use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -80,14 +80,14 @@ pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
 
 pub fn cwcoin<C, A>(amount: A) -> CwCoin
 where
-    C: Currency,
+    C: CurrencyDef,
     A: Into<Coin<C>>,
 {
     coin_legacy::to_cosmwasm(amount.into())
 }
 pub fn cwcoin_as_balance<C, A>(amount: A) -> Vec<CwCoin>
 where
-    C: Currency,
+    C: CurrencyDef,
     A: Into<Coin<C>> + Copy,
 {
     if amount.into().is_zero() {
@@ -99,7 +99,7 @@ where
 
 pub fn cwcoin_dex<C, A>(amount: A) -> CwCoin
 where
-    C: Currency,
+    C: CurrencyDef,
     A: Into<Coin<C>>,
 {
     coin_legacy::to_cosmwasm_on_dex(amount.into())

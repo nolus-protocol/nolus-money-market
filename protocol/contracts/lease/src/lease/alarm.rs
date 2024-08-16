@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{duration::Duration, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::{
@@ -21,7 +21,8 @@ impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
-    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
     pub(super) fn reschedule(
         &self,

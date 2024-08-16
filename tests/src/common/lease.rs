@@ -1,5 +1,5 @@
 use currencies::{LeaseGroup, PaymentGroup};
-use currency::{Currency, CurrencyDTO};
+use currency::{Currency, CurrencyDTO, CurrencyDef};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     api::{
@@ -51,7 +51,7 @@ impl Instantiator {
         lease_ica_id: &str,
     ) -> Addr
     where
-        D: Currency,
+        D: CurrencyDef,
     {
         let msg = Self::lease_instantiate_msg(
             lease_config.lease_currency,
@@ -203,8 +203,8 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
 ) where
-    DownpaymentC: Currency,
-    Lpn: Currency,
+    DownpaymentC: CurrencyDef,
+    Lpn: CurrencyDef,
 {
     check_state_opening(app, lease_addr.clone());
 
@@ -259,8 +259,8 @@ fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
     (exp_downpayment, exp_borrow): (Coin<DownpaymentC>, Coin<Lpn>),
 ) -> ResponseWithInterChainMsgs<'r, ()>
 where
-    DownpaymentC: Currency,
-    Lpn: Currency,
+    DownpaymentC: CurrencyDef,
+    Lpn: CurrencyDef,
 {
     let mut response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
         app,

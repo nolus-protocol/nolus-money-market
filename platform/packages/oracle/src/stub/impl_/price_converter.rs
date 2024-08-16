@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::price::{dto::PriceDTO, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -48,7 +48,8 @@ impl<'a, CurrencyG, TopG, QuoteC, QuoteG, PriceReqT> Oracle<CurrencyG>
 where
     CurrencyG: Group + MemberOf<TopG>,
     TopG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
     PriceReqT: RequestBuilder,
 {
@@ -57,7 +58,8 @@ where
 
     fn price_of<C>(&self) -> Result<Price<C, QuoteC>>
     where
-        C: Currency + MemberOf<CurrencyG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<CurrencyG>,
     {
         if currency::equal::<C, QuoteC>() {
             return Ok(Price::identity());
@@ -68,8 +70,8 @@ where
             .query_wasm_smart(self.addr(), &msg)
             .map_err(|error| {
                 error::failed_to_fetch_price(
-                    currency::dto::<C, CurrencyG>(),
-                    currency::dto::<QuoteC, QuoteG>(),
+                    C::definition().dto(),
+                    QuoteC::definition().dto(),
                     error,
                 )
             })

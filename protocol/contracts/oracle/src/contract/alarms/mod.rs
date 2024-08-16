@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -57,7 +57,8 @@ where
     ) -> ContractResult<AlarmsIter<'storage, '_, S, I, PriceG, BaseC, BaseG>>
     where
         I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-        BaseC: Currency + MemberOf<BaseG>,
+        BaseC: CurrencyDef,
+        BaseC::Group: MemberOf<BaseG>,
         BaseG: Group,
     {
         AlarmsIter::new(&self.alarms, prices)
@@ -66,7 +67,8 @@ where
     pub fn try_query_alarms<I, BaseC, BaseG>(&self, prices: I) -> Result<bool, ContractError>
     where
         I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-        BaseC: Currency + MemberOf<BaseG>,
+        BaseC: CurrencyDef,
+        BaseC::Group: MemberOf<BaseG>,
         BaseG: Group,
     {
         Ok(AlarmsIter::new(&self.alarms, prices)?
@@ -94,7 +96,8 @@ where
         alarm: AlarmDTO<PriceG, BaseC, BaseG>,
     ) -> Result<(), ContractError>
     where
-        BaseC: Currency + MemberOf<BaseG>,
+        BaseC: CurrencyDef,
+        BaseC::Group: MemberOf<BaseG>,
         BaseG: Group,
     {
         let (below, above_or_equal) = alarm.into();
@@ -131,7 +134,8 @@ struct AddAlarmsCmd<'storage, 'alarms, S, G, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
-    BaseC: Currency + MemberOf<BaseG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
     BaseG: Group,
 {
     receiver: Addr,
@@ -144,7 +148,8 @@ impl<'storage, 'alarms, S, G, BaseC, BaseG> WithPrice<BaseC>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
-    BaseC: Currency + MemberOf<BaseG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
     BaseG: Group,
 {
     type PriceG = G;
@@ -153,7 +158,8 @@ where
 
     fn exec<C>(self, below: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + MemberOf<Self::PriceG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::PriceG>,
     {
         self.above_or_equal
             .map(|base_price| Price::try_from(&base_price))
@@ -184,7 +190,8 @@ mod test {
         above: Option<(u128, u128)>,
     ) -> AlarmDTO<PriceCurrencies, BaseCurrency, BaseCurrencies>
     where
-        C: Currency + MemberOf<PriceCurrencies>,
+        C: CurrencyDef,
+        C::Group: MemberOf<PriceCurrencies>,
     {
         AlarmDTO::new(
             tests::base_price::<C>(below.0, below.1),

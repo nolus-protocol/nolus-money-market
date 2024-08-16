@@ -1,29 +1,28 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Currency, Definition, Group, Matcher, MaybeAnyVisitResult, MemberOf, SymbolStatic,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult, MemberOf,
 };
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Stable;
+pub struct Stable(CurrencyDTO<StableCurrencyGroup>);
+const STABLE_DEFINITION: Definition = Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0);
+const STABLE: Stable = Stable(CurrencyDTO::new(&STABLE_DEFINITION));
 
-impl Currency for Stable {
+impl CurrencyDef for Stable {
     type Group = StableCurrencyGroup;
-}
 
-impl Definition for Stable {
-    // should not be visible
-    const TICKER: SymbolStatic = "STABLE";
+    fn definition() -> &'static Self {
+        &STABLE
+    }
 
-    const BANK_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
-
-    const DEX_SYMBOL: SymbolStatic = "N/A_N/A_N/A";
-
-    const DECIMAL_DIGITS: u8 = 6;
+    fn dto(&self) -> &CurrencyDTO<Self::Group> {
+        &self.0
+    }
 }
 
 pub type CoinStable = Coin<Stable>;
@@ -35,7 +34,7 @@ impl Group for StableCurrencyGroup {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
@@ -46,7 +45,7 @@ impl Group for StableCurrencyGroup {
         _visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -56,12 +55,12 @@ impl Group for StableCurrencyGroup {
 
     fn maybe_visit_member<M, V, TopG>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
     {
-        MaybeAnyVisitResult::Ok(visitor.on::<Stable>()) // we accept ANY currency to allow any stable@protocol to be a member
+        MaybeAnyVisitResult::Ok(visitor.on::<Stable>(&STABLE)) // we accept ANY currency to allow any stable@protocol to be a member
     }
 }
 

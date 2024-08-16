@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{Currency as CurrencyT, CurrencyDTO, Definition, Group, MemberOf, SymbolOwned};
-use finance::price::dto::PriceDTO;
+use currency::{CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, SymbolOwned};
+use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_std::Addr,
@@ -38,7 +38,8 @@ pub struct MigrateMsg {}
 )]
 pub enum ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>
 where
-    BaseCurrency: CurrencyT + MemberOf<BaseCurrencies>,
+    BaseCurrency: CurrencyDef,
+    BaseCurrency::Group: MemberOf<BaseCurrencies>,
     BaseCurrencies: Group,
     AlarmCurrencies: Group,
     PriceCurrencies: Group,
@@ -172,15 +173,13 @@ pub struct Currency {
 }
 
 impl Currency {
-    pub fn new<C>(group: CurrencyGroup) -> Self
-    where
-        C: Definition,
-    {
+    pub fn new(def: &Definition, group: CurrencyGroup) -> Self
+where {
         Self {
-            ticker: C::TICKER.into(),
-            bank_symbol: C::BANK_SYMBOL.into(),
-            dex_symbol: C::DEX_SYMBOL.into(),
-            decimal_digits: C::DECIMAL_DIGITS,
+            ticker: def.ticker.into(),
+            bank_symbol: def.bank_symbol.into(),
+            dex_symbol: def.dex_symbol.into(),
+            decimal_digits: def.decimal_digits,
             group,
         }
     }
@@ -213,12 +212,14 @@ where
     rename_all = "snake_case",
     bound(serialize = "", deserialize = "")
 )]
-pub struct PricesResponse<PriceCurrencies, BaseCurrencies>
+pub struct PricesResponse<PriceCurrencies, BaseC, BaseCurrencies>
 where
     PriceCurrencies: Group,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseCurrencies>,
     BaseCurrencies: Group,
 {
-    pub prices: Vec<PriceDTO<PriceCurrencies, BaseCurrencies>>,
+    pub prices: Vec<BasePrice<PriceCurrencies, BaseC, BaseCurrencies>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

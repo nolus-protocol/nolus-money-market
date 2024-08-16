@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
 use sdk::cosmwasm_std::QuerierWrapper;
 
@@ -15,9 +15,11 @@ pub fn from_quote<QuoteC, QuoteG, OutC, OutG>(
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>>
 where
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
-    OutC: Currency + MemberOf<OutG>,
+    OutC: CurrencyDef,
+    OutC::Group: MemberOf<OutG>,
     OutG: Group,
 {
     struct PriceConvert<QuoteC, QuoteG, OutC, OutG>
@@ -36,9 +38,11 @@ where
     impl<QuoteC, QuoteG, OutC, OutG> WithOracle<QuoteC, QuoteG>
         for PriceConvert<QuoteC, QuoteG, OutC, OutG>
     where
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
-        OutC: Currency + MemberOf<OutG>,
+        OutC: CurrencyDef,
+        OutC::Group: MemberOf<OutG>,
         OutG: Group,
     {
         type G = OutG;
@@ -75,9 +79,11 @@ pub fn to_quote<InC, InG, QuoteC, QuoteG>(
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<QuoteC>>
 where
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
-    InC: Currency + MemberOf<InG>,
+    InC: CurrencyDef,
+    InC::Group: MemberOf<InG>,
     InG: Group,
 {
     struct PriceConvert<InC, InG, QuoteC, QuoteG>
@@ -95,9 +101,11 @@ where
 
     impl<InC, InG, QuoteC, QuoteG> WithOracle<QuoteC, QuoteG> for PriceConvert<InC, InG, QuoteC, QuoteG>
     where
-        InC: Currency + MemberOf<InG>,
+        InC: CurrencyDef,
+        InC::Group: MemberOf<InG>,
         InG: Group,
-        QuoteC: Currency + MemberOf<QuoteG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         type G = InG;

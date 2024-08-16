@@ -3,7 +3,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use ::currencies::{LeaseGroup, Lpns, Native, PaymentOnlyGroup};
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
@@ -31,13 +31,15 @@ where
 impl<PriceG, BaseC> SupportedPairs<PriceG, BaseC>
 where
     PriceG: Group,
-    BaseC: Currency + MemberOf<PriceG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<PriceG>,
 {
     const DB_ITEM: Item<'static, SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
 
     pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, ContractError>
     where
-        StableC: Currency + MemberOf<PriceG>,
+        StableC: CurrencyDef,
+        StableC::Group: MemberOf<PriceG>,
     {
         Self::check_tree::<StableC>(&tree).map(|()| SupportedPairs {
             tree,
@@ -145,10 +147,11 @@ where
 
     fn check_tree<StableC>(tree: &Tree<PriceG>) -> Result<(), ContractError>
     where
-        StableC: Currency + MemberOf<PriceG>,
+        StableC: CurrencyDef,
+        StableC::Group: MemberOf<PriceG>,
     {
         let root_currency = tree.root().value().target;
-        if root_currency != currency::dto::<BaseC, PriceG>() {
+        if &root_currency != BaseC::definition().dto() {
             Err(error::invalid_base_currency::<_, BaseC>(&root_currency))
         } else {
             let mut supported_currencies: Vec<&CurrencyDTO<PriceG>> =
@@ -157,7 +160,7 @@ where
             supported_currencies.sort_unstable();
 
             if supported_currencies
-                .binary_search(&&currency::dto::<StableC, PriceG>())
+                .binary_search(&&StableC::definition().dto().into_super_group())
                 .is_err()
             {
                 Err(ContractError::StableCurrencyNotInTree {})
@@ -195,7 +198,7 @@ mod tests {
         LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4,
         PaymentGroup as PriceCurrencies,
     };
-    use currency::{Currency, CurrencyDTO, Definition, MemberOf};
+    use currency::{CurrencyDTO, CurrencyDef, MemberOf};
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
@@ -233,13 +236,13 @@ mod tests {
                     }}
                 ]
             }}"#,
-            base = TheCurrency::TICKER,
-            lease1 = LeaseC1::TICKER,
-            lease2 = LeaseC2::TICKER,
-            lease3 = LeaseC3::TICKER,
-            lease4 = LeaseC4::TICKER,
-            lease5 = LeaseC5::TICKER,
-            native = Nls::TICKER,
+            base = TheCurrency::ticker(),
+            lease1 = LeaseC1::ticker(),
+            lease2 = LeaseC2::ticker(),
+            lease3 = LeaseC3::ticker(),
+            lease4 = LeaseC4::ticker(),
+            lease5 = LeaseC5::ticker(),
+            native = Nls::ticker(),
         ))
         .expect("123")
     }
@@ -267,16 +270,16 @@ mod tests {
                     }}
                 ]
             }}"#,
-            lease1 = LeaseC1::TICKER,
-            stable = Lpn::TICKER,
+            lease1 = LeaseC1::ticker(),
+            stable = Lpn::ticker(),
         ))
         .unwrap();
 
         assert_eq!(
             SupportedPairs::new::<Lpn>(tree.into_tree()),
             Err(ContractError::InvalidBaseCurrency(
-                Lpn::TICKER,
-                LeaseC1::TICKER.into(),
+                Lpn::ticker(),
+                LeaseC1::ticker().into(),
             ))
         );
     }
@@ -300,9 +303,9 @@ mod tests {
                     }}
                 ]
             }}"#,
-            base = TheCurrency::TICKER,
-            lease1 = LeaseC1::TICKER,
-            lease2 = LeaseC2::TICKER,
+            base = TheCurrency::ticker(),
+            lease1 = LeaseC1::ticker(),
+            lease2 = LeaseC2::ticker(),
         ))
         .unwrap();
 
@@ -323,8 +326,8 @@ mod tests {
                     }}
                 ]
             }}"#,
-            base = TheCurrency::TICKER,
-            lease1 = LeaseC1::TICKER,
+            base = TheCurrency::ticker(),
+            lease1 = LeaseC1::ticker(),
         ))
         .unwrap();
 
@@ -490,10 +493,10 @@ mod tests {
                         {{"value":[3,{3:?}]}}
                     ]
                 }}"#,
-                TheCurrency::TICKER,
-                LeaseC1::TICKER,
-                Nls::TICKER,
-                LeaseC2::TICKER,
+                TheCurrency::ticker(),
+                LeaseC1::ticker(),
+                Nls::ticker(),
+                LeaseC2::ticker(),
             ))
             .unwrap()
             .into_tree(),
@@ -505,18 +508,28 @@ mod tests {
         assert_eq!(
             listed_currencies.as_slice(),
             &[
-                api::Currency::new::<Lpn>(api::CurrencyGroup::Lpn),
-                api::Currency::new::<LeaseC1>(api::CurrencyGroup::Lease),
-                api::Currency::new::<Nls>(api::CurrencyGroup::Native),
-                api::Currency::new::<LeaseC2>(api::CurrencyGroup::Lease),
+                api::Currency::new(currency_dto::<Lpn>().definition(), api::CurrencyGroup::Lpn),
+                api::Currency::new(
+                    currency_dto::<LeaseC1>().definition(),
+                    api::CurrencyGroup::Lease
+                ),
+                api::Currency::new(
+                    currency_dto::<Nls>().definition(),
+                    api::CurrencyGroup::Native
+                ),
+                api::Currency::new(
+                    currency_dto::<LeaseC2>().definition(),
+                    api::CurrencyGroup::Lease
+                ),
             ]
         );
     }
 
     fn currency_dto<C>() -> CurrencyDTO<PriceCurrencies>
     where
-        C: Currency + MemberOf<PriceCurrencies>,
+        C: CurrencyDef,
+        C::Group: MemberOf<PriceCurrencies>,
     {
-        currency::dto::<C, _>()
+        C::definition().dto().into_super_group()
     }
 }

@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -108,7 +108,8 @@ impl Spec {
         payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
-        PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
+        PaymentC: CurrencyDef,
+        PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
     {
         if self.valid_transaction(payment, payment_currency_in_lpns) {
             Ok(())

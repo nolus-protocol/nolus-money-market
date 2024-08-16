@@ -1,7 +1,7 @@
 use std::slice;
 
-use currencies::{Lpn, Nls};
-use currency::{Currency, Definition};
+use currencies::{Lpn, Lpns, Native, Nls};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -33,7 +33,7 @@ fn test_case_with<Lpn>(
     custom_reserve: Option<&[CwCoin]>,
 ) -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     custom_reserve
         .map_or_else(
@@ -50,7 +50,7 @@ where
 
 fn test_case<Lpn>() -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     test_case_with::<Lpn>(2, None)
 }
@@ -196,10 +196,15 @@ fn init_treasury_balances<
     test_case: &TestCase<ProtocolsRegistry, Addr, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>,
 ) -> InitTreasuryBalancesResult<Lpn>
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     InitTreasuryBalancesResult {
-        native: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        native: bank::balance::<_, Native>(
+            test_case.address_book.treasury(),
+            test_case.app.query(),
+        )
+        .unwrap(),
         lpn: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
     }
 }
@@ -215,7 +220,7 @@ fn send_alarm_and_maybe_swap<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracl
     lpn_profit: Option<(Coin<Lpn>, CwCoin, Coin<Nls>)>,
 ) -> SendAlarmAndMaybeSwapResult
 where
-    Lpn: Definition,
+    Lpn: CurrencyDef,
 {
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
@@ -270,8 +275,8 @@ where
             requests.into_iter(),
             |amount: Amount, from_denom: DexDenom<'_>, to_denom: DexDenom<'_>| {
                 assert_eq!(amount, lpn_profit_swap_in.into());
-                assert_eq!(from_denom, Lpn::DEX_SYMBOL);
-                assert_eq!(to_denom, Nls::DEX_SYMBOL);
+                assert_eq!(from_denom, Lpn::dex());
+                assert_eq!(to_denom, Nls::dex());
 
                 lpn_profit_swap_out.into()
             },
@@ -364,7 +369,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
                 "profit-amount-amount",
                 &Amount::from(total_native_profit).to_string()
             ),
-            ("profit-amount-symbol", Nls::TICKER)
+            ("profit-amount-symbol", Nls::ticker())
         ]
     );
 
@@ -382,7 +387,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!("{}{}", Amount::from(total_native_profit), Nls::BANK_SYMBOL)
+                &format!("{}{}", Amount::from(total_native_profit), Nls::bank())
             )
         ]
     );
@@ -404,20 +409,21 @@ fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAla
     total_native_profit: Coin<Nls>,
     init_treasury_lpn_balance: Coin<Lpn>,
 ) where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     assert_eq!(
-        bank::balance::<Nls>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        bank::balance::<Nls, Native>(test_case.address_book.treasury(), test_case.app.query())
+            .unwrap(),
         init_treasury_native_balance + total_native_profit,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
+        bank::balance::<Lpn, _>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         Zero::ZERO,
     );
 
     assert_eq!(
-        bank::balance::<Lpn>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        bank::balance::<Lpn, _>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_lpn_balance,
     );
 }
@@ -426,7 +432,8 @@ fn on_time_alarm_do_transfers<Lpn>(
     native_profit: Coin<Nls>,
     lpn_profit: Option<(Coin<Lpn>, Coin<Nls>)>,
 ) where
-    Lpn: Definition + Currency,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     let mut test_case = test_case_with::<Lpn>(
         2,
@@ -532,7 +539,7 @@ fn integration_with_time_alarms() {
     assert!(!test_case
         .app
         .query()
-        .query_balance(test_case.address_book.profit().clone(), Nls::BANK_SYMBOL)
+        .query_balance(test_case.address_book.profit().clone(), Nls::bank())
         .unwrap()
         .amount
         .is_zero());
@@ -559,7 +566,7 @@ fn integration_with_time_alarms() {
         test_case
             .app
             .query()
-            .query_balance(test_case.address_book.profit().clone(), Nls::BANK_SYMBOL)
+            .query_balance(test_case.address_book.profit().clone(), Nls::bank())
             .unwrap()
             .amount
             .u128(),

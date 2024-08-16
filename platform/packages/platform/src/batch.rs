@@ -2,7 +2,7 @@ use std::vec;
 
 use serde::Serialize;
 
-use currency::Currency;
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
@@ -54,7 +54,7 @@ impl Batch {
     ) -> Result<()>
     where
         M: Serialize + ?Sized,
-        C: Currency,
+        C: CurrencyDef,
     {
         Self::wasm_exec_msg(addr, msg, funds).map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
@@ -81,7 +81,7 @@ impl Batch {
     ) -> Result<()>
     where
         M: Serialize + ?Sized,
-        C: Currency,
+        C: CurrencyDef,
     {
         Self::wasm_exec_msg(addr, msg, funds)
             .map(|wasm_msg| self.schedule_reply_on_success(wasm_msg, reply_id))
@@ -171,7 +171,7 @@ impl Batch {
     fn wasm_exec_msg<M, C>(addr: Addr, msg: &M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize + ?Sized,
-        C: Currency,
+        C: CurrencyDef,
     {
         to_json_binary(msg)
             .map_err(Error::Serialization)

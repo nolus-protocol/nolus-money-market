@@ -3,7 +3,7 @@ use std::{num::TryFromIntError, result::Result as StdResult};
 use thiserror::Error;
 
 #[cfg(feature = "contract")]
-use currency::{Currency, CurrencyDTO, Group};
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use currency::{SymbolOwned, SymbolStatic};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
@@ -102,10 +102,10 @@ pub enum ContractError {
 pub(crate) fn unsupported_currency<G, BaseC>(unsupported: &CurrencyDTO<G>) -> ContractError
 where
     G: Group,
-    BaseC: Currency,
+    BaseC: CurrencyDef,
 {
     ContractError::UnsupportedCurrency {
-        base: currency::to_string::<BaseC>(),
+        base: currency::to_string::<BaseC>(BaseC::definition()),
         unsupported: unsupported.to_string(),
     }
 }
@@ -114,7 +114,10 @@ where
 pub(crate) fn invalid_base_currency<G, BaseC>(configured_base: &CurrencyDTO<G>) -> ContractError
 where
     G: Group,
-    BaseC: Currency,
+    BaseC: CurrencyDef,
 {
-    ContractError::InvalidBaseCurrency(currency::to_string::<BaseC>(), configured_base.to_string())
+    ContractError::InvalidBaseCurrency(
+        currency::to_string::<BaseC>(BaseC::definition()),
+        configured_base.to_string(),
+    )
 }

@@ -41,14 +41,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currency::test::SubGroupTestC1;
+    use currency::test::SubGroupTestC10;
 
     use crate::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
         zero::Zero,
     };
 
-    type MyCoin = Coin<SubGroupTestC1>;
+    type MyCoin = Coin<SubGroupTestC10>;
     const PERIOD_LENGTH: Duration = Duration::YEAR;
 
     #[test]

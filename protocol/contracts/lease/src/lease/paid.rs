@@ -1,10 +1,12 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use platform::{bank::BankAccount, batch::Batch};
 use sdk::cosmwasm_std::Addr;
 
-use crate::{api::LeaseAssetCurrencies, error::ContractResult, position::Position};
+use crate::{
+    api::LeaseAssetCurrencies, error::ContractResult, finance::LpnCurrencies, position::Position,
+};
 
 use super::LeaseDTO;
 
@@ -29,14 +31,15 @@ where
 
 impl<Asset, Lpn> Lease<Asset, Lpn>
 where
-    Asset: Currency,
-    Lpn: Currency,
+    Asset: CurrencyDef,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
 {
     pub(crate) fn close<B>(self, mut lease_account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let surplus = lease_account.balance::<Lpn>()?;
+        let surplus = lease_account.balance::<Lpn, LpnCurrencies>()?;
 
         if !surplus.is_zero() {
             lease_account.send(surplus, self.customer.clone());
@@ -53,7 +56,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use currencies::{Lpn, PaymentC3};
-    use currency::{Currency, Group, MemberOf};
+    use currency::{Currency, CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, WithCoin},
         duration::Duration,
@@ -100,9 +103,9 @@ mod tests {
     }
 
     impl BankAccountView for MockBankView {
-        fn balance<C>(&self) -> PlatformResult<Coin<C>>
+        fn balance<C, G>(&self) -> PlatformResult<Coin<C>>
         where
-            C: Currency,
+            C: CurrencyDef,
         {
             if currency::equal::<C, TestAsset>() {
                 Ok(Coin::<C>::new(self.balance.into()))
@@ -111,8 +114,8 @@ mod tests {
             } else {
                 unreachable!(
                     "Expected {}, found {}",
-                    currency::to_string::<TestAsset>(),
-                    currency::to_string::<C>()
+                    currency::to_string(TestAsset::definition()),
+                    currency::to_string(C::definition())
                 );
             }
         }

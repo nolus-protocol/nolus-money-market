@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
 };
@@ -75,7 +75,8 @@ where
         payment_currency_in_lpns: Price<PaymentC>,
     ) -> ContractResult<()>
     where
-        PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
+        PaymentC: CurrencyDef,
+        PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
     {
         self.spec
             .validate_payment(payment, payment_currency_in_lpns)

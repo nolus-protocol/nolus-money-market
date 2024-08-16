@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -25,13 +25,17 @@ pub struct Ref<Lpn> {
 
 impl<Lpn> Ref<Lpn>
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
 {
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         querier
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
             .map_err(Error::QueryReserveFailure)
-            .and_then(|lpn: LpnCurrencyDTO| lpn.of_currency::<Lpn>().map_err(Error::UnexpectedLpn))
+            .and_then(|lpn: LpnCurrencyDTO| {
+                lpn.of_currency::<Lpn::Group>(Lpn::definition().dto())
+                    .map_err(Error::UnexpectedLpn)
+            })
             .map(|()| Self {
                 contract,
                 _lpns: PhantomData,

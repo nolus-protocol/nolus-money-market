@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
@@ -21,7 +21,8 @@ where
 {
     pub(crate) fn validate_repay<PaymentC>(&self, payment: Coin<PaymentC>) -> ContractResult<()>
     where
-        PaymentC: Currency + MemberOf<LeasePaymentCurrencies>,
+        PaymentC: CurrencyDef,
+        PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
     {
         self.oracle
             .price_of::<PaymentC>()

@@ -2,7 +2,7 @@ use currencies::{
     LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup as LeaseCurrencies, Lpn, Lpns,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, Definition, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
@@ -252,9 +252,9 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
     .init_lpp_with_funds(
         None,
         &[
-            coin(LPNS, Lpn::BANK_SYMBOL),
-            coin(OSMOS, LeaseC3::BANK_SYMBOL),
-            coin(CROS, LeaseCurrency::BANK_SYMBOL),
+            coin(LPNS, Lpn::bank()),
+            coin(OSMOS, LeaseC3::bank()),
+            coin(CROS, LeaseCurrency::bank()),
         ],
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
@@ -485,9 +485,12 @@ fn open_loans_insufficient_asset() {
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
-    Lpn: Currency + MemberOf<Lpns> + MemberOf<PriceCurrencies> + Definition,
-    LeaseC: Currency + MemberOf<LeaseCurrencies> + MemberOf<PriceCurrencies>,
-    DownpaymentC: Currency + MemberOf<PriceCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<PriceCurrencies>,
+    LeaseC: CurrencyDef,
+    LeaseC::Group: MemberOf<LeaseCurrencies> + MemberOf<PriceCurrencies>,
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PriceCurrencies>,
 {
     let user_addr = Addr::unchecked(USER);
 

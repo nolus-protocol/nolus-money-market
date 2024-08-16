@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use currency::{Currency, Definition};
+use currency::CurrencyDef;
 use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
@@ -24,7 +24,7 @@ pub(super) fn try_deposit<Lpn>(
     info: MessageInfo,
 ) -> Result<MessageResponse>
 where
-    Lpn: 'static + Currency + Definition,
+    Lpn: 'static + CurrencyDef,
 {
     let lender_addr = info.sender;
     let pending_deposit = bank::received_one(info.funds)?;
@@ -52,7 +52,7 @@ where
 
 pub(super) fn deposit_capacity<Lpn>(deps: Deps<'_>, env: Env) -> Result<Option<Coin<Lpn>>>
 where
-    Lpn: 'static + Currency + Serialize,
+    Lpn: 'static + CurrencyDef + Serialize,
 {
     LiquidityPool::<Lpn>::load(deps.storage)
         .and_then(|lpp: LiquidityPool<Lpn>| lpp.deposit_capacity(deps.querier, &env, Coin::ZERO))
@@ -65,7 +65,7 @@ pub(super) fn try_withdraw<Lpn>(
     amount_nlpn: Uint128,
 ) -> Result<MessageResponse>
 where
-    Lpn: 'static + Currency + Definition,
+    Lpn: 'static + CurrencyDef,
 {
     if amount_nlpn.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
@@ -105,7 +105,7 @@ where
 
 pub fn query_ntoken_price<Lpn>(deps: Deps<'_>, env: Env) -> Result<PriceResponse<Lpn>>
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     LiquidityPool::load(deps.storage).and_then(|lpp| {
         lpp.calculate_price(&deps, &env, Coin::default())

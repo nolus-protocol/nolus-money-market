@@ -1,5 +1,5 @@
-use currencies::PaymentGroup;
-use currency::{Currency, Definition};
+use currencies::{LeaseGroup, PaymentGroup};
+use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     price,
@@ -206,12 +206,10 @@ fn partial_close_invalid_currency() {
 
     assert_eq!(
         err.root_cause().downcast_ref::<currency::error::Error>(),
-        Some(
-            &currency::error::Error::currency_mismatch::<LeaseCurrency, _>(&currency::dto::<
-                PaymentCurrency,
-                PaymentGroup,
-            >())
-        )
+        Some(&currency::error::Error::currency_mismatch(
+            &currency::dto::<LeaseCurrency, LeaseGroup>(),
+            &currency::dto::<PaymentCurrency, PaymentGroup>()
+        ))
     );
 }
 
@@ -331,7 +329,7 @@ fn do_close(
                 "payment-amount",
                 Amount::from(close_amount_in_lpn).to_string(),
             )
-            .add_attribute("payment-symbol", LpnCurrency::TICKER)
+            .add_attribute("payment-symbol", LpnCurrency::ticker())
             .add_attribute("loan-close", exp_loan_close.to_string())
             .add_attribute(
                 "principal",
@@ -339,7 +337,7 @@ fn do_close(
             )
             .add_attribute("change", Amount::from(exp_change).to_string())
             .add_attribute("amount-amount", Amount::from(close_amount).to_string())
-            .add_attribute("amount-symbol", LeaseCurrency::TICKER),
+            .add_attribute("amount-symbol", LeaseCurrency::ticker()),
     );
 
     assert_eq!(
@@ -394,9 +392,9 @@ fn assert_unauthorized(test_case: &mut LeaseTestCase, lease: Addr, close_msg: Ex
 
 fn user_balance<C>(customer: &Addr, test_case: &LeaseTestCase) -> Coin<C>
 where
-    C: Currency,
+    C: CurrencyDef,
 {
-    platform::bank::balance::<C>(customer, test_case.app.query()).unwrap()
+    platform::bank::balance::<C, C::Group>(customer, test_case.app.query()).unwrap()
 }
 
 fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {

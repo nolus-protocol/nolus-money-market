@@ -1,20 +1,12 @@
-use std::{any::TypeId, marker::PhantomData};
+use std::marker::PhantomData;
 
-use crate::{symbol::Symbol, Definition, Group, MemberOf, SymbolSlice};
+use crate::{definition::DefinitionRef, symbol::Symbol, SymbolSlice};
 
 pub trait Matcher {
-    type Group: Group;
-
-    fn r#match<C>(&self) -> bool
-    where
-        C: Definition + MemberOf<Self::Group>;
-
-    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
-    where
-        SubG: Group + MemberOf<Self::Group>;
+    fn r#match(&self, def: DefinitionRef) -> bool;
 }
 
-pub(crate) fn symbol_matcher<'a, S>(symbol: &'a SymbolSlice) -> impl Matcher<Group = S::Group> + 'a
+pub(crate) fn symbol_matcher<'a, S>(symbol: &'a SymbolSlice) -> impl Matcher + 'a
 where
     S: 'a + Symbol + ?Sized,
 {
@@ -28,50 +20,20 @@ impl<'a, S> Matcher for SymbolMatcher<'a, S>
 where
     S: Symbol + ?Sized,
 {
-    type Group = S::Group;
-
-    fn r#match<CD>(&self) -> bool
-    where
-        CD: Definition,
-    {
-        self.0 == S::symbol::<CD>()
-    }
-
-    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
-    where
-        SubG: Group + MemberOf<Self::Group>,
-    {
-        SymbolMatcher(self.0, PhantomData::<S::Symbol<SubG>>)
+    fn r#match(&self, def: DefinitionRef) -> bool {
+        self.0 == S::symbol(def)
     }
 }
 
 #[derive(Debug)]
-pub struct TypeMatcher<G>(TypeId, PhantomData<G>);
-impl<G> TypeMatcher<G> {
-    pub fn new<T>(id: T) -> Self
-    where
-        T: Into<TypeId>,
-    {
-        Self(id.into(), PhantomData)
+pub struct TypeMatcher(DefinitionRef);
+impl TypeMatcher {
+    pub fn new(def: DefinitionRef) -> Self {
+        Self(def)
     }
 }
-impl<G> Matcher for TypeMatcher<G>
-where
-    G: Group,
-{
-    type Group = G;
-
-    fn r#match<C>(&self) -> bool
-    where
-        C: 'static,
-    {
-        TypeId::of::<C>() == self.0
-    }
-
-    fn to_sub_matcher<SubG>(&self) -> impl Matcher<Group = SubG>
-    where
-        SubG: Group,
-    {
-        TypeMatcher(self.0, PhantomData)
+impl Matcher for TypeMatcher {
+    fn r#match(&self, def: DefinitionRef) -> bool {
+        def == self.0
     }
 }

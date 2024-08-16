@@ -179,7 +179,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use currency::test::SubGroupTestC1;
+    use currency::test::SubGroupTestC10;
     use sdk::cosmwasm_std::{from_json, StdError};
 
     use crate::{
@@ -404,7 +404,7 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
-        type Currency = SubGroupTestC1;
+        type Currency = SubGroupTestC10;
 
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, Group};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
     duration::Duration,
@@ -37,7 +37,8 @@ where
 
         fn on<C>(self, expected_payment: Coin<C>) -> WithCoinResult<G, Self>
         where
-            C: Currency,
+            C: CurrencyDef,
+            C::Group: MemberOf<G>,
         {
             let received = bank::balance(self.account, self.querier)? >= expected_payment;
             Ok(received)

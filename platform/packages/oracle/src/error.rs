@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{error::Error as CurrencyError, CurrencyDTO, Group};
+use currency::{error::Error as CurrencyError, CurrencyDTO, Group, SymbolStatic, Tickers};
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -20,15 +20,15 @@ pub enum Error {
 
     #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
     FailedToFetchPrice {
-        from: String,
-        to: String,
+        from: SymbolStatic,
+        to: SymbolStatic,
         error: StdError,
     },
 }
 
 pub fn failed_to_fetch_price<G, QuoteG>(
-    from: CurrencyDTO<G>,
-    to: CurrencyDTO<QuoteG>,
+    from: &CurrencyDTO<G>,
+    to: &CurrencyDTO<QuoteG>,
     error: StdError,
 ) -> Error
 where
@@ -36,8 +36,8 @@ where
     QuoteG: Group,
 {
     Error::FailedToFetchPrice {
-        from: from.to_string(),
-        to: to.to_string(),
+        from: from.into_symbol::<Tickers<G>>(),
+        to: to.into_symbol::<Tickers<G>>(),
         error,
     }
 }

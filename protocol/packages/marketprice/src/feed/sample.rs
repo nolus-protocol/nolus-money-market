@@ -25,7 +25,7 @@ where
     SampleBuilder::from(observations, start_from, sample_span)
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct Sample<C, QuoteC>
 where
@@ -35,6 +35,16 @@ where
     /// Sample with no price means there has not been enough valid data to compute it.
     /// For example, none feed has been received within the validity window.
     price: Option<Price<C, QuoteC>>,
+}
+
+impl<C, QuoteC> Default for Sample<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn default() -> Self {
+        Self { price: None }
+    }
 }
 
 impl<C, QuoteC> Sample<C, QuoteC>

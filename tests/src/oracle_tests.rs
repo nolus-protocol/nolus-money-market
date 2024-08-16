@@ -1,3 +1,4 @@
+use currency::CurrencyDef;
 use serde::{Deserialize, Serialize};
 
 use currencies::{
@@ -5,7 +6,6 @@ use currencies::{
     PaymentGroup, PaymentGroup as PriceCurrencies,
     {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn},
 };
-use currency::Definition;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -63,10 +63,7 @@ fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr
     TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
         .init_lpp_with_funds(
             None,
-            &[coin(
-                5_000_000_000_000_000_000_000_000_000,
-                Lpn::BANK_SYMBOL,
-            )],
+            &[coin(5_000_000_000_000_000_000_000_000_000, Lpn::bank())],
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
@@ -417,10 +414,10 @@ fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
                     }}
                 ]
             }}"#,
-        usdc = Lpn::TICKER,
-        base_c = BaseC::TICKER,
-        weth = LeaseC5::TICKER,
-        wbtc = LeaseC2::TICKER,
+        usdc = Lpn::ticker(),
+        base_c = BaseC::ticker(),
+        weth = LeaseC5::ticker(),
+        wbtc = LeaseC2::ticker(),
     ))
     .unwrap()
 }

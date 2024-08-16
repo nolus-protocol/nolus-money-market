@@ -1,9 +1,10 @@
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use platform::{bank::BankAccount, batch::Batch};
 
 use crate::{
     api::LeaseAssetCurrencies,
     error::ContractError,
+    finance::LpnCurrencies,
     lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid},
     position::Position,
 };
@@ -32,8 +33,10 @@ where
         position: Position<Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Asset: Currency + MemberOf<LeaseAssetCurrencies>,
-        Lpn: Currency,
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies>,
+        Lpn: CurrencyDef,
+        Lpn::Group: MemberOf<LpnCurrencies>,
     {
         LeasePaid::<Asset, Lpn>::from_dto(dto, position).close(self.lease_account)
     }

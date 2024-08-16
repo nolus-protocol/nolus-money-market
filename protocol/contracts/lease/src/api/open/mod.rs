@@ -225,7 +225,7 @@ mod test_invariant {
 #[cfg(all(test, feature = "skel"))]
 mod test_position_spec {
     use currencies::Lpn;
-    use currency::Definition;
+    use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use sdk::cosmwasm_std::{from_json, StdError};
 
@@ -239,7 +239,7 @@ mod test_position_spec {
             spec_dto(),
             format!(
                 r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
-                lpn = Lpn::TICKER
+                lpn = Lpn::ticker()
             ),
         );
     }
@@ -248,7 +248,7 @@ mod test_position_spec {
     fn zero_min_asset() {
         let r = from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"0","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
-            lpn = Lpn::TICKER
+            lpn = Lpn::ticker()
         ));
         assert_err(r, "should be positive");
     }
@@ -257,7 +257,7 @@ mod test_position_spec {
     fn zero_min_transaction() {
         let r = from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"0","ticker":"{lpn}"}}}}"#,
-            lpn = Lpn::TICKER
+            lpn = Lpn::ticker()
         ));
         assert_err(r, "should be positive");
     }
@@ -266,7 +266,7 @@ mod test_position_spec {
     fn invalid_ticker() {
         let r = from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"ATOM"}}}}"#,
-            lpn = Lpn::TICKER
+            lpn = Lpn::ticker()
         ));
         assert_err(r, "'ATOM' pretending to be");
     }

@@ -38,7 +38,7 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount)
+        dbg!(coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount))
             .map(into_cosmos_sdk_coin)
             .map(|cosmos_sdk_coin| {
                 self.amounts.push(cosmos_sdk_coin);
@@ -97,7 +97,7 @@ impl<'c> From<Sender<'c>> for Transaction {
 mod test {
     use currency::{
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        Currency, Definition,
+        CurrencyDef,
     };
     use finance::coin::{Amount, Coin};
     use prost::Name;
@@ -136,31 +136,25 @@ mod test {
                     channel,
                     sender.clone(),
                     receiver.clone(),
-                    into_cosmos_sdk_coin(coin1),
+                    into_dex_coin(coin1),
                     timeout,
                 ),
             );
             trx.add_message(
                 MsgTransfer::type_url(),
-                new_msg(
-                    channel,
-                    sender,
-                    receiver,
-                    into_cosmos_sdk_coin(coin2),
-                    timeout,
-                ),
+                new_msg(channel, sender, receiver, into_dex_coin(coin2), timeout),
             );
             trx
         });
     }
 
-    fn into_cosmos_sdk_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
+    fn into_dex_coin<C>(coin: Coin<C>) -> CosmosSdkCoin
     where
-        C: Currency + Definition,
+        C: CurrencyDef,
     {
         CosmosSdkCoin {
             amount: Amount::from(coin).to_string(),
-            denom: C::DEX_SYMBOL.into(),
+            denom: C::definition().dto().definition().dex_symbol.into(),
         }
     }
 }

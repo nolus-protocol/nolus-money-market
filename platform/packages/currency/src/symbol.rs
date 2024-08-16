@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{Definition, Group, SymbolStatic};
+use crate::{definition::Definition, Group, SymbolStatic};
 
 pub trait Symbol {
     const DESCR: &'static str;
@@ -10,9 +10,7 @@ pub trait Symbol {
     where
         SubG: Group;
 
-    fn symbol<CD>() -> SymbolStatic
-    where
-        CD: Definition;
+    fn symbol(def: &Definition) -> SymbolStatic;
 }
 
 #[derive(Clone, Copy, Default)]
@@ -36,11 +34,8 @@ where
     where
     SubG: Group;
 
-    fn symbol<CD>() -> SymbolStatic
-    where
-        CD: Definition,
-    {
-        CD::TICKER
+    fn symbol(def: &Definition) -> SymbolStatic {
+        def.ticker
     }
 }
 
@@ -65,11 +60,8 @@ where
     where
     SubG: Group;
 
-    fn symbol<CD>() -> SymbolStatic
-    where
-        CD: Definition,
-    {
-        CD::BANK_SYMBOL
+    fn symbol(def: &Definition) -> SymbolStatic {
+        def.bank_symbol
     }
 }
 
@@ -95,10 +87,7 @@ where
     where
     SubG: Group;
 
-    fn symbol<CD>() -> SymbolStatic
-    where
-        CD: Definition,
-    {
-        CD::DEX_SYMBOL
+    fn symbol(def: &Definition) -> SymbolStatic {
+        def.dex_symbol
     }
 }

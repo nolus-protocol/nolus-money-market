@@ -1,4 +1,4 @@
-use currency::{Currency, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::coin::Coin;
 use platform::batch::Batch;
 
@@ -29,7 +29,8 @@ impl<Lpn> Impl<Lpn> {
 
 impl<Lpn> Reserve<Lpn> for Impl<Lpn>
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
 {
     fn cover_liquidation_losses(&mut self, amount: Coin<Lpn>) {
         debug_assert!(self.amount.is_none());
@@ -39,7 +40,8 @@ where
 
 impl<Lpn> TryFrom<Impl<Lpn>> for Batch
 where
-    Lpn: Currency + MemberOf<LpnCurrencies>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
 {
     type Error = Error;
 

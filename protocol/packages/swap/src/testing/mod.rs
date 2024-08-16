@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{
-    AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, DexSymbols, Group, GroupVisit as _,
+    AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupVisit as _,
     MemberOf,
 };
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
@@ -52,7 +52,7 @@ pub fn from_dex_symbol<G>(symbol: &str) -> dex::swap::Result<CurrencyDTO<G>>
 where
     G: Group,
 {
-    CurrencyDTO::<G>::from_symbol::<DexSymbols<G>>(symbol).map_err(Into::into)
+    CurrencyDTO::<G>::from_symbol_testing::<DexSymbols<G>>(symbol).map_err(Into::into)
 }
 
 #[cold]
@@ -79,9 +79,10 @@ where
     type Output = CoinDTO<G>;
     type Error = currency::error::Error;
 
-    fn on<C>(self) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self>
     where
-        C: Currency + MemberOf<G>,
+        C: CurrencyDef,
+        C::Group: MemberOf<G>,
     {
         Ok(Coin::<C>::new(self.amount).into())
     }

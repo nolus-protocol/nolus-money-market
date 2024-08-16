@@ -2,7 +2,7 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, LeaseGroup as AssetCurrencies, Lpn as BaseCurrency,
     Lpns as BaseCurrencies, Lpns, PaymentGroup as PriceCurrencies,
 };
-use currency::{Currency, CurrencyDTO};
+use currency::{CurrencyDTO, CurrencyDef};
 use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::Code;
 use sdk::{
@@ -124,7 +124,7 @@ impl<ProtocolsRegistry, Treasury>
 {
     pub fn open_lease<D>(&mut self, lease_currency: CurrencyDTO<AssetCurrencies>) -> Addr
     where
-        D: Currency,
+        D: CurrencyDef,
     {
         LeaseInstantiator::instantiate::<D>(
             &mut self.app,

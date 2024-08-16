@@ -1,15 +1,9 @@
-use std::{
-    fmt::{Display, Formatter},
-    marker::PhantomData,
-};
+use std::fmt::{Display, Formatter};
 
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    group::MemberOf, AnyVisitor, AnyVisitorResult, Currency, Group, GroupVisit, SymbolOwned,
-    Tickers,
-};
+use crate::{group::MemberOf, Group, SymbolOwned, Tickers};
 
 use crate::error::Error;
 
@@ -18,43 +12,26 @@ use super::CurrencyDTO as ValidatedDTO;
 /// Brings invariant checking as a step in deserializing a CurrencyDTO
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(transparent, deny_unknown_fields, rename_all = "snake_case")]
-pub(super) struct CurrencyDTO(SymbolOwned);
+pub(super) struct TickerDTO(SymbolOwned);
 
-impl Display for CurrencyDTO {
+impl Display for TickerDTO {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
     }
 }
 
-impl<G> TryFrom<CurrencyDTO> for ValidatedDTO<G>
+impl<G> TryFrom<TickerDTO> for ValidatedDTO<G>
 where
     G: Group,
 {
     type Error = Error;
 
-    fn try_from(dto: CurrencyDTO) -> Result<Self, Self::Error> {
-        struct TypeToCurrency<G>(PhantomData<G>);
-        impl<G> AnyVisitor<G> for TypeToCurrency<G>
-        where
-            G: Group,
-        {
-            type VisitorG = G;
-            type Output = ValidatedDTO<G>;
-
-            type Error = Error; // TODO consider adding a non-falling visiting variant
-
-            fn on<C>(self) -> AnyVisitorResult<G, Self>
-            where
-                C: Currency + MemberOf<G>,
-            {
-                Ok(super::dto::<C, G>())
-            }
-        }
-        Tickers::visit_any(&dto.0, TypeToCurrency(PhantomData))
+    fn try_from(dto: TickerDTO) -> Result<Self, Self::Error> {
+        Self::from_symbol::<Tickers<G>>(&dto.0)
     }
 }
 
-impl<G> From<ValidatedDTO<G>> for CurrencyDTO
+impl<G> From<ValidatedDTO<G>> for TickerDTO
 where
     G: Group + MemberOf<G>,
 {
@@ -67,11 +44,16 @@ where
 mod test {
     use sdk::cosmwasm_std;
 
-    use crate::test::{SubGroupCurrency, SubGroupTestC1, SuperGroupCurrency, SuperGroupTestC1};
+    use crate::{
+        test::{
+            SubGroupCurrency, SubGroupTestC10, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
+        },
+        CurrencyDef,
+    };
 
     #[test]
     fn deser_same_group() {
-        let coin: SuperGroupCurrency = SuperGroupCurrency::from_currency_type::<SuperGroupTestC1>();
+        let coin: SuperGroupCurrency = *SuperGroupTestC1::definition().dto();
         let coin_deser: SuperGroupCurrency = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -80,21 +62,19 @@ mod test {
 
     #[test]
     fn deser_parent_group() {
-        type CoinCurrency = SubGroupTestC1;
-        type DirectGroup = SubGroupCurrency;
         type ParentGroup = SuperGroupCurrency;
 
-        let coin = DirectGroup::from_currency_type::<CoinCurrency>();
+        let coin = *SubGroupTestC10::definition().dto();
         let coin_deser: ParentGroup = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
-        let coin_exp = ParentGroup::from_currency_type::<CoinCurrency>();
+        let coin_exp = coin.into_super_group::<SuperGroup>();
         assert_eq!(coin_exp, coin_deser);
     }
 
     #[test]
     fn deser_wrong_group() {
-        let coin = SuperGroupCurrency::from_currency_type::<SuperGroupTestC1>();
+        let coin = *SuperGroupTestC1::definition().dto();
         let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
         assert!(cosmwasm_std::from_json::<SubGroupCurrency>(&coin_raw).is_err());

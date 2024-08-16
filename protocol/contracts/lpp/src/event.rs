@@ -1,4 +1,4 @@
-use currency::Currency;
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use lpp_platform::NLpn;
 use platform::batch::{Emit, Emitter};
@@ -11,7 +11,7 @@ pub fn emit_deposit<Lpn>(
     receipts: Coin<NLpn>,
 ) -> Emitter
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     Emitter::of_type("lp-deposit")
         .emit_tx_info(&env)
@@ -29,7 +29,7 @@ pub fn emit_withdraw<Lpn>(
     close_flag: bool,
 ) -> Emitter
 where
-    Lpn: Currency,
+    Lpn: CurrencyDef,
 {
     Emitter::of_type("lp-withdraw")
         .emit_tx_info(&env)

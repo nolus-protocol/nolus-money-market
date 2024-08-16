@@ -7,9 +7,8 @@ pub type SuperGroupTestC2 = impl_::TestC2;
 pub type SuperGroupTestC3 = impl_::TestC3;
 pub type SuperGroupTestC4 = impl_::TestC4;
 pub type SuperGroupTestC5 = impl_::TestC5;
-pub type SuperGroupTestC6 = impl_::TestC6;
-
-pub type SubGroupTestC1 = impl_::TestC10;
+pub type SubGroupTestC6 = impl_::TestC6;
+pub type SubGroupTestC10 = impl_::TestC10;
 
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SuperGroup {}
@@ -20,7 +19,7 @@ impl Group for SuperGroup {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
         crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
@@ -28,9 +27,7 @@ impl Group for SuperGroup {
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
-            .or_else(|visitor| {
-                SubGroup::maybe_visit_member::<_, _, Self>(&matcher.to_sub_matcher(), visitor)
-            })
+            .or_else(|visitor| SubGroup::maybe_visit_member::<_, _, Self>(matcher, visitor))
     }
 
     fn maybe_visit_super_visitor<M, V, TopG>(
@@ -38,7 +35,7 @@ impl Group for SuperGroup {
         _visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -48,7 +45,7 @@ impl Group for SuperGroup {
 
     fn maybe_visit_member<M, V, TopG>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -67,7 +64,7 @@ impl Group for SubGroup {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member::<_, _, Self>(matcher, visitor)
@@ -78,7 +75,7 @@ impl Group for SubGroup {
         visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -88,7 +85,7 @@ impl Group for SubGroup {
 
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -101,152 +98,144 @@ impl MemberOf<SuperGroup> for SubGroup {}
 
 fn maybe_visit<M, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher<Group = SubGroup>,
+    M: Matcher,
     V: AnyVisitor<TopG>,
     SubGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    crate::maybe_visit_member::<_, SubGroupTestC1, TopG, _>(matcher, visitor).or_else(|visitor| {
-        crate::maybe_visit_member::<_, SuperGroupTestC6, TopG, _>(matcher, visitor)
+    crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(matcher, visitor).or_else(|visitor| {
+        crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(matcher, visitor)
     })
 }
 
 mod impl_ {
     use serde::{Deserialize, Serialize};
 
-    use crate::{Currency, Definition, SymbolStatic};
+    use crate::{CurrencyDTO, CurrencyDef, Definition};
 
     use super::{SubGroup, SuperGroup};
 
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC1;
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC1(CurrencyDTO<SuperGroup>);
+    pub const TESTC1_DEFINITION: Definition =
+        Definition::new("ticker#1", "ibc/bank_ticker#1", "ibc/dex_ticker#1", 6);
+    pub const TESTC1: TestC1 = TestC1(CurrencyDTO::new(&TESTC1_DEFINITION));
 
-    impl Currency for TestC1 {
+    impl CurrencyDef for TestC1 {
         type Group = SuperGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC1
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
-    impl Definition for TestC1 {
-        const TICKER: SymbolStatic = "ticker#1";
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC2(CurrencyDTO<SuperGroup>);
+    pub const TESTC2_DEFINITION: Definition =
+        Definition::new("ticker#2", "ibc/bank_ticker#2", "ibc/dex_ticker#2", 6);
+    pub const TESTC2: TestC2 = TestC2(CurrencyDTO::new(&TESTC2_DEFINITION));
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#1";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#1";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC2;
-
-    impl Currency for TestC2 {
+    impl CurrencyDef for TestC2 {
         type Group = SuperGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC2
+        }
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
-    impl Definition for TestC2 {
-        const TICKER: SymbolStatic = "ticker#2";
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC3(CurrencyDTO<SuperGroup>);
+    const TESTC3_DEFINITION: Definition =
+        Definition::new("ticker#3", "ibc/bank_ticker#3", "ibc/dex_ticker#3", 6);
+    const TESTC3: TestC3 = TestC3(CurrencyDTO::new(&TESTC3_DEFINITION));
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#2";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#2";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC3;
-
-    impl Currency for TestC3 {
+    impl CurrencyDef for TestC3 {
         type Group = SuperGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC3
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC4(CurrencyDTO<SuperGroup>);
+    pub const TESTC4_DEFINITION: Definition =
+        Definition::new("ticker#4", "ibc/bank_ticker#4", "ibc/dex_ticker#4", 6);
+    pub const TESTC4: TestC4 = TestC4(CurrencyDTO::new(&TESTC4_DEFINITION));
 
-    impl Definition for TestC3 {
-        const TICKER: SymbolStatic = "ticker#3";
-
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#3";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#3";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC4;
-
-    impl Currency for TestC4 {
+    impl CurrencyDef for TestC4 {
         type Group = SuperGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC4
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
-    impl Definition for TestC4 {
-        const TICKER: SymbolStatic = "ticker#4";
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC5(CurrencyDTO<SuperGroup>);
+    pub const TESTC5_DEFINITION: Definition =
+        Definition::new("ticker#5", "ibc/bank_ticker#5", "ibc/dex_ticker#5", 6);
+    pub const TESTC5: TestC5 = TestC5(CurrencyDTO::new(&TESTC5_DEFINITION));
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#4";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#4";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC5;
-
-    impl Currency for TestC5 {
+    impl CurrencyDef for TestC5 {
         type Group = SuperGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC5
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
-    impl Definition for TestC5 {
-        const TICKER: SymbolStatic = "ticker#5";
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC6(CurrencyDTO<SubGroup>);
+    pub const TESTC6_DEFINITION: Definition =
+        Definition::new("ticker#6", "ibc/bank_ticker#6", "ibc/dex_ticker#6", 6);
+    pub const TESTC6: TestC6 = TestC6(CurrencyDTO::new(&TESTC6_DEFINITION));
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#5";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#5";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC6;
-
-    impl Currency for TestC6 {
+    impl CurrencyDef for TestC6 {
         type Group = SubGroup;
+
+        fn definition() -> &'static Self {
+            &TESTC6
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 
-    impl Definition for TestC6 {
-        const TICKER: SymbolStatic = "ticker#6";
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+    pub struct TestC10(CurrencyDTO<SubGroup>);
+    pub const TESTC10_DEFINITION: Definition =
+        Definition::new("ticker#10", "ibc/bank_ticker#10", "ibc/dex_ticker#10", 6);
+    pub const TESTC10: TestC10 = TestC10(CurrencyDTO::new(&TESTC10_DEFINITION));
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#6";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#6";
-
-        const DECIMAL_DIGITS: u8 = 0;
-    }
-
-    #[derive(
-        Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
-    )]
-    pub struct TestC10;
-    impl Currency for TestC10 {
+    impl CurrencyDef for TestC10 {
         type Group = SubGroup;
-    }
 
-    impl Definition for TestC10 {
-        const TICKER: SymbolStatic = "ticker#10";
+        fn definition() -> &'static Self {
+            &TESTC10
+        }
 
-        const BANK_SYMBOL: SymbolStatic = "ibc/bank_ticker#10";
-
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_ticker#10";
-
-        const DECIMAL_DIGITS: u8 = 0;
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
     }
 }

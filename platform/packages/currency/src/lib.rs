@@ -1,7 +1,8 @@
 use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
-    dto::{dto, symbol, to_string, CurrencyDTO},
+    definition::Definition,
+    dto::{dto, to_string, CurrencyDTO},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
@@ -13,6 +14,7 @@ pub use crate::{
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
+mod definition;
 mod dto;
 pub mod error;
 mod from_symbol;
@@ -31,30 +33,38 @@ pub type SymbolSlice = str;
 pub type SymbolStatic = &'static SymbolSlice;
 pub type SymbolOwned = String;
 
-// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
-// satisfy trait bounds with regards of the lifetimes
-// For example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
-pub trait Currency: Copy + Ord + Default + Debug + 'static {
+/// Currency market trait
+///
+/// Designed to enforce static checks at compile-time guard protecting against mismatches in financial, at al, operations.
+pub trait Currency: Copy + Ord + Debug + 'static {}
+
+/// Represent a Currency definition, including the currency group, the ticker, the symbols on Nolus and the DEX network, and the number of decimals.
+///
+pub trait CurrencyDef: Currency {
     /// The group this currency belongs to
     type Group: Group;
+
+    fn definition() -> &'static Self;
+
+    fn dto(&self) -> &CurrencyDTO<Self::Group>;
+
+    #[cfg(any(test, feature = "testing"))]
+    fn ticker() -> SymbolStatic {
+        Self::definition().dto().definition().ticker
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    fn bank() -> SymbolStatic {
+        Self::definition().dto().definition().bank_symbol
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    fn dex() -> SymbolStatic {
+        Self::definition().dto().definition().dex_symbol
+    }
 }
 
-pub trait Definition: 'static {
-    /// Identifier of the currency
-    const TICKER: SymbolStatic;
-
-    /// Symbol at the Nolus network used by the Cosmos-SDK modules, mainly the Banking one
-    const BANK_SYMBOL: SymbolStatic;
-
-    /// Symbol at the Dex network
-    const DEX_SYMBOL: SymbolStatic;
-
-    /// Exponent on which the whole unit was raised to get the currency's base
-    /// unit represented by the trait.
-    ///
-    /// Example: `(10 ^ DECIMAL_DIGITS) uUSDC = 1 USDC`
-    const DECIMAL_DIGITS: u8;
-}
+impl<T> Currency for T where T: CurrencyDef {}
 
 pub fn equal<C1, C2>() -> bool
 where
@@ -66,8 +76,8 @@ where
 
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
-    M: Matcher<Group = C::Group>,
-    C: Currency + MemberOf<V::VisitorG> + Definition,
+    M: Matcher,
+    C: CurrencyDef + MemberOf<V::VisitorG>,
     V: AnyVisitor<C::Group>,
     C::Group: MemberOf<V::VisitorG>,
 {
@@ -76,14 +86,14 @@ where
 
 pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
-    M: Matcher<Group = C::Group>,
-    C: Currency + MemberOf<TopG> + MemberOf<V::VisitorG> + Definition,
-    C::Group: MemberOf<TopG>,
+    M: Matcher,
+    C: CurrencyDef,
+    C::Group: MemberOf<TopG> + MemberOf<V::VisitorG>,
     V: AnyVisitor<TopG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    if matcher.r#match::<C>() {
-        Ok(visitor.on::<C>())
+    if matcher.r#match(C::definition().dto().definition()) {
+        Ok(visitor.on::<C>(C::definition()))
     } else {
         Err(visitor)
     }

@@ -1,4 +1,4 @@
-use currency::{Currency, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::price::base::BasePrice;
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +9,8 @@ use super::{Alarm as ValidatedAlarm, Error};
 pub(super) struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -19,7 +20,8 @@ where
 impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpn, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     type Error = Error;
@@ -36,7 +38,8 @@ where
 impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpn, Lpns>
 where
     G: Group,
-    Lpn: Currency + MemberOf<Lpns>,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
     fn from(validated: ValidatedAlarm<G, Lpn, Lpns>) -> Self {

@@ -23,20 +23,13 @@ impl Group for PaymentGroup {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
-        LeaseGroup::maybe_visit_member(&matcher.to_sub_matcher::<LeaseGroup>(), visitor)
-            .or_else(|visitor| Lpns::maybe_visit_member(&matcher.to_sub_matcher::<Lpns>(), visitor))
-            .or_else(|visitor| {
-                Native::maybe_visit_member(&matcher.to_sub_matcher::<Native>(), visitor)
-            })
-            .or_else(|visitor| {
-                PaymentOnlyGroup::maybe_visit_member(
-                    &matcher.to_sub_matcher::<PaymentOnlyGroup>(),
-                    visitor,
-                )
-            })
+        LeaseGroup::maybe_visit_member(matcher, visitor)
+            .or_else(|visitor| Lpns::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| Native::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| PaymentOnlyGroup::maybe_visit_member(matcher, visitor))
     }
 
     fn maybe_visit_super_visitor<M, V, TopG>(
@@ -44,7 +37,7 @@ impl Group for PaymentGroup {
         _visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -54,7 +47,7 @@ impl Group for PaymentGroup {
 
     fn maybe_visit_member<M, V, TopG>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,

@@ -68,7 +68,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::test::{SubGroupTestC1, SuperGroupTestC1};
+    use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
     use crate::coin::{Amount, Coin};
 
@@ -92,7 +92,7 @@ mod test {
         }
     }
     mod usize_ratio {
-        use currency::test::{SubGroupTestC1, SuperGroupTestC1};
+        use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
         use crate::{
             coin::{Amount, Coin},
@@ -137,11 +137,11 @@ mod test {
 
         #[track_caller]
         fn test_impl(
-            amount1: Coin<SubGroupTestC1>,
+            amount1: Coin<SubGroupTestC10>,
             quote1: Coin<SuperGroupTestC1>,
             nominator: usize,
             denominator: usize,
-            amount_exp: Coin<SubGroupTestC1>,
+            amount_exp: Coin<SubGroupTestC10>,
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
@@ -152,8 +152,8 @@ mod test {
             );
         }
     }
-    fn c(a: Amount) -> Coin<SubGroupTestC1> {
-        Coin::<SubGroupTestC1>::from(a)
+    fn c(a: Amount) -> Coin<SubGroupTestC10> {
+        Coin::<SubGroupTestC10>::from(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {

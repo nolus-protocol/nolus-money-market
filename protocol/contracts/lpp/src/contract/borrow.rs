@@ -1,4 +1,4 @@
-use currency::{Currency, Definition};
+use currency::{Currency, CurrencyDef};
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
@@ -21,7 +21,7 @@ pub(super) fn try_open_loan<Lpn>(
     amount: Coin<Lpn>,
 ) -> Result<(LoanResponse<Lpn>, MessageResponse)>
 where
-    Lpn: 'static + Currency,
+    Lpn: 'static + CurrencyDef,
 {
     let lease_addr = info.sender;
     let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
@@ -43,7 +43,7 @@ pub(super) fn try_repay_loan<Lpn>(
     info: MessageInfo,
 ) -> Result<(Coin<Lpn>, MessageResponse)>
 where
-    Lpn: 'static + Definition + Currency,
+    Lpn: CurrencyDef,
 {
     let lease_addr = info.sender;
     let repay_amount = bank::received_one(info.funds)?;
@@ -68,7 +68,7 @@ pub(super) fn query_quote<Lpn>(
     quote: Coin<Lpn>,
 ) -> Result<QueryQuoteResponse>
 where
-    Lpn: 'static + Currency,
+    Lpn: CurrencyDef,
 {
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 

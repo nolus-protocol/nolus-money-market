@@ -163,7 +163,7 @@ where
     FromS: Symbol<Group = PaymentGroup>,
     IntoS: Symbol<Group = PaymentGroup>,
 {
-    CurrencyDTO::<PaymentGroup>::from_symbol::<FromS>(symbol)
+    CurrencyDTO::<PaymentGroup>::from_symbol_testing::<FromS>(symbol)
         .unwrap()
         .into_symbol::<IntoS>()
 }

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, Definition, Group,
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group,
     MemberOf, SingleVisitor,
 };
 
@@ -10,20 +10,36 @@ pub use self::group::*;
 mod group;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expect<C, VisitedG, VisitorG>(
-    PhantomData<C>,
+pub struct Expect<CDef, VisitedG, VisitorG>(
+    &'static CDef,
     PhantomData<VisitedG>,
     PhantomData<VisitorG>,
-);
+)
+where
+    CDef: 'static;
 
-impl<C, VisitedG, VisitorG> Default for Expect<C, VisitedG, VisitorG> {
-    fn default() -> Self {
-        Self(PhantomData, PhantomData, PhantomData)
+impl<CDef, VisitedG, VisitorG> Expect<CDef, VisitedG, VisitorG>
+where
+    CDef: CurrencyDef,
+{
+    pub fn new() -> Self {
+        Self(CDef::definition(), PhantomData, PhantomData)
     }
 }
-impl<C, VisitedG, VisitorG> AnyVisitor<VisitedG> for Expect<C, VisitedG, VisitorG>
+
+impl<CDef, VisitedG, VisitorG> Default for Expect<CDef, VisitedG, VisitorG>
 where
-    C: Currency + MemberOf<VisitedG>,
+    CDef: CurrencyDef,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<CDef, VisitedG, VisitorG> AnyVisitor<VisitedG> for Expect<CDef, VisitedG, VisitorG>
+where
+    CDef: CurrencyDef,
+    CDef::Group: Group + MemberOf<VisitedG>,
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
@@ -31,11 +47,11 @@ where
     type Output = bool;
     type Error = Error;
 
-    fn on<Cin>(self) -> Result<bool, Error>
+    fn on<Cin>(self, def: &Cin) -> Result<bool, Error>
     where
-        Cin: 'static,
+        Cin: CurrencyDef,
     {
-        Ok(crate::equal::<C, Cin>())
+        Ok(def.dto() == self.0.dto())
     }
 }
 
@@ -68,14 +84,14 @@ where
     type Output = bool;
     type Error = Error;
 
-    fn on<C>(self) -> AnyVisitorResult<G, Self> {
+    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self> {
         unreachable!();
     }
 }
 
 impl<CDef, G> SingleVisitor<CDef> for ExpectUnknownCurrency<G>
 where
-    CDef: Definition,
+    CDef: CurrencyDef,
 {
     type Output = bool;
     type Error = Error;
@@ -85,40 +101,48 @@ where
     }
 }
 
-pub struct ExpectPair<CDef1, VisitedG1, CDef2, VisitedG2>(
-    PhantomData<CDef1>,
+pub struct ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>(
+    &'dtos CurrencyDTO<G1>,
     PhantomData<VisitedG1>,
-    PhantomData<CDef2>,
+    &'dtos CurrencyDTO<G2>,
     PhantomData<VisitedG2>,
-);
-impl<C1, VisitedG1, C2, VisitedG2> AnyVisitorPair for ExpectPair<C1, VisitedG1, C2, VisitedG2>
+)
 where
-    C1: Currency,
     VisitedG1: Group,
-    C2: Currency,
+    G1: Group + MemberOf<VisitedG1>,
     VisitedG2: Group,
+    G2: Group + MemberOf<VisitedG2>;
+
+impl<'dtos, VisitedG1, VisitedG2, G1, G2> ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>
+where
+    VisitedG1: Group,
+    G1: Group + MemberOf<VisitedG1>,
+    VisitedG2: Group,
+    G2: Group + MemberOf<VisitedG2>,
+{
+    pub fn new(def1: &'dtos CurrencyDTO<G1>, def2: &'dtos CurrencyDTO<G2>) -> Self {
+        Self(def1, PhantomData, def2, PhantomData)
+    }
+}
+
+impl<'dtos, VisitedG1, VisitedG2, G1, G2> AnyVisitorPair
+    for ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>
+where
+    VisitedG1: Group,
+    G1: Group + MemberOf<VisitedG1>,
+    VisitedG2: Group,
+    G2: Group + MemberOf<VisitedG2>,
 {
     type VisitedG1 = VisitedG1;
     type VisitedG2 = VisitedG2;
     type Output = bool;
     type Error = Error;
 
-    fn on<C1in, C2in>(self) -> Result<Self::Output, Self::Error>
+    fn on<C1in, C2in>(self, def1: &C1in, def2: &C2in) -> Result<Self::Output, Self::Error>
     where
-        C1in: Currency,
-        C2in: Currency,
+        C1in: CurrencyDef,
+        C2in: CurrencyDef,
     {
-        Ok(crate::equal::<C1, C1in>() && crate::equal::<C2, C2in>())
-    }
-}
-
-impl<C1, VisitedG1, C2, VisitedG2> Default for ExpectPair<C1, VisitedG1, C2, VisitedG2> {
-    fn default() -> Self {
-        Self(
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-        )
+        Ok(def1.dto() == self.0 && def2.dto() == self.2)
     }
 }

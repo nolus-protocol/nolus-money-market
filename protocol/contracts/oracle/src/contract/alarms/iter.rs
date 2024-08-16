@@ -1,6 +1,6 @@
 use std::{iter, marker::PhantomData, ops::Deref};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::price::{self, base::with_price::WithPrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
@@ -15,7 +15,8 @@ where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
     BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -29,7 +30,8 @@ where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
     BaseG: Group,
 {
     pub fn new(
@@ -83,7 +85,8 @@ where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
-    BaseC: Currency + MemberOf<BaseG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
     BaseG: Group,
 {
     type Item = ContractResult<Addr>;
@@ -120,7 +123,7 @@ impl<'storage, 'alarms, S, PriceG, BaseC> WithPrice<BaseC>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     PriceG: Group,
-    BaseC: Currency,
+    BaseC: CurrencyDef,
 {
     type PriceG = PriceG;
 
@@ -129,7 +132,8 @@ where
 
     fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + MemberOf<Self::PriceG>,
+        C: CurrencyDef,
+        C::Group: MemberOf<Self::PriceG>,
     {
         Ok(self
             .alarms

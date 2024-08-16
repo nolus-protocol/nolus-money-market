@@ -28,7 +28,7 @@ impl Group for Lpns {
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
@@ -39,7 +39,7 @@ impl Group for Lpns {
         visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -49,7 +49,7 @@ impl Group for Lpns {
 
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
-        M: Matcher<Group = Self>,
+        M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
         Self: MemberOf<TopG>,
         TopG: Group,
@@ -63,7 +63,7 @@ impl MemberOf<Self> for Lpns {}
 
 #[cfg(test)]
 mod test {
-    use currency::Definition;
+    use currency::CurrencyDef as _;
 
     use crate::{
         lpn::{Lpn, Lpns},
@@ -77,14 +77,14 @@ mod test {
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Lpn, Lpns>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::BANK_SYMBOL);
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        maybe_visit_on_ticker_err::<Lpn, Lpns>(Nls::ticker());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<Lpn, Lpns>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::TICKER);
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
+        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Nls::bank());
     }
 }

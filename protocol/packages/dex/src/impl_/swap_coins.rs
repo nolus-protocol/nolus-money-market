@@ -39,7 +39,7 @@ mod test {
 
     use currency::{
         never::{self, Never},
-        test::{SubGroupTestC1, SuperGroup, SuperGroupTestC1},
+        test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1},
         Group, MemberOf,
     };
 
@@ -52,7 +52,7 @@ mod test {
     }
 
     fn coin2() -> CoinDTO<SuperGroup> {
-        Coin::<SubGroupTestC1>::new(28).into()
+        Coin::<SubGroupTestC10>::new(28).into()
     }
 
     pub struct TestVisitor<GTop, R>(Option<Amount>, R, Option<Amount>, R, PhantomData<GTop>)
