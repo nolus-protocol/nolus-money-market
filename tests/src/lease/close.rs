@@ -50,7 +50,7 @@ fn state_closed() {
         test_case.address_book.leaser().clone(),
         customer_addr,
     );
-    heal::heal_unsupported(&mut test_case.app, lease_addr);
+    heal::heal_no_inconsistency(&mut test_case.app, lease_addr);
 }
 
 fn close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(

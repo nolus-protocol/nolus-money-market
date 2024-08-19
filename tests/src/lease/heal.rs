@@ -93,14 +93,14 @@ pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr) {
     assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
 }
 
-pub(super) fn heal_unsupported(app: &mut App, lease: Addr) {
-    let err = try_heal(app, lease).unwrap_err();
-    let heal_err = err.downcast_ref::<ContractError>();
-    assert_eq!(
-        Some(&ContractError::unsupported_operation("heal")),
-        heal_err
-    );
-}
+// pub(super) fn heal_unsupported(app: &mut App, lease: Addr) {
+//     let err = try_heal(app, lease).unwrap_err();
+//     let heal_err = err.downcast_ref::<ContractError>();
+//     assert_eq!(
+//         Some(&ContractError::unsupported_operation("heal")),
+//         heal_err
+//     );
+// }
 
 fn try_heal(
     app: &mut App,

@@ -21,6 +21,7 @@ use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
 mod dex;
+mod drain;
 mod event;
 mod handler;
 mod lease;

@@ -1,12 +1,10 @@
-use currencies::PaymentGroup;
-use platform::bank;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{api::query::StateResponse, error::ContractResult};
 
-use super::{Handler, Response};
+use super::{drain::DrainAll, Handler, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
@@ -40,8 +38,8 @@ impl Handler for Closed {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        bank::bank_send_all::<PaymentGroup>(&env.contract.address, info.sender, querier)
-            .map_err(Into::into)
-            .map(|msgs| Response::from(msgs, self))
+        self.drain(&env.contract.address, info.sender, querier)
     }
 }
+
+impl DrainAll for Closed {}
