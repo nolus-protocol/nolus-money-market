@@ -79,7 +79,12 @@ where
         self.handler.on_price_alarm(querier, env, info)
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.heal(querier, env)
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.handler.heal(querier, env, info)
     }
 }

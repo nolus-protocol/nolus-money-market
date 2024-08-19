@@ -131,7 +131,7 @@ fn process_execute(
             access_control::check(&info.sender, &env.contract.address)?;
             state.on_dex_inner_continue(querier, env)
         }
-        ExecuteMsg::Heal() => state.heal(querier, env),
+        ExecuteMsg::Heal() => state.heal(querier, env, info),
     }
 }
 

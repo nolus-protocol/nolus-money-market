@@ -81,7 +81,12 @@ where
             .map_err(Into::into)
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
         self.handler.heal(querier, env).into()
     }
 

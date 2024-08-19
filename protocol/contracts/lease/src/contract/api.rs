@@ -70,7 +70,12 @@ where
         err("dex inner continue")
     }
 
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
+    fn heal(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
         err("heal")
     }
 

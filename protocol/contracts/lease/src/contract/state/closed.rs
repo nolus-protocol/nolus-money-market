@@ -1,3 +1,5 @@
+use currencies::PaymentGroup;
+use platform::bank;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
@@ -22,6 +24,7 @@ impl Handler for Closed {
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
     }
+
     fn on_price_alarm(
         self,
         _querier: QuerierWrapper<'_>,
@@ -29,5 +32,16 @@ impl Handler for Closed {
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
+    }
+
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        bank::bank_send_all::<PaymentGroup>(&env.contract.address, info.sender, querier)
+            .map_err(Into::into)
+            .map(|msgs| Response::from(msgs, self))
     }
 }

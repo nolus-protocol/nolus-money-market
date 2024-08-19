@@ -1,4 +1,4 @@
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
@@ -159,6 +159,61 @@ where
     G: Group,
 {
     BankView { account, querier }.balance()
+}
+
+/// Send all coins to a recipient
+pub fn bank_send_all<G>(from: &Addr, to: Addr, querier: QuerierWrapper<'_>) -> Result<Batch>
+where
+    G: Group,
+{
+    #[derive(Clone)]
+    struct SendAny<G> {
+        to: Addr,
+        _g: PhantomData<G>,
+    }
+
+    impl<G> WithCoin<G> for SendAny<G>
+    where
+        G: Group,
+    {
+        type VisitorG = G;
+
+        type Output = Batch;
+
+        type Error = Error;
+
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
+        where
+            C: CurrencyDef,
+            C::Group: MemberOf<Self::VisitorG>,
+        {
+            let mut sender = LazySenderStub::new(self.to);
+            sender.send(coin);
+            Ok(sender.into())
+        }
+    }
+
+    let from_account = account(from, querier);
+    from_account
+        .balances(SendAny::<G> {
+            to,
+            _g: PhantomData,
+        })
+        .and_then(|may_batch| {
+            // TODO eliminate the `Result::and_then` once `Result::flatten` gets stabilized
+            may_batch.transpose().map(Option::unwrap_or_default)
+        })
+}
+
+/// Send a single coin to a recepient
+#[cfg(feature = "testing")]
+pub fn bank_send<C>(to: Addr, amount: Coin<C>) -> Batch
+where
+    C: CurrencyDef,
+{
+    let mut batch = Batch::default();
+    bank_send_impl(&mut batch, to, &[amount]);
+    batch
 }
 
 impl<View> BankAccountView for BankStub<View>
@@ -349,22 +404,14 @@ where
     }
 }
 
-/// Send a single coin to a recepient
-#[cfg(feature = "testing")]
-pub fn bank_send<C>(to: Addr, amount: Coin<C>) -> Batch
-where
-    C: CurrencyDef,
-{
-    let mut batch = Batch::default();
-    bank_send_impl(&mut batch, to, &[amount]);
-    batch
-}
-
 #[cfg(test)]
 mod test {
 
     use currency::{
-        test::{SubGroup, SubGroupTestC10, SuperGroupTestC1},
+        test::{
+            SubGroup, SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1,
+            SuperGroupTestC4,
+        },
         CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
     use finance::{
@@ -372,7 +419,7 @@ mod test {
         test::coin::Expect,
     };
     use sdk::{
-        cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, Empty, QuerierWrapper},
+        cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, QuerierWrapper},
         cw_multi_test::BasicApp,
     };
 
@@ -580,14 +627,14 @@ mod test {
     where
         G: Group,
     {
-        let addr: Addr = Addr::unchecked("user");
+        let user: Addr = Addr::unchecked("user");
 
-        let app: BasicApp<Empty, Empty> = sdk::cw_multi_test::App::new(|router, _, storage| {
-            router.bank.init_balance(storage, &addr, coins).unwrap();
+        let app = BasicApp::new(|router, _, storage| {
+            router.bank.init_balance(storage, &user, coins).unwrap();
         });
         let querier: QuerierWrapper<'_> = app.wrap();
 
-        let bank_view: BankView<'_> = BankView::account(&addr, querier);
+        let bank_view: BankView<'_> = BankView::account(&user, querier);
 
         let result = bank_view.balances::<G, _>(mock.clone()).unwrap();
         mock.validate(result);
@@ -623,5 +670,60 @@ mod test {
             ],
             Cmd::<SubGroup>::expected::<SubGroupTestC10>(),
         );
+    }
+
+    #[test]
+    fn send_all_none() {
+        send_all_tester::<SuperGroup>(vec![], 0);
+    }
+
+    #[test]
+    fn send_all_subgroup() {
+        send_all_tester::<SubGroup>(vec![cw_coin(200, SuperGroupTestC4::bank())], 0);
+
+        send_all_tester::<SubGroup>(vec![cw_coin(100, SubGroupTestC10::dex())], 0);
+
+        send_all_tester::<SubGroup>(
+            vec![
+                cw_coin(100, SuperGroupTestC1::ticker()),
+                cw_coin(100, SubGroupTestC10::bank()),
+                cw_coin(200, SuperGroupTestC4::bank()),
+            ],
+            1,
+        );
+    }
+
+    #[test]
+    fn send_all_supergroup() {
+        send_all_tester::<SuperGroup>(vec![cw_coin(200, SuperGroupTestC4::dex())], 0);
+
+        send_all_tester::<SuperGroup>(vec![cw_coin(100, SubGroupTestC10::bank())], 1);
+
+        send_all_tester::<SuperGroup>(
+            vec![
+                cw_coin(100, SubGroupTestC10::bank()),
+                cw_coin(100, SuperGroupTestC1::ticker()),
+                cw_coin(100, SubGroupTestC6::bank()),
+                cw_coin(200, SuperGroupTestC4::bank()),
+            ],
+            3,
+        );
+    }
+
+    #[track_caller]
+    fn send_all_tester<G>(coins: Vec<CwCoin>, exp_coins_nb: usize)
+    where
+        G: Group,
+    {
+        let from: Addr = Addr::unchecked("user");
+        let to = from.clone();
+
+        let app = BasicApp::new(|router, _, storage| {
+            router.bank.init_balance(storage, &from, coins).unwrap();
+        });
+        let querier: QuerierWrapper<'_> = app.wrap();
+
+        let msgs = super::bank_send_all::<G>(&from, to, querier).unwrap();
+        assert_eq!(exp_coins_nb, msgs.len());
     }
 }

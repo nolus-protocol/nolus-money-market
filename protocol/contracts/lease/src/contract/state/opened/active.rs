@@ -177,6 +177,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         self.try_on_time_alarm(querier, &env, info)
     }
+
     fn on_price_alarm(
         self,
         querier: QuerierWrapper<'_>,
@@ -185,7 +186,13 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         self.try_on_price_alarm(querier, &env, info)
     }
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
+
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
         let lease_addr = self.lease.lease.addr.clone();
         balance::lpn_balance(&lease_addr, querier).and_then(|balance| {
             if balance.is_zero() {

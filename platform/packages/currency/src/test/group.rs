@@ -103,8 +103,8 @@ where
     SubGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
     TopG: Group + MemberOf<V::VisitorG>,
 {
-    crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(matcher, visitor).or_else(|visitor| {
-        crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(matcher, visitor)
+    crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(matcher, visitor).or_else(|visitor| {
+        crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(matcher, visitor)
     })
 }
 

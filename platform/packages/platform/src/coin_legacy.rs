@@ -49,7 +49,7 @@ where
     VisitedG: Group,
     V: WithCoin<VisitedG, VisitorG = VisitedG>,
 {
-    BankSymbols::maybe_visit_any(
+    BankSymbols::<VisitedG>::maybe_visit_any(
         &coin.denom,
         CoinTransformerAny(&coin, PhantomData::<VisitedG>, v),
     )

@@ -73,7 +73,12 @@ where
         err("on price alarm")
     }
 
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
+    fn heal(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
         err("heal")
     }
 }
