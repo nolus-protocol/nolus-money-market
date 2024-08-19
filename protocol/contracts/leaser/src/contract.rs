@@ -16,7 +16,7 @@ use sdk::{
         QuerierWrapper, Reply,
     },
 };
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -24,13 +24,9 @@ use crate::{
     leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::{
-        config::{migrate as cfg_migrate, Config},
-        leases::Leases,
-    },
+    state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 4;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
@@ -66,21 +62,11 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { protocols_registry }: MigrateMsg,
+    MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<Response> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage| cfg_migrate::migrate(storage, protocols_registry),
-        Into::into,
-    )
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: _,
-         }| response::response(release_label),
-    )
-    .inspect_err(platform_error::log(deps.api))
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
