@@ -1,7 +1,8 @@
+use currencies::Lpns;
 use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
-use currency::{Group, NlsPlatform, SymbolOwned};
+use currency::{CurrencyDTO, Group, NlsPlatform};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},
@@ -19,7 +20,7 @@ use crate::{borrow::InterestRate, loan::Loan};
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lpn_ticker: SymbolOwned,
+    pub lpn_ticker: CurrencyDTO<Lpns>,
     pub lease_code_admin: Addr,
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,

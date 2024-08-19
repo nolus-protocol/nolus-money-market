@@ -28,7 +28,7 @@ impl Config {
     where
         Lpn: CurrencyDef,
     {
-        if msg.lpn_ticker == Self::lpn_ticker::<Lpn>() {
+        if msg.lpn_ticker == currency::dto::<Lpn, _>() {
             Ok(Self {
                 lease_code,
                 borrow_rate: msg.borrow_rate,
