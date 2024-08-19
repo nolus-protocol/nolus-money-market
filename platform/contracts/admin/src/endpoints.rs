@@ -8,7 +8,7 @@ use sdk::{
     },
 };
 use versioning::{
-    package_version, version, FullUpdateOutput, ReleaseLabel, SemVer, Version, VersionSegment,
+    package_version, version, ReleaseLabel, SemVer, Version, VersionSegment,
 };
 
 use crate::{
@@ -60,17 +60,8 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        |storage| crate::state::migrate(storage),
-        Into::into,
-    )
-    .and_then(
-        |FullUpdateOutput {
-             release_label: reported_label,
-             storage_migration_output: (),
-         }| {
+    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
+        |reported_label| {
             check_release_label(reported_label.clone(), release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(

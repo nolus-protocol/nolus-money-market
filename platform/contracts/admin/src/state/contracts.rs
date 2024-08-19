@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{Item, Map},
@@ -67,37 +65,4 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<Contracts> {
             .map(|protocol| ContractsTemplate { platform, protocol })
             .map_err(Into::into)
     })
-}
-
-pub(super) fn migrate_platform(storage: &mut dyn Storage) -> Result<()> {
-    #[derive(Serialize, Deserialize)]
-    #[serde(rename_all = "snake_case", deny_unknown_fields)]
-    pub struct Platform {
-        pub dispatcher: Addr,
-        pub timealarms: Addr,
-        pub treasury: Addr,
-    }
-
-    Item::<'_, Platform>::new(
-        std::str::from_utf8(PLATFORM.as_slice()).expect("Expected valid UTF-8 encoded key!"),
-    )
-    .load(storage)
-    .map_err(Into::into)
-    .and_then(
-        |Platform {
-             dispatcher: _,
-             timealarms,
-             treasury,
-         }| {
-            PLATFORM
-                .save(
-                    storage,
-                    &PlatformContracts {
-                        timealarms,
-                        treasury,
-                    },
-                )
-                .map_err(Into::into)
-        },
-    )
 }
