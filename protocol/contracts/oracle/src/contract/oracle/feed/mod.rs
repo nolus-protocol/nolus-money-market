@@ -105,8 +105,7 @@ where
                 tree.load_path(currency)?,
             )
             .map_err(Into::<ContractError>::into)?;
-        // TODO consider introducing PriceDTO::into_conctete_quote<Q>(self, quote_dto: CurrencyDTO) -> BasePrice
-        BasePrice::try_from(dto).map_err(Into::into)
+        BasePrice::from_dto_price(dto, &currency::dto::<BaseC, _>()).map_err(Into::into)
     }
 }
 

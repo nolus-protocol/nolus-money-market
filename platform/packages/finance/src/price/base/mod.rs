@@ -49,6 +49,17 @@ where
         Self::new_unchecked(CoinDTO::from_coin(price.amount, c_dto), price.amount_quote)
     }
 
+    pub fn from_dto_price(
+        price: PriceDTO<BaseG, QuoteG>,
+        quote_c: &CurrencyDTO<QuoteG>,
+    ) -> FinanceResult<Self> {
+        price
+            .quote()
+            .of_currency_dto(quote_c)
+            .map(|()| price.quote().as_specific(quote_c))
+            .map(|quote_amount: Coin<QuoteC>| Self::new_unchecked(*price.base(), quote_amount))
+    }
+
     #[cfg(any(test, feature = "testing"))]
     pub fn new(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
         Self::new_unchecked(amount, amount_quote)
@@ -200,8 +211,7 @@ where
     type Error = Error;
 
     fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-        Coin::<QuoteC>::try_from(*(price.quote()))
-            .map(|amount_quote| Self::new_unchecked(*price.base(), amount_quote))
+        Self::from_dto_price(price, &currency::dto::<QuoteC, _>())
     }
 }
 #[cfg(test)]
