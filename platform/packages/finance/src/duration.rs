@@ -218,7 +218,7 @@ impl Display for Duration {
 mod tests {
     use std::u64;
 
-    use currency::test::SubGroupTestC1;
+    use currency::test::SubGroupTestC10;
     use sdk::cosmwasm_std::Timestamp as T;
 
     use crate::{
@@ -361,7 +361,7 @@ mod tests {
     fn into_slice_per_ratio() {
         let duration = D::from_nanos(D::YEAR.nanos());
         let res = duration
-            .into_slice_per_ratio::<Coin<SubGroupTestC1>>(584.into(), 1.into())
+            .into_slice_per_ratio::<Coin<SubGroupTestC10>>(584.into(), 1.into())
             .unwrap();
 
         assert_eq!(
@@ -373,7 +373,7 @@ mod tests {
     #[test]
     fn into_slice_per_ratio_err() {
         let duration = D::from_nanos(D::YEAR.nanos());
-        let res = duration.into_slice_per_ratio::<Coin<SubGroupTestC1>>(585.into(), 1.into());
+        let res = duration.into_slice_per_ratio::<Coin<SubGroupTestC10>>(585.into(), 1.into());
 
         assert_err(res, "in fraction calculation");
     }
