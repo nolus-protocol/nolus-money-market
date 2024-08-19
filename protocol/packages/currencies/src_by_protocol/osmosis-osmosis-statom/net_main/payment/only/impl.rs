@@ -3,7 +3,6 @@ use sdk::schemars;
 
 use crate::{define_currency, PaymentOnlyGroup};
 
-// define_currency!(AXL,,PaymentOnlyGroup, 6);
 define_currency!(
     Atom,
     "ATOM",
@@ -93,5 +92,13 @@ where
     TopG: Group + MemberOf<V::VisitorG>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, UsdcNoble, TopG, _>(matcher, visitor)
+    maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
+    .or_else(|visitor| maybe_visit::<_, Osmo, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, StOsmo, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, Weth, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, Wbtc, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, Akt, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, Inj, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, Axl, TopG, _>(matcher, visitor))
+    .or_else(|visitor| maybe_visit::<_, UsdcNoble, TopG, _>(matcher, visitor))
 }
