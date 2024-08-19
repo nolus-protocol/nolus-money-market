@@ -2,7 +2,6 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use currency::CurrencyDef as _;
 use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},
@@ -90,8 +89,12 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
         QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
             .map_err(ContractError::LoadFeeders)
             .and_then(|ref f| to_json_binary(&f)),
-        QueryMsg::BaseCurrency {} => to_json_binary(BaseCurrency::definition().dto()),
-        QueryMsg::StableCurrency {} => to_json_binary(StableCurrency::definition().dto()),
+        QueryMsg::BaseCurrency {} => {
+            to_json_binary(&currency::dto::<BaseCurrency, BaseCurrencies>())
+        }
+        QueryMsg::StableCurrency {} => {
+            to_json_binary(&currency::dto::<StableCurrency, PriceCurrencies>())
+        }
         QueryMsg::SupportedCurrencyPairs {} => to_json_binary(
             &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .swap_pairs_df()
@@ -242,10 +245,10 @@ mod tests {
         let value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: PaymentC5::definition().dto().into_super_group(),
+            from: currency::dto::<PaymentC5, PriceCurrencies>(),
             to: SwapTarget {
                 pool_id: 1,
-                target: Lpn::definition().dto().into_super_group(),
+                target: currency::dto::<Lpn, PriceCurrencies>(),
             },
         }];
 
@@ -256,8 +259,8 @@ mod tests {
     fn impl_swap_path() {
         use crate::api::swap::QueryMsg as QueryMsgApi;
 
-        let from = PaymentC1::definition().dto().into_super_group();
-        let to = Lpn::definition().dto().into_super_group();
+        let from = currency::dto::<PaymentC1, PriceCurrencies>().into_super_group();
+        let to = currency::dto::<Lpn, PriceCurrencies>().into_super_group();
         let query_impl = QueryMsg::SwapPath { from, to };
         let query_api = cosmwasm_std::from_json::<QueryMsgApi<PriceCurrencies>>(
             &cosmwasm_std::to_json_vec(&query_impl).unwrap(),

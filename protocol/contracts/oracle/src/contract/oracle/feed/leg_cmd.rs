@@ -1,4 +1,4 @@
-use currency::{AnyVisitorPair, CurrencyDef, Group, MemberOf};
+use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, Price};
 
 use crate::ContractError;
@@ -48,12 +48,14 @@ where
     type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
     type Error = ContractError;
 
-    fn on<B, Q>(self, _def1: &B, _def2: &Q) -> Result<Self::Output, Self::Error>
+    fn on<B, Q>(
+        self,
+        dto1: &CurrencyDTO<Self::VisitedG1>,
+        dto2: &CurrencyDTO<Self::VisitedG2>,
+    ) -> Result<Self::Output, Self::Error>
     where
-        B: CurrencyDef + MemberOf<Self::VisitedG1>,
-        B::Group: MemberOf<Self::VisitedG1>,
-        Q: CurrencyDef + MemberOf<Self::VisitedG2>,
-        Q::Group: MemberOf<Self::VisitedG2>,
+        B: Currency + MemberOf<Self::VisitedG1>,
+        Q: Currency + MemberOf<Self::VisitedG2>,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases
@@ -63,12 +65,17 @@ where
             .enumerate()
             .rev()
             .find_map(|(i, parent_bprice)| {
-                Price::<Q, BaseC>::try_from(parent_bprice)
+                parent_bprice
+                    .try_as_specific::<Q, _>(dto2)
                     .ok()
                     .map(|parent_price| {
-                        self.price_querier.price::<B, Q>().map(|res_price| {
-                            res_price.map(|price| (i + 1, BasePrice::from(price * parent_price)))
-                        })
+                        self.price_querier
+                            .price::<B, Q>(dto1, dto2)
+                            .map(|res_price| {
+                                res_price.map(|price| {
+                                    (i + 1, BasePrice::from_price(price * parent_price, *dto1))
+                                })
+                            })
                     })
             })
             .transpose()
@@ -106,19 +113,28 @@ mod test {
         let mut cmd =
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
         assert_eq!(
-            cmd.on::<PaymentC4, BaseCurrency>(PaymentC4::definition(), BaseCurrency::definition()),
+            cmd.on::<PaymentC4, BaseCurrency>(
+                &currency::dto::<PaymentC4, PaymentCurrencies>(),
+                &currency::dto::<BaseCurrency, _>()
+            ),
             Ok(Some(tests::base_price::<PaymentC4>(1, 1)))
         );
 
         // child
         assert_eq!(
-            cmd.on::<PaymentC5, PaymentC4>(PaymentC5::definition(), PaymentC4::definition()),
+            cmd.on::<PaymentC5, PaymentC4>(
+                &currency::dto::<PaymentC5, _>(),
+                &currency::dto::<PaymentC4, _>()
+            ),
             Ok(Some(tests::base_price::<PaymentC5>(2, 1)))
         );
 
         // hop to the next branch
         assert_eq!(
-            cmd.on::<PaymentC1, BaseCurrency>(PaymentC1::definition(), BaseCurrency::definition()),
+            cmd.on::<PaymentC1, BaseCurrency>(
+                &currency::dto::<PaymentC1, _>(),
+                &currency::dto::<BaseCurrency, _>()
+            ),
             Ok(Some(tests::base_price::<PaymentC1>(2, 1)))
         );
     }
@@ -132,12 +148,18 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, PaymentC4>(PaymentC6::definition(), PaymentC4::definition()),
+            cmd.on::<PaymentC6, PaymentC4>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<PaymentC4, _>()
+            ),
             Ok(None)
         );
 
         assert_eq!(
-            cmd.on::<PaymentC4, BaseCurrency>(PaymentC4::definition(), BaseCurrency::definition()),
+            cmd.on::<PaymentC4, BaseCurrency>(
+                &currency::dto::<PaymentC4, _>(),
+                &currency::dto::<BaseCurrency, _>()
+            ),
             Ok(Some(tests::base_price::<PaymentC4>(2, 1)))
         );
     }
@@ -153,24 +175,39 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC3, PaymentC5>(PaymentC3::definition(), PaymentC5::definition()),
+            cmd.on::<PaymentC3, PaymentC5>(
+                &currency::dto::<PaymentC3, _>(),
+                &currency::dto::<PaymentC5, _>()
+            ),
             Ok(None)
         );
         assert_eq!(
-            cmd.on::<PaymentC5, PaymentC4>(PaymentC5::definition(), PaymentC4::definition(),),
+            cmd.on::<PaymentC5, PaymentC4>(
+                &currency::dto::<PaymentC5, _>(),
+                &currency::dto::<PaymentC4, _>(),
+            ),
             Ok(None)
         );
 
         assert_eq!(
-            cmd.on::<PaymentC4, BaseCurrency>(PaymentC4::definition(), BaseCurrency::definition(),),
+            cmd.on::<PaymentC4, BaseCurrency>(
+                &currency::dto::<PaymentC4, _>(),
+                &currency::dto::<BaseCurrency, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC4>(2, 1)))
         );
         assert_eq!(
-            cmd.on::<PaymentC5, PaymentC4>(PaymentC5::definition(), PaymentC4::definition(),),
+            cmd.on::<PaymentC5, PaymentC4>(
+                &currency::dto::<PaymentC5, _>(),
+                &currency::dto::<PaymentC4, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC5>(10, 1)))
         );
         assert_eq!(
-            cmd.on::<PaymentC3, PaymentC5>(PaymentC3::definition(), PaymentC5::definition(),),
+            cmd.on::<PaymentC3, PaymentC5>(
+                &currency::dto::<PaymentC3, _>(),
+                &currency::dto::<PaymentC5, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC3>(30, 1)))
         );
     }
@@ -186,22 +223,34 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC4, BaseCurrency>(PaymentC4::definition(), BaseCurrency::definition(),),
+            cmd.on::<PaymentC4, BaseCurrency>(
+                &currency::dto::<PaymentC4, _>(),
+                &currency::dto::<BaseCurrency, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC4>(2, 1)))
         );
 
         assert_eq!(
-            cmd.on::<PaymentC6, PaymentC4>(PaymentC6::definition(), PaymentC4::definition(),),
+            cmd.on::<PaymentC6, PaymentC4>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<PaymentC4, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC6>(8, 1)))
         );
 
         assert_eq!(
-            cmd.on::<PaymentC3, PaymentC4>(PaymentC3::definition(), PaymentC4::definition(),),
+            cmd.on::<PaymentC3, PaymentC4>(
+                &currency::dto::<PaymentC3, _>(),
+                &currency::dto::<PaymentC4, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC3>(6, 1)))
         );
 
         assert_eq!(
-            cmd.on::<PaymentC6, PaymentC4>(PaymentC6::definition(), PaymentC4::definition(),),
+            cmd.on::<PaymentC6, PaymentC4>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<PaymentC4, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC6>(8, 1)))
         );
     }
@@ -216,7 +265,10 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(PaymentC6::definition(), BaseCurrency::definition(),),
+            cmd.on::<PaymentC6, BaseCurrency>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<BaseCurrency, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
         );
     }
@@ -230,7 +282,10 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(PaymentC6::definition(), BaseCurrency::definition(),),
+            cmd.on::<PaymentC6, BaseCurrency>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<BaseCurrency, _>(),
+            ),
             Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
         );
     }
@@ -244,7 +299,10 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(PaymentC6::definition(), BaseCurrency::definition(),),
+            cmd.on::<PaymentC6, BaseCurrency>(
+                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<BaseCurrency, _>(),
+            ),
             Ok(None)
         );
     }

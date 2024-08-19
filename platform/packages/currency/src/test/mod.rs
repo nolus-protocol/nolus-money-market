@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group,
-    MemberOf, SingleVisitor,
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef,
+    Group, MemberOf, SingleVisitor,
 };
 
 pub use self::group::*;
@@ -138,11 +138,15 @@ where
     type Output = bool;
     type Error = Error;
 
-    fn on<C1in, C2in>(self, def1: &C1in, def2: &C2in) -> Result<Self::Output, Self::Error>
+    fn on<C1in, C2in>(
+        self,
+        dto1: &CurrencyDTO<Self::VisitedG1>,
+        dto2: &CurrencyDTO<Self::VisitedG2>,
+    ) -> Result<Self::Output, Self::Error>
     where
-        C1in: CurrencyDef,
-        C2in: CurrencyDef,
+        C1in: Currency,
+        C2in: Currency,
     {
-        Ok(def1.dto() == self.0 && def2.dto() == self.2)
+        Ok(dto1 == self.0 && dto2 == self.2)
     }
 }

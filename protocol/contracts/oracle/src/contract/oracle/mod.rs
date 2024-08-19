@@ -52,7 +52,7 @@ where
     PriceG: Group,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<PriceG>,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
         let tree = SupportedPairs::load(storage.deref())?;
@@ -133,7 +133,7 @@ where
                 Ok((base_price * self.stable_to_base.inv()).into())
             }
         }
-        self.try_query_base_price(at, &StableCurrency::definition().dto().into_super_group())
+        self.try_query_base_price(at, &currency::dto::<StableCurrency, _>())
             .and_then(|stable_price| {
                 Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
             })
@@ -171,7 +171,7 @@ where
     PriceG: Group + Clone,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<PriceG>,
 {
     const REPLY_ID: Id = 0;
     const EVENT_TYPE: &'static str = "pricealarm";

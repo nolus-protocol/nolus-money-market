@@ -34,11 +34,11 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
         C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
     {
-        self.2.on::<C>(self.0.as_specific::<C>())
+        self.2.on::<C>(self.0.as_specific::<C, _>(def.dto()))
     }
 }

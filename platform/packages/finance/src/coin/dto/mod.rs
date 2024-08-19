@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{never::Never, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{never::Never, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 use transformer::CoinTransformerAny;
 
@@ -45,6 +45,14 @@ impl<G> CoinDTO<G>
 where
     G: Group,
 {
+    // pre-condition: the dto represents the C
+    pub fn from_coin<C>(coin: Coin<C>, currency: CurrencyDTO<G>) -> Self
+    where
+        C: Currency + MemberOf<G>,
+    {
+        Self::new(coin.amount, currency)
+    }
+
     fn new(amount: Amount, currency: CurrencyDTO<G>) -> Self {
         Self { amount, currency }
     }
@@ -80,12 +88,12 @@ where
     }
 
     /// Intended in scenarios when the currency is known in advance.
-    pub fn as_specific<C>(&self) -> Coin<C>
+    pub fn as_specific<C, SubG>(&self, def: &CurrencyDTO<SubG>) -> Coin<C>
     where
-        C: CurrencyDef,
-        C::Group: MemberOf<G>,
+        C: Currency + MemberOf<SubG>,
+        SubG: Group + MemberOf<G>,
     {
-        debug_assert!(self.of_currency::<C>().is_ok());
+        debug_assert!(self.of_currency_dto(def).is_ok());
 
         Coin::new(self.amount)
     }
@@ -95,14 +103,6 @@ where
         SubG: Group + MemberOf<G>,
     {
         self.currency.of_currency(dto).map_err(Into::into)
-    }
-
-    pub fn of_currency<C>(&self) -> Result<()>
-    where
-        C: CurrencyDef,
-        C::Group: MemberOf<G>,
-    {
-        self.of_currency_dto(C::definition().dto())
     }
 }
 
@@ -115,6 +115,7 @@ where
     }
 }
 
+// TODO consider feature gating the conversions to any(test, feature="testing") to force using the optimizable member functions in production
 impl<G, C> TryFrom<CoinDTO<G>> for Coin<C>
 where
     G: Group,
@@ -124,18 +125,19 @@ where
     type Error = Error;
 
     fn try_from(coin: CoinDTO<G>) -> Result<Self> {
-        coin.of_currency::<C>().map(|()| coin.as_specific())
+        let dto = C::definition().dto();
+        coin.of_currency_dto(dto).map(|()| coin.as_specific(dto))
     }
 }
 
 impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     G: Group,
-    C: CurrencyDef, // consider turning it into Currency not CurrencyDef to facilitate Rust Optimizer
+    C: CurrencyDef,
     C::Group: MemberOf<G>,
 {
     fn from(coin: Coin<C>) -> Self {
-        Self::new(coin.amount, C::definition().dto().into_super_group::<G>())
+        Self::from_coin(coin, C::definition().dto().into_super_group::<G>())
     }
 }
 

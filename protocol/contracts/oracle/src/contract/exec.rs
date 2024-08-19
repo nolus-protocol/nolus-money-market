@@ -25,7 +25,7 @@ pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrenci
 where
     BaseCurrency: CurrencyDef,
     BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
-    BaseCurrencies: Group,
+    BaseCurrencies: Group + MemberOf<PriceCurrencies>,
     AlarmCurrencies: Group,
     PriceCurrencies: Group,
 {
@@ -70,7 +70,7 @@ where
     G: Group,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<G>,
 {
     Config::load(storage)
         .map(|cfg| Feeds::<G, BaseC, BaseG>::with(cfg.price_config))

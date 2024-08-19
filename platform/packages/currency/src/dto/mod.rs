@@ -275,17 +275,16 @@ mod test {
         type TheC = SuperGroupTestC1;
         type TheG = <TheC as CurrencyDef>::Group;
 
-        let c1_def = SuperGroupTestC1::definition().dto().definition();
         assert_eq!(
-            c1_def.bank_symbol,
+            SuperGroupTestC1::bank(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<BankSymbols::<TheG>>()
         );
         assert_eq!(
-            c1_def.dex_symbol,
+            SuperGroupTestC1::dex(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<DexSymbols::<TheG>>()
         );
         assert_eq!(
-            c1_def.ticker,
+            SuperGroupTestC1::ticker(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<Tickers::<TheG>>()
         );
 
@@ -299,7 +298,6 @@ mod test {
         C: CurrencyDef,
         C::Group: MemberOf<G>,
     {
-        // deliberately not just C::definition().dto() to test the ctor
-        CurrencyDTO::<G>::new(C::definition().dto().definition())
+        super::dto::<C, G>()
     }
 }

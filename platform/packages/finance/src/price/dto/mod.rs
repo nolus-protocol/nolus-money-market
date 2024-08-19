@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, CurrencyDef, Group, MemberOf};
+#[cfg(any(test, feature = "testing"))]
+use currency::CurrencyDef;
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -32,6 +34,21 @@ where
     G: Group,
     QuoteG: Group,
 {
+    pub fn from_price<C, Q>(
+        price: Price<C, Q>,
+        base_c: CurrencyDTO<G>,
+        quote_c: CurrencyDTO<QuoteG>,
+    ) -> Self
+    where
+        C: Currency + MemberOf<G>,
+        Q: Currency + MemberOf<QuoteG>,
+    {
+        Self::new_unchecked(
+            CoinDTO::from_coin(price.amount, base_c),
+            CoinDTO::from_coin(price.amount_quote, quote_c),
+        )
+    }
+
     pub(super) fn new_unchecked(base: CoinDTO<G>, quote: CoinDTO<QuoteG>) -> Self {
         let res = Self {
             amount: base,
@@ -96,30 +113,35 @@ where
     }
 
     /// Intended in scenarios when the currencies are known in advance.
-    fn as_specific<C, QuoteC>(&self) -> Price<C, QuoteC>
+    #[cfg(any(test, feature = "testing"))]
+    pub fn as_specific<C, QuoteC>(
+        &self,
+        amount_c: &CurrencyDTO<G>,
+        quote_c: &CurrencyDTO<QuoteG>,
+    ) -> Price<C, QuoteC>
     where
-        C: CurrencyDef,
-        C::Group: MemberOf<G>,
-        QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        C: Currency + MemberOf<G>,
+        QuoteC: Currency + MemberOf<QuoteG>,
     {
-        super::total_of(self.amount.as_specific()).is(self.amount_quote.as_specific())
+        debug_assert!(self.of_currencies(amount_c, quote_c).is_ok());
+        super::total_of(self.amount.as_specific(amount_c))
+            .is(self.amount_quote.as_specific(quote_c))
     }
 
-    fn of_currencies<C, QuoteC>(&self) -> Result<()>
-    where
-        C: CurrencyDef,
-        C::Group: MemberOf<G>,
-        QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
-    {
+    #[cfg(any(test, feature = "testing"))]
+    fn of_currencies(
+        &self,
+        amount_c: &CurrencyDTO<G>,
+        quote_c: &CurrencyDTO<QuoteG>,
+    ) -> Result<()> {
         self.amount
-            .of_currency::<C>()
-            .and_then(|()| self.amount_quote.of_currency::<QuoteC>())
+            .of_currency_dto(amount_c)
+            .and_then(|()| self.amount_quote.of_currency_dto(quote_c))
             .map_err(Into::into)
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl<G, QuoteG, C, QuoteC> From<Price<C, QuoteC>> for PriceDTO<G, QuoteG>
 where
     G: Group,
@@ -134,6 +156,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl<G, QuoteG, C, QuoteC> TryFrom<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
@@ -150,6 +173,7 @@ where
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
     G: Group,
@@ -162,9 +186,11 @@ where
     type Error = Error;
 
     fn try_from(price: &PriceDTO<G, QuoteG>) -> StdResult<Self, Self::Error> {
+        let dto_c = currency::dto::<C, G>();
+        let dto_quote = currency::dto::<QuoteC, QuoteG>();
         price
-            .of_currencies::<C, QuoteC>()
-            .map(|()| price.as_specific())
+            .of_currencies(&dto_c, &dto_quote)
+            .map(|()| price.as_specific(&dto_c, &dto_quote))
     }
 }
 

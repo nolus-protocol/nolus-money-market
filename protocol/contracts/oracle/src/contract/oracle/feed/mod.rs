@@ -29,7 +29,7 @@ where
     PriceG: Group,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<PriceG>,
 {
     pub(crate) fn with(config: Config) -> Self {
         Self {
@@ -97,8 +97,15 @@ where
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
         let dto = self
             .feeds
-            .price::<BaseC, _, _>(storage, at, total_feeders, tree.load_path(currency)?)
+            .price::<BaseC, _, _>(
+                currency::dto::<BaseC, _>(),
+                storage,
+                at,
+                total_feeders,
+                tree.load_path(currency)?,
+            )
             .map_err(Into::<ContractError>::into)?;
+        // TODO consider introducing PriceDTO::into_conctete_quote<Q>(self, quote_dto: CurrencyDTO) -> BasePrice
         BasePrice::try_from(dto).map_err(Into::into)
     }
 }
@@ -111,7 +118,7 @@ mod test {
         Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
         PaymentGroup as PriceCurrencies,
     };
-    use currency::SymbolStatic;
+    use currency::{Currency, SymbolStatic};
     use finance::{
         coin::Amount,
         duration::Duration,
@@ -152,21 +159,19 @@ mod test {
     impl PriceQuerier for TestFeeds {
         type CurrencyGroup = PriceCurrencies;
 
-        fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+        fn price<C, QuoteC>(
+            &self,
+            amount_c: &CurrencyDTO<Self::CurrencyGroup>,
+            quote_c: &CurrencyDTO<Self::CurrencyGroup>,
+        ) -> Result<Option<Price<C, QuoteC>>, ContractError>
         where
-            B: CurrencyDef,
-            B::Group: MemberOf<Self::CurrencyGroup>,
-            Q: CurrencyDef,
-            Q::Group: MemberOf<Self::CurrencyGroup>,
+            C: Currency + MemberOf<Self::CurrencyGroup>,
+            QuoteC: Currency + MemberOf<Self::CurrencyGroup>,
         {
             Ok(self
                 .0
-                .get(&(
-                    B::definition().dto().first_key(),
-                    Q::definition().dto().first_key(),
-                ))
-                .map(Price::try_from)
-                .transpose()?)
+                .get(&(amount_c.first_key(), quote_c.first_key()))
+                .map(|dto| dto.as_specific(amount_c, quote_c)))
         }
     }
 

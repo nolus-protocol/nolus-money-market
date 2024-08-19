@@ -64,12 +64,13 @@ fn marketprice_add_feed_expect_err() {
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
+            currency::dto::<SuperGroupTestC3, _>(),
             &deps.storage,
             ts,
             TOTAL_FEEDERS,
             [
-                SuperGroupTestC5::definition().dto(),
-                SuperGroupTestC3::definition().dto(),
+                &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SuperGroupTestC3, _>(),
             ]
             .into_iter(),
         )
@@ -116,12 +117,13 @@ fn marketprice_add_feed() {
         .unwrap();
     let err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
+            currency::dto::<SuperGroupTestC3, _>(),
             &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
             [
-                SuperGroupTestC5::definition().dto(),
-                SuperGroupTestC3::definition().dto(),
+                &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SuperGroupTestC3, _>(),
             ]
             .into_iter(),
         )
@@ -131,12 +133,13 @@ fn marketprice_add_feed() {
     {
         let price_resp = market
             .price::<SuperGroupTestC3, SuperGroup, _>(
+                currency::dto::<SuperGroupTestC3, _>(),
                 &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
                 [
-                    SuperGroupTestC5::definition().dto(),
-                    SuperGroupTestC3::definition().dto(),
+                    &currency::dto::<SuperGroupTestC5, _>(),
+                    &currency::dto::<SuperGroupTestC3, _>(),
                 ]
                 .into_iter(),
             )
@@ -221,14 +224,15 @@ fn marketprice_follow_the_path() {
 
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
+            currency::dto::<SuperGroupTestC2, _>(),
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                SuperGroupTestC3::definition().dto(),
-                SuperGroupTestC5::definition().dto(),
-                SuperGroupTestC1::definition().dto(),
-                SuperGroupTestC2::definition().dto(),
+                &currency::dto::<SuperGroupTestC3, _>(),
+                &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SuperGroupTestC2, _>(),
             ]
             .into_iter(),
         )
@@ -241,12 +245,13 @@ fn marketprice_follow_the_path() {
     // first and second part of denom pair are the same
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
+            currency::dto::<SuperGroupTestC2, _>(),
             &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                SuperGroupTestC3::definition().dto(),
-                SuperGroupTestC2::definition().dto(),
+                &currency::dto::<SuperGroupTestC3, _>(),
+                &currency::dto::<SuperGroupTestC2, _>(),
             ]
             .into_iter(),
         )
@@ -257,12 +262,13 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
+                currency::dto::<SuperGroupTestC2, _>(),
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &SubGroupTestC10::definition().dto().into_super_group(),
-                    SuperGroupTestC2::definition().dto()
+                    &currency::dto::<SubGroupTestC10, _>(),
+                    &currency::dto::<SuperGroupTestC2, _>(),
                 ]
                 .into_iter(),
             )
@@ -274,12 +280,13 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC5, SuperGroup, _>(
+                currency::dto::<SuperGroupTestC5, _>(),
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &SubGroupTestC10::definition().dto().into_super_group(),
-                    SuperGroupTestC5::definition().dto()
+                    &currency::dto::<SubGroupTestC10, _>(),
+                    &currency::dto::<SuperGroupTestC5, _>(),
                 ]
                 .into_iter()
             )
@@ -291,13 +298,14 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
+                currency::dto::<SuperGroupTestC2, _>(),
                 &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    SuperGroupTestC3::definition().dto(),
-                    &SubGroupTestC10::definition().dto().into_super_group(),
-                    SuperGroupTestC2::definition().dto()
+                    &currency::dto::<SuperGroupTestC3, _>(),
+                    &currency::dto::<SubGroupTestC10, _>(),
+                    &currency::dto::<SuperGroupTestC2, _>(),
                 ]
                 .into_iter()
             )

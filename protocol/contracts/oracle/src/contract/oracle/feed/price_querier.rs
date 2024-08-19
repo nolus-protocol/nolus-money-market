@@ -1,4 +1,4 @@
-use currency::{Currency, CurrencyDef, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Storage, Timestamp};
@@ -37,12 +37,14 @@ where
 pub trait PriceQuerier {
     type CurrencyGroup: Group;
 
-    fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+    fn price<C, QuoteC>(
+        &self,
+        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
+    ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
-        B: CurrencyDef,
-        B::Group: MemberOf<Self::CurrencyGroup>,
-        Q: CurrencyDef,
-        Q::Group: MemberOf<Self::CurrencyGroup>;
+        C: Currency + MemberOf<Self::CurrencyGroup>,
+        QuoteC: Currency + MemberOf<Self::CurrencyGroup>;
 }
 
 impl<'a, G> PriceQuerier for FedPrices<'a, G>
@@ -51,16 +53,18 @@ where
 {
     type CurrencyGroup = G;
 
-    fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+    fn price<C, QuoteC>(
+        &self,
+        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
+    ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
-        B: CurrencyDef,
-        B::Group: MemberOf<Self::CurrencyGroup>,
-        Q: CurrencyDef,
-        Q::Group: MemberOf<Self::CurrencyGroup>,
+        C: Currency + MemberOf<Self::CurrencyGroup>,
+        QuoteC: Currency + MemberOf<Self::CurrencyGroup>,
     {
-        let price = self
-            .feeds
-            .price_of_feed(self.storage, self.at, self.total_feeders);
+        let price =
+            self.feeds
+                .price_of_feed(amount_c, quote_c, self.storage, self.at, self.total_feeders);
         maybe_price(price)
     }
 }

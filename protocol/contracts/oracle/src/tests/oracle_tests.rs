@@ -58,7 +58,7 @@ fn feed_direct_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: PaymentC4::definition().dto().into_super_group(),
+            currency: currency::dto::<PaymentC4, PriceCurrencies>().into_super_group(),
         },
     )
     .unwrap();
@@ -88,7 +88,7 @@ fn feed_indirect_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: PaymentC5::definition().dto().into_super_group(),
+            currency: currency::dto::<PaymentC5, PriceCurrencies>().into_super_group(),
         },
     )
     .unwrap();
@@ -109,7 +109,7 @@ fn query_prices_unsupported_denom() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: PaymentC1::definition().dto().into_super_group(),
+            currency: currency::dto::<PaymentC1, PriceCurrencies>().into_super_group(),
         },
     )
     .unwrap();

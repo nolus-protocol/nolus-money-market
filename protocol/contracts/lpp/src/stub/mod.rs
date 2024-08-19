@@ -40,7 +40,7 @@ where
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
             .map_err(ContractError::from)
             .and_then(|lpn: CurrencyDTO<Lpns>| {
-                lpn.of_currency(Lpn::definition().dto())
+                lpn.of_currency(&currency::dto::<Lpn, _>())
                     .map_err(ContractError::UnknownCurrency)
             })
             .map(|()| Self {
@@ -52,7 +52,7 @@ where
 
     // TODO DEPRECATED since the Lpn type is statically known TODO remove
     pub fn lpn(&self) -> CurrencyDTO<Lpns> {
-        Lpn::definition().dto().into_super_group()
+        currency::dto::<Lpn, _>().into_super_group()
     }
 
     pub fn addr(&self) -> &Addr {

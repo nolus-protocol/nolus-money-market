@@ -1,6 +1,6 @@
 use crate::{
-    error::Error, group::MemberOf, matcher, CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol,
-    SymbolSlice,
+    error::Error, group::MemberOf, matcher, Currency, CurrencyDTO, CurrencyDef,
+    MaybeAnyVisitResult, Symbol, SymbolSlice,
 };
 
 use super::Group;
@@ -21,6 +21,7 @@ where
     type Output;
     type Error;
 
+    // TODO suppose passing def as CurrencyDTO<G>, where G:Group, C: Currency + MembedOf<G> would help the compiler to eliminate a bunch of monomorphized functions
     fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
@@ -33,12 +34,14 @@ pub trait AnyVisitorPair {
     type Output;
     type Error;
 
-    fn on<C1, C2>(self, def1: &C1, def2: &C2) -> AnyVisitorPairResult<Self>
+    fn on<C1, C2>(
+        self,
+        dto1: &CurrencyDTO<Self::VisitedG1>,
+        dto2: &CurrencyDTO<Self::VisitedG2>,
+    ) -> AnyVisitorPairResult<Self>
     where
-        C1: CurrencyDef + MemberOf<Self::VisitedG1>,
-        C1::Group: MemberOf<Self::VisitedG1>,
-        C2: CurrencyDef + MemberOf<Self::VisitedG2>,
-        C2::Group: MemberOf<Self::VisitedG2>;
+        C1: Currency + MemberOf<Self::VisitedG1>,
+        C2: Currency + MemberOf<Self::VisitedG2>;
 }
 
 pub trait GroupVisit: Symbol {
@@ -101,7 +104,7 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
-    use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+    use crate::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult};
 
@@ -144,26 +147,27 @@ mod impl_any_tickers {
             C1::Group: MemberOf<G1>,
         {
             self.currency2.into_currency_type(SecondTickerVisitor {
-                def1,
+                c: PhantomData::<C1>,
+                def1: def1.dto().into_super_group::<V::VisitedG1>(),
                 group2: PhantomData::<G2>,
                 visitor: self.visitor,
             })
         }
     }
 
-    struct SecondTickerVisitor<'def1, C1, G2, V>
+    struct SecondTickerVisitor<C1, G2, V>
     where
-        C1: CurrencyDef,
+        C1: Currency,
         V: AnyVisitorPair,
     {
-        def1: &'def1 C1,
+        c: PhantomData<C1>,
+        def1: CurrencyDTO<V::VisitedG1>,
         group2: PhantomData<G2>,
         visitor: V,
     }
-    impl<'def1, C1, G2, V> AnyVisitor<G2> for SecondTickerVisitor<'def1, C1, G2, V>
+    impl<C1, G2, V> AnyVisitor<G2> for SecondTickerVisitor<C1, G2, V>
     where
-        C1: CurrencyDef,
-        C1::Group: MemberOf<V::VisitedG1>,
+        C1: Currency + MemberOf<V::VisitedG1>,
         G2: Group,
         V: AnyVisitorPair<VisitedG2 = G2>,
     {
@@ -174,10 +178,11 @@ mod impl_any_tickers {
 
         fn on<C2>(self, def2: &C2) -> AnyVisitorResult<G2, Self>
         where
-            C2: CurrencyDef,
+            C2: CurrencyDef + MemberOf<Self::VisitorG>,
             C2::Group: MemberOf<Self::VisitorG>,
         {
-            self.visitor.on::<C1, C2>(self.def1, def2)
+            self.visitor
+                .on::<C1, C2>(&self.def1, &def2.dto().into_super_group::<V::VisitedG2>())
         }
     }
 }
@@ -302,15 +307,14 @@ mod test {
         CDef2: CurrencyDef,
         CDef2::Group: MemberOf<VisitedG2>,
     {
-        let v_c1_c2 = ExpectPair::<VisitedG1, VisitedG2, _, _>::new(
-            CDef1::definition().dto(),
-            CDef2::definition().dto(),
-        );
+        let dto1 = crate::dto::<CDef1, _>();
+        let dto2 = crate::dto::<CDef2, _>();
+        let v_c1_c2 = ExpectPair::<VisitedG1, VisitedG2, _, _>::new(&dto1, &dto2);
         assert_eq!(
             Ok(true),
             super::visit_any_on_currencies::<VisitedG1, VisitedG2, _>(
-                CDef1::definition().dto().into_super_group::<VisitedG1>(),
-                CDef2::definition().dto().into_super_group::<VisitedG2>(),
+                crate::dto::<CDef1, VisitedG1>(),
+                crate::dto::<CDef2, VisitedG2>(),
                 v_c1_c2
             )
         );

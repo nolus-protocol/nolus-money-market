@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
-use finance::price::{dto::PriceDTO, Price};
+use finance::price::{base::BasePrice, Price};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -75,7 +75,9 @@ where
                     error,
                 )
             })
-            .and_then(|price: PriceDTO<CurrencyG, QuoteG>| price.try_into().map_err(Into::into))
+            .and_then(|price: BasePrice<CurrencyG, QuoteC, QuoteG>| {
+                price.try_into().map_err(Into::into)
+            })
     }
 }
 

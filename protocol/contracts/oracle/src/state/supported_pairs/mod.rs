@@ -151,7 +151,7 @@ where
         StableC::Group: MemberOf<PriceG>,
     {
         let root_currency = tree.root().value().target;
-        if &root_currency != BaseC::definition().dto() {
+        if root_currency != currency::dto::<BaseC, _>() {
             Err(error::invalid_base_currency::<_, BaseC>(&root_currency))
         } else {
             let mut supported_currencies: Vec<&CurrencyDTO<PriceG>> =
@@ -160,7 +160,7 @@ where
             supported_currencies.sort_unstable();
 
             if supported_currencies
-                .binary_search(&&StableC::definition().dto().into_super_group())
+                .binary_search(&&currency::dto::<StableC, _>())
                 .is_err()
             {
                 Err(ContractError::StableCurrencyNotInTree {})
@@ -530,6 +530,6 @@ mod tests {
         C: CurrencyDef,
         C::Group: MemberOf<PriceCurrencies>,
     {
-        C::definition().dto().into_super_group()
+        currency::dto::<C, _>()
     }
 }

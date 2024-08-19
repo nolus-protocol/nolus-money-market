@@ -93,17 +93,17 @@ mod tests {
 
         let mut expected = vec![
             SwapLeg::<PriceCurrencies> {
-                from: PaymentC3::definition().dto().into_super_group(),
+                from: currency::dto::<PaymentC3, PriceCurrencies>().into_super_group(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: Lpn::definition().dto().into_super_group(),
+                    target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
                 },
             },
             SwapLeg {
-                from: PaymentC6::definition().dto().into_super_group(),
+                from: currency::dto::<PaymentC6, PriceCurrencies>().into_super_group(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: Lpn::definition().dto().into_super_group(),
+                    target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
                 },
             },
         ];

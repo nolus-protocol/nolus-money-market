@@ -33,7 +33,7 @@ where
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
             .map_err(Error::QueryReserveFailure)
             .and_then(|lpn: LpnCurrencyDTO| {
-                lpn.of_currency::<Lpn::Group>(Lpn::definition().dto())
+                lpn.of_currency(&currency::dto::<Lpn, _>())
                     .map_err(Error::UnexpectedLpn)
             })
             .map(|()| Self {

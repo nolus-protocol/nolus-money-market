@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, CurrencyDef, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 use with_price::WithPrice;
 
@@ -42,6 +42,13 @@ where
     QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
+    pub fn from_price<C>(price: Price<C, QuoteC>, c_dto: CurrencyDTO<BaseG>) -> Self
+    where
+        C: Currency + MemberOf<BaseG>,
+    {
+        Self::new_unchecked(CoinDTO::from_coin(price.amount, c_dto), price.amount_quote)
+    }
+
     #[cfg(any(test, feature = "testing"))]
     pub fn new(amount: CoinDTO<BaseG>, amount_quote: Coin<QuoteC>) -> Self {
         Self::new_unchecked(amount, amount_quote)
@@ -65,6 +72,25 @@ where
             amount_quote,
             _quote_group: PhantomData,
         }
+    }
+
+    pub fn try_as_specific<C, SubG>(
+        &self,
+        amount_c: &CurrencyDTO<SubG>,
+    ) -> Result<Price<C, QuoteC>, Error>
+    where
+        C: Currency + MemberOf<SubG>,
+        SubG: Group + MemberOf<BaseG>,
+    {
+        self.of_currency(amount_c)
+            .map(|()| super::total_of(self.amount.as_specific(amount_c)).is(self.amount_quote))
+    }
+
+    fn of_currency<SubG>(&self, amount_c: &CurrencyDTO<SubG>) -> Result<(), Error>
+    where
+        SubG: Group + MemberOf<BaseG>,
+    {
+        self.amount.of_currency_dto(amount_c).map_err(Into::into)
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
@@ -114,7 +140,7 @@ where
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
-        Self::new_unchecked(price.amount.into(), price.amount_quote)
+        Self::from_price(price, C::definition().dto().into_super_group())
     }
 }
 
@@ -146,10 +172,7 @@ where
     type Error = Error;
 
     fn try_from(base: &BasePrice<G, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
-        base.amount
-            .try_into()
-            .map_err(Into::into)
-            .map(|amount| super::total_of(amount).is(base.amount_quote))
+        base.try_as_specific(C::definition().dto())
     }
 }
 
