@@ -991,7 +991,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "access-control",
  "cosmwasm-std",
