@@ -7,9 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{
-    package_version, version, ReleaseLabel, SemVer, Version, VersionSegment,
-};
+use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
