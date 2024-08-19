@@ -855,12 +855,7 @@ fn loan_open_and_repay() {
     let balance = bank::balance::<_, Lpns>(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(
         balance,
-        Coin::<Lpn>::from(
-            loan1
-                - interest1
-                    .of(loan1)
-                    .expect("Failed to calculate interest on the loan")
-        )
+        Coin::<Lpn>::from(loan1 - interest1.of(loan1).unwrap())
     );
 
     let resp: LppBalanceResponse<Lpns> = test_case
@@ -1240,12 +1235,7 @@ fn compare_lpp_states() {
     let balance = bank::balance::<_, Lpns>(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(
         balance,
-        Coin::<Lpn>::from(
-            loan1
-                - interest1
-                    .of(loan1)
-                    .expect("Failed to calculate interest on the loan")
-        )
+        Coin::<Lpn>::from(loan1 - interest1.of(loan1).unwrap())
     );
 
     let resp: LppBalanceResponse<Lpns> = test_case

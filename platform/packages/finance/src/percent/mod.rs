@@ -225,9 +225,7 @@ pub(super) mod test {
     fn test_zero() {
         assert_eq!(
             Coin::<SubGroupTestC10>::new(0),
-            Percent::ZERO
-                .of(Coin::<SubGroupTestC10>::new(10))
-                .expect("Expected zero percent")
+            Percent::ZERO.of(Coin::<SubGroupTestC10>::new(10)).unwrap()
         )
     }
 
@@ -238,10 +236,7 @@ pub(super) mod test {
             Coin::<SubGroupTestC10>::new(amount),
             Percent::HUNDRED
                 .of(Coin::<SubGroupTestC10>::new(amount))
-                .expect(&format!(
-                    "Failed to calculate 100% of the coin amount: {}",
-                    amount
-                ))
+                .unwrap()
         )
     }
 
