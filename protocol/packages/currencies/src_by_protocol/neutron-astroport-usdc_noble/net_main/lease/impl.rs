@@ -98,6 +98,15 @@ define_currency!(
     18
 );
 
+define_currency!(
+    DAtom,
+    "D_ATOM",
+    "ibc/EB08474FFC49B6BB2F03F7D9B08697138F4DA53347CA1AB718C8BCFBB58C1B2B", // transfer/channel-3839/factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom
+    "factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom",
+    LeaseGroup,
+    6
+);
+
 pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher,
@@ -116,6 +125,7 @@ where
         .or_else(|visitor| maybe_visit::<_, Newt, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Eclip, TopG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, WstEth, TopG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, DAtom, TopG, _>(matcher, visitor))
 }
 
 #[cfg(test)]
