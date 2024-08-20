@@ -31,7 +31,7 @@ osmosis-osmosis-usdc_axelar = ["contract"]
 osmosis-osmosis-usdc_noble = ["contract"]
 
 contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies", "dep:oracle"]
-stub = []
+stub = ["dep:currencies"]
 testing = ["currency/testing"]
 
 [dependencies]
