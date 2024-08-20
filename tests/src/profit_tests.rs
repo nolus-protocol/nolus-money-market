@@ -34,6 +34,7 @@ fn test_case_with<Lpn>(
 ) -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
     Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     custom_reserve
         .map_or_else(
@@ -51,6 +52,7 @@ where
 fn test_case<Lpn>() -> TestCase<Addr, Addr, Addr, (), (), (), Addr, Addr>
 where
     Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     test_case_with::<Lpn>(2, None)
 }

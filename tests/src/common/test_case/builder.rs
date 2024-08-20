@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use currency::{Currency, CurrencyDef};
+use currencies::Lpns;
+use currency::{Currency, CurrencyDef, MemberOf};
 use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
@@ -48,6 +49,7 @@ pub(crate) struct Builder<
 impl<Lpn> BlankBuilder<Lpn>
 where
     Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     pub fn new() -> Self {
         Self::with_reserve(&[cwcoin::<Lpn, _>(10_000), cwcoin_dex::<Lpn, _>(10_000)])
@@ -294,6 +296,7 @@ impl<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlar
     Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, (), Oracle, TimeAlarms>
 where
     Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
 {
     pub fn init_lpp(
         self,

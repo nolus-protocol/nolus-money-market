@@ -46,20 +46,6 @@ fn open_lease_unsupported_currency_by_oracle() {
 }
 
 #[test]
-#[should_panic(expected = "The LPN ticker does not match the LPN this contract is compiled with")]
-fn init_lpp_with_unknown_currency() {
-    type NotLpn = LeaseC1;
-
-    TestCaseBuilder::<NotLpn>::new().init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-    );
-}
-
-#[test]
 fn open_multiple_loans() {
     type LeaseCurrency = LeaseC1;
 
