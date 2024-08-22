@@ -146,7 +146,7 @@ impl<C> Eq for Coin<C> {}
 
 impl<C> PartialEq for Coin<C> {
     fn eq(&self, other: &Self) -> bool {
-        self.amount == other.amount
+        self.amount.eq(&other.amount)
     }
 }
 
