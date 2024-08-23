@@ -11,7 +11,7 @@ use crate::{define_currency, LeaseGroup};
 define_currency!(
     Atom,
     "ATOM",
-    "ibc/B62610294777CD7D4567F7125B5D88DE95C6B7F7ED25430F3808F863202BC599", // transfer/channel-1/transfer/channel-1/uatom
+    "ibc/2E935FE009C5499B9EF05DA9DBA83E0132F3D1CB99409068579ECC1A0B02A3D6", // transfer/channel-3/transfer/channel-1/uatom
     "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", // transfer/channel-1/uatom
     LeaseGroup,
     6
@@ -20,7 +20,7 @@ define_currency!(
 define_currency!(
     Ntrn,
     "NTRN",
-    "ibc/0C698C8970DB4C539455E5225665A804F6338753211319E44BAD39758B238695", // transfer/channel-1/untrn
+    "ibc/7C1B575B45FDB34A291FDBFC1CDC01A2196D4BDD11C8C1930F2576D310B31119", // transfer/channel-3/untrn
     "untrn",
     LeaseGroup,
     6
