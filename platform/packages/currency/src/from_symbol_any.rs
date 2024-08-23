@@ -1,6 +1,6 @@
 use crate::{
-    error::Error, group::MemberOf, matcher, Currency, CurrencyDTO, CurrencyDef,
-    MaybeAnyVisitResult, Symbol, SymbolSlice,
+    error::Error, exchanged::AnyCurrency, group::MemberOf, matcher, Currency, CurrencyDTO,
+    CurrencyDef, MaybeAnyVisitResult, Symbol, SymbolSlice,
 };
 
 use super::Group;
@@ -60,7 +60,7 @@ pub trait GroupVisit: Symbol {
         V: AnyVisitor<Self::Group, VisitorG = Self::Group>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        Self::Group::maybe_visit(&matcher, visitor)
+        Self::Group::maybe_visit::<AnyCurrency, _, _>(&matcher, visitor)
     }
 
     fn visit_member_any<V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
@@ -83,7 +83,7 @@ pub trait GroupVisit: Symbol {
         Self::Group: MemberOf<V::VisitorG>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        Self::Group::maybe_visit_super_visitor(&matcher, visitor)
+        Self::Group::maybe_visit_super_visitor::<AnyCurrency, _, _, _>(&matcher, visitor)
     }
 }
 impl<T> GroupVisit for T where T: Symbol {}

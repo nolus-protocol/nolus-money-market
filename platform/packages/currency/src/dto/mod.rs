@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     definition::DefinitionRef,
     error::{Error, Result},
+    exchanged::AnyCurrency,
     group::MemberOf,
     CurrencyDef, Group, GroupVisit as _, MaybeAnyVisitResult, Symbol, SymbolSlice, SymbolStatic,
     Tickers, TypeMatcher,
@@ -48,7 +49,10 @@ where
         SubG: Group + MemberOf<G>,
         V: AnyVisitor<SubG, VisitorG = G>,
     {
-        SubG::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
+        SubG::maybe_visit_super_visitor::<AnyCurrency, _, _, _>(
+            &TypeMatcher::new(self.def),
+            visitor,
+        )
     }
 
     pub fn into_currency_super_group_type<TopG, V>(self, visitor: V) -> AnyVisitorResult<G, V>
@@ -57,7 +61,7 @@ where
         G: MemberOf<TopG>,
         V: AnyVisitor<G, VisitorG = TopG>,
     {
-        G::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
+        G::maybe_visit_super_visitor::<AnyCurrency, _, _, _>(&TypeMatcher::new(self.def), visitor)
             .unwrap_or_else(|_| self.unexpected::<V>())
     }
 
@@ -65,7 +69,7 @@ where
     where
         V: AnyVisitor<G, VisitorG = G>,
     {
-        G::maybe_visit(&TypeMatcher::new(self.def), visitor)
+        <G as Group>::maybe_visit::<AnyCurrency, _, _>(&TypeMatcher::new(self.def), visitor)
             .unwrap_or_else(|_| self.unexpected::<V>())
     }
 

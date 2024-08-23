@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::{group::MemberOf, AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult};
+use crate::{
+    exchanged::InPoolWith, group::MemberOf, AnyVisitor, CurrencyDTO, Group, Matcher,
+    MaybeAnyVisitResult,
+};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -17,20 +20,15 @@ pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit<PivotC, M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
     {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
-            .or_else(|visitor| SubGroup::maybe_visit_member::<_, _, Self>(matcher, visitor))
+        <Self as InPoolWith>::maybe_visit(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
+    fn maybe_visit_super_visitor<PivotC, M, V, TopG>(
         _matcher: &M,
         _visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
@@ -43,7 +41,10 @@ impl Group for SuperGroup {
         unreachable!()
     }
 
-    fn maybe_visit_member<M, V, TopG>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    fn maybe_visit_member<PivotC, M, V, TopG>(
+        _matcher: &M,
+        _visitor: V,
+    ) -> MaybeAnyVisitResult<TopG, V>
     where
         M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
@@ -55,6 +56,34 @@ impl Group for SuperGroup {
 }
 impl MemberOf<Self> for SuperGroup {}
 
+impl InPoolWith for SuperGroup {
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<Self, VisitorG = Self>,
+        Self: MemberOf<V::VisitorG>,
+    {
+        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
+            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
+            .or_else(|visitor| {
+                <SubGroup as InPoolWith>::maybe_visit_member::<_, _, Self>(matcher, visitor)
+            })
+    }
+
+    fn maybe_visit_member<M, V, TopG>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<TopG>,
+        Self: MemberOf<TopG> + MemberOf<V::VisitorG>,
+        TopG: Group + MemberOf<V::VisitorG>,
+    {
+        unreachable!()
+    }
+}
+
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SubGroup {}
 pub type SubGroupCurrency = CurrencyDTO<SubGroup>;
@@ -62,23 +91,50 @@ pub type SubGroupCurrency = CurrencyDTO<SubGroup>;
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit<PivotC, M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
         V: AnyVisitor<Self, VisitorG = Self>,
+        Self: InPoolWith<PivotC>,
     {
-        Self::maybe_visit_member::<_, _, Self>(matcher, visitor)
+        <Self as Group>::maybe_visit_member::<PivotC, _, _, Self>(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
+    fn maybe_visit_super_visitor<PivotC, M, V, TopG>(
         matcher: &M,
         visitor: V,
     ) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
         V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
+        Self: MemberOf<TopG> + InPoolWith<PivotC>,
         TopG: Group,
+    {
+        <Self as InPoolWith<PivotC>>::maybe_visit_member::<_, _, Self>(matcher, visitor)
+    }
+
+    fn maybe_visit_member<PivotC, M, V, TopG>(
+        matcher: &M,
+        visitor: V,
+    ) -> MaybeAnyVisitResult<TopG, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<TopG, VisitorG = TopG>,
+        Self: MemberOf<TopG> + InPoolWith<PivotC>,
+        TopG: Group,
+    {
+        <Self as InPoolWith<PivotC>>::maybe_visit_member::<_, _, TopG>(matcher, visitor)
+    }
+}
+impl MemberOf<Self> for SubGroup {}
+impl MemberOf<SuperGroup> for SubGroup {}
+
+impl InPoolWith for SubGroup {
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<Self, VisitorG = Self>,
+        Self: MemberOf<V::VisitorG>,
     {
         maybe_visit::<_, Self, _>(matcher, visitor)
     }
@@ -86,15 +142,13 @@ impl Group for SubGroup {
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<TopG>,
+        Self: MemberOf<TopG> + MemberOf<V::VisitorG>,
+        TopG: Group + MemberOf<V::VisitorG>,
     {
         maybe_visit::<_, TopG, _>(matcher, visitor)
     }
 }
-impl MemberOf<Self> for SubGroup {}
-impl MemberOf<SuperGroup> for SubGroup {}
 
 fn maybe_visit<M, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
