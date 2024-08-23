@@ -3,7 +3,6 @@ use std::{any::TypeId, fmt::Debug};
 pub use crate::{
     definition::Definition,
     dto::{dto, to_string, CurrencyDTO},
-    exchanged::{AnyCurrency, InPoolWith},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
@@ -18,7 +17,6 @@ pub use crate::{
 mod definition;
 mod dto;
 pub mod error;
-mod exchanged;
 mod from_symbol;
 mod from_symbol_any;
 mod group;

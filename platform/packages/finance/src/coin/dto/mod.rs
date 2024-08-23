@@ -189,8 +189,8 @@ mod test {
 
     use currency::{
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, InPoolWith, Matcher,
-        MaybeAnyVisitResult, MemberOf,
+        AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
+        MemberOf,
     };
     use sdk::cosmwasm_std;
 
@@ -219,64 +219,39 @@ mod test {
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
 
-        fn maybe_visit<PivotC, M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
             M: Matcher,
             V: AnyVisitor<Self, VisitorG = Self>,
-            Self: InPoolWith<PivotC>,
         {
-            <Self as Group>::maybe_visit_member(matcher, visitor)
+            Self::maybe_visit_member(matcher, visitor)
         }
 
-        fn maybe_visit_super_visitor<PivotC, M, V, TopG>(
+        fn maybe_visit_super_visitor<M, V, TopG>(
             _matcher: &M,
             _visitor: V,
         ) -> MaybeAnyVisitResult<Self, V>
         where
             M: Matcher,
             V: AnyVisitor<Self, VisitorG = TopG>,
-            Self: MemberOf<TopG> + InPoolWith<PivotC>,
+            Self: MemberOf<TopG>,
             TopG: Group,
         {
             unreachable!("There is no parent group of this group")
         }
 
-        fn maybe_visit_member<PivotC, M, V, TopG>(
-            matcher: &M,
-            visitor: V,
-        ) -> MaybeAnyVisitResult<TopG, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<TopG, VisitorG = TopG>,
-            Self: MemberOf<TopG> + InPoolWith<PivotC>,
-            TopG: Group,
-        {
-            <Self as InPoolWith<PivotC>>::maybe_visit_member::<_, _, TopG>(matcher, visitor)
-        }
-    }
-    impl MemberOf<Self> for MyTestGroup {}
-
-    impl InPoolWith for MyTestGroup {
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<Self, VisitorG = Self>,
-            Self: Group + MemberOf<V::VisitorG>,
-        {
-            <Self as InPoolWith>::maybe_visit_member::<_, _, Self>(matcher, visitor)
-        }
-
         fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
         where
             M: Matcher,
-            V: AnyVisitor<TopG>,
-            Self: MemberOf<TopG> + MemberOf<V::VisitorG>,
-            TopG: Group + MemberOf<V::VisitorG>,
+            V: AnyVisitor<TopG, VisitorG = TopG>,
+            Self: MemberOf<TopG>,
+            TopG: Group,
         {
             assert!(matcher.r#match(&MY_TESTC_DEFINITION));
             Ok(visitor.on::<MyTestCurrency>(&MY_TESTC))
         }
     }
+    impl MemberOf<Self> for MyTestGroup {}
 
     #[test]
     fn longer_representation() {
