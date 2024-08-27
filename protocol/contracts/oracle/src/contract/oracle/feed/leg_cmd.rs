@@ -41,21 +41,19 @@ where
     BaseG: Group,
     Querier: PriceQuerier<CurrencyGroup = PriceG>,
 {
-    type VisitedG1 = PriceG;
-
-    type VisitedG2 = PriceG;
+    type VisitedG = PriceG;
 
     type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
     type Error = ContractError;
 
     fn on<B, Q>(
         self,
-        dto1: &CurrencyDTO<Self::VisitedG1>,
-        dto2: &CurrencyDTO<Self::VisitedG2>,
+        dto1: &CurrencyDTO<Self::VisitedG>,
+        dto2: &CurrencyDTO<Self::VisitedG>,
     ) -> Result<Self::Output, Self::Error>
     where
-        B: Currency + MemberOf<Self::VisitedG1>,
-        Q: Currency + MemberOf<Self::VisitedG2>,
+        B: Currency + MemberOf<Self::VisitedG>,
+        Q: Currency + MemberOf<Self::VisitedG>,
     {
         // tries to find price for non empty stack (in a branch of the tree)
         // covers both normal flow and NoPrice cases

@@ -125,23 +125,22 @@ where
     }
 }
 
-impl<'dtos, VisitedG1, VisitedG2, G1, G2> AnyVisitorPair
-    for ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>
+impl<'dtos, VisitedG, VisitedG2, G1, G2> AnyVisitorPair
+    for ExpectPair<'dtos, VisitedG, VisitedG2, G1, G2>
 where
-    VisitedG1: Group,
-    G1: Group + MemberOf<VisitedG1>,
+    VisitedG: Group,
+    G1: Group + MemberOf<VisitedG>,
     VisitedG2: Group,
     G2: Group + MemberOf<VisitedG2>,
 {
-    type VisitedG1 = VisitedG1;
-    type VisitedG2 = VisitedG2;
+    type VisitedG = VisitedG;
     type Output = bool;
     type Error = Error;
 
     fn on<C1in, C2in>(
         self,
-        dto1: &CurrencyDTO<Self::VisitedG1>,
-        dto2: &CurrencyDTO<Self::VisitedG2>,
+        dto1: &CurrencyDTO<Self::VisitedG>,
+        dto2: &CurrencyDTO<Self::VisitedG>,
     ) -> Result<Self::Output, Self::Error>
     where
         C1in: Currency,
