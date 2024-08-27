@@ -77,7 +77,7 @@ where
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
     M: Matcher,
-    C: CurrencyDef + MemberOf<V::VisitorG>,
+    C: CurrencyDef,
     V: AnyVisitor<C::Group>,
     C::Group: MemberOf<V::VisitorG>,
 {
