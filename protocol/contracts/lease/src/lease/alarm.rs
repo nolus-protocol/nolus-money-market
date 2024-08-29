@@ -24,6 +24,22 @@ where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
+    // pub(super) fn reschedule(
+    //     &self,
+    //     now: &Timestamp,
+    //     recheck_in: Duration,
+    //     liquidation_zone: &Zone,
+    //     total_due: LpnCoin,
+    //     time_alarms: &TimeAlarmsRef,
+    //     price_alarms: &OracleRef,
+    // ) -> ContractResult<Batch> {
+    //     let next_recheck = now + recheck_in;
+    //     let batch = time_alarms.setup_alarm(next_recheck)?;
+
+    //     self.reschedule_price_alarm(liquidation_zone, total_due, price_alarms.as_alarms::<LeaseAssetCurrencies>())
+    //         .map(|()| batch.merge(price_alarms.into()))
+    // }
+
     pub(super) fn reschedule(
         &self,
         now: &Timestamp,
@@ -34,22 +50,21 @@ where
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
+        let batch = time_alarms.setup_alarm(next_recheck)?;
 
-        time_alarms
-            .setup_alarm(next_recheck)
-            .map_err(Into::into)
-            .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms::<LeaseAssetCurrencies>();
-                self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
-                    .map(|_| schedule_time_alarm.merge(price_alarms.into()))
-            })
+        self.reschedule_price_alarm(
+            liquidation_zone,
+            total_due,
+            price_alarms.as_alarms::<LeaseAssetCurrencies>(),
+        )
+        .map(|()| batch.merge(price_alarms.as_alarms::<LeaseAssetCurrencies>().into()))
     }
 
     fn reschedule_price_alarm<PriceAlarms>(
         &self,
         liquidation_zone: &Zone,
         total_due: LpnCoin,
-        price_alarms: &mut PriceAlarms,
+        price_alarms: PriceAlarms,
     ) -> ContractResult<()>
     where
         PriceAlarms:
@@ -129,25 +144,22 @@ mod tests {
             .unwrap();
 
         assert_eq!(alarm_msgs, {
-            let mut batch = Batch::default();
-
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_json_binary(&AddAlarm { time: recheck_time }).unwrap(),
-                funds: vec![],
-            });
-
             let below_alarm = total_of(liability_alarm_on.of(asset)).is(due.total_due());
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
-                    alarm: Alarm::new(below_alarm, None),
-                })
-                .unwrap(),
-                funds: vec![],
-            });
 
-            batch
+            Batch::default()
+                .schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: TIME_ALARMS_ADDR.into(),
+                    msg: to_json_binary(&AddAlarm { time: recheck_time }).unwrap(),
+                    funds: vec![],
+                })
+                .schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: ORACLE_ADDR.into(),
+                    msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
+                        alarm: Alarm::new(below_alarm, None),
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                })
         });
     }
 
@@ -188,24 +200,20 @@ mod tests {
         let exp_above = total_of(zone.low().unwrap().ltv().of(lease_amount)).is(total_due);
 
         assert_eq!(alarm_msgs, {
-            let mut batch = Batch::default();
-
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: to_json_binary(&AddAlarm { time: recalc_at }).unwrap(),
-                funds: vec![],
-            });
-
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: ORACLE_ADDR.into(),
-                msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
-                    alarm: Alarm::new(exp_below, Some(exp_above)),
+            Batch::default()
+                .schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: TIME_ALARMS_ADDR.into(),
+                    msg: to_json_binary(&AddAlarm { time: recalc_at }).unwrap(),
+                    funds: vec![],
                 })
-                .unwrap(),
-                funds: vec![],
-            });
-
-            batch
+                .schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: ORACLE_ADDR.into(),
+                    msg: to_json_binary(&AddPriceAlarm::<LeaseGroup, TestLpn, Lpns> {
+                        alarm: Alarm::new(exp_below, Some(exp_above)),
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                })
         });
     }
 

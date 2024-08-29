@@ -59,11 +59,16 @@ where
 }
 
 impl MigrationResult {
-    pub fn try_add_msgs<F>(mut self, add_fn: F) -> ContractResult<Self>
+    pub fn try_add_msgs<F>(self, add_fn: F) -> ContractResult<Self>
     where
-        F: FnOnce(&mut Batch) -> ContractResult<()>,
+        F: FnOnce(Batch) -> ContractResult<Batch>,
     {
-        add_fn(&mut self.msgs).map(|()| self)
+        let (msgs, next_customer) = (self.msgs, self.next_customer);
+
+        add_fn(msgs).map(|batch| MigrationResult {
+            msgs: batch,
+            next_customer,
+        })
     }
 }
 
@@ -93,7 +98,7 @@ impl MigrateBatch {
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
         match maybe_leases_nb {
-            Err(err) => Some(Err(err.into())),
+            Err(err) => Err(err.into()),
             Ok(leases_nb) => {
                 if let Some(left) = self.leases_left.checked_sub(leases_nb) {
                     self.leases_left = left;
@@ -102,8 +107,18 @@ impl MigrateBatch {
                             .schedule_migrate_wasm_no_reply(lease, &migrate_msg(), self.new_code)
                             .map(|()| None)
                             .map_err(Into::into)
-                            .transpose()
-                    })
+                    });
+
+                    match res {
+                        Ok(updated_msgs) => Ok((
+                            MigrationResult {
+                                msgs: updated_msgs,
+                                next_customer: None,
+                            },
+                            self.leases_left,
+                        )),
+                        Err(err) => Err(err),
+                    }
                 } else {
                     Some(Ok(()))
                 }
@@ -314,7 +329,11 @@ mod test {
         exp.msgs
             .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg(), new_code)
             .unwrap();
-        exp
+
+        MigrationResult {
+            msgs,
+            next_customer: Some(customer),
+        }
     }
 
     fn test_customers() -> impl Iterator<Item = ContractResult<Customer<IntoIter<Addr>>>> {

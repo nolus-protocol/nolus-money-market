@@ -24,11 +24,11 @@ pub struct Batch {
 }
 
 impl Batch {
-    pub fn schedule_execute_no_reply<M>(&mut self, msg: M)
+    pub fn schedule_execute_no_reply<M>(self, msg: M) -> Self
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_no_reply(msg)
+        dbg!(self.schedule_no_reply(msg))
     }
 
     pub fn schedule_execute_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
@@ -38,7 +38,7 @@ impl Batch {
         self.schedule_reply_on_success(msg, reply_id)
     }
 
-    pub fn schedule_execute_wasm_no_reply_no_funds<M>(&mut self, addr: Addr, msg: &M) -> Result<()>
+    pub fn schedule_execute_wasm_no_reply_no_funds<M>(self, addr: Addr, msg: &M) -> Result<Self>
     where
         M: Serialize + ?Sized,
     {
@@ -47,11 +47,11 @@ impl Batch {
 
     // TODO get self by value
     pub fn schedule_execute_wasm_no_reply<M, C>(
-        &mut self,
+        self,
         addr: Addr,
         msg: &M,
         funds: Option<Coin<C>>,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
         C: CurrencyDef,
@@ -130,11 +130,11 @@ impl Batch {
     }
 
     pub fn schedule_migrate_wasm_no_reply<M>(
-        &mut self,
+        self,
         addr: Addr,
         msg: &M,
         new_code: Code,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
     {
@@ -223,36 +223,42 @@ impl Batch {
             .map_err(Into::into)
     }
 
-    fn schedule_no_reply<M>(&mut self, msg: M)
+    fn schedule_no_reply<M>(self, msg: M) -> Self
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg(SubMsg::new(msg));
+        self.schedule_msg(SubMsg::new(msg))
     }
 
     fn schedule_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg(SubMsg::reply_on_success(msg, reply_id));
+        self.schedule_msg_t(SubMsg::reply_on_success(msg, reply_id));
     }
 
     fn schedule_reply_on_error<M>(&mut self, msg: M, reply_id: ReplyId)
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg(SubMsg::reply_on_error(msg, reply_id));
+        self.schedule_msg_t(SubMsg::reply_on_error(msg, reply_id));
     }
 
     fn schedule_reply_always<M>(&mut self, msg: M, reply_id: ReplyId)
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg(SubMsg::reply_always(msg, reply_id));
+        self.schedule_msg_t(SubMsg::reply_always(msg, reply_id));
     }
 
     #[inline]
-    fn schedule_msg(&mut self, msg: SubMsg) {
+    fn schedule_msg(mut self, msg: SubMsg) -> Self {
+        self.msgs.push(msg);
+        self
+    }
+
+    #[inline]
+    fn schedule_msg_t(&mut self, msg: SubMsg) {
         self.msgs.push(msg);
     }
 }
@@ -275,11 +281,11 @@ mod test {
 
     #[test]
     fn no_events() {
-        let mut b = Batch::default();
+        let b = Batch::default();
         assert_eq!(0, b.len());
         assert!(b.is_empty());
 
-        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
+        let b = b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
             contract_addr: "".to_string(),
         }));
         assert_eq!(1, b.len());
@@ -288,14 +294,14 @@ mod test {
 
     #[test]
     fn msgs_len() {
-        let mut b = Batch::default();
+        let b = Batch::default();
         assert_eq!(0, b.len());
         assert!(b.is_empty());
-        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
+        let b = b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
             contract_addr: "".into(),
         }));
         assert_eq!(1, b.len());
-        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+        let b = b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
             contract_addr: "".into(),
             admin: "".into(),
         }));

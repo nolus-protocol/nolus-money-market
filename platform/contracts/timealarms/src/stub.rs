@@ -13,7 +13,7 @@ pub trait TimeAlarms
 where
     Self: Into<Batch>,
 {
-    fn add_alarm(&mut self, time: Timestamp) -> Result<()>;
+    fn add_alarm(self, time: Timestamp) -> Result<Batch>;
 }
 
 pub trait WithTimeAlarms {
@@ -43,9 +43,7 @@ impl TimeAlarmsRef {
     }
 
     pub fn setup_alarm(&self, when: Timestamp) -> Result<Batch> {
-        let mut stub = self.as_stub();
-        stub.add_alarm(when)?;
-        Ok(stub.into())
+        self.as_stub().add_alarm(when)
     }
 
     /// It would be overengineering to hide the `TimeAlarms` implementation
@@ -81,14 +79,13 @@ impl<'a> TimeAlarmsStub<'a> {
 }
 
 impl<'a> TimeAlarms for TimeAlarmsStub<'a> {
-    fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
-        self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr().clone(),
+    fn add_alarm(self, time: Timestamp) -> Result<Batch> {
+        let addr = self.addr().clone();
+        Ok(self.batch.schedule_execute_no_reply(wasm_execute(
+            addr,
             &ExecuteMsg::AddAlarm { time },
             vec![],
-        )?);
-
-        Ok(())
+        )?))
     }
 }
 
