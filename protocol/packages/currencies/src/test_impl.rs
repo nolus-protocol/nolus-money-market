@@ -54,14 +54,6 @@ where
         Symbols::visit_any(symbol, Expect::<C, C::Group, C::Group>::default()),
         Ok(true)
     );
-    assert_eq!(
-        Symbols::visit_member_any(symbol, Expect::<C, C::Group, VisitorG>::default()),
-        Ok(true)
-    );
-    assert_eq!(
-        Symbols::maybe_visit_member_any(symbol, Expect::<C, C::Group, VisitorG>::default()),
-        Ok(Ok(true))
-    );
 }
 
 fn visit_on_symbol_err<C, VisitorG, Symbols>(unknown_symbol: &SymbolSlice)
@@ -75,15 +67,4 @@ where
         Symbols::visit_any(unknown_symbol, Expect::<C, C::Group, C::Group>::default()),
         Err(Error::NotInCurrencyGroup(_, _, _))
     ));
-
-    assert!(matches!(
-        Symbols::visit_member_any(unknown_symbol, Expect::<C, C::Group, VisitorG>::default()),
-        Err(Error::NotInCurrencyGroup(_, _, _))
-    ));
-
-    let v = Expect::<C, C::Group, VisitorG>::default();
-    assert_eq!(
-        Symbols::maybe_visit_member_any(unknown_symbol, v.clone()),
-        Err(v)
-    );
 }

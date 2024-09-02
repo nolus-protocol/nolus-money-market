@@ -61,29 +61,6 @@ pub trait GroupVisit: Symbol {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
         Self::Group::maybe_visit(&matcher, visitor)
     }
-
-    fn visit_member_any<V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
-    where
-        V: AnyVisitor<Self::Group>,
-        Self::Group: MemberOf<V::VisitorG>,
-        Error: Into<V::Error>,
-    {
-        Self::maybe_visit_member_any(symbol, visitor).unwrap_or_else(|_| {
-            Err(Error::not_in_currency_group::<_, Self, Self::Group>(symbol).into())
-        })
-    }
-
-    fn maybe_visit_member_any<V>(
-        symbol: &SymbolSlice,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self::Group, V>
-    where
-        V: AnyVisitor<Self::Group>,
-        Self::Group: MemberOf<V::VisitorG>,
-    {
-        let matcher = matcher::symbol_matcher::<Self>(symbol);
-        Self::Group::maybe_visit_super_visitor(&matcher, visitor)
-    }
 }
 impl<T> GroupVisit for T where T: Symbol {}
 
@@ -237,14 +214,6 @@ mod test {
             Tickers::<SuperGroup>::visit_any(
                 SubGroupTestC10::ticker(),
                 Expect::<SubGroupTestC10, SuperGroup, SuperGroup>::new()
-            )
-        );
-
-        assert_eq!(
-            Ok(true),
-            Tickers::<SubGroup>::visit_member_any(
-                SubGroupTestC10::ticker(),
-                Expect::<SubGroupTestC10, SubGroup, SuperGroup>::new()
             )
         );
     }
