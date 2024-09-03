@@ -1,6 +1,10 @@
 use serde::Deserialize;
 
-use crate::{group::MemberOf, AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult};
+use crate::{
+    from_symbol_any::{MaybePivotVisitResult, PivotVisitor},
+    group::MemberOf,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
+};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -28,6 +32,8 @@ impl Group for SuperGroup {
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
             .or_else(|visitor| SubGroup::maybe_visit_member::<_, _, Self>(matcher, visitor))
+        // Pivot::with_buddy(CurrencyAnyVisitor::new(matcher, visitor))
+        // .map_err(CurrencyAnyVisitor::back_to_any)
     }
 
     fn maybe_visit_super_visitor<M, V, TopG>(
@@ -53,7 +59,148 @@ impl Group for SuperGroup {
         unreachable!()
     }
 }
-impl MemberOf<Self> for SuperGroup {}
+
+impl MemberOf<Self> for SuperGroup {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = Self>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC1, _>(SuperGroupTestC1::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC2, _>(
+                    SuperGroupTestC2::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC3, _>(
+                    SuperGroupTestC3::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC4, _>(
+                    SuperGroupTestC4::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC5, _>(
+                    SuperGroupTestC5::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| SubGroup::with_buddy(matcher, v))
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SuperGroupTestC1 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC2, _>(SuperGroupTestC2::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC4, _>(
+                    SuperGroupTestC4::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SuperGroupTestC2 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC1, _>(SuperGroupTestC1::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC3, _>(
+                    SuperGroupTestC3::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| {
+                maybe_visit::<_, SubGroupTestC6, _>(
+                    &SubGroupTestC6::definition().dto().into_super_group(),
+                    matcher,
+                    v,
+                )
+            })
+            .or_else(|v| {
+                maybe_visit::<_, SubGroupTestC10, _>(
+                    &SubGroupTestC10::definition().dto().into_super_group(),
+                    matcher,
+                    v,
+                )
+            })
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SuperGroupTestC3 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC2, _>(SuperGroupTestC2::definition().dto(), matcher, v)
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SuperGroupTestC4 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC1, _>(SuperGroupTestC1::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC5, _>(
+                    SuperGroupTestC5::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SuperGroupTestC5 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC4, _>(SuperGroupTestC4::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SubGroupTestC10, _>(
+                    &SubGroupTestC10::definition().dto().into_super_group(),
+                    matcher,
+                    v,
+                )
+            })
+    }
+}
 
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
 pub struct SubGroup {}
@@ -90,23 +237,113 @@ impl Group for SubGroup {
         Self: MemberOf<TopG>,
         TopG: Group,
     {
+        // Pivot::with_buddy(CurrencyAnyVisitor::new(matcher, visitor)).map_err(|v| v.back_to_any())
         maybe_visit::<_, TopG, _>(matcher, visitor)
     }
 }
-impl MemberOf<Self> for SubGroup {}
-impl MemberOf<SuperGroup> for SubGroup {}
 
 fn maybe_visit<M, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
 where
     M: Matcher,
     V: AnyVisitor<TopG>,
     SubGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    TopG: Group,
 {
     crate::maybe_visit_member::<_, SubGroupTestC6, TopG, _>(matcher, visitor).or_else(|visitor| {
         crate::maybe_visit_member::<_, SubGroupTestC10, TopG, _>(matcher, visitor)
     })
 }
+
+impl MemberOf<SubGroup> for SubGroup {
+    fn with_buddy<M, V>(_matcher: &M, _v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SubGroup>,
+    {
+        todo!("add support for SuperG: Group, V: PivotVisitor, V::VisitedG: MemberOf<SuperG> to remove `impl MemberOf<SuperGroup> for SubGroup{{}}`")
+    }
+}
+
+impl MemberOf<SuperGroup> for SubGroup {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SubGroupTestC6, _>(
+            &SubGroupTestC6::definition().dto().into_super_group(),
+            matcher,
+            v,
+        )
+        .or_else(|v| {
+            maybe_visit::<_, SubGroupTestC10, _>(
+                &SubGroupTestC10::definition().dto().into_super_group(),
+                matcher,
+                v,
+            )
+        })
+    }
+}
+
+// impl MemberOf<SubGroup> for SubGroup {
+//     fn with_buddy<CurrencyV>(v: CurrencyV) -> MaybePivotVisitResult<CurrencyV>
+//     where
+//         CurrencyV: PivotVisitor<VisitedG = SubGroup>,
+//     {
+//         v.on::<SubGroupTestC6>()
+//             .or_else(|v| v.on::<SubGroupTestC10>())
+//     }
+// }
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+// impl MemberOf<SubGroup> for SubGroupTestC6 {
+//     fn with_buddy<CurrencyV>(v: CurrencyV) -> MaybePivotVisitResult<CurrencyV>
+//     where
+//         CurrencyV: PivotVisitor<VisitedG = SubGroup>,
+//     {
+//         crate::visit_noone(v)
+//     }
+// }
+
+impl MemberOf<SuperGroup> for SubGroupTestC6 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC2, _>(SuperGroupTestC2::definition().dto(), matcher, v)
+    }
+}
+
+//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10
+impl MemberOf<SuperGroup> for SubGroupTestC10 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = SuperGroup>,
+    {
+        use crate::maybe_visit_pivot as maybe_visit;
+        maybe_visit::<_, SuperGroupTestC2, _>(SuperGroupTestC2::definition().dto(), matcher, v)
+            .or_else(|v| {
+                maybe_visit::<_, SuperGroupTestC5, _>(
+                    SuperGroupTestC5::definition().dto(),
+                    matcher,
+                    v,
+                )
+            })
+    }
+}
+
+// impl MemberOf<SubGroup> for SubGroupTestC10 {
+//     fn with_buddy<CurrencyV>(v: CurrencyV) -> MaybeCurrencyVisitResult<CurrencyV>
+//     where
+//         CurrencyV: PivotVisitor<VisitedG = SubGroup>,
+//     {
+//         v.on::<SubGroupTestC10>()
+//     }
+// }
 
 mod impl_ {
     use serde::{Deserialize, Serialize};

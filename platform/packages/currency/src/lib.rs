@@ -1,5 +1,7 @@
 use std::{any::TypeId, fmt::Debug};
 
+use from_symbol_any::{MaybePivotVisitResult, PivotVisitor};
+
 pub use crate::{
     definition::Definition,
     dto::{dto, to_string, CurrencyDTO},
@@ -17,6 +19,7 @@ pub use crate::{
 mod definition;
 mod dto;
 pub mod error;
+mod exchanged;
 mod from_symbol;
 mod from_symbol_any;
 mod group;
@@ -64,6 +67,14 @@ pub trait CurrencyDef: Currency {
     }
 }
 
+pub fn into_super_group<C, SuperG>(c_def: C) -> CurrencyDTO<SuperG>
+where
+    C: CurrencyDef<Group = SuperG>,
+    SuperG: Group,
+{
+    *c_def.dto()
+}
+
 impl<T> Currency for T where T: CurrencyDef {}
 
 pub fn equal<C1, C2>() -> bool
@@ -78,8 +89,8 @@ pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<
 where
     M: Matcher,
     C: CurrencyDef,
+    C::Group: MemberOf<C::Group> + MemberOf<V::VisitorG>,
     V: AnyVisitor<C::Group>,
-    C::Group: MemberOf<V::VisitorG>,
 {
     maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
@@ -90,7 +101,7 @@ where
     C: CurrencyDef,
     C::Group: MemberOf<TopG> + MemberOf<V::VisitorG>,
     V: AnyVisitor<TopG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    TopG: Group,
 {
     if matcher.r#match(C::definition().dto().definition()) {
         Ok(visitor.on::<C>(C::definition()))
@@ -99,10 +110,26 @@ where
     }
 }
 
-pub fn visit_noone<VisitedG, V>(visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
+pub fn maybe_visit_pivot<M, C, V>(
+    buddy: &CurrencyDTO<V::VisitedG>,
+    matcher: &M,
+    visitor: V,
+) -> MaybePivotVisitResult<V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
-    V: AnyVisitor<VisitedG>,
+    M: Matcher,
+    C: Currency + MemberOf<V::VisitedG>,
+    V: PivotVisitor,
+{
+    if matcher.r#match(buddy.definition()) {
+        Ok(visitor.on::<C>(buddy))
+    } else {
+        Err(visitor)
+    }
+}
+
+pub fn visit_noone<V>(visitor: V) -> MaybePivotVisitResult<V>
+where
+    V: PivotVisitor,
 {
     Err(visitor)
 }

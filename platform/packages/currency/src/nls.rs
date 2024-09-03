@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    group::MemberOf, AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher,
-    MaybeAnyVisitResult,
+    from_symbol_any::{MaybePivotVisitResult, PivotVisitor},
+    group::MemberOf,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
 };
 
 #[derive(
@@ -35,6 +36,16 @@ impl CurrencyDef for NlsPlatform {
 
     fn dto(&self) -> &CurrencyDTO<Self::Group> {
         &self.0
+    }
+}
+
+impl MemberOf<Native> for NlsPlatform {
+    fn with_buddy<M, V>(_matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor,
+    {
+        crate::visit_noone(v)
     }
 }
 
@@ -76,4 +87,16 @@ impl Group for Native {
     }
 }
 
-impl MemberOf<Self> for Native {}
+impl MemberOf<Self> for Native {
+    fn with_buddy<M, V>(matcher: &M, visitor: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = Self>,
+    {
+        crate::maybe_visit_pivot::<_, NlsPlatform, _>(
+            NlsPlatform::definition().dto(),
+            matcher,
+            visitor,
+        )
+    }
+}

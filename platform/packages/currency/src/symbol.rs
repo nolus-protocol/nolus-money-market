@@ -5,10 +5,12 @@ use crate::{definition::Definition, Group, SymbolStatic};
 pub trait Symbol {
     const DESCR: &'static str;
 
+    // type Group: Group + InPoolWith<Self::Group>;
     type Group: Group;
     type Symbol<SubG>: Symbol<Group = SubG>
     where
         SubG: Group;
+    // SubG: Group + InPoolWith<SubG>;
 
     fn symbol(def: &Definition) -> SymbolStatic;
 }

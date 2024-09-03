@@ -59,8 +59,8 @@ where
         quote_c: &CurrencyDTO<Self::CurrencyGroup>,
     ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
-        C: Currency + MemberOf<Self::CurrencyGroup>,
-        QuoteC: Currency + MemberOf<Self::CurrencyGroup>,
+        C: Currency,
+        QuoteC: Currency,
     {
         let price =
             self.feeds

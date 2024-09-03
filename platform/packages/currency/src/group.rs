@@ -1,10 +1,10 @@
 use std::fmt::Debug;
 
-use crate::CurrencyDef;
+use crate::from_symbol_any::{MaybePivotVisitResult, PivotVisitor};
 
 use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
 
-pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
+pub trait Group: Copy + Clone + Debug + Ord + PartialEq {
     const DESCR: &'static str;
 
     // Visit this group directly by a visitor
@@ -26,6 +26,7 @@ pub trait Group: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> {
 
     // Visit this group since it is a member, or a sub-group, of another that is being visited
     fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    //TODO consider factor it out, called only from within Group::maybe_visit
     where
         M: Matcher,
         V: AnyVisitor<TopG, VisitorG = TopG>,
@@ -39,12 +40,16 @@ pub trait MemberOf<G>
 where
     G: Group,
 {
+    fn with_buddy<M, V>(matcher: &M, v: V) -> MaybePivotVisitResult<V>
+    where
+        M: Matcher,
+        V: PivotVisitor<VisitedG = G>;
 }
 
-impl<G, C> MemberOf<G> for C
-where
-    C: CurrencyDef,
-    C::Group: MemberOf<G>,
-    G: Group,
-{
-}
+// impl<G, C> MemberOf<G> for C
+// where
+//     C: CurrencyDef,
+//     C::Group: MemberOf<G>,
+//     G: Group,
+// {
+// }

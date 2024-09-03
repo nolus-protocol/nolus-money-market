@@ -101,37 +101,32 @@ where
     }
 }
 
-pub struct ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>(
+pub struct ExpectPair<'dtos, VisitedG, G1, G2>(
+    PhantomData<VisitedG>,
     &'dtos CurrencyDTO<G1>,
-    PhantomData<VisitedG1>,
     &'dtos CurrencyDTO<G2>,
-    PhantomData<VisitedG2>,
 )
-where
-    VisitedG1: Group,
-    G1: Group + MemberOf<VisitedG1>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>;
-
-impl<'dtos, VisitedG1, VisitedG2, G1, G2> ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>
-where
-    VisitedG1: Group,
-    G1: Group + MemberOf<VisitedG1>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>,
-{
-    pub fn new(def1: &'dtos CurrencyDTO<G1>, def2: &'dtos CurrencyDTO<G2>) -> Self {
-        Self(def1, PhantomData, def2, PhantomData)
-    }
-}
-
-impl<'dtos, VisitedG, VisitedG2, G1, G2> AnyVisitorPair
-    for ExpectPair<'dtos, VisitedG, VisitedG2, G1, G2>
 where
     VisitedG: Group,
     G1: Group + MemberOf<VisitedG>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>,
+    G2: Group + MemberOf<VisitedG>;
+
+impl<'dtos, VisitedG, G1, G2> ExpectPair<'dtos, VisitedG, G1, G2>
+where
+    VisitedG: Group,
+    G1: Group + MemberOf<VisitedG>,
+    G2: Group + MemberOf<VisitedG>,
+{
+    pub fn new(def1: &'dtos CurrencyDTO<G1>, def2: &'dtos CurrencyDTO<G2>) -> Self {
+        Self(PhantomData, def1, def2)
+    }
+}
+
+impl<'dtos, VisitedG, G1, G2> AnyVisitorPair for ExpectPair<'dtos, VisitedG, G1, G2>
+where
+    VisitedG: Group,
+    G1: Group + MemberOf<VisitedG>,
+    G2: Group + MemberOf<VisitedG>,
 {
     type VisitedG = VisitedG;
     type Output = bool;
@@ -146,6 +141,6 @@ where
         C1in: Currency,
         C2in: Currency,
     {
-        Ok(dto1 == self.0 && dto2 == self.2)
+        Ok(dto1 == self.1 && dto2 == self.2)
     }
 }
