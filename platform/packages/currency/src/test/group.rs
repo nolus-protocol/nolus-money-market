@@ -193,7 +193,11 @@ impl MemberOf<SuperGroup> for SuperGroupTestC5 {
         use crate::maybe_visit_pivot as maybe_visit;
         maybe_visit::<_, SuperGroupTestC4, _, _>(SuperGroupTestC4::definition().dto(), matcher, v)
             .or_else(|v| {
-                maybe_visit::<_, SubGroupTestC10, _, _>(SubGroupTestC10::definition().dto(), matcher, v)
+                maybe_visit::<_, SubGroupTestC10, _, _>(
+                    SubGroupTestC10::definition().dto(),
+                    matcher,
+                    v,
+                )
             })
     }
 }

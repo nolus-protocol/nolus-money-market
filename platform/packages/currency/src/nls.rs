@@ -93,7 +93,7 @@ impl MemberOf<Self> for Native {
         M: Matcher,
         V: PivotVisitor<VisitedG = Self>,
     {
-        crate::maybe_visit_pivot::<_, NlsPlatform,_,  _>(
+        crate::maybe_visit_pivot::<_, NlsPlatform, _, _>(
             NlsPlatform::definition().dto(),
             matcher,
             visitor,

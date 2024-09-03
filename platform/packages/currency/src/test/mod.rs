@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, Currency,
+    CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor,
 };
 
 pub use self::group::*;
