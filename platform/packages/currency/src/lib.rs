@@ -109,18 +109,19 @@ where
     }
 }
 
-pub fn maybe_visit_pivot<M, C, V>(
-    buddy: &CurrencyDTO<V::VisitedG>,
+pub fn maybe_visit_pivot<M, C, CurrencyG, V>(
+    buddy: &CurrencyDTO<CurrencyG>,
     matcher: &M,
     visitor: V,
 ) -> MaybePivotVisitResult<V>
 where
     M: Matcher,
-    C: Currency + MemberOf<V::VisitedG>,
+    C: Currency + MemberOf<CurrencyG> + MemberOf<V::VisitedG>,
+    CurrencyG: Group + MemberOf<V::VisitedG>,
     V: PivotVisitor,
 {
     if matcher.r#match(buddy.definition()) {
-        Ok(visitor.on::<C>(buddy))
+        Ok(visitor.on::<C, CurrencyG>(buddy))
     } else {
         Err(visitor)
     }

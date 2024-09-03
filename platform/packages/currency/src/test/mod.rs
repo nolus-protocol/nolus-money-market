@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef,
-    Group, MemberOf, SingleVisitor,
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor
 };
 
 pub use self::group::*;
@@ -136,7 +135,7 @@ where
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> Result<Self::Output, Self::Error>
+    ) -> AnyVisitorPairResult<Self>
     where
         C1in: Currency,
         C2in: Currency,

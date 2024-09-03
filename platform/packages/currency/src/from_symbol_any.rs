@@ -43,11 +43,10 @@ where
     type Output;
     type Error;
 
-    fn on<C>(self, def: &CurrencyDTO<Self::VisitedG>) -> PivotVisitorResult<Self>
-    // TODO loose the `CurrencyDTO<Self::VisitedG>` requirement to <SubG> where SubG: MemberOf<Self::VisitedG>, `CurrencyDTO<SubG>`,
-    // or
+    fn on<C, CurrencyG>(self, def: &CurrencyDTO<CurrencyG>) -> PivotVisitorResult<Self>
     where
-        C: Currency + MemberOf<Self::VisitedG>; // the bounds are not equivalent to C: CurrencyDef, C::Group: MemberOf<Self::VisitedG>, as MemberOf defines a sub-group where Self belongs to
+        C: Currency + MemberOf<CurrencyG> + MemberOf<Self::VisitedG>, // the bounds are not equivalent to C: CurrencyDef, C::Group: MemberOf<Self::VisitedG>, as MemberOf defines a sub-group where Self belongs to
+        CurrencyG: Group + MemberOf<Self::VisitedG>;
 }
 
 pub trait AnyVisitorPair {
@@ -148,32 +147,34 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C1>(self, def: &CurrencyDTO<Self::VisitedG>) -> PivotVisitorResult<Self>
+        fn on<C1, CurrencyG>(self, def: &CurrencyDTO<CurrencyG>) -> PivotVisitorResult<Self>
         where
             C1: Currency + MemberOf<Self::VisitedG>,
+            CurrencyG: Group + MemberOf<Self::VisitedG>,
         {
+            let def1 = def.into_super_group();
             self.currency2
                 .may_into_pivot_type::<C1, _>(SecondTickerVisitor {
                     c: PhantomData::<C1>,
-                    def1: def,
+                    def1,
                     group: PhantomData::<G>,
                     visitor: self.visitor,
                 })
-                .unwrap_or_else(|_| Err(Error::not_in_pool_with(def, &self.currency2).into()))
+                .unwrap_or_else(|_| Err(Error::not_in_pool_with(&def1, &self.currency2).into()))
         }
     }
 
-    struct SecondTickerVisitor<'def, C1, G, V>
+    struct SecondTickerVisitor<C1, G, V>
     where
         C1: Currency,
         V: AnyVisitorPair,
     {
         c: PhantomData<C1>,
-        def1: &'def CurrencyDTO<V::VisitedG>,
+        def1: CurrencyDTO<V::VisitedG>,
         group: PhantomData<G>,
         visitor: V,
     }
-    impl<'def, C1, G, V> PivotVisitor for SecondTickerVisitor<'def, C1, G, V>
+    impl<C1, G, V> PivotVisitor for SecondTickerVisitor<C1, G, V>
     where
         C1: Currency + MemberOf<G> + MemberOf<V::VisitedG>,
         G: Group,
@@ -184,11 +185,13 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C2>(self, def: &CurrencyDTO<Self::VisitedG>) -> PivotVisitorResult<Self>
+        fn on<C2, CurrencyG>(self, def: &CurrencyDTO<CurrencyG>) -> PivotVisitorResult<Self>
         where
             C2: Currency + MemberOf<Self::VisitedG>,
+            CurrencyG: Group + MemberOf<Self::VisitedG>,
         {
-            self.visitor.on::<C1, C2>(self.def1, def)
+            self.visitor
+                .on::<C1, C2>(&self.def1, &def.into_super_group())
         }
     }
 }
@@ -200,7 +203,7 @@ mod test {
         from_symbol_any::GroupVisit,
         test::{
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC10, SubGroupTestC6,
-            SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+            SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC5,
         },
         CurrencyDef, Group, MemberOf, Tickers,
     };
@@ -287,13 +290,24 @@ mod test {
 
     #[test]
     fn visit_any_currencies() {
+        //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC6>();
-        visit_any_currencies_ok::<SubGroup, SubGroupTestC10, SubGroupTestC6>();
-        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC10>();
 
+        visit_any_currencies_ok::<SubGroup, SubGroupTestC10, SubGroupTestC6>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SubGroupTestC6>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC10>();
         visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SuperGroupTestC2>();
-        visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SubGroupTestC10>();
+
+        visit_any_currencies_nok::<SubGroup, SubGroupTestC10, SubGroupTestC10>();
+        visit_any_currencies_nok::<SuperGroup, SubGroupTestC10, SubGroupTestC10>();
+
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC3>();
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC3, SuperGroupTestC1>();
+
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC5>();
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC5, SuperGroupTestC1>();
     }
 
     fn visit_any_currencies_ok<VisitedG, CDef1, CDef2>()
@@ -304,12 +318,40 @@ mod test {
         CDef2: CurrencyDef,
         CDef2::Group: MemberOf<CDef2::Group> + MemberOf<VisitedG>,
     {
+        assert_eq!(
+            Ok(true),
+            visit_any_currencies_int::<VisitedG, CDef1, CDef2>()
+        );
+    }
+
+    fn visit_any_currencies_nok<VisitedG, CDef1, CDef2>()
+    where
+        VisitedG: Group + MemberOf<VisitedG>,
+        CDef1: CurrencyDef,
+        CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
+        CDef2: CurrencyDef,
+        CDef2::Group: MemberOf<CDef2::Group> + MemberOf<VisitedG>,
+    {
+        assert_eq!(
+            Err(Error::not_in_pool_with(
+                &CDef1::definition().dto().into_super_group::<VisitedG>(),
+                &CDef2::definition().dto().into_super_group::<VisitedG>()
+            )),
+            visit_any_currencies_int::<VisitedG, CDef1, CDef2>()
+        );
+    }
+
+    fn visit_any_currencies_int<VisitedG, CDef1, CDef2>() -> Result<bool, Error>
+    where
+        VisitedG: Group + MemberOf<VisitedG>,
+        CDef1: CurrencyDef,
+        CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
+        CDef2: CurrencyDef,
+        CDef2::Group: MemberOf<CDef2::Group> + MemberOf<VisitedG>,
+    {
         let dto1 = crate::dto::<CDef1, _>();
         let dto2 = crate::dto::<CDef2, _>();
         let v_c1_c2 = ExpectPair::<VisitedG, _, _>::new(&dto1, &dto2);
-        assert_eq!(
-            Ok(true),
-            super::visit_any_on_currencies::<VisitedG, _>(dto1, dto2, v_c1_c2)
-        );
+        super::visit_any_on_currencies::<VisitedG, _>(dto1, dto2, v_c1_c2)
     }
 }
