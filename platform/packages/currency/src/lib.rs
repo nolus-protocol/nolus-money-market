@@ -1,6 +1,6 @@
 use std::{any::TypeId, fmt::Debug};
 
-use from_symbol_any::{MaybePivotVisitResult, PivotVisitor};
+use pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 
 pub use crate::{
     definition::Definition,
@@ -25,6 +25,7 @@ mod group;
 mod matcher;
 pub mod never;
 mod nls;
+mod pairs;
 mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
@@ -109,27 +110,27 @@ where
     }
 }
 
-pub fn maybe_visit_pivot<M, C, CurrencyG, V>(
-    buddy: &CurrencyDTO<CurrencyG>,
+pub fn maybe_visit_pivot<M, C, V>(
+    buddy: &CurrencyDTO<C::Group>,
     matcher: &M,
     visitor: V,
-) -> MaybePivotVisitResult<V>
+) -> MaybePairsVisitorResult<V>
 where
     M: Matcher,
-    C: Currency + MemberOf<CurrencyG> + MemberOf<V::VisitedG>,
-    CurrencyG: Group + MemberOf<V::VisitedG>,
-    V: PivotVisitor,
+    C: CurrencyDef + PairsGroup<CommonGroup = V::VisitedG>,
+    C::Group: Group + MemberOf<V::VisitedG>,
+    V: PairsVisitor,
 {
     if matcher.r#match(buddy.definition()) {
-        Ok(visitor.on::<C, CurrencyG>(buddy))
+        Ok(visitor.on::<C>(buddy))
     } else {
         Err(visitor)
     }
 }
 
-pub fn visit_noone<V>(visitor: V) -> MaybePivotVisitResult<V>
+pub fn visit_noone<V>(visitor: V) -> MaybePairsVisitorResult<V>
 where
-    V: PivotVisitor,
+    V: PairsVisitor,
 {
     Err(visitor)
 }

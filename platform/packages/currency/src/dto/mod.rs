@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     definition::DefinitionRef,
     error::{Error, Result},
-    from_symbol_any::{MaybePivotVisitResult, PivotVisitor, PivotVisitorResult},
     group::MemberOf,
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
     CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolSlice, SymbolStatic, Tickers,
     TypeMatcher,
 };
@@ -73,20 +73,20 @@ where
         G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
     }
 
-    pub fn may_into_pivot_type<Pivot, V>(self, visitor: V) -> MaybePivotVisitResult<V>
+    pub fn may_into_pair_member_type<Pivot, V>(self, visitor: V) -> MaybePairsVisitorResult<V>
     where
-        Pivot: MemberOf<G>,
-        V: PivotVisitor<VisitedG = G>,
+        Pivot: PairsGroup,
+        V: PairsVisitor<VisitedG = Pivot::CommonGroup>,
     {
-        Pivot::with_buddy(&TypeMatcher::new(self.def), visitor)
+        Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_pivot_type<Pivot, V>(self, visitor: V) -> PivotVisitorResult<V>
+    pub fn into_pair_member_type<Pivot, V>(self, visitor: V) -> PairsVisitorResult<V>
     where
-        Pivot: MemberOf<G>,
-        V: PivotVisitor<VisitedG = G>,
+        Pivot: PairsGroup,
+        V: PairsVisitor<VisitedG = Pivot::CommonGroup>,
     {
-        self.may_into_pivot_type::<Pivot, _>(visitor)
+        self.may_into_pair_member_type::<Pivot, _>(visitor)
             .unwrap_or_else(|_| self.unexpected())
     }
 

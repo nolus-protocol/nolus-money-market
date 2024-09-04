@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    from_symbol_any::{MaybePivotVisitResult, PivotVisitor},
     group::MemberOf,
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
 };
 
@@ -39,19 +39,21 @@ impl CurrencyDef for NlsPlatform {
     }
 }
 
-impl MemberOf<Native> for NlsPlatform {
-    fn with_buddy<M, V>(_matcher: &M, v: V) -> MaybePivotVisitResult<V>
+impl PairsGroup for NlsPlatform {
+    type CommonGroup = Native;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PivotVisitor,
+        V: PairsVisitor,
     {
-        crate::visit_noone(v)
+        crate::visit_noone(visitor)
     }
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Ord, PartialOrd, PartialEq, Eq)]
 pub struct Native {}
-
+impl MemberOf<Self> for Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
 
@@ -84,19 +86,5 @@ impl Group for Native {
         TopG: Group,
     {
         crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(matcher, visitor)
-    }
-}
-
-impl MemberOf<Self> for Native {
-    fn with_buddy<M, V>(matcher: &M, visitor: V) -> MaybePivotVisitResult<V>
-    where
-        M: Matcher,
-        V: PivotVisitor<VisitedG = Self>,
-    {
-        crate::maybe_visit_pivot::<_, NlsPlatform, _, _>(
-            NlsPlatform::definition().dto(),
-            matcher,
-            visitor,
-        )
     }
 }
