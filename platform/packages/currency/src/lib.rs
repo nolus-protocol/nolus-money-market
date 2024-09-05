@@ -1,7 +1,5 @@
 use std::{any::TypeId, fmt::Debug};
 
-use pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor};
-
 pub use crate::{
     definition::Definition,
     dto::{dto, to_string, CurrencyDTO},
@@ -13,6 +11,7 @@ pub use crate::{
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
@@ -110,7 +109,7 @@ where
     }
 }
 
-pub fn maybe_visit_pivot<M, C, V>(
+pub fn maybe_visit_buddy<M, C, V>(
     buddy: &CurrencyDTO<C::Group>,
     matcher: &M,
     visitor: V,
@@ -118,7 +117,7 @@ pub fn maybe_visit_pivot<M, C, V>(
 where
     M: Matcher,
     C: CurrencyDef + PairsGroup<CommonGroup = V::VisitedG>,
-    C::Group: Group + MemberOf<V::VisitedG>,
+    C::Group: MemberOf<V::VisitedG>,
     V: PairsVisitor,
 {
     if matcher.r#match(buddy.definition()) {
@@ -128,9 +127,6 @@ where
     }
 }
 
-pub fn visit_noone<V>(visitor: V) -> MaybePairsVisitorResult<V>
-where
-    V: PairsVisitor,
-{
+pub fn visit_noone<R, V>(visitor: V) -> Result<R, V> {
     Err(visitor)
 }

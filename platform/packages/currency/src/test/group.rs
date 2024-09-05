@@ -70,7 +70,7 @@ impl PairsGroup for SuperGroup {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC1, _>(
             SuperGroupTestC1::definition().dto(),
             matcher,
@@ -101,7 +101,7 @@ impl PairsGroup for SuperGroupTestC1 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC2, _>(
             SuperGroupTestC2::definition().dto(),
             matcher,
@@ -122,7 +122,7 @@ impl PairsGroup for SuperGroupTestC2 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC1, _>(
             SuperGroupTestC1::definition().dto(),
             matcher,
@@ -149,7 +149,7 @@ impl PairsGroup for SuperGroupTestC3 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC2, _>(
             SuperGroupTestC2::definition().dto(),
             matcher,
@@ -167,7 +167,7 @@ impl PairsGroup for SuperGroupTestC4 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC1, _>(
             SuperGroupTestC1::definition().dto(),
             matcher,
@@ -188,7 +188,7 @@ impl PairsGroup for SuperGroupTestC5 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC4, _>(
             SuperGroupTestC4::definition().dto(),
             matcher,
@@ -262,7 +262,7 @@ impl PairsGroup for SubGroup {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SubGroupTestC6, _>(SubGroupTestC6::definition().dto(), matcher, visitor)
             .or_else(|v| {
                 maybe_visit::<_, SubGroupTestC10, _>(
@@ -283,7 +283,7 @@ impl PairsGroup for SubGroupTestC6 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC2, _>(
             SuperGroupTestC2::definition().dto(),
             matcher,
@@ -306,7 +306,7 @@ impl PairsGroup for SubGroupTestC10 {
         M: Matcher,
         V: PairsVisitor<VisitedG = Self::CommonGroup>,
     {
-        use crate::maybe_visit_pivot as maybe_visit;
+        use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<_, SuperGroupTestC2, _>(
             SuperGroupTestC2::definition().dto(),
             matcher,
