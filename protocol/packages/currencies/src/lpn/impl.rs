@@ -1,8 +1,8 @@
 use sdk::schemars;
 
-use currency::{Matcher, MaybePairsVisitorResult, PairsVisitor};
+use currency::{Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 
-use crate::{define_currency, Lpns};
+use crate::{define_currency, Lpns, PaymentGroup};
 
 define_currency!(
     UsdcNoble,
@@ -26,3 +26,4 @@ impl PairsGroup for Lpn {
         currency::visit_noone(visitor) // TODO
     }
 }
+

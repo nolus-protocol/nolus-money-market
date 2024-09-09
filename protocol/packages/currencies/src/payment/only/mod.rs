@@ -12,6 +12,8 @@ mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
+pub(crate) use impl_mod::maybe_visit_buddy;
+
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
 pub struct PaymentOnlyGroup {}
 

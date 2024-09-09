@@ -1,4 +1,7 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
+    PairsVisitor,
+};
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
@@ -57,3 +60,18 @@ impl Group for PaymentGroup {
 }
 
 impl MemberOf<Self> for PaymentGroup {}
+
+impl PairsGroup for PaymentGroup {
+    type CommonGroup = Self;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self, VisitedG = Self::CommonGroup>,
+    {
+        crate::lease::maybe_visit_buddy(matcher, visitor)
+            .or_else(|v| crate::lpn::maybe_visit_buddy(matcher, v))
+            .or_else(|v| crate::native::maybe_visit_buddy(matcher, v))
+            .or_else(|v| only::maybe_visit_buddy(matcher, v))
+    }
+}

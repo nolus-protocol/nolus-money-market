@@ -29,6 +29,8 @@ where
         C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>; // cannot deduce the same bounds for C, as MemberOf defines a sub-group where Self belongs to
 }
 
+pub trait InPoolWith<C> {}
+
 pub trait AnyVisitorPair {
     type VisitedG: Group;
 
@@ -42,7 +44,7 @@ pub trait AnyVisitorPair {
     ) -> AnyVisitorPairResult<Self>
     where
         C1: Currency + MemberOf<Self::VisitedG>,
-        C2: Currency + MemberOf<Self::VisitedG>;
+        C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>;
 }
 
 pub trait GroupVisit
@@ -82,6 +84,7 @@ pub fn visit_any_on_currencies<G, V>(
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
+    // G: Group + PairsGroup<CommonGroup = G> + Currency, // TODO remove `+ Currency` one get rid of `impl PriceGroup for PriceCurrencies`
     G: Group + PairsGroup<CommonGroup = G>,
     V: AnyVisitorPair<VisitedG = G>,
     Error: Into<V::Error>,
@@ -98,7 +101,7 @@ mod impl_any_tickers {
         Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
 
-    use super::AnyVisitorPair;
+    use super::{AnyVisitorPair, InPoolWith};
 
     pub struct FirstTickerVisitor<G, V>
     where
@@ -126,6 +129,7 @@ mod impl_any_tickers {
         V: AnyVisitorPair<VisitedG = G>,
         Error: Into<V::Error>,
     {
+        type Pivot = G;
         type VisitedG = G::CommonGroup;
 
         type Output = <V as AnyVisitorPair>::Output;
@@ -160,10 +164,12 @@ mod impl_any_tickers {
     }
     impl<C1, G, V> PairsVisitor for SecondTickerVisitor<C1, G, V>
     where
-        C1: Currency + MemberOf<G> + MemberOf<V::VisitedG>,
+        C1: CurrencyDef,
+        C1::Group: MemberOf<G>,
         G: Group,
         V: AnyVisitorPair<VisitedG = G>,
     {
+        type Pivot = C1;
         type VisitedG = G;
 
         type Output = <V as AnyVisitorPair>::Output;
@@ -171,8 +177,8 @@ mod impl_any_tickers {
 
         fn on<C2>(self, def: &CurrencyDTO<C2::Group>) -> PairsVisitorResult<Self>
         where
-            C2: CurrencyDef,
-            C2::Group: Group + MemberOf<Self::VisitedG>,
+            C2: CurrencyDef + InPoolWith<Self::Pivot>,
+            C2::Group: MemberOf<Self::VisitedG>,
         {
             self.visitor
                 .on::<C1, C2>(&self.def1, &def.into_super_group())
@@ -190,7 +196,7 @@ mod test {
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC10, SubGroupTestC6,
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC5,
         },
-        CurrencyDef, Group, MemberOf, Tickers,
+        Currency, CurrencyDef, Group, MemberOf, Tickers,
     };
 
     #[test]
@@ -297,7 +303,7 @@ mod test {
 
     fn visit_any_currencies_ok<VisitedG, CDef1, CDef2>()
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG>,
+        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,
@@ -311,7 +317,7 @@ mod test {
 
     fn visit_any_currencies_nok<VisitedG, CDef1, CDef2>()
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG>,
+        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,
@@ -328,7 +334,7 @@ mod test {
 
     fn visit_any_currencies_int<VisitedG, CDef1, CDef2>() -> Result<bool, Error>
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG>,
+        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,

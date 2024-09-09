@@ -1,4 +1,7 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, CurrencyDef, Group, InPoolWith, Matcher, MaybeAnyVisitResult,
+    MaybePairsVisitorResult, MemberOf, PairsVisitor,
+};
 
 pub use impl_mod::Nls;
 
@@ -51,5 +54,16 @@ impl Group for Native {
     }
 }
 
+pub(crate) fn maybe_visit_buddy<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+where
+    M: Matcher,
+    V: PairsVisitor<Pivot = PaymentGroup, VisitedG = PaymentGroup>,
+{
+    use currency::maybe_visit_buddy as maybe_visit;
+    maybe_visit::<Nls, _, _>(Nls::definition().dto(), matcher, visitor)
+}
+
 impl MemberOf<Self> for Native {}
 impl MemberOf<PaymentGroup> for Native {}
+
+impl InPoolWith<PaymentGroup> for Nls {}

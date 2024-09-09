@@ -1,6 +1,8 @@
 use sdk::schemars;
 
-use crate::{define_currency, Native};
+use currency::{Matcher, PairsGroup};
+
+use crate::{define_currency, Native, PaymentGroup};
 
 define_currency!(
     Nls,

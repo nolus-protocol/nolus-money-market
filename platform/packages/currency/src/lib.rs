@@ -6,7 +6,7 @@ pub use crate::{
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
-        AnyVisitorResult, GroupVisit,
+        AnyVisitorResult, GroupVisit, InPoolWith,
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
@@ -109,14 +109,14 @@ where
     }
 }
 
-pub fn maybe_visit_buddy<M, C, V>(
+pub fn maybe_visit_buddy<C, M, V>(
     buddy: &CurrencyDTO<C::Group>,
     matcher: &M,
     visitor: V,
 ) -> MaybePairsVisitorResult<V>
 where
     M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = V::VisitedG>,
+    C: CurrencyDef + PairsGroup<CommonGroup = V::VisitedG> + InPoolWith<V::Pivot>,
     C::Group: MemberOf<V::VisitedG>,
     V: PairsVisitor,
 {

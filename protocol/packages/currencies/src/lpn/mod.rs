@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, CurrencyDef, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsVisitor
+};
 use sdk::schemars::{self, JsonSchema};
 
 pub use impl_mod::Lpn;
@@ -60,6 +62,17 @@ impl Group for Lpns {
 
 impl MemberOf<PaymentGroup> for Lpns {}
 impl MemberOf<Self> for Lpns {}
+
+pub(crate) fn maybe_visit_buddy<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+where
+    M: Matcher,
+    V: PairsVisitor<Pivot = PaymentGroup, VisitedG = PaymentGroup>,
+{
+    use currency::maybe_visit_buddy as maybe_visit;
+    maybe_visit::<Lpn, _, _>(Lpn::definition().dto(), matcher, visitor)
+}
+
+impl InPoolWith<PaymentGroup> for Lpn {}
 
 #[cfg(test)]
 mod test {

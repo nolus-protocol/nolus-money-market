@@ -15,6 +15,8 @@ pub(crate) mod r#impl;
 #[cfg(feature = "testing")]
 pub(crate) mod testing;
 
+pub(crate) use impl_mod::maybe_visit_buddy;
+
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,
 )]

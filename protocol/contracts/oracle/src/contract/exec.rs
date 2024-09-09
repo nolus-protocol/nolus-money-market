@@ -1,6 +1,6 @@
 use finance::price::dto::PriceDTO;
 
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf, PairsGroup};
 use platform::{contract, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -27,7 +27,7 @@ where
     BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
     BaseCurrencies: Group + MemberOf<PriceCurrencies>,
     AlarmCurrencies: Group,
-    PriceCurrencies: Group,
+    PriceCurrencies: Group + PairsGroup<CommonGroup = PriceCurrencies>,
 {
     match msg {
         ExecuteMsg::FeedPrices { prices } => {
@@ -67,7 +67,7 @@ fn try_feed_prices<G, BaseC, BaseG>(
     prices: Vec<PriceDTO<G, G>>,
 ) -> ContractResult<()>
 where
-    G: Group,
+    G: Group + PairsGroup<CommonGroup = G>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
     BaseG: Group + MemberOf<G>,

@@ -76,7 +76,7 @@ where
     pub fn may_into_pair_member_type<Pivot, V>(self, visitor: V) -> MaybePairsVisitorResult<V>
     where
         Pivot: PairsGroup,
-        V: PairsVisitor<VisitedG = Pivot::CommonGroup>,
+        V: PairsVisitor<Pivot = Pivot, VisitedG = Pivot::CommonGroup>,
     {
         Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
@@ -84,7 +84,7 @@ where
     pub fn into_pair_member_type<Pivot, V>(self, visitor: V) -> PairsVisitorResult<V>
     where
         Pivot: PairsGroup,
-        V: PairsVisitor<VisitedG = Pivot::CommonGroup>,
+        V: PairsVisitor<Pivot = Pivot, VisitedG = Pivot::CommonGroup>,
     {
         self.may_into_pair_member_type::<Pivot, _>(visitor)
             .unwrap_or_else(|_| self.unexpected())

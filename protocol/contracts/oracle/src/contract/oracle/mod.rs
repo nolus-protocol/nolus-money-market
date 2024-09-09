@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, PairsGroup};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -36,7 +36,7 @@ pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
 pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
-    PriceG: Group,
+    PriceG: Group + PairsGroup<CommonGroup = PriceG>,
     BaseC: Currency + MemberOf<BaseG>,
     BaseG: Group,
 {
@@ -49,7 +49,7 @@ where
 impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
-    PriceG: Group,
+    PriceG: Group + PairsGroup<CommonGroup = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
@@ -168,7 +168,7 @@ where
 impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
-    PriceG: Group + Clone,
+    PriceG: Group + Clone + PairsGroup<CommonGroup = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
