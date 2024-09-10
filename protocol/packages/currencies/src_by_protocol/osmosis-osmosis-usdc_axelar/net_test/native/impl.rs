@@ -1,8 +1,8 @@
 use sdk::schemars;
 
-use currency::{PairsGroup, PairsVisitor, MaybePairsVisitorResult, Matcher};
+use currency::{Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 
-use crate::{define_currency, Native, Lpn, PaymentGroup};
+use crate::{define_currency, Lpn, Native, PaymentGroup};
 
 define_currency!(
     Nls,

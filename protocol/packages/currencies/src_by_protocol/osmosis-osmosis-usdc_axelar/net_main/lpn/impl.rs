@@ -2,9 +2,7 @@ use sdk::schemars;
 
 use currency::InPoolWith;
 
-use crate::{
-    define_currency, lease::impl_mod::Osmo, payment::only::impl_mod::UsdcNoble, Lpns,
-};
+use crate::{define_currency, lease::impl_mod::Osmo, payment::only::impl_mod::UsdcNoble, Lpns};
 
 define_currency!(
     Usdc,
