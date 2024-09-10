@@ -62,8 +62,6 @@ where
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    type VisitorG = VisitorG;
-
     type Output = ApiCurrency;
 
     type Error = Never;

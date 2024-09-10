@@ -1,7 +1,4 @@
-use currency::{
-    AnyVisitor, CurrencyDef, Group, InPoolWith, Matcher, MaybeAnyVisitResult,
-    MaybePairsVisitorResult, MemberOf, PairsVisitor,
-};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 
 pub use impl_mod::Nls;
 
@@ -21,49 +18,33 @@ mod testing;
 pub struct Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
+    type TopG = PaymentGroup;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
+        Self: Group<TopG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        matcher: &M,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self>,
     {
         currency::maybe_visit_member::<_, Nls, Self, _>(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self::TopG>,
     {
-        currency::maybe_visit_member::<_, Nls, TopG, _>(matcher, visitor)
+        currency::maybe_visit_member::<_, Nls, Self::TopG, _>(matcher, visitor)
     }
-}
-
-pub(crate) fn maybe_visit_buddy<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-    M: Matcher,
-    V: PairsVisitor<Pivot = PaymentGroup, VisitedG = PaymentGroup>,
-{
-    use currency::maybe_visit_buddy as maybe_visit;
-    maybe_visit::<Nls, _, _>(Nls::definition().dto(), matcher, visitor)
 }
 
 impl MemberOf<Self> for Native {}
 impl MemberOf<PaymentGroup> for Native {}
-
-impl InPoolWith<PaymentGroup> for Nls {}

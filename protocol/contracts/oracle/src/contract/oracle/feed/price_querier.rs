@@ -1,4 +1,4 @@
-use currency::{Currency, CurrencyDTO, Group, MemberOf, PairsGroup};
+use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Storage, Timestamp};
@@ -7,7 +7,7 @@ use crate::ContractError;
 
 pub struct FedPrices<'a, G>
 where
-    G: Group + PairsGroup<CommonGroup = G>,
+    G: Group,
 {
     storage: &'a dyn Storage,
     feeds: &'a PriceFeeds<'static, G>,
@@ -17,7 +17,7 @@ where
 
 impl<'a, G> FedPrices<'a, G>
 where
-    G: Group + PairsGroup<CommonGroup = G>,
+    G: Group,
 {
     pub fn new(
         storage: &'a dyn Storage,
@@ -49,7 +49,7 @@ pub trait PriceQuerier {
 
 impl<'a, G> PriceQuerier for FedPrices<'a, G>
 where
-    G: Group + PairsGroup<CommonGroup = G>,
+    G: Group,
 {
     type CurrencyGroup = G;
 

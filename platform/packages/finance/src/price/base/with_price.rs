@@ -37,7 +37,7 @@ where
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
-    price.amount.with_coin(CoinResolve {
+    price.amount.with_super_coin(CoinResolve {
         price: UncheckedConversion(price),
         cmd,
     })
@@ -57,7 +57,7 @@ where
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
-    amount.with_coin(CoinResolve {
+    amount.with_super_coin(CoinResolve {
         price: CheckedConversion::<BaseG, QuoteC, QuoteG>(amount_quote, PhantomData, PhantomData),
         cmd,
     })
@@ -149,8 +149,6 @@ where
     Cmd: WithPrice<QuoteC, PriceG = G>,
     Cmd::Error: From<Error>,
 {
-    type VisitorG = G;
-
     type Output = Cmd::Output;
 
     type Error = Cmd::Error;
@@ -158,7 +156,7 @@ where
     fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<G> + MemberOf<G::TopG>,
     {
         self.price
             .try_obtain_price(amount)

@@ -87,39 +87,40 @@ where
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
     M: Matcher,
-    C: CurrencyDef,
-    C::Group: MemberOf<C::Group> + MemberOf<V::VisitorG>,
+    C: CurrencyDef + PairsGroup<CommonGroup = <C::Group as Group>::TopG>,
+    C::Group: MemberOf<C::Group> + MemberOf<<C::Group as Group>::TopG>,
     V: AnyVisitor<C::Group>,
 {
     maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
 
-pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub fn maybe_visit_member<M, C, VisitedG, V>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    C: CurrencyDef,
-    C::Group: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    V: AnyVisitor<TopG>,
-    TopG: Group,
+    C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+    C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+    V: AnyVisitor<VisitedG>,
+    VisitedG: Group,
 {
-    if matcher.r#match(C::definition().dto().definition()) {
-        Ok(visitor.on::<C>(C::definition()))
+    let member = C::definition();
+    if matcher.r#match(member.dto().definition()) {
+        Ok(visitor.on::<C>(member))
     } else {
         Err(visitor)
     }
 }
 
-pub fn maybe_visit_buddy<C, M, V>(
-    buddy: &CurrencyDTO<C::Group>,
-    matcher: &M,
-    visitor: V,
-) -> MaybePairsVisitorResult<V>
+pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
 where
     M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = V::VisitedG> + InPoolWith<V::Pivot>,
-    C::Group: MemberOf<V::VisitedG>,
+    C: CurrencyDef + InPoolWith<V::Pivot>,
+    C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
     V: PairsVisitor,
 {
+    let buddy = C::definition().dto();
     if matcher.r#match(buddy.definition()) {
         Ok(visitor.on::<C>(buddy))
     } else {

@@ -12,41 +12,34 @@ mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
 
-pub(crate) use impl_mod::maybe_visit_buddy;
-
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
 pub struct PaymentOnlyGroup {}
 
 impl Group for PaymentOnlyGroup {
     const DESCR: &'static str = "payment only";
+    type TopG = PaymentGroup;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
+        Self: Group<TopG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        matcher: &M,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self>,
     {
         impl_mod::maybe_visit::<_, _, Self>(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self::TopG>,
     {
         impl_mod::maybe_visit(matcher, visitor)
     }

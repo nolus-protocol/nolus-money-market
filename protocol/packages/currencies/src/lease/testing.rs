@@ -1,10 +1,10 @@
 use currency::{
-    AnyVisitor, CurrencyDef, Group, InPoolWith, Matcher, MaybeAnyVisitResult,
-    MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+    AnyVisitor, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
 };
 use sdk::schemars;
 
-use crate::{define_currency, LeaseGroup, PaymentGroup};
+use crate::{define_currency, LeaseGroup, Lpn, PaymentGroup};
 
 define_currency!(
     LeaseC1,
@@ -51,102 +51,80 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    V: AnyVisitor<TopG>,
-    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
+    LeaseGroup: MemberOf<VisitedG>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, LeaseC1, TopG, _>(matcher, visitor)
-        .or_else(|visitor| maybe_visit::<_, LeaseC2, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC3, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC4, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, LeaseC5, TopG, _>(matcher, visitor))
+    maybe_visit::<_, LeaseC1, VisitedG, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, LeaseC2, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC3, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC4, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC5, VisitedG, _>(matcher, visitor))
 }
 
-pub(crate) fn maybe_visit_buddy<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-    M: Matcher,
-    V: PairsVisitor<Pivot = PaymentGroup, VisitedG = PaymentGroup>,
-{
-    use currency::maybe_visit_buddy as maybe_visit;
-    maybe_visit::<LeaseC1, _, _>(LeaseC1::definition().dto(), matcher, visitor)
-        .or_else(|visitor| {
-            maybe_visit::<LeaseC2, _, _>(LeaseC2::definition().dto(), matcher, visitor)
-        })
-        .or_else(|visitor| {
-            maybe_visit::<LeaseC3, _, _>(LeaseC3::definition().dto(), matcher, visitor)
-        })
-        .or_else(|visitor| {
-            maybe_visit::<LeaseC4, _, _>(LeaseC4::definition().dto(), matcher, visitor)
-        })
-        .or_else(|visitor| {
-            maybe_visit::<LeaseC5, _, _>(LeaseC5::definition().dto(), matcher, visitor)
-        })
-}
-
-impl InPoolWith<PaymentGroup> for LeaseC1 {}
 impl PairsGroup for LeaseC1 {
     type CommonGroup = PaymentGroup;
 
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }
 }
 
-impl InPoolWith<PaymentGroup> for LeaseC2 {}
 impl PairsGroup for LeaseC2 {
     type CommonGroup = PaymentGroup;
 
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }
 }
 
-impl InPoolWith<PaymentGroup> for LeaseC3 {}
 impl PairsGroup for LeaseC3 {
     type CommonGroup = PaymentGroup;
 
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }
 }
 
-impl InPoolWith<PaymentGroup> for LeaseC4 {}
 impl PairsGroup for LeaseC4 {
     type CommonGroup = PaymentGroup;
 
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }
 }
+impl InPoolWith<Lpn> for LeaseC4 {}
 
-impl InPoolWith<PaymentGroup> for LeaseC5 {}
 impl PairsGroup for LeaseC5 {
     type CommonGroup = PaymentGroup;
 
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }

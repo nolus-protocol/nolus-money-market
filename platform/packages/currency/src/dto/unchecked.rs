@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::{group::MemberOf, Group, SymbolOwned, Tickers};
+use crate::{Group, SymbolOwned, Tickers};
 
 use crate::error::Error;
 
@@ -22,7 +22,7 @@ impl Display for TickerDTO {
 
 impl<G> TryFrom<TickerDTO> for ValidatedDTO<G>
 where
-    G: Group + MemberOf<G>,
+    G: Group,
 {
     type Error = Error;
 

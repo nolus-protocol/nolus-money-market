@@ -35,7 +35,7 @@ where
 
 impl<PriceG, BaseC, BaseG, Querier> AnyVisitorPair for &mut LegCmd<PriceG, BaseC, BaseG, Querier>
 where
-    PriceG: Group,
+    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group,

@@ -1,18 +1,18 @@
 use currency::{Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 use sdk::schemars;
 
-use crate::{define_currency, Lpns, PaymentGroup};
+use crate::{define_currency, LeaseC4, Lpns, PaymentGroup};
 
 define_currency!(Lpn, "LPN", "ibc/test_LPN", "ibc/test_DEX_LPN", Lpns, 6);
 
 impl PairsGroup for Lpn {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        currency::maybe_visit_buddy::<LeaseC4, _, _>(matcher, visitor)
     }
 }

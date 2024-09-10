@@ -23,7 +23,7 @@ pub trait BankAccountView {
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin<G, VisitorG = G> + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate;
 }
 
@@ -65,7 +65,7 @@ pub fn may_received<VisitedG, V>(
 ) -> Option<WithCoinResult<VisitedG, V>>
 where
     VisitedG: Group,
-    V: WithCoin<VisitedG, VisitorG = VisitedG>,
+    V: WithCoin<VisitedG>,
 {
     let mut may_res = None;
     for coin in cw_amount {
@@ -107,7 +107,7 @@ impl<'a> BankAccountView for BankView<'a> {
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin<G, VisitorG = G> + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.querier
@@ -176,8 +176,6 @@ where
     where
         G: Group,
     {
-        type VisitorG = G;
-
         type Output = Batch;
 
         type Error = Error;
@@ -185,7 +183,7 @@ where
         fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
         where
             C: CurrencyDef,
-            C::Group: MemberOf<Self::VisitorG>,
+            C::Group: MemberOf<G> + MemberOf<G::TopG>,
         {
             let mut sender = LazySenderStub::new(self.to);
             sender.send(coin);
@@ -232,7 +230,7 @@ where
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
-        Cmd: WithCoin<G, VisitorG = G> + Clone,
+        Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
@@ -605,7 +603,6 @@ mod test {
     where
         G: Group,
     {
-        type VisitorG = G;
         type Output = ();
         type Error = Error;
 

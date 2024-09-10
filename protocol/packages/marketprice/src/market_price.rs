@@ -73,7 +73,7 @@ where
     ) -> Result<PriceDTO<PriceG, QuoteG>, PriceFeedsError>
     where
         'm: 'a,
-        PriceG: Group,
+        PriceG: Group<TopG = PriceG>,
         QuoteC: Currency + MemberOf<QuoteG> + MemberOf<PriceG>,
         QuoteG: Group + MemberOf<PriceG>,
         Iter: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
@@ -151,7 +151,7 @@ impl<'a, 'def, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, 'def, Iter, C, G, Qu
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: Currency + MemberOf<G>,
-    G: Group,
+    G: Group<TopG = G>,
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
@@ -190,18 +190,17 @@ impl<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: Currency + MemberOf<G>,
-    G: Group,
+    G: Group<TopG = G>,
     QuoteQuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    type VisitorG = G;
     type Output = PriceDTO<G, QuoteG>;
     type Error = PriceFeedsError;
 
     fn on<C>(self, def: &C) -> AnyVisitorResult<G, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<G> + MemberOf<G::TopG>,
     {
         let next_c = def.dto().into_super_group::<G>();
         let next_price = self.feeds.price_of_feed::<C, QuoteC>(

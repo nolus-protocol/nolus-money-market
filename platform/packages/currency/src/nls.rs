@@ -56,35 +56,30 @@ pub struct Native {}
 impl MemberOf<Self> for Native {}
 impl Group for Native {
     const DESCR: &'static str = "native";
+    type TopG = Self;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
+        Self: Group<TopG = Self>,
     {
-        Self::maybe_visit_member::<_, _, Self>(matcher, visitor)
+        Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        matcher: &M,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self>,
     {
         crate::maybe_visit_member::<_, NlsPlatform, Self, _>(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Native, V>
     where
         M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Native>,
     {
-        crate::maybe_visit_member::<_, NlsPlatform, TopG, _>(matcher, visitor)
+        crate::maybe_visit_member::<_, NlsPlatform, Self::TopG, _>(matcher, visitor)
     }
 }

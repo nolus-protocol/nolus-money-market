@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    AnyVisitor, CurrencyDef, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsVisitor
-};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 pub use impl_mod::Lpn;
@@ -27,52 +25,36 @@ pub struct Lpns {}
 
 impl Group for Lpns {
     const DESCR: &'static str = "lpns";
+    type TopG = PaymentGroup;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
+        Self: Group<TopG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        matcher: &M,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self>,
     {
         currency::maybe_visit_member::<_, Lpn, Self, _>(matcher, visitor)
     }
 
-    fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self::TopG>,
     {
-        currency::maybe_visit_member::<_, Lpn, TopG, _>(matcher, visitor)
+        currency::maybe_visit_member::<_, Lpn, Self::TopG, _>(matcher, visitor)
     }
 }
 
 impl MemberOf<PaymentGroup> for Lpns {}
 impl MemberOf<Self> for Lpns {}
-
-pub(crate) fn maybe_visit_buddy<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-    M: Matcher,
-    V: PairsVisitor<Pivot = PaymentGroup, VisitedG = PaymentGroup>,
-{
-    use currency::maybe_visit_buddy as maybe_visit;
-    maybe_visit::<Lpn, _, _>(Lpn::definition().dto(), matcher, visitor)
-}
-
-impl InPoolWith<PaymentGroup> for Lpn {}
 
 #[cfg(test)]
 mod test {

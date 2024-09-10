@@ -43,7 +43,6 @@ where
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    type VisitorG = VisitorG;
     type Output = bool;
     type Error = Error;
 
@@ -80,7 +79,6 @@ impl<G> AnyVisitor<G> for ExpectUnknownCurrency<G>
 where
     G: Group,
 {
-    type VisitorG = G;
     type Output = bool;
     type Error = Error;
 
@@ -124,11 +122,12 @@ where
 
 impl<'dtos, VisitedG, G1, G2> AnyVisitorPair for ExpectPair<'dtos, VisitedG, G1, G2>
 where
-    VisitedG: Group,
+    VisitedG: Group<TopG = VisitedG>,
     G1: Group + MemberOf<VisitedG>,
     G2: Group + MemberOf<VisitedG>,
 {
     type VisitedG = VisitedG;
+
     type Output = bool;
     type Error = Error;
 

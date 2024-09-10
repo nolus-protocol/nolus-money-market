@@ -17,22 +17,20 @@ pub trait AnyVisitor<VisitedG>
 where
     VisitedG: Group,
 {
-    type VisitorG: Group;
-
     type Output;
     type Error;
 
     // TODO suppose passing def as CurrencyDTO<G>, where G:Group, C: Currency + MembedOf<G> would help the compiler to eliminate a bunch of monomorphized functions
     fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
     where
-        C: CurrencyDef,
-        C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>; // cannot deduce the same bounds for C, as MemberOf defines a sub-group where Self belongs to
+        C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>; // cannot deduce the same bounds for C, as MemberOf defines a sub-group where Self belongs to
 }
 
 pub trait InPoolWith<C> {}
 
 pub trait AnyVisitorPair {
-    type VisitedG: Group;
+    type VisitedG: Group<TopG = Self::VisitedG>;
 
     type Output;
     type Error;
@@ -53,8 +51,7 @@ where
 {
     fn visit_any<V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
     where
-        V: AnyVisitor<Self::Group, VisitorG = Self::Group>,
-        Self::Group: MemberOf<Self::Group>,
+        V: AnyVisitor<Self::Group>,
         Error: Into<V::Error>,
     {
         Self::maybe_visit_any(symbol, visitor).unwrap_or_else(|_| {
@@ -64,11 +61,10 @@ where
 
     fn maybe_visit_any<V>(symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
     where
-        V: AnyVisitor<Self::Group, VisitorG = Self::Group>,
-        Self::Group: MemberOf<Self::Group>,
+        V: AnyVisitor<Self::Group>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        <Self::Group as Group>::maybe_visit(&matcher, visitor)
+        <Self::Group as Group>::maybe_visit_super_visitor(&matcher, visitor)
     }
 }
 impl<T> GroupVisit for T
@@ -78,18 +74,16 @@ where
 {
 }
 
-pub fn visit_any_on_currencies<G, V>(
-    currency1: CurrencyDTO<G>,
-    currency2: CurrencyDTO<G>,
+pub fn visit_any_on_currencies<V>(
+    currency1: CurrencyDTO<V::VisitedG>,
+    currency2: CurrencyDTO<V::VisitedG>,
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where
-    // G: Group + PairsGroup<CommonGroup = G> + Currency, // TODO remove `+ Currency` one get rid of `impl PriceGroup for PriceCurrencies`
-    G: Group + PairsGroup<CommonGroup = G>,
-    V: AnyVisitorPair<VisitedG = G>,
+    V: AnyVisitorPair,
     Error: Into<V::Error>,
 {
-    currency1.into_pair_member_type::<G, _>(FirstTickerVisitor::new(currency2, visitor))
+    currency1.into_currency_type(FirstTickerVisitor::new(currency1, currency2, visitor))
 }
 
 mod impl_any_tickers {
@@ -101,87 +95,89 @@ mod impl_any_tickers {
         Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
 
-    use super::{AnyVisitorPair, InPoolWith};
+    use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, InPoolWith};
 
-    pub struct FirstTickerVisitor<G, V>
+    pub struct FirstTickerVisitor<V>
     where
-        G: Group,
         V: AnyVisitorPair,
     {
-        currency2: CurrencyDTO<G>,
+        currency1: CurrencyDTO<V::VisitedG>,
+        currency2: CurrencyDTO<V::VisitedG>,
         visitor: V,
     }
-    impl<G, V> FirstTickerVisitor<G, V>
+    impl<V> FirstTickerVisitor<V>
     where
-        G: Group + PairsGroup<CommonGroup = G>,
         V: AnyVisitorPair,
     {
-        pub fn new(ticker2: CurrencyDTO<G>, visitor: V) -> Self {
+        pub fn new(
+            currency1: CurrencyDTO<V::VisitedG>,
+            currency2: CurrencyDTO<V::VisitedG>,
+            visitor: V,
+        ) -> Self {
             Self {
-                currency2: ticker2,
+                currency1,
+                currency2,
                 visitor,
             }
         }
     }
-    impl<G, V> PairsVisitor for FirstTickerVisitor<G, V>
+    impl<V> AnyVisitor<V::VisitedG> for FirstTickerVisitor<V>
     where
-        G: Group + PairsGroup<CommonGroup = G>,
-        V: AnyVisitorPair<VisitedG = G>,
+        V: AnyVisitorPair,
         Error: Into<V::Error>,
     {
-        type Pivot = G;
-        type VisitedG = G::CommonGroup;
-
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C1>(self, def: &CurrencyDTO<C1::Group>) -> PairsVisitorResult<Self>
+        fn on<C1>(self, def: &C1) -> AnyVisitorResult<V::VisitedG, Self>
         where
-            C1: CurrencyDef + PairsGroup<CommonGroup = Self::VisitedG>,
-            C1::Group: Group + MemberOf<Self::VisitedG>,
+            C1: CurrencyDef + PairsGroup<CommonGroup = <V::VisitedG as Group>::TopG>,
+            C1::Group: MemberOf<V::VisitedG> + MemberOf<<V::VisitedG as Group>::TopG>, // TODO since V::VisitedG === Self::VisitorG, do we need them both?
         {
-            let def1 = def.into_super_group();
+            debug_assert_eq!(def.dto(), &self.currency1);
             self.currency2
-                .may_into_pair_member_type::<C1, _>(SecondTickerVisitor {
+                .may_into_pair_member_type(SecondTickerVisitor {
                     c: PhantomData::<C1>,
-                    def1,
-                    group: PhantomData::<G>,
+                    currency1: self.currency1,
+                    currency2: self.currency2,
                     visitor: self.visitor,
                 })
-                .unwrap_or_else(|_| Err(Error::not_in_pool_with(&def1, &self.currency2).into()))
+                .unwrap_or_else(|_| {
+                    Err(Error::not_in_pool_with(&self.currency1, &self.currency2).into())
+                })
         }
     }
 
-    struct SecondTickerVisitor<C1, G, V>
+    struct SecondTickerVisitor<C1, V>
     where
         C1: Currency,
         V: AnyVisitorPair,
     {
         c: PhantomData<C1>,
-        def1: CurrencyDTO<V::VisitedG>,
-        group: PhantomData<G>,
+        currency1: CurrencyDTO<V::VisitedG>,
+        currency2: CurrencyDTO<V::VisitedG>,
         visitor: V,
     }
-    impl<C1, G, V> PairsVisitor for SecondTickerVisitor<C1, G, V>
+    impl<C1, V> PairsVisitor for SecondTickerVisitor<C1, V>
     where
-        C1: CurrencyDef,
-        C1::Group: MemberOf<G>,
-        G: Group,
-        V: AnyVisitorPair<VisitedG = G>,
+        C1: CurrencyDef + PairsGroup,
+        //+ PairsGroup<CommonGroup = <V::VisitedG as Group>::TopG>,
+        C1::Group: MemberOf<V::VisitedG> + MemberOf<<C1 as PairsGroup>::CommonGroup>,
+        V: AnyVisitorPair<VisitedG = C1::CommonGroup>,
     {
         type Pivot = C1;
-        type VisitedG = G;
+        // C1::CommonGroup;
 
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C2>(self, def: &CurrencyDTO<C2::Group>) -> PairsVisitorResult<Self>
+        fn on<C2>(self, currency: &CurrencyDTO<C2::Group>) -> PairsVisitorResult<Self>
         where
             C2: CurrencyDef + InPoolWith<Self::Pivot>,
-            C2::Group: MemberOf<Self::VisitedG>,
+            C2::Group: MemberOf<<Self::Pivot as PairsGroup>::CommonGroup>,
         {
-            self.visitor
-                .on::<C1, C2>(&self.def1, &def.into_super_group())
+            debug_assert_eq!(currency, &self.currency2);
+            self.visitor.on::<C1, C2>(&self.currency1, &self.currency2)
         }
     }
 }
@@ -191,12 +187,11 @@ mod test {
     use crate::{
         error::Error,
         from_symbol_any::GroupVisit,
-        pairs::PairsGroup,
         test::{
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC10, SubGroupTestC6,
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC5,
         },
-        Currency, CurrencyDef, Group, MemberOf, Tickers,
+        CurrencyDef, Group, MemberOf, Tickers,
     };
 
     #[test]
@@ -303,7 +298,7 @@ mod test {
 
     fn visit_any_currencies_ok<VisitedG, CDef1, CDef2>()
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
+        VisitedG: Group<TopG = VisitedG>,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,
@@ -317,7 +312,7 @@ mod test {
 
     fn visit_any_currencies_nok<VisitedG, CDef1, CDef2>()
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
+        VisitedG: Group<TopG = VisitedG>,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,
@@ -334,7 +329,7 @@ mod test {
 
     fn visit_any_currencies_int<VisitedG, CDef1, CDef2>() -> Result<bool, Error>
     where
-        VisitedG: Group + PairsGroup<CommonGroup = VisitedG> + Currency,
+        VisitedG: Group<TopG = VisitedG>,
         CDef1: CurrencyDef,
         CDef1::Group: MemberOf<CDef1::Group> + MemberOf<VisitedG>,
         CDef2: CurrencyDef,
@@ -343,6 +338,6 @@ mod test {
         let dto1 = crate::dto::<CDef1, _>();
         let dto2 = crate::dto::<CDef2, _>();
         let v_c1_c2 = ExpectPair::<VisitedG, _, _>::new(&dto1, &dto2);
-        super::visit_any_on_currencies::<VisitedG, _>(dto1, dto2, v_c1_c2)
+        super::visit_any_on_currencies(dto1, dto2, v_c1_c2)
     }
 }

@@ -11,7 +11,7 @@ impl PairsGroup for Nls {
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // TODO
     }

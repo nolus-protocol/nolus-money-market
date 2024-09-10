@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf, PairsGroup};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{config::Config, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -26,7 +26,7 @@ pub struct Feeds<PriceG, BaseC, BaseG> {
 
 impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
 where
-    PriceG: Group + PairsGroup<CommonGroup = PriceG>,
+    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,

@@ -27,7 +27,7 @@ mod unchecked;
 #[serde(
     try_from = "unchecked::TickerDTO",
     into = "unchecked::TickerDTO",
-    bound(deserialize = "G: Group + MemberOf<G>")
+    bound(deserialize = "G: Group")
 )]
 pub struct CurrencyDTO<G>
 where
@@ -50,43 +50,40 @@ where
 
     pub fn may_into_currency_type<SubG, V>(self, visitor: V) -> MaybeAnyVisitResult<SubG, V>
     where
-        SubG: Group + MemberOf<SubG> + MemberOf<G>,
-        V: AnyVisitor<SubG, VisitorG = G>,
+        SubG: Group,
+        V: AnyVisitor<SubG>,
     {
         SubG::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_currency_super_group_type<TopG, V>(self, visitor: V) -> AnyVisitorResult<G, V>
+    pub fn into_currency_super_group_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
     where
-        TopG: Group,
-        G: MemberOf<G> + MemberOf<TopG>,
-        V: AnyVisitor<G, VisitorG = TopG>,
+        V: AnyVisitor<G>,
     {
-        G::maybe_visit_super_visitor::<_, _, _>(&TypeMatcher::new(self.def), visitor)
+        G::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
             .unwrap_or_else(|_| self.unexpected())
     }
 
     pub fn into_currency_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
     where
-        V: AnyVisitor<G, VisitorG = G>,
+        V: AnyVisitor<G>,
+        G: Group<TopG = G>,
     {
         G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
     }
 
-    pub fn may_into_pair_member_type<Pivot, V>(self, visitor: V) -> MaybePairsVisitorResult<V>
+    pub fn may_into_pair_member_type<V>(self, visitor: V) -> MaybePairsVisitorResult<V>
     where
-        Pivot: PairsGroup,
-        V: PairsVisitor<Pivot = Pivot, VisitedG = Pivot::CommonGroup>,
+        V: PairsVisitor,
     {
-        Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
+        V::Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_pair_member_type<Pivot, V>(self, visitor: V) -> PairsVisitorResult<V>
+    pub fn into_pair_member_type<V>(self, visitor: V) -> PairsVisitorResult<V>
     where
-        Pivot: PairsGroup,
-        V: PairsVisitor<Pivot = Pivot, VisitedG = Pivot::CommonGroup>,
+        V: PairsVisitor,
     {
-        self.may_into_pair_member_type::<Pivot, _>(visitor)
+        self.may_into_pair_member_type(visitor)
             .unwrap_or_else(|_| self.unexpected())
     }
 
@@ -124,18 +121,16 @@ where
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn from_symbol_testing<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<G>>
+    pub fn from_symbol_testing<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
-        S::Group: MemberOf<S::Group>,
     {
         Self::from_symbol::<S>(symbol)
     }
 
-    fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<G>>
+    fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
-        S::Group: MemberOf<S::Group>,
     {
         use crate::GroupVisit;
 
@@ -144,8 +139,6 @@ where
         where
             G: Group,
         {
-            type VisitorG = G;
-
             type Output = CurrencyDTO<G>;
             type Error = Error;
 
@@ -157,7 +150,8 @@ where
                 Ok(def.dto().into_super_group())
             }
         }
-        S::visit_any(symbol, TypeToCurrency(PhantomData))
+        // V: AnyVisitor<<Self::Group as Group>::TopG>,
+        S::visit_any(symbol, TypeToCurrency(PhantomData::<S::Group>))
     }
 
     fn unexpected<R>(self) -> R

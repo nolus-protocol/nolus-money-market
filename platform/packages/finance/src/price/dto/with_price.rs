@@ -23,7 +23,7 @@ where
 {
     // the refactored code that substituted the Price generic parameter with an enum Price got worse in the size of the output .wasm
     // trait objects are not possible here due to the generic function parameters
-    price.amount.with_coin(PriceAmountVisitor {
+    price.amount.with_super_coin(PriceAmountVisitor {
         _amount_g: PhantomData::<G>,
         amount_quote: &price.amount_quote,
         price: NonValidatingPrice {
@@ -47,7 +47,7 @@ where
     Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Cmd::Error: From<Error>,
 {
-    amount.with_coin(PriceAmountVisitor {
+    amount.with_super_coin(PriceAmountVisitor {
         _amount_g: PhantomData::<G>,
         amount_quote: &amount_quote,
         price: ValidatingPrice {
@@ -78,17 +78,15 @@ where
     Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Cmd::Error: From<Error>,
 {
-    type VisitorG = G;
-
     type Output = Cmd::Output;
 
     type Error = Cmd::Error;
 
-    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<Self::VisitorG, Self>
+    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
     where
-        C: Currency + MemberOf<Self::VisitorG>,
+        C: Currency + MemberOf<G> + MemberOf<G::TopG>,
     {
-        self.amount_quote.with_coin(PriceQuoteAmountVisitor {
+        self.amount_quote.with_super_coin(PriceQuoteAmountVisitor {
             amount,
             _amount_g: PhantomData::<G>,
             _amount_quote_g: PhantomData::<QuoteG>,
@@ -120,15 +118,13 @@ where
     Cmd: WithPrice<G = G, QuoteG = QuoteG>,
     Cmd::Error: From<Error>,
 {
-    type VisitorG = QuoteG;
-
     type Output = Cmd::Output;
 
     type Error = Cmd::Error;
 
-    fn on<QuoteC>(self, amount_quote: Coin<QuoteC>) -> WithCoinResult<Self::VisitorG, Self>
+    fn on<QuoteC>(self, amount_quote: Coin<QuoteC>) -> WithCoinResult<QuoteG, Self>
     where
-        QuoteC: Currency + MemberOf<Self::VisitorG>,
+        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<QuoteG::TopG>,
     {
         self.price
             .try_obtain_price(self.amount, amount_quote)

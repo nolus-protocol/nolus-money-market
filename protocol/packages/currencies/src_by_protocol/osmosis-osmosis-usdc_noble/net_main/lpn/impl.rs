@@ -1,8 +1,12 @@
 use sdk::schemars;
 
-use currency::{Matcher, MaybePairsVisitorResult, PairsVisitor};
+use currency::{InPoolWith, Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 
-use crate::{define_currency, Lpns};
+use crate::{
+    define_currency,
+    lease::impl_mod::{Atom, Inj},
+    Lpns, Nls, PaymentGroup,
+};
 
 define_currency!(
     UsdcNoble,
@@ -21,8 +25,11 @@ impl PairsGroup for Lpn {
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
-        V: PairsVisitor<VisitedG = Self::CommonGroup>,
+        V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        currency::visit_noone(visitor)
     }
 }
+impl InPoolWith<Inj> for Lpn {}
+impl InPoolWith<Nls> for Lpn {}
+impl InPoolWith<Atom> for Lpn {}
