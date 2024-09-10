@@ -46,11 +46,11 @@ where
     type Output = bool;
     type Error = Error;
 
-    fn on<Cin>(self, def: &Cin) -> Result<bool, Error>
+    fn on<Cin>(self, def: &CurrencyDTO<Cin::Group>) -> Result<bool, Error>
     where
         Cin: CurrencyDef,
     {
-        Ok(def.dto() == self.0.dto())
+        Ok(def == self.0.dto())
     }
 }
 
@@ -82,7 +82,10 @@ where
     type Output = bool;
     type Error = Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self> {
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+    where
+        C: CurrencyDef,
+    {
         unreachable!();
     }
 }

@@ -20,8 +20,7 @@ where
     type Output;
     type Error;
 
-    // TODO suppose passing def as CurrencyDTO<G>, where G:Group, C: Currency + MembedOf<G> would help the compiler to eliminate a bunch of monomorphized functions
-    fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>; // cannot deduce the same bounds for C, as MemberOf defines a sub-group where Self belongs to
@@ -129,12 +128,12 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C1>(self, def: &C1) -> AnyVisitorResult<V::VisitedG, Self>
+        fn on<C1>(self, def: &CurrencyDTO<C1::Group>) -> AnyVisitorResult<V::VisitedG, Self>
         where
             C1: CurrencyDef + PairsGroup<CommonGroup = <V::VisitedG as Group>::TopG>,
             C1::Group: MemberOf<V::VisitedG> + MemberOf<<V::VisitedG as Group>::TopG>, // TODO since V::VisitedG === Self::VisitorG, do we need them both?
         {
-            debug_assert_eq!(def.dto(), &self.currency1);
+            debug_assert_eq!(def, &self.currency1);
             self.currency2
                 .may_into_pair_member_type(SecondTickerVisitor {
                     c: PhantomData::<C1>,

@@ -105,8 +105,8 @@ where
     V: AnyVisitor<VisitedG>,
     VisitedG: Group,
 {
-    let member = C::definition();
-    if matcher.r#match(member.dto().definition()) {
+    let member = C::definition().dto();
+    if matcher.r#match(member.definition()) {
         Ok(visitor.on::<C>(member))
     } else {
         Err(visitor)

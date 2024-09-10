@@ -197,12 +197,12 @@ where
     type Output = PriceDTO<G, QuoteG>;
     type Error = PriceFeedsError;
 
-    fn on<C>(self, def: &C) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G> + MemberOf<G::TopG>,
     {
-        let next_c = def.dto().into_super_group::<G>();
+        let next_c = def.into_super_group::<G>();
         let next_price = self.feeds.price_of_feed::<C, QuoteC>(
             &next_c,
             self.c_dto,

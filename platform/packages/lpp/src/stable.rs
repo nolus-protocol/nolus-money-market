@@ -67,7 +67,7 @@ impl Group for StableCurrencyGroup {
         M: Matcher,
         V: AnyVisitor<Self::TopG>,
     {
-        MaybeAnyVisitResult::Ok(visitor.on::<Stable>(&STABLE)) // we accept ANY currency to allow any stable@protocol to be a member
+        MaybeAnyVisitResult::Ok(visitor.on::<Stable>(&STABLE.dto())) // we accept ANY currency to allow any stable@protocol to be a member
     }
 }
 

@@ -142,12 +142,12 @@ where
             type Output = CurrencyDTO<G>;
             type Error = Error;
 
-            fn on<C>(self, def: &C) -> AnyVisitorResult<G, Self>
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
             where
                 C: CurrencyDef,
                 C::Group: MemberOf<G>,
             {
-                Ok(def.dto().into_super_group())
+                Ok(def.into_super_group())
             }
         }
         // V: AnyVisitor<<Self::Group as Group>::TopG>,

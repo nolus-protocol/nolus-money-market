@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{
-    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyDef, CurrencyVisit, Group,
-    GroupVisit, MemberOf, SingleVisitor, Symbol,
+    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyDTO, CurrencyDef, CurrencyVisit,
+    Group, GroupVisit, MemberOf, SingleVisitor, Symbol,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -139,7 +139,7 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
