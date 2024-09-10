@@ -9,7 +9,7 @@ pub use self::only::PaymentOnlyGroup;
 #[cfg(feature = "testing")]
 pub use testing::*;
 
-mod only;
+pub(crate) mod only;
 #[cfg(feature = "testing")]
 mod testing;
 

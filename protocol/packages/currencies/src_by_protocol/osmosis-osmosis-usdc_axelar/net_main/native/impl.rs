@@ -1,6 +1,10 @@
 use sdk::schemars;
 
-use crate::{define_currency, Native};
+use currency::{
+    Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor,
+};
+
+use crate::{define_currency, payment::only::impl_mod::UsdcNoble, Native, PaymentGroup};
 
 define_currency!(
     Nls,
@@ -10,3 +14,16 @@ define_currency!(
     Native,
     6
 );
+
+impl PairsGroup for Nls {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<UsdcNoble, _, _>(matcher, visitor)
+    }
+}

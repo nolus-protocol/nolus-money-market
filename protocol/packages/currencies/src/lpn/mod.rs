@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
+    PairsVisitor,
+};
 use sdk::schemars::{self, JsonSchema};
 
 pub use impl_mod::Lpn;
@@ -16,6 +19,18 @@ use crate::PaymentGroup;
 mod r#impl;
 #[cfg(feature = "testing")]
 mod testing;
+
+impl PairsGroup for Lpn {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor)
+    }
+}
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,

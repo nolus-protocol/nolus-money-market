@@ -1,6 +1,10 @@
 use sdk::schemars;
 
-use crate::{define_currency, Lpns};
+use currency::InPoolWith;
+
+use crate::{
+    define_currency, lease::impl_mod::Osmo, payment::only::impl_mod::UsdcNoble, Lpns,
+};
 
 define_currency!(
     Usdc,
@@ -12,3 +16,6 @@ define_currency!(
 );
 
 pub use Usdc as Lpn;
+
+impl InPoolWith<UsdcNoble> for Lpn {}
+impl InPoolWith<Osmo> for Lpn {}
