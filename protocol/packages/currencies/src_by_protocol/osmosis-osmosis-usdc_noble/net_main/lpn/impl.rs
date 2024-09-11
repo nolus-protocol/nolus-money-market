@@ -1,10 +1,11 @@
 use sdk::schemars;
 
-use currency::{InPoolWith, Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
+use currency::InPoolWith;
 
 use crate::{
-    define_currency, lease::impl_mod::Osmo, payment::only::impl_mod::UsdcNoble, Lpns, Nls,
-    PaymentGroup,
+    define_currency,
+    lease::impl_mod::{Atom, Inj},
+    Lpns, Nls,
 };
 
 define_currency!(
