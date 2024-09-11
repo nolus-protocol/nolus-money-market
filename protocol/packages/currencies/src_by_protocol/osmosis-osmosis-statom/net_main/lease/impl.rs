@@ -1,7 +1,10 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
+};
 use sdk::schemars;
 
-use crate::{define_currency, LeaseGroup};
+use crate::{define_currency, payment::only::impl_mod::Atom, LeaseGroup, Nls, PaymentGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -17,16 +20,33 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    V: AnyVisitor<TopG>,
-    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
+    LeaseGroup: MemberOf<VisitedG>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, UsdcNoble, TopG, _>(matcher, visitor)
+    maybe_visit::<_, UsdcNoble, VisitedG, _>(matcher, visitor)
 }
+
+impl PairsGroup for UsdcNoble {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Atom, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<Nls> for UsdcNoble {}
 
 #[cfg(test)]
 mod test {
