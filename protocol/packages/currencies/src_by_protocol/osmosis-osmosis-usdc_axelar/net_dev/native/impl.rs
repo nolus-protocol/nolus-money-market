@@ -1,6 +1,6 @@
 use sdk::schemars;
 
-use currency::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, Matcher};
+use currency::{Matcher, MaybePairsVisitorResult, PairsGroup, PairsVisitor};
 
 use crate::{define_currency, Native, PaymentGroup};
 
