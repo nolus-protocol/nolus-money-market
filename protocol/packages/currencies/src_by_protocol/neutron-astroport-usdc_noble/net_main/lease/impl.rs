@@ -110,7 +110,10 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, VisitedG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
     V: AnyVisitor<VisitedG>,
