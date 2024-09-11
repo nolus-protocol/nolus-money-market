@@ -1,7 +1,10 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
+};
 use sdk::schemars;
 
-use crate::{define_currency, LeaseGroup};
+use crate::{define_currency, LeaseGroup, Lpn, Nls, PaymentGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -107,25 +110,171 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    V: AnyVisitor<TopG>,
-    LeaseGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
+    LeaseGroup: MemberOf<VisitedG>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, Atom, TopG, _>(matcher, visitor)
-        .or_else(|visitor| maybe_visit::<_, StAtom, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Ntrn, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Dydx, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Tia, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StTia, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StkAtom, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Newt, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Eclip, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, WstEth, TopG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, DAtom, TopG, _>(matcher, visitor))
+    maybe_visit::<_, Atom, VisitedG, _>(matcher, visitor)
+        .or_else(|visitor| maybe_visit::<_, StAtom, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Ntrn, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Dydx, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Tia, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, StTia, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, StkAtom, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Newt, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, Eclip, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, WstEth, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, DAtom, VisitedG, _>(matcher, visitor))
+}
+
+impl PairsGroup for Atom {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Ntrn, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<StAtom> for Atom {}
+impl InPoolWith<StkAtom> for Atom {}
+
+impl PairsGroup for StAtom {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Atom, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for Ntrn {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<Atom> for Ntrn {}
+impl InPoolWith<Nls> for Ntrn {}
+impl InPoolWith<Tia> for Ntrn {}
+
+impl PairsGroup for Dydx {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for Tia {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Ntrn, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<StTia> for Tia {}
+
+impl PairsGroup for StTia {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Tia, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for StkAtom {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Atom, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for Newt {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor)
+    }
+}
+
+impl PairsGroup for Eclip {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor)
+    }
+}
+
+impl PairsGroup for WstEth {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor)
+    }
+}
+
+impl PairsGroup for DAtom {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
+    }
 }
 
 #[cfg(test)]
