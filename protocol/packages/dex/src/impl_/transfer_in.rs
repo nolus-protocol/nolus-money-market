@@ -30,8 +30,6 @@ where
     where
         G: Group,
     {
-        type VisitorG = G;
-
         type Output = bool;
         type Error = Error;
 
@@ -45,7 +43,7 @@ where
         }
     }
 
-    payment.with_coin(CheckBalance::<G> {
+    payment.with_super_coin(CheckBalance::<G> {
         account,
         querier,
         currency_g: PhantomData,

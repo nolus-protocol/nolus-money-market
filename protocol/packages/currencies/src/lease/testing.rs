@@ -72,51 +72,57 @@ where
 impl PairsGroup for LeaseC1 {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<LeaseC3, _, _>(matcher, visitor)
     }
 }
 
 impl PairsGroup for LeaseC2 {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
     }
 }
+impl InPoolWith<LeaseC3> for LeaseC2 {}
+impl InPoolWith<LeaseC4> for LeaseC2 {}
 
 impl PairsGroup for LeaseC3 {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<LeaseC2, _, _>(matcher, visitor)
     }
 }
+impl InPoolWith<LeaseC1> for LeaseC3 {}
 
 impl PairsGroup for LeaseC4 {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<LeaseC2, _, _>(matcher, visitor)
     }
 }
-impl InPoolWith<Lpn> for LeaseC4 {}
 
 impl PairsGroup for LeaseC5 {
     type CommonGroup = PaymentGroup;

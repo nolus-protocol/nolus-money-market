@@ -214,7 +214,7 @@ mod test {
     fn hop_parent_in_stack() {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, BaseCurrency>(2, 1);
-        feeds.add::<PaymentC3, PaymentC4>(3, 1);
+        feeds.add::<PaymentC5, PaymentC4>(3, 1);
         feeds.add::<PaymentC6, PaymentC4>(4, 1);
 
         let mut cmd =
@@ -237,8 +237,8 @@ mod test {
         );
 
         assert_eq!(
-            cmd.on::<PaymentC3, PaymentC4>(
-                &currency::dto::<PaymentC3, _>(),
+            cmd.on::<PaymentC5, PaymentC4>(
+                &currency::dto::<PaymentC5, _>(),
                 &currency::dto::<PaymentC4, _>(),
             ),
             Ok(Some(tests::base_price::<PaymentC3>(6, 1)))
@@ -257,14 +257,14 @@ mod test {
     fn hop_to_root() {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, BaseCurrency>(2, 1);
-        feeds.add::<PaymentC6, BaseCurrency>(4, 1);
+        feeds.add::<PaymentC1, BaseCurrency>(4, 1);
 
         let mut cmd =
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(
-                &currency::dto::<PaymentC6, _>(),
+            cmd.on::<PaymentC1, BaseCurrency>(
+                &currency::dto::<PaymentC1, _>(),
                 &currency::dto::<BaseCurrency, _>(),
             ),
             Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
@@ -274,13 +274,13 @@ mod test {
     #[test]
     fn price_root_with_empty_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<PaymentC6, BaseCurrency>(4, 1);
+        feeds.add::<PaymentC1, BaseCurrency>(4, 1);
 
         let mut cmd =
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(
+            cmd.on::<PaymentC1, BaseCurrency>(
                 &currency::dto::<PaymentC6, _>(),
                 &currency::dto::<BaseCurrency, _>(),
             ),
@@ -297,8 +297,8 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
-            cmd.on::<PaymentC6, BaseCurrency>(
-                &currency::dto::<PaymentC6, _>(),
+            cmd.on::<PaymentC1, BaseCurrency>(
+                &currency::dto::<PaymentC1, _>(),
                 &currency::dto::<BaseCurrency, _>(),
             ),
             Ok(None)
