@@ -1,5 +1,6 @@
 use std::ops::DerefMut as _;
 
+use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub::convert;
 use oracle_platform::OracleRef;
@@ -54,8 +55,12 @@ pub fn instantiate(
 
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
-        .and_then(|lease_code| Config::try_new::<LpnCurrency>(msg, lease_code))
-        .and_then(|cfg| LiquidityPool::<LpnCurrency>::store(deps.storage, cfg))
+        .and_then(|lease_code| {
+            LiquidityPool::<LpnCurrency>::store(
+                deps.storage,
+                Config::new::<LpnCurrency>(msg, lease_code),
+            )
+        })
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
@@ -141,7 +146,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => Config::load(deps.storage).and_then(|ref resp| to_json_binary(resp)),
-        QueryMsg::Lpn() => to_json_binary(&Config::lpn_ticker::<LpnCurrency>()),
+        QueryMsg::Lpn() => to_json_binary(LpnCurrency::definition().dto()),
         QueryMsg::Balance { address } => {
             lender::query_balance(deps.storage, address).and_then(|ref resp| to_json_binary(resp))
         }
