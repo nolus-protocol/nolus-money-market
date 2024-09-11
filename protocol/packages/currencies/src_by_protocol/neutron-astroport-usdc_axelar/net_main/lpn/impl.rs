@@ -1,6 +1,7 @@
+use currency::InPoolWith;
 use sdk::schemars;
 
-use crate::{define_currency, Lpns};
+use crate::{define_currency, payment::only::impl_mod::UsdcNoble, Lpns, lease::impl_mod::Ntrn};
 
 define_currency!(
     UsdcAxelar,
@@ -12,3 +13,6 @@ define_currency!(
 );
 
 pub use UsdcAxelar as Lpn;
+
+impl InPoolWith<Ntrn> for Lpn {}
+impl InPoolWith<UsdcNoble> for Lpn {}
