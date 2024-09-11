@@ -4,7 +4,7 @@ use currency::{
 };
 use sdk::schemars;
 
-use crate::{define_currency, LeaseGroup, PaymentGroup, Lpn};
+use crate::{define_currency, LeaseGroup, Lpn, PaymentGroup};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -29,7 +29,10 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, VisitedG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
     V: AnyVisitor<VisitedG>,

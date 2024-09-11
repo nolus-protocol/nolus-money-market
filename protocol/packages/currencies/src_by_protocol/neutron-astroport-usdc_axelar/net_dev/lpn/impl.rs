@@ -2,7 +2,11 @@ use sdk::schemars;
 
 use currency::InPoolWith;
 
-use crate::{define_currency, Lpns, lease::impl_mod::{Ntrn, Atom}};
+use crate::{
+    define_currency,
+    lease::impl_mod::{Atom, Ntrn},
+    Lpns,
+};
 
 define_currency!(
     UsdcAxelar,
