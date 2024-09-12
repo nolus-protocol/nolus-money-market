@@ -420,12 +420,12 @@ fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAla
     );
 
     assert_eq!(
-        bank::balance::<Lpn, _>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
+        bank::balance::<Lpn, Lpn::Group>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         Zero::ZERO,
     );
 
     assert_eq!(
-        bank::balance::<Lpn, _>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
+        bank::balance::<Lpn, Lpn::Group>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_lpn_balance,
     );
 }
