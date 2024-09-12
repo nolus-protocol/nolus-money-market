@@ -9,7 +9,7 @@ pub use self::only::PaymentOnlyGroup;
 #[cfg(feature = "testing")]
 pub use testing::*;
 
-mod only;
+pub(crate) mod only;
 #[cfg(feature = "testing")]
 mod testing;
 
@@ -20,11 +20,12 @@ pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {
     const DESCR: &'static str = "payment";
+    type TopG = Self;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
     {
         LeaseGroup::maybe_visit_member(matcher, visitor)
             .or_else(|visitor| Lpns::maybe_visit_member(matcher, visitor))
@@ -32,25 +33,10 @@ impl Group for PaymentGroup {
             .or_else(|visitor| PaymentOnlyGroup::maybe_visit_member(matcher, visitor))
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        _matcher: &M,
-        _visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
-    {
-        unreachable!()
-    }
-
-    fn maybe_visit_member<M, V, TopG>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self::TopG>,
     {
         unreachable!()
     }

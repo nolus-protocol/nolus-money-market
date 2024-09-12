@@ -52,8 +52,6 @@ where
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
-    type VisitorG = LeasePaymentCurrencies;
-
     type Output = PaymentCoin;
 
     type Error = ContractError;
@@ -61,7 +59,7 @@ where
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<LeasePaymentCurrencies>,
     {
         self.lease.validate_repay(coin).map(|()| coin.into())
     }

@@ -1,5 +1,5 @@
 use currencies::{
-    Lpn, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC7,
+    Lpn, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
     PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, Group, MemberOf};
@@ -17,6 +17,7 @@ use sdk::{
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract::{execute, query},
+    error,
     tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
@@ -41,24 +42,24 @@ fn feed_direct_price() {
         BaseG: Group,
         <Lpn as CurrencyDef>::Group: MemberOf<BaseG>,
     {
-        price::total_of(Coin::<PaymentC4>::new(10))
+        price::total_of(Coin::<PaymentC1>::new(10))
             .is(Coin::<Lpn>::new(120))
             .into()
     }
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    // Feed direct price PaymentC4/OracleBaseAsset
+    // Feed direct price PaymentC1/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![generate_price()],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for PaymentC5
+    // query price for PaymentC3
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: currency::dto::<PaymentC4, PriceCurrencies>().into_super_group(),
+            currency: currency::dto::<PaymentC1, PriceCurrencies>().into_super_group(),
         },
     )
     .unwrap();
@@ -71,62 +72,64 @@ fn feed_indirect_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let price_a_to_b =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(120)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC5>::new(120)));
     let price_b_to_c =
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(5)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(5)));
     let price_c_to_usdc =
-        PriceDTO::from(price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(5)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(5)));
 
-    // Feed indirect price from PaymentC5 to OracleBaseAsset
+    // Feed indirect price from PaymentC3 to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![price_a_to_b, price_b_to_c, price_c_to_usdc],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for PaymentC5
+    // query price for PaymentC3
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::BasePrice {
-            currency: currency::dto::<PaymentC5, PriceCurrencies>().into_super_group(),
+            currency: currency::dto::<PaymentC3, PriceCurrencies>().into_super_group(),
         },
     )
     .unwrap();
 
     let expected_price =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(1)).is(Coin::<Lpn>::new(3)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)));
     let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 
 #[test]
-#[should_panic(expected = "UnsupportedCurrency")]
 fn query_prices_unsupported_denom() {
     let (deps, _) = setup_test(dummy_default_instantiate_msg());
 
-    // query for unsupported denom should fail
-    query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::BasePrice {
-            currency: currency::dto::<PaymentC1, PriceCurrencies>().into_super_group(),
-        },
-    )
-    .unwrap();
+    let detached = currency::dto::<PaymentC8, PriceCurrencies>().into_super_group();
+    assert_eq!(
+        error::unsupported_currency::<_, Lpn>(&detached),
+        query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::BasePrice { currency: detached },
+        )
+        .unwrap_err()
+    );
 }
 
 #[test]
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
+    let unsupported =
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC1>::new(12)));
     let prices = vec![
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12))),
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(22))),
+        unsupported,
+        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(22))),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    assert_eq!(ContractError::UnsupportedDenomPairs {}, err);
+    assert_eq!(error::unsupported_denom_pairs(&unsupported), err);
 }
 
 #[test]
@@ -134,7 +137,7 @@ fn deliver_alarm() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
     setup_receiver(&mut deps.querier);
 
-    let current_price = price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23451));
+    let current_price = price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23451));
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.into()],
     };
@@ -143,7 +146,7 @@ fn deliver_alarm() {
 
     {
         let alarm_below_price =
-            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23450));
+            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23450));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
@@ -159,7 +162,7 @@ fn deliver_alarm() {
     }
     {
         let alarm_below_price =
-            price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<Lpn>::new(23452));
+            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23452));
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };

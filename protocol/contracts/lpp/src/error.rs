@@ -28,9 +28,6 @@ pub enum ContractError {
     #[error("[Lpp] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
-    #[error("[Lpp] Invalid config parameter! {0}")]
-    InvalidConfigParameter(String),
-
     #[error("[Lpp] Unknown currency, details '{0}'")]
     UnknownCurrency(currency::error::Error),
 

@@ -1,18 +1,15 @@
 use std::mem;
 
+use currencies::Lpns;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDef, SymbolSlice};
+use currency::{CurrencyDef, MemberOf};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::{
-    borrow::InterestRate,
-    error::{ContractError, Result},
-    msg::InstantiateMsg,
-};
+use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -24,20 +21,16 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn try_new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Result<Self>
+    pub fn new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Self
     where
         Lpn: CurrencyDef,
+        Lpn::Group: MemberOf<Lpns>,
     {
-        if msg.lpn_ticker == currency::dto::<Lpn, _>() {
-            Ok(Self {
-                lease_code,
-                borrow_rate: msg.borrow_rate,
-                min_utilization: msg.min_utilization,
-            })
-        } else {
-            Err(ContractError::InvalidConfigParameter(
-                "The LPN ticker does not match the LPN this contract is compiled with".into(),
-            ))
+        debug_assert_eq!(Ok(()), msg.lpn.of_currency(Lpn::definition().dto()));
+        Self {
+            lease_code,
+            borrow_rate: msg.borrow_rate,
+            min_utilization: msg.min_utilization,
         }
     }
 
@@ -52,13 +45,6 @@ impl Config {
             borrow_rate,
             min_utilization,
         }
-    }
-
-    pub fn lpn_ticker<Lpn>() -> &'static SymbolSlice
-    where
-        Lpn: CurrencyDef,
-    {
-        Lpn::ticker()
     }
 
     pub const fn lease_code(&self) -> Code {

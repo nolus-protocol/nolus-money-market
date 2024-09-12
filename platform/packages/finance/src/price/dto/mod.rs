@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{
+    fmt::{Display, Formatter},
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
 #[cfg(any(test, feature = "testing"))]
 use currency::CurrencyDef;
@@ -191,6 +195,16 @@ where
         price
             .of_currencies(&dto_c, &dto_quote)
             .map(|()| price.as_specific(&dto_c, &dto_quote))
+    }
+}
+
+impl<G, QuoteG> Display for PriceDTO<G, QuoteG>
+where
+    G: Group,
+    QuoteG: Group,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("Price({}/{})", self.amount, self.amount_quote))
     }
 }
 

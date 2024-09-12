@@ -59,8 +59,6 @@ impl PositionDTO {
             V: WithPosition,
             ContractError: Into<V::Error>,
         {
-            type VisitorG = LeasePaymentCurrencies;
-
             type Output = V::Output;
 
             type Error = V::Error;
@@ -68,7 +66,7 @@ impl PositionDTO {
             fn on<Asset>(self, amount: Coin<Asset>) -> WithCoinResult<LeaseAssetCurrencies, Self>
             where
                 Asset: CurrencyDef,
-                Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<Self::VisitorG>,
+                Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
             {
                 Spec::try_from(self.spec)
                     .map(|spec| Position::<Asset>::new(amount, spec))

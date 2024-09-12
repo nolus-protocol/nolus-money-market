@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{
-    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyDef, CurrencyVisit, Group,
-    GroupVisit, MemberOf, SingleVisitor, Symbol,
+    AnyVisitor, AnyVisitorResult, BankSymbols, Currency, CurrencyDTO, CurrencyDef, CurrencyVisit,
+    Group, GroupVisit, MemberOf, SingleVisitor, Symbol,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
@@ -23,7 +23,7 @@ where
     CDef: CurrencyDef,
     COut: Currency,
 {
-    BankSymbols::visit::<CDef, _>(&coin.denom, CoinTransformer(&coin, PhantomData))
+    BankSymbols::<CDef::Group>::visit::<CDef, _>(&coin.denom, CoinTransformer(&coin, PhantomData))
 }
 
 pub(crate) fn from_cosmwasm_any<VisitedG, V>(
@@ -32,7 +32,7 @@ pub(crate) fn from_cosmwasm_any<VisitedG, V>(
 ) -> StdResult<WithCoinResult<VisitedG, V>, V>
 where
     VisitedG: Group,
-    V: WithCoin<VisitedG, VisitorG = VisitedG>,
+    V: WithCoin<VisitedG>,
 {
     BankSymbols::maybe_visit_any(
         &coin.denom,
@@ -47,7 +47,7 @@ pub(crate) fn maybe_from_cosmwasm_any<VisitedG, V>(
 ) -> Option<WithCoinResult<VisitedG, V>>
 where
     VisitedG: Group,
-    V: WithCoin<VisitedG, VisitorG = VisitedG>,
+    V: WithCoin<VisitedG>,
 {
     BankSymbols::<VisitedG>::maybe_visit_any(
         &coin.denom,
@@ -90,19 +90,18 @@ where
     where
         S: Symbol,
     {
-        type VisitorG = S::Group;
         type Output = CosmWasmCoin;
         type Error = Error;
 
         fn on<C>(self, coin: Coin<C>) -> WithCoinResult<S::Group, Self>
         where
             C: CurrencyDef,
-            C::Group: MemberOf<Self::VisitorG>,
+            C::Group: MemberOf<S::Group>,
         {
             Ok(to_cosmwasm_on_network_impl::<C, S>(coin))
         }
     }
-    coin_dto.with_coin(CoinTransformer(PhantomData::<S>))
+    coin_dto.with_super_coin(CoinTransformer(PhantomData::<S>))
 }
 
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin
@@ -134,17 +133,16 @@ struct CoinTransformerAny<'a, VisitedG, V>(&'a CosmWasmCoin, PhantomData<Visited
 
 impl<'a, VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'a, VisitedG, V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
+    VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
-    type VisitorG = V::VisitorG;
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
     {
         self.2.on::<C>(from_cosmwasm_internal::<C, C>(self.0))
     }

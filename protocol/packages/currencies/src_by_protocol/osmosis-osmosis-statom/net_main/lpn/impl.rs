@@ -1,6 +1,7 @@
+use currency::InPoolWith;
 use sdk::schemars;
 
-use crate::{define_currency, Lpns};
+use crate::{define_currency, payment::only::impl_mod::Atom, Lpns};
 
 define_currency!(
     StAtom,
@@ -12,3 +13,5 @@ define_currency!(
 );
 
 pub use StAtom as Lpn;
+
+impl InPoolWith<Atom> for Lpn {}

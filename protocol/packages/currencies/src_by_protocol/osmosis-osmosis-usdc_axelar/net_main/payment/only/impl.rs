@@ -1,7 +1,11 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars;
 
-use crate::{define_currency, PaymentOnlyGroup};
+use currency::{
+    AnyVisitor, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
+};
+
+use crate::{define_currency, lease::impl_mod::Inj, Lpn, Nls, PaymentGroup, PaymentOnlyGroup};
 
 define_currency!(
     UsdcNoble,
@@ -16,12 +20,27 @@ pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitR
 where
     M: Matcher,
     V: AnyVisitor<TopG>,
-    PaymentOnlyGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    PaymentOnlyGroup: MemberOf<TopG>,
+    TopG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as maybe_visit;
     maybe_visit::<_, UsdcNoble, TopG, _>(matcher, visitor)
 }
+
+impl PairsGroup for UsdcNoble {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<Inj> for UsdcNoble {}
+impl InPoolWith<Nls> for UsdcNoble {}
 
 #[cfg(test)]
 mod test {

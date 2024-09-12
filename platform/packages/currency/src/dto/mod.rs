@@ -10,8 +10,9 @@ use crate::{
     definition::DefinitionRef,
     error::{Error, Result},
     group::MemberOf,
-    CurrencyDef, Group, GroupVisit as _, MaybeAnyVisitResult, Symbol, SymbolSlice, SymbolStatic,
-    Tickers, TypeMatcher,
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
+    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolSlice, SymbolStatic, Tickers,
+    TypeMatcher,
 };
 
 use super::{AnyVisitor, AnyVisitorResult};
@@ -23,7 +24,11 @@ mod unchecked;
 /// This is a value type designed for efficient representation, data transfer and storage.
 /// `GroupMember` specifies which currencies are valid instances of this type.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd, Serialize, Deserialize)]
-#[serde(try_from = "unchecked::TickerDTO", into = "unchecked::TickerDTO")]
+#[serde(
+    try_from = "unchecked::TickerDTO",
+    into = "unchecked::TickerDTO",
+    bound(deserialize = "G: Group")
+)]
 pub struct CurrencyDTO<G>
 where
     G: Group,
@@ -45,28 +50,40 @@ where
 
     pub fn may_into_currency_type<SubG, V>(self, visitor: V) -> MaybeAnyVisitResult<SubG, V>
     where
-        SubG: Group + MemberOf<G>,
-        V: AnyVisitor<SubG, VisitorG = G>,
+        SubG: Group,
+        V: AnyVisitor<SubG>,
     {
-        SubG::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
+        SubG::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_currency_super_group_type<TopG, V>(self, visitor: V) -> AnyVisitorResult<G, V>
+    pub fn into_currency_super_group_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
     where
-        TopG: Group,
-        G: MemberOf<TopG>,
-        V: AnyVisitor<G, VisitorG = TopG>,
+        V: AnyVisitor<G>,
     {
-        G::maybe_visit_super_visitor(&TypeMatcher::new(self.def), visitor)
-            .unwrap_or_else(|_| self.unexpected::<V>())
+        G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
     }
 
     pub fn into_currency_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
     where
-        V: AnyVisitor<G, VisitorG = G>,
+        V: AnyVisitor<G>,
+        G: Group<TopG = G>,
     {
-        G::maybe_visit(&TypeMatcher::new(self.def), visitor)
-            .unwrap_or_else(|_| self.unexpected::<V>())
+        G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
+    }
+
+    pub fn may_into_pair_member_type<V>(self, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        V: PairsVisitor,
+    {
+        V::Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
+    }
+
+    pub fn into_pair_member_type<V>(self, visitor: V) -> PairsVisitorResult<V>
+    where
+        V: PairsVisitor,
+    {
+        self.may_into_pair_member_type(visitor)
+            .unwrap_or_else(|_| self.unexpected())
     }
 
     pub fn into_super_group<SuperG>(self) -> CurrencyDTO<SuperG>
@@ -103,42 +120,42 @@ where
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn from_symbol_testing<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<G>>
+    pub fn from_symbol_testing<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
     {
         Self::from_symbol::<S>(symbol)
     }
 
-    fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<G>>
+    fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
     {
+        use crate::GroupVisit;
+
         struct TypeToCurrency<G>(PhantomData<G>);
         impl<G> AnyVisitor<G> for TypeToCurrency<G>
         where
             G: Group,
         {
-            type VisitorG = G;
             type Output = CurrencyDTO<G>;
-
             type Error = Error;
 
-            fn on<C>(self, def: &C) -> AnyVisitorResult<G, Self>
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
             where
                 C: CurrencyDef,
                 C::Group: MemberOf<G>,
             {
-                Ok(def.dto().into_super_group::<G>())
+                Ok(def.into_super_group())
             }
         }
-        S::visit_any(symbol, TypeToCurrency(PhantomData))
+        // V: AnyVisitor<<Self::Group as Group>::TopG>,
+        S::visit_any(symbol, TypeToCurrency(PhantomData::<S::Group>))
     }
 
-    fn unexpected<V>(self) -> AnyVisitorResult<G, V>
+    fn unexpected<R>(self) -> R
     where
-        V: AnyVisitor<G>,
-        G: MemberOf<V::VisitorG>,
+        G: Group,
     {
         panic!(
             r#"Found an invalid currency instance! "{:?}" did not match "{}" !"#,

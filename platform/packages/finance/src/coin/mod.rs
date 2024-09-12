@@ -225,16 +225,15 @@ pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoi
 
 pub trait WithCoin<VisitedG>
 where
-    VisitedG: Group + MemberOf<Self::VisitorG>,
+    VisitedG: Group,
 {
-    type VisitorG: Group;
     type Output;
     type Error;
 
     fn on<C>(self, coin: Coin<C>) -> WithCoinResult<VisitedG, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>;
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
 }
 
 impl<CoinCRef, C> Sum<CoinCRef> for Coin<C>

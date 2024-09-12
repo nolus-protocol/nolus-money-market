@@ -28,12 +28,11 @@ pub mod coin {
     where
         CExp: CurrencyDef,
     {
-        type VisitorG = CExp::Group;
         type Output = bool;
 
         type Error = Error;
 
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<Self::VisitorG, Self>
+        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<CExp::Group, Self>
         where
             C: Currency,
         {

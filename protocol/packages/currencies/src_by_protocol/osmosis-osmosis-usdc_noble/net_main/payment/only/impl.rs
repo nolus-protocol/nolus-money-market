@@ -1,7 +1,10 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
+    PairsVisitor,
+};
 use sdk::schemars;
 
-use crate::{define_currency, PaymentOnlyGroup};
+use crate::{define_currency, PaymentGroup, PaymentOnlyGroup};
 
 define_currency!(
     UsdcAxelar,
@@ -12,13 +15,28 @@ define_currency!(
     6
 );
 
-pub(super) fn maybe_visit<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    V: AnyVisitor<TopG>,
-    PaymentOnlyGroup: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
+    PaymentOnlyGroup: MemberOf<VisitedG>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as maybe_visit;
-    maybe_visit::<_, UsdcAxelar, TopG, _>(matcher, visitor)
+    maybe_visit::<_, UsdcAxelar, VisitedG, _>(matcher, visitor)
+}
+
+impl PairsGroup for UsdcAxelar {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor) // TODO
+    }
 }

@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::{group::MemberOf, Group, SymbolOwned, Tickers};
+use crate::{Group, SymbolOwned, Tickers};
 
 use crate::error::Error;
 
@@ -33,7 +33,7 @@ where
 
 impl<G> From<ValidatedDTO<G>> for TickerDTO
 where
-    G: Group + MemberOf<G>,
+    G: Group,
 {
     fn from(value: ValidatedDTO<G>) -> Self {
         Self(value.into_symbol::<Tickers<G>>().to_owned())
@@ -53,19 +53,19 @@ mod test {
 
     #[test]
     fn deser_same_group() {
-        let coin: SuperGroupCurrency = *SuperGroupTestC1::definition().dto();
-        let coin_deser: SuperGroupCurrency = cosmwasm_std::to_json_vec(&coin)
+        let coin = SuperGroupTestC1::definition().dto();
+        let coin_deser: SuperGroupCurrency = cosmwasm_std::to_json_vec(coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
-        assert_eq!(coin, coin_deser);
+        assert_eq!(coin, &coin_deser);
     }
 
     #[test]
     fn deser_parent_group() {
         type ParentGroup = SuperGroupCurrency;
 
-        let coin = *SubGroupTestC10::definition().dto();
-        let coin_deser: ParentGroup = cosmwasm_std::to_json_vec(&coin)
+        let coin = SubGroupTestC10::definition().dto();
+        let coin_deser: ParentGroup = cosmwasm_std::to_json_vec(coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
         let coin_exp = coin.into_super_group::<SuperGroup>();

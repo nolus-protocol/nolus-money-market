@@ -74,12 +74,10 @@ impl<G> AnyVisitor<G> for ConstructDto<G>
 where
     G: Group,
 {
-    type VisitorG = G;
-
     type Output = CoinDTO<G>;
     type Error = currency::error::Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,

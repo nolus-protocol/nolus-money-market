@@ -2,9 +2,9 @@ use currency::CurrencyDef;
 use serde::{Deserialize, Serialize};
 
 use currencies::{
-    LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns, Lpns as BaseCurrencies,
-    PaymentGroup, PaymentGroup as PriceCurrencies,
-    {LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn},
+    LeaseC1, LeaseC2, LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpn, Lpns,
+    Lpns as BaseCurrencies, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentGroup,
+    PaymentGroup as PriceCurrencies,
 };
 use finance::{
     coin::{Amount, Coin},
@@ -47,7 +47,7 @@ use crate::common::{
 
 type LeaseCurrency = LeaseC1;
 type TheCoin = Coin<Lpn>;
-type BaseC = LeaseC3;
+type BaseC = PaymentC4;
 type Alarm = oracle::api::Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>;
 type ExecuteMsg =
     oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>;
@@ -139,7 +139,7 @@ fn feed_price_with_alarm_issue() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<Lpn>::new(1)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(1)),
                     None,
                 ),
             },
@@ -171,7 +171,7 @@ fn feed_price_with_alarm() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<Lpn>::new(10)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(10)),
                     None,
                 ),
             },
@@ -184,7 +184,7 @@ fn feed_price_with_alarm() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<LeaseC4>::new(1),
+        Coin::<PaymentC4>::new(1),
         Coin::<Lpn>::new(5),
     );
 }
@@ -192,6 +192,8 @@ fn feed_price_with_alarm() {
 #[test]
 fn overwrite_alarm_and_dispatch() {
     let mut test_case = create_test_case();
+    update_tree(&mut test_case, swap_tree());
+
     oracle_mod::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
@@ -203,8 +205,8 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<Lpn>::new(5)),
-                    Some(price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<Lpn>::new(5))),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(5)),
+                    Some(price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(5))),
                 ),
             },
             &[],
@@ -220,7 +222,7 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<LeaseC4>::new(1)).is(Coin::<Lpn>::new(10)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(10)),
                     None,
                 ),
             },
@@ -234,7 +236,7 @@ fn overwrite_alarm_and_dispatch() {
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
-        Coin::<LeaseC4>::new(1),
+        Coin::<PaymentC4>::new(1),
         Coin::<Lpn>::new(5),
     );
 
@@ -400,45 +402,11 @@ fn test_config_update() {
     assert!(price.is_err());
 }
 
-fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-    cosmwasm_std::from_json(format!(
-        r#"{{
-                "value":[0,"{usdc}"],
-                "children":[
-                    {{
-                        "value":[1,"{base_c}"],
-                        "children":[
-                            {{"value":[2,"{weth}"]}},
-                            {{"value":[3,"{wbtc}"]}}
-                        ]
-                    }}
-                ]
-            }}"#,
-        usdc = Lpn::ticker(),
-        base_c = BaseC::ticker(),
-        weth = LeaseC5::ticker(),
-        wbtc = LeaseC2::ticker(),
-    ))
-    .unwrap()
-}
-
 #[test]
 fn test_swap_path() {
     let mut test_case = create_test_case();
 
-    let response: AppResponse = test_case
-        .app
-        .sudo(
-            test_case.address_book.oracle().clone(),
-            &SudoMsg::SwapTree { tree: swap_tree() },
-        )
-        .unwrap()
-        .unwrap_response();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
-    );
+    update_tree(&mut test_case, swap_tree());
 
     let resp: SwapPath<PriceCurrencies> = test_case
         .app
@@ -446,20 +414,20 @@ fn test_swap_path() {
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
             &OracleQ::<PriceCurrencies>::SwapPath {
-                from: currency::dto::<LeaseC2, _>(),
-                to: currency::dto::<LeaseC5, _>(),
+                from: currency::dto::<PaymentC4, _>(),
+                to: currency::dto::<PaymentC1, _>(),
             },
         )
         .unwrap();
 
     let expect = vec![
         SwapTarget {
-            pool_id: 3,
-            target: currency::dto::<BaseC, _>(),
+            pool_id: 1,
+            target: currency::dto::<Lpn, _>(),
         },
         SwapTarget {
-            pool_id: 2,
-            target: currency::dto::<LeaseC5, _>(),
+            pool_id: 11,
+            target: currency::dto::<PaymentC1, _>(),
         },
     ];
 
@@ -472,19 +440,7 @@ fn test_query_swap_tree() {
 
     let tree: HumanReadableTree<SwapTarget<PaymentGroup>> = swap_tree();
 
-    let response: AppResponse = test_case
-        .app
-        .sudo(
-            test_case.address_book.oracle().clone(),
-            &SudoMsg::SwapTree { tree: tree.clone() },
-        )
-        .unwrap()
-        .unwrap_response();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
-    );
+    update_tree(&mut test_case, tree.clone());
 
     let resp: SwapTreeResponse<PaymentGroup> = test_case
         .app
@@ -673,6 +629,7 @@ fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
 #[test]
 fn price_alarm_rescheduling() {
     let mut test_case = create_test_case();
+    update_tree(&mut test_case, swap_tree());
 
     let dummy_code = test_case
         .app
@@ -796,6 +753,7 @@ fn price_alarm_rescheduling() {
 #[test]
 fn price_alarm_rescheduling_with_failing() {
     let mut test_case = create_test_case();
+    update_tree(&mut test_case, swap_tree());
 
     let dummy_code = test_case
         .app
@@ -928,5 +886,50 @@ fn price_alarm_rescheduling_with_failing() {
         None,
         "{:?}",
         response.events
+    );
+}
+
+fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    cosmwasm_std::from_json(format!(
+        r#"{{
+                "value":[0,"{lpn}"],
+                "children":[
+                    {{
+                        "value":[1,"{base_c}"],
+                        "children":[
+                            {{"value":[2,"{p5}"]}},
+                            {{"value":[3,"{p6}"]}}
+                        ]
+                    }},
+                    {{
+                        "value":[11,"{p1}"]
+                    }}
+                ]
+            }}"#,
+        lpn = Lpn::definition().dto(),
+        base_c = BaseC::definition().dto(),
+        p5 = PaymentC5::definition().dto(),
+        p6 = PaymentC6::definition().dto(),
+        p1 = PaymentC1::definition().dto(),
+    ))
+    .unwrap()
+}
+
+fn update_tree(
+    test_case: &mut TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>,
+    new_tree: HumanReadableTree<SwapTarget<PaymentGroup>>,
+) {
+    let response: AppResponse = test_case
+        .app
+        .sudo(
+            test_case.address_book.oracle().clone(),
+            &SudoMsg::SwapTree { tree: new_tree },
+        )
+        .unwrap()
+        .unwrap_response();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
     );
 }

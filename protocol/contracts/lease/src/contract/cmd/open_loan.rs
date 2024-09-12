@@ -80,8 +80,6 @@ struct DownpaymentHandler<'a> {
     querier: QuerierWrapper<'a>,
 }
 impl<'a> WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'a> {
-    type VisitorG = LeasePaymentCurrencies;
-
     type Output = (DownpaymentCoin, LpnCoin);
 
     type Error = ContractError;
@@ -89,7 +87,7 @@ impl<'a> WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'a> {
     fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<LeasePaymentCurrencies>,
     {
         let downpayment_lpn = convert::to_quote::<
             C,

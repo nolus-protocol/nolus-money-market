@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, CurrencyDef, Group, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MemberOf};
 
 use crate::coin::WithCoin;
 
@@ -12,12 +12,12 @@ pub(super) struct CoinTransformerAny<'a, VisitedG, V>(
     V,
 )
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
+    VisitedG: Group,
     V: WithCoin<VisitedG>;
 
 impl<'a, VisitedG, V> CoinTransformerAny<'a, VisitedG, V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
+    VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
     pub(super) fn new(dto: &'a CoinDTO<VisitedG>, v: V) -> Self {
@@ -27,18 +27,17 @@ where
 
 impl<'a, VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'a, VisitedG, V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
+    VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
-    type VisitorG = V::VisitorG;
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<VisitedG> + MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
     {
-        self.2.on::<C>(self.0.as_specific::<C, _>(def.dto()))
+        self.2.on::<C>(self.0.as_specific::<C, _>(def))
     }
 }

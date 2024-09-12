@@ -163,15 +163,13 @@ where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type VisitorG = PaymentCurrencies;
-
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn on<Dpc>(self, downpayment: Coin<Dpc>) -> WithCoinResult<PaymentCurrencies, Self>
     where
         Dpc: CurrencyDef,
-        Dpc::Group: MemberOf<Self::VisitorG>,
+        Dpc::Group: MemberOf<PaymentCurrencies>,
     {
         self.lease_asset
             .into_currency_super_group_type(QuoteStage4 {
@@ -208,15 +206,13 @@ where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type VisitorG = PaymentCurrencies;
-
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<Asset>(self, _def: &Asset) -> AnyVisitorResult<LeaseCurrencies, Self>
+    fn on<Asset>(self, _def: &CurrencyDTO<Asset::Group>) -> AnyVisitorResult<LeaseCurrencies, Self>
     where
         Asset: CurrencyDef,
-        Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<Self::VisitorG>,
+        Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 

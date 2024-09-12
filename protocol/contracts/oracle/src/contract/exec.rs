@@ -27,7 +27,7 @@ where
     BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
     BaseCurrencies: Group + MemberOf<PriceCurrencies>,
     AlarmCurrencies: Group,
-    PriceCurrencies: Group,
+    PriceCurrencies: Group<TopG = PriceCurrencies>,
 {
     match msg {
         ExecuteMsg::FeedPrices { prices } => {
@@ -67,7 +67,7 @@ fn try_feed_prices<G, BaseC, BaseG>(
     prices: Vec<PriceDTO<G, G>>,
 ) -> ContractResult<()>
 where
-    G: Group,
+    G: Group<TopG = G>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
     BaseG: Group + MemberOf<G>,

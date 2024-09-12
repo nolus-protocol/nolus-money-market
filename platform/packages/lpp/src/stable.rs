@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult, MemberOf,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
+    MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
 };
 use finance::coin::Coin;
 use sdk::schemars::{self, JsonSchema};
@@ -24,6 +25,17 @@ impl CurrencyDef for Stable {
         &self.0
     }
 }
+impl PairsGroup for Stable {
+    type CommonGroup = StableCurrencyGroup;
+
+    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        currency::visit_noone(visitor)
+    }
+}
 
 pub type CoinStable = Coin<Stable>;
 
@@ -31,36 +43,22 @@ pub type CoinStable = Coin<Stable>;
 pub struct StableCurrencyGroup;
 impl Group for StableCurrencyGroup {
     const DESCR: &'static str = "stable currency";
+    type TopG = Self;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = Self>,
+        V: AnyVisitor<Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
     }
 
-    fn maybe_visit_super_visitor<M, V, TopG>(
-        _matcher: &M,
-        _visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_member<M, V>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
-        V: AnyVisitor<Self, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
+        V: AnyVisitor<Self::TopG>,
     {
-        unreachable!("There is no parent group to this one!")
-    }
-
-    fn maybe_visit_member<M, V, TopG>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<TopG, VisitorG = TopG>,
-        Self: MemberOf<TopG>,
-        TopG: Group,
-    {
-        MaybeAnyVisitResult::Ok(visitor.on::<Stable>(&STABLE)) // we accept ANY currency to allow any stable@protocol to be a member
+        MaybeAnyVisitResult::Ok(visitor.on::<Stable>(STABLE.dto())) // we accept ANY currency to allow any stable@protocol to be a member
     }
 }
 

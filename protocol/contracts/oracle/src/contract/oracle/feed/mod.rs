@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
-    error::ContractError,
+    error::{self, ContractError},
     state::supported_pairs::SupportedPairs,
 };
 
@@ -26,7 +26,7 @@ pub struct Feeds<PriceG, BaseC, BaseG> {
 
 impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
 where
-    PriceG: Group,
+    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
@@ -47,22 +47,23 @@ where
         prices: &[PriceDTO<PriceG, PriceG>],
     ) -> Result<(), ContractError> {
         let tree = SupportedPairs::<PriceG, BaseC>::load(storage)?;
-        if prices.iter().any(|price| {
+        if let Some(unsupported) = prices.iter().find(|price| {
             !tree.swap_pairs_df().any(
                 |SwapLeg {
                      from,
                      to: SwapTarget { target: to, .. },
                  }| {
+                    // TODO price.base().of_currency_dto(from) && ...
                     price.base().currency() == from && price.quote().currency() == to
                 },
             )
         }) {
-            return Err(ContractError::UnsupportedDenomPairs {});
+            Err(error::unsupported_denom_pairs(unsupported))
+        } else {
+            self.feeds
+                .feed(storage, block_time, sender_raw, prices)
+                .map_err(Into::into)
         }
-
-        self.feeds.feed(storage, block_time, sender_raw, prices)?;
-
-        Ok(())
     }
 
     pub fn all_prices_iter<'r, 'self_, 'storage, I>(
@@ -113,28 +114,17 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use currencies::{
-        Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
-        PaymentGroup as PriceCurrencies,
-    };
-    use currency::{Currency, SymbolStatic};
+    use currencies::{Lpn as BaseCurrency, PaymentGroup as PriceCurrencies};
+    use currency::{Currency, CurrencyDTO, CurrencyDef, MemberOf, SymbolStatic};
     use finance::{
         coin::Amount,
-        duration::Duration,
-        percent::Percent,
         price::{dto::PriceDTO, Price},
     };
     use marketprice::alarms::prefix::Prefix;
-    use price_querier::PriceQuerier;
-    use sdk::cosmwasm_std::{
-        self,
-        testing::{self, MockStorage},
-    };
-    use tree::HumanReadableTree;
 
-    use crate::tests;
+    use crate::{tests, ContractError};
 
-    use super::*;
+    use super::price_querier::PriceQuerier;
 
     #[derive(Clone)]
     pub struct TestFeeds(
@@ -174,55 +164,26 @@ mod test {
         }
     }
 
-    fn test_case() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-        let base = BaseCurrency::ticker();
-        let osmo = PaymentC5::ticker();
-        let nls = PaymentC1::ticker();
-        let weth = PaymentC7::ticker();
-        let atom = PaymentC3::ticker();
-        let axl = PaymentC4::ticker();
-        let cro = PaymentC6::ticker();
-
-        cosmwasm_std::from_json(format!(
-            r#"
-            {{
-                "value":[0,"{base}"],
-                "children":[
-                    {{
-                        "value":[4,"{atom}"],
-                        "children":[
-                            {{"value":[3,"{weth}"]}}
-                        ]
-                    }},
-                    {{
-                        "value":[2,"{nls}"],
-                        "children":[
-                            {{
-                                "value":[1,"{osmo}"],
-                                "children":[
-                                    {{"value":[5,"{axl}"]}},
-                                    {{"value":[6,"{cro}"]}}
-                                ]
-                            }}
-                        ]
-                    }}
-                ]
-            }}"#
-        ))
-        .unwrap()
-    }
-
     mod all_prices_iter {
-        use currencies::{Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies};
-        use finance::price::base::BasePrice;
+        use currencies::{
+            Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6,
+            PaymentC7, PaymentGroup as PriceCurrencies,
+        };
+        use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
+        use marketprice::config::Config;
+        use sdk::cosmwasm_std::{
+            testing::{self, MockStorage},
+            Addr,
+        };
 
-        use super::*;
+        use super::BaseCurrency;
+        use crate::{contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, tests};
 
         #[test]
         fn normal() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = test_case();
+            let tree = tests::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )
@@ -244,12 +205,12 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        tests::dto_price::<PaymentC3, _, BaseCurrency, _>(1, 1),
-                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(2, 1),
-                        tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
-                        tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
-                        tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
-                        tests::dto_price::<PaymentC4, _, PaymentC5, _>(1, 1),
+                        tests::dto_price::<PaymentC4, _, BaseCurrency, _>(2, 1),
+                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC1, _>(3, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC4, _>(7, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC4, _>(3, 1),
+                        tests::dto_price::<PaymentC3, _, PaymentC5, _>(11, 1),
                     ],
                 )
                 .unwrap();
@@ -260,12 +221,12 @@ mod test {
                 .collect();
 
             let expected: Vec<BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>> = vec![
-                tests::base_price::<PaymentC3>(1, 1),
-                tests::base_price::<PaymentC7>(1, 1),
-                tests::base_price::<PaymentC1>(2, 1),
-                tests::base_price::<PaymentC5>(2, 1),
                 tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC5>(2 * 7, 1),
+                tests::base_price::<PaymentC3>(2 * 7 * 11, 1),
                 tests::base_price::<PaymentC6>(6, 1),
+                tests::base_price::<PaymentC1>(5, 1),
+                tests::base_price::<PaymentC7>(3 * 5, 1),
             ];
 
             assert_eq!(expected, prices);
@@ -275,7 +236,7 @@ mod test {
         fn missing_price() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = test_case();
+            let tree = tests::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )
@@ -297,20 +258,20 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        // tests::dto_price::<PaymentC3, BaseCurrency>(1, 1),
-                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(2, 1),
-                        tests::dto_price::<PaymentC7, _, PaymentC3, _>(1, 1),
-                        tests::dto_price::<PaymentC5, _, PaymentC1, _>(1, 1),
-                        tests::dto_price::<PaymentC6, _, PaymentC5, _>(3, 1),
-                        tests::dto_price::<PaymentC4, _, PaymentC5, _>(1, 1),
+                        // tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1), a gap for PaymentC7
+                        tests::dto_price::<PaymentC4, _, BaseCurrency, _>(2, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC1, _>(10, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC4, _>(1, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC4, _>(3, 1),
+                        tests::dto_price::<PaymentC3, _, PaymentC5, _>(1, 1),
                     ],
                 )
                 .unwrap();
 
             let expected: Vec<BasePrice<PriceCurrencies, BaseCurrency, BaseCurrencies>> = vec![
-                tests::base_price::<PaymentC1>(2, 1),
-                tests::base_price::<PaymentC5>(2, 1),
                 tests::base_price::<PaymentC4>(2, 1),
+                tests::base_price::<PaymentC5>(2, 1),
+                tests::base_price::<PaymentC3>(2, 1),
                 tests::base_price::<PaymentC6>(6, 1),
             ];
 

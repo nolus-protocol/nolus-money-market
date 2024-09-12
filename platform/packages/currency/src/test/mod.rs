@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef,
-    Group, MemberOf, SingleVisitor,
+    error::Error, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, Currency,
+    CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor,
 };
 
 pub use self::group::*;
@@ -43,15 +43,14 @@ where
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    type VisitorG = VisitorG;
     type Output = bool;
     type Error = Error;
 
-    fn on<Cin>(self, def: &Cin) -> Result<bool, Error>
+    fn on<Cin>(self, def: &CurrencyDTO<Cin::Group>) -> Result<bool, Error>
     where
         Cin: CurrencyDef,
     {
-        Ok(def.dto() == self.0.dto())
+        Ok(def == self.0.dto())
     }
 }
 
@@ -80,11 +79,13 @@ impl<G> AnyVisitor<G> for ExpectUnknownCurrency<G>
 where
     G: Group,
 {
-    type VisitorG = G;
     type Output = bool;
     type Error = Error;
 
-    fn on<C>(self, _def: &C) -> AnyVisitorResult<G, Self> {
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+    where
+        C: CurrencyDef,
+    {
         unreachable!();
     }
 }
@@ -101,39 +102,35 @@ where
     }
 }
 
-pub struct ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>(
+pub struct ExpectPair<'dtos, VisitedG, G1, G2>(
+    PhantomData<VisitedG>,
     &'dtos CurrencyDTO<G1>,
-    PhantomData<VisitedG1>,
     &'dtos CurrencyDTO<G2>,
-    PhantomData<VisitedG2>,
 )
-where
-    VisitedG1: Group,
-    G1: Group + MemberOf<VisitedG1>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>;
-
-impl<'dtos, VisitedG1, VisitedG2, G1, G2> ExpectPair<'dtos, VisitedG1, VisitedG2, G1, G2>
-where
-    VisitedG1: Group,
-    G1: Group + MemberOf<VisitedG1>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>,
-{
-    pub fn new(def1: &'dtos CurrencyDTO<G1>, def2: &'dtos CurrencyDTO<G2>) -> Self {
-        Self(def1, PhantomData, def2, PhantomData)
-    }
-}
-
-impl<'dtos, VisitedG, VisitedG2, G1, G2> AnyVisitorPair
-    for ExpectPair<'dtos, VisitedG, VisitedG2, G1, G2>
 where
     VisitedG: Group,
     G1: Group + MemberOf<VisitedG>,
-    VisitedG2: Group,
-    G2: Group + MemberOf<VisitedG2>,
+    G2: Group + MemberOf<VisitedG>;
+
+impl<'dtos, VisitedG, G1, G2> ExpectPair<'dtos, VisitedG, G1, G2>
+where
+    VisitedG: Group,
+    G1: Group + MemberOf<VisitedG>,
+    G2: Group + MemberOf<VisitedG>,
+{
+    pub fn new(def1: &'dtos CurrencyDTO<G1>, def2: &'dtos CurrencyDTO<G2>) -> Self {
+        Self(PhantomData, def1, def2)
+    }
+}
+
+impl<'dtos, VisitedG, G1, G2> AnyVisitorPair for ExpectPair<'dtos, VisitedG, G1, G2>
+where
+    VisitedG: Group<TopG = VisitedG>,
+    G1: Group + MemberOf<VisitedG>,
+    G2: Group + MemberOf<VisitedG>,
 {
     type VisitedG = VisitedG;
+
     type Output = bool;
     type Error = Error;
 
@@ -141,11 +138,11 @@ where
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> Result<Self::Output, Self::Error>
+    ) -> AnyVisitorPairResult<Self>
     where
         C1in: Currency,
         C2in: Currency,
     {
-        Ok(dto1 == self.0 && dto2 == self.2)
+        Ok(dto1 == self.1 && dto2 == self.2)
     }
 }

@@ -10,6 +10,12 @@ pub enum Error {
     #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
     NotInCurrencyGroup(String, &'static str, &'static str),
 
+    #[error("[Currency] No records for a pool with '{buddy1}' and '{buddy2}'")]
+    NotInPoolWith {
+        buddy1: SymbolStatic,
+        buddy2: SymbolStatic,
+    },
+
     #[error("[Currency] Expected currency {expected}, found {found}")]
     CurrencyMismatch {
         expected: SymbolStatic,
@@ -43,6 +49,16 @@ impl Error {
         Self::CurrencyMismatch {
             expected: expected.into_symbol::<Tickers<ExpG>>(),
             found: found.into_symbol::<Tickers<G>>(),
+        }
+    }
+
+    pub fn not_in_pool_with<G>(c1: &CurrencyDTO<G>, c2: &CurrencyDTO<G>) -> Self
+    where
+        G: Group,
+    {
+        Self::NotInPoolWith {
+            buddy1: c1.into_symbol::<Tickers<G>>(),
+            buddy2: c2.into_symbol::<Tickers<G>>(),
         }
     }
 }

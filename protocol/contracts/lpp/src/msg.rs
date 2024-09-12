@@ -20,7 +20,8 @@ use crate::{borrow::InterestRate, loan::Loan};
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lpn_ticker: CurrencyDTO<Lpns>,
+    #[serde(alias = "lpn_ticker")]
+    pub lpn: CurrencyDTO<Lpns>,
     pub lease_code_admin: Addr,
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,

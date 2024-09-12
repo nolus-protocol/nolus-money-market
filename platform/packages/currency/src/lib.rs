@@ -6,11 +6,12 @@ pub use crate::{
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
         visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
-        AnyVisitorResult, GroupVisit,
+        AnyVisitorResult, GroupVisit, InPoolWith,
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
     nls::{Native as NativePlatform, NlsPlatform},
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
@@ -23,6 +24,7 @@ mod group;
 mod matcher;
 pub mod never;
 mod nls;
+mod pairs;
 mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
@@ -64,6 +66,14 @@ pub trait CurrencyDef: Currency {
     }
 }
 
+pub fn into_super_group<C, SuperG>(c_def: C) -> CurrencyDTO<SuperG>
+where
+    C: CurrencyDef<Group = SuperG>,
+    SuperG: Group,
+{
+    *c_def.dto()
+}
+
 impl<T> Currency for T where T: CurrencyDef {}
 
 pub fn equal<C1, C2>() -> bool
@@ -77,32 +87,47 @@ where
 pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
 where
     M: Matcher,
-    C: CurrencyDef,
+    C: CurrencyDef + PairsGroup<CommonGroup = <C::Group as Group>::TopG>,
+    C::Group: MemberOf<C::Group> + MemberOf<<C::Group as Group>::TopG>,
     V: AnyVisitor<C::Group>,
-    C::Group: MemberOf<V::VisitorG>,
 {
     maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
 
-pub fn maybe_visit_member<M, C, TopG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+pub fn maybe_visit_member<M, C, VisitedG, V>(
+    matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    C: CurrencyDef,
-    C::Group: MemberOf<TopG> + MemberOf<V::VisitorG>,
-    V: AnyVisitor<TopG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+    C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+    V: AnyVisitor<VisitedG>,
+    VisitedG: Group,
 {
-    if matcher.r#match(C::definition().dto().definition()) {
-        Ok(visitor.on::<C>(C::definition()))
+    let member = C::definition().dto();
+    if matcher.r#match(member.definition()) {
+        Ok(visitor.on::<C>(member))
     } else {
         Err(visitor)
     }
 }
 
-pub fn visit_noone<VisitedG, V>(visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
+pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
 where
-    VisitedG: Group + MemberOf<V::VisitorG>,
-    V: AnyVisitor<VisitedG>,
+    M: Matcher,
+    C: CurrencyDef + InPoolWith<V::Pivot>,
+    C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
+    V: PairsVisitor,
 {
+    let buddy = C::definition().dto();
+    if matcher.r#match(buddy.definition()) {
+        Ok(visitor.on::<C>(buddy))
+    } else {
+        Err(visitor)
+    }
+}
+
+pub fn visit_noone<R, V>(visitor: V) -> Result<R, V> {
     Err(visitor)
 }

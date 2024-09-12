@@ -5,7 +5,7 @@ use tree::NodeRef;
 
 use currency::{
     never::{self, Never},
-    AnyVisitor, AnyVisitorResult, CurrencyDef, Group, MaybeAnyVisitResult, MemberOf,
+    AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MaybeAnyVisitResult, MemberOf,
 };
 
 use crate::api::{swap::SwapTarget, Currency as ApiCurrency, CurrencyGroup};
@@ -62,17 +62,15 @@ where
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    type VisitorG = VisitorG;
-
     type Output = ApiCurrency;
 
     type Error = Never;
 
-    fn on<C>(self, def: &C) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
         C: CurrencyDef,
     {
         // TODO get rid of visiting
-        Ok(ApiCurrency::new(def.dto().definition(), self.2))
+        Ok(ApiCurrency::new(def.definition(), self.2))
     }
 }

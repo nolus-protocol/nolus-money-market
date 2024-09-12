@@ -1,10 +1,15 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
-pub(super) fn maybe_visit<M, V, TopG>(_matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
+use crate::PaymentGroup;
+
+pub(super) fn maybe_visit<M, V, VisitedG>(
+    _matcher: &M,
+    visitor: V,
+) -> MaybeAnyVisitResult<VisitedG, V>
 where
     M: Matcher,
-    V: AnyVisitor<TopG>,
-    TopG: Group + MemberOf<V::VisitorG>,
+    V: AnyVisitor<VisitedG>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     currency::visit_noone(visitor)
 }

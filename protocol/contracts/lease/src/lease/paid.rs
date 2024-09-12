@@ -56,7 +56,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use currencies::{Lpn, PaymentC3};
-    use currency::{Currency, CurrencyDef, Group, MemberOf};
+    use currency::{Currency, CurrencyDef, Group};
     use finance::{
         coin::{Coin, WithCoin},
         duration::Duration,
@@ -122,7 +122,7 @@ mod tests {
 
         fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
         where
-            G: Group + MemberOf<Cmd::VisitorG>,
+            G: Group,
             Cmd: WithCoin<G>,
             Cmd::Output: Aggregate,
         {

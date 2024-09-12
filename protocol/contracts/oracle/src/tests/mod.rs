@@ -1,6 +1,6 @@
 use currencies::{
-    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC3,
-    PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC1,
+    PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
@@ -75,42 +75,44 @@ pub(crate) fn dummy_instantiate_msg(
     }
 }
 
+pub(crate) fn dummy_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    sdk::cosmwasm_std::from_json(format!(
+        r#"{{
+            "value":[0,"{lpn}"],
+            "children":[
+                {{
+                    "value":[3,"{p4}"],
+                    "children":[
+                        {{
+                            "value":[2,"{p5}"],
+                            "children":[
+                                {{"value":[1,"{p3}"]}}
+                            ]
+                        }},
+                        {{"value":[15,"{p6}"]}}
+                    ]
+                }},
+                {{
+                    "value":[4,"{p1}"],
+                    "children":[
+                        {{"value":[5,"{p7}"]}}
+                    ]
+                }}
+            ]
+        }}"#,
+        lpn = BaseCurrency::definition().dto(),
+        p4 = PaymentC4::definition().dto(),
+        p5 = PaymentC5::definition().dto(),
+        p3 = PaymentC3::definition().dto(),
+        p1 = PaymentC1::definition().dto(),
+        p6 = PaymentC6::definition().dto(),
+        p7 = PaymentC7::definition().dto(),
+    ))
+    .unwrap()
+}
+
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg<PriceCurrencies> {
-    dummy_instantiate_msg(
-        60,
-        Percent::from_percent(50),
-        sdk::cosmwasm_std::from_json(format!(
-            r#"{{
-                "value":[0,"{usdc}"],
-                "children":[
-                    {{
-                        "value":[3,"{weth}"],
-                        "children":[
-                            {{
-                                "value":[2,"{atom}"],
-                                "children":[
-                                    {{"value":[1,"{osmo}"]}}
-                                ]
-                            }}
-                        ]
-                    }},
-                    {{
-                        "value":[4,"{axl}"],
-                        "children":[
-                            {{"value":[5,"{cro}"]}}
-                        ]
-                    }}
-                ]
-            }}"#,
-            usdc = BaseCurrency::ticker(),
-            weth = PaymentC7::ticker(),
-            atom = PaymentC3::ticker(),
-            osmo = PaymentC5::ticker(),
-            axl = PaymentC4::ticker(),
-            cro = PaymentC6::ticker(),
-        ))
-        .unwrap(),
-    )
+    dummy_instantiate_msg(60, Percent::from_percent(50), dummy_swap_tree())
 }
 
 pub(crate) fn dummy_feed_prices_msg(
@@ -118,16 +120,16 @@ pub(crate) fn dummy_feed_prices_msg(
     ExecuteMsg::FeedPrices {
         prices: vec![
             PriceDTO::from(
-                price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC3>::new(12)),
+                price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC5>::new(12)),
             ),
             PriceDTO::from(
-                price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC7>::new(32)),
+                price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(32)),
             ),
             PriceDTO::from(
-                price::total_of(Coin::<PaymentC7>::new(10)).is(Coin::<BaseCurrency>::new(12)),
+                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<BaseCurrency>::new(12)),
             ),
             PriceDTO::from(
-                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<BaseCurrency>::new(120)),
+                price::total_of(Coin::<PaymentC1>::new(10)).is(Coin::<BaseCurrency>::new(120)),
             ),
         ],
     }

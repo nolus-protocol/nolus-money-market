@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, AnyVisitorResult, CurrencyDef, MemberOf};
+use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, MemberOf};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -60,7 +60,7 @@ where
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        lpn.into_currency_type(FactoryStage2 {
+        lpn.into_currency_super_group_type(FactoryStage2 {
             lease_dto: self.lease_dto,
             cmd: self.cmd,
             position,
@@ -79,12 +79,10 @@ where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
-    type VisitorG = LpnCurrencies;
-
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn on<Lpn>(self, _def: &Lpn) -> AnyVisitorResult<LpnCurrencies, Self>
+    fn on<Lpn>(self, _def: &CurrencyDTO<Lpn::Group>) -> AnyVisitorResult<LpnCurrencies, Self>
     where
         Lpn: CurrencyDef,
         Lpn::Group: MemberOf<LpnCurrencies>,

@@ -72,7 +72,8 @@ where
 
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
-        V: WithCoin<G, VisitorG = G>,
+        V: WithCoin<G>,
+        G: Group<TopG = G>,
     {
         self.currency
             .into_currency_type(CoinTransformerAny::new(self, cmd))
@@ -81,7 +82,7 @@ where
     pub fn with_super_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
         V: WithCoin<G>,
-        G: MemberOf<V::VisitorG>,
+        G: MemberOf<G>,
     {
         self.currency
             .into_currency_super_group_type(CoinTransformerAny::new(self, cmd))
@@ -170,14 +171,13 @@ impl<G> WithCoin<G> for IntoDTO<G>
 where
     G: Group,
 {
-    type VisitorG = G;
     type Output = CoinDTO<G>;
     type Error = Never;
 
     fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<G, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<Self::VisitorG>,
+        C::Group: MemberOf<G>,
     {
         Ok(coin.into())
     }
@@ -190,7 +190,7 @@ mod test {
     use currency::{
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
-        MemberOf,
+        MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
     };
     use sdk::cosmwasm_std;
 
@@ -213,42 +213,40 @@ mod test {
         }
     }
 
+    impl PairsGroup for MyTestCurrency {
+        type CommonGroup = MyTestGroup;
+
+        fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            currency::visit_noone(visitor)
+        }
+    }
+
     #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
     pub struct MyTestGroup {}
 
     impl Group for MyTestGroup {
         const DESCR: &'static str = "My Test Group";
+        type TopG = Self;
 
         fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
             M: Matcher,
-            V: AnyVisitor<Self, VisitorG = Self>,
+            V: AnyVisitor<Self>,
         {
             Self::maybe_visit_member(matcher, visitor)
         }
 
-        fn maybe_visit_super_visitor<M, V, TopG>(
-            _matcher: &M,
-            _visitor: V,
-        ) -> MaybeAnyVisitResult<Self, V>
+        fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
         where
             M: Matcher,
-            V: AnyVisitor<Self, VisitorG = TopG>,
-            Self: MemberOf<TopG>,
-            TopG: Group,
-        {
-            unreachable!("There is no parent group of this group")
-        }
-
-        fn maybe_visit_member<M, V, TopG>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<TopG, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<TopG, VisitorG = TopG>,
-            Self: MemberOf<TopG>,
-            TopG: Group,
+            V: AnyVisitor<Self::TopG>,
         {
             assert!(matcher.r#match(&MY_TESTC_DEFINITION));
-            Ok(visitor.on::<MyTestCurrency>(&MY_TESTC))
+            Ok(visitor.on::<MyTestCurrency>(MY_TESTC.dto()))
         }
     }
     impl MemberOf<Self> for MyTestGroup {}
