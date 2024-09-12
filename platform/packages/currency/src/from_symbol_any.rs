@@ -63,7 +63,7 @@ where
         V: AnyVisitor<Self::Group>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        <Self::Group as Group>::maybe_visit_super_visitor(&matcher, visitor)
+        <Self::Group as Group>::maybe_visit(&matcher, visitor)
     }
 }
 impl<T> GroupVisit for T

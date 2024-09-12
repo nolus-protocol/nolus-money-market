@@ -236,20 +236,8 @@ mod test {
         where
             M: Matcher,
             V: AnyVisitor<Self>,
-            Self: Group<TopG = Self>,
         {
             Self::maybe_visit_member(matcher, visitor)
-        }
-
-        fn maybe_visit_super_visitor<M, V>(
-            _matcher: &M,
-            _visitor: V,
-        ) -> MaybeAnyVisitResult<Self, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<Self>,
-        {
-            unreachable!("There is no parent group of this group")
         }
 
         fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>

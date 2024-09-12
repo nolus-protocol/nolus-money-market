@@ -26,21 +26,11 @@ impl Group for PaymentGroup {
     where
         M: Matcher,
         V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
     {
         LeaseGroup::maybe_visit_member(matcher, visitor)
             .or_else(|visitor| Lpns::maybe_visit_member(matcher, visitor))
             .or_else(|visitor| Native::maybe_visit_member(matcher, visitor))
             .or_else(|visitor| PaymentOnlyGroup::maybe_visit_member(matcher, visitor))
-    }
-
-    fn maybe_visit_super_visitor<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
-    {
-        unreachable!()
     }
 
     fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>

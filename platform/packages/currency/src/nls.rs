@@ -62,17 +62,8 @@ impl Group for Native {
     where
         M: Matcher,
         V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
     {
         Self::maybe_visit_member(matcher, visitor)
-    }
-
-    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        crate::maybe_visit_member::<_, NlsPlatform, Self, _>(matcher, visitor)
     }
 
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Native, V>

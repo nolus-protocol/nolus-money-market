@@ -241,7 +241,7 @@ mod test {
                 &currency::dto::<PaymentC5, _>(),
                 &currency::dto::<PaymentC4, _>(),
             ),
-            Ok(Some(tests::base_price::<PaymentC3>(6, 1)))
+            Ok(Some(tests::base_price::<PaymentC5>(6, 1)))
         );
 
         assert_eq!(
@@ -267,7 +267,7 @@ mod test {
                 &currency::dto::<PaymentC1, _>(),
                 &currency::dto::<BaseCurrency, _>(),
             ),
-            Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
+            Ok(Some(tests::base_price::<PaymentC1>(4, 1)))
         );
     }
 
@@ -280,11 +280,11 @@ mod test {
             LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
+            Ok(Some(tests::base_price::<PaymentC1>(4, 1))),
             cmd.on::<PaymentC1, BaseCurrency>(
-                &currency::dto::<PaymentC6, _>(),
+                &currency::dto::<PaymentC1, _>(),
                 &currency::dto::<BaseCurrency, _>(),
             ),
-            Ok(Some(tests::base_price::<PaymentC6>(4, 1)))
         );
     }
 

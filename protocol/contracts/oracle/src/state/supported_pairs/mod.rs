@@ -263,15 +263,15 @@ mod tests {
     fn test_invalid_base() {
         let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
-                "value": [0, {lease1:?}],
+                "value": [0, "{lease1}"],
                 "children": [
                     {{
-                        "value": [1, {stable:?}]
+                        "value": [1, "{stable}"]
                     }}
                 ]
             }}"#,
-            lease1 = LeaseC1::ticker(),
-            stable = Lpn::ticker(),
+            lease1 = LeaseC1::definition().dto(),
+            stable = Lpn::definition().dto(),
         ))
         .unwrap();
 
@@ -288,24 +288,24 @@ mod tests {
     fn test_duplicated_nodes() {
         let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
-                "value": [0, {base:?}],
+                "value": [0, "{base}"],
                 "children":[
                     {{
-                        "value": [1, {lease1:?}]
+                        "value": [1, "{lease1}"]
                     }},
                     {{
-                        "value": [2, {lease2:?}],
+                        "value": [2, "{lease2}"],
                         "children": [
                             {{
-                                "value": [1, {lease1:?}]
+                                "value": [1, "{lease1}"]
                             }}
                         ]
                     }}
                 ]
             }}"#,
-            base = TheCurrency::ticker(),
-            lease1 = LeaseC1::ticker(),
-            lease2 = LeaseC2::ticker(),
+            base = TheCurrency::definition().dto(),
+            lease1 = LeaseC1::definition().dto(),
+            lease2 = LeaseC2::definition().dto(),
         ))
         .unwrap();
 
@@ -319,15 +319,15 @@ mod tests {
     fn test_unknown_stable_currency() {
         let tree: HumanReadableTree<_> = cosmwasm_std::from_json(format!(
             r#"{{
-                "value": [0, {base:?}],
+                "value": [0, "{base}"],
                 "children":[
                     {{
-                        "value": [1, {lease1:?}]
+                        "value": [1, "{lease1}"]
                     }}
                 ]
             }}"#,
-            base = TheCurrency::ticker(),
-            lease1 = LeaseC1::ticker(),
+            base = TheCurrency::definition().dto(),
+            lease1 = LeaseC1::definition().dto(),
         ))
         .unwrap();
 

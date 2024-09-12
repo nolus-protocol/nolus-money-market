@@ -31,7 +31,6 @@ impl Group for SuperGroup {
     where
         M: Matcher,
         V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
     {
         crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
@@ -39,14 +38,6 @@ impl Group for SuperGroup {
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
             .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
             .or_else(|visitor| SubGroup::maybe_visit_member(matcher, visitor))
-    }
-
-    fn maybe_visit_super_visitor<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        unreachable!()
     }
 
     fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
@@ -57,41 +48,6 @@ impl Group for SuperGroup {
         unreachable!()
     }
 }
-
-// impl PairsGroup for SuperGroup {
-//     type CommonGroup = SuperGroup;
-
-//     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-//     where
-//         M: Matcher,
-//         V: PairsVisitor<Pivot = Self, VisitedG = Self::CommonGroup>,
-//     {
-//         use crate::maybe_visit_buddy as maybe_visit;
-//         maybe_visit::<SuperGroupTestC1, _, _>(
-//             SuperGroupTestC1::definition().dto(),
-//             matcher,
-//             visitor,
-//         )
-//         .or_else(|v| {
-//             maybe_visit::<SuperGroupTestC2, _, _>(SuperGroupTestC2::definition().dto(), matcher, v)
-//         })
-//         .or_else(|v| {
-//             maybe_visit::<SuperGroupTestC3, _, _>(SuperGroupTestC3::definition().dto(), matcher, v)
-//         })
-//         .or_else(|v| {
-//             maybe_visit::<SuperGroupTestC4, _, _>(SuperGroupTestC4::definition().dto(), matcher, v)
-//         })
-//         .or_else(|v| {
-//             maybe_visit::<SuperGroupTestC5, _, _>(SuperGroupTestC5::definition().dto(), matcher, v)
-//         })
-//         .or_else(|v| {
-//             maybe_visit::<SubGroupTestC6, _, _>(SubGroupTestC6::definition().dto(), matcher, v)
-//         })
-//         .or_else(|v| {
-//             maybe_visit::<SubGroupTestC10, _, _>(SubGroupTestC10::definition().dto(), matcher, v)
-//         })
-//     }
-// }
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC1 {
@@ -199,15 +155,6 @@ impl Group for SubGroup {
     where
         M: Matcher,
         V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
-    {
-        Self::maybe_visit_member(matcher, visitor)
-    }
-
-    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
     {
         maybe_visit::<_, Self, _>(matcher, visitor)
     }
@@ -232,26 +179,6 @@ where
         |visitor| crate::maybe_visit_member::<_, SubGroupTestC10, VisitedG, _>(matcher, visitor),
     )
 }
-
-// impl PairsGroup for SubGroup {
-//     type CommonGroup = SuperGroup;
-
-//     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-//     where
-//         M: Matcher,
-//         V: PairsVisitor<Pivot = Self, VisitedG = Self::CommonGroup>,
-//     {
-//         use crate::maybe_visit_buddy as maybe_visit;
-//         maybe_visit::<SubGroupTestC6, _, _>(SubGroupTestC6::definition().dto(), matcher, visitor)
-//             .or_else(|v| {
-//                 maybe_visit::<SubGroupTestC10, _, _>(
-//                     SubGroupTestC10::definition().dto(),
-//                     matcher,
-//                     v,
-//                 )
-//             })
-//     }
-// }
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
 impl PairsGroup for SubGroupTestC6 {

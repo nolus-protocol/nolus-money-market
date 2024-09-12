@@ -4,7 +4,7 @@ use currency::{
 };
 use sdk::schemars;
 
-use crate::{define_currency, LeaseGroup, Lpn, PaymentGroup};
+use crate::{define_currency, LeaseGroup, Lpn, Nls, PaymentGroup};
 
 define_currency!(
     LeaseC1,
@@ -51,6 +51,15 @@ define_currency!(
     6
 );
 
+define_currency!(
+    LeaseC6,
+    "LC6",
+    "ibc/84E70F4A34FB2DE135FD3A04FDDF53B7DA4206080AA785C8BAB7F8B26299A221", // transfer/channel-0/transfer/channel-208/wbtc-satoshi
+    "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F", // transfer/channel-208/wbtc-satoshi
+    LeaseGroup,
+    8
+);
+
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
@@ -67,6 +76,7 @@ where
         .or_else(|visitor| maybe_visit::<_, LeaseC3, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC4, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC5, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC6, VisitedG, _>(matcher, visitor))
 }
 
 impl PairsGroup for LeaseC1 {
@@ -127,12 +137,25 @@ impl PairsGroup for LeaseC4 {
 impl PairsGroup for LeaseC5 {
     type CommonGroup = PaymentGroup;
 
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Nls, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for LeaseC6 {
+    type CommonGroup = PaymentGroup;
+
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor) // TODO
+        currency::visit_noone(visitor) // let's stay detached from the swap tree for some corner cases
     }
 }
 

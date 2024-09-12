@@ -17,7 +17,7 @@ where
                 if msgs.is_empty() {
                     Err(ContractError::InconsistencyNotDetected())
                 } else {
-                    Ok(dbg!(msgs))
+                    Ok(msgs)
                 }
             })
             .map(|msgs| Response::from(msgs, self))

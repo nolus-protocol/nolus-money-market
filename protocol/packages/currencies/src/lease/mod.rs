@@ -29,17 +29,8 @@ impl Group for LeaseGroup {
     where
         M: Matcher,
         V: AnyVisitor<Self>,
-        Self: Group<TopG = Self>,
     {
-        Self::maybe_visit_member(matcher, visitor)
-    }
-
-    fn maybe_visit_super_visitor<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        impl_mod::maybe_visit::<_, _, Self>(matcher, visitor)
+        impl_mod::maybe_visit(matcher, visitor)
     }
 
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
