@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use lease::api::MigrateMsg;
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
@@ -9,8 +11,9 @@ pub struct Customer<LeaseIter> {
     leases: LeaseIter,
 }
 
-#[derive(Default)]
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+// #[derive(Default)]
+// #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Debug, Eq, PartialEq)]
 pub struct MigrationResult {
     pub msgs: Batch,
     pub next_customer: Option<Addr>,
@@ -70,19 +73,35 @@ impl MigrationResult {
             next_customer,
         })
     }
+
+    fn default() -> Self {
+        Self::new(Batch::default(), None)
+    }
+
+    fn new(msgs: Batch, next_customer: Option<Addr>) -> Self {
+        Self {
+            msgs,
+            next_customer,
+        }
+    }
 }
 
 struct MigrateBatch {
     new_code: Code,
     leases_left: MaxLeases,
-    msgs: Batch,
+    result: MigrationResult,
 }
+
 impl MigrateBatch {
     fn new(new_code: Code, max_leases: MaxLeases) -> Self {
+        Self::new_with_result(new_code, max_leases, MigrationResult::default())
+    }
+
+    fn new_with_result(new_code: Code, leases_left: MaxLeases, result: MigrationResult) -> Self {
         Self {
             new_code,
-            leases_left: max_leases,
-            msgs: Default::default(),
+            leases_left,
+            result,
         }
     }
 
@@ -107,18 +126,8 @@ impl MigrateBatch {
                             .schedule_migrate_wasm_no_reply(lease, &migrate_msg(), self.new_code)
                             .map(|()| None)
                             .map_err(Into::into)
-                    });
-
-                    match res {
-                        Ok(updated_msgs) => Ok((
-                            MigrationResult {
-                                msgs: updated_msgs,
-                                next_customer: None,
-                            },
-                            self.leases_left,
-                        )),
-                        Err(err) => Err(err),
-                    }
+                        })
+                        .and_then(|updated_msgs| Ok(self.update(updated_msgs, None)))
                 } else {
                     Some(Ok(()))
                 }
@@ -143,8 +152,17 @@ impl MigrateBatch {
 
 impl From<MigrateBatch> for Batch {
     fn from(this: MigrateBatch) -> Self {
-        this.msgs
+        this.result.msgs
     }
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum MigrateError {
+    #[error("[Leaser] Migration incomplete with next customer")]
+    MigrationIncomplete(MigrationResult),
+
+    #[error("{0}")]
+    ContractError(#[from] ContractError),
 }
 
 #[cfg(test)]
@@ -329,11 +347,7 @@ mod test {
         exp.msgs
             .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg(), new_code)
             .unwrap();
-
-        MigrationResult {
-            msgs,
-            next_customer: Some(customer),
-        }
+        exp
     }
 
     fn test_customers() -> impl Iterator<Item = ContractResult<Customer<IntoIter<Addr>>>> {

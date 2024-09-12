@@ -47,7 +47,4 @@ pub enum ContractError {
 
     #[error("[Leaser][ProtocolsRegistry] The protocol deregistration request preparation failed! Cause: {0}")]
     ProtocolDeregistration(platform::error::Error),
-
-    #[error("[Leaser]")]
-    MigrationIncomplete(&'static str),
 }

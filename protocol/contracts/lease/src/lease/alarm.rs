@@ -24,22 +24,6 @@ where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
-    // pub(super) fn reschedule(
-    //     &self,
-    //     now: &Timestamp,
-    //     recheck_in: Duration,
-    //     liquidation_zone: &Zone,
-    //     total_due: LpnCoin,
-    //     time_alarms: &TimeAlarmsRef,
-    //     price_alarms: &OracleRef,
-    // ) -> ContractResult<Batch> {
-    //     let next_recheck = now + recheck_in;
-    //     let batch = time_alarms.setup_alarm(next_recheck)?;
-
-    //     self.reschedule_price_alarm(liquidation_zone, total_due, price_alarms.as_alarms::<LeaseAssetCurrencies>())
-    //         .map(|()| batch.merge(price_alarms.into()))
-    // }
-
     pub(super) fn reschedule(
         &self,
         now: &Timestamp,
@@ -50,14 +34,18 @@ where
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
         let next_recheck = now + recheck_in;
-        let batch = time_alarms.setup_alarm(next_recheck)?;
 
-        self.reschedule_price_alarm(
-            liquidation_zone,
-            total_due,
-            price_alarms.as_alarms::<LeaseAssetCurrencies>(),
-        )
-        .map(|()| batch.merge(price_alarms.as_alarms::<LeaseAssetCurrencies>().into()))
+        time_alarms
+            .setup_alarm(next_recheck)
+            .map_err(Into::into)
+            .and_then(|schedule_time_alarm| {
+                self.reschedule_price_alarm(
+                    liquidation_zone,
+                    total_due,
+                    price_alarms.as_alarms::<LeaseAssetCurrencies>(),
+                )
+                .map(|schedule_price_alarm| schedule_time_alarm.merge(schedule_price_alarm))
+            })
     }
 
     fn reschedule_price_alarm<PriceAlarms>(
@@ -65,7 +53,7 @@ where
         liquidation_zone: &Zone,
         total_due: LpnCoin,
         price_alarms: PriceAlarms,
-    ) -> ContractResult<()>
+    ) -> ContractResult<Batch>
     where
         PriceAlarms:
             PriceAlarmsTrait<LeaseAssetCurrencies, BaseC = LpnCurrency, BaseG = LpnCurrencies>,

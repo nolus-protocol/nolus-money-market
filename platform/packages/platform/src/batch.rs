@@ -14,6 +14,7 @@ use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, error::Error, result:
 
 pub type ReplyId = u64;
 
+#[must_use]
 #[derive(Default)]
 #[cfg_attr(
     any(debug_assertions, test, feature = "testing"),
@@ -28,7 +29,7 @@ impl Batch {
     where
         M: Into<CosmosMsg>,
     {
-        dbg!(self.schedule_no_reply(msg))
+        self.schedule_no_reply(msg)
     }
 
     pub fn schedule_execute_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
