@@ -258,7 +258,7 @@ mod test {
             V: AnyVisitor<Self::TopG>,
         {
             assert!(matcher.r#match(&MY_TESTC_DEFINITION));
-            Ok(visitor.on::<MyTestCurrency>(&MY_TESTC.dto()))
+            Ok(visitor.on::<MyTestCurrency>(MY_TESTC.dto()))
         }
     }
     impl MemberOf<Self> for MyTestGroup {}
