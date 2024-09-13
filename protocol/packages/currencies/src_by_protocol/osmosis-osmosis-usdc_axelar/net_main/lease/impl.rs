@@ -93,15 +93,6 @@ define_currency!(
 );
 
 define_currency!(
-    StkAtom,
-    "STK_ATOM",
-    "ibc/DAAD372DB7DD45BBCFA4DDD40CA9793E9D265D1530083AB41A8A0C53C3EBE865", // transfer/channel-0/transfer/channel-4/stk/uatom
-    "ibc/CAA179E40F0266B0B29FB5EAA288FB9212E628822265D4141EBD1C47C3CBFCBC", // transfer/channel-4/stk/uatom
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Strd,
     "STRD",
     "ibc/04CA9067228BB51F1C39A506DA00DF07E1496D8308DD21E8EF66AD6169FA722B", // transfer/channel-0/transfer/channel-326/ustrd
@@ -209,15 +200,6 @@ define_currency!(
     18
 );
 
-define_currency!(
-    Cudos,
-    "CUDOS",
-    "ibc/BB9810E7FE8836311126F15BE0B20E7463189751840F8C3FEF3AC8F87D8AB7C8", // transfer/channel-0/transfer/channel-298/acudos
-    "ibc/E09ED39F390EC51FA9F3F69BEA08B5BBE6A48B3057B2B1C3467FAAE9E58B021B", // transfer/channel-298/acudos
-    LeaseGroup,
-    18
-);
-
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
@@ -238,7 +220,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Akt, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Axl, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, QAtom, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StkAtom, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Strd, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Inj, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Scrt, VisitedG, _>(matcher, visitor))
@@ -251,7 +232,6 @@ where
         .or_else(|visitor| maybe_visit::<_, MilkTia, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Cudos, VisitedG, _>(matcher, visitor))
 }
 
 impl PairsGroup for Atom {
@@ -385,18 +365,6 @@ impl PairsGroup for QAtom {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<Atom, _, _>(matcher, visitor)
-    }
-}
-
-impl PairsGroup for StkAtom {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
     }
 }
 
@@ -558,18 +526,6 @@ impl PairsGroup for Dym {
     }
 }
 
-impl PairsGroup for Cudos {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use currency::CurrencyDef as _;
@@ -586,7 +542,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Cudos, Dym, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Dym, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -599,7 +555,6 @@ mod test {
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Cudos, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::dex());
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::bank());
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::ticker());
