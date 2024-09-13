@@ -67,42 +67,6 @@ define_currency!(
     6
 );
 
-define_currency!(
-    StkAtom,
-    "STK_ATOM",
-    "ibc/DAC47DFAA22682AAFFE28D1B3969BBF6405311F0A3F1228C45519AAE81CD9B9E", // transfer/channel-3839/transfer/channel-49/stk/uatom
-    "ibc/3649CE0C8A2C79048D8C6F31FF18FA69C9BC7EB193512E0BD03B733011290445", // transfer/channel-49/stk/uatom
-    LeaseGroup,
-    6
-);
-
-define_currency!(
-    Newt,
-    "NEWT",
-    "ibc/B474BAE18361B48F4D59B8DB429EE494355E030EE50DE6A8CBE9AE5631DEAF50", // transfer/channel-3839/factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt
-    "factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt", // factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt
-    LeaseGroup,
-    6
-);
-
-define_currency!(
-    Eclip,
-    "ECLIP",
-    "ibc/D30D1FB08459ED7108DE569DA30224F0CB96CFA940BC1F412CF5D763F080DB33", // transfer/channel-3839/factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
-    "factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip", // factory/neutron10sr06r3qkhn7xzpw3339wuj77hu06mzna6uht0/eclip
-    LeaseGroup,
-    6
-);
-
-define_currency!(
-    WstEth,
-    "WST_ETH",
-    "ibc/237D015A64364977C849C6784BA9093D88306C21CE2A7B8C1422BA2E40633353", // transfer/channel-3839/factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH
-    "factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH", // factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH
-    LeaseGroup,
-    18
-);
-
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
@@ -120,10 +84,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Dydx, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Tia, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, StTia, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StkAtom, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Newt, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Eclip, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, WstEth, VisitedG, _>(matcher, visitor))
 }
 
 impl PairsGroup for Atom {
@@ -139,7 +99,6 @@ impl PairsGroup for Atom {
     }
 }
 impl InPoolWith<StAtom> for Atom {}
-impl InPoolWith<StkAtom> for Atom {}
 
 impl PairsGroup for StAtom {
     type CommonGroup = PaymentGroup;
@@ -210,55 +169,6 @@ impl PairsGroup for StTia {
     }
 }
 
-impl PairsGroup for StkAtom {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<Atom, _, _>(matcher, visitor)
-    }
-}
-
-impl PairsGroup for Newt {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
-    }
-}
-
-impl PairsGroup for Eclip {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
-    }
-}
-
-impl PairsGroup for WstEth {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use currency::CurrencyDef as _;
@@ -275,7 +185,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Dydx, Eclip, Newt, Ntrn, StAtom, StTia, StkAtom, Tia, WstEth};
+    use super::{Atom, Dydx, Ntrn, StAtom, StTia, Tia};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -285,10 +195,6 @@ mod test {
         maybe_visit_on_ticker_impl::<Dydx, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<StkAtom, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Newt, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Eclip, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<WstEth, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::dex());
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::bank());
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::ticker());
@@ -304,7 +210,6 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Dydx, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<StTia, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<StkAtom, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::dex());
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::ticker());
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Lpn::ticker());
