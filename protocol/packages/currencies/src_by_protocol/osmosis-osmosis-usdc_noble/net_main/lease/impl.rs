@@ -93,15 +93,6 @@ define_currency!(
 );
 
 define_currency!(
-    StkAtom,
-    "STK_ATOM",
-    "ibc/DAAD372DB7DD45BBCFA4DDD40CA9793E9D265D1530083AB41A8A0C53C3EBE865", // transfer/channel-0/transfer/channel-4/stk/uatom
-    "ibc/CAA179E40F0266B0B29FB5EAA288FB9212E628822265D4141EBD1C47C3CBFCBC", // transfer/channel-4/stk/uatom
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Strd,
     "STRD",
     "ibc/04CA9067228BB51F1C39A506DA00DF07E1496D8308DD21E8EF66AD6169FA722B", // transfer/channel-0/transfer/channel-326/ustrd
