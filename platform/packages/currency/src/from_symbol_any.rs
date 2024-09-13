@@ -22,8 +22,8 @@ where
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
     where
-    // for the sake of generating less monomorphized functions, try to:
-    // C: Currency + MemberOf<VisitedG> + MemberOf<VisitedG::TopG> + ...
+        // for the sake of generating less monomorphized functions, try to:
+        // C: Currency + MemberOf<VisitedG> + MemberOf<VisitedG::TopG> + ...
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
 }
