@@ -61,7 +61,8 @@ runs:
                 "max_wasm_file_size": "5M",
                 "protocols": [
                   "neutron-astroport-usdc_axelar",
-                  "osmosis-osmosis-usdc_axelar"
+                  "osmosis-osmosis-usdc_axelar",
+                  "osmosis-osmosis-osmo"
                 ]
               },
               "net_test": {
@@ -69,7 +70,8 @@ runs:
                 "max_wasm_file_size": "5M",
                 "protocols": [
                   "neutron-astroport-usdc_axelar",
-                  "osmosis-osmosis-usdc_axelar"
+                  "osmosis-osmosis-usdc_axelar",
+                  "osmosis-osmosis-osmo"
                 ]
               },
               "net_main": {
