@@ -85,7 +85,7 @@ where
         G: MemberOf<G>,
     {
         self.currency
-            .into_currency_super_group_type(CoinTransformerAny::new(self, cmd))
+            .into_currency_type(CoinTransformerAny::new(self, cmd))
     }
 
     /// Intended in scenarios when the currency is known in advance.

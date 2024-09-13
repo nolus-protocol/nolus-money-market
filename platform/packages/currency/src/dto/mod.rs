@@ -56,17 +56,9 @@ where
         SubG::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_currency_super_group_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
-    where
-        V: AnyVisitor<G>,
-    {
-        G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
-    }
-
     pub fn into_currency_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
     where
         V: AnyVisitor<G>,
-        G: Group<TopG = G>,
     {
         G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
     }

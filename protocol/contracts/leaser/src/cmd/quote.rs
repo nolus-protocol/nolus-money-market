@@ -171,15 +171,14 @@ where
         Dpc: CurrencyDef,
         Dpc::Group: MemberOf<PaymentCurrencies>,
     {
-        self.lease_asset
-            .into_currency_super_group_type(QuoteStage4 {
-                downpayment,
-                lpp_quote: self.lpp_quote,
-                oracle: self.oracle,
-                liability: self.liability,
-                lease_interest_rate_margin: self.lease_interest_rate_margin,
-                max_ltd: self.max_ltd,
-            })
+        self.lease_asset.into_currency_type(QuoteStage4 {
+            downpayment,
+            lpp_quote: self.lpp_quote,
+            oracle: self.oracle,
+            liability: self.liability,
+            lease_interest_rate_margin: self.lease_interest_rate_margin,
+            max_ltd: self.max_ltd,
+        })
     }
 }
 

@@ -60,7 +60,7 @@ where
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
         let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        lpn.into_currency_super_group_type(FactoryStage2 {
+        lpn.into_currency_type(FactoryStage2 {
             lease_dto: self.lease_dto,
             cmd: self.cmd,
             position,
