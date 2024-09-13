@@ -37,30 +37,21 @@ where
 fn map_from_group<G, TopG>(
     node: NodeRef<'_, SwapTarget<TopG>>,
     api_group: CurrencyGroup,
-) -> MaybeAnyVisitResult<G, CurrencyVisitor<G, TopG>>
+) -> MaybeAnyVisitResult<G, CurrencyVisitor<G>>
 where
     G: Group + MemberOf<TopG>,
     TopG: Group,
 {
     node.value()
         .target
-        .may_into_currency_type::<G, _>(CurrencyVisitor::<G, TopG>(
-            PhantomData,
-            PhantomData,
-            api_group,
-        ))
+        .may_into_currency_type::<G, _>(CurrencyVisitor::<G>(PhantomData, api_group))
 }
 
-struct CurrencyVisitor<VisitedG, VisitorG>(
-    PhantomData<VisitedG>,
-    PhantomData<VisitorG>,
-    CurrencyGroup,
-);
+struct CurrencyVisitor<VisitedG>(PhantomData<VisitedG>, CurrencyGroup);
 
-impl<VisitedG, VisitorG> AnyVisitor<VisitedG> for CurrencyVisitor<VisitedG, VisitorG>
+impl<VisitedG> AnyVisitor<VisitedG> for CurrencyVisitor<VisitedG>
 where
-    VisitedG: Group + MemberOf<VisitorG>,
-    VisitorG: Group,
+    VisitedG: Group,
 {
     type Output = ApiCurrency;
 
@@ -70,7 +61,6 @@ where
     where
         C: CurrencyDef,
     {
-        // TODO get rid of visiting
-        Ok(ApiCurrency::new(def.definition(), self.2))
+        Ok(ApiCurrency::new(def.definition(), self.1))
     }
 }
