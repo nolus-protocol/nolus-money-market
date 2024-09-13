@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
@@ -21,7 +22,7 @@ use crate::{
         Config, ExecuteMsg, InstantiateMsg, MigrateMsg, PricesResponse, QueryMsg, SudoMsg,
         SwapTreeResponse,
     },
-    contract::{alarms::MarketAlarms, oracle::Oracle},
+    contract::{alarms::MarketAlarms, oracle::Oracle as GenericOracle},
     error::ContractError,
     result::ContractResult,
     state::supported_pairs::SupportedPairs,
@@ -38,6 +39,9 @@ mod oracle;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
 const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+
+type Oracle<'storage, S> =
+    GenericOracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
 
 #[entry_point]
 pub fn instantiate(
@@ -63,23 +67,23 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(
-        deps.storage,
-        CONTRACT_VERSION,
-        ContractError::UpdateSoftware,
-    )
-    .and_then(response::response)
-    .inspect_err(platform_error::log(deps.api))
+    validate_swap_tree(deps.storage, env.block.time)
+        .and_then(|()| {
+            versioning::update_software(
+                deps.storage,
+                CONTRACT_VERSION,
+                ContractError::UpdateSoftware,
+            )
+        })
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
-    type QueryOracle<'storage, S> =
-        Oracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
-
     match msg {
         QueryMsg::ContractVersion {} => to_json_binary(&package_version!()),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
@@ -106,16 +110,16 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
                 .collect::<Vec<_>>(),
         ),
         QueryMsg::BasePrice { currency } => to_json_binary(
-            &QueryOracle::load(deps.storage)?
+            &Oracle::load(deps.storage)?
                 .try_query_base_price(env.block.time, &currency)
                 .map(PriceDTO::from)?,
         ),
         QueryMsg::StablePrice { currency } => to_json_binary(
-            &QueryOracle::load(deps.storage)?
+            &Oracle::load(deps.storage)?
                 .try_query_stable_price::<StableCurrency>(env.block.time, &currency)?,
         ),
         QueryMsg::Prices {} => {
-            let prices = QueryOracle::load(deps.storage)?.try_query_prices(env.block.time)?;
+            let prices = Oracle::load(deps.storage)?.try_query_prices(env.block.time)?;
 
             to_json_binary(&PricesResponse { prices })
         }
@@ -129,7 +133,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
                 .into_human_readable(),
         }),
         QueryMsg::AlarmsStatus {} => {
-            to_json_binary(&QueryOracle::load(deps.storage)?.try_query_alarms(env.block.time)?)
+            to_json_binary(&Oracle::load(deps.storage)?.try_query_alarms(env.block.time)?)
         }
     }
 }
@@ -185,6 +189,18 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
         }),
     }
     .map(response::response_only_messages)
+}
+
+fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()> {
+    // we use calculation of all prices since it does not add a significant overhead over the swap tree validation
+    // otherwise we would have to implement a separate and mostly mirroring algorithm
+    Oracle::load(store)
+        .and_then(|oracle| {
+            oracle
+                .try_query_prices(now)
+                .map_err(|e| ContractError::BrokenSwapTree(e.to_string()))
+        })
+        .map(std::mem::drop)
 }
 
 fn to_json_binary<T>(data: &T) -> ContractResult<Binary>

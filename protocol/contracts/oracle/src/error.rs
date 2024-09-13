@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("[Oracle] Failed to update software! Cause: {0}")]
     UpdateSoftware(StdError),
 
+    #[error("[Oracle] The configured swap tree does not conform to the code! Cause: {0}")]
+    BrokenSwapTree(String),
+
     #[error("[Oracle] Failed to load feeders! Cause: {0}")]
     LoadFeeders(StdError),
 

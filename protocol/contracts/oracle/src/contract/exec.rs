@@ -9,12 +9,15 @@ use sdk::{
 
 use crate::{
     api::{Config, DispatchAlarmsResponse, ExecuteMsg},
-    contract::{alarms::MarketAlarms, oracle::Oracle},
+    contract::alarms::MarketAlarms,
     error::ContractError,
     result::ContractResult,
 };
 
-use super::oracle::{feed::Feeds, feeder::Feeders};
+use super::{
+    oracle::{feed::Feeds, feeder::Feeders},
+    Oracle,
+};
 
 pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>(
     deps: DepsMut<'_>,
@@ -43,13 +46,11 @@ where
             )
             .map(|()| Default::default())
         }
-        ExecuteMsg::DispatchAlarms { max_count } => {
-            Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?
-                .try_notify_alarms(env.block.time, max_count)
-                .and_then(|(total, resp)| {
-                    response::response_with_messages(DispatchAlarmsResponse(total), resp)
-                })
-        }
+        ExecuteMsg::DispatchAlarms { max_count } => Oracle::load(deps.storage)?
+            .try_notify_alarms(env.block.time, max_count)
+            .and_then(|(total, resp)| {
+                response::response_with_messages(DispatchAlarmsResponse(total), resp)
+            }),
         ExecuteMsg::AddPriceAlarm { alarm } => {
             contract::validate_addr(deps.querier, &sender)?;
 
