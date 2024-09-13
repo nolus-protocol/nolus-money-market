@@ -34,7 +34,7 @@ currencies = { path = "../protocol/packages/currencies", features = ["testing"] 
 currency = { path = "../platform/packages/currency", features = ["testing"] }
 dex = { path = "../protocol/packages/dex", features = ["testing"] }
 finance = { path = "../platform/packages/finance", features = ["testing"] }
-lpp-platform = { path = "../platform/packages/lpp", features = ["testing"]  }
+lpp-platform = { path = "../platform/packages/lpp", features = ["testing"] }
 marketprice = { path = "../protocol/packages/marketprice", features = ["testing"] }
 platform = { path = "../platform/packages/platform", features = ["testing"] }
 sdk = { path = "../platform/packages/sdk", features = ["cosmos", "neutron", "testing"] }
