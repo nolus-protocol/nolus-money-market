@@ -191,7 +191,7 @@ impl PairsGroup for StTia {
 impl PairsGroup for WstEth {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
