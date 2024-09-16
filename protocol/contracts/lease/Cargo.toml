@@ -26,6 +26,7 @@ net_main = ["contract", "swap/main"]
 
 neutron-astroport-usdc_axelar = ["contract", "swap/astroport"]
 neutron-astroport-usdc_noble = ["contract", "swap/astroport"]
+osmosis-osmosis-all_btc = ["contract", "swap/osmosis"]
 osmosis-osmosis-osmo = ["contract", "swap/osmosis"]
 osmosis-osmosis-statom = ["contract", "swap/osmosis"]
 osmosis-osmosis-usdc_axelar = ["contract", "swap/osmosis"]

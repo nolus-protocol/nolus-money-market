@@ -26,6 +26,7 @@ net_main = []
 
 neutron-astroport-usdc_axelar = []
 neutron-astroport-usdc_noble = []
+osmosis-osmosis-all_btc = []
 osmosis-osmosis-osmo = []
 osmosis-osmosis-statom = []
 osmosis-osmosis-usdc_axelar = []
