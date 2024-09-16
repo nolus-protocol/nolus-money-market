@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, iter};
 
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
@@ -93,12 +93,21 @@ pub(super) fn try_migrate_leases<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(Addr) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
 {
+    const LEGACY_LEASES: [&str; 5] = [
+        "nolus17zjugw5la8fwa0jyca2tqg28upmjyqjwscc2z4fu54s0cdkh724ql4j6r7",
+        "nolus1q2xsckvufnlz6yynqsm33mrcx2hkajjwyqjxnmxslhyt85mvg9csyzy97z",
+        "nolus1scvnd78uzl8jwpwtnggy8l4tk56n6fkgg3nw5z5qnhp0tk0nd7uss225rw",
+        "nolus1d0dc9zqtj9yagd8wkaw23qhw84x4agqxgu39hj7zts0xrzvj9mtqfmtcjy",
+        "nolus1v2vwau267hn7g3frgnqsshfehtn6d6fnd9j9s0wm3n4t3n4mnecqh77dfp",
+    ];
+
     Config::update_lease_code(storage, new_lease)?;
 
-    let leases = Leases::iter(storage, None);
-    migrate::migrate_leases(leases, new_lease, max_leases, migrate_msg)
+    let legacy_leases = LEGACY_LEASES.into_iter().map(Addr::unchecked);
+    let cusomers = Leases::iter(storage, None);
+    migrate::migrate_leases(legacy_leases, cusomers, new_lease, max_leases, migrate_msg)
         .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
@@ -112,12 +121,19 @@ pub(super) fn try_migrate_leases_cont<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(Addr) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
 {
     let lease_code = Config::load(storage)?.lease_code;
 
-    let leases = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(leases, lease_code, max_leases, migrate_msg).map(|result| {
+    let customers = Leases::iter(storage, Some(next_customer));
+    migrate::migrate_leases(
+        iter::empty(),
+        customers,
+        lease_code,
+        max_leases,
+        migrate_msg,
+    )
+    .map(|result| {
         MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
     })
 }
@@ -132,7 +148,7 @@ pub(super) fn try_close_protocol<ProtocolsRegistryLoader, MsgFactory>(
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(Addr) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
     match force {
@@ -268,9 +284,10 @@ mod test {
         )
         .unwrap();
         let cw_resp = response::response_only_messages(resp);
-        let update_lpp_update_reserve_migrate_lease_delete_protocol = 1 + 1 + 1 + 1;
+        let update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases =
+            1 + 1 + 1 + 1 + 5;
         assert_eq!(
-            update_lpp_update_reserve_migrate_lease_delete_protocol,
+            update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases,
             cw_resp.messages.len()
         );
     }
@@ -324,7 +341,7 @@ mod test {
         }
     }
 
-    fn migrate_msg(_customer: Addr) -> MigrateMsg {
+    fn migrate_msg() -> MigrateMsg {
         MigrateMsg {}
     }
 }

@@ -39,6 +39,9 @@ pub enum ContractError {
     #[error("[Leaser] No Liquidity")]
     NoLiquidity {},
 
+    #[error("[Leaser] The leases exceed the limit")]
+    ExceedMigrationLimit(),
+
     #[error("[Leaser] Invalid continuation key, cause: {err} ")]
     InvalidContinuationKey { err: String },
 

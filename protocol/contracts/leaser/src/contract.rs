@@ -233,7 +233,7 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-fn migrate_msg(_customer: Addr) -> LeaseMigrateMsg {
+fn migrate_msg() -> LeaseMigrateMsg {
     LeaseMigrateMsg {}
 }
 
