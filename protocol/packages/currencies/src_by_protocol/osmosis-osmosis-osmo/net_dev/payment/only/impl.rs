@@ -1,6 +1,6 @@
 use currency::{
-    AnyVisitor, Group, InPoolWith, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
-    PairsGroup, PairsVisitor,
+    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
+    PairsVisitor,
 };
 use sdk::schemars;
 
