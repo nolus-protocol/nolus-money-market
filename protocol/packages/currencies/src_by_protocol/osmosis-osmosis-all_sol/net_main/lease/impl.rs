@@ -74,7 +74,7 @@ mod test {
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<UsdcNoble, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(UsdcNoble::bank());
+        maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(UsdcNoble::ticker());
         maybe_visit_on_bank_symbol_err::<UsdcNoble, LeaseGroup>(UsdcNoble::dex());
     }
 }
