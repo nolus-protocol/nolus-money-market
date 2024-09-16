@@ -9,10 +9,10 @@ license.workspace = true
 combinations = [
     { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
     { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-all_btc", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
     { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-or-stub", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
     { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-all_btc", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
 ]
 feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar"], at-least-one = true, mutually-exclusive = true }, contract-or-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
@@ -26,6 +26,7 @@ net_main = ["dep:swap", "contract", "swap/main"]
 
 neutron-astroport-usdc_axelar = ["contract", "swap/astroport"]
 neutron-astroport-usdc_noble = ["contract", "swap/astroport"]
+osmosis-osmosis-all_btc = ["contract", "swap/osmosis"]
 osmosis-osmosis-osmo = ["contract", "swap/osmosis"]
 osmosis-osmosis-statom = ["contract", "swap/osmosis"]
 osmosis-osmosis-usdc_axelar = ["contract", "swap/osmosis"]
