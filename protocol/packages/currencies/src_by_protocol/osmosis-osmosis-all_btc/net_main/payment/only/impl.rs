@@ -158,6 +158,7 @@ impl PairsGroup for Osmo {
     }
 }
 impl InPoolWith<StOsmo> for Osmo {}
+impl InPoolWith<Weth> for Osmo {}
 impl InPoolWith<Akt> for Osmo {}
 impl InPoolWith<Axl> for Osmo {}
 
@@ -177,12 +178,13 @@ impl PairsGroup for StOsmo {
 impl PairsGroup for Weth {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor)
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Osmo, _, _>(matcher, visitor)
     }
 }
 
@@ -202,12 +204,13 @@ impl PairsGroup for Akt {
 impl PairsGroup for Inj {
     type CommonGroup = PaymentGroup;
 
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
     {
-        currency::visit_noone(visitor)
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<UsdcNoble, _, _>(matcher, visitor)
     }
 }
 

@@ -6,7 +6,7 @@ use sdk::schemars;
 
 use crate::{
     define_currency,
-    payment::only::impl_mod::{AllEth, Atom},
+    payment::only::impl_mod::{AllEth, Atom, Inj},
     LeaseGroup, Lpn, Nls, PaymentGroup,
 };
 
@@ -48,6 +48,7 @@ impl PairsGroup for UsdcNoble {
 impl InPoolWith<Nls> for UsdcNoble {}
 impl InPoolWith<AllEth> for UsdcNoble {}
 impl InPoolWith<Atom> for UsdcNoble {}
+impl InPoolWith<Inj> for UsdcNoble {}
 
 #[cfg(test)]
 mod test {
