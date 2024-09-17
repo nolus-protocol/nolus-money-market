@@ -187,18 +187,12 @@ where
     /// value of the prices. The rounding would be done by shifting to
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Result<Self> {
+    fn lossy_add(self, rhs: Self) -> Option<Self> {
         let factor: Coin<C> = Coin::new(1_000_000_000_000_000_000); // 1*10^18
 
         total(factor, self)
             .and_then(|total_self| {
-                total(factor, rhs).and_then(|total_rhs| {
-                    total_self.checked_add(total_rhs).ok_or(Error::overflow_err(
-                        "while adding",
-                        total_self,
-                        total_rhs,
-                    ))
-                })
+                total(factor, rhs).and_then(|total_rhs| total_self.checked_add(total_rhs))
             })
             .map(|factored_total| total_of(factor).is(factored_total))
     }
@@ -285,7 +279,7 @@ where
 
     fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
         self.checked_add(rhs)
-            .or_else(|| self.lossy_add(rhs).ok())
+            .or_else(|| self.lossy_add(rhs))
             .expect("should not observe huge prices")
     }
 }
@@ -330,17 +324,13 @@ impl<C, QuoteC> Display for Price<C, QuoteC> {
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Result<Coin<QuoteC>>
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>>
 where
     C: 'static,
     QuoteC: 'static,
 {
     let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote).ok_or(Error::overflow_err(
-        "in currency convertion",
-        ratio_impl,
-        price.amount_quote,
-    ))
+    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
 }
 
 #[cfg(test)]
@@ -352,7 +342,6 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
-        error::{Error, Result},
         price::{self, Price},
         ratio::Rational,
     };
@@ -447,10 +436,10 @@ mod test {
     }
 
     #[test]
-    fn total_err() {
+    fn total_overflow() {
         let price = price::total_of::<SuperGroupTestC2>(1.into())
             .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
-        assert_err(super::total(2.into(), price), "in currency convertion");
+        assert!(super::total(2.into(), price).is_none());
     }
 
     #[test]
@@ -501,11 +490,11 @@ mod test {
     }
 
     #[test]
-    fn lossy_add_err() {
+    fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        assert_err(p1.lossy_add(p2), "in currency convertion");
+        assert!(p1.lossy_add(p2).is_none());
     }
 
     #[test]
@@ -603,11 +592,11 @@ mod test {
         assert_eq!(exp, price1.add(price2));
         assert!({
             price1.checked_add(price2).map_or_else(
-                || Ok(exp) == price1.lossy_add(price2),
+                || Some(exp) == price1.lossy_add(price2),
                 |v| v == price1.add(price2),
             )
         });
-        assert!(Ok(exp) == price1.lossy_add(price2));
+        assert!(Some(exp) == price1.lossy_add(price2));
         assert!(exp >= price1);
         assert!(exp >= price2);
 
@@ -628,7 +617,7 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Ok(exp), price1.lossy_add(price2));
+        assert_eq!(Some(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
     }
 
@@ -674,14 +663,6 @@ mod test {
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
         lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
-    }
-
-    fn assert_err<T>(r: Result<T>, msg: &str) {
-        assert!(matches!(
-            r,
-            Err(Error::OverflowError { operation, operand1: _, operand2: _ })
-            if operation.contains(msg)
-        ));
     }
 }
 

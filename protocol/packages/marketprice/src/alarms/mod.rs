@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDef, Group, MemberOf, SymbolOwned};
 use finance::{
     coin::{Amount, CoinDTO},
+    error::Error as FinanceError,
     price::{self, Price},
 };
 use sdk::{
@@ -57,16 +58,14 @@ impl<G> NormalizedPrice<G>
 where
     G: Group + Clone,
 {
-    fn new<C, BaseC>(price: &Price<C, BaseC>) -> Result<Self, AlarmError>
+    fn new<C, BaseC>(price: &Price<C, BaseC>) -> Option<Self>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
-        price::total(NORM_SCALE.into(), price.inv())
-            .map_err(AlarmError::CreatingNormalizedPrice)
-            .map(|price| NormalizedPrice::<G>(price.into()))
+        price::total(NORM_SCALE.into(), price.inv()).map(|price| NormalizedPrice::<G>(price.into()))
     }
 }
 
@@ -156,10 +155,7 @@ where
         }
     }
 
-    pub fn alarms<C, BaseC>(
-        &self,
-        price: Price<C, BaseC>,
-    ) -> Result<AlarmsIterator<'_, G>, AlarmError>
+    pub fn alarms<C, BaseC>(&self, price: Price<C, BaseC>) -> Option<AlarmsIterator<'_, G>>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
@@ -215,6 +211,35 @@ where
     G: Group + Clone,
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
+    // pub fn add_alarm<C, BaseC>(
+    //     &mut self,
+    //     subscriber: Addr,
+    //     below: Price<C, BaseC>,
+    //     above_or_equal: Option<Price<C, BaseC>>,
+    // ) -> Result<(), AlarmError>
+    // where
+    //     C: CurrencyDef,
+    //     C::Group: MemberOf<G>,
+    //     BaseC: CurrencyDef,
+    // {
+    //     NormalizedPrice::new(&below)
+    //         .ok_or(AlarmError::CreatingNormalizedPrice)
+    //         .and_then(|normalized_below| {
+    //             self.add_alarm_below_internal(subscriber.clone(), &normalized_below)
+    //                 .and_then(|()| match above_or_equal {
+    //                     None => self.remove_above_or_equal(subscriber),
+    //                     Some(above_or_equal) => NormalizedPrice::new(&above_or_equal)
+    //                         .ok_or(AlarmError::CreatingNormalizedPrice)
+    //                         .and_then(|normalized_above_or_equal| {
+    //                             Ok(self.add_alarm_above_or_equal_internal(
+    //                                 subscriber,
+    //                                 &normalized_above_or_equal,
+    //                             ))?
+    //                         }),
+    //                 })
+    //         })
+    // }
+
     pub fn add_alarm<C, BaseC>(
         &mut self,
         subscriber: Addr,
@@ -226,20 +251,34 @@ where
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
-        NormalizedPrice::new(&below).and_then(|normalized_below| {
-            self.add_alarm_below_internal(subscriber.clone(), &normalized_below)
-                .and_then(|()| match above_or_equal {
+        NormalizedPrice::new(&below)
+            .ok_or_else(|| {
+                AlarmError::CreatingNormalizedPrice(
+                    FinanceError::Overflow(
+                        format!("Overflow occurred while normalizing the below price: {:?}", below)
+                    )
+                )
+            })
+            .and_then(|normalized_below| {
+                self.add_alarm_below_internal(subscriber.clone(), &normalized_below)?;
+
+                match above_or_equal {
                     None => self.remove_above_or_equal(subscriber),
-                    Some(above_or_equal) => NormalizedPrice::new(&above_or_equal).and_then(
-                        |normalized_above_or_equal| {
-                            self.add_alarm_above_or_equal_internal(
-                                subscriber,
-                                &normalized_above_or_equal,
-                            )
-                        },
-                    ),
-                })
-        })
+                    Some(above_or_equal) => {
+                        NormalizedPrice::new(&above_or_equal)
+                            .ok_or_else(|| {
+                                AlarmError::CreatingNormalizedPrice(
+                                    FinanceError::Overflow(
+                                        format!("Overflow occurred while normalizing the above_or_equal price: {:?}", above_or_equal)
+                                    )
+                                )
+                            })
+                            .and_then(|normalized_above_or_equal| {
+                                self.add_alarm_above_or_equal_internal(subscriber, &normalized_above_or_equal)
+                            })
+                    }
+                }
+            })
     }
 
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {

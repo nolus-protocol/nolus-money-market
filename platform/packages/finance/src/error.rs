@@ -19,6 +19,9 @@ pub enum Error {
         operand2: String,
     },
 
+    #[error("[Finance] [OverflowError] {0}")]
+    Overflow(String),
+
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
 

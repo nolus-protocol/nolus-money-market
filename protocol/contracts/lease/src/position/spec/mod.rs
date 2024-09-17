@@ -4,6 +4,7 @@ use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
+    error::Error as FinanceError,
     liability::Liability,
     percent::Percent,
     price::{self},
@@ -63,7 +64,12 @@ impl Spec {
             .and_then(|()| {
                 self.liability
                     .init_borrow_amount(downpayment, may_max_ltd)
-                    .map_err(Into::into)
+                    .ok_or(ContractError::FinanceError(FinanceError::Overflow(
+                        format!(
+                            "Overflow while calculating the borrow amount with downpayment: {:?}",
+                            downpayment
+                        ),
+                    )))
             })
             .and_then(|borrow| {
                 self.valid_transaction(borrow, one)
@@ -91,7 +97,7 @@ impl Spec {
             })
     }
 
-    pub fn overdue_collection_in<Due>(&self, due: &Due) -> ContractResult<Duration>
+    pub fn overdue_collection_in<Due>(&self, due: &Due) -> Option<Duration>
     where
         Due: DueTrait,
     {
@@ -104,30 +110,21 @@ impl Spec {
         asset: Coin<Asset>,
         due: &Due,
         asset_in_lpns: Price<Asset>,
-    ) -> ContractResult<Debt<Asset>>
+    ) -> Option<Debt<Asset>>
     where
         Asset: Currency,
         Due: DueTrait,
     {
         let total_due = price::total(due.total_due(), asset_in_lpns.inv())?;
 
-        let may_liquidation_liability =
-            self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)?;
-        let may_liquidation_overdue =
-            self.may_ask_liquidation_overdue(asset, due, asset_in_lpns)?;
-
-        let max_liability_or_overdue = may_liquidation_liability.max(may_liquidation_overdue);
-
-        if let Some(max_value) = max_liability_or_overdue {
-            return Ok(Debt::Bad(max_value));
-        }
-
-        let ltv = Percent::from_ratio(total_due, asset)?;
-
-        // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
-        let no_liquidation = self.no_liquidation(due, ltv.min(self.liability.third_liq_warn()))?;
-
-        Ok(no_liquidation)
+        self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
+            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
+            .map(Debt::Bad)
+            .or_else(|| {
+                let ltv = Percent::from_ratio(total_due, asset)?;
+                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
+                self.no_liquidation(due, ltv.min(self.liability.third_liq_warn()))
+            })
     }
 
     /// Check if the amount can be used for repayment.
@@ -148,7 +145,11 @@ impl Spec {
                     Ok(())
                 } else {
                     price::total(self.min_transaction, payment_currency_in_lpns.inv())
-                        .map_err(Into::into)
+                        .ok_or(ContractError::FinanceError(FinanceError::overflow_err(
+                            "while calculating the total",
+                            self.min_transaction,
+                            payment_currency_in_lpns.inv(),
+                        )))
                         .and_then(|amount| Err(ContractError::InsufficientPayment(amount.into())))
                 }
             })
@@ -216,7 +217,11 @@ impl Spec {
         TransactionC: Currency,
     {
         price::total(amount, transaction_currency_in_lpn)
-            .map_err(Into::into)
+            .ok_or(ContractError::FinanceError(FinanceError::overflow_err(
+                "while calculating the total",
+                amount,
+                transaction_currency_in_lpn,
+            )))
             .map(|amount| amount >= self.min_transaction)
     }
 
@@ -229,7 +234,11 @@ impl Spec {
         TransactionC: Currency,
     {
         price::total(asset_amount, transaction_currency_in_lpn)
-            .map_err(Into::into)
+            .ok_or(ContractError::FinanceError(FinanceError::overflow_err(
+                "while calculating the total",
+                asset_amount,
+                transaction_currency_in_lpn,
+            )))
             .map(|asset_amount| asset_amount >= self.min_asset)
     }
 
@@ -238,15 +247,13 @@ impl Spec {
         asset: Coin<Asset>,
         total_due: Coin<Asset>,
         asset_in_lpns: Price<Asset>,
-    ) -> ContractResult<Option<Liquidation<Asset>>>
+    ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
     {
         self.liability
             .amount_to_liquidate(asset, total_due)
-            .map_err(Into::into)
-            .map(Into::into)
-            .map(|liquidation_amount| {
+            .and_then(|liquidation_amount| {
                 self.may_ask_liquidation(
                     asset,
                     Cause::Liability {
@@ -264,7 +271,7 @@ impl Spec {
         asset: Coin<Asset>,
         due: &Due,
         asset_in_lpns: Price<Asset>,
-    ) -> ContractResult<Option<Liquidation<Asset>>>
+    ) -> Option<Liquidation<Asset>>
     where
         Asset: Currency,
         Due: DueTrait,
@@ -272,11 +279,9 @@ impl Spec {
         self.overdue_collection(due).and_then(|collection| {
             let collectable = collection.amount();
             debug_assert!(collectable <= due.total_due());
-            price::total(collectable, asset_in_lpns.inv())
-                .map_err(Into::into)
-                .map(|to_liquidate| {
-                    self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
-                })
+            price::total(collectable, asset_in_lpns.inv()).and_then(|to_liquidate| {
+                self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
+            })
         })
     }
 
@@ -304,14 +309,14 @@ impl Spec {
         }
     }
 
-    fn no_liquidation<Asset, Due>(&self, due: &Due, ltv: Percent) -> ContractResult<Debt<Asset>>
+    fn no_liquidation<Asset, Due>(&self, due: &Due, ltv: Percent) -> Option<Debt<Asset>>
     where
         Asset: Currency,
         Due: DueTrait,
     {
         debug_assert!(ltv < self.liability.max());
         if due.total_due().is_zero() {
-            Ok(Debt::No)
+            Some(Debt::No)
         } else {
             self.overdue_collection_in(due)
                 .map(|overdue_collection_in| Debt::Ok {
@@ -321,7 +326,7 @@ impl Spec {
         }
     }
 
-    fn overdue_collection<Due>(&self, due: &Due) -> ContractResult<OverdueCollection>
+    fn overdue_collection<Due>(&self, due: &Due) -> Option<OverdueCollection>
     where
         Due: DueTrait,
     {
@@ -444,7 +449,6 @@ mod test_debt {
     };
 
     use crate::{
-        error::ContractResult,
         finance::LpnCoin,
         position::{Cause, Debt, DueTrait, OverdueCollection},
     };
@@ -465,11 +469,11 @@ mod test_debt {
         }
 
         #[track_caller]
-        fn overdue_collection(&self, min_amount: LpnCoin) -> ContractResult<OverdueCollection> {
+        fn overdue_collection(&self, min_amount: LpnCoin) -> Option<OverdueCollection> {
             if self.overdue.is_zero() || self.overdue < min_amount {
-                Ok(OverdueCollection::StartIn(Duration::from_days(5)))
+                Some(OverdueCollection::StartIn(Duration::from_days(5)))
             } else {
-                Ok(OverdueCollection::Overdue(self.overdue))
+                Some(OverdueCollection::Overdue(self.overdue))
             }
         }
     }

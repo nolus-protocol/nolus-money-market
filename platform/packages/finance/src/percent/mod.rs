@@ -43,18 +43,14 @@ impl Percent {
     pub fn from_ratio<FractionUnit>(
         nominator: FractionUnit,
         denominator: FractionUnit,
-    ) -> FinanceResult<Self>
+    ) -> Option<Self>
     where
         FractionUnit: Zero + Debug + Copy + PartialEq + Display,
         Self: Fractionable<FractionUnit>,
     {
         let ratio = Rational::new(nominator, denominator);
 
-        ratio.of(Percent::HUNDRED).ok_or(Error::overflow_err(
-            "while converting ratio to percent",
-            ratio,
-            Percent::HUNDRED,
-        ))
+        ratio.of(Percent::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {

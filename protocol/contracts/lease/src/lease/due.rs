@@ -1,7 +1,6 @@
 use finance::{duration::Duration, interest};
 
 use crate::{
-    error::ContractResult,
     finance::LpnCoin,
     loan::State,
     position::{DueTrait, OverdueCollection},
@@ -12,7 +11,7 @@ impl DueTrait for State {
         self.principal_due + self.total_due_interest()
     }
 
-    fn overdue_collection(&self, min_amount: LpnCoin) -> ContractResult<OverdueCollection> {
+    fn overdue_collection(&self, min_amount: LpnCoin) -> Option<OverdueCollection> {
         let total_due_interest = self.total_due_interest();
 
         let time_to_accrue_min_amount = if total_due_interest >= min_amount {
@@ -38,9 +37,9 @@ impl DueTrait for State {
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
 
         if time_to_collect == Duration::default() {
-            Ok(OverdueCollection::Overdue(total_due_interest))
+            Some(OverdueCollection::Overdue(total_due_interest))
         } else {
-            Ok(OverdueCollection::StartIn(time_to_collect))
+            Some(OverdueCollection::StartIn(time_to_collect))
         }
     }
 }

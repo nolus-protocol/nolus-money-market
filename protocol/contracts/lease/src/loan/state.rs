@@ -3,10 +3,7 @@ use finance::{
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
-use crate::{
-    error::ContractResult,
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
-};
+use crate::finance::{LpnCoin, LpnCurrencies, LpnCurrency};
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State {
@@ -39,12 +36,12 @@ impl Overdue {
         max_due: Duration,
         margin_interest: Percent,
         lpp_loan: &LppLoan,
-    ) -> ContractResult<Self>
+    ) -> Option<Self>
     where
         LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     {
         if due_period_margin.length() < max_due {
-            Ok(Self::StartIn(max_due - due_period_margin.length()))
+            Some(Self::StartIn(max_due - due_period_margin.length()))
         } else {
             // due to the right-opened nature of intervals, if '==' then the due period end is the overdue period start
             let overdue_period = if due_period_margin.length() == max_due {
@@ -60,11 +57,9 @@ impl Overdue {
                 lpp_loan.principal_due(),
                 overdue_period.length(),
             )
-            .map_err(Into::into)
             .and_then(|margin| {
                 lpp_loan
                     .interest_due(&overdue_period.till())
-                    .map_err(Into::into)
                     .map(|interest| Self::Accrued { interest, margin })
             })
         }

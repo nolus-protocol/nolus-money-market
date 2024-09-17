@@ -78,31 +78,45 @@ impl Deposit {
             .map_err(Into::into)
             .and_then(|may_globals| {
                 let mut globals = may_globals.unwrap_or_default();
-                self.update_rewards(&globals).and_then(|()| {
-                    price::total(amount_lpn, price.get().inv())
-                        .map_err(Into::into)
-                        .and_then(|deposited_nlpn| {
-                            self.data.deposited_nlpn += deposited_nlpn;
-                            Self::DEPOSITS
-                                .save(storage, self.addr.clone(), &self.data)
-                                .map_err(Into::into)
-                                .and_then(|()| {
-                                    globals.balance_nlpn =
-                                        globals.balance_nlpn.checked_add(deposited_nlpn).ok_or(
-                                            ContractError::Finance(FinanceError::overflow_err(
-                                                "while calculating the balance",
-                                                globals.balance_nlpn,
-                                                deposited_nlpn,
-                                            )),
-                                        )?;
+                self.update_rewards(&globals)
+                    .ok_or_else(|| {
+                        ContractError::Finance(FinanceError::Overflow(
+                            "Oveflow while updating the rewrds".to_string(),
+                        ))
+                    })
+                    .and_then(|()| {
+                        price::total(amount_lpn, price.get().inv())
+                            .ok_or_else(|| {
+                                ContractError::Finance(FinanceError::overflow_err(
+                                    "while calculating the total",
+                                    amount_lpn,
+                                    price.get().inv(),
+                                ))
+                            })
+                            .and_then(|deposited_nlpn| {
+                                self.data.deposited_nlpn += deposited_nlpn;
+                                Self::DEPOSITS
+                                    .save(storage, self.addr.clone(), &self.data)
+                                    .map_err(Into::into)
+                                    .and_then(|()| {
+                                        globals.balance_nlpn = globals
+                                            .balance_nlpn
+                                            .checked_add(deposited_nlpn)
+                                            .ok_or(ContractError::Finance(
+                                                FinanceError::overflow_err(
+                                                    "while calculating the balance",
+                                                    globals.balance_nlpn,
+                                                    deposited_nlpn,
+                                                ),
+                                            ))?;
 
-                                    Self::GLOBALS
-                                        .save(storage, &globals)
-                                        .map_err(Into::into)
-                                        .map(|()| deposited_nlpn)
-                                })
-                        })
-                })
+                                        Self::GLOBALS
+                                            .save(storage, &globals)
+                                            .map_err(Into::into)
+                                            .map(|()| deposited_nlpn)
+                                    })
+                            })
+                    })
             })
     }
 
@@ -117,22 +131,28 @@ impl Deposit {
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        self.update_rewards(&globals)?;
+        self.update_rewards(&globals)
+            .ok_or_else(|| {
+                ContractError::Finance(FinanceError::Overflow(
+                    "Oveflow while updating the rewrds".to_string(),
+                ))
+            })
+            .and_then(|()| {
+                self.data.deposited_nlpn -= amount_nlpn;
+                globals.balance_nlpn -= amount_nlpn;
 
-        self.data.deposited_nlpn -= amount_nlpn;
-        globals.balance_nlpn -= amount_nlpn;
+                let maybe_reward = if self.data.deposited_nlpn.is_zero() {
+                    Self::DEPOSITS.remove(storage, self.addr.clone());
+                    Some(self.data.pending_rewards_nls)
+                } else {
+                    Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
+                    None
+                };
 
-        let maybe_reward = if self.data.deposited_nlpn.is_zero() {
-            Self::DEPOSITS.remove(storage, self.addr.clone());
-            Some(self.data.pending_rewards_nls)
-        } else {
-            Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-            None
-        };
+                Self::GLOBALS.save(storage, &globals)?;
 
-        Self::GLOBALS.save(storage, &globals)?;
-
-        Ok(maybe_reward)
+                Ok(maybe_reward)
+            })
     }
 
     pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<Nls>) -> Result<()> {
@@ -157,24 +177,24 @@ impl Deposit {
         Ok(Self::GLOBALS.save(deps.storage, &globals)?)
     }
 
-    fn update_rewards(&mut self, globals: &DepositsGlobals) -> Result<()> {
+    fn update_rewards(&mut self, globals: &DepositsGlobals) -> Option<()> {
         self.calculate_reward(globals).map(|reward| {
             self.data.pending_rewards_nls = reward;
             self.data.reward_per_token = globals.reward_per_token;
         })
     }
 
-    fn calculate_reward(&self, globals: &DepositsGlobals) -> Result<Coin<NlsPlatform>> {
+    fn calculate_reward(&self, globals: &DepositsGlobals) -> Option<Coin<NlsPlatform>> {
         let deposit = &self.data;
 
         let may_global_reward = globals.reward_per_token.map_or_else(
-            || Ok(Coin::ZERO),
-            |price| price::total(deposit.deposited_nlpn, price).map_err(Into::into),
+            || Some(Coin::ZERO),
+            |price| price::total(deposit.deposited_nlpn, price),
         );
 
         let may_deposit_reward = deposit.reward_per_token.map_or_else(
-            || Ok(Coin::ZERO),
-            |price| price::total(deposit.deposited_nlpn, price).map_err(Into::into),
+            || Some(Coin::ZERO),
+            |price| price::total(deposit.deposited_nlpn, price),
         );
 
         may_global_reward.and_then(|global_reward| {
@@ -187,14 +207,14 @@ impl Deposit {
     pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.calculate_reward(&globals)
-            .map_err(|err| StdError::generic_err(err.to_string()))
+            .ok_or_else(|| StdError::generic_err("Failed to calculate rewards"))
     }
 
     /// pay accounted rewards to the deposit owner or optional recipient
     pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals)
-            .map_err(|err| StdError::generic_err(err.to_string()))
+            .ok_or_else(|| StdError::generic_err("Failed to update rewards"))
             .and_then(|()| {
                 let reward = self.data.pending_rewards_nls;
                 self.data.pending_rewards_nls = Coin::ZERO;

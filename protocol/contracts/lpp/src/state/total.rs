@@ -57,13 +57,12 @@ impl<Lpn> Total<Lpn> {
         Self::STORAGE.load(storage)
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Result<Coin<Lpn>> {
+    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest::<Coin<Lpn>, _, _>(
             self.annual_interest_rate,
             self.total_principal_due,
             Duration::between(&self.last_update_time, ctime),
         )
-        .map_err(Into::into)
         .map(|interest| interest + self.total_interest_due)
     }
 
@@ -73,7 +72,12 @@ impl<Lpn> Total<Lpn> {
         amount: Coin<Lpn>,
         loan_interest_rate: Percent,
     ) -> Result<&Self> {
-        self.total_interest_due = self.total_interest_due_by_now(&ctime)?;
+        self.total_interest_due =
+            self.total_interest_due_by_now(&ctime)
+                .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                    "Oveflow while calculating the total interest due by now: {:?}",
+                    &ctime
+                ))))?;
 
         let new_total_principal_due =
             self.total_principal_due
@@ -126,43 +130,30 @@ impl<Lpn> Total<Lpn> {
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
-    ) -> Result<&Self> {
+    ) -> Option<&Self> {
         // The interest payment calculation of loans is the source of truth.
         // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
         // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
 
-        self.total_interest_due = self
-            .total_interest_due_by_now(&ctime)?
-            .saturating_sub(loan_interest_payment);
+        self.total_interest_due =
+            self.total_interest_due_by_now(&ctime)
+                .map(|total_interst_due_by_now| {
+                    total_interst_due_by_now.saturating_sub(loan_interest_payment)
+                })?;
 
         let new_total_principal_due = self
             .total_principal_due
-            .checked_sub(loan_principal_payment)
-            .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                "while adding",
-                self.total_principal_due,
-                loan_principal_payment,
-            )))?;
+            .checked_sub(loan_principal_payment)?;
 
         self.annual_interest_rate = if new_total_principal_due.is_zero() {
-            Ok(zero_interest_rate())
+            Some(zero_interest_rate())
         } else {
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
             Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                    "in fraction calculation",
-                    self.annual_interest_rate,
-                    self.total_principal_due,
-                )))
                 .and_then(|annual_interest| {
                     loan_interest_rate
                         .of(loan_principal_payment)
-                        .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                            "in fraction calculation",
-                            loan_interest_rate,
-                            loan_principal_payment,
-                        )))
                         .map(|loan_interest| {
                             Rational::new(
                                 annual_interest.saturating_sub(loan_interest),
@@ -175,7 +166,7 @@ impl<Lpn> Total<Lpn> {
         self.total_principal_due = new_total_principal_due;
         self.last_update_time = ctime;
 
-        Ok(self)
+        Some(self)
     }
 }
 

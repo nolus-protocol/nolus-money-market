@@ -41,7 +41,6 @@ impl WithLease for LeaseState {
     {
         lease
             .state(self.now)
-            .map_err(Into::into)
             .map(|open_lease| StateResponse::opened_from(open_lease, self.in_progress))
     }
 }

@@ -121,6 +121,11 @@ where
                 self.commited_balance(&env.contract.address, querier, pending_deposit)
                     .and_then(|balance: Coin<Lpn>| {
                         self.utilization(balance, total_due)
+                            .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                                "during utilization ratio calculation",
+                                balance,
+                                total_due,
+                            )))
                             .and_then(|utilization| {
                                 if utilization > min_utilization {
                                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
@@ -150,6 +155,10 @@ where
 
         self.total
             .total_interest_due_by_now(&env.block.time)
+            .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                "Oveflow while calculating the total interest due by now: {:?}",
+                &env.block.time
+            ))))
             .map(|total_interest_due| LppBalances {
                 balance,
                 total_principal_due,
@@ -197,7 +206,15 @@ where
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
         self.calculate_price(deps, env, Coin::ZERO)
-            .and_then(|price| price::total(amount_nlpn, price.get()).map_err(Into::into))
+            .and_then(|price| {
+                price::total(amount_nlpn, price.get()).ok_or(ContractError::Finance(
+                    FinanceError::overflow_err(
+                        "while calculating the total",
+                        amount_nlpn,
+                        price.get(),
+                    ),
+                ))
+            })
             .and_then(|amount_lpn| {
                 self.balance(&env.contract.address, deps.querier)
                     .and_then(|contract_balance| {
@@ -224,6 +241,10 @@ where
                 let total_principal_due = self.total.total_principal_due();
                 self.total
                     .total_interest_due_by_now(now)
+                    .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                        "Oveflow while calculating the total interest due by now: {:?}",
+                        now
+                    ))))
                     .and_then(|total_interest| {
                         let total_liability_past_quote =
                             total_principal_due + quote + total_interest;
@@ -232,6 +253,9 @@ where
                         self.config
                             .borrow_rate()
                             .calculate(total_liability_past_quote, total_balance_past_quote)
+                            .ok_or(ContractError::Finance(FinanceError::Overflow(
+                                "Overflow while calculating the borrow rate".to_string(),
+                            )))
                     })
                     .map(Some)
             }
@@ -283,6 +307,10 @@ where
         Loan::load(deps.storage, lease_addr.clone()).and_then(|mut loan| {
             let loan_annual_interest_rate = loan.annual_interest_rate;
             loan.repay(&env.block.time, repay_amount)
+                .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                    "Oveflow while repaying {:?}",
+                    repay_amount
+                ))))
                 .and_then(|payment| {
                     Loan::save(deps.storage, lease_addr, loan).and_then(|()| {
                         self.total
@@ -292,6 +320,10 @@ where
                                 payment.principal,
                                 loan_annual_interest_rate,
                             )
+                            .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                                "Oveflow while repaying {:?}",
+                                payment
+                            ))))
                             .and_then(|total| {
                                 total
                                     .store(deps.storage)
@@ -330,6 +362,10 @@ where
     fn total_due(&self, now: &Timestamp) -> Result<Coin<Lpn>> {
         self.total
             .total_interest_due_by_now(now)
+            .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                "Oveflow while calculating the total interest due by now: {:?}",
+                now
+            ))))
             .map(|interest_due| self.total.total_principal_due() + interest_due)
     }
 
@@ -344,11 +380,11 @@ where
             .and_then(|balance: Coin<Lpn>| self.total_due(now).map(|total_due| balance + total_due))
     }
 
-    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Result<Percent> {
+    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Option<Percent> {
         if balance.is_zero() {
-            Ok(Percent::HUNDRED)
+            Some(Percent::HUNDRED)
         } else {
-            Percent::from_ratio(total_due, total_due + balance).map_err(Into::into)
+            Percent::from_ratio(total_due, total_due + balance)
         }
     }
 }

@@ -57,10 +57,15 @@ where
     where
         Due: DueTrait,
     {
-        self.spec.overdue_collection_in(due)
+        self.spec
+            .overdue_collection_in(due)
+            .ok_or(ContractError::FinanceError(FinanceError::Overflow(
+                "Failed to calculate the duration until overdue interest becomes collectable."
+                    .to_string(),
+            )))
     }
 
-    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> ContractResult<Debt<Asset>>
+    pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Option<Debt<Asset>>
     where
         Due: DueTrait,
     {

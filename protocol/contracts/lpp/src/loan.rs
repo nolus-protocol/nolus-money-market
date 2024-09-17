@@ -33,23 +33,21 @@ where
 impl<Lpn> Loan<Lpn> {
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
-    pub fn interest_due(&self, by: &Timestamp) -> Result<Coin<Lpn>> {
+    pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest(
             self.annual_interest_rate,
             self.principal_due,
             self.due_period(by),
         )
-        .map_err(Into::into)
     }
 
-    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Result<RepayShares<Lpn>> {
+    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
         interest::pay(
             self.annual_interest_rate,
             self.principal_due,
             repayment,
             self.due_period(by),
         )
-        .map_err(Into::into)
         .map(|(paid_for, interest_change)| {
             self.settle_repayment(interest_change, repayment, paid_for)
         })

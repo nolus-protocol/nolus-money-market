@@ -1,5 +1,5 @@
 use currency::platform::{PlatformGroup, Stable};
-use finance::{duration::Duration, interest, percent::Percent};
+use finance::{duration::Duration, error::Error as FinanceErr, interest, percent::Percent};
 use lpp_platform::{CoinStable, Lpp as LppTrait};
 use oracle_platform::{convert, Oracle, OracleRef};
 use platform::message::Response as MessageResponse;
@@ -46,7 +46,14 @@ where
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
         interest::interest(apr, self.balance, period)
-            .map_err(ContractError::InterestCalculation)
+            .ok_or(ContractError::InterestCalculation(FinanceErr::Overflow(
+                format!(
+                "Overflow occurred during interest calculation. APR: {}, Balance: {}, Period: {}",
+                apr,
+                self.balance,
+                period
+            ),
+            )))
             .and_then(|reward_in_stable| {
                 convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
                     .map_err(ContractError::ConvertRewardsToNLS)

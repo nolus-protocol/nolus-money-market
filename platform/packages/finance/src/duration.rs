@@ -11,7 +11,6 @@ use sdk::{
 };
 
 use crate::{
-    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
@@ -93,30 +92,21 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> FinanceResult<T>
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
         T: TimeSliceable + Display + Clone,
     {
         let self_a_year = Rational::new(self.nanos(), Self::YEAR.nanos());
-        annual_amount
-            .clone()
-            .checked_mul(&self_a_year)
-            .ok_or(Error::overflow_err(
-                "while multiplying",
-                annual_amount,
-                self_a_year,
-            ))
+        annual_amount.clone().checked_mul(&self_a_year)
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> FinanceResult<Self>
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
         Self: Fractionable<U>,
         U: Zero + Debug + PartialEq + Copy + Display,
     {
         let ratio = Rational::new(amount, annual_amount);
-        ratio
-            .of(self)
-            .ok_or(Error::overflow_err("in fraction calculation", ratio, self))
+        ratio.of(self)
     }
 }
 
@@ -224,7 +214,6 @@ mod tests {
     use crate::{
         coin::Coin,
         duration::{Duration as D, Units},
-        error::{Error, Result},
     };
 
     #[test]
@@ -350,11 +339,11 @@ mod tests {
     }
 
     #[test]
-    fn annualized_slice_of_err() {
+    fn annualized_slice_of_overlow() {
         let duration = D::from_nanos(D::YEAR.nanos() + 1);
         let res = duration.annualized_slice_of(u64::MAX);
 
-        assert_err(res, "while multiplying");
+        assert!(res.is_none())
     }
 
     #[test]
@@ -371,18 +360,10 @@ mod tests {
     }
 
     #[test]
-    fn into_slice_per_ratio_err() {
+    fn into_slice_per_ratio_overflow() {
         let duration = D::from_nanos(D::YEAR.nanos());
         let res = duration.into_slice_per_ratio::<Coin<SubGroupTestC10>>(585.into(), 1.into());
 
-        assert_err(res, "in fraction calculation");
-    }
-
-    fn assert_err<T>(r: Result<T>, msg: &str) {
-        assert!(matches!(
-            r,
-            Err(Error::OverflowError { operation, operand1: _, operand2: _ })
-            if operation.contains(msg)
-        ));
+        assert!(res.is_none())
     }
 }

@@ -2,14 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    error::Error as FinanceError,
     fraction::Fraction,
     percent::{Percent, Units},
     ratio::Rational,
 };
 use sdk::schemars::{self, JsonSchema};
-
-use crate::error::ContractError;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "UncheckedInterestRate")]
@@ -59,11 +56,7 @@ impl InterestRate {
         self.addon_optimal_interest_rate
     }
 
-    pub fn calculate<Lpn>(
-        &self,
-        total_liability: Coin<Lpn>,
-        balance: Coin<Lpn>,
-    ) -> Result<Percent, ContractError>
+    pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Option<Percent>
     where
         Lpn: PartialEq,
     {
@@ -71,7 +64,6 @@ impl InterestRate {
             self.utilization_optimal.units(),
             (Percent::HUNDRED - self.utilization_optimal).units(),
         )
-        .map_err(Into::into)
         .and_then(|utilization_max| {
             let config = Rational::new(
                 self.addon_optimal_interest_rate.units(),
@@ -79,20 +71,13 @@ impl InterestRate {
             );
 
             if balance.is_zero() {
-                Ok(utilization_max)
+                Some(utilization_max)
             } else {
                 Percent::from_ratio(total_liability, balance)
-                    .map_err(Into::into)
                     .map(|utilization| utilization.min(utilization_max))
             }
             .and_then(|utilization| {
-                Fraction::<Units>::of(&config, utilization)
-                    .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                        "in fraction calculation",
-                        config,
-                        utilization,
-                    )))
-                    .map(|res| self.base_interest_rate + res)
+                Fraction::<Units>::of(&config, utilization).map(|res| self.base_interest_rate + res)
             })
         })
     }

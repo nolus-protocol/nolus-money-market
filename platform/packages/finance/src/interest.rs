@@ -6,31 +6,25 @@ use std::{
 
 use crate::{
     duration::Duration,
-    error::{Error, Result},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     zero::Zero,
 };
 
 /// Computes how much interest is accrued
-pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> Result<P>
+pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> Option<P>
 where
     F: Fraction<U> + Display,
     P: Fractionable<U> + TimeSliceable + Display + Clone,
 {
     rate.of(principal.clone())
-        .ok_or(Error::overflow_err(
-            "in fraction calculation",
-            rate,
-            principal,
-        ))
         .and_then(|interest_per_year| period.annualized_slice_of(interest_per_year))
 }
 
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
-pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> Result<(Duration, P)>
+pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
     F: Fraction<U> + Display,
     P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero + Display,
@@ -38,7 +32,7 @@ where
 {
     interest(rate, principal, period).and_then(|interest_due_per_period| {
         if interest_due_per_period == P::ZERO {
-            Ok((Duration::from_nanos(0), payment))
+            Some((Duration::from_nanos(0), payment))
         } else {
             let repayment = cmp::min(interest_due_per_period, payment);
             period

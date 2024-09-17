@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
+    error::Error as FinanceError,
     liability::Liability,
     percent::Percent,
     price::total,
@@ -214,7 +215,11 @@ where
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
         total(self.downpayment, self.oracle.price_of::<Dpc>()?)
-            .map_err(ContractError::Finance)
+            .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                "while calculating the total",
+                self.downpayment,
+                self.oracle.price_of::<Dpc>()?,
+            )))
             .and_then(|downpayment_lpn| {
                 if downpayment_lpn.is_zero() {
                     return Err(ContractError::ZeroDownpayment {});
@@ -222,7 +227,10 @@ where
 
                 self.liability
                     .init_borrow_amount(downpayment_lpn, self.max_ltd)
-                    .map_err(ContractError::Finance)
+                    .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                        "Overflow while calculating the borrow amount with downpayment: {:?}",
+                        downpayment_lpn
+                    ))))
                     .and_then(|borrow| {
                         self.oracle
                             .price_of::<Asset>()
@@ -230,7 +238,11 @@ where
                             .and_then(|price| {
                                 let asset_price = price.inv();
                                 total(downpayment_lpn + borrow, asset_price)
-                                    .map_err(ContractError::Finance)
+                                    .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                                        "while calculating the total",
+                                        downpayment_lpn + borrow,
+                                        asset_price,
+                                    )))
                                     .and_then(|total_asset| {
                                         self.lpp_quote.with(borrow).map(|annual_interest_rate| {
                                             QuoteResponse {
