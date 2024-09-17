@@ -25,7 +25,8 @@ where
     pub swap_tree: HumanReadableTree<SwapTarget<PriceCurrencies>>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {}
 

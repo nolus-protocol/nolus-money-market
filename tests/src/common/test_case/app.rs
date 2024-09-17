@@ -103,6 +103,21 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| app.execute(sender, msg.into()))
     }
 
+    pub fn migrate<'r, T>(
+        &'r mut self,
+        sender: Addr,
+        contract_addr: Addr,
+        msg: &T,
+        new_code_id: u64,
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
+    where
+        T: Debug + Serialize,
+    {
+        self.with_mock_app(|app: &mut MockApp| {
+            app.migrate_contract(sender, contract_addr, msg, new_code_id)
+        })
+    }
+
     pub fn sudo<'r, T, U>(
         &'r mut self,
         contract_addr: T,

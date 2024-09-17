@@ -42,8 +42,8 @@ where
             TestCaseBuilder::<Lpn>::with_reserve,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(cadence_hours)
         .into_generic()

@@ -101,7 +101,8 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
                 oracle_mod::mock_query,
             )
             .with_reply(oracle::contract::reply)
-            .with_sudo(oracle::contract::sudo),
+            .with_sudo(oracle::contract::sudo)
+            .with_migrate(oracle::contract::migrate),
         ))
         .init_time_alarms()
         .init_treasury()

@@ -96,8 +96,8 @@ where
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::SingleProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(24)
     .init_reserve()

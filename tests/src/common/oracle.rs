@@ -36,12 +36,12 @@ impl Instantiator {
             .with_reply(reply)
             .with_sudo(sudo);
 
-        Self::instantiate(app, Box::new(endpoints))
+        Self::instantiate(app, Box::new(endpoints), None)
     }
 
     #[track_caller]
-    pub fn instantiate(app: &mut App, endpoints: Box<CwContract>) -> Addr {
-        let code_id = app.store_code(endpoints);
+    pub fn instantiate(app: &mut App, endpoints: Box<CwContract>, admin: Option<Addr>) -> Addr {
+        let code_id = dbg!(app.store_code(endpoints));
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
@@ -68,7 +68,7 @@ impl Instantiator {
             &msg,
             &Vec::default(),
             "oracle",
-            None,
+            admin.map(Addr::into_string),
         )
         .unwrap()
         .unwrap_response()
@@ -114,7 +114,7 @@ pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
     let response: AppResponse = test_case
         .app
         .sudo(
-            oracle,
+            oracle.clone(),
             &SudoMsg::<PriceCurrencies>::RegisterFeeder {
                 feeder_address: addr.into(),
             },
@@ -126,7 +126,7 @@ pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
 
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract2")],
+        &[Event::new("sudo").add_attribute("_contract_address", oracle)],
     );
 }
 

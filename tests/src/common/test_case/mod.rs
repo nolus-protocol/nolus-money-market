@@ -50,6 +50,8 @@ type OptionalOracleWrapper = Option<
         oracle::api::SudoMsg<PriceCurrencies>,
         oracle::ContractError,
         oracle::ContractError,
+        oracle::api::MigrateMsg,
+        oracle::ContractError,
     >,
 >;
 

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{
     LeaseC1, LeaseC2, LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpn, Lpns,
-    Lpns as BaseCurrencies, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentGroup,
+    Lpns as BaseCurrencies, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup,
     PaymentGroup as PriceCurrencies,
 };
 use finance::{
@@ -16,9 +16,10 @@ use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{
         swap::{SwapPath, SwapTarget},
-        AlarmsCount, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
+        AlarmsCount, MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
     },
     result::ContractResult,
+    ContractError,
 };
 use platform::{batch::Batch, coin_legacy, contract::Code};
 use sdk::{
@@ -70,8 +71,17 @@ fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(Some(
+            CwContractWrapper::new(
+                oracle::contract::execute,
+                oracle::contract::instantiate,
+                oracle::contract::query,
+            )
+            .with_reply(oracle::contract::reply)
+            .with_sudo(oracle::contract::sudo)
+            .with_migrate(oracle::contract::migrate),
+        ))
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -119,7 +129,8 @@ fn internal_test_integration_setup_test() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("execute").add_attribute("_contract_address", "contract2")]
+        &[Event::new("execute")
+            .add_attribute("_contract_address", test_case.address_book.oracle())]
     );
 }
 
@@ -389,7 +400,7 @@ fn test_config_update() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
+        &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.oracle())]
     );
 
     let price: Result<PriceDTO<LeaseGroup, Lpns>, _> = test_case.app.query().query_wasm_smart(
@@ -452,6 +463,25 @@ fn test_query_swap_tree() {
         .unwrap();
 
     assert_eq!(resp.tree, tree);
+}
+
+#[test]
+fn migrate_invalid_swap_tree() {
+    let mut test_case = create_test_case();
+    update_tree(&mut test_case, invalid_swap_tree());
+    let err = test_case
+        .app
+        .migrate(
+            test_case.address_book.protocols_registry().clone(),
+            test_case.address_book.oracle().clone(),
+            &MigrateMsg {},
+            5, // must be equal to the stored code
+        )
+        .unwrap_err();
+    assert!(matches!(
+        err.downcast_ref::<ContractError>(),
+        Some(&ContractError::BrokenSwapTree(_))
+    ));
 }
 
 #[test]
@@ -889,7 +919,18 @@ fn price_alarm_rescheduling_with_failing() {
     );
 }
 
+fn invalid_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    swap_tree_impl::<PaymentC7>()
+}
+
 fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    swap_tree_impl::<PaymentC1>()
+}
+
+fn swap_tree_impl<LpnDescendantC>() -> HumanReadableTree<SwapTarget<PriceCurrencies>>
+where
+    LpnDescendantC: CurrencyDef,
+{
     cosmwasm_std::from_json(format!(
         r#"{{
                 "value":[0,"{lpn}"],
@@ -910,7 +951,7 @@ fn swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
         base_c = BaseC::definition().dto(),
         p5 = PaymentC5::definition().dto(),
         p6 = PaymentC6::definition().dto(),
-        p1 = PaymentC1::definition().dto(),
+        p1 = LpnDescendantC::definition().dto(),
     ))
     .unwrap()
 }
@@ -930,6 +971,6 @@ fn update_tree(
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract2")]
+        &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.oracle())]
     );
 }

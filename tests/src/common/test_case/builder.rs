@@ -372,23 +372,26 @@ where
     }
 }
 
-impl<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
-    Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, (), TimeAlarms>
+impl<Lpn, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
+    Builder<Lpn, Addr, Treasury, Profit, Reserve, Leaser, Lpp, (), TimeAlarms>
 where
     Lpn: Currency,
 {
     pub fn init_oracle(
         self,
         custom_wrapper: OptionalOracleWrapper,
-    ) -> Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Addr, TimeAlarms>
-    {
+    ) -> Builder<Lpn, Addr, Treasury, Profit, Reserve, Leaser, Lpp, Addr, TimeAlarms> {
         let Self {
             mut test_case,
             _lpn,
         } = self;
 
         let oracle_addr: Addr = if let Some(contract) = custom_wrapper {
-            OracleInstantiator::instantiate(&mut test_case.app, Box::new(contract))
+            OracleInstantiator::instantiate(
+                &mut test_case.app,
+                Box::new(contract),
+                Some(test_case.address_book.protocols_registry().clone()),
+            )
         } else {
             OracleInstantiator::instantiate_default(&mut test_case.app)
         };

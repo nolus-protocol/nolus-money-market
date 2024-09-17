@@ -61,8 +61,8 @@ fn open_multiple_loans() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -149,8 +149,8 @@ fn test_quote() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -248,8 +248,8 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(24)
     .init_reserve()
@@ -337,8 +337,8 @@ fn test_quote_fixed_rate() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -432,8 +432,8 @@ fn open_loans_lpp_fails() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -496,8 +496,8 @@ where
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(24)
     .init_reserve()
@@ -603,8 +603,8 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()

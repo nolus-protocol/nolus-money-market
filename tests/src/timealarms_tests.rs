@@ -551,8 +551,8 @@ fn test_profit_alarms() {
         cwcoin(Coin::<Nls>::new(1_000_000)),
     ])
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(1)
     .into_generic();

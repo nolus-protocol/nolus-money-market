@@ -149,8 +149,8 @@ fn open_loan_unauthorized_contract_id() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .into_generic();
@@ -182,8 +182,8 @@ fn open_loan_no_liquidity() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -237,8 +237,8 @@ fn deposit_and_withdraw() {
             TestCase::DEFAULT_LPP_MIN_UTILIZATION,
         )
         .init_time_alarms()
-        .init_oracle(None)
         .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
         .init_treasury()
         .init_profit(24)
         .init_reserve()
@@ -549,8 +549,8 @@ fn loan_open_and_repay() {
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(24)
     .init_reserve()
@@ -916,8 +916,8 @@ fn compare_lpp_states() {
         TestCase::DEFAULT_LPP_MIN_UTILIZATION,
     )
     .init_time_alarms()
-    .init_oracle(None)
     .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(None)
     .init_treasury()
     .init_profit(24)
     .init_reserve()
