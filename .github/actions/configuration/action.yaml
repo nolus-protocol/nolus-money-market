@@ -91,6 +91,7 @@ runs:
               "net_main": [
                 "neutron-astroport-usdc_axelar",
                 "neutron-astroport-usdc_noble",
+                "osmosis-osmosis-all_btc",
                 "osmosis-osmosis-statom",
                 "osmosis-osmosis-usdc_axelar",
                 "osmosis-osmosis-usdc_noble"
