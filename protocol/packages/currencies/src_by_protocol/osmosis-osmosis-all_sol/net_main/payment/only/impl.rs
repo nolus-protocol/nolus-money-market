@@ -267,7 +267,7 @@ mod test {
         },
     };
 
-    use super::{Akt, AllEth, AllBtc, Atom, Axl, StAtom};
+    use super::{Akt, AllBtc, AllEth, Atom, Axl, StAtom};
 
     #[test]
     fn maybe_visit_on_ticker() {
