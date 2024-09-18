@@ -11,6 +11,9 @@ impl DueTrait for State {
         self.principal_due + self.total_due_interest()
     }
 
+    // If `into_slice_per_ratio` overflows (returns `None`), `Duration::MAX` is returned to indicate that
+    // the time to accrue the required amount is effectively infinite, due to the very small overdue amount.
+    // The method returns `None` only if the interest calculation overflows.
     fn overdue_collection(&self, min_amount: LpnCoin) -> Option<OverdueCollection> {
         let total_due_interest = self.total_due_interest();
 

@@ -53,16 +53,11 @@ where
     /// Compute how much time is necessary for the due interest to become collectable
     ///
     /// If it is already enough to be collected then return zero.
-    pub fn overdue_collection_in<Due>(&self, due: &Due) -> ContractResult<Duration>
+    pub fn overdue_collection_in<Due>(&self, due: &Due) -> Option<Duration>
     where
         Due: DueTrait,
     {
-        self.spec
-            .overdue_collection_in(due)
-            .ok_or(ContractError::FinanceError(FinanceError::Overflow(
-                "Failed to calculate the duration until overdue interest becomes collectable."
-                    .to_string(),
-            )))
+        self.spec.overdue_collection_in(due)
     }
 
     pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Option<Debt<Asset>>

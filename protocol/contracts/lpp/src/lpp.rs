@@ -117,34 +117,41 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            self.total_due(&env.block.time).and_then(|total_due| {
-                self.commited_balance(&env.contract.address, querier, pending_deposit)
-                    .and_then(|balance: Coin<Lpn>| {
-                        self.utilization(balance, total_due)
-                            .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                                "during utilization ratio calculation",
-                                balance,
-                                total_due,
-                            )))
-                            .and_then(|utilization| {
-                                if utilization > min_utilization {
-                                    // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                                    let utilization_ratio =
-                                        Rational::new(Percent::HUNDRED, min_utilization);
-                                    Fraction::<Units>::of(&utilization_ratio, total_due)
-                                        .ok_or(ContractError::Finance(FinanceError::overflow_err(
-                                            "in fraction calculation",
-                                            utilization_ratio,
-                                            total_due,
-                                        )))
-                                        .map(|res| res - balance - total_due)
-                                } else {
-                                    Ok(Coin::ZERO)
-                                }
-                            })
-                    })
-                    .map(Some)
-            })
+            self.total_due(&env.block.time)
+                .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                    "Oveflow while calculating the total interest due by now: {:?}",
+                    &env.block.time
+                ))))
+                .and_then(|total_due| {
+                    self.commited_balance(&env.contract.address, querier, pending_deposit)
+                        .and_then(|balance: Coin<Lpn>| {
+                            self.utilization(balance, total_due)
+                                .ok_or(ContractError::Finance(FinanceError::overflow_err(
+                                    "during utilization ratio calculation",
+                                    balance,
+                                    total_due,
+                                )))
+                                .and_then(|utilization| {
+                                    if utilization > min_utilization {
+                                        // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
+                                        let utilization_ratio =
+                                            Rational::new(Percent::HUNDRED, min_utilization);
+                                        Fraction::<Units>::of(&utilization_ratio, total_due)
+                                            .ok_or(ContractError::Finance(
+                                                FinanceError::overflow_err(
+                                                    "in fraction calculation",
+                                                    utilization_ratio,
+                                                    total_due,
+                                                ),
+                                            ))
+                                            .map(|res| res - balance - total_due)
+                                    } else {
+                                        Ok(Coin::ZERO)
+                                    }
+                                })
+                        })
+                        .map(Some)
+                })
         }
     }
 
@@ -359,13 +366,9 @@ where
         bank::balance::<_, Lpn::Group>(account, querier).map_err(Into::into)
     }
 
-    fn total_due(&self, now: &Timestamp) -> Result<Coin<Lpn>> {
+    fn total_due(&self, now: &Timestamp) -> Option<Coin<Lpn>> {
         self.total
             .total_interest_due_by_now(now)
-            .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
-                "Oveflow while calculating the total interest due by now: {:?}",
-                now
-            ))))
             .map(|interest_due| self.total.total_principal_due() + interest_due)
     }
 
@@ -377,7 +380,14 @@ where
         pending_deposit: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
         self.commited_balance(account, querier, pending_deposit)
-            .and_then(|balance: Coin<Lpn>| self.total_due(now).map(|total_due| balance + total_due))
+            .and_then(|balance: Coin<Lpn>| {
+                self.total_due(now)
+                    .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                        "Oveflow while calculating the total interest due by now: {:?}",
+                        now
+                    ))))
+                    .map(|total_due| balance + total_due)
+            })
     }
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Option<Percent> {

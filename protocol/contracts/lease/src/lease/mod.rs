@@ -1,5 +1,4 @@
 use currency::{Currency, CurrencyDef, MemberOf};
-use finance::error::Error as FinanceError;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -93,31 +92,23 @@ where
         )
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset>> {
-        self.loan
-            .state(&now)
-            .ok_or(ContractError::FinanceError(FinanceError::Overflow(
-                format!(
-                    "Failed to calculate the lease state at the specified time: {:?}",
-                    &now
-                ),
-            )))
-            .and_then(|loan| {
-                self.position
-                    .overdue_collection_in(&loan)
-                    .map(|overdue_collect_in| State {
-                        amount: self.position.amount(),
-                        interest_rate: loan.annual_interest,
-                        interest_rate_margin: loan.annual_interest_margin,
-                        principal_due: loan.principal_due,
-                        overdue_margin: loan.overdue.margin(),
-                        overdue_interest: loan.overdue.interest(),
-                        overdue_collect_in,
-                        due_margin: loan.due_margin_interest,
-                        due_interest: loan.due_interest,
-                        validity: now,
-                    })
-            })
+    pub(crate) fn state(&self, now: Timestamp) -> Option<State<Asset>> {
+        self.loan.state(&now).and_then(|loan| {
+            self.position
+                .overdue_collection_in(&loan)
+                .map(|overdue_collect_in| State {
+                    amount: self.position.amount(),
+                    interest_rate: loan.annual_interest,
+                    interest_rate_margin: loan.annual_interest_margin,
+                    principal_due: loan.principal_due,
+                    overdue_margin: loan.overdue.margin(),
+                    overdue_interest: loan.overdue.interest(),
+                    overdue_collect_in,
+                    due_margin: loan.due_margin_interest,
+                    due_interest: loan.due_interest,
+                    validity: now,
+                })
+        })
     }
 }
 
