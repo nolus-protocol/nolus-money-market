@@ -211,35 +211,6 @@ where
     G: Group + Clone,
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    // pub fn add_alarm<C, BaseC>(
-    //     &mut self,
-    //     subscriber: Addr,
-    //     below: Price<C, BaseC>,
-    //     above_or_equal: Option<Price<C, BaseC>>,
-    // ) -> Result<(), AlarmError>
-    // where
-    //     C: CurrencyDef,
-    //     C::Group: MemberOf<G>,
-    //     BaseC: CurrencyDef,
-    // {
-    //     NormalizedPrice::new(&below)
-    //         .ok_or(AlarmError::CreatingNormalizedPrice)
-    //         .and_then(|normalized_below| {
-    //             self.add_alarm_below_internal(subscriber.clone(), &normalized_below)
-    //                 .and_then(|()| match above_or_equal {
-    //                     None => self.remove_above_or_equal(subscriber),
-    //                     Some(above_or_equal) => NormalizedPrice::new(&above_or_equal)
-    //                         .ok_or(AlarmError::CreatingNormalizedPrice)
-    //                         .and_then(|normalized_above_or_equal| {
-    //                             Ok(self.add_alarm_above_or_equal_internal(
-    //                                 subscriber,
-    //                                 &normalized_above_or_equal,
-    //                             ))?
-    //                         }),
-    //                 })
-    //         })
-    // }
-
     pub fn add_alarm<C, BaseC>(
         &mut self,
         subscriber: Addr,
