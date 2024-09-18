@@ -10,7 +10,7 @@ pub(super) struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -21,7 +21,7 @@ impl<G, Lpn, Lpns> TryFrom<Alarm<G, Lpn, Lpns>> for ValidatedAlarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     type Error = Error;
@@ -39,7 +39,7 @@ impl<G, Lpn, Lpns> From<ValidatedAlarm<G, Lpn, Lpns>> for Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     fn from(validated: ValidatedAlarm<G, Lpn, Lpns>) -> Self {

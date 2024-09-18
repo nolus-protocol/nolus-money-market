@@ -9,7 +9,7 @@ pub struct LegCmd<PriceG, BaseC, BaseG, Querier>
 where
     PriceG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
     BaseG: Group,
     Querier: PriceQuerier,
 {
@@ -19,10 +19,10 @@ where
 
 impl<PriceG, BaseC, BaseG, Querier> LegCmd<PriceG, BaseC, BaseG, Querier>
 where
-    PriceG: Group,
+    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<PriceG>,
     Querier: PriceQuerier,
 {
     pub fn new(price_querier: Querier) -> Self {
@@ -38,7 +38,7 @@ where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group,
+    BaseG: Group + MemberOf<PriceG>,
     Querier: PriceQuerier<CurrencyGroup = PriceG>,
 {
     type VisitedG = PriceG;
@@ -64,7 +64,7 @@ where
             .rev()
             .find_map(|(i, parent_bprice)| {
                 parent_bprice
-                    .try_as_specific::<Q, _>(dto2)
+                    .try_as_specific::<Q, Self::VisitedG>(dto2)
                     .ok()
                     .map(|parent_price| {
                         self.price_querier

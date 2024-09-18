@@ -13,23 +13,21 @@ use super::PriceDTO as ValidatedDTO;
     rename_all = "snake_case",
     bound(serialize = "", deserialize = "")
 )]
-pub(super) struct PriceDTO<G, QuoteG>
+pub(super) struct PriceDTO<G>
 where
     G: Group,
-    QuoteG: Group,
 {
     amount: CoinDTO<G>,
-    amount_quote: CoinDTO<QuoteG>,
+    amount_quote: CoinDTO<G>,
 }
 
-impl<G, QuoteG> TryFrom<PriceDTO<G, QuoteG>> for ValidatedDTO<G, QuoteG>
+impl<G> TryFrom<PriceDTO<G>> for ValidatedDTO<G>
 where
-    G: Group,
-    QuoteG: Group,
+    G: Group<TopG = G>,
 {
     type Error = Error;
 
-    fn try_from(dto: PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
+    fn try_from(dto: PriceDTO<G>) -> Result<Self, Self::Error> {
         Self::try_new(dto.amount, dto.amount_quote)
     }
 }

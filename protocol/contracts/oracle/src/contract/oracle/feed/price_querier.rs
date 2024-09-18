@@ -49,7 +49,7 @@ pub trait PriceQuerier {
 
 impl<'a, G> PriceQuerier for FedPrices<'a, G>
 where
-    G: Group,
+    G: Group<TopG = G>,
 {
     type CurrencyGroup = G;
 

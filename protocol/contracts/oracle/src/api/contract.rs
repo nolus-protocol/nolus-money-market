@@ -40,13 +40,13 @@ pub struct MigrateMsg {}
 pub enum ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>
 where
     BaseCurrency: CurrencyDef,
-    BaseCurrency::Group: MemberOf<BaseCurrencies>,
+    BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<AlarmCurrencies::TopG>,
     BaseCurrencies: Group,
     AlarmCurrencies: Group,
-    PriceCurrencies: Group,
+    PriceCurrencies: Group<TopG = PriceCurrencies>,
 {
     FeedPrices {
-        prices: Vec<PriceDTO<PriceCurrencies, PriceCurrencies>>,
+        prices: Vec<PriceDTO<PriceCurrencies>>,
     },
     AddPriceAlarm {
         alarm: Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>,
@@ -217,8 +217,8 @@ pub struct PricesResponse<PriceCurrencies, BaseC, BaseCurrencies>
 where
     PriceCurrencies: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseCurrencies>,
-    BaseCurrencies: Group,
+    BaseC::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies::TopG>,
+    BaseCurrencies: Group + MemberOf<PriceCurrencies>,
 {
     pub prices: Vec<BasePrice<PriceCurrencies, BaseC, BaseCurrencies>>,
 }

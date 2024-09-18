@@ -16,7 +16,7 @@ pub fn from_quote<QuoteC, QuoteG, OutC, OutG>(
 ) -> Result<Coin<OutC>>
 where
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<OutG::TopG>,
     QuoteG: Group,
     OutC: CurrencyDef,
     OutC::Group: MemberOf<OutG>,
@@ -80,8 +80,8 @@ pub fn to_quote<InC, InG, QuoteC, QuoteG>(
 ) -> Result<Coin<QuoteC>>
 where
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<InG::TopG>,
+    QuoteG: Group + MemberOf<InG>,
     InC: CurrencyDef,
     InC::Group: MemberOf<InG>,
     InG: Group,

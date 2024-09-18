@@ -128,10 +128,9 @@ where
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn unsupported_denom_pairs<G, QuoteG>(price: &PriceDTO<G, QuoteG>) -> ContractError
+pub(crate) fn unsupported_denom_pairs<G>(price: &PriceDTO<G>) -> ContractError
 where
     G: Group,
-    QuoteG: Group,
 {
     ContractError::UnsupportedDenomPairs(price.to_string())
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::NlsPlatform;
+use currency::platform::Nls;
 use finance::{
     coin::Coin,
     price::{self, Price},
@@ -28,8 +28,8 @@ struct DepositData {
     deposited_nlpn: Coin<NLpn>,
 
     // Rewards
-    reward_per_token: Option<Price<NLpn, NlsPlatform>>,
-    pending_rewards_nls: Coin<NlsPlatform>,
+    reward_per_token: Option<Price<NLpn, Nls>>,
+    pending_rewards_nls: Coin<Nls>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
@@ -37,7 +37,7 @@ struct DepositsGlobals {
     balance_nlpn: Coin<NLpn>,
 
     // Rewards
-    reward_per_token: Option<Price<NLpn, NlsPlatform>>,
+    reward_per_token: Option<Price<NLpn, Nls>>,
 }
 
 impl Deposit {
@@ -95,7 +95,7 @@ impl Deposit {
         &mut self,
         storage: &mut dyn Storage,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<Option<Coin<NlsPlatform>>> {
+    ) -> Result<Option<Coin<Nls>>> {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
@@ -119,7 +119,7 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<NlsPlatform>) -> Result<()> {
+    pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<Nls>) -> Result<()> {
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         if globals.balance_nlpn.is_zero() {
@@ -146,7 +146,7 @@ impl Deposit {
         self.data.reward_per_token = globals.reward_per_token;
     }
 
-    fn calculate_reward(&self, globals: &DepositsGlobals) -> Coin<NlsPlatform> {
+    fn calculate_reward(&self, globals: &DepositsGlobals) -> Coin<Nls> {
         let deposit = &self.data;
 
         let global_reward = globals
@@ -163,13 +163,13 @@ impl Deposit {
     }
 
     /// query accounted rewards
-    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<NlsPlatform>> {
+    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         Ok(self.calculate_reward(&globals))
     }
 
     /// pay accounted rewards to the deposit owner or optional recipient
-    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<NlsPlatform>> {
+    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<Nls>> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
@@ -276,12 +276,12 @@ mod test {
         let amount = deposit1
             .claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
-        assert_eq!(amount, Coin::<NlsPlatform>::new(2000));
+        assert_eq!(amount, Coin::<Nls>::new(2000));
 
         let amount = deposit2
             .claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
-        assert_eq!(amount, Coin::<NlsPlatform>::new(500));
+        assert_eq!(amount, Coin::<Nls>::new(500));
 
         Deposit::distribute_rewards(deps.as_mut(), Coin::new(1000))
             .expect("should distribute rewards");
@@ -303,7 +303,7 @@ mod test {
             .withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw")
             .expect("should be some rewards");
-        assert_eq!(rewards, Coin::<NlsPlatform>::new(500));
+        assert_eq!(rewards, Coin::<Nls>::new(500));
         let response =
             Deposit::query_balance_nlpn(deps.as_mut().storage, addr1).expect("should query");
         assert!(response.is_none());
@@ -322,7 +322,7 @@ mod test {
         let rewards = deposit
             .query_rewards(deps.as_ref().storage)
             .expect("should query");
-        assert_eq!(Coin::<NlsPlatform>::new(0), rewards);
+        assert_eq!(Coin::<Nls>::new(0), rewards);
 
         // balance_nls = 0, balance_nlpn != 0
         deposit
@@ -332,7 +332,7 @@ mod test {
         let rewards = deposit
             .query_rewards(deps.as_ref().storage)
             .expect("should query");
-        assert_eq!(Coin::<NlsPlatform>::new(0), rewards);
+        assert_eq!(Coin::<Nls>::new(0), rewards);
     }
 
     #[test]

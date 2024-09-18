@@ -89,7 +89,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<PriceDTO<SuperGroup, SuperGroup>> = Vec::new();
+    let prices: Vec<PriceDTO<SuperGroup>> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
@@ -324,7 +324,7 @@ where
     C1::Group: MemberOf<G>,
     C2: CurrencyDef,
     C2::Group: MemberOf<G>,
-    G: Group,
+    G: Group<TopG = G>,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
@@ -333,7 +333,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = PriceDTO::<G, G>::from(price);
+    let price = PriceDTO::<G>::from(price);
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)

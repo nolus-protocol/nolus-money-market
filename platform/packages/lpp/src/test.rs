@@ -1,6 +1,6 @@
 #![cfg(feature = "testing")]
 
-use currency::NlsPlatform;
+use currency::platform::Nls;
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -15,12 +15,12 @@ use crate::{
 
 pub struct DummyLpp {
     balance: Option<CoinStable>,
-    expected_reward: Option<Coin<NlsPlatform>>,
+    expected_reward: Option<Coin<Nls>>,
     failing_reward: bool,
 }
 
 impl DummyLpp {
-    pub fn with_balance(balance: CoinStable, reward: Coin<NlsPlatform>) -> Self {
+    pub fn with_balance(balance: CoinStable, reward: Coin<Nls>) -> Self {
         Self {
             balance: Some(balance),
             expected_reward: Some(reward),
@@ -36,7 +36,7 @@ impl DummyLpp {
         }
     }
 
-    pub fn failing_reward(balance: CoinStable, reward: Coin<NlsPlatform>) -> Self {
+    pub fn failing_reward(balance: CoinStable, reward: Coin<Nls>) -> Self {
         Self {
             balance: Some(balance),
             expected_reward: Some(reward),
@@ -53,7 +53,7 @@ impl Lpp for DummyLpp {
         })
     }
 
-    fn distribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
+    fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {
         assert_eq!(self.expected_reward, Some(reward));
 
         if self.failing_reward {

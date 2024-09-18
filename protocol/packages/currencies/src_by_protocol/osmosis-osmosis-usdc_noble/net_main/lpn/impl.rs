@@ -4,7 +4,7 @@ use currency::InPoolWith;
 
 use crate::{
     define_currency,
-    lease::impl_mod::{Atom, Inj},
+    lease::impl_mod::{AllBtc, AllEth, Atom, Inj},
     Lpns, Nls,
 };
 
@@ -22,3 +22,5 @@ pub use UsdcNoble as Lpn;
 impl InPoolWith<Inj> for Lpn {}
 impl InPoolWith<Nls> for Lpn {}
 impl InPoolWith<Atom> for Lpn {}
+impl InPoolWith<AllBtc> for Lpn {}
+impl InPoolWith<AllEth> for Lpn {}

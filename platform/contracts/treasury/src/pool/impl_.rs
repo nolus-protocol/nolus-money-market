@@ -1,6 +1,6 @@
-use currency::NativePlatform;
+use currency::platform::{PlatformGroup, Stable};
 use finance::{duration::Duration, interest, percent::Percent};
-use lpp_platform::{CoinStable, Lpp as LppTrait, Stable, StableCurrencyGroup};
+use lpp_platform::{CoinStable, Lpp as LppTrait};
 use oracle_platform::{convert, Oracle, OracleRef};
 use platform::message::Response as MessageResponse;
 
@@ -17,7 +17,7 @@ pub struct Pool<Lpp, StableOracle> {
 impl<Lpp, StableOracle> Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<NativePlatform, QuoteC = Stable, QuoteG = StableCurrencyGroup>
+    StableOracle: Oracle<PlatformGroup, QuoteC = Stable, QuoteG = PlatformGroup>
         + AsRef<OracleRef<StableOracle::QuoteC, StableOracle::QuoteG>>,
 {
     pub fn new(lpp: Lpp, oracle: StableOracle) -> Result<Self, ContractError> {
@@ -34,7 +34,7 @@ where
 impl<Lpp, StableOracle> PoolTrait for Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<NativePlatform, QuoteC = Stable, QuoteG = StableCurrencyGroup>,
+    StableOracle: Oracle<PlatformGroup, QuoteC = Stable, QuoteG = PlatformGroup>,
 {
     fn balance(&self) -> CoinStable {
         self.balance
@@ -47,7 +47,7 @@ where
     ) -> Result<MessageResponse, ContractError> {
         let reward_in_stable = interest::interest(apr, self.balance, period);
 
-        convert::from_quote::<_, _, _, _, NativePlatform>(&self.oracle, reward_in_stable)
+        convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
             .map_err(ContractError::ConvertRewardsToNLS)
             .and_then(|rewards| {
                 self.lpp
@@ -59,7 +59,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use currency::NlsPlatform;
+    use currency::platform::Nls;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
     use lpp_platform::{test::DummyLpp, CoinStable};
     use oracle_platform::{test::DummyOracle, Oracle};
@@ -85,7 +85,7 @@ mod test {
         let bar0_apr = Percent::from_percent(20);
         let lpp0_tvl: CoinStable = 15_000.into();
 
-        let lpp = DummyLpp::with_balance(lpp0_tvl, Coin::<NlsPlatform>::default());
+        let lpp = DummyLpp::with_balance(lpp0_tvl, Coin::<Nls>::default());
         let oracle = DummyOracle::failing();
 
         let pool = PoolImpl::new(lpp, oracle).unwrap();

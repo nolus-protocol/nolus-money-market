@@ -1,4 +1,4 @@
-use currency::NlsPlatform;
+use currency::platform::Nls;
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -36,7 +36,7 @@ impl<'a> Lpp for Stub<'a> {
             .map_err(Into::into)
     }
 
-    fn distribute(self, reward: Coin<NlsPlatform>) -> Result<MessageResponse> {
+    fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {
         if reward.is_zero() {
             return Ok(Default::default());
         }

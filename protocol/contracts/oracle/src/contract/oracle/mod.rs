@@ -111,7 +111,7 @@ where
             for StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
         where
             StableCurrency: CurrencyDef,
-            StableCurrency::Group: MemberOf<StableG>,
+            StableCurrency::Group: MemberOf<StableG> + MemberOf<G::TopG>,
             BaseCurrency: CurrencyDef,
             G: Group,
             StableG: Group,

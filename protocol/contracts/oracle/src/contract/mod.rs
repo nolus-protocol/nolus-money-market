@@ -3,7 +3,6 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},
     error as platform_error, response,
@@ -110,9 +109,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
                 .collect::<Vec<_>>(),
         ),
         QueryMsg::BasePrice { currency } => to_json_binary(
-            &Oracle::load(deps.storage)?
-                .try_query_base_price(env.block.time, &currency)
-                .map(PriceDTO::from)?,
+            &Oracle::load(deps.storage)?.try_query_base_price(env.block.time, &currency)?,
         ),
         QueryMsg::StablePrice { currency } => to_json_binary(
             &Oracle::load(deps.storage)?

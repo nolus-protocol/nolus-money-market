@@ -30,14 +30,13 @@ mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 
-pub(crate) fn dto_price<C, G, Q, LpnG>(total_of: Amount, is: Amount) -> PriceDTO<G, LpnG>
+pub(crate) fn dto_price<C, G, Q>(total_of: Amount, is: Amount) -> PriceDTO<G>
 where
     C: CurrencyDef,
     C::Group: MemberOf<G>,
-    G: Group,
+    G: Group<TopG = G>,
     Q: CurrencyDef,
-    Q::Group: MemberOf<LpnG>,
-    LpnG: Group,
+    Q::Group: MemberOf<G>,
 {
     price::total_of(Coin::<C>::new(total_of))
         .is(Coin::<Q>::new(is))

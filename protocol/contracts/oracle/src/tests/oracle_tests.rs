@@ -1,8 +1,6 @@
 use currencies::{
-    Lpn, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
-    PaymentGroup as PriceCurrencies,
+    Lpn, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8, PaymentGroup as PriceCurrencies,
 };
-use currency::{CurrencyDef, Group, MemberOf};
 use finance::{coin::Coin, price, price::dto::PriceDTO};
 use platform::{contract, tests};
 use sdk::{
@@ -37,11 +35,7 @@ fn feed_prices_unknown_feeder() {
 
 #[test]
 fn feed_direct_price() {
-    fn generate_price<BaseG>() -> PriceDTO<PriceCurrencies, BaseG>
-    where
-        BaseG: Group,
-        <Lpn as CurrencyDef>::Group: MemberOf<BaseG>,
-    {
+    fn generate_price() -> PriceDTO<PriceCurrencies> {
         price::total_of(Coin::<PaymentC1>::new(10))
             .is(Coin::<Lpn>::new(120))
             .into()
@@ -63,7 +57,7 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies> = from_json(res).unwrap();
     assert_eq!(generate_price(), value);
 }
 
@@ -96,7 +90,7 @@ fn feed_indirect_price() {
 
     let expected_price =
         PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)));
-    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 

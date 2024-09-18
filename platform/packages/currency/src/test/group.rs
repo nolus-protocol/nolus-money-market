@@ -134,11 +134,13 @@ impl PairsGroup for SuperGroupTestC5 {
     {
         use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<SuperGroupTestC4, _, _>(matcher, visitor)
+            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC5 {}
+impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC5 {} // Note Self is InPoolWith<Self>
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC5 {}
 
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]

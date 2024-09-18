@@ -29,7 +29,7 @@ pub enum ExecuteMsg<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     AddPriceAlarm { alarm: Alarm<G, Lpn, Lpns> },
@@ -60,7 +60,7 @@ pub struct Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     below: BasePrice<G, Lpn, Lpns>,
@@ -71,7 +71,7 @@ impl<G, Lpn, Lpns> Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm<G, Lpn, Lpns>
@@ -94,7 +94,7 @@ where
             where
                 BaseG: Group,
                 QuoteC: CurrencyDef,
-                QuoteC::Group: MemberOf<QuoteG>,
+                QuoteC::Group: MemberOf<QuoteG>+ MemberOf<BaseG::TopG>,
                 QuoteG: Group,
             {
                 below_price: &'a BasePrice<BaseG, QuoteC, QuoteG>,
@@ -104,7 +104,7 @@ where
             where
                 BaseG: Group,
                 QuoteC: CurrencyDef,
-                QuoteC::Group: MemberOf<QuoteG>,
+                QuoteC::Group: MemberOf<QuoteG>+ MemberOf<BaseG::TopG>,
                 QuoteG: Group,
             {
                 type PriceG = BaseG;
@@ -146,7 +146,7 @@ impl<G, Lpn, Lpns> From<Alarm<G, Lpn, Lpns>>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     fn from(value: Alarm<G, Lpn, Lpns>) -> Self {
@@ -158,7 +158,7 @@ impl<G, Lpn, Lpns> Clone for Alarm<G, Lpn, Lpns>
 where
     G: Group,
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
     Lpns: Group,
 {
     fn clone(&self) -> Self {
@@ -174,9 +174,7 @@ mod test {
     use serde::Serialize;
     use std::fmt::{Display, Formatter, Result as FmtResult};
 
-    use currencies::{
-        LeaseGroup, Lpns, {LeaseC1, LeaseC2, LeaseC3, Lpn},
-    };
+    use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseGroup, Lpn, Lpns, PaymentGroup};
     use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},
@@ -186,7 +184,7 @@ mod test {
 
     use super::Alarm;
 
-    type BasePriceTest = BasePrice<LeaseGroup, Lpn, Lpns>;
+    type BasePriceTest = BasePrice<PaymentGroup, Lpn, Lpns>;
 
     #[test]
     fn new_valid() {
@@ -214,7 +212,7 @@ mod test {
 
     #[test]
     fn below_price_err() {
-        assert_err::<LeaseGroup, Lpn, Lpns>(
+        assert_err::<PaymentGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Below,
                 Coin::<LeaseC1>::new(5),
@@ -223,7 +221,7 @@ mod test {
             .and_then(|json| from_both_str_impl(json, None::<&str>)),
             "The quote amount should not be zero",
         );
-        assert_err::<LeaseGroup, Lpn, Lpns>(
+        assert_err::<PaymentGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Below,
                 Coin::<LeaseC2>::new(0),
@@ -243,7 +241,7 @@ mod test {
         )
         .unwrap();
 
-        assert_err::<LeaseGroup, Lpn, Lpns>(
+        assert_err::<PaymentGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Above,
                 Coin::<LeaseC1>::new(5),
@@ -252,7 +250,7 @@ mod test {
             .and_then(|json| from_both_str_impl(&below, Some(&json))),
             "The quote amount should not be zero",
         );
-        assert_err::<LeaseGroup, Lpn, Lpns>(
+        assert_err::<PaymentGroup, Lpn, Lpns>(
             alarm_half_coins_to_json(
                 AlarmPrice::Above,
                 Coin::<LeaseC3>::new(0),
@@ -280,7 +278,7 @@ mod test {
             Lpn::ticker()
         );
 
-        assert_err::<LeaseGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
+        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
     }
 
     #[test]
@@ -322,7 +320,7 @@ mod test {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
         assert!(r.is_err());
@@ -341,7 +339,7 @@ mod test {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
         from_both_impl::<G, QuoteC, QuoteG, QuoteC, QuoteG>(below, None)
@@ -354,10 +352,10 @@ mod test {
     where
         G: Group,
         QuoteC1: CurrencyDef,
-        QuoteC1::Group: MemberOf<QuoteG1>,
+        QuoteC1::Group: MemberOf<QuoteG1> + MemberOf<G::TopG>,
         QuoteG1: Group,
         QuoteC2: CurrencyDef,
-        QuoteC2::Group: MemberOf<QuoteG2>,
+        QuoteC2::Group: MemberOf<QuoteG2> + MemberOf<G::TopG>,
         QuoteG2: Group,
     {
         from_both_impl(below, Some(above))
@@ -370,10 +368,10 @@ mod test {
     where
         G: Group,
         QuoteC1: CurrencyDef,
-        QuoteC1::Group: MemberOf<QuoteG1>,
+        QuoteC1::Group: MemberOf<QuoteG1> + MemberOf<G::TopG>,
         QuoteG1: Group,
         QuoteC2: CurrencyDef,
-        QuoteC2::Group: MemberOf<QuoteG2>,
+        QuoteC2::Group: MemberOf<QuoteG2> + MemberOf<G::TopG>,
         QuoteG2: Group,
     {
         let above_str = above
@@ -392,7 +390,7 @@ mod test {
         Str2: AsRef<str>,
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
         let full_json = above.map_or_else(
@@ -422,7 +420,7 @@ mod test {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
         as_json(&price).map(|string_price| alarm_half_to_json_str(price_type, &string_price))

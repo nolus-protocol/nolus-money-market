@@ -58,7 +58,7 @@ where
     where
         I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
         BaseC: CurrencyDef,
-        BaseC::Group: MemberOf<BaseG>,
+        BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
         BaseG: Group,
     {
         AlarmsIter::new(&self.alarms, prices)
@@ -68,7 +68,7 @@ where
     where
         I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
         BaseC: CurrencyDef,
-        BaseC::Group: MemberOf<BaseG>,
+        BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
         BaseG: Group,
     {
         Ok(AlarmsIter::new(&self.alarms, prices)?
@@ -97,7 +97,7 @@ where
     ) -> Result<(), ContractError>
     where
         BaseC: CurrencyDef,
-        BaseC::Group: MemberOf<BaseG>,
+        BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
         BaseG: Group,
     {
         let (below, above_or_equal) = alarm.into();
@@ -135,7 +135,7 @@ where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
     BaseG: Group,
 {
     receiver: Addr,
@@ -149,7 +149,7 @@ where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
     BaseG: Group,
 {
     type PriceG = G;

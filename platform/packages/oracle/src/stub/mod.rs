@@ -13,19 +13,18 @@ use self::impl_::{BasePriceRequest, OracleStub, RequestBuilder};
 mod impl_;
 
 #[cfg(feature = "unchecked-stable-quote")]
-pub fn new_unchecked_stable_quote_stub<'a, G, StableC, StableG>(
+pub fn new_unchecked_stable_quote_stub<'a, G, StableC>(
     oracle: Addr,
     querier: QuerierWrapper<'a>,
-) -> impl Oracle<G, QuoteC = StableC, QuoteG = StableG> + AsRef<OracleRef<StableC, StableG>> + 'a
+) -> impl Oracle<G, QuoteC = StableC, QuoteG = G> + AsRef<OracleRef<StableC, G>> + 'a
 where
-    G: Group + 'a,
+    G: Group<TopG = G> + 'a,
     StableC: CurrencyDef,
-    StableC::Group: MemberOf<StableG>,
-    StableG: Group + 'a,
+    StableC::Group: MemberOf<G>,
 {
     use self::impl_::StablePriceRequest;
 
-    impl_::OracleStub::<G, StableC, StableG, StablePriceRequest>::new(
+    impl_::OracleStub::<G, StableC, G, StablePriceRequest>::new(
         OracleRef::unchecked(oracle),
         querier,
     )
@@ -94,6 +93,8 @@ where
     where
         V: WithOracle<QuoteC, QuoteG, G = G>,
         G: Group,
+        // QuoteC::Group: MemberOf<G> + MemberOf<G::TopG>,
+        QuoteC::Group: MemberOf<G::TopG>,
     {
         cmd.exec(OracleStub::<'_, G, QuoteC, QuoteG, BasePriceRequest>::new(
             self, querier,

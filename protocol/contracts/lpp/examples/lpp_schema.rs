@@ -1,9 +1,9 @@
 use currencies::Lpns;
+use currency::platform::Stable;
 use lpp::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, PriceResponse, QueryLoanResponse,
     QueryMsg, QueryQuoteResponse, RewardsResponse,
 };
-use lpp_platform::Stable;
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {

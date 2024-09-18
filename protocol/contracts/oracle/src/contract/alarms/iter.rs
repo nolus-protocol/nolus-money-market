@@ -16,7 +16,7 @@ where
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
     BaseG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
@@ -31,7 +31,7 @@ where
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
     BaseG: Group,
 {
     pub fn new(
@@ -86,7 +86,7 @@ where
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
     PriceG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
     BaseG: Group,
 {
     type Item = ContractResult<Addr>;
