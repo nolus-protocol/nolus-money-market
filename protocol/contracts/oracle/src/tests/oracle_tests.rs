@@ -120,7 +120,7 @@ fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let unsupported =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC1>::new(12)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)));
     let prices = vec![
         unsupported,
         PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(22))),

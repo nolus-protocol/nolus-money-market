@@ -99,6 +99,7 @@ impl PairsGroup for LeaseC1 {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<LeaseC3, _, _>(matcher, visitor)
+            .or_else(|v| maybe_visit::<LeaseC2, _, _>(matcher, v))
     }
 }
 
@@ -114,6 +115,7 @@ impl PairsGroup for LeaseC2 {
         maybe_visit::<Lpn, _, _>(matcher, visitor)
     }
 }
+impl InPoolWith<LeaseC1> for LeaseC2 {}
 impl InPoolWith<LeaseC3> for LeaseC2 {}
 impl InPoolWith<LeaseC4> for LeaseC2 {}
 

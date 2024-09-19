@@ -148,7 +148,7 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     msg: SudoMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
     match msg {
@@ -158,6 +158,7 @@ pub fn sudo(
         SudoMsg::SwapTree { tree } => {
             SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+                .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
         }
     }
     .map(|()| response::empty_response())
@@ -209,9 +210,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currencies::{
-        LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
-    };
+    use currencies::{LeaseC1, LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC9};
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
@@ -227,8 +226,11 @@ mod tests {
     #[test]
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
-        let msg =
-            dummy_instantiate_msg(60, Percent::from_percent(50), test_tree::dummy_swap_tree());
+        let msg = dummy_instantiate_msg(
+            60,
+            Percent::from_percent(50),
+            test_tree::minimal_swap_tree(),
+        );
         let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
@@ -254,7 +256,7 @@ mod tests {
         let value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: currency::dto::<PaymentC5, PriceCurrencies>(),
+            from: currency::dto::<PaymentC9, PriceCurrencies>(),
             to: SwapTarget {
                 pool_id: 1,
                 target: currency::dto::<Lpn, PriceCurrencies>(),

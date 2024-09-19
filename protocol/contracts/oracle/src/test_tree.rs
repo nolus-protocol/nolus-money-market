@@ -46,3 +46,35 @@ pub fn dummy_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
     ))
     .expect("The dummy swap tree is valid")
 }
+
+pub fn minimal_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    sdk::cosmwasm_std::from_json(format!(
+        r#"{{
+            "value":[0,"{lpn}"],
+            "children":[
+                {{
+                    "value":[1,"{p9}"]
+                }}
+            ]
+        }}"#,
+        lpn = BaseCurrency::definition().dto(),
+        p9 = PaymentC9::definition().dto(),
+    ))
+    .expect("The dummy swap tree is valid")
+}
+
+pub fn invalid_pair_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
+    sdk::cosmwasm_std::from_json(format!(
+        r#"{{
+            "value":[0,"{lpn}"],
+            "children":[
+                {{
+                    "value":[1,"{p5}"]
+                }}
+            ]
+        }}"#,
+        lpn = BaseCurrency::definition().dto(),
+        p5 = PaymentC5::definition().dto(),
+    ))
+    .expect("The dummy swap tree is valid")
+}
