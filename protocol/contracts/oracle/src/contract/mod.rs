@@ -159,7 +159,8 @@ pub fn sudo(
         SudoMsg::SwapTree { tree } => {
             SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
-                .and_then(|()| validate_swap_tree(deps.storage, env.block.time)) // TODO move the swap tree validation at the tree instantiation
+                .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+            // TODO move the swap tree validation at the tree instantiation
         }
     }
     .map(|()| response::empty_response())
