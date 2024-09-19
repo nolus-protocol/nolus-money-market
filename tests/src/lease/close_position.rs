@@ -1,4 +1,4 @@
-use currencies::{LeaseGroup, PaymentGroup};
+use currencies::{LeaseGroup, PaymentC5, PaymentGroup};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
@@ -198,7 +198,7 @@ fn partial_close_invalid_currency() {
             Addr::unchecked(USER),
             lease,
             &(&ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-                amount: PaymentCoin::from(12345678).into(),
+                amount: Coin::<PaymentC5>::from(12345678).into(),
             }))),
             &[],
         )
@@ -208,7 +208,7 @@ fn partial_close_invalid_currency() {
         err.root_cause().downcast_ref::<currency::error::Error>(),
         Some(&currency::error::Error::currency_mismatch(
             &currency::dto::<LeaseCurrency, LeaseGroup>(),
-            &currency::dto::<PaymentCurrency, PaymentGroup>()
+            &currency::dto::<PaymentC5, PaymentGroup>()
         ))
     );
 }

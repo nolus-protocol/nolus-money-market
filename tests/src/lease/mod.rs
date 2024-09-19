@@ -1,4 +1,4 @@
-use currencies::{LeaseC1, LeaseC2, LeaseGroup, Lpn, PaymentGroup};
+use currencies::{LeaseC2, LeaseGroup, Lpn, PaymentC1, PaymentGroup};
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
@@ -33,7 +33,7 @@ type Lpnoin = Coin<LpnCurrency>;
 type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
 
-type PaymentCurrency = LeaseC1;
+type PaymentCurrency = PaymentC1;
 type PaymentCoin = Coin<PaymentCurrency>;
 
 const DOWNPAYMENT: PaymentCoin = PaymentCoin::new(1_000_000_000_000);

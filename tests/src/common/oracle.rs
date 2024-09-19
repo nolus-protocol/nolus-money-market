@@ -1,6 +1,6 @@
 use currencies::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency,
-    Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
+    PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -13,7 +13,7 @@ use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
-    ContractError,
+    test_tree, ContractError,
 };
 use sdk::{
     cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
@@ -41,7 +41,7 @@ impl Instantiator {
 
     #[track_caller]
     pub fn instantiate(app: &mut App, endpoints: Box<CwContract>, admin: Option<Addr>) -> Addr {
-        let code_id = dbg!(app.store_code(endpoints));
+        let code_id = app.store_code(endpoints);
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
@@ -52,14 +52,7 @@ impl Instantiator {
                 ),
             },
 
-            swap_tree: oracle::swap_tree!(
-                { base: BaseCurrency::ticker() },
-                (1, LeaseC2::ticker()),
-                (3, LeaseC3::ticker()),
-                (7, LeaseC4::ticker()),
-                (11, Nls::ticker()),
-                (13, LeaseC1::ticker()),
-            ),
+            swap_tree: test_tree::dummy_swap_tree(),
         };
 
         app.instantiate(
