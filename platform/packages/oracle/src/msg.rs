@@ -14,7 +14,7 @@ where
 
     /// Provide the price of a currency against the base one
     ///
-    /// Return [PriceDTO]
+    /// Return [BasePrice<G, <BaseCurrency>, <BaseCurrencyGroup>>]
     BasePrice { currency: CurrencyDTO<G> },
 }
 
@@ -29,6 +29,6 @@ where
 
     /// Provide the price of a currency against the stable one
     ///
-    /// Return [PriceDTO]
+    /// Return [BasePrice<G, <BaseCurrency>, <BaseCurrencyGroup>>]
     StablePrice { currency: CurrencyDTO<G> },
 }

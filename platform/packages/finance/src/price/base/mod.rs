@@ -11,7 +11,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
 };
 
-use super::{dto::PriceDTO, Price};
+use super::Price;
 
 mod unchecked;
 pub mod with_price;
@@ -34,25 +34,6 @@ where
     #[serde(skip)]
     _quote_group: PhantomData<QuoteG>,
 }
-
-// impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
-// where
-//     BaseG: Group<TopG = BaseG>,
-//     QuoteC: CurrencyDef,
-//     QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG>,
-//     QuoteG: Group + MemberOf<BaseG>,
-// {
-//     pub fn from_dto_price(
-//         price: PriceDTO<BaseG>,
-//         quote_c: &CurrencyDTO<QuoteG>,
-//     ) -> FinanceResult<Self> {
-//         price
-//             .quote()
-//             .of_currency_dto(quote_c)
-//             .map(|()| price.quote().as_specific(quote_c))
-//             .map(|quote_amount: Coin<QuoteC>| Self::new_unchecked(*price.base(), quote_amount))
-//     }
-// }
 
 impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
@@ -195,33 +176,6 @@ where
     }
 }
 
-//
-// PriceDTO related transformations
-//
-// impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC, QuoteG>> for PriceDTO<BaseG::TopG>
-// where
-//     BaseG: Group,
-//     QuoteC: CurrencyDef,
-//     QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
-//     QuoteG: Group,
-// {
-//     fn from(base: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
-//         Self::new_unchecked(base.amount.into_super_coin(), base.amount_quote.into())
-//     }
-// }
-// impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG>> for BasePrice<BaseG, QuoteC, QuoteG>
-// where
-//     BaseG: Group<TopG = BaseG>,
-//     QuoteC: CurrencyDef,
-//     QuoteC::Group: MemberOf<QuoteG>,
-//     QuoteG: Group + MemberOf<BaseG>,
-// {
-//     type Error = Error;
-
-//     fn try_from(price: PriceDTO<BaseG>) -> Result<Self, Self::Error> {
-//         Self::from_dto_price(price, &currency::dto::<QuoteC, _>())
-//     }
-// }
 #[cfg(test)]
 mod test_invariant {
     use currency::{
