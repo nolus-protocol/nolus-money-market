@@ -8,8 +8,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 
 #[cfg(test)]
 mod tests {
-    use currencies::{Lpn, PaymentC3, PaymentC6, PaymentGroup as PriceCurrencies};
-    use currency::CurrencyDef as _;
+    use currencies::{Lpn, PaymentC9, PaymentGroup as PriceCurrencies};
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -19,19 +18,18 @@ mod tests {
     use crate::{
         api::{swap::SwapTarget, Config, QueryMsg, SudoMsg, SwapLeg},
         contract::{query, sudo},
-        swap_tree,
-        tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
+        test_tree, tests, ContractError,
     };
 
     #[test]
     fn configure() {
         use marketprice::config::Config as PriceConfig;
-        let msg = dummy_instantiate_msg(
+        let msg = tests::dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker())),
+            test_tree::dummy_swap_tree(),
         );
-        let (mut deps, _info) = setup_test(msg);
+        let (mut deps, _info) = tests::setup_test(msg);
 
         let msg = SudoMsg::UpdateConfig(PriceConfig::new(
             Percent::from_percent(44),
@@ -70,10 +68,9 @@ mod tests {
 
     #[test]
     fn config_supported_pairs() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
-        let test_tree =
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC6::ticker()));
+        let test_tree = test_tree::minimal_swap_tree();
 
         let res = sudo(
             deps.as_mut(),
@@ -91,51 +88,31 @@ mod tests {
         let mut value: Vec<SwapLeg<PriceCurrencies>> = from_json(res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
-        let mut expected = vec![
-            SwapLeg::<PriceCurrencies> {
-                from: currency::dto::<PaymentC3, PriceCurrencies>().into_super_group(),
-                to: SwapTarget {
-                    pool_id: 1,
-                    target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
-                },
+        let mut expected = vec![SwapLeg::<PriceCurrencies> {
+            from: currency::dto::<PaymentC9, PriceCurrencies>().into_super_group(),
+            to: SwapTarget {
+                pool_id: 1,
+                target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
             },
-            SwapLeg {
-                from: currency::dto::<PaymentC6, PriceCurrencies>().into_super_group(),
-                to: SwapTarget {
-                    pool_id: 2,
-                    target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
-                },
-            },
-        ];
+        }];
         expected.sort_by(|a, b| a.from.cmp(&b.from));
 
         assert_eq!(value, expected);
     }
 
     #[test]
-    #[should_panic]
     fn invalid_supported_pairs() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
-        let test_tree =
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC3::ticker()));
+        let test_tree = test_tree::invalid_pair_swap_tree();
 
-        let Response {
-            messages,
-            attributes,
-            events,
-            data,
-            ..
-        }: Response = sudo(
+        let err = sudo(
             deps.as_mut(),
             mock_env(),
             SudoMsg::SwapTree { tree: test_tree },
         )
-        .unwrap();
+        .unwrap_err();
 
-        assert!(messages.is_empty());
-        assert!(attributes.is_empty());
-        assert!(events.is_empty());
-        assert!(data.is_none());
+        assert!(matches!(err, ContractError::BrokenSwapTree(_)));
     }
 }

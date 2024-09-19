@@ -5,6 +5,7 @@ use currency::test::{
     SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
 use currency::{CurrencyDef, Group, MemberOf};
+use finance::price::base::BasePrice;
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -89,7 +90,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<PriceDTO<SuperGroup, SuperGroup>> = Vec::new();
+    let prices: Vec<PriceDTO<SuperGroup>> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
@@ -145,7 +146,7 @@ fn marketprice_add_feed() {
             )
             .unwrap();
 
-        assert_eq!(PriceDTO::from(price1), price_resp);
+        assert_eq!(BasePrice::from(price1), price_resp);
     }
 }
 
@@ -238,7 +239,7 @@ fn marketprice_follow_the_path() {
         )
         .unwrap();
     let expected = price::<SuperGroupTestC3, SuperGroupTestC2, _, _>(1, 6);
-    let expected_dto = PriceDTO::from(expected);
+    let expected_dto = BasePrice::from(expected);
 
     assert_eq!(expected_dto, price_resp);
 
@@ -324,7 +325,7 @@ where
     C1::Group: MemberOf<G>,
     C2: CurrencyDef,
     C2::Group: MemberOf<G>,
-    G: Group,
+    G: Group<TopG = G>,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
@@ -333,7 +334,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = PriceDTO::<G, G>::from(price);
+    let price = PriceDTO::<G>::from(price);
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)

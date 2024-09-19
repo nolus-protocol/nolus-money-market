@@ -111,7 +111,7 @@ where
             for StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
         where
             StableCurrency: CurrencyDef,
-            StableCurrency::Group: MemberOf<StableG>,
+            StableCurrency::Group: MemberOf<StableG> + MemberOf<G::TopG>,
             BaseCurrency: CurrencyDef,
             G: Group,
             StableG: Group,
@@ -222,10 +222,9 @@ where
 #[cfg(test)]
 mod test_normalized_price_not_found {
     use currencies::{
-        Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC4,
-        PaymentGroup as PriceCurrencies, PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
+        Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
+        PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
-    use currency::CurrencyDef as _;
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
     use sdk::cosmwasm_std::{
@@ -237,7 +236,7 @@ mod test_normalized_price_not_found {
         api::{Alarm, Config},
         contract::alarms::MarketAlarms,
         state::supported_pairs::SupportedPairs,
-        swap_tree,
+        test_tree,
     };
 
     use super::{feed::Feeds, feeder::Feeders, Oracle};
@@ -288,8 +287,7 @@ mod test_normalized_price_not_found {
         Config::new(price_config.clone()).store(storage).unwrap();
 
         SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(
-            swap_tree!({ base: BaseCurrency::ticker() }, (1, Nls::ticker()), (10, PaymentC4::ticker()))
-                .into_tree(),
+            test_tree::dummy_swap_tree().into_tree(),
         )
         .unwrap()
         .save(storage)

@@ -5,6 +5,7 @@ use currency::{
     SymbolStatic,
 };
 use finance::price::{
+    base::BasePrice,
     dto::{with_price, PriceDTO, WithPrice},
     Price,
 };
@@ -24,7 +25,7 @@ pub struct PriceFeeds<'m, PriceG> {
 
 impl<'m, PriceG> PriceFeeds<'m, PriceG>
 where
-    PriceG: Group,
+    PriceG: Group<TopG = PriceG>,
 {
     pub const fn new(namespace: &'m str, config: Config) -> Self {
         Self {
@@ -39,7 +40,7 @@ where
         storage: &mut dyn Storage,
         at: Timestamp,
         sender_raw: &Addr,
-        prices: &[PriceDTO<PriceG, PriceG>],
+        prices: &[PriceDTO<PriceG>],
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
             self.storage.update(
@@ -70,11 +71,12 @@ where
         at: Timestamp,
         total_feeders: usize,
         leaf_to_root: Iter,
-    ) -> Result<PriceDTO<PriceG, QuoteG>, PriceFeedsError>
+    ) -> Result<BasePrice<PriceG, QuoteC, QuoteG>, PriceFeedsError>
     where
         'm: 'a,
         PriceG: Group<TopG = PriceG>,
-        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<PriceG>,
+        QuoteC: CurrencyDef,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<PriceG>,
         QuoteG: Group + MemberOf<PriceG>,
         Iter: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
     {
@@ -150,9 +152,11 @@ where
 impl<'a, 'def, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, 'def, Iter, C, G, QuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    C: Currency + MemberOf<G>,
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
     G: Group<TopG = G>,
-    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
 {
     fn advance<'new_def, NextC>(
@@ -177,11 +181,11 @@ where
         }
     }
 
-    fn do_collect(mut self) -> Result<PriceDTO<G, QuoteG>, PriceFeedsError> {
+    fn do_collect(mut self) -> Result<BasePrice<G, QuoteC, QuoteG>, PriceFeedsError> {
         if let Some(next_currency) = self.root_to_leaf.next() {
             next_currency.into_currency_type(self)
         } else {
-            Ok(PriceDTO::from_price(self.price, *self.c_dto, self.root_dto))
+            Ok(self.price.into())
         }
     }
 }
@@ -189,18 +193,20 @@ impl<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
     for PriceCollect<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    QuoteC: Currency + MemberOf<G>,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<G>,
     G: Group<TopG = G>,
-    QuoteQuoteC: Currency + MemberOf<QuoteG>,
+    QuoteQuoteC: CurrencyDef,
+    QuoteQuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
 {
-    type Output = PriceDTO<G, QuoteG>;
+    type Output = BasePrice<G, QuoteQuoteC, QuoteG>;
     type Error = PriceFeedsError;
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<G> + MemberOf<G::TopG>,
+        C::Group: MemberOf<G>,
     {
         let next_c = def.into_super_group::<G>();
         let next_price = self.feeds.price_of_feed::<C, QuoteC>(
@@ -215,34 +221,30 @@ where
     }
 }
 
-fn add_observation<G, QuoteG>(
+fn add_observation<G>(
     feed_bin: Option<PriceFeedBin>,
     from: &Addr,
     at: Timestamp,
-    price: PriceDTO<G, QuoteG>,
+    price: PriceDTO<G>,
     valid_since: Timestamp,
 ) -> Result<PriceFeedBin, PriceFeedsError>
 where
-    G: Group,
-    QuoteG: Group,
+    G: Group<TopG = G>,
 {
     debug_assert!(valid_since < at);
-    struct AddObservation<'a, G, QuoteG> {
+    struct AddObservation<'a, G> {
         feed_bin: Option<PriceFeedBin>,
         from: &'a Addr,
         at: Timestamp,
         valid_since: Timestamp,
         group: PhantomData<G>,
-        quote_group: PhantomData<QuoteG>,
     }
 
-    impl<'a, G, QuoteG> WithPrice for AddObservation<'a, G, QuoteG>
+    impl<'a, G> WithPrice for AddObservation<'a, G>
     where
-        G: Group,
-        QuoteG: Group,
+        G: Group<TopG = G>,
     {
         type G = G;
-        type QuoteG = QuoteG;
         type Output = PriceFeedBin;
         type Error = PriceFeedsError;
 
@@ -266,7 +268,6 @@ where
             at,
             valid_since,
             group: PhantomData,
-            quote_group: PhantomData,
         },
     )
 }
@@ -277,12 +278,11 @@ mod test {
         SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
         SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
     };
-    use currency::{Group, MemberOf};
     use finance::{
         coin::Coin,
         duration::Duration,
         percent::Percent,
-        price::{self, dto::PriceDTO, Price},
+        price::{self, Price},
     };
     use sdk::cosmwasm_std::{Addr, MemoryStorage, Timestamp};
 
@@ -334,14 +334,9 @@ mod test {
 
     #[test]
     fn feed_pair() {
-        fn build_price<QuoteG>() -> PriceDTO<SuperGroup, QuoteG>
-        where
-            SubGroup: MemberOf<QuoteG>,
-            QuoteG: Group,
-        {
+        fn build_price() -> Price<SuperGroupTestC5, SubGroupTestC10> {
             price::total_of(Coin::<SuperGroupTestC5>::new(1))
                 .is(Coin::<SubGroupTestC10>::new(18500))
-                .into()
         }
 
         let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
@@ -352,7 +347,7 @@ mod test {
                 &mut storage,
                 NOW,
                 &Addr::unchecked(FEEDER),
-                &[build_price()],
+                &[build_price().into()],
             )
             .unwrap();
 
@@ -371,7 +366,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok(build_price()),
+            Ok(build_price().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 currency::dto::<SubGroupTestC10, _>(),
                 &storage,

@@ -32,120 +32,106 @@ pub fn execute<BaseG, QuoteC, QuoteG, Cmd>(
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
     QuoteG: Group,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
     price.amount.with_super_coin(CoinResolve {
-        price: UncheckedConversion(price),
+        price: UncheckedConversion::<BaseG, QuoteC>(PhantomData, price.amount_quote),
         cmd,
     })
 }
 
 /// Execute the provided price command on a non-validated price
 /// Intended mainly for invariant validation purposes.
-pub(super) fn execute_with_coins<BaseG, QuoteC, QuoteG, Cmd>(
+pub(super) fn execute_with_coins<BaseG, QuoteC, Cmd>(
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
     cmd: Cmd,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC: Currency,
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
     amount.with_super_coin(CoinResolve {
-        price: CheckedConversion::<BaseG, QuoteC, QuoteG>(amount_quote, PhantomData, PhantomData),
+        price: CheckedConversion::<BaseG, QuoteC>(PhantomData, amount_quote),
         cmd,
     })
 }
 
 trait PriceFactory {
     type G: Group;
-    type QuoteC: Currency + MemberOf<Self::QuoteG>;
-    type QuoteG: Group;
+    type QuoteC: Currency;
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
         C: Currency + MemberOf<Self::G>;
 }
 
-struct UncheckedConversion<'price, BaseG, QuoteC, QuoteG>(&'price BasePrice<BaseG, QuoteC, QuoteG>)
+struct UncheckedConversion<BaseG, QuoteC>(PhantomData<BaseG>, Coin<QuoteC>)
 where
-    BaseG: Group,
-    QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
-    QuoteG: Group;
+    // BaseG: Group,
+    QuoteC: CurrencyDef;
+// QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+// QuoteG: Group;
 
-impl<'price, BaseG, QuoteC, QuoteG> PriceFactory
-    for UncheckedConversion<'price, BaseG, QuoteC, QuoteG>
+impl<BaseG, QuoteC> PriceFactory for UncheckedConversion<BaseG, QuoteC>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC::Group: MemberOf<BaseG::TopG>,
 {
     type G = BaseG;
     type QuoteC = QuoteC;
-    type QuoteG = QuoteG;
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
         C: Currency + MemberOf<Self::G>,
     {
-        Ok(Price::new(amount, self.0.amount_quote))
+        Ok(Price::new(amount, self.1))
     }
 }
 
-struct CheckedConversion<BaseG, QuoteC, QuoteG>(
-    Coin<QuoteC>,
-    PhantomData<BaseG>,
-    PhantomData<QuoteG>,
-)
+struct CheckedConversion<BaseG, QuoteC>(PhantomData<BaseG>, Coin<QuoteC>)
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group;
+    QuoteC: Currency;
 
-impl<BaseG, QuoteC, QuoteG> PriceFactory for CheckedConversion<BaseG, QuoteC, QuoteG>
+impl<BaseG, QuoteC> PriceFactory for CheckedConversion<BaseG, QuoteC>
 where
     BaseG: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC: Currency,
 {
     type G = BaseG;
     type QuoteC = QuoteC;
-    type QuoteG = QuoteG;
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
         C: Currency + MemberOf<Self::G>,
     {
-        Price::try_new(amount, self.0)
+        Price::try_new(amount, self.1)
     }
 }
 
-struct CoinResolve<Price, G, QuoteC, QuoteG, Cmd>
+struct CoinResolve<Price, G, QuoteC, Cmd>
 where
-    Price: PriceFactory<G = G, QuoteC = QuoteC, QuoteG = QuoteG>,
+    Price: PriceFactory<G = G, QuoteC = QuoteC>,
     G: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC: Currency,
     Cmd: WithPrice<QuoteC, PriceG = G>,
 {
     price: Price,
     cmd: Cmd,
 }
 
-impl<Price, G, QuoteC, QuoteG, Cmd> WithCoin<G> for CoinResolve<Price, G, QuoteC, QuoteG, Cmd>
+impl<Price, G, QuoteC, Cmd> WithCoin<G> for CoinResolve<Price, G, QuoteC, Cmd>
 where
-    Price: PriceFactory<G = G, QuoteC = QuoteC, QuoteG = QuoteG>,
+    Price: PriceFactory<G = G, QuoteC = QuoteC>,
     G: Group,
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
+    QuoteC: Currency,
     Cmd: WithPrice<QuoteC, PriceG = G>,
     Cmd::Error: From<Error>,
 {

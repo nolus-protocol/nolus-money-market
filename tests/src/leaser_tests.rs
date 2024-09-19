@@ -1,6 +1,6 @@
 use currencies::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseGroup as LeaseCurrencies, Lpn, Lpns,
-    PaymentGroup as PriceCurrencies,
+    LeaseC1, LeaseC2, LeaseC3, LeaseC6, LeaseC7, LeaseGroup as LeaseCurrencies, Lpn, Lpns,
+    PaymentC1, PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -31,7 +31,7 @@ type TheCurrency = Lpn;
 
 #[test]
 fn open_osmo_lease() {
-    open_lease_impl::<Lpn, LeaseC1, Lpn>(true);
+    open_lease_impl::<Lpn, LeaseC7, Lpn>(true);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn open_cro_lease() {
 #[test]
 #[should_panic(expected = "Unsupported currency")]
 fn open_lease_unsupported_currency_by_oracle() {
-    open_lease_impl::<Lpn, LeaseC5, Lpn>(false);
+    open_lease_impl::<Lpn, LeaseC6, Lpn>(false);
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn open_multiple_loans() {
 fn test_quote() {
     type Lpn = TheCurrency;
     type Downpayment = Lpn;
-    type LeaseCurrency = LeaseC3;
+    type LeaseCurrency = LeaseC7;
 
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
@@ -206,9 +206,12 @@ fn test_quote() {
     );
 }
 
-fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: Coin<TheCurrency>) {
+fn common_quote_with_conversion(
+    downpayment: Coin<PaymentC1>,
+    borrow_after_mul2: Coin<TheCurrency>,
+) {
     type Lpn = TheCurrency;
-    type LeaseCurrency = LeaseC4;
+    type LeaseCurrency = LeaseC2;
 
     const LPNS: Amount = 5_000_000_000_000;
     const OSMOS: Amount = 5_000_000_000_000;
@@ -262,7 +265,7 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
 
     oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
 
-    let dpn_lpn_base = Coin::<LeaseC3>::new(1);
+    let dpn_lpn_base = Coin::<PaymentC1>::new(1);
     let dpn_lpn_quote = Coin::<Lpn>::new(2);
     let dpn_lpn_price = total_of(dpn_lpn_base).is(dpn_lpn_quote);
 
@@ -278,7 +281,7 @@ fn common_quote_with_conversion(downpayment: Coin<LeaseC3>, borrow_after_mul2: C
     );
     oracle_mod::feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
 
-    let resp = leaser_mod::query_quote::<LeaseC3, LeaseCurrency>(
+    let resp = leaser_mod::query_quote::<_, LeaseCurrency>(
         &test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -319,7 +322,7 @@ fn test_quote_with_conversion_5000() {
 fn test_quote_fixed_rate() {
     type Lpn = TheCurrency;
     type Downpayment = Lpn;
-    type LeaseCurrency = LeaseC3;
+    type LeaseCurrency = LeaseC2;
 
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(

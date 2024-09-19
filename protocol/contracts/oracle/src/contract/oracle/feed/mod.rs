@@ -44,7 +44,7 @@ where
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        prices: &[PriceDTO<PriceG, PriceG>],
+        prices: &[PriceDTO<PriceG>],
     ) -> Result<(), ContractError> {
         let tree = SupportedPairs::<PriceG, BaseC>::load(storage)?;
         if let Some(unsupported) = prices.iter().find(|price| {
@@ -106,7 +106,8 @@ where
                 tree.load_path(currency)?,
             )
             .map_err(Into::<ContractError>::into)?;
-        BasePrice::from_dto_price(dto, &currency::dto::<BaseC, _>()).map_err(Into::into)
+        Ok(dto)
+        // BasePrice::from_dto_price(dto, &currency::dto::<BaseC, _>()).map_err(Into::into)
     }
 }
 
@@ -127,9 +128,7 @@ mod test {
     use super::price_querier::PriceQuerier;
 
     #[derive(Clone)]
-    pub struct TestFeeds(
-        pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies, PriceCurrencies>>,
-    );
+    pub struct TestFeeds(pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies>>);
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
@@ -140,7 +139,7 @@ mod test {
         {
             self.0.insert(
                 (B::ticker(), Q::ticker()),
-                tests::dto_price::<B, PriceCurrencies, Q, PriceCurrencies>(total_of, is),
+                tests::dto_price::<B, PriceCurrencies, Q>(total_of, is),
             );
         }
     }
@@ -177,13 +176,15 @@ mod test {
         };
 
         use super::BaseCurrency;
-        use crate::{contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, tests};
+        use crate::{
+            contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, test_tree, tests,
+        };
 
         #[test]
         fn normal() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = tests::dummy_swap_tree();
+            let tree = test_tree::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )
@@ -205,12 +206,12 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        tests::dto_price::<PaymentC4, _, BaseCurrency, _>(2, 1),
-                        tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1),
-                        tests::dto_price::<PaymentC7, _, PaymentC1, _>(3, 1),
-                        tests::dto_price::<PaymentC5, _, PaymentC4, _>(7, 1),
-                        tests::dto_price::<PaymentC6, _, PaymentC4, _>(3, 1),
-                        tests::dto_price::<PaymentC3, _, PaymentC5, _>(11, 1),
+                        tests::dto_price::<PaymentC4, _, BaseCurrency>(2, 1),
+                        tests::dto_price::<PaymentC1, _, BaseCurrency>(5, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC1>(3, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC4>(7, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC4>(3, 1),
+                        tests::dto_price::<PaymentC3, _, PaymentC5>(11, 1),
                     ],
                 )
                 .unwrap();
@@ -236,7 +237,7 @@ mod test {
         fn missing_price() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = tests::dummy_swap_tree();
+            let tree = test_tree::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )
@@ -259,11 +260,11 @@ mod test {
                     &Addr::unchecked("feeder"),
                     &[
                         // tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1), a gap for PaymentC7
-                        tests::dto_price::<PaymentC4, _, BaseCurrency, _>(2, 1),
-                        tests::dto_price::<PaymentC7, _, PaymentC1, _>(10, 1),
-                        tests::dto_price::<PaymentC5, _, PaymentC4, _>(1, 1),
-                        tests::dto_price::<PaymentC6, _, PaymentC4, _>(3, 1),
-                        tests::dto_price::<PaymentC3, _, PaymentC5, _>(1, 1),
+                        tests::dto_price::<PaymentC4, _, BaseCurrency>(2, 1),
+                        tests::dto_price::<PaymentC7, _, PaymentC1>(10, 1),
+                        tests::dto_price::<PaymentC5, _, PaymentC4>(1, 1),
+                        tests::dto_price::<PaymentC6, _, PaymentC4>(3, 1),
+                        tests::dto_price::<PaymentC3, _, PaymentC5>(1, 1),
                     ],
                 )
                 .unwrap();

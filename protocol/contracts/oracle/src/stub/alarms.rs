@@ -17,7 +17,8 @@ where
 
     fn add_alarm(&mut self, alarm: Alarm<AlarmCurrencies, Self::BaseC, Self::BaseG>) -> Result<()>
     where
-        <Self::BaseC as CurrencyDef>::Group: MemberOf<Self::BaseG>;
+        <Self::BaseC as CurrencyDef>::Group:
+            MemberOf<Self::BaseG> + MemberOf<AlarmCurrencies::TopG>;
 }
 
 pub trait AsAlarms<OracleBase, OracleBaseG>
@@ -29,7 +30,8 @@ where
         &self,
     ) -> impl PriceAlarms<AlarmCurrencies, BaseC = OracleBase, BaseG = OracleBaseG>
     where
-        AlarmCurrencies: Group;
+        AlarmCurrencies: Group,
+        OracleBase::Group: MemberOf<AlarmCurrencies::TopG>;
 }
 
 impl<OracleBase, OracleBaseG> AsAlarms<OracleBase, OracleBaseG>
@@ -44,6 +46,7 @@ where
     ) -> impl PriceAlarms<AlarmCurrencies, BaseC = OracleBase, BaseG = OracleBaseG>
     where
         AlarmCurrencies: Group,
+        OracleBase::Group: MemberOf<AlarmCurrencies::TopG>,
     {
         AlarmsStub {
             oracle_ref: self,
@@ -76,7 +79,7 @@ impl<'a, AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies>
 where
     AlarmCurrencies: Group,
     OracleBase: CurrencyDef,
-    OracleBase::Group: MemberOf<OracleBaseG>,
+    OracleBase::Group: MemberOf<OracleBaseG> + MemberOf<AlarmCurrencies::TopG>,
     OracleBaseG: Group,
 {
     type BaseC = OracleBase;

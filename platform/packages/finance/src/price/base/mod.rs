@@ -11,7 +11,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
 };
 
-use super::{dto::PriceDTO, Price};
+use super::Price;
 
 mod unchecked;
 pub mod with_price;
@@ -20,13 +20,13 @@ pub mod with_price;
 #[serde(
     try_from = "unchecked::BasePrice<BaseG, QuoteG>",
     into = "unchecked::BasePrice<BaseG, QuoteG>",
-    bound(serialize = "", deserialize = "")
+    bound(serialize = "", deserialize = "",)
 )]
 pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
@@ -39,7 +39,7 @@ impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
     QuoteG: Group,
 {
     pub fn from_price<C>(price: Price<C, QuoteC>, c_dto: CurrencyDTO<BaseG>) -> Self
@@ -47,17 +47,6 @@ where
         C: Currency + MemberOf<BaseG>,
     {
         Self::new_unchecked(CoinDTO::from_coin(price.amount, c_dto), price.amount_quote)
-    }
-
-    pub fn from_dto_price(
-        price: PriceDTO<BaseG, QuoteG>,
-        quote_c: &CurrencyDTO<QuoteG>,
-    ) -> FinanceResult<Self> {
-        price
-            .quote()
-            .of_currency_dto(quote_c)
-            .map(|()| price.quote().as_specific(quote_c))
-            .map(|quote_amount: Coin<QuoteC>| Self::new_unchecked(*price.base(), quote_amount))
     }
 
     #[cfg(any(test, feature = "testing"))]
@@ -147,7 +136,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -161,7 +150,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -177,7 +166,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -187,33 +176,6 @@ where
     }
 }
 
-//
-// PriceDTO related transformations
-//
-impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC, QuoteG>> for PriceDTO<BaseG, QuoteG>
-where
-    BaseG: Group,
-    QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    fn from(base: BasePrice<BaseG, QuoteC, QuoteG>) -> Self {
-        Self::new_unchecked(base.amount, base.amount_quote.into())
-    }
-}
-impl<BaseG, QuoteC, QuoteG> TryFrom<PriceDTO<BaseG, QuoteG>> for BasePrice<BaseG, QuoteC, QuoteG>
-where
-    BaseG: Group,
-    QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    type Error = Error;
-
-    fn try_from(price: PriceDTO<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-        Self::from_dto_price(price, &currency::dto::<QuoteC, _>())
-    }
-}
 #[cfg(test)]
 mod test_invariant {
     use currency::{
@@ -309,7 +271,7 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
         assert!(matches!(
@@ -325,8 +287,8 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
-        QuoteG: Group,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+        QuoteG: Group + MemberOf<G>,
     {
         load_with_group::<G, QuoteC, QuoteG>(json)
     }
@@ -335,8 +297,8 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG>,
-        QuoteG: Group,
+        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+        QuoteG: Group + MemberOf<G>,
     {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }

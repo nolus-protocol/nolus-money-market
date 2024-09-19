@@ -27,7 +27,8 @@ pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrenci
 ) -> ContractResult<CwResponse>
 where
     BaseCurrency: CurrencyDef,
-    BaseCurrency::Group: MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies>,
+    BaseCurrency::Group:
+        MemberOf<BaseCurrencies> + MemberOf<PriceCurrencies> + MemberOf<AlarmCurrencies::TopG>,
     BaseCurrencies: Group + MemberOf<PriceCurrencies>,
     AlarmCurrencies: Group,
     PriceCurrencies: Group<TopG = PriceCurrencies>,
@@ -65,7 +66,7 @@ fn try_feed_prices<G, BaseC, BaseG>(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender: Addr,
-    prices: Vec<PriceDTO<G, G>>,
+    prices: Vec<PriceDTO<G>>,
 ) -> ContractResult<()>
 where
     G: Group<TopG = G>,

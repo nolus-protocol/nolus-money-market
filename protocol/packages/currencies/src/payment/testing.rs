@@ -10,3 +10,4 @@ pub type PaymentC5 = LeaseC3;
 pub type PaymentC6 = LeaseC4;
 pub type PaymentC7 = LeaseC5;
 pub type PaymentC8 = LeaseC6;
+pub type PaymentC9 = LeaseC7;

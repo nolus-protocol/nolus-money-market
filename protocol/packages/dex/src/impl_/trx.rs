@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, Group, MemberOf, NlsPlatform};
+use currency::{platform::Nls, CurrencyDTO, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -19,12 +19,12 @@ use crate::{error::Result, swap::ExactAmountIn};
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_minutes(7); // less than the total amount of time 100 blocks take (a Hermes setting to look back for packets)
 
 //TODO take them as input from the client
-const ICA_TRANSFER_ACK_TIP: Coin<NlsPlatform> = Coin::new(1);
-const ICA_TRANSFER_TIMEOUT_TIP: Coin<NlsPlatform> = ICA_TRANSFER_ACK_TIP;
+const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
+const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 
 //TODO take them as input from the client
-const ICA_SWAP_ACK_TIP: Coin<NlsPlatform> = Coin::new(1);
-const ICA_SWAP_TIMEOUT_TIP: Coin<NlsPlatform> = ICA_SWAP_ACK_TIP;
+const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
+const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 
 pub(super) struct TransferOutTrx<'a> {
     sender: LocalSender<'a>,

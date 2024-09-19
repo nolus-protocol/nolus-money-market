@@ -60,6 +60,15 @@ define_currency!(
     8
 );
 
+define_currency!(
+    LeaseC7,
+    "LC7",
+    "ibc/2435225A34FB2DE135FD3A04FDDF53B7DA4206080AA785C8BAB7F8B26299A221",
+    "ibc/C1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
+    LeaseGroup,
+    4
+);
+
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
@@ -77,6 +86,7 @@ where
         .or_else(|visitor| maybe_visit::<_, LeaseC4, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC5, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, LeaseC6, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, LeaseC7, VisitedG, _>(matcher, visitor))
 }
 
 impl PairsGroup for LeaseC1 {
@@ -89,6 +99,7 @@ impl PairsGroup for LeaseC1 {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<LeaseC3, _, _>(matcher, visitor)
+            .or_else(|v| maybe_visit::<LeaseC2, _, _>(matcher, v))
     }
 }
 
@@ -104,6 +115,7 @@ impl PairsGroup for LeaseC2 {
         maybe_visit::<Lpn, _, _>(matcher, visitor)
     }
 }
+impl InPoolWith<LeaseC1> for LeaseC2 {}
 impl InPoolWith<LeaseC3> for LeaseC2 {}
 impl InPoolWith<LeaseC4> for LeaseC2 {}
 
@@ -156,6 +168,19 @@ impl PairsGroup for LeaseC6 {
         V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor) // let's stay detached from the swap tree for some corner cases
+    }
+}
+
+impl PairsGroup for LeaseC7 {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
     }
 }
 

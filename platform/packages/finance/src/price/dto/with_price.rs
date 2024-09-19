@@ -1,9 +1,12 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{Currency, Group, MemberOf};
+use currency::{
+    error::Error as CurrencyError, AnyVisitorPair, AnyVisitorPairResult, Currency, CurrencyDTO,
+    Group, InPoolWith, MemberOf,
+};
 
 use crate::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
+    coin::{Coin, CoinDTO},
     error::{Error, Result},
     price::Price,
 };
@@ -11,123 +14,91 @@ use crate::{
 use super::{PriceDTO, WithPrice};
 
 /// Execute the provided price command on a valid price
-pub fn execute<G, QuoteG, Cmd>(
-    price: PriceDTO<G, QuoteG>,
-    cmd: Cmd,
-) -> StdResult<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd>(price: PriceDTO<G>, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
 where
-    G: Group,
-    QuoteG: Group,
-    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
-    Cmd::Error: From<Error>,
+    G: Group<TopG = G>,
+    Cmd: WithPrice<G = G>,
+    Cmd::Error: From<Error> + From<CurrencyError>,
 {
     // the refactored code that substituted the Price generic parameter with an enum Price got worse in the size of the output .wasm
     // trait objects are not possible here due to the generic function parameters
-    price.amount.with_super_coin(PriceAmountVisitor {
-        _amount_g: PhantomData::<G>,
-        amount_quote: &price.amount_quote,
-        price: NonValidatingPrice {
-            _amount_g: PhantomData::<G>,
-            _amount_quote_g: PhantomData::<QuoteG>,
+    currency::visit_any_on_currencies(
+        price.amount.currency(),
+        price.amount_quote.currency(),
+        PriceAmountVisitor {
+            amount: &price.amount,
+            amount_quote: &price.amount_quote,
+            price: NonValidatingPrice {
+                _amount_g: PhantomData::<G>,
+            },
+            cmd,
         },
-        cmd,
-    })
+    )
 }
 
 /// Execute the provided price command on a non-validated price
 /// Intended mainly for invariant validation purposes.
-pub(super) fn execute_with_coins<G, QuoteG, Cmd>(
+pub(super) fn execute_with_coins<G, Cmd>(
     amount: CoinDTO<G>,
-    amount_quote: CoinDTO<QuoteG>,
+    amount_quote: CoinDTO<G>,
     cmd: Cmd,
 ) -> StdResult<Cmd::Output, Cmd::Error>
 where
-    G: Group,
-    QuoteG: Group,
-    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
-    Cmd::Error: From<Error>,
+    G: Group<TopG = G>,
+    Cmd: WithPrice<G = G>,
+    Cmd::Error: From<Error> + From<CurrencyError>,
 {
-    amount.with_super_coin(PriceAmountVisitor {
-        _amount_g: PhantomData::<G>,
-        amount_quote: &amount_quote,
-        price: ValidatingPrice {
-            _amount_g: PhantomData::<G>,
-            _amount_quote_g: PhantomData::<QuoteG>,
+    currency::visit_any_on_currencies(
+        amount.currency(),
+        amount_quote.currency(),
+        PriceAmountVisitor {
+            amount: &amount,
+            amount_quote: &amount_quote,
+            price: ValidatingPrice {
+                _amount_g: PhantomData::<G>,
+            },
+            cmd,
         },
-        cmd,
-    })
+    )
 }
 
-struct PriceAmountVisitor<'quote, G, QuoteG, Price, Cmd>
+struct PriceAmountVisitor<'amount, G, Price, Cmd>
 where
     G: Group,
-    QuoteG: Group,
 {
-    _amount_g: PhantomData<G>,
-    amount_quote: &'quote CoinDTO<QuoteG>,
+    amount: &'amount CoinDTO<G>,
+    amount_quote: &'amount CoinDTO<G>,
     price: Price,
     cmd: Cmd,
 }
 
-impl<'quote, G, QuoteG, Price, Cmd> WithCoin<G>
-    for PriceAmountVisitor<'quote, G, QuoteG, Price, Cmd>
+impl<'amount, G, Price, Cmd> AnyVisitorPair for PriceAmountVisitor<'amount, G, Price, Cmd>
 where
-    G: Group,
-    QuoteG: Group,
-    Price: PriceFactory<G = G, QuoteG = QuoteG>,
-    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
+    G: Group<TopG = G>,
+    Price: PriceFactory<G = G>,
+    Cmd: WithPrice<G = G>,
     Cmd::Error: From<Error>,
 {
+    type VisitedG = G;
+
     type Output = Cmd::Output;
 
     type Error = Cmd::Error;
 
-    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
+    fn on<C1, C2>(
+        self,
+        dto1: &CurrencyDTO<Self::VisitedG>,
+        dto2: &CurrencyDTO<Self::VisitedG>,
+    ) -> AnyVisitorPairResult<Self>
     where
-        C: Currency + MemberOf<G> + MemberOf<G::TopG>,
-    {
-        self.amount_quote.with_super_coin(PriceQuoteAmountVisitor {
-            amount,
-            _amount_g: PhantomData::<G>,
-            _amount_quote_g: PhantomData::<QuoteG>,
-            price: self.price,
-            cmd: self.cmd,
-        })
-    }
-}
-
-struct PriceQuoteAmountVisitor<C, G, QuoteG, Price, Cmd>
-where
-    C: Currency,
-    QuoteG: Group,
-{
-    amount: Coin<C>,
-    _amount_g: PhantomData<G>,
-    _amount_quote_g: PhantomData<QuoteG>,
-    price: Price,
-    cmd: Cmd,
-}
-
-impl<C, G, QuoteG, Price, Cmd> WithCoin<QuoteG>
-    for PriceQuoteAmountVisitor<C, G, QuoteG, Price, Cmd>
-where
-    C: Currency + MemberOf<G>,
-    G: Group,
-    QuoteG: Group,
-    Price: PriceFactory<G = G, QuoteG = QuoteG>,
-    Cmd: WithPrice<G = G, QuoteG = QuoteG>,
-    Cmd::Error: From<Error>,
-{
-    type Output = Cmd::Output;
-
-    type Error = Cmd::Error;
-
-    fn on<QuoteC>(self, amount_quote: Coin<QuoteC>) -> WithCoinResult<QuoteG, Self>
-    where
-        QuoteC: Currency + MemberOf<QuoteG> + MemberOf<QuoteG::TopG>,
+        C1: Currency + MemberOf<Self::VisitedG>,
+        C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>,
     {
         self.price
-            .try_obtain_price(self.amount, amount_quote)
+            .try_obtain_price::<C1, C2>(
+                self.amount.as_specific(dto1),
+                self.amount_quote.as_specific(dto2),
+            )
             .map_err(Into::into)
             .and_then(|price| self.cmd.exec(price))
     }
@@ -135,7 +106,6 @@ where
 
 pub trait PriceFactory {
     type G: Group;
-    type QuoteG: Group;
 
     fn try_obtain_price<C, QuoteC>(
         self,
@@ -144,20 +114,17 @@ pub trait PriceFactory {
     ) -> Result<Price<C, QuoteC>>
     where
         C: Currency + MemberOf<Self::G>,
-        QuoteC: Currency + MemberOf<Self::QuoteG>;
+        QuoteC: Currency + MemberOf<Self::G>;
 }
 
-struct NonValidatingPrice<G, QuoteG> {
+struct NonValidatingPrice<G> {
     _amount_g: PhantomData<G>,
-    _amount_quote_g: PhantomData<QuoteG>,
 }
-impl<G, QuoteG> PriceFactory for NonValidatingPrice<G, QuoteG>
+impl<G> PriceFactory for NonValidatingPrice<G>
 where
     G: Group,
-    QuoteG: Group,
 {
     type G = G;
-    type QuoteG = QuoteG;
 
     fn try_obtain_price<C, QuoteC>(
         self,
@@ -166,25 +133,21 @@ where
     ) -> Result<Price<C, QuoteC>>
     where
         C: Currency + MemberOf<Self::G>,
-        QuoteC: Currency + MemberOf<Self::QuoteG>,
+        QuoteC: Currency + MemberOf<Self::G>,
     {
         Ok(Price::new(amount, amount_quote))
     }
 }
 
-struct ValidatingPrice<G, QuoteG> {
+struct ValidatingPrice<G> {
     _amount_g: PhantomData<G>,
-    _amount_quote_g: PhantomData<QuoteG>,
 }
 
-impl<G, QuoteG> PriceFactory for ValidatingPrice<G, QuoteG>
+impl<G> PriceFactory for ValidatingPrice<G>
 where
     G: Group,
-    QuoteG: Group,
 {
     type G = G;
-
-    type QuoteG = QuoteG;
 
     fn try_obtain_price<C, QuoteC>(
         self,
@@ -193,7 +156,7 @@ where
     ) -> Result<Price<C, QuoteC>>
     where
         C: Currency + MemberOf<Self::G>,
-        QuoteC: Currency + MemberOf<Self::QuoteG>,
+        QuoteC: Currency + MemberOf<Self::G>,
     {
         Price::try_new(amount, amount_quote)
     }

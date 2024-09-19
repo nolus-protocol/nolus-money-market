@@ -209,6 +209,33 @@ define_currency!(
     18
 );
 
+define_currency!(
+    AllBtc,
+    "ALL_BTC",
+    "ibc/E45CFCB959F4F6D1065B7033EE49A88E606E6AD82E75725219B3D68B0FA89987", // transfer/channel-0/allBTC
+    "factory/osmo1z6r6qdknhgsc0zeracktgpcxf43j6sekq07nw8sxduc9lg0qjjlqfu25e3/alloyed/allBTC",
+    LeaseGroup,
+    8
+);
+
+define_currency!(
+    AllSol,
+    "ALL_SOL",
+    "ibc/762E1E45658845A12E214A91C3C05FDFC5951D60404FAADA225A369A96DCD9A9", // transfer/channel-0/allSOL
+    "factory/osmo1n3n75av8awcnw4jl62n3l48e6e4sxqmaf97w5ua6ddu4s475q5qq9udvx4/alloyed/allSOL",
+    LeaseGroup,
+    9
+);
+
+define_currency!(
+    AllEth,
+    "ALL_ETH",
+    "ibc/7879B1CBBD2E07347002334792368E65C11A7D1629297D04B6A2155F557E02D4", // transfer/channel-0/allETH
+    "factory/osmo1k6c8jln7ejuqwtqmay3yvzrg3kueaczl96pk067ldg8u835w0yhsw27twm/alloyed/allETH",
+    LeaseGroup,
+    18
+);
+
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
@@ -242,6 +269,9 @@ where
         .or_else(|visitor| maybe_visit::<_, Pica, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cudos, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, AllBtc, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, AllSol, VisitedG, _>(matcher, visitor))
+        .or_else(|visitor| maybe_visit::<_, AllEth, VisitedG, _>(matcher, visitor))
 }
 
 impl PairsGroup for Atom {
@@ -547,6 +577,46 @@ impl PairsGroup for Cudos {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<Osmo, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for AllBtc {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
+    }
+}
+impl InPoolWith<AllSol> for AllBtc {}
+
+impl PairsGroup for AllSol {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<AllBtc, _, _>(matcher, visitor)
+    }
+}
+
+impl PairsGroup for AllEth {
+    type CommonGroup = PaymentGroup;
+
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {
+        use currency::maybe_visit_buddy as maybe_visit;
+        maybe_visit::<Lpn, _, _>(matcher, visitor)
     }
 }
 

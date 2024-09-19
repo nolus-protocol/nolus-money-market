@@ -3,7 +3,6 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use finance::price::dto::PriceDTO;
 use platform::{
     batch::{Emit, Emitter},
     error as platform_error, response,
@@ -46,7 +45,7 @@ type Oracle<'storage, S> =
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
@@ -61,6 +60,7 @@ pub fn instantiate(
             )
         })
         .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+        .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
         .map(|()| response::empty_response())
 }
 
@@ -110,9 +110,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> Contra
                 .collect::<Vec<_>>(),
         ),
         QueryMsg::BasePrice { currency } => to_json_binary(
-            &Oracle::load(deps.storage)?
-                .try_query_base_price(env.block.time, &currency)
-                .map(PriceDTO::from)?,
+            &Oracle::load(deps.storage)?.try_query_base_price(env.block.time, &currency)?,
         ),
         QueryMsg::StablePrice { currency } => to_json_binary(
             &Oracle::load(deps.storage)?
@@ -151,7 +149,7 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     msg: SudoMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
     match msg {
@@ -161,6 +159,8 @@ pub fn sudo(
         SudoMsg::SwapTree { tree } => {
             SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+                .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+            // TODO move the swap tree validation at the tree instantiation
         }
     }
     .map(|()| response::empty_response())
@@ -212,17 +212,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currencies::{
-        LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
-    };
-    use currency::CurrencyDef as _;
+    use currencies::{LeaseC1, LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC9};
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
         api::{swap::SwapTarget, Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg},
         contract::query,
-        swap_tree,
+        test_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };
 
@@ -234,7 +231,7 @@ mod tests {
         let msg = dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC5::ticker())),
+            test_tree::minimal_swap_tree(),
         );
         let (deps, _info) = setup_test(msg);
 
@@ -261,7 +258,7 @@ mod tests {
         let value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: currency::dto::<PaymentC5, PriceCurrencies>(),
+            from: currency::dto::<PaymentC9, PriceCurrencies>(),
             to: SwapTarget {
                 pool_id: 1,
                 target: currency::dto::<Lpn, PriceCurrencies>(),

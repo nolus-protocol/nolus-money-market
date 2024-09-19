@@ -2,7 +2,7 @@ use currencies::Lpns;
 use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, Group, NlsPlatform};
+use currency::{platform::Nls, CurrencyDTO, Group};
 use finance::{
     coin::{Coin, CoinDTO},
     percent::{bound::BoundToHundredPercent, Percent},
@@ -171,5 +171,5 @@ where
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct RewardsResponse {
-    pub rewards: Coin<NlsPlatform>,
+    pub rewards: Coin<Nls>,
 }

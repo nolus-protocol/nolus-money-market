@@ -49,7 +49,7 @@ where
     CurrencyG: Group + MemberOf<TopG>,
     TopG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG>,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<CurrencyG::TopG>,
     QuoteG: Group,
     PriceReqT: RequestBuilder,
 {

@@ -1,9 +1,11 @@
 use currencies::{
-    Lpn, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
+    LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{CurrencyDef, Group, MemberOf};
-use finance::{coin::Coin, price, price::dto::PriceDTO};
+use finance::{
+    coin::Coin,
+    price::{self, base::BasePrice, dto::PriceDTO},
+};
 use platform::{contract, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -37,11 +39,7 @@ fn feed_prices_unknown_feeder() {
 
 #[test]
 fn feed_direct_price() {
-    fn generate_price<BaseG>() -> PriceDTO<PriceCurrencies, BaseG>
-    where
-        BaseG: Group,
-        <Lpn as CurrencyDef>::Group: MemberOf<BaseG>,
-    {
+    fn generate_price() -> PriceDTO<PriceCurrencies> {
         price::total_of(Coin::<PaymentC1>::new(10))
             .is(Coin::<Lpn>::new(120))
             .into()
@@ -63,7 +61,7 @@ fn feed_direct_price() {
         },
     )
     .unwrap();
-    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
+    let value: PriceDTO<PriceCurrencies> = from_json(res).unwrap();
     assert_eq!(generate_price(), value);
 }
 
@@ -94,9 +92,10 @@ fn feed_indirect_price() {
     )
     .unwrap();
 
-    let expected_price =
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)));
-    let value: PriceDTO<PriceCurrencies, BaseCurrencies> = from_json(res).unwrap();
+    let expected_price = BasePrice::<LeaseGroup, _, Lpns>::from(
+        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)),
+    );
+    let value: BasePrice<LeaseGroup, _, _> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 
@@ -121,7 +120,7 @@ fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let unsupported =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC1>::new(12)));
+        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)));
     let prices = vec![
         unsupported,
         PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(22))),

@@ -1,5 +1,5 @@
-use currencies::{Lpn, Nls};
-use currency::{CurrencyDef, NlsPlatform};
+use currencies::{Lpn, Nls as NlsProtocol};
+use currency::{platform::Nls as NlsPlatform, CurrencyDef};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -119,7 +119,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     let mut test_case = new_test_case(registry);
     let feeder1 = Addr::unchecked("feeder1");
     oracle_mod::add_feeder(&mut test_case, &feeder1);
-    let price = price::total_of(Coin::<Nls>::new(23456789)).is(Coin::<Lpn>::new(100000000));
+    let price = price::total_of(Coin::<NlsProtocol>::new(23456789)).is(Coin::<Lpn>::new(100000000));
     oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
 
     let treasury = test_case.address_book.treasury().clone();
@@ -214,7 +214,7 @@ fn check_events(
                     "rewards-amount",
                     &Into::<Amount>::into(exp_reward).to_string()
                 ),
-                ("rewards-symbol", Nls::ticker()),
+                ("rewards-symbol", NlsPlatform::ticker()),
             ]
         );
     });

@@ -190,7 +190,7 @@ mod test {
         from_symbol_any::GroupVisit,
         test::{
             Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC10, SubGroupTestC6,
-            SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC5,
+            SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4,
         },
         CurrencyDef, Group, MemberOf, Tickers,
     };
@@ -287,14 +287,13 @@ mod test {
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC10>();
         visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SuperGroupTestC2>();
 
-        // visit_any_currencies_nok::<SubGroup, SubGroupTestC10, SubGroupTestC10>();
         visit_any_currencies_nok::<SuperGroup, SubGroupTestC10, SubGroupTestC10>();
 
         visit_any_currencies_nok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC3>();
         visit_any_currencies_nok::<SuperGroup, SuperGroupTestC3, SuperGroupTestC1>();
 
-        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC5>();
-        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC5, SuperGroupTestC1>();
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC2, SuperGroupTestC4>();
+        visit_any_currencies_nok::<SuperGroup, SuperGroupTestC4, SuperGroupTestC2>();
     }
 
     fn visit_any_currencies_ok<VisitedG, CDef1, CDef2>()
