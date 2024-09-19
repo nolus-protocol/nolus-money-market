@@ -1,7 +1,11 @@
 use currencies::{
-    Lpn, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8, PaymentGroup as PriceCurrencies,
+    LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
+    PaymentGroup as PriceCurrencies,
 };
-use finance::{coin::Coin, price, price::dto::PriceDTO};
+use finance::{
+    coin::Coin,
+    price::{self, base::BasePrice, dto::PriceDTO},
+};
 use platform::{contract, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -88,9 +92,10 @@ fn feed_indirect_price() {
     )
     .unwrap();
 
-    let expected_price =
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)));
-    let value: PriceDTO<PriceCurrencies> = from_json(res).unwrap();
+    let expected_price = BasePrice::<LeaseGroup, _, Lpns>::from(
+        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)),
+    );
+    let value: BasePrice<LeaseGroup, _, _> = from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
 

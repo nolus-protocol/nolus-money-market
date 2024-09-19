@@ -153,7 +153,6 @@ impl<'a, 'def, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, 'def, Iter, C, G, Qu
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: CurrencyDef,
-    // C::Group: MemberOf<QuoteG> + MemberOf<G>,
     C::Group: MemberOf<G>,
     G: Group<TopG = G>,
     QuoteC: CurrencyDef,
@@ -187,7 +186,6 @@ where
             next_currency.into_currency_type(self)
         } else {
             Ok(self.price.into())
-                //  *self.c_dto, self.root_dto))
         }
     }
 }
@@ -196,8 +194,7 @@ impl<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: CurrencyDef,
-    // QuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
-    QuoteC::Group:  MemberOf<G>,
+    QuoteC::Group: MemberOf<G>,
     G: Group<TopG = G>,
     QuoteQuoteC: CurrencyDef,
     QuoteQuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
@@ -278,13 +275,14 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{
-        SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5
+        SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+        SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
     };
     use finance::{
         coin::Coin,
         duration::Duration,
         percent::Percent,
-        price::{self, base::BasePrice, Price},
+        price::{self, Price},
     };
     use sdk::cosmwasm_std::{Addr, MemoryStorage, Timestamp};
 
@@ -336,10 +334,9 @@ mod test {
 
     #[test]
     fn feed_pair() {
-        fn build_price() -> BasePrice<SuperGroup, SubGroupTestC10, SubGroup> {
+        fn build_price() -> Price<SuperGroupTestC5, SubGroupTestC10> {
             price::total_of(Coin::<SuperGroupTestC5>::new(1))
                 .is(Coin::<SubGroupTestC10>::new(18500))
-                .into()
         }
 
         let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
@@ -350,7 +347,7 @@ mod test {
                 &mut storage,
                 NOW,
                 &Addr::unchecked(FEEDER),
-                &[build_price()],
+                &[build_price().into()],
             )
             .unwrap();
 
@@ -369,7 +366,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok(build_price()),
+            Ok(build_price().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 currency::dto::<SubGroupTestC10, _>(),
                 &storage,
