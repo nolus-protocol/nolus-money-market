@@ -176,13 +176,15 @@ mod test {
         };
 
         use super::BaseCurrency;
-        use crate::{contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, tests};
+        use crate::{
+            contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, test_tree, tests,
+        };
 
         #[test]
         fn normal() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = tests::dummy_swap_tree();
+            let tree = test_tree::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )
@@ -235,7 +237,7 @@ mod test {
         fn missing_price() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
-            let tree = tests::dummy_swap_tree();
+            let tree = test_tree::dummy_swap_tree();
             let tree = SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<BaseCurrency>(
                 tree.into_tree(),
             )

@@ -9,7 +9,6 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 #[cfg(test)]
 mod tests {
     use currencies::{Lpn, PaymentC3, PaymentC6, PaymentGroup as PriceCurrencies};
-    use currency::CurrencyDef as _;
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -19,19 +18,18 @@ mod tests {
     use crate::{
         api::{swap::SwapTarget, Config, QueryMsg, SudoMsg, SwapLeg},
         contract::{query, sudo},
-        swap_tree,
-        tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
+        test_tree, tests,
     };
 
     #[test]
     fn configure() {
         use marketprice::config::Config as PriceConfig;
-        let msg = dummy_instantiate_msg(
+        let msg = tests::dummy_instantiate_msg(
             60,
             Percent::from_percent(50),
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker())),
+            test_tree::dummy_swap_tree(),
         );
-        let (mut deps, _info) = setup_test(msg);
+        let (mut deps, _info) = tests::setup_test(msg);
 
         let msg = SudoMsg::UpdateConfig(PriceConfig::new(
             Percent::from_percent(44),
@@ -70,10 +68,9 @@ mod tests {
 
     #[test]
     fn config_supported_pairs() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
-        let test_tree =
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC6::ticker()));
+        let test_tree = test_tree::dummy_swap_tree();
 
         let res = sudo(
             deps.as_mut(),
@@ -115,10 +112,9 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_supported_pairs() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
-        let test_tree =
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC3::ticker()), (2, PaymentC3::ticker()));
+        let test_tree = test_tree::dummy_swap_tree();
 
         let Response {
             messages,

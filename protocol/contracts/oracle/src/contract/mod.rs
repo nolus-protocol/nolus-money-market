@@ -212,14 +212,13 @@ mod tests {
     use currencies::{
         LeaseGroup, Lpns, {LeaseC1, Lpn, PaymentC1, PaymentC5},
     };
-    use currency::CurrencyDef as _;
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
         api::{swap::SwapTarget, Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg},
         contract::query,
-        swap_tree,
+        test_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };
 
@@ -228,11 +227,8 @@ mod tests {
     #[test]
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
-        let msg = dummy_instantiate_msg(
-            60,
-            Percent::from_percent(50),
-            swap_tree!({ base: Lpn::ticker() }, (1, PaymentC5::ticker())),
-        );
+        let msg =
+            dummy_instantiate_msg(60, Percent::from_percent(50), test_tree::dummy_swap_tree());
         let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
