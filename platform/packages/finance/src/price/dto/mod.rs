@@ -226,7 +226,7 @@ where
 mod test_invariant {
 
     use currency::test::{
-        SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC5,
+        SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
     };
     use currency::{error::Error as CurrencyError, CurrencyDef, Group, MemberOf};
     use sdk::cosmwasm_std::{from_json, StdError as CWError, StdResult as CWResult};
@@ -344,13 +344,13 @@ mod test_invariant {
     #[test]
     fn invalid_pair() {
         let p = PriceDTO::<TC>::try_new(
-            Coin::<SuperGroupTestC3>::new(4).into(),
-            Coin::<SuperGroupTestC5>::new(5).into(),
+            Coin::<SuperGroupTestC2>::new(4).into(),
+            Coin::<SuperGroupTestC4>::new(5).into(),
         );
         assert_eq!(
             Error::CurrencyError(CurrencyError::NotInPoolWith {
-                buddy1: SuperGroupTestC3::ticker(),
-                buddy2: SuperGroupTestC5::ticker()
+                buddy1: SuperGroupTestC2::ticker(),
+                buddy2: SuperGroupTestC4::ticker()
             }),
             p.unwrap_err()
         );
@@ -360,8 +360,8 @@ mod test_invariant {
     fn invalid_pair_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "4", "ticker": "{}"}}, "amount_quote": {{"amount": "5", "ticker": "{}"}}}}"#,
-            SuperGroupTestC3::ticker(),
-            SuperGroupTestC5::ticker()
+            SuperGroupTestC4::ticker(),
+            SuperGroupTestC2::ticker()
         );
         assert_load_err(load(&json.into_bytes()), "No records for a pool with");
     }
