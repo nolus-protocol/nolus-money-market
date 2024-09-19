@@ -45,7 +45,7 @@ type Oracle<'storage, S> =
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
@@ -60,6 +60,7 @@ pub fn instantiate(
             )
         })
         .and_then(|supported_pairs| supported_pairs.save(deps.storage))
+        .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
         .map(|()| response::empty_response())
 }
 
@@ -158,7 +159,7 @@ pub fn sudo(
         SudoMsg::SwapTree { tree } => {
             SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
-                .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+                .and_then(|()| validate_swap_tree(deps.storage, env.block.time)) // TODO move the swap tree validation at the tree instantiation
         }
     }
     .map(|()| response::empty_response())

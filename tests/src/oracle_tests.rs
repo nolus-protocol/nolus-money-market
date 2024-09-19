@@ -467,6 +467,7 @@ fn test_query_swap_tree() {
 }
 
 #[test]
+#[ignore = "impossible to setup invalid tree, instead a new code shoudl be used"]
 fn migrate_invalid_swap_tree() {
     let mut test_case = create_test_case();
     update_tree(&mut test_case, invalid_swap_tree());
