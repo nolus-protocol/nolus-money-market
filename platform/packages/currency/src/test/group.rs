@@ -61,11 +61,14 @@ impl PairsGroup for SuperGroupTestC1 {
         use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC1 {}
+impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC1 {}
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC2 {
@@ -100,10 +103,14 @@ impl PairsGroup for SuperGroupTestC3 {
     {
         use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
+            .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
+impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC3 {}
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC4 {
@@ -117,10 +124,12 @@ impl PairsGroup for SuperGroupTestC4 {
         use crate::maybe_visit_buddy as maybe_visit;
         maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC4 {}
+impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC4 {}
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
@@ -133,12 +142,16 @@ impl PairsGroup for SuperGroupTestC5 {
         V: PairsVisitor<Pivot = Self>,
     {
         use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC4, _, _>(matcher, visitor)
+        maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
+            .or_else(|v| maybe_visit::<SuperGroupTestC3, _, _>(matcher, v))
+            .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
+impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC5 {}
+impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC5 {} // Note Self is InPoolWith<Self>, defined so to allow 'same-currency' 'unit tests on PriceDTO
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC5 {}
@@ -216,7 +229,10 @@ impl PairsGroup for SubGroupTestC10 {
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}
+impl InPoolWith<SuperGroupTestC1> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC10 {}
+impl InPoolWith<SuperGroupTestC3> for SubGroupTestC10 {}
+impl InPoolWith<SuperGroupTestC4> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC5> for SubGroupTestC10 {}
 impl InPoolWith<SubGroupTestC6> for SubGroupTestC10 {}
 
