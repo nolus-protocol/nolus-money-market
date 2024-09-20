@@ -22,27 +22,19 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract"]
-net_test = ["contract"]
-net_main = ["contract"]
-
-neutron-astroport-usdc_axelar = ["contract"]
-neutron-astroport-usdc_noble = ["contract"]
-osmosis-osmosis-akt = ["contract"]
-osmosis-osmosis-all_btc = ["contract"]
-osmosis-osmosis-all_sol = ["contract"]
-osmosis-osmosis-osmo = ["contract"]
-osmosis-osmosis-statom = ["contract"]
-osmosis-osmosis-usdc_axelar = ["contract"]
-osmosis-osmosis-usdc_noble = ["contract"]
-
-contract = ["stub", "sdk/contract", "dep:cosmwasm-std", "dep:versioning", "dep:currencies", "dep:oracle"]
-stub = ["dep:currencies"]
+contract = [
+    "stub",
+    "sdk/contract",
+    "dep:cosmwasm-std",
+    "dep:versioning",
+    "dep:oracle",
+]
+stub = []
 testing = ["currency/testing"]
 
 [dependencies]
 access-control = { workspace = true }
-currencies = { workspace = true, optional = true }
+currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
