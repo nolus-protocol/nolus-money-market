@@ -1,4 +1,6 @@
+// TODO [Edition=2024] Remove `#[expect]`.
 #[cfg(any(feature = "testing", test))]
+#[expect(edition_2024_expr_fragment_specifier)]
 #[macro_export]
 macro_rules! tree_json {
     (value: $value: expr $(,)?) => {
