@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "versioning"
 version = "0.2.0"
