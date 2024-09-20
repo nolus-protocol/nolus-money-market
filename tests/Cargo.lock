@@ -573,10 +573,13 @@ dependencies = [
 name = "currencies"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "currency",
  "sdk",
  "serde",
+ "serde_json",
  "thiserror",
+ "topology",
 ]
 
 [[package]]
@@ -2127,6 +2130,16 @@ dependencies = [
  "thiserror",
  "time-oracle",
  "versioning",
+]
+
+[[package]]
+name = "topology"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,10 +1,40 @@
-use currency::InPoolWith;
-use sdk::schemars;
+use serde::{Deserialize, Serialize};
 
-use crate::{define_currency, LeaseC2, LeaseC7, Lpns, Nls};
+use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith};
+use sdk::schemars::JsonSchema;
 
-define_currency!(Lpn, "LPN", "ibc/test_LPN", "ibc/test_DEX_LPN", Lpns, 6);
+use crate::{
+    lease::impl_mod::{LeaseC2, LeaseC7},
+    native::impl_mod::Nls,
+};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[schemars(crate = "sdk::schemars")]
+pub struct Lpn(CurrencyDTO<super::Group>);
+
+impl CurrencyDef for Lpn {
+    type Group = super::Group;
+
+    #[inline]
+    fn definition() -> &'static Self {
+        const {
+            &Lpn(CurrencyDTO::new(
+                const { &Definition::new("LPN", "ibc/bank_LPN", "ibc/dex_LPN", 6) },
+            ))
+        }
+    }
+
+    #[inline]
+    fn dto(&self) -> &CurrencyDTO<Self::Group> {
+        &self.0
+    }
+}
 
 impl InPoolWith<LeaseC2> for Lpn {}
-impl InPoolWith<Nls> for Lpn {}
+
 impl InPoolWith<LeaseC7> for Lpn {}
+
+impl InPoolWith<Nls> for Lpn {}
