@@ -79,6 +79,7 @@ where
             sent: bool,
             _group: PhantomData<G>,
         }
+
         impl<'a, GIn> CoinVisitor for SendWorker<'a, GIn>
         where
             GIn: Group,
@@ -86,6 +87,7 @@ where
             type GIn = GIn;
 
             type Result = ();
+
             type Error = Error;
 
             fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
@@ -283,18 +285,22 @@ struct Counter<G> {
     last_index: Option<CoinsNb>,
     _group: PhantomData<G>,
 }
+
 impl<G> Counter<G> {
     fn last_index(&self) -> CoinsNb {
         self.last_index
             .expect("The swap task did not provide any coins")
     }
 }
+
 impl<GIn> CoinVisitor for Counter<GIn>
 where
     GIn: Group,
 {
     type GIn = GIn;
+
     type Result = IterNext;
+
     type Error = Never;
 
     fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> StdResult<Self::Result, Self::Error>

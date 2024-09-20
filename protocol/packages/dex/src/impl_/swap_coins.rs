@@ -97,7 +97,9 @@ mod test {
         R: Clone,
     {
         type GIn = G;
+
         type Result = R;
+
         type Error = Never;
 
         fn visit<GG>(&mut self, coin: &CoinDTO<GG>) -> Result<Self::Result, Self::Error>
