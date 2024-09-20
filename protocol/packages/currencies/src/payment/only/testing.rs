@@ -2,8 +2,9 @@ use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
 use crate::PaymentGroup;
 
+#[inline]
 pub(super) fn maybe_visit<M, V, VisitedG>(
-    _matcher: &M,
+    _: &M,
     visitor: V,
 ) -> MaybeAnyVisitResult<VisitedG, V>
 where

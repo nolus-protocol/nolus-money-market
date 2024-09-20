@@ -1,12 +1,13 @@
-pub use lease::LeaseGroup;
-pub use lpn::{Lpn, Lpns};
-pub use native::{Native, Nls};
 #[cfg(feature = "testing")]
-pub use payment::*;
-pub use payment::{PaymentGroup, PaymentOnlyGroup};
-pub use stable::Stable;
+pub use self::payment::*;
+pub use self::{
+    lease::Group as LeaseGroup,
+    lpn::{Group as Lpns, impl_mod::Lpn},
+    native::{Group as Native, impl_mod::Nls},
+    payment::{Group as PaymentGroup, OnlyGroup as PaymentOnlyGroup},
+    stable::Stable,
+};
 
-mod currency_macro;
 mod lease;
 mod lpn;
 mod native;
