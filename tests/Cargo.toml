@@ -11,6 +11,9 @@ combinations = [
 ]
 feature-groups = { protocol = { members = ["neutron-astroport-usdc_noble", "neutron-astroport-usdc_axelar", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true } }
 
+[workspace.lints.rust]
+unexpected_cfgs = { level = "forbid" }
+
 [features]
 neutron-astroport-usdc_noble = ["lease/neutron-astroport-usdc_noble", "profit/neutron-astroport-usdc_noble"]
 neutron-astroport-usdc_axelar = ["lease/neutron-astroport-usdc_axelar", "profit/neutron-astroport-usdc_axelar"]
