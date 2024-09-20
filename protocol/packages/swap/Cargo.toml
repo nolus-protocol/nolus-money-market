@@ -9,13 +9,9 @@ license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["astroport", "test"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["neutron-astroport-usdc_axelar"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["astroport", "main"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_axelar", "neutron-astroport-usdc_noble"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-usdc_axelar"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["osmosis-osmosis-statom", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["ci", "$dex"], always-on = ["$dex"], feature-groups = ["dex"], include-rest = true, generics = { "$dex" = "dex" } },
 ]
-feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { dex = { members = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis", "dex-test_impl"], at-least-one = true, mutually-exclusive = true } }
 
 [features]
 # Mandatory features
