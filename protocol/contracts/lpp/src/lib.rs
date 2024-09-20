@@ -10,6 +10,7 @@ pub mod loan;
 #[cfg(feature = "contract")]
 mod lpp;
 pub mod msg;
+#[cfg(feature = "contract")]
 pub mod state;
 #[cfg(feature = "stub")]
 pub mod stub;
