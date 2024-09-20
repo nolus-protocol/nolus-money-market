@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "profit"
 version = "0.6.8"
