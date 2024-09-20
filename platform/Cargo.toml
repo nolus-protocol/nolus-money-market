@@ -15,7 +15,6 @@ license = "Apache-2.0"
 [workspace.dependencies]
 # Own Contracts
 admin_contract = { path = "contracts/admin", default-features = false }
-rewards_dispatcher = { path = "contracts/dispatcher", default-features = false }
 timealarms = { path = "contracts/timealarms", default-features = false }
 treasury = { path = "contracts/treasury", default-features = false }
 
