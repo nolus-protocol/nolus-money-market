@@ -1,3 +1,8 @@
+use std::{
+    borrow::Borrow,
+    hash::{Hash, Hasher},
+};
+
 use serde::Deserialize;
 
 pub(crate) use self::{ibc::Ibc, native::Native};
@@ -7,7 +12,19 @@ mod native;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(transparent)]
-pub(crate) struct Id(String);
+pub struct Id(String);
+
+impl Hash for Id {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        str::hash(&self.0, state)
+    }
+}
+
+impl Borrow<str> for Id {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
 
 impl AsRef<str> for Id {
     #[inline]
