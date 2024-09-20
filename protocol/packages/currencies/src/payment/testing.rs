@@ -1,6 +1,6 @@
-pub use crate::lease::testing::*; // brings LeaseC? types
-use crate::lpn::Lpn;
-use crate::native::Nls;
+// brings `LeaseC*` types
+pub use crate::lease::impl_mod::definitions::*;
+use crate::{lpn::Lpn, native::Nls};
 
 pub type PaymentC1 = Nls;
 pub type PaymentC2 = Lpn;

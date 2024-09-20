@@ -1,24 +1,25 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+
+use crate::payment;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) use r#impl as impl_mod;
-#[cfg(feature = "testing")]
-pub(crate) use testing as impl_mod;
+pub(crate) mod impl_mod {
+    include!(concat!(env!("OUT_DIR"), "/payment_only.rs"));
+}
 
-use crate::PaymentGroup;
-
-#[cfg(not(feature = "testing"))]
-pub(crate) mod r#impl;
 #[cfg(feature = "testing")]
-pub(crate) mod testing;
+#[path = "testing.rs"]
+pub(crate) mod impl_mod;
 
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
-pub struct PaymentOnlyGroup {}
+pub struct Group {}
 
-impl Group for PaymentOnlyGroup {
+impl currency::Group for Group {
     const DESCR: &'static str = "payment only";
-    type TopG = PaymentGroup;
 
+    type TopG = payment::Group;
+
+    #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -36,5 +37,6 @@ impl Group for PaymentOnlyGroup {
     }
 }
 
-impl MemberOf<PaymentGroup> for PaymentOnlyGroup {}
-impl MemberOf<Self> for PaymentOnlyGroup {}
+impl MemberOf<Self> for Group {}
+
+impl MemberOf<payment::Group> for Group {}
