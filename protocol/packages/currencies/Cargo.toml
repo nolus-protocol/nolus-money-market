@@ -7,6 +7,8 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+build = "build/main.rs"
+
 [package.metadata.cargo-each]
 combinations = [
     { tags = ["ci", "@agnostic"], include-rest = true },
@@ -27,3 +29,10 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+
+[build-dependencies]
+topology = { workspace = true }
+
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

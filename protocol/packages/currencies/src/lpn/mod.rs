@@ -1,28 +1,67 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
+    AnyVisitor, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
     PairsVisitor,
 };
-use sdk::schemars::{self, JsonSchema};
+use sdk::schemars::JsonSchema;
 
-pub use impl_mod::Lpn;
+use crate::payment;
 
-#[cfg(not(feature = "testing"))]
-use r#impl as impl_mod;
-#[cfg(feature = "testing")]
-use testing as impl_mod;
-
-use crate::PaymentGroup;
+use self::impl_mod::Lpn;
 
 #[cfg(not(feature = "testing"))]
-mod r#impl;
+pub(crate) mod impl_mod {
+    include!(concat!(env!("OUT_DIR"), "/lpn.rs"));
+}
+
 #[cfg(feature = "testing")]
-mod testing;
+#[path = "testing.rs"]
+pub(crate) mod impl_mod;
+
+#[derive(
+    Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[schemars(crate = "sdk::schemars")]
+pub enum Group {}
+
+impl currency::Group for Group {
+    const DESCR: &'static str = "lpns";
+
+    type TopG = payment::Group;
+
+    #[inline]
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<Self>,
+    {
+        use currency::maybe_visit_member as visit;
+
+        visit::<_, Lpn, _, _>(matcher, visitor)
+    }
+
+    #[inline]
+    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    where
+        M: Matcher,
+        V: AnyVisitor<Self::TopG>,
+    {
+        use currency::maybe_visit_member as visit;
+
+        visit::<_, Lpn, _, _>(matcher, visitor)
+    }
+}
+
+impl MemberOf<Self> for Group {}
+
+impl MemberOf<payment::Group> for Group {}
 
 impl PairsGroup for Lpn {
-    type CommonGroup = PaymentGroup;
+    type CommonGroup = payment::Group;
 
+    #[inline]
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
     where
         M: Matcher,
@@ -32,48 +71,19 @@ impl PairsGroup for Lpn {
     }
 }
 
-#[derive(
-    Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, JsonSchema, Serialize, Deserialize,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct Lpns {}
-
-impl Group for Lpns {
-    const DESCR: &'static str = "lpns";
-    type TopG = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        currency::maybe_visit_member::<_, Lpn, Self, _>(matcher, visitor)
-    }
-
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
-    {
-        currency::maybe_visit_member::<_, Lpn, Self::TopG, _>(matcher, visitor)
-    }
-}
-
-impl MemberOf<PaymentGroup> for Lpns {}
-impl MemberOf<Self> for Lpns {}
-
 #[cfg(test)]
 mod test {
     use currency::CurrencyDef as _;
 
     use crate::{
-        lpn::{Lpn, Lpns},
-        native::Nls,
+        native::impl_mod::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
     };
+
+    use super::{impl_mod::Lpn, Group as Lpns};
 
     #[test]
     fn maybe_visit_on_ticker() {
