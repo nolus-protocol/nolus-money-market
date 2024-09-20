@@ -46,7 +46,11 @@ sdk = { path = "../platform/packages/sdk", default-features = false }
 tree = { path = "../platform/packages/tree", default-features = false }
 versioning = { path = "../platform/packages/versioning", default-features = false }
 
+# Tools Packages
+topology = { path = "../tools/topology" }
+
 # General
+anyhow = "1"
 base64 = { version = "0.22", default-features = false }
 enum_dispatch = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
