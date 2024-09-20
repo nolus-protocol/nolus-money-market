@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "lpp"
 version = "0.5.6"

@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "reserve"
 version = "0.1.6"
