@@ -1,14 +1,18 @@
 use topology::{CurrencyDefinition, Topology};
 
+/// Returns iterator yielding [`CurrencyDefinition`]s, with the first one being
+/// the host networks host currency.
 fn currency_definitions_generator(
     source: &str,
     dex: &str,
 ) -> impl Iterator<Item = CurrencyDefinition> {
-    serde_json::from_str::<'_, Topology>(source)
+    let currency_definitions = serde_json::from_str::<'_, Topology>(source)
         .expect("Failed to deserialize testing JSON!")
         .currency_definitions(dex)
-        .expect("Failed to create currency definitions!")
-        .into_iter()
+        .expect("Failed to create currency definitions!");
+
+    IntoIterator::into_iter([currency_definitions.host_currency])
+        .chain(currency_definitions.dex_currencies)
 }
 
 #[track_caller]
@@ -53,6 +57,16 @@ fn snapshot() {
 
     expect(
         &mut currencies,
+        "NLS",
+        "unls",
+        "unls",
+        "transfer/channel-1636/unls",
+        "ibc/60CCD515066BDEC287A05074FC7157504D3D7FAC816DD59BBC8F4F84EAB226E6",
+        6,
+    );
+
+    expect(
+        &mut currencies,
         "AKT",
         "transfer/channel-0/transfer/channel-73/uakt",
         "ibc/1064EED4A8E99F9C1158680236D0C5C3EA6B8BB65C9F87DAC6BC759DD904D818",
@@ -78,16 +92,6 @@ fn snapshot() {
         "ibc/8FB044422997A8A77891DE729EC28638DDE4C81A54398F68149A058AA9B74D9F",
         "transfer/channel-1/ujunox",
         "ibc/8E2FEFCBD754FA3C97411F0126B9EC76191BAA1B3959CB73CECF396A4037BBF0",
-        6,
-    );
-
-    expect(
-        &mut currencies,
-        "NLS",
-        "unls",
-        "unls",
-        "transfer/channel-1636/unls",
-        "ibc/60CCD515066BDEC287A05074FC7157504D3D7FAC816DD59BBC8F4F84EAB226E6",
         6,
     );
 
@@ -121,6 +125,17 @@ fn with_intermediates() {
 
     expect(
         &mut currencies,
+        "HostC",
+        "chostc",
+        "chostc",
+        "transfer/channel-10001/transfer/channel-1001/transfer/channel-101/\
+        transfer/channel-11/chostc",
+        "ibc/127DE8C2179188419C34E69BFF735D4D2D443C31F39272DF5970DAFFEF5CCBC0",
+        2,
+    );
+
+    expect(
+        &mut currencies,
         "DexC",
         "transfer/channel-0/transfer/channel-10/transfer/channel-100/transfer/\
          channel-1000/mdexc",
@@ -141,17 +156,6 @@ fn with_intermediates() {
         1000000/transfer/channel-10000000/ufarc",
         "ibc/19CA222BFA498B666FC36E691BB9609466D1030EA773C3F33E4C2F4F5AA0916C",
         6,
-    );
-
-    expect(
-        &mut currencies,
-        "HostC",
-        "chostc",
-        "chostc",
-        "transfer/channel-10001/transfer/channel-1001/transfer/channel-101/\
-        transfer/channel-11/chostc",
-        "ibc/127DE8C2179188419C34E69BFF735D4D2D443C31F39272DF5970DAFFEF5CCBC0",
-        2,
     );
 
     expect_end(currencies);
