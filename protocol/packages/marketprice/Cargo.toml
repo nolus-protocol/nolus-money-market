@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "marketprice"
 version = "0.4.0"

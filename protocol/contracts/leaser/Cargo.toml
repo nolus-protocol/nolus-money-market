@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "leaser"
 version = "0.9.4"

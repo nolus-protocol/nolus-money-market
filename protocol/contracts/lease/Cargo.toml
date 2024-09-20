@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "lease"
 version = "0.9.10"
