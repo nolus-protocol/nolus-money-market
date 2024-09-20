@@ -7,9 +7,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
-[[package.metadata.cargo-each.combinations]]
-tags = ["ci", "@agnostic"]
-include-rest = false
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "@agnostic"], include-rest = false },
+]
 
 [[test]]
 name = "oracle"
