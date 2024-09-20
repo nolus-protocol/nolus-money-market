@@ -9,9 +9,8 @@ license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "ci", "$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test", "net_main"], "$protocol" = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar"] } },
-    { tags = ["build", "ci", "$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["build", "ci", "$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["build", "@agnostic"], include-rest = false },
+    { tags = ["ci", "@agnostic"], include-rest = true },
 ]
 
 [lib]
