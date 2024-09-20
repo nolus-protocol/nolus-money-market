@@ -9,14 +9,11 @@ license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "contract-and-skel", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["contract-and-skel", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["contract-and-skel", "testing"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["build", "$dex"], always-on = ["contract", "$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis"] } },
+    { tags = ["ci", "@agnostic"], always-on = ["skel"], feature-groups = ["testing"], include-rest = false },
+    { tags = ["ci", "@agnostic"], always-on = ["contract", "dex-test_impl"], feature-groups = ["testing"], include-rest = false },
 ]
-feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar"], at-least-one = true, mutually-exclusive = true }, contract-and-skel = { members = ["contract", "skel"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -25,6 +22,7 @@ crate-type = ["cdylib", "rlib"]
 dex-astroport_main = ["contract", "swap/dex-astroport_main"]
 dex-astroport_test = ["contract", "swap/dex-astroport_test"]
 dex-osmosis = ["contract", "swap/dex-osmosis"]
+dex-test_impl = ["contract", "swap/dex-test_impl"]
 
 contract = [
     "dep:cosmwasm-std",
