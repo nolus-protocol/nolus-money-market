@@ -37,7 +37,7 @@ where
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
-    price.amount.with_super_coin(CoinResolve {
+    price.amount.with_coin(CoinResolve {
         price: UncheckedConversion::<BaseG, QuoteC>(PhantomData, price.amount_quote),
         cmd,
     })
@@ -56,7 +56,7 @@ where
     Cmd: WithPrice<QuoteC, PriceG = BaseG>,
     Cmd::Error: From<Error>,
 {
-    amount.with_super_coin(CoinResolve {
+    amount.with_coin(CoinResolve {
         price: CheckedConversion::<BaseG, QuoteC>(PhantomData, amount_quote),
         cmd,
     })

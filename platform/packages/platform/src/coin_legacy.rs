@@ -101,7 +101,7 @@ where
             Ok(to_cosmwasm_on_network_impl::<C, S>(coin))
         }
     }
-    coin_dto.with_super_coin(CoinTransformer(PhantomData::<S>))
+    coin_dto.with_coin(CoinTransformer(PhantomData::<S>))
 }
 
 fn to_cosmwasm_on_network_impl<C, S>(coin: Coin<C>) -> CosmWasmCoin

@@ -53,8 +53,11 @@ where
                      from,
                      to: SwapTarget { target: to, .. },
                  }| {
-                    // TODO price.base().of_currency_dto(from) && ...
-                    price.base().currency() == from && price.quote().currency() == to
+                    price
+                        .base()
+                        .of_currency_dto(&from)
+                        .and_then(|()| price.quote().of_currency_dto(&to))
+                        .is_ok()
                 },
             )
         }) {

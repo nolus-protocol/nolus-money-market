@@ -73,15 +73,6 @@ where
     pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
         V: WithCoin<G>,
-        G: Group<TopG = G>,
-    {
-        self.currency
-            .into_currency_type(CoinTransformerAny::new(self, cmd))
-    }
-
-    pub fn with_super_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
-    where
-        V: WithCoin<G>,
         G: MemberOf<G>,
     {
         self.currency

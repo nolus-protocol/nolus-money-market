@@ -74,7 +74,7 @@ impl PositionDTO {
                     .and_then(|position| self.cmd.on(position))
             }
         }
-        self.amount.with_super_coin(WithAmount {
+        self.amount.with_coin(WithAmount {
             cmd,
             spec: self.spec,
         })
