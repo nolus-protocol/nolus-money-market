@@ -25,5 +25,3 @@ pub enum Error {
     #[error("[Reserve][Stub] Contacted a reserve contract with unexpected Lpn. Cause: {0}")]
     UnexpectedLpn(currency::error::Error),
 }
-
-pub type Result<T> = std::result::Result<T, Error>;

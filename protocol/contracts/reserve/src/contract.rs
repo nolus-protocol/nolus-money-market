@@ -1,7 +1,6 @@
 use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
-use cosmwasm_std::{Addr, QuerierWrapper};
 use currencies::{Lpn as LpnCurrency, Lpns};
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -15,13 +14,16 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{self, entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{
+        self, entry_point, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
+    },
 };
 use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    error::{Error, Result},
+    error::Error,
+    result::Result,
     state::Config,
 };
 

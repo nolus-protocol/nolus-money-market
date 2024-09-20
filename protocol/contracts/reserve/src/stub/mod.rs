@@ -7,7 +7,8 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     api::{LpnCurrencies, LpnCurrencyDTO, QueryMsg},
-    error::{Error, Result},
+    error::Error,
+    result::Result,
 };
 
 use self::reserve::Impl;

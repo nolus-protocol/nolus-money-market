@@ -9,7 +9,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::error::Result;
+use crate::result::Result;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 pub struct Config {
