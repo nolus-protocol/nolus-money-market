@@ -6,10 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    never::{self, Never},
-    Group, MemberOf,
-};
+use currency::{Group, MemberOf};
 use finance::{coin::CoinDTO, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
@@ -159,10 +156,18 @@ where
 
     fn last_coin_index(spec: &SwapTask) -> CoinsNb {
         let mut counter = Counter::<SwapTask::InG>::default();
-        let _res = never::safe_unwrap(spec.on_coins(&mut counter));
 
-        #[cfg(debug_assertions)]
-        debug_assert_eq!(_res, IterState::Complete);
+        match spec.on_coins(&mut counter) {
+            #[cfg_attr(not(debug_assertions), expect(unused_variables))]
+            Ok(iter_state) => {
+                #[cfg(debug_assertions)]
+                assert_eq!(iter_state, IterState::Complete);
+            }
+            Err(TooManyCoins {}) => {
+                unimplemented!("Functionality doesn't support this many coins!");
+            }
+        }
+
         counter.last_index()
     }
 }
@@ -293,7 +298,7 @@ struct Counter<G> {
 impl<G> Counter<G> {
     fn last_index(&self) -> CoinsNb {
         self.last_index
-            .expect("The swap task did not provide any coins")
+            .expect("The swap task did not provide any coins!")
     }
 }
 
@@ -305,19 +310,20 @@ where
 
     type Result = IterNext;
 
-    type Error = Never;
+    type Error = TooManyCoins;
 
     fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> StdResult<Self::Result, Self::Error>
     where
         G: Group + MemberOf<Self::GIn>,
     {
-        let next_idx = self.last_index.map_or(CoinsNb::ZERO, |prev_idx| {
-            prev_idx
-                .checked_add(1)
-                .expect("The swap task exceeds the max number of coins `CoinsNb::MAX`")
-        });
-        self.last_index = Some(next_idx);
-        Ok(IterNext::Continue)
+        self.last_index = Some(
+            self.last_index
+                .map(|last_index| last_index.checked_add(1).ok_or(const { TooManyCoins {} }))
+                .transpose()?
+                .unwrap_or(const { CoinsNb::ZERO }),
+        );
+
+        const { Ok(IterNext::Continue) }
     }
 }
 
@@ -332,6 +338,9 @@ where
         }
     }
 }
+
+#[derive(Debug)]
+struct TooManyCoins;
 
 #[cfg(test)]
 mod test {
