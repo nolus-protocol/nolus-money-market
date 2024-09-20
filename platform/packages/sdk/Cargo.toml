@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "sdk"
 version = "0.2.0"
