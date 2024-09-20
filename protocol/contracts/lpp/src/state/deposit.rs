@@ -184,7 +184,7 @@ impl Deposit {
         })
     }
 
-    fn calculate_reward(&self, globals: &DepositsGlobals) -> Option<Coin<NlsPlatform>> {
+    fn calculate_reward(&self, globals: &DepositsGlobals) -> Option<Coin<Nls>> {
         let deposit = &self.data;
 
         let may_global_reward = globals.reward_per_token.map_or_else(
