@@ -22,30 +22,20 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract", "swap/test"]
-net_test = ["contract", "swap/test"]
-net_main = ["contract", "swap/main"]
-
-neutron-astroport-usdc_axelar = ["contract", "swap/astroport"]
-neutron-astroport-usdc_noble = ["contract", "swap/astroport"]
-osmosis-osmosis-akt = ["contract", "swap/osmosis"]
-osmosis-osmosis-all_btc = ["contract", "swap/osmosis"]
-osmosis-osmosis-all_sol = ["contract", "swap/osmosis"]
-osmosis-osmosis-osmo = ["contract", "swap/osmosis"]
-osmosis-osmosis-statom = ["contract", "swap/osmosis"]
-osmosis-osmosis-usdc_axelar = ["contract", "swap/osmosis"]
-osmosis-osmosis-usdc_noble = ["contract", "swap/osmosis"]
+dex-astroport_main = ["contract", "swap/dex-astroport_main"]
+dex-astroport_test = ["contract", "swap/dex-astroport_test"]
+dex-osmosis = ["contract", "swap/dex-osmosis"]
 
 contract = [
-    "skel",
-    "sdk/contract",
     "dep:cosmwasm-std",
     "dep:enum_dispatch",
+    "skel",
+    "sdk/contract",
+    "dep:swap",
     "dep:versioning",
 ]
 skel = [ # TODO reassess if it is still needed
     "dep:access-control",
-    "dep:dex",
     "dep:lpp",
     "dep:oracle",
     "dep:oracle-platform",
@@ -55,17 +45,25 @@ skel = [ # TODO reassess if it is still needed
     "dep:timealarms",
     "dep:thiserror",
 ]
-testing = ["currencies/testing", "currency/testing", "finance/testing", "lpp/testing", "profit/testing"]
+testing = [
+    "currencies/testing",
+    "currency/testing",
+    "finance/testing",
+    "dep:lpp",
+    "lpp/testing",
+    "dep:profit",
+    "profit/testing",
+]
 
 [dependencies]
-access-control = { workspace = true, optional = true }
 profit = { workspace = true, optional = true, features = ["stub"] }
 reserve = { workspace = true, optional = true, features = ["stub"] }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 
+access-control = { workspace = true, optional = true }
 currencies = { workspace = true }
 currency = { workspace = true }
-dex = { workspace = true, optional = true, features = ["impl", "migration"] }
+dex = { workspace = true, features = ["impl", "migration"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 oracle = { workspace = true, optional = true, features = ["stub_alarms", "stub_price"] }

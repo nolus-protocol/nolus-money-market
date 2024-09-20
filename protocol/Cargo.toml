@@ -48,11 +48,11 @@ versioning = { path = "../platform/packages/versioning", default-features = fals
 
 # General
 base64 = { version = "0.22", default-features = false }
+enum_dispatch = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = "1"
 postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
-enum_dispatch = { version = "0.3", default-features = false }
 
 # CosmWasm
 # Required as a dependency by `entry_point` attribute macro

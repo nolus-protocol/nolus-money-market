@@ -22,19 +22,18 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["dep:swap", "contract", "swap/test"]
-net_test = ["dep:swap", "contract", "swap/test"]
-net_main = ["dep:swap", "contract", "swap/main"]
-
-neutron-astroport-usdc_axelar = ["contract", "swap/astroport"]
-neutron-astroport-usdc_noble = ["contract", "swap/astroport"]
-osmosis-osmosis-akt = ["contract", "swap/osmosis"]
-osmosis-osmosis-all_btc = ["contract", "swap/osmosis"]
-osmosis-osmosis-all_sol = ["contract", "swap/osmosis"]
-osmosis-osmosis-osmo = ["contract", "swap/osmosis"]
-osmosis-osmosis-statom = ["contract", "swap/osmosis"]
-osmosis-osmosis-usdc_axelar = ["contract", "swap/osmosis"]
-osmosis-osmosis-usdc_noble = ["contract", "swap/osmosis"]
+dex-astroport_main = [
+    "contract",
+    "swap/dex-astroport_main",
+]
+dex-astroport_test = [
+    "contract",
+    "swap/dex-astroport_test",
+]
+dex-osmosis = [
+    "contract",
+    "swap/dex-osmosis",
+]
 
 contract = [
     "sdk/contract",
@@ -47,11 +46,15 @@ contract = [
     "dep:oracle",
     "dep:oracle-platform",
     "dep:platform",
+    "dep:swap",
     "dep:timealarms",
     "dep:thiserror",
     "dep:versioning",
 ]
-stub = ["dep:platform", "dep:thiserror"]
+stub = [
+    "dep:platform",
+    "dep:thiserror",
+]
 testing = []
 
 [dependencies]
@@ -81,6 +84,6 @@ dex = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["testing"] }
 oracle-platform = { workspace = true, features = ["testing"] }
-timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
-swap = { workspace = true, features = ["testing"] }
+swap = { workspace = true, features = ["dex-test_impl", "testing"] }
+timealarms = { workspace = true, features = ["testing"] }
