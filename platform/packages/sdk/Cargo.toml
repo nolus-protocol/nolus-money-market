@@ -26,8 +26,15 @@ testing = [
     "dep:thiserror",
     "cosmos_ibc",
 ]
-cosmos_ibc = ["dep:cosmos-sdk-proto", "cosmos", "cosmos-sdk-proto/cosmwasm"]
 cosmos = []
+cosmos_proto = [
+    "dep:cosmos-sdk-proto",
+    "cosmos-sdk-proto/cosmwasm",
+]
+cosmos_ibc = [
+    "cosmos",
+    "cosmos_proto",
+]
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 
 [dependencies]
