@@ -7,9 +7,8 @@ license = "Apache-2.0"
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "net_main", "$protocol"], feature-groups = ["protocol"], always-on = ["$protocol"], include-rest = true, generics = { "$protocol" = "protocol" } }
+    { tags = ["ci", "$dex"], always-on = ["$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_test", "dex-astroport_main", "dex-osmosis"] } },
 ]
-feature-groups = { protocol = { members = ["neutron-astroport-usdc_noble", "neutron-astroport-usdc_axelar", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"], at-least-one = true, mutually-exclusive = true } }
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "forbid" }
