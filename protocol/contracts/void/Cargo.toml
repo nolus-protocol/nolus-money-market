@@ -17,8 +17,6 @@ combinations = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-
 [dependencies]
 platform = { workspace = true }
 sdk = { workspace = true }

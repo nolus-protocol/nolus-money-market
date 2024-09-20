@@ -22,27 +22,12 @@ feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-lea
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract"]
-net_test = ["contract"]
-net_main = ["contract"]
-
-neutron-astroport-usdc_axelar = ["contract"]
-neutron-astroport-usdc_noble = ["contract"]
-osmosis-osmosis-akt = ["contract"]
-osmosis-osmosis-all_btc = ["contract"]
-osmosis-osmosis-all_sol = ["contract"]
-osmosis-osmosis-osmo = ["contract"]
-osmosis-osmosis-statom = ["contract"]
-osmosis-osmosis-usdc_axelar = ["contract"]
-osmosis-osmosis-usdc_noble = ["contract"]
-
 contract = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
     "sdk/contract",
     "dep:cosmwasm-std",
-    "dep:currencies",
     "dep:marketprice",
     "dep:versioning",
 ]
@@ -80,5 +65,6 @@ currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
+oracle = { workspace = true, features = ["contract"] }
 marketprice = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["schema", "testing"] }

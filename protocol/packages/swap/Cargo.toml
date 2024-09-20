@@ -29,7 +29,6 @@ dex-astroport_main = [
 ]
 dex-osmosis = [
     "dep:osmosis-std",
-    "sdk/cosmos",
 ]
 dex-test_impl = [
     "dep:astroport",
