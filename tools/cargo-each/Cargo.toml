@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "cargo-each"
 version = "0.0.0"
