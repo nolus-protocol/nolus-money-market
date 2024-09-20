@@ -33,11 +33,8 @@ impl Leases {
 
         Self::PENDING_CUSTOMER
             .load(storage)
-            .map(|customer| {
-                Self::PENDING_CUSTOMER.remove(storage);
-                customer
-            })
-            .map(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
+            .inspect(|_| Self::PENDING_CUSTOMER.remove(storage))
+            .and_then(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
             .map(|_| stored)
             .map_err(Into::into)
     }
