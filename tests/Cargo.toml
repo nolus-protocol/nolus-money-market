@@ -15,23 +15,18 @@ feature-groups = { protocol = { members = ["neutron-astroport-usdc_noble", "neut
 unexpected_cfgs = { level = "forbid" }
 
 [features]
-neutron-astroport-usdc_noble = ["lease/neutron-astroport-usdc_noble", "profit/neutron-astroport-usdc_noble"]
-neutron-astroport-usdc_axelar = ["lease/neutron-astroport-usdc_axelar", "profit/neutron-astroport-usdc_axelar"]
-osmosis-osmosis-akt = ["lease/osmosis-osmosis-akt", "profit/osmosis-osmosis-akt"]
-osmosis-osmosis-all_btc = ["lease/osmosis-osmosis-all_btc", "profit/osmosis-osmosis-all_btc"]
-osmosis-osmosis-all_sol = ["lease/osmosis-osmosis-all_sol", "profit/osmosis-osmosis-all_sol"]
-osmosis-osmosis-statom = ["lease/osmosis-osmosis-statom", "profit/osmosis-osmosis-statom"]
-osmosis-osmosis-usdc_axelar = ["lease/osmosis-osmosis-usdc_axelar", "profit/osmosis-osmosis-usdc_axelar"]
-osmosis-osmosis-usdc_noble = ["lease/osmosis-osmosis-usdc_noble", "profit/osmosis-osmosis-usdc_noble"]
+dex-astroport_test = ["lease/dex-astroport_test", "profit/dex-astroport_test"]
+dex-astroport_main = ["lease/dex-astroport_main", "profit/dex-astroport_main"]
+dex-osmosis = ["lease/dex-osmosis", "profit/dex-osmosis"]
 
 [dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"] }
-lease = { path = "../protocol/contracts/lease", features = ["net_main", "testing"] }
-leaser = { path = "../protocol/contracts/leaser", features = ["net_main", "testing"] }
-lpp = { path = "../protocol/contracts/lpp", features = ["net_main", "contract", "testing"] }
-oracle = { path = "../protocol/contracts/oracle", features = ["net_main", "contract", "testing"] }
-profit = { path = "../protocol/contracts/profit", features = ["net_main", "contract", "testing"] }
-reserve = { path = "../protocol/contracts/reserve", features = ["net_main", "contract", "testing"] }
+lease = { path = "../protocol/contracts/lease", features = ["contract", "testing"] }
+leaser = { path = "../protocol/contracts/leaser", features = ["testing"] }
+lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"] }
+oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"] }
+profit = { path = "../protocol/contracts/profit", features = ["contract", "testing"] }
+reserve = { path = "../protocol/contracts/reserve", features = ["contract", "testing"] }
 timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
 treasury = { path = "../platform/contracts/treasury" }
 
