@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+use sdk::schemars::{r#gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -126,11 +126,13 @@ where
         use crate::GroupVisit;
 
         struct TypeToCurrency<G>(PhantomData<G>);
+
         impl<G> AnyVisitor<G> for TypeToCurrency<G>
         where
             G: Group,
         {
             type Output = CurrencyDTO<G>;
+
             type Error = Error;
 
             fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
@@ -141,6 +143,7 @@ where
                 Ok(def.into_super_group())
             }
         }
+
         // V: AnyVisitor<<Self::Group as Group>::TopG>,
         S::visit_any(symbol, TypeToCurrency(PhantomData::<S::Group>))
     }
@@ -152,7 +155,7 @@ where
         panic!(
             r#"Found an invalid currency instance! "{:?}" did not match "{}" !"#,
             self,
-            G::DESCR
+            G::DESCR,
         )
     }
 }
@@ -201,14 +204,13 @@ where
         unchecked::TickerDTO::schema_name()
     }
 
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        unchecked::TickerDTO::json_schema(gen)
+    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
+        unchecked::TickerDTO::json_schema(r#gen)
     }
 }
 
 #[cfg(test)]
 mod test {
-
     use crate::{
         test::{self, SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, MemberOf, Tickers,
@@ -218,32 +220,34 @@ mod test {
     fn eq_same_type() {
         assert_eq!(
             dto::<SuperGroup, SuperGroupTestC1>(),
-            dto::<SuperGroup, SuperGroupTestC1>()
+            dto::<SuperGroup, SuperGroupTestC1>(),
         );
 
         assert_ne!(
             dto::<SuperGroup, SuperGroupTestC1>(),
-            dto::<SuperGroup, SuperGroupTestC2>()
+            dto::<SuperGroup, SuperGroupTestC2>(),
         );
     }
 
     #[test]
     fn into_currency_type() {
         let c1 = dto::<SuperGroup, SuperGroupTestC1>();
+
         assert_eq!(
+            c1.into_currency_type(test::Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new()),
             Ok(true),
-            c1.into_currency_type(test::Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new())
         );
 
         assert_eq!(
+            c1.into_currency_type(test::Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new()),
             Ok(false),
-            c1.into_currency_type(test::Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new())
         );
     }
 
     #[test]
     fn into_super_group() {
         let sub_currency = dto::<SubGroup, SubGroupTestC10>();
+
         assert_eq!(
             dto::<SubGroup, SubGroupTestC10>(),
             sub_currency.into_super_group::<SuperGroup>()
@@ -288,16 +292,19 @@ mod test {
             SuperGroupTestC1::bank(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<BankSymbols::<TheG>>()
         );
+
         assert_eq!(
             SuperGroupTestC1::dex(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<DexSymbols::<TheG>>()
         );
+
         assert_eq!(
             SuperGroupTestC1::ticker(),
             dto::<SuperGroup, SuperGroupTestC1>().into_symbol::<Tickers::<TheG>>()
         );
 
         let c = dto::<SuperGroup, SuperGroupTestC1>();
+
         assert_eq!(c.to_string(), c.into_symbol::<Tickers::<TheG>>());
     }
 
