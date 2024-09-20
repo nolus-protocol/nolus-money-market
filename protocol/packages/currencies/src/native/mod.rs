@@ -1,25 +1,27 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+
+use crate::payment;
 
 pub use impl_mod::Nls;
 
 #[cfg(not(feature = "testing"))]
-use r#impl as impl_mod;
-#[cfg(feature = "testing")]
-use testing as impl_mod;
+pub(crate) mod impl_mod {
+    include!(concat!(env!("OUT_DIR"), "/native.rs"));
+}
 
-use crate::PaymentGroup;
-
-#[cfg(not(feature = "testing"))]
-mod r#impl;
 #[cfg(feature = "testing")]
-mod testing;
+#[path = "testing.rs"]
+pub(crate) mod impl_mod;
 
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
-pub struct Native {}
-impl Group for Native {
-    const DESCR: &'static str = "native";
-    type TopG = PaymentGroup;
+pub enum Group {}
 
+impl currency::Group for Group {
+    const DESCR: &'static str = "native";
+
+    type TopG = payment::Group;
+
+    #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -28,6 +30,7 @@ impl Group for Native {
         currency::maybe_visit_member::<_, Nls, Self, _>(matcher, visitor)
     }
 
+    #[inline]
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
@@ -37,5 +40,35 @@ impl Group for Native {
     }
 }
 
-impl MemberOf<Self> for Native {}
-impl MemberOf<PaymentGroup> for Native {}
+impl MemberOf<Self> for Group {}
+
+impl MemberOf<payment::Group> for Group {}
+
+#[cfg(test)]
+mod test {
+    use currency::CurrencyDef as _;
+
+    use crate::{
+        lpn::Lpn,
+        test_impl::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        },
+    };
+
+    use super::{impl_mod::Nls, Group as NativeGroup};
+
+    #[test]
+    fn maybe_visit_on_ticker() {
+        maybe_visit_on_ticker_impl::<Nls, NativeGroup>();
+        maybe_visit_on_ticker_err::<Nls, NativeGroup>(Nls::bank());
+        maybe_visit_on_ticker_err::<Nls, NativeGroup>(Lpn::ticker());
+    }
+
+    #[test]
+    fn maybe_visit_on_bank_symbol() {
+        maybe_visit_on_bank_symbol_impl::<Nls, NativeGroup>();
+        maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Nls::ticker());
+        maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Lpn::bank());
+    }
+}
