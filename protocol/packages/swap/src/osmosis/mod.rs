@@ -12,7 +12,7 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
+use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Coin as CwCoin};
 
 #[cfg(test)]
 mod test;
@@ -23,7 +23,9 @@ type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
 #[derive(Serialize, Deserialize)]
-pub struct Impl;
+pub enum Impl
+where
+    Self: ExactAmountIn, {}
 
 impl ExactAmountIn for Impl {
     fn build_request<GIn, GSwap>(
@@ -57,20 +59,13 @@ impl ExactAmountIn for Impl {
         Ok(())
     }
 
-    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
-    where
-        I: Iterator<Item = Any>,
-    {
-        use std::str::FromStr;
-
-        let resp = trx_resps
-            .next()
-            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
-
-        let amount = trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)?
+    fn parse_response(response: CosmosAny) -> Result<Amount> {
+        let amount = trx::decode_msg_response::<_, ResponseMsg>(response, ResponseMsg::TYPE_URL)?
             .token_out_amount;
 
-        Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
+        amount
+            .parse::<Amount>()
+            .map_err(|_| Error::InvalidAmount(amount))
     }
 }
 

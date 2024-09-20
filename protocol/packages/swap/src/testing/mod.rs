@@ -6,20 +6,18 @@ use currency::{
 };
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
-use sdk::cosmos_sdk_proto::Any;
-#[cfg(test)]
-pub(crate) use tests::validate_a_response;
+use sdk::cosmos_sdk_proto::Any as CosmosAny;
 
 #[cfg(test)]
 mod tests;
 
 pub trait ExactAmountInSkel {
-    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group + MemberOf<GSwap>,
         GSwap: Group;
 
-    fn build_response(amount_out: Amount) -> Any;
+    fn build_response(amount_out: Amount) -> CosmosAny;
 }
 
 pub struct SwapRequest<GIn, GSwap>
@@ -31,11 +29,11 @@ where
     pub swap_path: SwapPath<GSwap>,
 }
 
-pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::CoinDTO<G>
+pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> CoinDTO<G>
 where
-    G: currency::Group,
+    G: Group,
 {
-    currency::DexSymbols::visit_any(
+    DexSymbols::visit_any(
         denom,
         ConstructDto {
             amount: amount
@@ -55,11 +53,46 @@ where
     CurrencyDTO::<G>::from_symbol_testing::<DexSymbols<G>>(symbol).map_err(Into::into)
 }
 
+#[cfg(any(feature = "testing", test))]
 #[cold]
 pub(crate) fn pattern_match_else(message_name: &str) -> ! {
     unimplemented!(
         r#"Expected "{message_name}" message symmetric to the one built by the "build_request" method!"#
     );
+}
+
+#[cfg(all(not(feature = "testing"), test))]
+pub(crate) fn validate_a_response(resp_base64: &str, exp_amount1: Amount, exp_amount2: Amount) {
+    use base64::{engine::general_purpose, Engine};
+
+    use dex::swap::ExactAmountIn;
+    use platform::trx;
+
+    use crate::Impl;
+
+    let resp = general_purpose::STANDARD
+        .decode(resp_base64)
+        .expect("Response string should be valid Base-64 encoded data!");
+    let mut resp_messages = trx::decode_msg_responses(&resp)
+        .expect("Response data should contain valid response messages!")
+        .map(|response| {
+            <Impl as ExactAmountIn>::parse_response(response)
+                .expect("Response message should be a swap response!")
+        });
+
+    assert_eq!(
+        resp_messages
+            .next()
+            .expect("Expected response for first swapped amount!"),
+        exp_amount1,
+    );
+    assert_eq!(
+        resp_messages
+            .next()
+            .expect("Expected response for second swapped amount!"),
+        exp_amount2,
+    );
+    assert_eq!(resp_messages.next(), None);
 }
 
 struct ConstructDto<G>

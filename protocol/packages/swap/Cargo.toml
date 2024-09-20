@@ -16,13 +16,7 @@ combinations = [
 feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
 [features]
-# TODO get rid of main and test and specialize astroport into ~_main and ~_test when the CI builds protocols provided as input
-# instead of implicitly building them in matrix
-main = []
-test = []
-
-astroport = [
-    "sdk/cosmos_ibc",
+dex-astroport_test = [
     "dep:astroport",
     "dep:currency",
     "dep:dex",
@@ -30,36 +24,69 @@ astroport = [
     "dep:oracle",
     "dep:platform",
     "dep:sdk",
+    "sdk/cosmos_ibc",
     "dep:serde",
 ]
-osmosis = [
-    "sdk/cosmos",
-    "dep:osmosis-std",
+dex-astroport_main = [
+    "dep:astroport",
     "dep:currency",
     "dep:dex",
     "dep:finance",
     "dep:oracle",
     "dep:platform",
     "dep:sdk",
+    "sdk/cosmos_ibc",
+    "dep:serde",
+]
+dex-osmosis = [
+    "dep:currency",
+    "dep:dex",
+    "dep:finance",
+    "dep:oracle",
+    "dep:osmosis-std",
+    "dep:platform",
+    "dep:sdk",
+    "sdk/cosmos",
     "dep:serde",
 ]
 
-testing = ["finance/testing", "dep:serde", "dex/testing"]
+testing = [
+    "dep:currency",
+    "currency/testing",
+    "dep:dex",
+    "dex/testing",
+    "dep:finance",
+    "finance/testing",
+    "dep:oracle",
+    "oracle/stub_swap",
+    "dep:platform",
+    "dep:sdk",
+    "sdk/cosmos_proto",
+    "dep:prost",
+    "dep:serde",
+]
 
 [dependencies]
-currency = { workspace = true, optional = true }
 dex = { workspace = true, optional = true }
+oracle = { workspace = true, optional = true }
+
+currency = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }
-oracle = { workspace = true, optional = true, features = ["stub_swap"] }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true, optional = true }
 
 astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
+prost = { workspace = true, optional = true, features = ["derive", "std"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+dex = { workspace = true }
+finance = { workspace = true }
+oracle = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
+sdk = { workspace = true }
 
 base64 = { workspace = true, features = ["alloc"] }
+prost = { workspace = true }

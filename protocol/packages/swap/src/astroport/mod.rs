@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use astroport::{
     asset::AssetInfo,
     router::{ExecuteMsg, SwapOperation, SwapResponseData},
@@ -27,43 +25,23 @@ use sdk::{
 
 #[cfg(test)]
 mod test;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(feature = "testing", test))]
 mod testing;
 
 type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
 
-trait Router {
-    const ROUTER_ADDR: &'static str;
-}
-
-pub struct Main {}
-
-impl Router for Main {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
-    const ROUTER_ADDR: &'static str =
-        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
-}
-
-pub struct Test {}
-
-impl Router for Test {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-    const ROUTER_ADDR: &'static str =
-        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
-}
-
 #[derive(Serialize, Deserialize)]
-pub struct RouterImpl<R>(PhantomData<R>);
+pub enum Impl
+where
+    Self: ExactAmountIn, {}
 
-impl<R> RouterImpl<R> {
-    const MAX_IMPACT: Decimal = Decimal::percent(50); // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
+impl Impl {
+    // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
+    const MAX_IMPACT: Decimal = Decimal::percent(50);
 }
 
-impl<R> ExactAmountIn for RouterImpl<R>
-where
-    R: Router,
-{
+impl ExactAmountIn for Impl {
     fn build_request<GIn, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
@@ -86,7 +64,7 @@ where
         .map_err(Into::into)
         .map(|msg| RequestMsg {
             sender: sender.into(),
-            contract: R::ROUTER_ADDR.into(),
+            contract: <Self as Router>::ADDRESS.into(),
             msg,
             funds: vec![token_in],
         })
@@ -95,22 +73,33 @@ where
         })
     }
 
-    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
-    where
-        I: Iterator<Item = CosmosAny>,
-    {
-        trx_resps
-            .next()
-            .ok_or_else(|| Error::MissingResponse("router swap".into()))
-            .and_then(|resp| {
-                trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::type_url())
+    fn parse_response(response: CosmosAny) -> Result<Amount> {
+        trx::decode_msg_response::<_, ResponseMsg>(response, ResponseMsg::type_url())
+            .map_err(Into::into)
+            .and_then(|response_message| {
+                cosmwasm_std::from_json::<SwapResponseData>(response_message.data)
                     .map_err(Into::into)
-            })
-            .and_then(|cosmwasm_resp| {
-                cosmwasm_std::from_json::<SwapResponseData>(cosmwasm_resp.data).map_err(Into::into)
             })
             .map(|swap_resp| swap_resp.return_amount.into())
     }
+}
+
+trait Router {
+    const ADDRESS: &'static str;
+}
+
+#[cfg(feature = "dex-astroport_test")]
+impl Router for Impl {
+    // Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+    const ADDRESS: &'static str =
+        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+}
+
+#[cfg(feature = "dex-astroport_main")]
+impl Router for Impl {
+    // Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
+    const ADDRESS: &'static str =
+        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
 }
 
 fn to_operations<'a, G>(

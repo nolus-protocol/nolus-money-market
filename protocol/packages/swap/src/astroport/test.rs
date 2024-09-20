@@ -10,12 +10,12 @@ use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_s
 
 use crate::testing;
 
-use super::{Main, RouterImpl};
+use super::Impl;
 
 #[test]
 fn const_eq_max_allowed_slippage() {
     assert_eq!(
-        RouterImpl::<Main>::MAX_IMPACT,
+        Impl::MAX_IMPACT,
         astroport::pair::MAX_ALLOWED_SLIPPAGE
             .parse::<Decimal>()
             .unwrap()

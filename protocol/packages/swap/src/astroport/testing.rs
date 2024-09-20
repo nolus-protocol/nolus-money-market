@@ -6,7 +6,6 @@ use astroport::{
 };
 
 use currency::{CurrencyDTO, Group, MemberOf};
-use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use sdk::{
@@ -20,13 +19,9 @@ use sdk::{
 
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
-use super::{RequestMsg, ResponseMsg, Router, RouterImpl};
+use super::{Impl, RequestMsg, ResponseMsg, Router};
 
-impl<R> ExactAmountInSkel for RouterImpl<R>
-where
-    Self: ExactAmountIn,
-    R: Router,
-{
+impl ExactAmountInSkel for Impl {
     fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group + MemberOf<GSwap>,
@@ -41,7 +36,7 @@ where
 
         assert_eq!(
             contract,
-            R::ROUTER_ADDR,
+            <Self as Router>::ADDRESS,
             "Expected message to be addressed to currently selected router!"
         );
 
@@ -59,7 +54,7 @@ where
             )
         })
         else {
-            testing::pattern_match_else("ExecuteSwapOperations");
+            testing::pattern_match_else(type_name::<RequestMsg>())
         };
 
         let swap_path =
