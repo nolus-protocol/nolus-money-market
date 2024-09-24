@@ -25,13 +25,7 @@ on:
 concurrency:
   cancel-in-progress: true
   group: |-
-    ${{ format(
-      '{0}-{1}-{2}',
-      github.ref_name,
-      github.ref_type,
-      github.event_name,
-      inputs.upload-artifacts
-    ) }}
+    ${{ format('{0}-{1}-{2}', github.ref_name, github.ref_type, github.event_name, inputs.upload-artifacts) }}
 
 defaults:
   run:
@@ -41,12 +35,7 @@ env:
   CARGO_TERM_COLOR: "always"
   RELEASE_VERSION: "ci"
   UPLOAD_ARTIFACTS: |-
-    ${{ toJSON(
-      github.ref_type == 'tag' || (
-        github.event_name == 'workflow_dispatch'
-          && inputs.upload-artifacts
-      )
-    ) }}
+    ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 jobs:
   configuration:
@@ -471,9 +460,7 @@ jobs:
     strategy:
       fail-fast: false
       ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(
-          needs.configuration.outputs.unused-deps-matrix-json
-        ) }}"
+      matrix: "${{ fromJSON(needs.configuration.outputs.unused-deps-matrix-json) }}"
     ### GitHub Actions escaped string
     name: "Check for unused dependencies [${{ matrix.working-directory }};
       ${{ matrix.network }}; ${{ matrix.protocol }}]"
@@ -535,9 +522,7 @@ jobs:
     strategy:
       fail-fast: false
       ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(
-          needs.configuration.outputs.packages-tests-matrix-json
-        ) }}"
+      matrix: "${{ fromJSON(needs.configuration.outputs.packages-tests-matrix-json) }}"
     ### GitHub Actions escaped string
     name: "Run packages' tests [${{ matrix.working-directory }};
       ${{ matrix.network }}; ${{ matrix.protocol }}]"
@@ -654,9 +639,7 @@ jobs:
     strategy:
       fail-fast: false
       ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(
-          needs.configuration.outputs.build-optimized-matrix-json
-        ) }}"
+      matrix: "${{ fromJSON(needs.configuration.outputs.build-optimized-matrix-json) }}"
     ### GitHub Actions escaped string
     name: "Building contracts [${{ matrix.working-directory }};
       ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]"
