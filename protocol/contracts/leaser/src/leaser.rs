@@ -28,7 +28,7 @@ use crate::{
     ContractError,
 };
 
-#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
+#[cfg(all(feature = "osmosis-osmosis-usdc_axelar", feature = "net_main"))]
 const LEGACY_LEASES: [&str; 4] = [
     "nolus1q2xsckvufnlz6yynqsm33mrcx2hkajjwyqjxnmxslhyt85mvg9csyzy97z",
     "nolus1scvnd78uzl8jwpwtnggy8l4tk56n6fkgg3nw5z5qnhp0tk0nd7uss225rw",
@@ -36,13 +36,13 @@ const LEGACY_LEASES: [&str; 4] = [
     "nolus1v2vwau267hn7g3frgnqsshfehtn6d6fnd9j9s0wm3n4t3n4mnecqh77dfp",
 ];
 
-#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+#[cfg(all(feature = "osmosis-osmosis-usdc_noble", feature = "net_main"))]
 const LEGACY_LEASES: [&str; 1] =
     ["nolus17zjugw5la8fwa0jyca2tqg28upmjyqjwscc2z4fu54s0cdkh724ql4j6r7"];
 
 #[cfg(not(any(
-    feature = "osmosis-osmosis-usdc_noble",
-    feature = "osmosis-osmosis-usdc_axelar"
+    all(feature = "osmosis-osmosis-usdc_noble", feature = "net_main"),
+    all(feature = "osmosis-osmosis-usdc_axelar", feature = "net_main")
 )))]
 const LEGACY_LEASES: [&str; 0] = [];
 
