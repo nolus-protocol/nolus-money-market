@@ -28,6 +28,24 @@ use crate::{
     ContractError,
 };
 
+#[cfg(feature = "osmosis-osmosis-usdc_axelar")]
+const LEGACY_LEASES: [&str; 4] = [
+    "nolus1q2xsckvufnlz6yynqsm33mrcx2hkajjwyqjxnmxslhyt85mvg9csyzy97z",
+    "nolus1scvnd78uzl8jwpwtnggy8l4tk56n6fkgg3nw5z5qnhp0tk0nd7uss225rw",
+    "nolus1d0dc9zqtj9yagd8wkaw23qhw84x4agqxgu39hj7zts0xrzvj9mtqfmtcjy",
+    "nolus1v2vwau267hn7g3frgnqsshfehtn6d6fnd9j9s0wm3n4t3n4mnecqh77dfp",
+];
+
+#[cfg(feature = "osmosis-osmosis-usdc_noble")]
+const LEGACY_LEASES: [&str; 1] =
+    ["nolus17zjugw5la8fwa0jyca2tqg28upmjyqjwscc2z4fu54s0cdkh724ql4j6r7"];
+
+#[cfg(not(any(
+    feature = "osmosis-osmosis-usdc_noble",
+    feature = "osmosis-osmosis-usdc_axelar"
+)))]
+const LEGACY_LEASES: [&str; 0] = [];
+
 pub struct Leaser<'a> {
     deps: Deps<'a>,
 }
@@ -95,24 +113,6 @@ pub(super) fn try_migrate_leases<MsgFactory>(
 where
     MsgFactory: Fn() -> MigrateMsg,
 {
-    #[cfg(feature = "osmosis-osmosis-usdc_axelar")]
-    const LEGACY_LEASES: [&str; 4] = [
-        "nolus1q2xsckvufnlz6yynqsm33mrcx2hkajjwyqjxnmxslhyt85mvg9csyzy97z",
-        "nolus1scvnd78uzl8jwpwtnggy8l4tk56n6fkgg3nw5z5qnhp0tk0nd7uss225rw",
-        "nolus1d0dc9zqtj9yagd8wkaw23qhw84x4agqxgu39hj7zts0xrzvj9mtqfmtcjy",
-        "nolus1v2vwau267hn7g3frgnqsshfehtn6d6fnd9j9s0wm3n4t3n4mnecqh77dfp",
-    ];
-
-    #[cfg(feature = "osmosis-osmosis-usdc_noble")]
-    const LEGACY_LEASES: [&str; 1] =
-        ["nolus17zjugw5la8fwa0jyca2tqg28upmjyqjwscc2z4fu54s0cdkh724ql4j6r7"];
-
-    #[cfg(not(any(
-        feature = "osmosis-osmosis-usdc_noble",
-        feature = "osmosis-osmosis-usdc_axelar"
-    )))]
-    const LEGACY_LEASES: [&str; 0] = [];
-
     Config::update_lease_code(storage, new_lease)?;
 
     let legacy_leases = LEGACY_LEASES.into_iter().map(Addr::unchecked);
@@ -231,6 +231,7 @@ mod test {
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
+        leaser::LEGACY_LEASES,
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
         state::leases::Leases,
         ContractError,
@@ -295,7 +296,7 @@ mod test {
         .unwrap();
         let cw_resp = response::response_only_messages(resp);
         let update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases =
-            1 + 1 + 1 + 1 + 5;
+            1 + 1 + 1 + 1 + LEGACY_LEASES.len();
         assert_eq!(
             update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases,
             cw_resp.messages.len()
