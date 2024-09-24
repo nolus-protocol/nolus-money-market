@@ -1,0 +1,12 @@
+{
+  "dex": "osmosis",
+  "dex_network": "OSMOSIS",
+  "liquidity_provider_currency_ticker": "USDC_AXELAR",
+  "stable_currency_ticker": "ATOM",
+  "lease_currencies_tickers": [
+    "ATOM",
+    "AKT",
+    "JUNO",
+    "OSMO"
+  ]
+}
