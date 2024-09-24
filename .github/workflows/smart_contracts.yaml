@@ -38,754 +38,546 @@ env:
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 jobs:
-  configuration:
+  load-configuration:
     runs-on: "ubuntu-latest"
-    name: "Configuration"
+    name: "Load configuration"
     outputs:
-      stable-rust-version: |-
-        ${{ steps.configuration.outputs.stable-rust-version }}
-      nightly-rust-version: |-
-        ${{ steps.configuration.outputs.nightly-rust-version }}
-      dev-profile-with-debug-assertions: |-
-        ${{ steps.configuration.outputs.dev-profile-with-debug-assertions }}
-      dev-profile-without-debug-assertions: |-
-        ${{ steps.configuration.outputs.dev-profile-without-debug-assertions }}
-      formatting-matrix-json: |-
-        ${{ steps.configuration.outputs.formatting-matrix-json }}
-      linting-matrix-json: |-
-        ${{ steps.configuration.outputs.linting-matrix-json }}
-      unused-deps-matrix-json: |-
-        ${{ steps.configuration.outputs.unused-deps-matrix-json }}
-      packages-tests-matrix-json: |-
-        ${{ steps.configuration.outputs.packages-tests-matrix-json }}
-      build-optimized-matrix-json: |-
-        ${{ steps.configuration.outputs.build-optimized-matrix-json }}
-      available-wasm-capabilities: |-
-        ${{ steps.configuration.outputs.available-wasm-capabilities }}
-      networks-and-protocols-json: |-
-        ${{ steps.configuration.outputs.networks-and-protocols-json }}
+      dex-types-json: |-
+        ${{ steps.configuration.outputs.dex-types-json }}
+      profiles-json: |-
+        ${{ steps.configuration.outputs.profiles-json }}
+      workspaces-json: |-
+        ${{ steps.configuration.outputs.workspaces-json }}
     steps:
       - uses: "actions/checkout@v4"
       - id: "configuration"
-        uses: "./.github/actions/configuration"
-  install_crates-io_tooling:
+        name: "Load configuration"
+        run: |-
+          set -eu
+
+          . "./scripts/check/configuration.sh"
+
+          workspaces_quoted="$(
+            "jq" \
+              --raw-input \
+              <<EOF
+          ${workspaces:?}
+          EOF
+          )"
+
+          workspaces_json="$(
+            "jq" \
+              --slurp \
+              <<EOF
+          ${workspaces_quoted:?}
+          EOF
+          )"
+
+          dex_types_quoted="$(
+            "jq" \
+              --raw-input \
+              <<EOF
+          ${dex_types:?}
+          EOF
+          )"
+
+          dex_types_json="$(
+            "jq" \
+              --slurp \
+              <<EOF
+          ${dex_types_quoted:?}
+          EOF
+          )"
+
+          profiles_quoted="$(
+            "jq" \
+              --raw-input \
+              <<EOF
+          ${profiles:?}
+          EOF
+          )"
+
+          profiles_json="$(
+            "jq" \
+              --slurp \
+              <<EOF
+          ${profiles_quoted:?}
+          EOF
+          )"
+
+          "echo" \
+            "workspaces-json<<EOF
+          ${workspaces_json:?}
+          EOF
+          dex-types-json<<EOF
+          ${dex_types_json:?}
+          EOF
+          profiles-json<<EOF
+          ${profiles_json:?}
+          EOF" \
+            >>"${GITHUB_OUTPUT}"
+  prepare_tool_caches:
     runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
+        local:
+          - "false"
         tool:
-          # Add necessary tooling
           - "cargo-audit"
-          - "cargo-nextest"
           - "cargo-udeps"
-          - "cosmwasm-check"
+          - "git-cliff"
+        include:
+          - local: "true"
+            tool: "cargo-each"
     name: |-
-      Install tool [${{ matrix.tool }}; crates.io]
+      Prepare tool caches [${{ matrix.tool }}]
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/install-tool"
-        with:
-          no-fetching: "true"
-          fail-on-cache-miss: "false"
-          tool: |-
-            ${{ matrix.tool }}
-          local: "false"
-  cache_stable_rust_toolchain:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-    name: "Cache stable Rust toolchain"
-    steps:
-      - uses: "actions/checkout@v4"
-      - id: "restore-cache"
-        uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "false"
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "true"
-          fail-on-cache-miss: "false"
-  cache_nightly_rust_toolchain:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-    name: "Cache nightly Rust toolchains"
-    steps:
-      - uses: "actions/checkout@v4"
-      - id: "restore-cache"
-        uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "false"
-          cache-rust-stable: "false"
-          cache-rust-nightly: "true"
-          rust-nightly: |-
-            ${{ needs.configuration.outputs.nightly-rust-version }}
-          no-fetching: "true"
-          fail-on-cache-miss: "false"
-  cache_cargo_and_vendor_deps:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-    strategy:
-      fail-fast: true
-      matrix:
-        working-directory:
-          - "platform"
-          - "protocol"
-          - "tests"
-          - "tools"
-    name: |-
-      Cache Cargo and vendor dependencies [${{ matrix.working-directory }}]
-    steps:
-      - uses: "actions/checkout@v4"
-      - id: "restore-cache"
-        uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "true"
-          working-directory: |-
-            ${{ matrix.working-directory }}
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "true"
-          fail-on-cache-miss: "false"
-  check_deps_versions:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-    strategy:
-      fail-fast: true
-      matrix:
-        working-directory:
-          - "platform"
-          - "protocol"
-          - "tests"
-          - "tools"
-    name: |-
-      Check dependencies' versions [${{ matrix.working-directory }}]
-    steps:
-      - if: |-
-          env.UPLOAD_ARTIFACTS == 'true'
+      - name: "Checkout repository"
         uses: "actions/checkout@v4"
-      - uses: "./.github/actions/cache-rust"
-        if: |-
-          env.UPLOAD_ARTIFACTS == 'true'
+      - name: |-
+          Install `${{ matrix.tool }}` and create cache
+        uses: "./.github/actions/install-tool"
         with:
-          cache-cargo: "false"
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "false"
-          fail-on-cache-miss: "true"
-      - if: |-
-          env.UPLOAD_ARTIFACTS == 'true'
-        env:
-          stable_rust_version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-        run: |-
-          cargo "+${stable_rust_version}" update --locked
-        working-directory: |-
-          ${{ matrix.working-directory }}
-  generate_release_version:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "check_deps_versions"
-    name: "Generate release version label"
-    env:
-      ref_type: |-
-        ${{ github.ref_type }}
-      ref_name: |-
-        ${{ github.ref_name }}
-    outputs:
-      release-version: |-
-        ${{ steps.release-version.outputs.release-version }}
-    steps:
-      - id: "release-version"
-        run: |-
-          if test "${UPLOAD_ARTIFACTS}" = 'true'
-          then
-            release_version="${ref_type}-${ref_name}-$(date -Iminute)"
-
-            echo "Release version: ${release_version}" \
-              >> "${GITHUB_STEP_SUMMARY}"
-          else
-            release_version="${RELEASE_VERSION}"
-          fi
-
-          echo "release-version=${release_version}" >> "${GITHUB_OUTPUT}"
-  audit_dependencies:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-      - "check_deps_versions"
-      - "install_crates-io_tooling"
-    strategy:
-      fail-fast: true
-      matrix:
-        working-directory:
-          - "platform"
-          - "protocol"
-          - "tests"
-          - "tools"
-    name: |-
-      Audit dependencies [${{ matrix.working-directory }}]
-    steps:
-      - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "false"
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "false"
-          fail-on-cache-miss: "true"
-      - uses: "./.github/actions/install-tool"
-        with:
-          no-fetching: "false"
-          fail-on-cache-miss: "true"
-          tool: "cargo-audit"
-          local: "false"
-      - env:
-          working_directory: |-
-            ${{ matrix.working-directory }}
-        run: |
-          if [ "-f" "./.cargo/audit.toml" ]
-          then
-            if [ ! "-d" "${working_directory}/.cargo" ]
-            then
-              mkdir "${working_directory}/.cargo"
-            fi
-
-            cp "./.cargo/audit.toml" "${working_directory}/.cargo/audit.toml"
-          fi
-      - env:
-          stable_rust_version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-        run: |-
-          cargo "+${stable_rust_version}" audit
-        working-directory: |-
-          ${{ matrix.working-directory }}
-  check_formatting:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-    strategy:
-      fail-fast: true
-      ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(needs.configuration.outputs.formatting-matrix-json) }}"
-    name: |-
-      Check formatting [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
-    steps:
-      - uses: "actions/checkout@v4"
-      ### TODO remove [start]
-      - env:
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
-        run: |-
-          set -e
-
-          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
-          then
-            exit
-          fi
-
-          files="$(
-            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
-          )"
-
-          if [ -z "${files}" ]
-          then
-            exit
-          fi
-
-          cp \
-            -R \
-            -f \
-            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
-            "./packages/currencies/src/"
-        working-directory: |-
-          ${{ matrix.working-directory }}
-      ### TODO remove [end]
-      - uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "false"
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "false"
-          fail-on-cache-miss: "true"
-      - env:
-          stable_rust_version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-        if: |-
-          matrix.working-directory != 'protocol' || (
-            matrix.network != '@agnostic' && matrix.protocol != '@agnostic'
-          )
-        run: |-
-          set -e
-
-          if [ -f "../rustfmt.toml" ]
-          then
-            cp "../rustfmt.toml" "./"
-          fi
-
-          cargo "+${stable_rust_version}" fmt --check
-        working-directory: |-
-          ${{ matrix.working-directory }}
-  install_local_tooling:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-      - "cache_cargo_and_vendor_deps"
-      - "check_deps_versions"
-      - "check_formatting"
-    strategy:
-      fail-fast: true
-      matrix:
-        tool:
-          # Add necessary tooling
-          - "cargo-each"
-    name: |-
-      Install tool [${{ matrix.tool }}; local]
-    steps:
-      - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/cache-rust"
-        with:
-          cache-cargo: "true"
-          working-directory: "tools"
-          cache-rust-stable: "true"
-          rust-stable: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          cache-rust-nightly: "false"
-          no-fetching: "false"
           fail-on-cache-miss: "false"
-      - uses: "./.github/actions/install-tool"
-        with:
+          local: "${{ matrix.local }}"
           no-fetching: "true"
-          fail-on-cache-miss: "false"
-          tool: |-
-            ${{ matrix.tool }}
-          local: "true"
-          rust-version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          tools-deps-restored: "true"
-  linting:
-    runs-on: 'ubuntu-latest'
+          tool: "${{ matrix.tool }}"
+  workspace_check:
     needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-      - "cache_cargo_and_vendor_deps"
-      - "install_crates-io_tooling"
-      - "audit_dependencies"
-      - "check_formatting"
-      - "install_local_tooling"
+      - "load-configuration"
+      - "prepare_tool_caches"
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
-      ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(needs.configuration.outputs.linting-matrix-json) }}"
+      matrix:
+        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
+    env:
+      workspace: |-
+        ${{ matrix.workspace }}
     name: |-
-      Linting [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]
+      Workspace-level checks [${{ matrix.workspace }}]
     steps:
-      - uses: "actions/checkout@v4"
-      ### TODO remove [start]
-      - env:
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+      - name: "Update Rust"
         run: |-
-          set -e
-
-          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
-          then
-            exit
-          fi
-
-          files="$(
-            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
-          )"
-
-          if [ -z "${files}" ]
-          then
-            exit
-          fi
-
-          cp \
-            -R \
-            -f \
-            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
-            "./packages/currencies/src/"
-        working-directory: |-
-          ${{ matrix.working-directory }}
-      ### TODO remove [end]
-      - uses: "./.github/actions/linting"
+          "rustup" "update"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+      - name: "Install `cargo-audit` from cache"
+        uses: "./.github/actions/install-tool"
         with:
-          rust-version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          working-directory: |-
-            ${{ matrix.working-directory }}
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+          fail-on-cache-miss: "true"
+          local: "false"
+          no-fetching: "false"
+          tool: "cargo-audit"
+      - name: "Copy `.cargo` configuration"
+        run: |-
+          set -eu
+
+          "cp" \
+            -R \
+            "./.cargo" \
+            "./${workspace:?}/.cargo"
+      - name: "Run workspace-level checks"
+        run: |-
+          set -eu
+
+          "sh" \
+            -eu \
+            "./scripts/check/workspace_checks.sh" \
+            "./${workspace:?}"
+  instance_lint:
+    needs:
+      - "load-configuration"
+      - "prepare_tool_caches"
+    strategy:
+      fail-fast: true
+      matrix:
+        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
+        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
+        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
+    name: |-
+      Instance-level lints [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Update Rust"
+        run: |-
+          "rustup" "update"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+      - name: "Install `cargo-each` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "true"
+          no-fetching: "false"
+          tool: "cargo-each"
+      - name: "Copy CI build configuration"
+        run: |-
+          "cp" \
+            -R \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          dex_type: |-
+            ${{ matrix.dex-type }}
           profile: |-
             ${{ matrix.profile }}
-  unused_deps:
-    runs-on: 'ubuntu-latest'
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-      - "cache_nightly_rust_toolchain"
-      - "cache_cargo_and_vendor_deps"
-      - "install_crates-io_tooling"
-      - "audit_dependencies"
-      - "check_formatting"
-      - "install_local_tooling"
-    strategy:
-      fail-fast: false
-      ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(needs.configuration.outputs.unused-deps-matrix-json) }}"
-    name: |-
-      Check for unused dependencies [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
-    steps:
-      - uses: "actions/checkout@v4"
-      ### TODO remove [start]
-      - env:
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run instance-level lints"
         run: |-
-          set -e
+          set -eu
 
-          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
-          then
-            exit
-          fi
-
-          files="$(
-            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
-          )"
-
-          if [ -z "${files}" ]
-          then
-            exit
-          fi
-
-          cp \
-            -R \
-            -f \
-            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
-            "./packages/currencies/src/"
-        working-directory: |-
-          ${{ matrix.working-directory }}
-      ### TODO remove [end]
-      - uses: "./.github/actions/unused-deps"
-        with:
-          stable-rust-version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          nightly-rust-version: |-
-            ${{ needs.configuration.outputs.nightly-rust-version }}
-          working-directory: |-
-            ${{ matrix.working-directory }}
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
-  packages_tests:
+          "sh" \
+            -eu \
+            "./scripts/check/instance_lint.sh" \
+            "./${workspace:?}" \
+            "${dex_type:?}" \
+            "${profile:?}"
+  instance_check_deps:
+    needs:
+      - "load-configuration"
+      - "prepare_tool_caches"
+    strategy:
+      fail-fast: true
+      matrix:
+        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
+        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
+    name: |-
+      Check instance dependencies [${{ matrix.workspace }}; ${{ matrix.dex-type }}]
     runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_stable_rust_toolchain"
-      - "cache_cargo_and_vendor_deps"
-      - "install_crates-io_tooling"
-      - "audit_dependencies"
-      - "check_formatting"
-      - "install_local_tooling"
-    strategy:
-      fail-fast: false
-      ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(needs.configuration.outputs.packages-tests-matrix-json) }}"
-    name: |-
-      Run packages' tests [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
     steps:
-      - uses: "actions/checkout@v4"
-      ### TODO remove [start]
-      - env:
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+      - name: "Update Rust"
         run: |-
-          set -e
-
-          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
-          then
-            exit
-          fi
-
-          files="$(
-            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
-          )"
-
-          if [ -z "${files}" ]
-          then
-            exit
-          fi
-
-          cp \
-            -R \
-            -f \
-            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
-            "./packages/currencies/src/"
-        working-directory: |-
-          ${{ matrix.working-directory }}
-      ### TODO remove [end]
-      - uses: "./.github/actions/run-tests"
+          "rustup" "update"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+      - name: "Install `cargo-udeps` from cache"
+        uses: "./.github/actions/install-tool"
         with:
-          rust-version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          working-directory: |-
-            ${{ matrix.working-directory }}
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+          fail-on-cache-miss: "true"
+          local: "false"
+          no-fetching: "false"
+          tool: "cargo-udeps"
+      - name: "Install `cargo-each` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "true"
+          no-fetching: "false"
+          tool: "cargo-each"
+      - name: "Install nightly Rust toolchain"
+        run: |-
+          "rustup" \
+            "toolchain" \
+            "add" \
+            "nightly"
+      - name: "Copy CI build configuration"
+        run: |-
+          "cp" \
+            -R \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          dex_type: |-
+            ${{ matrix.dex-type }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Check dependencies"
+        run: |-
+          set -eu
+
+          "sh" \
+            -eu \
+            "./scripts/check/protocol_check_deps.sh" \
+            "./${workspace:?}" \
+            "${dex_type:?}"
+  instance_tests:
+    needs:
+      - "load-configuration"
+      - "prepare_tool_caches"
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: true
+      matrix:
+        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
+        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
+        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
+    name: |-
+      Run instance tests [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
+    steps:
+      - name: "Update Rust"
+        run: |-
+          "rustup" "update"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+      - name: "Install `cargo-each` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "true"
+          no-fetching: "false"
+          tool: "cargo-each"
+      - name: "Copy CI build configuration"
+        run: |-
+          "cp" \
+            -R \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          dex_type: |-
+            ${{ matrix.dex-type }}
           profile: |-
-            ${{ needs.configuration.outputs.dev-profile-with-debug-assertions }}
-  build_optimizer_image:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_cargo_and_vendor_deps"
-      - "check_deps_versions"
-      - "audit_dependencies"
-      - "check_formatting"
-    name: "Build optimizer image"
-    outputs:
-      container-cache-id: |-
-        ${{ steps.container-cache-id.outputs.id }}
-    steps:
-      - uses: "actions/checkout@v4"
-      - id: "container-cache-id"
-        env:
-          file_hashes: |-
-            ${{ hashFiles(
-              './Containerfile',
-              './scripts/build-and-optimize.sh',
-              './tools/cargo-each/**',
-              './tools/Cargo.lock'
-            ) }}
-          stable_rust_version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
+            ${{ matrix.profile }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run instance tests"
         run: |-
-          printf "${file_hashes}; ${stable_rust_version}; ${UPLOAD_ARTIFACTS}" \
-            | sha256sum --tag \
-            | sed 's/SHA256 (-) = /id=container-/' >> "${GITHUB_OUTPUT}"
-      - id: "cache-container"
+          set -eu
+
+          "sh" \
+            -eu \
+            "./scripts/check/instance_tests.sh" \
+            "./${workspace:?}" \
+            "${dex_type:?}" \
+            "${profile:?}"
+  build:
+    needs:
+      - "load-configuration"
+      - "workspace_check"
+      - "instance_lint"
+      - "instance_check_deps"
+      - "instance_tests"
+    runs-on: "ubuntu-latest"
+    name: "Build platform binaries and protocol container image"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+        with:
+          fetch-depth: "0"
+          fetch-tags: "true"
+      - id: "restore-builder-base-container-cache"
+        name: "Restore builder base image from cache"
         uses: "actions/cache/restore@v4"
         with:
-          key: |-
-            ${{ steps.container-cache-id.outputs.id }}
-          path: "container.tar"
-          lookup-only: "true"
+          key: "builder-base-container"
+          path: |-
+            builder-base-container.tar
       - if: |-
-          steps.cache-container.outputs.cache-hit != 'true'
-        env:
-          stable_rust_version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Build builder base image"
         run: |-
-          docker image build . -f "Containerfile" \
-            -t "localhost/wasm-optimizer" \
-            --build-arg "rust_ver=${stable_rust_version}" \
-            --build-arg "check_container_dependencies_updated=\
-          ${UPLOAD_ARTIFACTS}"
-
-          docker image save -o "container.tar" "localhost/wasm-optimizer"
+          "docker" \
+            "buildx" \
+            "build" \
+            --file "build.Containerfile" \
+            --tag "builder-base" \
+            --target "builder-base" \
+            "."
       - if: |-
-          steps.cache-container.outputs.cache-hit != 'true'
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Export builder base image"
+        run: |-
+          "docker" \
+            "save" \
+            --output "builder-base-container.tar" \
+            "builder-base"
+      - if: |-
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Store builder base image to cache"
         uses: "actions/cache/save@v4"
         with:
-          key: |-
-            ${{ steps.container-cache-id.outputs.id }}
-          path: "container.tar"
-  build_and_check_optimized_protocol:
-    runs-on: "ubuntu-latest"
-    needs:
-      - "configuration"
-      - "cache_cargo_and_vendor_deps"
-      - "generate_release_version"
-      - "install_crates-io_tooling"
-      - "check_formatting"
-      - "build_optimizer_image"
-    strategy:
-      fail-fast: false
-      ### GitHub Actions escaped string
-      matrix: "${{ fromJSON(needs.configuration.outputs.build-optimized-matrix-json) }}"
-    name: |-
-      Building contracts [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]
-    steps:
-      - uses: "actions/checkout@v4"
-      ### TODO remove [start]
-      - env:
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
+          key: "builder-base-container"
+          path: |-
+            builder-base-container.tar
+      - if: |-
+          steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Load builder base image"
         run: |-
-          set -e
+          "docker" \
+            "load" \
+            --input "builder-base-container.tar"
+      - name: "Produce builder images"
+        run: |-
+          set -eu
 
-          if [ ! -d "./packages/currencies/src_by_protocol/${protocol}/${network}/" ]
-          then
-            exit
-          fi
+          builder_image() {
+            target="${1:?}"
 
-          files="$(
-            ls "./packages/currencies/src_by_protocol/${protocol}/${network}/"
-          )"
+            "docker" \
+              "buildx" \
+              "build" \
+              --build-arg "check_dependencies_updated=${UPLOAD_ARTIFACTS:?}" \
+              --file "build.Containerfile" \
+              --tag "${target:?}-builder" \
+              --target "${target:?}-builder" \
+              "."
+          }
 
-          if [ -z "${files}" ]
-          then
-            exit
-          fi
+          for workspace in \
+            "platform" \
+            "protocol"
+          do
+            "builder_image" "${workspace:?}"
+          done
+      - name: "Produce platform binaries"
+        run: |-
+          set -eu
 
-          cp \
-            -R \
-            -f \
-            "./packages/currencies/src_by_protocol/${protocol}/${network}/"* \
-            "./packages/currencies/src/"
-        working-directory: |-
-          ${{ matrix.working-directory }}
-      ### TODO remove [end]
-      - uses: "./.github/actions/build-and-check-optimized"
+          build_and_pack() {
+            network="${1:?}"
+
+            "mkdir" "./artifacts-${network:?}/"
+
+            "docker" \
+              "run" \
+              --volume "./artifacts-${network:?}/:/artifacts/" \
+              "platform-builder" \
+              "${network:?}"
+          }
+
+          for network in \
+            "test-net" \
+            "production-net"
+          do
+            "build_and_pack" "${network:?}"
+          done
+      - name: "Export protocol builder image"
+        run: |-
+          "docker" \
+            "image" \
+            "save" \
+            --output "protocol-builder.tar" \
+            "protocol-builder"
+      - name: "Upload test-net platform binaries"
+        uses: "actions/upload-artifact@v4"
         with:
-          rust-version: |-
-            ${{ needs.configuration.outputs.stable-rust-version }}
-          container-cache-id: |-
-            ${{ needs.build_optimizer_image.outputs.container-cache-id }}
-          generated-release-version: |-
-            ${{ needs.generate_release_version.outputs.release-version }}
-          working-directory: |-
-            ${{ matrix.working-directory }}
-          network: |-
-            ${{ matrix.network }}
-          protocol: |-
-            ${{ matrix.protocol }}
-          profile: |-
-            ${{ matrix.profile }}
-          max-wasm-file-size: |-
-            ${{ matrix.max-wasm-file-size }}
-          available-wasm-capabilities: |-
-            ${{ needs.configuration.outputs.available-wasm-capabilities }}
-          upload-artifacts: |-
-            ${{ env.UPLOAD_ARTIFACTS }}
-  draft_release:
-    runs-on: ubuntu-latest
+          if-no-files-found: "error"
+          name: "platform-test-net"
+          path: |-
+            ./artifacts-test-net/*
+      - name: "Upload production-net platform binaries"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "platform-production-net"
+          path: |-
+            ./artifacts-production-net/*
+      - name: "Upload protocol builder image"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "protocol-builder"
+          path: |-
+            ./protocol-builder.tar
+  create_draft_release:
+    needs:
+      - "build"
     if: |-
       github.ref_type == 'tag'
-    needs:
-      - "configuration"
-      - "check_deps_versions"
-      - "audit_dependencies"
-      - "check_formatting"
-      - "linting"
-      - "unused_deps"
-      - "packages_tests"
-      - "build_and_check_optimized_protocol"
+    name: "Create draft release"
     permissions:
       contents: "write"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: "Install git-cliff"
-        run: |-
-          cargo +stable install git-cliff
-      - uses: "actions/checkout@v4"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
         with:
-          fetch-depth: 0
-      - name: "Download artifacts"
+          fetch-depth: "0"
+          fetch-tags: "true"
+          sparse-checkout: |-
+            .github/actions/install-tool
+      - name: "Install `git-cliff` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "false"
+          no-fetching: "false"
+          tool: "git-cliff"
+      - name: "Download produced artifacts"
         uses: "actions/download-artifact@v4"
         with:
+          merge-multiple: "false"
           path: "./artifacts/"
-      - name: "Create ZIP files with binaries"
-        env:
-          networks_and_protocols_json: |-
-            ${{ needs.configuration.outputs.networks-and-protocols-json }}
+      - name: "Create test-net platform binaries archive"
         run: |-
-          set -e
+          set -eu
 
-          common_prefix="optimized-binaries"
-          readonly platform_dir_prefixed="${common_prefix}-platform"
-          readonly protocol_dir_prefixed="${common_prefix}-protocol"
-          unset -v "common_prefix"
-
-          readonly networks_and_protocols_json="$(
-            echo "${networks_and_protocols_json}" \
-              | jq -c ".[] | to_entries[]"
+          files="$(
+            "find" \
+              "." \
+              "!" \
+              -path "./**/**"
           )"
 
-          echo "${networks_and_protocols_json}" \
-            | while read -r "network_and_protocols"
-              do \
-                network_and_protocols="$(
-                  echo "${network_and_protocols}" \
-                    | jq -c ".key, .value"
-                )"; \
-                echo "${network_and_protocols}" \
-                  | while read -r "network"
-                    do \
-                      network="$(
-                        echo "${network}" \
-                          | sed -e "s/^\"\([^\"]\{1,\}\)\"$/\1/"
-                      )"; \
-                      network_prefixed="${protocol_dir_prefixed}-${network}"; \
-                      mkdir "./${network_prefixed}/"; \
-                      read -r "protocols"; \
-                      protocols="$(echo "${protocols}" | jq -c ".[]")"; \
-                      protocols="$(
-                        echo "${protocols}" \
-                          | sed -e "s/^\"\([^\"]\{1,\}\)\"$/\1/"
-                      )"; \
-                      echo "${protocols}" \
-                        | while read -r "protocol"
-                          do \
-                            mv "./${network_prefixed}-${protocol}/" \
-                              "./${network_prefixed}/${protocol}"; \
-                          done; \
-                      cd "./${network_prefixed}/"; \
-                      zip -r "${network_prefixed}.zip" .; \
-                      mv "./${network_prefixed}.zip" "../"; \
-                      cd "../"; \
-                    done; \
-              done
-
-          platform_dirs="$(find -type d -name "${platform_dir_prefixed}-*")"
-          platform_dirs="$(echo "${platform_dirs}" | grep "^\./[^\/]\{1,\}$")"
-          readonly platform_dirs="$(echo "${platform_dirs}" | sed -e "s/^\.\/$//")"
-
-          echo "${platform_dirs}" \
-            | while read -r "platform_profile"
-              do \
-                cd "./${platform_profile}/"; \
-                zip -r "${platform_profile}.zip" .; \
-                mv "./${platform_profile}.zip" "../"; \
-                cd "../"; \
-              done
+          "xargs" \
+            -E "" \
+            -n "1" \
+            "tar" \
+            -r \
+            -f "../platform-test-net.tar" \
+            <<EOF
+          ${files:?}
+          EOF
+        working-directory: "./artifacts/platform-test-net/"
+      - name: "Compress test-net platform binaries archive"
+        run: |-
+          "gzip" "./platform-test-net.tar"
         working-directory: "./artifacts/"
+      - name: "Create production-net platform binaries archive"
+        run: |-
+          set -eu
+
+          files="$(
+            "find" \
+              "." \
+              "!" \
+              "(" \
+              -path "." \
+              -o \
+              -path "./**/**" \
+              ")"
+          )"
+          files="$(
+            "sed" \
+              -e "s/^\\.\\/\\(.\\+\\)$/\\1/g" \
+              <<EOF
+          ${files:?}
+          EOF
+          )"
+          readonly files
+
+          "xargs" \
+            -E "" \
+            -n "1" \
+            "tar" \
+            -r \
+            -f "../platform-production-net.tar" \
+            <<EOF
+          ${files:?}
+          EOF
+        working-directory: "./artifacts/platform-production-net/"
+      - name: "Compress production-net platform binaries archive"
+        run: |-
+          "gzip" "./platform-production-net.tar"
+        working-directory: "./artifacts/"
+      - name: "Compress protocol builder image"
+        run: |-
+          set -eu
+
+          "gzip" "./protocol-builder.tar"
+
+          "mv" \
+            "./protocol-builder.tar.gz" \
+            "../"
+        working-directory: "./artifacts/protocol-builder/"
       - name: "Generate changelog"
         run: |-
-          git cliff --current > "./changelog"
+          "git" \
+            "cliff" \
+            --current \
+            >"./changelog"
       - name: "Create draft release"
         uses: "softprops/action-gh-release@v2"
         with:
@@ -795,4 +587,4 @@ jobs:
           body_path: "./changelog"
           generate_release_notes: false
           files: |
-            ./artifacts/*.zip
+            ./artifacts/*.tar.gz
