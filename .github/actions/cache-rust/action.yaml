@@ -78,6 +78,27 @@ runs:
       run: |-
         error_code="0"
 
+        ensure_value_is_boolean() {
+          case "${value}" in
+          ("false"|"true") ;;
+          (*)
+            "echo" "Expected boolean value for parameter, but got: \"${value}\"\
+        !"
+
+            error_code="1"
+            ;;
+          esac
+        }
+
+        for value in \
+          "${cache_cargo}" \
+          "${cache_rust_stable}" \
+          "${cache_rust_nightly}" \
+          "${fail_on_cache_miss}"
+        do
+          "ensure_value_is_boolean" "${value}"
+        done
+
         if [ "${cache_cargo}" = "true" -a "${cache_rust_stable}" = "false" \
           -a "${fail_on_cache_miss}" = 'false' ]
         then
