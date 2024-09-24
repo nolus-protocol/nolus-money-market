@@ -8,7 +8,7 @@ on:
         description: "Upload optimized builds as artifacts."
         required: true
         default: false
-        type: boolean
+        type: "boolean"
   push:
     branches:
       - "main"
@@ -729,7 +729,7 @@ jobs:
       - "packages_tests"
       - "build_and_check_optimized_protocol"
     permissions:
-      contents: write
+      contents: "write"
     steps:
       - name: "Install git-cliff"
         run: |-
