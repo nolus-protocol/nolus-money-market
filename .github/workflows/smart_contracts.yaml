@@ -90,8 +90,8 @@ jobs:
           - "cargo-nextest"
           - "cargo-udeps"
           - "cosmwasm-check"
-    ### GitHub Actions escaped string
-    name: "Install tool [${{ matrix.tool }}; local: false]"
+    name: |-
+      Install tool [${{ matrix.tool }}; crates.io]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/install-tool"
@@ -148,9 +148,8 @@ jobs:
           - "protocol"
           - "tests"
           - "tools"
-    ### GitHub Actions escaped string
-    name: "Cache Cargo and vendor dependencies [${{ matrix.working-directory }}\
-      ]"
+    name: |-
+      Cache Cargo and vendor dependencies [${{ matrix.working-directory }}]
     steps:
       - uses: "actions/checkout@v4"
       - id: "restore-cache"
@@ -178,8 +177,8 @@ jobs:
           - "protocol"
           - "tests"
           - "tools"
-    ### GitHub Actions escaped string
-    name: "Check dependencies' versions [${{ matrix.working-directory }}]"
+    name: |-
+      Check dependencies' versions [${{ matrix.working-directory }}]
     steps:
       - if: |-
           env.UPLOAD_ARTIFACTS == 'true'
@@ -246,8 +245,8 @@ jobs:
           - "protocol"
           - "tests"
           - "tools"
-    ### GitHub Actions escaped string
-    name: "Audit dependencies [${{ matrix.working-directory }}]"
+    name: |-
+      Audit dependencies [${{ matrix.working-directory }}]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/cache-rust"
@@ -294,9 +293,8 @@ jobs:
       fail-fast: true
       ### GitHub Actions escaped string
       matrix: "${{ fromJSON(needs.configuration.outputs.formatting-matrix-json) }}"
-    ### GitHub Actions escaped string
-    name: "Check formatting [${{ matrix.working-directory }}; ${{ matrix.network }};
-      ${{ matrix.protocol }}]"
+    name: |-
+      Check formatting [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
     steps:
       - uses: "actions/checkout@v4"
       ### TODO remove [start]
@@ -371,8 +369,8 @@ jobs:
         tool:
           # Add necessary tooling
           - "cargo-each"
-    ### GitHub Actions escaped string
-    name: "Install tool [${{ matrix.tool }}; local: true]"
+    name: |-
+      Install tool [${{ matrix.tool }}; local]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/cache-rust"
@@ -409,9 +407,8 @@ jobs:
       fail-fast: true
       ### GitHub Actions escaped string
       matrix: "${{ fromJSON(needs.configuration.outputs.linting-matrix-json) }}"
-    ### GitHub Actions escaped string
-    name: "Linting [${{ matrix.working-directory }}; ${{ matrix.network }};
-      ${{ matrix.protocol }}; ${{ matrix.profile }}]"
+    name: |-
+      Linting [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]
     steps:
       - uses: "actions/checkout@v4"
       ### TODO remove [start]
@@ -474,9 +471,8 @@ jobs:
       matrix: "${{ fromJSON(
           needs.configuration.outputs.unused-deps-matrix-json
         ) }}"
-    ### GitHub Actions escaped string
-    name: "Check for unused dependencies [${{ matrix.working-directory }};
-      ${{ matrix.network }}; ${{ matrix.protocol }}]"
+    name: |-
+      Check for unused dependencies [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
     steps:
       - uses: "actions/checkout@v4"
       ### TODO remove [start]
@@ -538,9 +534,8 @@ jobs:
       matrix: "${{ fromJSON(
           needs.configuration.outputs.packages-tests-matrix-json
         ) }}"
-    ### GitHub Actions escaped string
-    name: "Run packages' tests [${{ matrix.working-directory }};
-      ${{ matrix.network }}; ${{ matrix.protocol }}]"
+    name: |-
+      Run packages' tests [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}]
     steps:
       - uses: "actions/checkout@v4"
       ### TODO remove [start]
@@ -657,9 +652,8 @@ jobs:
       matrix: "${{ fromJSON(
           needs.configuration.outputs.build-optimized-matrix-json
         ) }}"
-    ### GitHub Actions escaped string
-    name: "Building contracts [${{ matrix.working-directory }};
-      ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]"
+    name: |-
+      Building contracts [${{ matrix.working-directory }}; ${{ matrix.network }}; ${{ matrix.protocol }}; ${{ matrix.profile }}]
     steps:
       - uses: "actions/checkout@v4"
       ### TODO remove [start]
