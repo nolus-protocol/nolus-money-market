@@ -27,7 +27,9 @@ impl Leases {
         let mut stored = false;
         let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
             let mut leases = may_leases.unwrap_or_default();
+
             stored = leases.insert(lease);
+
             Ok(leases)
         };
 
