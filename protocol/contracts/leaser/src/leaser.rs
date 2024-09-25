@@ -4,7 +4,7 @@ use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
+use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg, MigrationKind};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -111,7 +111,7 @@ pub(super) fn try_migrate_leases<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
 {
     Config::update_lease_code(storage, new_lease)?;
 
@@ -131,7 +131,7 @@ pub(super) fn try_migrate_leases_cont<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
 {
     let lease_code = Config::load(storage)?.lease_code;
 
@@ -158,7 +158,7 @@ pub(super) fn try_close_protocol<ProtocolsRegistryLoader, MsgFactory>(
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
     match force {
@@ -225,7 +225,7 @@ mod test {
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use lease::api::{
         open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-        MigrateMsg,
+        MigrateMsg, MigrationKind,
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
@@ -352,7 +352,7 @@ mod test {
         }
     }
 
-    fn migrate_msg() -> MigrateMsg {
-        MigrateMsg {}
+    fn migrate_msg(kind: MigrationKind) -> MigrateMsg {
+        MigrateMsg { kind }
     }
 }

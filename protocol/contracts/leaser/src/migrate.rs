@@ -1,4 +1,4 @@
-use lease::api::MigrateMsg;
+use lease::api::{MigrateMsg, MigrationKind};
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
 
@@ -36,12 +36,12 @@ where
     Leases: ExactSizeIterator<Item = Addr>,
     I: Iterator<Item = MaybeCustomer<LI>>,
     LI: ExactSizeIterator<Item = Addr>,
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
 {
     let mut msgs = MigrateBatch::new(lease_code, max_leases);
 
     let legacy_leases = msgs
-        .migrate_leases(leases, &migrate_msg)
+        .migrate_leases(leases, &|| migrate_msg(MigrationKind::LEGACY))
         .transpose()
         .and_then(|no_capacity| match no_capacity {
             Some(()) => Err(ContractError::ExceedMigrationLimit()),
@@ -51,7 +51,9 @@ where
     legacy_leases.and_then(|()| {
         customers
             .find_map(|maybe_customer| match maybe_customer {
-                Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
+                Ok(customer) => {
+                    msgs.migrate_or_be_next(customer, &|| migrate_msg(MigrationKind::REGULAR))
+                }
                 Err(err) => Some(Err(err)),
             })
             .transpose()
@@ -149,7 +151,7 @@ impl From<MigrateBatch> for Batch {
 mod test {
     use std::{iter, vec::IntoIter};
 
-    use lease::api::MigrateMsg;
+    use lease::api::{MigrateMsg, MigrationKind};
     use platform::contract::Code;
     use sdk::cosmwasm_std::Addr;
 
@@ -183,7 +185,7 @@ mod test {
                 no_leases.into_iter().map(Ok),
                 new_code,
                 2,
-                migrate_msg(),
+                migrate_msg,
             )
         );
     }
@@ -210,7 +212,7 @@ mod test {
                     customers.into_iter(),
                     new_code,
                     2,
-                    migrate_msg()
+                    migrate_msg
                 )
             );
         }
@@ -246,7 +248,7 @@ mod test {
             };
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 0, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 0, migrate_msg)
             );
         }
         {
@@ -254,7 +256,7 @@ mod test {
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 1, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 1, migrate_msg)
             );
         }
         {
@@ -262,7 +264,7 @@ mod test {
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 2, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 2, migrate_msg)
             );
         }
         {
@@ -272,7 +274,7 @@ mod test {
             exp.next_customer = Some(customer3());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 3, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 3, migrate_msg)
             );
         }
         {
@@ -283,7 +285,7 @@ mod test {
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 4, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 4, migrate_msg)
             );
         }
         {
@@ -294,7 +296,7 @@ mod test {
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 5, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 5, migrate_msg)
             );
         }
         {
@@ -308,7 +310,7 @@ mod test {
             exp.next_customer = None;
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(iter::empty(), test_customers(), new_code, 7, migrate_msg())
+                super::migrate_leases(iter::empty(), test_customers(), new_code, 7, migrate_msg)
             );
         }
     }
@@ -336,14 +338,18 @@ mod test {
                 customers.into_iter(),
                 new_code,
                 3,
-                migrate_msg()
+                migrate_msg
             )
         );
     }
 
     fn add_expected(mut exp: MigrationResult, lease_addr: Addr, new_code: Code) -> MigrationResult {
         exp.msgs
-            .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg()(), new_code)
+            .schedule_migrate_wasm_no_reply(
+                lease_addr,
+                &migrate_msg(MigrationKind::REGULAR),
+                new_code,
+            )
             .unwrap();
         exp
     }
@@ -371,7 +377,7 @@ mod test {
         vec![Ok(cust1), Ok(cust2), Ok(cust3), Ok(cust4)].into_iter()
     }
 
-    fn migrate_msg() -> impl Fn() -> MigrateMsg {
-        || MigrateMsg {}
+    fn migrate_msg(kind: MigrationKind) -> MigrateMsg {
+        MigrateMsg { kind }
     }
 }

@@ -7,10 +7,10 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, ReleaseLabel, SemVer, Version, VersionSegment};
 
 use crate::{
-    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
+    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg, MigrationKind},
     contract::api::Contract,
     error::ContractResult,
 };
@@ -50,11 +50,16 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { kind }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
-        .and_then(response::response)
-        .inspect_err(platform_error::log(deps.api))
+    match kind {
+        MigrationKind::LEGACY => Ok(ReleaseLabel::label()),
+        MigrationKind::REGULAR => {
+            versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into)
+        }
+    }
+    .and_then(response::response)
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
