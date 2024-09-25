@@ -158,23 +158,22 @@ impl ConfigManagement
 
 trait TryFind
 where
-    Self: Iterator,
+    Self: Iterator + Sized,
 {
     fn try_find<F, E>(&mut self, mut f: F) -> Result<Option<Self::Item>, E>
     where
         F: FnMut(&Self::Item) -> Result<bool, E>,
     {
-        for item in self {
-            if f(&item)? {
-                return Ok(Some(item));
-            }
-        }
-
-        Ok(None)
+        self.find_map(move |item| match f(&item) {
+            Ok(true) => Some(Ok(item)),
+            Ok(false) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .transpose()
     }
 }
 
-impl<I> TryFind for I where I: Iterator + ?Sized {}
+impl<I> TryFind for I where I: Iterator {}
 
 #[cfg(test)]
 mod tests {
@@ -232,6 +231,7 @@ mod tests {
 
     impl CoinVisitor for Visitor {
         type GIn = PaymentGroup;
+
         type Result = IterNext;
 
         type Error = Never;
