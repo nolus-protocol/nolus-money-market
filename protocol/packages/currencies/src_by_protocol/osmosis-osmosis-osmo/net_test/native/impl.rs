@@ -7,7 +7,7 @@ define_currency!(
     Nls,
     "NLS",
     "unls",
-    "ibc/D9AFCECDD361D38302AA66EB3BAC23B95234832C51D12489DC451FA2B7C72782", // transfer/channel-783/unls
+    "ibc/EF145240FE393A1CEC9C35ED1866A235D23176EA9B32069F714C9309FEA55718", // transfer/channel-8272/unls
     Native,
     6
 );
