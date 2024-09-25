@@ -100,6 +100,7 @@ where
             type GIn = SwapIn;
 
             type Result = IterNext;
+
             type Error = Error;
 
             fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
@@ -144,6 +145,7 @@ where
             type GIn = SwapIn;
 
             type Result = IterNext;
+
             type Error = Error;
 
             fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> Result<Self::Result>
@@ -154,6 +156,7 @@ where
                 Ok(IterNext::Continue)
             }
         }
+
         let mut resp = ExactInResponse(
             trx::decode_msg_responses(resp)?,
             Amount::ZERO,

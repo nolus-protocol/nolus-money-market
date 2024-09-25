@@ -60,6 +60,7 @@ pub trait CoinVisitor {
     type GIn: Group;
 
     type Result;
+
     type Error;
 
     fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
