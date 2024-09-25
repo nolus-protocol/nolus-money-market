@@ -1,8 +1,8 @@
 [package]
 name = "marketprice"
 version = "0.3.0"
-authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
+authors.workspace = true
 license.workspace = true
 
 [package.metadata.cargo-each]
