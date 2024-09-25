@@ -208,7 +208,7 @@ runs:
         working-directory: "tools"
         cache-rust-stable: "false"
         cache-rust-nightly: "false"
-        lookup-only: "false"
+        no-fetching: "false"
         fail-on-cache-miss: "true"
     - if: |-
         steps.local-tool-restore.conclusion == 'success'
