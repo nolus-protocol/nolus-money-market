@@ -1,5 +1,3 @@
-#![cfg(feature = "testing")]
-
 use std::marker::PhantomData;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
