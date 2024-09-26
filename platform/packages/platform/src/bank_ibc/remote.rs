@@ -2,10 +2,10 @@ use currency::{DexSymbols, Group};
 use finance::coin::CoinDTO;
 use prost::Name;
 use sdk::{
-    cosmos_sdk_proto::{
+    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
+    ibc_proto::{
         cosmos::base::v1beta1::Coin as CosmosSdkCoin, ibc::applications::transfer::v1::MsgTransfer,
     },
-    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
 };
 
 use crate::{coin_legacy, ica::HostAccount, result::Result, trx::Transaction};
@@ -73,6 +73,7 @@ fn new_msg(
         receiver: receiver.into(),
         timeout_height: None,
         timeout_timestamp: timeout.nanos(),
+        memo: "".into(),
     }
 }
 
@@ -102,11 +103,11 @@ mod test {
     use finance::coin::{Amount, Coin};
     use prost::Name;
     use sdk::{
-        cosmos_sdk_proto::{
+        cosmwasm_std::{Addr, Timestamp},
+        ibc_proto::{
             cosmos::base::v1beta1::Coin as CosmosSdkCoin,
             ibc::applications::transfer::v1::MsgTransfer,
         },
-        cosmwasm_std::{Addr, Timestamp},
     };
 
     use crate::{

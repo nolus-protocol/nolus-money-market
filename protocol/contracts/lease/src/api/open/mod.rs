@@ -216,7 +216,8 @@ mod test_invariant {
             r,
             Err(StdError::ParseErr {
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace: _,
             }) if target_type.contains("InterestPaymentSpec") && real_msg.contains(msg)
         ));
     }
@@ -283,7 +284,8 @@ mod test_position_spec {
             r,
             Err(StdError::ParseErr {
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace: _,
             }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
         ));
     }

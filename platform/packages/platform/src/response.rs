@@ -31,7 +31,7 @@ where
 
     events
         .into_iter()
-        .fold(cw_resp, |res, event| res.add_event(event.into()))
+        .fold(cw_resp, |res, event| res.add_event(event))
 }
 
 pub fn response_with_messages<T, M, E>(response: T, messages: M) -> Result<CwResponse, E>

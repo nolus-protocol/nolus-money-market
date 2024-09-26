@@ -19,19 +19,19 @@ pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
     }
 }
 
-pub struct SingleUserAccess<'storage, 'namespace, S>
+pub struct SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
 {
     storage: S,
-    storage_item: Item<'namespace, Addr>,
+    storage_item: Item<Addr>,
 }
 
-impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+impl<'storage, S> SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
 {
-    pub const fn new(storage: S, storage_namespace: &'namespace str) -> Self {
+    pub const fn new(storage: S, storage_namespace: &'static str) -> Self {
         Self {
             storage,
             storage_item: Item::new(storage_namespace),
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<'storage, 'namespace, S> SingleUserAccess<'storage, 'namespace, S>
+impl<'storage, S> SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {

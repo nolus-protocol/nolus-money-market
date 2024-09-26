@@ -325,10 +325,11 @@ mod test {
     {
         assert!(r.is_err());
         assert!(matches!(
-            dbg!(r),
-            Err(StdError::ParseErr {
+            r,
+            Err(StdError::ParseErr{
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace:_,
             }) if target_type.contains("Alarm") && real_msg.contains(msg)
         ));
     }

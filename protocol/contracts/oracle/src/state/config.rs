@@ -9,7 +9,7 @@ use sdk::{
 use crate::{api::Config, error::Result as ContractResult, ContractError};
 
 impl Config {
-    const STORAGE: Item<'static, Self> = Item::new("config");
+    const STORAGE: Item<Self> = Item::new("config");
 
     pub fn new(price_config: PriceConfig) -> Self {
         Self { price_config }

@@ -44,11 +44,8 @@ impl DummyLpp {
 }
 impl Lpp for DummyLpp {
     fn balance(&self, _oracle: Addr) -> Result<CoinStable> {
-        self.balance.ok_or_else(|| {
-            Error::Std(StdError::GenericErr {
-                msg: "Test failing Lpp::balance()".into(),
-            })
-        })
+        self.balance
+            .ok_or_else(|| Error::Std(StdError::generic_err("Test failing Lpp::balance()")))
     }
 
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {

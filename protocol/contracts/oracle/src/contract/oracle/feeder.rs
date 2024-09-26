@@ -13,7 +13,7 @@ pub struct Feeders {
 }
 
 impl Feeders {
-    const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
+    const FEEDERS: PriceFeeders = PriceFeeders::new("feeders");
 
     pub(crate) fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         Self::FEEDERS.get(storage)

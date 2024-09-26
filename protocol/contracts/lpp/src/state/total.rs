@@ -33,7 +33,7 @@ impl<Lpn> Default for Total<Lpn> {
 }
 
 impl<Lpn> Total<Lpn> {
-    const STORAGE: Item<'static, Total<Lpn>> = Item::new("total");
+    const STORAGE: Item<Total<Lpn>> = Item::new("total");
 
     pub fn new() -> Self {
         Total {

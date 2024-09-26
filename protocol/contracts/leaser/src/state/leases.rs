@@ -13,8 +13,8 @@ use crate::{
 pub(crate) struct Leases {}
 
 impl Leases {
-    const PENDING_CUSTOMER: Item<'static, Addr> = Item::new("pending_customer");
-    const CUSTOMER_LEASES: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
+    const PENDING_CUSTOMER: Item<Addr> = Item::new("pending_customer");
+    const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_CUSTOMER

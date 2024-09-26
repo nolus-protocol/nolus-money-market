@@ -14,6 +14,6 @@ combinations = [
 schema = ["sdk/schema"]
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "schema", "storage"] }
+sdk = { workspace = true, features = ["schema", "storage"] }
 
 serde = { workspace = true, features = ["derive"] }

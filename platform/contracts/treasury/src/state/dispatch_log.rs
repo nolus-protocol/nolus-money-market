@@ -14,7 +14,7 @@ pub struct DispatchLog {
 }
 
 impl DispatchLog {
-    const STORAGE: Item<'static, Self> = Item::new("dispatch_log");
+    const STORAGE: Item<Self> = Item::new("dispatch_log");
 
     pub fn new(last_dispatch: Timestamp) -> Self {
         DispatchLog { last_dispatch }

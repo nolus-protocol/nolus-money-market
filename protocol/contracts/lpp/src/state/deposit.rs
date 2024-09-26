@@ -41,8 +41,8 @@ struct DepositsGlobals {
 }
 
 impl Deposit {
-    const DEPOSITS: Map<'static, Addr, DepositData> = Map::new("deposits");
-    const GLOBALS: Item<'static, DepositsGlobals> = Item::new("deposits_globals");
+    const DEPOSITS: Map<Addr, DepositData> = Map::new("deposits");
+    const GLOBALS: Item<DepositsGlobals> = Item::new("deposits_globals");
 
     pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
         let data = Self::DEPOSITS

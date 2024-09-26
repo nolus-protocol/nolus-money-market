@@ -173,7 +173,7 @@ mod test {
             testing::{
                 mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
             },
-            Env, OwnedDeps,
+            Addr, Env, OwnedDeps,
         };
 
         use super::{
@@ -183,6 +183,10 @@ mod test {
 
         const LENDER: &str = "lender";
         const DEPOSIT: Amount = 100;
+
+        fn lender() -> Addr {
+            Addr::unchecked(LENDER)
+        }
 
         fn test_case<F>(initial_lpp_balance: Amount, f: F)
         where
@@ -194,23 +198,26 @@ mod test {
             setup_storage(deps.as_mut().storage, DEFAULT_MIN_UTILIZATION);
 
             deps.querier
+                .bank
                 .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(initial_lpp_balance)]);
 
             f(deps, env)
         }
 
         mod deposit {
-            use sdk::cosmwasm_std::{testing::mock_info, Addr};
+            use sdk::cosmwasm_std::testing;
 
-            use super::{
-                cwcoin, query_balance, test_case, try_deposit, TheCurrency, DEPOSIT, LENDER,
-            };
+            use super::{cwcoin, query_balance, test_case, try_deposit, TheCurrency, DEPOSIT};
 
             #[test]
             fn test_deposit_zero() {
                 test_case(0, |mut deps, env| {
-                    try_deposit::<TheCurrency>(deps.as_mut(), env, mock_info(LENDER, &[]))
-                        .unwrap_err();
+                    try_deposit::<TheCurrency>(
+                        deps.as_mut(),
+                        env,
+                        testing::message_info(&super::lender(), &[]),
+                    )
+                    .unwrap_err();
                 })
             }
 
@@ -220,12 +227,12 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, Addr::unchecked(LENDER))
+                        query_balance(deps.as_ref().storage, super::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -237,11 +244,10 @@ mod test {
 
         mod withdraw {
             use finance::coin::Amount;
-            use sdk::cosmwasm_std::{testing::mock_info, Addr, Uint128};
+            use sdk::cosmwasm_std::{testing, Uint128};
 
             use super::{
                 cwcoin, query_balance, test_case, try_deposit, try_withdraw, TheCurrency, DEPOSIT,
-                LENDER,
             };
 
             #[test]
@@ -250,14 +256,14 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        mock_info(LENDER, &[]),
+                        testing::message_info(&super::lender(), &[]),
                         Uint128::default(),
                     )
                     .unwrap_err();
@@ -273,20 +279,20 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        mock_info(LENDER, &[]),
+                        testing::message_info(&super::lender(), &[]),
                         WITHDRAWN.into(),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, Addr::unchecked(LENDER))
+                        query_balance(deps.as_ref().storage, super::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -301,20 +307,20 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        mock_info(LENDER, &[]),
+                        testing::message_info(&super::lender(), &[]),
                         DEPOSIT.into(),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, Addr::unchecked(LENDER))
+                        query_balance(deps.as_ref().storage, super::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -329,14 +335,14 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        mock_info(LENDER, &[]),
+                        testing::message_info(&super::lender(), &[]),
                         (DEPOSIT << 1).into(),
                     )
                     .unwrap_err();
@@ -350,11 +356,9 @@ mod test {
                 price::{self, Price},
             };
             use lpp_platform::NLpn;
-            use sdk::cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
+            use sdk::cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
 
-            use super::{
-                cwcoin, query_ntoken_price, test_case, try_deposit, TheCurrency, DEPOSIT, LENDER,
-            };
+            use super::{cwcoin, query_ntoken_price, test_case, try_deposit, TheCurrency, DEPOSIT};
 
             #[test]
             fn test_nlpn_price() {
@@ -364,7 +368,7 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        mock_info(LENDER, &[cwcoin(DEPOSIT)]),
+                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
                     )
                     .unwrap();
 
@@ -376,6 +380,7 @@ mod test {
                     );
 
                     deps.querier
+                        .bank
                         .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(DEPOSIT + INTEREST)])
                         .unwrap();
 
@@ -399,12 +404,13 @@ mod test {
     }
 
     mod min_utilization {
+        use cosmwasm_std::testing;
         use finance::{
             coin::Amount,
             percent::{bound::BoundToHundredPercent, Percent},
         };
         use sdk::cosmwasm_std::{
-            testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+            testing::{mock_dependencies, mock_env, MOCK_CONTRACT_ADDR},
             Addr,
         };
 
@@ -424,6 +430,7 @@ mod test {
 
             if borrowed != 0 {
                 deps.querier
+                    .bank
                     .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(borrowed)]);
 
                 LiquidityPool::<TheCurrency>::load(deps.as_ref().storage)
@@ -437,12 +444,12 @@ mod test {
                     .unwrap();
             }
 
-            deps.querier.update_balance(
+            deps.querier.bank.update_balance(
                 MOCK_CONTRACT_ADDR,
                 vec![cwcoin(lpp_balance_at_deposit + deposit)],
             );
 
-            let info = mock_info("lender1", &[cwcoin(deposit)]);
+            let info = testing::message_info(&Addr::unchecked("lender1"), &[cwcoin(deposit)]);
 
             let result = try_deposit::<TheCurrency>(deps.as_mut(), env, info);
 

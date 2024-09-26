@@ -11,8 +11,8 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         from_json,
-        testing::{mock_env, mock_info, MockQuerier},
-        Event,
+        testing::{self, mock_env, MockQuerier},
+        Addr, Event,
     },
 };
 
@@ -31,7 +31,7 @@ fn feed_prices_unknown_feeder() {
     let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
 
     let msg = dummy_feed_prices_msg();
-    let info = mock_info("test", &[]);
+    let info = testing::message_info(&Addr::unchecked("test"), &[]);
 
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(ContractError::UnknownFeeder {}, err)

@@ -17,17 +17,17 @@ use sdk::{
 use crate::{alarms::prefix::Prefix, config::Config, error::PriceFeedsError, feed::PriceFeed};
 
 pub type PriceFeedBin = Vec<u8>;
-pub struct PriceFeeds<'m, PriceG> {
-    storage: Map<'m, (SymbolStatic, SymbolStatic), PriceFeedBin>,
+pub struct PriceFeeds<PriceG> {
+    storage: Map<(SymbolStatic, SymbolStatic), PriceFeedBin>,
     config: Config,
     _g: PhantomData<PriceG>,
 }
 
-impl<'m, PriceG> PriceFeeds<'m, PriceG>
+impl<PriceG> PriceFeeds<PriceG>
 where
     PriceG: Group<TopG = PriceG>,
 {
-    pub const fn new(namespace: &'m str, config: Config) -> Self {
+    pub const fn new(namespace: &'static str, config: Config) -> Self {
         Self {
             storage: Map::new(namespace),
             config,
@@ -64,7 +64,7 @@ where
         Ok(())
     }
 
-    pub fn price<'a, QuoteC, QuoteG, Iter>(
+    pub fn price<'m, 'a, QuoteC, QuoteG, Iter>(
         &'m self,
         quote_c: CurrencyDTO<QuoteG>,
         storage: &'a dyn Storage,
@@ -140,7 +140,7 @@ where
     QuoteG: Group,
 {
     root_to_leaf: Iter,
-    feeds: &'a PriceFeeds<'a, G>,
+    feeds: &'a PriceFeeds<G>,
     storage: &'a dyn Storage,
     at: Timestamp,
     total_feeders: usize,

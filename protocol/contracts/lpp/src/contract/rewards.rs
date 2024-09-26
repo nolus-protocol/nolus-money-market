@@ -83,7 +83,7 @@ mod test {
     };
     use platform::{coin_legacy, contract::Code};
     use sdk::cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+        testing::{self, mock_dependencies, mock_env, MOCK_CONTRACT_ADDR},
         Coin as CwCoin,
     };
 
@@ -126,18 +126,19 @@ mod test {
         .unwrap();
 
         // no deposit
-        let info = mock_info("lender", &[]);
+        let info = testing::message_info(&Addr::unchecked("lender"), &[]);
         let response = try_claim_rewards(deps.as_mut(), env.clone(), info, None);
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
         lpp_balance += deposit;
-        let info = mock_info("lender", &[cwcoin(deposit)]);
+        let info = testing::message_info(&Addr::unchecked("lender"), &[cwcoin(deposit)]);
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // pending rewards == 0
-        let info = mock_info("lender", &[]);
+        let info = testing::message_info(&Addr::unchecked("lender"), &[]);
         let response = try_claim_rewards(deps.as_mut(), env, info, None);
         assert_eq!(response, Err(ContractError::NoRewards {}));
     }

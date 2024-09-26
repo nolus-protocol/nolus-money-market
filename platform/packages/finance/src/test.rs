@@ -1,8 +1,8 @@
 use currency::{CurrencyDef, Group, MemberOf};
 
-use crate::coin::{Coin, CoinDTO};
+use crate::coin::{Amount, Coin, CoinDTO};
 
-pub fn funds<G, C>(amount: u128) -> CoinDTO<G>
+pub fn funds<G, C>(amount: Amount) -> CoinDTO<G>
 where
     G: Group,
     C: CurrencyDef,

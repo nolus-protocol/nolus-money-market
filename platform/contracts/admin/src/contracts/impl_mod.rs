@@ -73,7 +73,7 @@ pub(super) fn migrate_contract(
         WasmMsg::Migrate {
             contract_addr: address.into_string(),
             new_code_id: migrate.code_id.u64(),
-            msg: Binary(migrate.migrate_msg.into_bytes()),
+            msg: Binary::new(migrate.migrate_msg.into_bytes()),
         },
         0,
     );
@@ -292,7 +292,7 @@ where
 fn execute_contract(batch: &mut Batch, address: Addr, execute_message: String) {
     batch.schedule_execute_no_reply(WasmMsg::Execute {
         contract_addr: address.into_string(),
-        msg: Binary(execute_message.into_bytes()),
+        msg: Binary::new(execute_message.into_bytes()),
         funds: vec![],
     });
 }

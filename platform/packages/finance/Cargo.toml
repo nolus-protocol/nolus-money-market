@@ -15,7 +15,7 @@ testing = []
 
 [dependencies]
 currency = { workspace = true }
-sdk = { workspace = true, features = ["cosmos", "schema"] }
+sdk = { workspace = true }
 
 gcd = { workspace = true }
 thiserror = { workspace = true }
@@ -23,3 +23,4 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+sdk = { workspace = true, features = ["schema"] }

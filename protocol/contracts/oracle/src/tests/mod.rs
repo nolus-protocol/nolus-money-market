@@ -14,8 +14,8 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         coins,
-        testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        MemoryStorage, MessageInfo, OwnedDeps,
+        testing::{self, mock_dependencies, mock_env, MockApi, MockQuerier},
+        Addr, MemoryStorage, MessageInfo, OwnedDeps,
     },
 };
 use tree::HumanReadableTree;
@@ -103,7 +103,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, Nls::ticker()));
+    let info = testing::message_info(&Addr::unchecked(CREATOR), &coins(1000, Nls::ticker()));
     let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 

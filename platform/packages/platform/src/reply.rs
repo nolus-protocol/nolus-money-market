@@ -39,7 +39,7 @@ pub fn from_execute<T>(reply: Reply) -> Result<Option<T>>
 where
     T: DeserializeOwned,
 {
-    decode::<MsgExecuteContractResponse>(reply)
+    decode_first_response::<MsgExecuteContractResponse>(reply)
         .and_then(|data| from_json(data.data).map_err(Error::Serialization))
 }
 
@@ -76,7 +76,7 @@ fn from_instantiate_inner<R>(api: &dyn Api, reply: Reply) -> Result<InstantiateR
 where
     R: InstantiationResponse,
 {
-    let response: R = decode(reply)?;
+    let response: R = decode_first_response(reply)?;
 
     api.addr_validate(response.addr())
         .map_err(|err| Error::CosmWasmAddressInvalid(response.addr().to_string(), err))
@@ -93,16 +93,18 @@ where
     M::decode(message).map_err(Into::into)
 }
 
-fn decode<M>(reply: Reply) -> Result<M>
+fn decode_first_response<M>(reply: Reply) -> Result<M>
 where
     M: Message + Default,
 {
-    reply
+    let responses = reply
         .result
         .into_result()
         .map_err(Error::ReplyResultError)?
-        .data
-        .ok_or(Error::EmptyReply())
-        .map_err(Into::into)
-        .and_then(|ref data| decode_raw(data))
+        .msg_responses;
+    if responses.is_empty() {
+        Err(Error::EmptyReply())
+    } else {
+        decode_raw(responses[0].value.as_slice())
+    }
 }

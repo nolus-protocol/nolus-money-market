@@ -278,7 +278,8 @@ mod test_invariant {
             r,
             Err(StdError::ParseErr {
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace: _,
             }) if target_type.contains("BasePrice") && real_msg.contains(msg)
         ));
     }

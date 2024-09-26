@@ -19,7 +19,7 @@ pub struct Config {
 }
 
 impl Config {
-    const STORAGE: Item<'static, Self> = Item::new("config");
+    const STORAGE: Item<Self> = Item::new("config");
 
     pub fn new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Self
     where

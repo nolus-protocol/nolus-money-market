@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
-    CodeInfoResponse, ContractInfoResponse, ContractResult, Empty, GovMsg, HexBinary, IbcMsg,
+    Addr, Checksum, CodeInfoResponse, ContractInfoResponse, ContractResult, Empty, GovMsg, IbcMsg,
     IbcQuery, OwnedDeps, SystemError, SystemResult, WasmQuery,
 };
 use cw_multi_test::{
@@ -58,8 +58,14 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
             if contracts.contains(&contract_addr.as_str()) =>
         {
             SystemResult::Ok(ContractResult::Ok(
-                cosmwasm_std::to_json_binary(&ContractInfoResponse::default())
-                    .expect("serialization succeed"),
+                cosmwasm_std::to_json_binary(&ContractInfoResponse::new(
+                    2,
+                    Addr::unchecked("input"),
+                    None,
+                    false,
+                    None,
+                ))
+                .expect("serialization succeed"),
             ))
         }
         WasmQuery::Smart { contract_addr, .. }
@@ -72,8 +78,8 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
         WasmQuery::CodeInfo { code_id } => SystemResult::Ok(ContractResult::Ok(
             cosmwasm_std::to_json_binary(&CodeInfoResponse::new(
                 *code_id,
-                "".into(),
-                HexBinary::from_hex("1f4e209a").expect("deserialization succeed"),
+                Addr::unchecked(""),
+                Checksum::from_hex("1f4e209a").expect("deserialization succeed"),
             ))
             .expect("serialization succeed"),
         )),

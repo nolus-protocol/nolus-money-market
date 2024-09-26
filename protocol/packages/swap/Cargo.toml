@@ -22,7 +22,7 @@ main = []
 test = []
 
 astroport = [
-    "sdk/cosmos_ibc",
+    "sdk/cosmos_proto",
     "dep:astroport",
     "dep:currency",
     "dep:dex",
@@ -33,7 +33,6 @@ astroport = [
     "dep:serde",
 ]
 osmosis = [
-    "sdk/cosmos",
     "dep:osmosis-std",
     "dep:currency",
     "dep:dex",

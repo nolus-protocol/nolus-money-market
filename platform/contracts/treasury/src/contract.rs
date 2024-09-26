@@ -231,7 +231,7 @@ mod tests {
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
             coins, from_json,
-            testing::{mock_dependencies_with_balance, mock_env, mock_info},
+            testing::{self, mock_dependencies_with_balance, mock_env},
             Addr, DepsMut,
         },
         testing::customized_mock_deps_with_contracts,
@@ -266,7 +266,7 @@ mod tests {
             ])
             .unwrap(),
         };
-        let info = mock_info("creator", &coins(1000, "unolus"));
+        let info = testing::message_info(&Addr::unchecked("creator"), &coins(1000, "unolus"));
 
         let res: CwResponse = instantiate(deps, mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());

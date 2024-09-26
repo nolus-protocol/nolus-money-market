@@ -9,8 +9,8 @@ use crate::{
     result::Result,
 };
 
-const PLATFORM: Item<'_, PlatformContracts<Addr>> = Item::new("platform_contracts");
-const PROTOCOL: Map<'_, String, Protocol<Addr>> = Map::new("protocol_contracts");
+const PLATFORM: Item<PlatformContracts<Addr>> = Item::new("platform_contracts");
+const PROTOCOL: Map<String, Protocol<Addr>> = Map::new("protocol_contracts");
 
 pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> Result<()> {
     PLATFORM

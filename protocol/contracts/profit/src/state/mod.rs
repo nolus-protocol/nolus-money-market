@@ -35,7 +35,7 @@ mod idle;
 mod open_ica;
 mod resp_delivery;
 
-const STATE: Item<'static, State> = Item::new("contract_state");
+const STATE: Item<State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
 type ProfitCurrencies = PaymentGroup;

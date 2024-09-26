@@ -22,7 +22,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    const STORAGE: Item<'static, Self> = Item::new("dispatcher_config");
+    const STORAGE: Item<Self> = Item::new("dispatcher_config");
 
     pub fn new(
         cadence_hours: CadenceHours,

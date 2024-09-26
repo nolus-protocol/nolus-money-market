@@ -17,7 +17,7 @@ use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{
         coins, from_json,
-        testing::{mock_env, mock_info},
+        testing::{self, mock_env},
         to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, WasmMsg,
     },
     schemars::{self, JsonSchema},
@@ -76,11 +76,11 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
 }
 
 fn owner() -> MessageInfo {
-    mock_info(CREATOR, &[])
+    testing::message_info(&Addr::unchecked(CREATOR), &[])
 }
 
 fn customer() -> MessageInfo {
-    mock_info("addr0000", &coins(2, TheCurrency::dex()))
+    testing::message_info(&Addr::unchecked("addr0000"), &coins(2, TheCurrency::dex()))
 }
 
 fn setup_test_case(deps: DepsMut<'_>) {

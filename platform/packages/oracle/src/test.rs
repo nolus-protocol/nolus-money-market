@@ -73,9 +73,7 @@ where
                 error::failed_to_fetch_price(
                     C::definition().dto(),
                     QuoteC::definition().dto(),
-                    StdError::GenericErr {
-                        msg: "Test failing Oracle::price_of()".into(),
-                    },
+                    StdError::generic_err("Test failing Oracle::price_of()"),
                 )
             })
     }

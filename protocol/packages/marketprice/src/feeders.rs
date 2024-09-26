@@ -24,11 +24,11 @@ pub enum PriceFeedersError {
 }
 
 // state/logic
-pub struct PriceFeeders<'f>(Item<'f, HashSet<Addr>>);
+pub struct PriceFeeders(Item<HashSet<Addr>>);
 
 // this is the core business logic we expose
-impl<'f> PriceFeeders<'f> {
-    pub const fn new(namespace: &'f str) -> Self {
+impl PriceFeeders {
+    pub const fn new(namespace: &'static str) -> Self {
         Self(Item::new(namespace))
     }
 

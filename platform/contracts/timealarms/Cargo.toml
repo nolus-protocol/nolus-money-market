@@ -35,6 +35,4 @@ serde = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, features = ["cosmos", "storage", "testing"] }
+sdk = { workspace = true, features = ["testing"] }

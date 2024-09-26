@@ -76,7 +76,7 @@ pub(crate) enum State {
     Liquidated,
 }
 
-const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
+const STATE_DB_ITEM: Item<State> = Item::new("state");
 
 pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
     STATE_DB_ITEM.load(storage).map_err(Into::into)

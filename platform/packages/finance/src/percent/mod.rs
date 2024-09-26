@@ -63,14 +63,14 @@ impl Percent {
         self.0
             .checked_add(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Add, self, other).into())
+            .ok_or_else(|| OverflowError::new(OverflowOperation::Add).into())
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_sub(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
+            .ok_or_else(|| OverflowError::new(OverflowOperation::Sub).into())
     }
 }
 

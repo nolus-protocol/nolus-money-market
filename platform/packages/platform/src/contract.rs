@@ -125,7 +125,7 @@ pub mod tests {
 #[cfg(any(feature = "testing", test))]
 pub mod testing {
     use sdk::cosmwasm_std::{
-        to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
+        to_json_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
         WasmQuery,
     };
 
@@ -136,12 +136,13 @@ pub mod testing {
     pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
             to_json_binary(&{
-                let mut response = ContractInfoResponse::default();
-
-                response.code_id = CODE.into();
-                response.creator = "some data".into();
-
-                response
+                ContractInfoResponse::new(
+                    CODE.into(),
+                    Addr::unchecked("creator"),
+                    None,
+                    false,
+                    None,
+                );
             })
             .expect("serialization succeedeed"),
         ))
