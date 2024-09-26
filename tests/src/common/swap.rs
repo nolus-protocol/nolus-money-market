@@ -65,17 +65,12 @@ where
     let requests: Vec<SwapRequest<GIn, GSwap>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
-        .map(
-            |NeutronAny {
-                 type_url,
-                 value: Binary(value),
-             }: NeutronAny| {
-                <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
-                    type_url,
-                    value,
-                })
-            },
-        )
+        .map(|NeutronAny { type_url, value }: NeutronAny| {
+            <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
+                type_url,
+                value: value.into(),
+            })
+        })
         .collect();
 
     assert!(!requests.is_empty());
@@ -186,7 +181,7 @@ fn send_response<'r>(
     ibc::send_response(
         app,
         inituator_contract_addr.clone(),
-        Binary(platform::trx::encode_msg_responses(
+        Binary::new(platform::trx::encode_msg_responses(
             amounts.iter().copied().map(Impl::build_response),
         )),
     )

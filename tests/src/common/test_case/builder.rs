@@ -309,7 +309,7 @@ where
     {
         self.init_lpp_with_funds(
             custom_wrapper,
-            &[CwCoin::new(2500, Lpn::bank())],
+            &[CwCoin::new(2500u128, Lpn::bank())],
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,

@@ -39,8 +39,8 @@ mod mock_lease {
 
     use crate::common::{test_case::app::App, ADMIN};
 
-    const GATE: Item<'static, bool> = Item::new("alarm gate");
-    const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
+    const GATE: Item<bool> = Item::new("alarm gate");
+    const TIMEALARMS_ADDR: Item<Addr> = Item::new("ta_addr");
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]

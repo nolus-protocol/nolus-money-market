@@ -2,14 +2,14 @@ use std::slice;
 
 use currencies::PaymentGroup;
 use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolSlice, SymbolStatic};
+use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::{
-        cosmos::base::v1beta1::Coin as ProtobufCoin,
-        ibc::applications::transfer::v1::MsgTransfer,
-        traits::{Message, Name},
-    },
+    cosmos_sdk_proto::traits::{Message, Name},
     cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
+    ibc_proto::{
+        cosmos::base::v1beta1::Coin as ProtobufCoin, ibc::applications::transfer::v1::MsgTransfer,
+    },
     neutron_sdk::{
         bindings::types::ProtobufAny,
         sudo::msg::{RequestPacket, SudoMsg},
@@ -53,7 +53,7 @@ pub(crate) fn expect_remote_transfer<T>(
 
     let token: ProtobufCoin = message.token.unwrap();
 
-    CwCoin::new(token.amount.parse().unwrap(), token.denom)
+    CwCoin::new(token.amount.parse::<Amount>().unwrap(), token.denom)
 }
 
 pub(crate) fn do_transfer<'r>(
@@ -147,7 +147,7 @@ pub(super) fn send_error(
 }
 
 fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<'_, AppResponse> {
-    send_response(app, addr, Binary(Vec::new()))
+    send_response(app, addr, Binary::new(Vec::new()))
 }
 
 fn dex_to_bank(symbol: &SymbolSlice) -> SymbolStatic {

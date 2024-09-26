@@ -518,9 +518,9 @@ enum DummyExecMsg {
     ShouldFail(bool),
 }
 
-const ORACLE_ADDR: Item<'static, Addr> = Item::new("oracle_addr");
+const ORACLE_ADDR: Item<Addr> = Item::new("oracle_addr");
 
-const SHOULD_FAIL: Item<'static, bool> = Item::new("should_fail");
+const SHOULD_FAIL: Item<bool> = Item::new("should_fail");
 
 fn schedule_alarm(
     storage: &dyn Storage,
