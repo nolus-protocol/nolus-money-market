@@ -39,7 +39,7 @@ where
 
     customers
         .find_map(|maybe_customer| match maybe_customer {
-            Ok(customer) => msgs.migrate_or_be_next(customer, &|| migrate_msg()),
+            Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
             Err(err) => Some(Err(err)),
         })
         .transpose()
