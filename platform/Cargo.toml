@@ -51,7 +51,7 @@ cw-multi-test = { version = "2", default-features = false, features = [
 
 # neutron-sdk is stuck on v0.20 and we would get two versions in the build tree that might not be ideal
 cosmos-sdk-proto = { version = "0.25", default-features = false }
-ibc-proto = { workspace = "0.49", default-features = false }
+ibc-proto = { version = "0.49", default-features = false }
 
 # Other
 prost = { version = "0.13", default-features = false }
