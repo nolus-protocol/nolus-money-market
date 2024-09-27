@@ -30,6 +30,8 @@ where
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
+    #[schemars(with = "CoinDTO<QuoteG>")]
+    // decouples this field representation on the wire from the `Coin<>`-s one
     amount_quote: Coin<QuoteC>,
     #[serde(skip)]
     _quote_group: PhantomData<QuoteG>,

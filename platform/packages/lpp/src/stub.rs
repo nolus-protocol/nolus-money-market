@@ -1,5 +1,5 @@
-use currency::platform::Nls;
-use finance::coin::Coin;
+use currency::platform::{Nls, PlatformGroup};
+use finance::coin::{Coin, CoinDTO};
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -27,13 +27,17 @@ impl<'a> Stub<'a> {
 impl<'a> Lpp for Stub<'a> {
     fn balance(&self, oracle: Addr) -> Result<CoinStable> {
         self.querier
-            .query_wasm_smart(
+            .query_wasm_smart::<CoinDTO<PlatformGroup>>(
                 &self.lpp,
                 &(QueryMsg::StableBalance {
                     oracle_addr: oracle,
                 }),
             )
             .map_err(Into::into)
+            .map(|dto| {
+                dto.try_into()
+                    .unwrap_or_else(|_| unreachable!("Each stable is member of the plaform group!"))
+            })
     }
 
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {

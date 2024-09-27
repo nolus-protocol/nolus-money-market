@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::Addr;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Return the total value of a pool in a stable currency as [CoinStable]
+    /// Return the total value of a pool in a stable currency as [CoinDTO<PlatformGroup>]
     StableBalance { oracle_addr: Addr },
 }
 
