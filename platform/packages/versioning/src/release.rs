@@ -28,8 +28,7 @@ impl ReleaseLabel {
         Self(Self::VOID_RELEASE.into())
     }
 
-    pub fn label() -> Self {
-        // TODO revert its visibility to `(crate)` once the migration to 0.7.3 is done
+    pub(crate) fn label() -> Self {
         Self(Self::RELEASE_LABEL.into())
     }
 }

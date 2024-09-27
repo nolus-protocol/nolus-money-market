@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
 use cosmwasm_std::Storage;
-use lease::api::{MigrateMsg as LeaseMigrateMsg, MigrationKind};
+use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
     contract::{self, Code, CodeId},
     error as platform_error,
@@ -233,8 +233,8 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-fn migrate_msg(kind: MigrationKind) -> LeaseMigrateMsg {
-    LeaseMigrateMsg { kind }
+fn migrate_msg() -> LeaseMigrateMsg {
+    LeaseMigrateMsg {}
 }
 
 fn finalizer(env: Env) -> Addr {
