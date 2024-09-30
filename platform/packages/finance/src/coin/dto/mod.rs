@@ -17,6 +17,7 @@ use crate::{
 
 use super::{Coin, WithCoin};
 
+mod amount_serde;
 mod transformer;
 
 /// A type designed to be used in the init, execute and query incoming messages
@@ -36,6 +37,8 @@ pub struct CoinDTO<G>
 where
     G: Group,
 {
+    #[serde(with = "amount_serde")]
+    #[schemars(with = "String")]
     amount: Amount,
     #[serde(rename = "ticker")] // it is more descriptive on the wire than currency
     currency: CurrencyDTO<G>,
@@ -183,7 +186,7 @@ mod test {
         AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
         MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
     };
-    use sdk::cosmwasm_std;
+    use sdk::cosmwasm_std::{self, StdError};
 
     use crate::coin::{Amount, Coin, CoinDTO};
 
@@ -253,14 +256,12 @@ mod test {
     }
 
     #[test]
-    fn compatible_deserialization() {
+    fn incompatible_deserialization() {
         let coin = Coin::<MyTestCurrency>::new(85);
-        assert_eq!(
-            coin,
-            cosmwasm_std::to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
-                .and_then(cosmwasm_std::from_json)
-                .expect("correct raw bytes")
-        );
+        let err = cosmwasm_std::to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
+            .and_then(cosmwasm_std::from_json::<Coin<MyTestCurrency>>)
+            .expect_err("correct raw bytes");
+        assert!(matches!(err, StdError::ParseErr { .. }));
     }
 
     #[test]
