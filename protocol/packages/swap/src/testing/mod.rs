@@ -6,7 +6,7 @@ use currency::{
 };
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapPath;
-use sdk::cosmos_sdk_proto::Any;
+use sdk::cosmos_sdk_proto::Any as CosmosAny;
 #[cfg(test)]
 pub(crate) use tests::validate_a_response;
 
@@ -14,12 +14,12 @@ pub(crate) use tests::validate_a_response;
 mod tests;
 
 pub trait ExactAmountInSkel {
-    fn parse_request<GIn, GSwap>(request: Any) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group + MemberOf<GSwap>,
         GSwap: Group;
 
-    fn build_response(amount_out: Amount) -> Any;
+    fn build_response(amount_out: Amount) -> CosmosAny;
 }
 
 pub struct SwapRequest<GIn, GSwap>
