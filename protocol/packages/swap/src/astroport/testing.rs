@@ -1,4 +1,4 @@
-use std::any::type_name;
+use std::any;
 
 use currency::{CurrencyDTO, Group, MemberOf};
 use dex::swap::ExactAmountIn;
@@ -53,11 +53,11 @@ where
         } = cosmwasm_std::from_json(msg).unwrap_or_else(|_| {
             panic!(
                 r#"Expected message to be from type "{}""#,
-                type_name::<ExecuteMsg>()
+                any::type_name::<ExecuteMsg>()
             )
         })
         else {
-            testing::pattern_match_else("ExecuteSwapOperations");
+            testing::pattern_match_else(any::type_name::<RequestMsg>())
         };
 
         let swap_path =
