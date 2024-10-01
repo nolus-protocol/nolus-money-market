@@ -5,13 +5,14 @@ use crate::{testing::ExactAmountInSkel, Impl};
 
 #[test]
 fn build_and_parse() {
-    let expected_amount = 20;
+    const EXPECTED_AMOUNT: Amount = 20;
 
-    let mut resp = vec![<Impl as ExactAmountInSkel>::build_response(expected_amount)].into_iter();
+    let mut iter = Some(<Impl as ExactAmountInSkel>::build_response(EXPECTED_AMOUNT)).into_iter();
 
-    let parsed = <Impl as ExactAmountIn>::parse_response(&mut resp).unwrap();
+    assert_eq!(
+        <Impl as ExactAmountIn>::parse_response(&mut iter).unwrap(),
+        EXPECTED_AMOUNT
+    );
 
-    assert_eq!(parsed, expected_amount);
-
-    assert_eq!(resp.next(), None);
+    assert!(iter.next().is_none());
 }
