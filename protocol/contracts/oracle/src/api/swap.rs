@@ -1,5 +1,6 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::result::Result as StdResult;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use thiserror::Error;
 
