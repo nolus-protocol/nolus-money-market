@@ -18,46 +18,39 @@ combinations = [
 feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
 [features]
-# TODO get rid of main and test and specialize astroport into ~_main and ~_test when the CI builds protocols provided as input
-# instead of implicitly building them in matrix
-main = []
-test = []
-
-astroport = [
-    "sdk/cosmos_proto",
+# Mandatory features
+dex-astroport_test = [
     "dep:astroport",
-    "dep:currency",
-    "dep:dex",
-    "dep:finance",
-    "dep:oracle",
-    "dep:platform",
-    "dep:sdk",
-    "dep:serde",
+    "sdk/cosmos_proto",
 ]
-osmosis = [
+dex-astroport_main = [
+    "dep:astroport",
+    "sdk/cosmos_proto",
+]
+dex-osmosis = [
     "dep:osmosis-std",
-    "dep:currency",
-    "dep:dex",
-    "dep:finance",
-    "dep:oracle",
-    "dep:platform",
-    "dep:sdk",
-    "dep:serde",
 ]
 
-testing = ["finance/testing", "dep:serde", "dex/testing"]
+# Optional features
+testing = [
+    "currency/testing",
+    "dex/testing",
+    "finance/testing",
+    "sdk/cosmos_ibc",
+]
 
 [dependencies]
-currency = { workspace = true, optional = true }
-dex = { workspace = true, optional = true }
-finance = { workspace = true, optional = true }
-oracle = { workspace = true, optional = true, features = ["stub_swap"] }
-platform = { workspace = true, optional = true }
-sdk = { workspace = true, optional = true }
+dex = { workspace = true }
+oracle = { workspace = true, features = ["stub_swap"] }
+
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true }
 
 astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
-serde = { workspace = true, optional = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
