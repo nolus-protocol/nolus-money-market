@@ -11,7 +11,7 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
+use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Coin as CwCoin};
 
 #[cfg(test)]
 mod test;
@@ -57,7 +57,7 @@ impl ExactAmountIn for Impl {
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = Any>,
+        I: Iterator<Item = CosmosAny>,
     {
         use std::str::FromStr;
 
