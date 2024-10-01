@@ -34,7 +34,7 @@ impl IntoRepayable for Spec {
 }
 
 impl Closable for Spec {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         lease.lease.position.amount()
     }
 
