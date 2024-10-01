@@ -53,6 +53,7 @@ where
     CurrencyDTO::<G>::from_symbol_testing::<DexSymbols<G>>(symbol).map_err(Into::into)
 }
 
+#[cfg(any(feature = "testing", test))]
 #[cold]
 pub(crate) fn pattern_match_else(message_name: &str) -> ! {
     unimplemented!(
