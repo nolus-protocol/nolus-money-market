@@ -21,7 +21,9 @@ mod testing;
 type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
-pub struct Impl;
+pub enum Impl
+where
+    Self: ExactAmountIn, {}
 
 impl ExactAmountIn for Impl {
     fn build_request<GIn, GSwap>(
