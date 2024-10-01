@@ -10,13 +10,13 @@ use crate::testing;
 
 use super::{
     api::{AssetInfo, SwapOperation},
-    Main, RouterImpl,
+    MAX_IMPACT,
 };
 
 #[test]
 fn const_eq_max_allowed_slippage() {
     assert_eq!(
-        RouterImpl::<Main>::MAX_IMPACT,
+        MAX_IMPACT,
         astroport::pair::MAX_ALLOWED_SLIPPAGE
             .parse::<Decimal>()
             .unwrap()
