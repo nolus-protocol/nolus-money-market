@@ -119,6 +119,7 @@ where
             self.spec.out_currency(),
             PhantomData::<SwapClient>,
         );
+
         let mut filtered_swapper =
             CurrencyFilter::<_, _, _>::new(&mut swapper, self.spec.out_currency());
 
@@ -138,6 +139,7 @@ where
             PhantomData<SwapIn>,
             PhantomData<SwapClient>,
         );
+
         impl<I, SwapIn, SwapClient> CoinVisitor for ExactInResponse<I, SwapIn, SwapClient>
         where
             SwapIn: Group,
