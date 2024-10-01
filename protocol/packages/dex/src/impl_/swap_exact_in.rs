@@ -156,8 +156,10 @@ where
             where
                 G: Group + MemberOf<Self::GIn>,
             {
-                self.1 += SwapClient::parse_response(&mut self.0)?;
-                Ok(IterNext::Continue)
+                SwapClient::parse_response(&mut self.0)
+                    .inspect(|&amount| self.1 += amount)
+                    .map(|_| IterNext::Continue)
+                    .map_err(Into::into)
             }
         }
 
