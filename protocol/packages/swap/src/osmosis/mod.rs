@@ -23,7 +23,9 @@ type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
 #[derive(Serialize, Deserialize)]
-pub struct Impl;
+pub enum Impl
+where
+    Self: ExactAmountIn, {}
 
 impl ExactAmountIn for Impl {
     fn build_request<GIn, GSwap>(
