@@ -61,16 +61,15 @@ impl ExactAmountIn for Impl {
     where
         I: Iterator<Item = CosmosAny>,
     {
-        use std::str::FromStr;
-
-        let resp = trx_resps
+        trx_resps
             .next()
-            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
-
-        let amount = trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)?
-            .token_out_amount;
-
-        Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
+            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))
+            .and_then(|response| {
+                trx::decode_msg_response::<_, ResponseMsg>(response, ResponseMsg::TYPE_URL)
+                    .map_err(Into::into)
+            })
+            .map(|response| response.token_out_amount)
+            .and_then(|amount| amount.parse().map_err(|_| Error::InvalidAmount(amount)))
     }
 }
 
