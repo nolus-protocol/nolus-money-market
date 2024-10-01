@@ -29,11 +29,11 @@ where
     pub swap_path: SwapPath<GSwap>,
 }
 
-pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> finance::coin::CoinDTO<G>
+pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> CoinDTO<G>
 where
-    G: currency::Group,
+    G: Group,
 {
-    currency::DexSymbols::visit_any(
+    DexSymbols::visit_any(
         denom,
         ConstructDto {
             amount: amount
