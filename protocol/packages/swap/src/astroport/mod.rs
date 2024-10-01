@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use astroport::{
     asset::AssetInfo,
     router::{ExecuteMsg, SwapOperation, SwapResponseData},
