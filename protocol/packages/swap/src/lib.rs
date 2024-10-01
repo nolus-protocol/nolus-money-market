@@ -1,14 +1,15 @@
-#[cfg(feature = "osmosis")]
-pub use self::osmosis::Impl;
-
-#[cfg(all(feature = "astroport", feature = "main"))]
-pub type Impl = astroport::RouterImpl<astroport::Main>;
-#[cfg(all(feature = "astroport", feature = "test"))]
-pub type Impl = astroport::RouterImpl<astroport::Test>;
-
-#[cfg(feature = "astroport")]
+#[cfg(any(feature = "dex-astroport_main", feature = "dex-astroport_test"))]
 mod astroport;
-#[cfg(feature = "osmosis")]
+#[cfg(feature = "dex-osmosis")]
 mod osmosis;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(feature = "testing", test))]
 pub mod testing;
+
+pub type Impl = PrivateImpl;
+
+#[cfg(feature = "dex-astroport_main")]
+type PrivateImpl = astroport::Impl<astroport::NeutronMain>;
+#[cfg(feature = "dex-astroport_test")]
+type PrivateImpl = astroport::Impl<astroport::NeutronTest>;
+#[cfg(feature = "dex-osmosis")]
+type PrivateImpl = osmosis::Impl;
