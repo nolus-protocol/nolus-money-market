@@ -28,7 +28,9 @@ pub mod sell_asset;
 
 pub(crate) trait Closable {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin;
+
     fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx;
+
     fn event_type(&self) -> Type;
 }
 
