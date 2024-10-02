@@ -1,5 +1,9 @@
 [workspace]
-members = ["contracts/*/src/..", "packages/*/src/..", "tests"]
+members = [
+    "contracts/*/src/..",
+    "packages/*/src/..",
+    "tests"
+]
 
 resolver = "2"
 
@@ -30,8 +34,8 @@ versioning = { path = "packages/versioning", default-features = false }
 # General
 anyhow = "1"
 base64 = { version = "0.22", default-features = false }
-data-encoding = "2.5.0"
-gcd = "2.3.0"
+data-encoding = "2"
+gcd = "2"
 serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 
@@ -54,8 +58,8 @@ cosmos-sdk-proto = { version = "0.25", default-features = false }
 ibc-proto = { version = "0.49", default-features = false }
 
 # Other
-prost = { version = "0.13", default-features = false }
-neutron-sdk = { version = "0.11.0", default-features = false }
+# prost = { version = "0.13", default-features = false }
+neutron-sdk = { version = "0.11", default-features = false }
 
 # Testing
 serde_test = "1"
