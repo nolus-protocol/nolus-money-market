@@ -17,7 +17,6 @@ use crate::{
 
 use super::{Coin, WithCoin};
 
-mod amount_serde;
 mod transformer;
 
 /// A type designed to be used in the init, execute and query incoming messages
@@ -37,7 +36,7 @@ pub struct CoinDTO<G>
 where
     G: Group,
 {
-    #[serde(with = "amount_serde")]
+    #[serde(with = "super::amount_serde")]
     #[schemars(with = "String")]
     amount: Amount,
     #[serde(rename = "ticker")] // it is more descriptive on the wire than currency
@@ -179,89 +178,59 @@ where
 
 #[cfg(test)]
 mod test {
-    use serde::{Deserialize, Serialize};
+    use std::fmt::Debug;
+
+    use serde::{de::DeserializeOwned, Serialize};
 
     use currency::{
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
-        MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+        CurrencyDef, Group, MemberOf,
     };
-    use sdk::cosmwasm_std::{self, StdError};
+    use sdk::cosmwasm_std;
 
     use crate::coin::{Amount, Coin, CoinDTO};
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
-    pub struct MyTestCurrency(CurrencyDTO<MyTestGroup>);
-    pub const MY_TESTC_DEFINITION: Definition = Definition::new("qwerty", "ibc/1", "ibc/2", 6);
-    pub const MY_TESTC: MyTestCurrency = MyTestCurrency(CurrencyDTO::new(&MY_TESTC_DEFINITION));
-
-    impl CurrencyDef for MyTestCurrency {
-        type Group = MyTestGroup;
-
-        fn definition() -> &'static Self {
-            &MY_TESTC
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
-        }
-    }
-
-    impl PairsGroup for MyTestCurrency {
-        type CommonGroup = MyTestGroup;
-
-        fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            currency::visit_noone(visitor)
-        }
-    }
-
-    #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-    pub struct MyTestGroup {}
-
-    impl Group for MyTestGroup {
-        const DESCR: &'static str = "My Test Group";
-        type TopG = Self;
-
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<Self>,
-        {
-            Self::maybe_visit_member(matcher, visitor)
-        }
-
-        fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-        where
-            M: Matcher,
-            V: AnyVisitor<Self::TopG>,
-        {
-            assert!(matcher.r#match(&MY_TESTC_DEFINITION));
-            Ok(visitor.on::<MyTestCurrency>(MY_TESTC.dto()))
-        }
-    }
-    impl MemberOf<Self> for MyTestGroup {}
-
     #[test]
     fn longer_representation() {
-        let coin = Coin::<MyTestCurrency>::new(4215);
+        let coin = Coin::<SuperGroupTestC1>::new(4215);
         let coin_len = cosmwasm_std::to_json_vec(&coin).unwrap().len();
-        let coindto_len = cosmwasm_std::to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
+        let coindto_len = cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
             .unwrap()
             .len();
         assert!(coin_len < coindto_len);
     }
 
     #[test]
-    fn incompatible_deserialization() {
-        let coin = Coin::<MyTestCurrency>::new(85);
-        let err = cosmwasm_std::to_json_vec(&CoinDTO::<MyTestGroup>::from(coin))
-            .and_then(cosmwasm_std::from_json::<Coin<MyTestCurrency>>)
-            .expect_err("correct raw bytes");
-        assert!(matches!(err, StdError::ParseErr { .. }));
+    fn serialize_deserialize() {
+        serialize_deserialize_coin::<SuperGroupTestC1>(
+            Amount::MIN,
+            &json::<SuperGroupTestC1>(Amount::MIN),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC1>(123, &json::<SuperGroupTestC1>(123));
+        serialize_deserialize_coin::<SuperGroupTestC1>(
+            Amount::MAX,
+            &json::<SuperGroupTestC1>(Amount::MAX),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC2>(
+            Amount::MIN,
+            &json::<SuperGroupTestC2>(Amount::MIN),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC2>(7368953, &json::<SuperGroupTestC2>(7368953));
+        serialize_deserialize_coin::<SuperGroupTestC2>(
+            Amount::MAX,
+            &json::<SuperGroupTestC2>(Amount::MAX),
+        );
+    }
+
+    #[test]
+    fn compatible_deserialization() {
+        let coin = Coin::<SuperGroupTestC1>::new(85);
+        assert_eq!(
+            coin,
+            cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
+                .and_then(cosmwasm_std::from_json::<Coin<SuperGroupTestC1>>)
+                .unwrap()
+        );
     }
 
     #[test]
@@ -341,5 +310,32 @@ mod test {
         G: Group,
     {
         CoinDTO::<G>::from(Coin::<C>::new(amount))
+    }
+
+    fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)
+    where
+        C: CurrencyDef + PartialEq + Debug,
+    {
+        serialize_deserialize_impl(test_coin::<C, C::Group>(amount), exp_txt)
+    }
+
+    fn serialize_deserialize_impl<T>(obj: T, exp_txt: &str)
+    where
+        T: Serialize + DeserializeOwned + PartialEq + Debug,
+    {
+        let obj_bin = cosmwasm_std::to_json_vec(&obj).unwrap();
+        assert_eq!(obj, cosmwasm_std::from_json(&obj_bin).unwrap());
+
+        let obj_txt = String::from_utf8(obj_bin).unwrap();
+        assert_eq!(exp_txt, obj_txt);
+
+        assert_eq!(obj, cosmwasm_std::from_json(exp_txt.as_bytes()).unwrap());
+    }
+
+    fn json<C>(amount: Amount) -> String
+    where
+        C: CurrencyDef,
+    {
+        format!(r#"{{"amount":"{}","ticker":"{}"}}"#, amount, C::ticker(),)
     }
 }

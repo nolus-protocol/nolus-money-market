@@ -18,6 +18,7 @@ use crate::zero::Zero;
 
 pub use self::dto::{from_amount_ticker, CoinDTO, IntoDTO};
 
+mod amount_serde;
 mod dto;
 mod serde;
 
@@ -27,6 +28,8 @@ pub type NonZeroAmount = NonZeroU128;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C> {
+    #[serde(with = "amount_serde")]
+    #[schemars(with = "String")]
     amount: Amount,
     // TODO rename to currency
     #[serde(skip)]
