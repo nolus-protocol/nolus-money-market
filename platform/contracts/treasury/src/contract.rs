@@ -226,12 +226,13 @@ fn setup_dispatching(
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::MessageInfo;
     use finance::percent::Percent;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
             coins, from_json,
-            testing::{self, mock_dependencies_with_balance, mock_env},
+            testing::{mock_dependencies_with_balance, mock_env},
             Addr, DepsMut,
         },
         testing::customized_mock_deps_with_contracts,
@@ -266,7 +267,10 @@ mod tests {
             ])
             .unwrap(),
         };
-        let info = testing::message_info(&Addr::unchecked("creator"), &coins(1000, "unolus"));
+        let info = MessageInfo {
+            sender: Addr::unchecked("creator"),
+            funds: vec![cosmwasm_std::coin(1000, "unolus")],
+        };
 
         let res: CwResponse = instantiate(deps, mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());

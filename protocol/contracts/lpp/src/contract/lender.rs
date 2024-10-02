@@ -127,19 +127,13 @@ mod test {
     use std::ops::DerefMut as _;
 
     use access_control::ContractOwnerAccess;
-    use currencies::Lpn;
-    use finance::{
-        coin::Coin,
-        percent::{bound::BoundToHundredPercent, Percent},
-    };
-    use platform::{coin_legacy, contract::Code};
-    use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Storage};
+    use finance::percent::{bound::BoundToHundredPercent, Percent};
+    use platform::contract::Code;
+    use sdk::cosmwasm_std::{Addr, Storage};
 
-    use crate::{borrow::InterestRate, state::Config};
+    use crate::{borrow::InterestRate, contract::test::TheCurrency, state::Config};
 
     use super::{query_balance, query_ntoken_price, try_deposit, try_withdraw, LiquidityPool};
-
-    type TheCurrency = Lpn;
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
@@ -173,20 +167,17 @@ mod test {
             testing::{
                 mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
             },
-            Addr, Env, OwnedDeps,
+            Env, OwnedDeps,
         };
 
+        use crate::contract::test;
+
         use super::{
-            cwcoin, query_balance, query_ntoken_price, setup_storage, try_deposit, try_withdraw,
+            query_balance, query_ntoken_price, setup_storage, try_deposit, try_withdraw,
             TheCurrency, DEFAULT_MIN_UTILIZATION,
         };
 
-        const LENDER: &str = "lender";
         const DEPOSIT: Amount = 100;
-
-        fn lender() -> Addr {
-            Addr::unchecked(LENDER)
-        }
 
         fn test_case<F>(initial_lpp_balance: Amount, f: F)
         where
@@ -199,25 +190,21 @@ mod test {
 
             deps.querier
                 .bank
-                .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(initial_lpp_balance)]);
+                .update_balance(MOCK_CONTRACT_ADDR, vec![test::cwcoin(initial_lpp_balance)]);
 
             f(deps, env)
         }
 
         mod deposit {
-            use sdk::cosmwasm_std::testing;
+            use crate::contract::test;
 
-            use super::{cwcoin, query_balance, test_case, try_deposit, TheCurrency, DEPOSIT};
+            use super::{query_balance, test_case, try_deposit, TheCurrency, DEPOSIT};
 
             #[test]
             fn test_deposit_zero() {
                 test_case(0, |mut deps, env| {
-                    try_deposit::<TheCurrency>(
-                        deps.as_mut(),
-                        env,
-                        testing::message_info(&super::lender(), &[]),
-                    )
-                    .unwrap_err();
+                    try_deposit::<TheCurrency>(deps.as_mut(), env, test::lender_msg_no_funds())
+                        .unwrap_err();
                 })
             }
 
@@ -227,12 +214,12 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, super::lender())
+                        query_balance(deps.as_ref().storage, test::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -244,10 +231,12 @@ mod test {
 
         mod withdraw {
             use finance::coin::Amount;
-            use sdk::cosmwasm_std::{testing, Uint128};
+            use sdk::cosmwasm_std::Uint128;
+
+            use crate::contract::test;
 
             use super::{
-                cwcoin, query_balance, test_case, try_deposit, try_withdraw, TheCurrency, DEPOSIT,
+                query_balance, test_case, try_deposit, try_withdraw, TheCurrency, DEPOSIT,
             };
 
             #[test]
@@ -256,14 +245,14 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        testing::message_info(&super::lender(), &[]),
+                        test::lender_msg_no_funds(),
                         Uint128::default(),
                     )
                     .unwrap_err();
@@ -279,20 +268,20 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        testing::message_info(&super::lender(), &[]),
+                        test::lender_msg_no_funds(),
                         WITHDRAWN.into(),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, super::lender())
+                        query_balance(deps.as_ref().storage, test::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -307,20 +296,20 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        testing::message_info(&super::lender(), &[]),
+                        test::lender_msg_no_funds(),
                         DEPOSIT.into(),
                     )
                     .unwrap();
 
                     assert_eq!(
-                        query_balance(deps.as_ref().storage, super::lender())
+                        query_balance(deps.as_ref().storage, test::lender())
                             .unwrap()
                             .balance
                             .u128(),
@@ -335,14 +324,14 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
                     try_withdraw::<TheCurrency>(
                         deps.as_mut(),
                         env,
-                        testing::message_info(&super::lender(), &[]),
+                        test::lender_msg_no_funds(),
                         (DEPOSIT << 1).into(),
                     )
                     .unwrap_err();
@@ -356,9 +345,11 @@ mod test {
                 price::{self, Price},
             };
             use lpp_platform::NLpn;
-            use sdk::cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
+            use sdk::cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 
-            use super::{cwcoin, query_ntoken_price, test_case, try_deposit, TheCurrency, DEPOSIT};
+            use crate::contract::test;
+
+            use super::{query_ntoken_price, test_case, try_deposit, TheCurrency, DEPOSIT};
 
             #[test]
             fn test_nlpn_price() {
@@ -368,7 +359,7 @@ mod test {
                     try_deposit::<TheCurrency>(
                         deps.as_mut(),
                         env.clone(),
-                        testing::message_info(&super::lender(), &[cwcoin(DEPOSIT)]),
+                        test::lender_msg_with_funds(DEPOSIT),
                     )
                     .unwrap();
 
@@ -381,7 +372,7 @@ mod test {
 
                     deps.querier
                         .bank
-                        .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(DEPOSIT + INTEREST)])
+                        .update_balance(MOCK_CONTRACT_ADDR, vec![test::cwcoin(DEPOSIT + INTEREST)])
                         .unwrap();
 
                     let nlpn_price: Price<NLpn, TheCurrency> =
@@ -414,7 +405,9 @@ mod test {
             Addr,
         };
 
-        use super::{cwcoin, setup_storage, try_deposit, LiquidityPool, TheCurrency};
+        use crate::contract::test;
+
+        use super::{setup_storage, try_deposit, LiquidityPool, TheCurrency};
 
         fn test_case(
             lpp_balance_at_deposit: Amount,
@@ -431,7 +424,7 @@ mod test {
             if borrowed != 0 {
                 deps.querier
                     .bank
-                    .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(borrowed)]);
+                    .update_balance(MOCK_CONTRACT_ADDR, vec![test::cwcoin(borrowed)]);
 
                 LiquidityPool::<TheCurrency>::load(deps.as_ref().storage)
                     .unwrap()
@@ -446,10 +439,10 @@ mod test {
 
             deps.querier.bank.update_balance(
                 MOCK_CONTRACT_ADDR,
-                vec![cwcoin(lpp_balance_at_deposit + deposit)],
+                vec![test::cwcoin(lpp_balance_at_deposit + deposit)],
             );
 
-            let info = testing::message_info(&Addr::unchecked("lender1"), &[cwcoin(deposit)]);
+            let info = testing::message_info(&Addr::unchecked("lender1"), &[test::cwcoin(deposit)]);
 
             let result = try_deposit::<TheCurrency>(deps.as_mut(), env, info);
 
@@ -526,12 +519,5 @@ mod test {
         fn test_uncapped() {
             test_case(50, 0, 50, BoundToHundredPercent::ZERO, false);
         }
-    }
-
-    fn cwcoin<A>(amount: A) -> CwCoin
-    where
-        A: Into<Coin<TheCurrency>>,
-    {
-        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }
