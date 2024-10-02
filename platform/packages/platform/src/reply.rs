@@ -2,13 +2,13 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use prost::Message;
 use serde::de::DeserializeOwned;
 
 use sdk::{
     cosmos_sdk_proto::cosmwasm::wasm::v1::{
         MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
     },
+    cosmos_sdk_proto::prost::Message,
     cosmwasm_std::{from_json, Addr, Api, Reply},
 };
 

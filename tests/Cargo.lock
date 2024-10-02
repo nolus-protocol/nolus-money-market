@@ -1472,7 +1472,6 @@ version = "0.3.0"
 dependencies = [
  "currency",
  "finance",
- "prost 0.13.3",
  "sdk",
  "serde",
  "thiserror",

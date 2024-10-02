@@ -195,11 +195,8 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 
-            let canonical_addr = cosmwasm_std::instantiate2_address(
-                checksum.as_slice(),
-                &creator,
-                protocol.as_bytes(),
-            )?;
+            let canonical_addr =
+                cosmwasm_std::instantiate2_address(checksum.as_ref(), &creator, protocol.as_ref())?;
 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 

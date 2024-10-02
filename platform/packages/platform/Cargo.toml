@@ -18,7 +18,6 @@ currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["cosmos_proto", "neutron"] }
 
-prost = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 

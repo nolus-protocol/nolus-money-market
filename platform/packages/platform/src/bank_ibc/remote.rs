@@ -1,7 +1,7 @@
 use currency::{DexSymbols, Group};
 use finance::coin::CoinDTO;
-use prost::Name;
 use sdk::{
+    cosmos_sdk_proto::prost::Name,
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
     ibc_proto::{
         cosmos::base::v1beta1::Coin as CosmosSdkCoin, ibc::applications::transfer::v1::MsgTransfer,
@@ -101,8 +101,8 @@ mod test {
         CurrencyDef,
     };
     use finance::coin::{Amount, Coin};
-    use prost::Name;
     use sdk::{
+        cosmos_sdk_proto::prost::Name,
         cosmwasm_std::{Addr, Timestamp},
         ibc_proto::{
             cosmos::base::v1beta1::Coin as CosmosSdkCoin,
