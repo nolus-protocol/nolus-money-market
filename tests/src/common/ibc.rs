@@ -147,7 +147,7 @@ pub(super) fn send_error(
 }
 
 fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<'_, AppResponse> {
-    send_response(app, addr, Binary::new(Vec::new()))
+    send_response(app, addr, Binary::new(vec![]))
 }
 
 fn dex_to_bank(symbol: &SymbolSlice) -> SymbolStatic {

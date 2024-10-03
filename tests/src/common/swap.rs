@@ -65,7 +65,7 @@ where
     let requests: Vec<SwapRequest<GIn, GSwap>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
-        .map(|NeutronAny { type_url, value }: NeutronAny| {
+        .map(|NeutronAny { type_url, value }| {
             <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
                 type_url,
                 value: value.into(),
