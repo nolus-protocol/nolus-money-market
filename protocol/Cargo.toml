@@ -54,6 +54,9 @@ cosmwasm-std = { version = "2", default-features = false, features = [
     "iterator",
     "std",
 ] }
+# Defined solely to resolve CW 1.x types in the Astroport API
+# TODO Remove once the Astroport API gets migrated to CW 2.x
+cosmwasm-std-1 = { version = "1", package = "cosmwasm-std", default-features = false, features = [] }
 
 # Other
 astroport = { version = "5", default-features = false }

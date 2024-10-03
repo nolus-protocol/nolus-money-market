@@ -1,4 +1,5 @@
 use astroport::{asset::AssetInfo, router::SwapOperation};
+use cosmwasm_std_1::Decimal;
 
 use currency::{
     test::{SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1},
@@ -6,7 +7,7 @@ use currency::{
 };
 use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
-use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::Decimal};
+use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 
 use crate::testing;
 
