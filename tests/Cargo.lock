@@ -2012,7 +2012,6 @@ name = "swap"
 version = "0.1.1"
 dependencies = [
  "astroport",
- "cosmwasm-std 1.5.8",
  "currency",
  "dex",
  "finance",

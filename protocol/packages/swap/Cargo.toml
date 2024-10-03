@@ -24,7 +24,6 @@ test = []
 astroport = [
     "sdk/cosmos_proto",
     "dep:astroport",
-    "dep:cosmwasm-std-1",
     "dep:currency",
     "dep:dex",
     "dep:finance",
@@ -55,7 +54,6 @@ platform = { workspace = true, optional = true }
 sdk = { workspace = true, optional = true }
 
 astroport = { workspace = true, optional = true }
-cosmwasm-std-1 = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 

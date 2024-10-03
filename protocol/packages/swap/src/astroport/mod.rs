@@ -1,10 +1,5 @@
 use std::marker::PhantomData;
 
-use astroport::{
-    asset::AssetInfo,
-    router::{ExecuteMsg, SwapOperation, SwapResponseData},
-};
-use cosmwasm_std_1::Decimal;
 use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, SymbolSlice};
@@ -23,9 +18,12 @@ use sdk::{
         traits::Name,
         Any as CosmosAny,
     },
-    cosmwasm_std::{self, Coin as CwCoin},
+    cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
+use api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
+
+mod api;
 #[cfg(test)]
 mod test;
 #[cfg(any(test, feature = "testing"))]
