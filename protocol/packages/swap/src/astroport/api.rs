@@ -1,5 +1,4 @@
 /// TODO remove once Astroport bump their dependency to cosmwasm-std 2.x
-
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Addr, Decimal, Uint128};
