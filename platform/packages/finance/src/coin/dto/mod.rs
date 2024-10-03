@@ -180,7 +180,7 @@ where
 mod test {
     use std::fmt::Debug;
 
-    use serde::{de::DeserializeOwned, Serialize};
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
     use currency::{
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
@@ -239,7 +239,7 @@ mod test {
         type TheCurrency = SuperGroupTestC1;
         type TheGroup = <TheCurrency as CurrencyDef>::Group;
         assert_eq!(
-            CoinDTO::<TheGroup>::from(Coin::<TheCurrency>::from(amount)),
+            test_coin::<TheCurrency, TheGroup>(amount),
             super::from_amount_ticker::<TheGroup>(amount, *TheCurrency::definition().dto())
         );
     }
@@ -247,17 +247,11 @@ mod test {
     #[test]
     fn display() {
         assert_eq!(
-            format!(
-                "25 {}",
-                SuperGroupTestC1::definition().dto().definition().ticker
-            ),
+            format!("25 {}", SuperGroupTestC1::ticker()),
             test_coin::<SuperGroupTestC1, SuperGroup>(25).to_string()
         );
         assert_eq!(
-            format!(
-                "0 {}",
-                SuperGroupTestC2::definition().dto().definition().ticker
-            ),
+            format!("0 {}", SuperGroupTestC2::ticker()),
             test_coin::<SuperGroupTestC2, SuperGroup>(0).to_string()
         );
     }
@@ -272,7 +266,7 @@ mod test {
 
     #[test]
     fn deser_same_group() {
-        let coin: CoinDTO<SuperGroup> = Coin::<SuperGroupTestC1>::new(4215).into();
+        let coin = test_coin::<SuperGroupTestC1, SuperGroup>(4215);
         let coin_deser: CoinDTO<SuperGroup> = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -287,7 +281,7 @@ mod test {
 
         let amount = 3134131;
 
-        let coin: CoinDTO<DirectGroup> = Coin::<CoinCurrency>::new(amount).into();
+        let coin = test_coin::<CoinCurrency, DirectGroup>(amount);
         let coin_deser: CoinDTO<ParentGroup> = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -297,10 +291,95 @@ mod test {
 
     #[test]
     fn deser_wrong_group() {
-        let coin: CoinDTO<SuperGroup> = Coin::<SuperGroupTestC1>::new(4215).into();
+        let coin = test_coin::<SuperGroupTestC1, SuperGroup>(4215);
         let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
         assert!(cosmwasm_std::from_json::<CoinDTO<SubGroup>>(&coin_raw).is_err());
+    }
+
+    #[test]
+    fn serialize_deserialize() {
+        serialize_deserialize_coin::<SuperGroupTestC1>(
+            Amount::MIN,
+            coin_json::<SuperGroupTestC1>(0).as_ref(),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC1>(
+            123,
+            coin_json::<SuperGroupTestC1>(123).as_ref(),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC1>(
+            Amount::MAX,
+            coin_json::<SuperGroupTestC1>(340282366920938463463374607431768211455).as_ref(),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC2>(
+            Amount::MIN,
+            coin_json::<SuperGroupTestC2>(Amount::MIN).as_ref(),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC2>(
+            7368953,
+            coin_json::<SuperGroupTestC2>(7368953).as_ref(),
+        );
+        serialize_deserialize_coin::<SuperGroupTestC2>(
+            Amount::MAX,
+            coin_json::<SuperGroupTestC2>(340282366920938463463374607431768211455).as_ref(),
+        );
+    }
+
+    #[test]
+    fn serialize_deserialize_as_field() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        #[serde(bound(serialize = "", deserialize = ""))]
+        struct CoinContainer<G>
+        where
+            G: Group,
+        {
+            coin: CoinDTO<G>,
+        }
+        let coin_container = CoinContainer {
+            coin: test_coin::<SuperGroupTestC2, SuperGroup>(10),
+        };
+        serialize_deserialize_impl(
+            coin_container,
+            format!(r#"{{"coin":{}}}"#, coin_json::<SuperGroupTestC2>(10)).as_ref(),
+        );
+    }
+
+    #[test]
+    fn distinct_currencies() {
+        let amount = 432;
+        assert_ne!(
+            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC1, SuperGroup>(amount)),
+            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC2, SuperGroup>(amount))
+        );
+    }
+
+    fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)
+    where
+        C: CurrencyDef + PartialEq + Debug,
+        C::Group: MemberOf<SuperGroup>,
+    {
+        let coin = test_coin::<C, SuperGroup>(amount);
+        serialize_deserialize_impl(coin, exp_txt)
+    }
+
+    fn serialize_deserialize_impl<T>(obj: T, exp_txt: &str)
+    where
+        T: Serialize + DeserializeOwned + PartialEq + Debug,
+    {
+        let obj_bin = cosmwasm_std::to_json_vec(&obj).unwrap();
+        assert_eq!(obj, cosmwasm_std::from_json(&obj_bin).unwrap());
+
+        let obj_txt = String::from_utf8(obj_bin).unwrap();
+        assert_eq!(exp_txt, obj_txt);
+
+        assert_eq!(obj, cosmwasm_std::from_json(exp_txt.as_bytes()).unwrap());
+    }
+
+    fn coin_json<C>(amount: Amount) -> String
+    where
+        C: CurrencyDef,
+    {
+        format!(r#"{{"amount":"{}","ticker":"{}"}}"#, amount, C::ticker())
     }
 
     fn test_coin<C, G>(amount: Amount) -> CoinDTO<G>

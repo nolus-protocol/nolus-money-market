@@ -26,16 +26,8 @@ pub type LpnCoinDTO = crate::finance::LpnCoinDTO;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub kind: MigrationKind, // TODO remove it once the migration ot v0.7.3 is over
-}
+pub struct MigrateMsg {}
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum MigrationKind {
-    LEGACY,
-    REGULAR,
-}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

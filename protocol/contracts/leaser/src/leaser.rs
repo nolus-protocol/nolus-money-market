@@ -1,10 +1,10 @@
-use std::{collections::HashSet, iter};
+use std::collections::HashSet;
 
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg, MigrationKind};
+use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -27,24 +27,6 @@ use crate::{
     msg::ForceClose,
     ContractError,
 };
-
-#[cfg(all(feature = "osmosis-osmosis-usdc_axelar", feature = "net_main"))]
-const LEGACY_LEASES: [&str; 4] = [
-    "nolus1q2xsckvufnlz6yynqsm33mrcx2hkajjwyqjxnmxslhyt85mvg9csyzy97z",
-    "nolus1scvnd78uzl8jwpwtnggy8l4tk56n6fkgg3nw5z5qnhp0tk0nd7uss225rw",
-    "nolus1d0dc9zqtj9yagd8wkaw23qhw84x4agqxgu39hj7zts0xrzvj9mtqfmtcjy",
-    "nolus1v2vwau267hn7g3frgnqsshfehtn6d6fnd9j9s0wm3n4t3n4mnecqh77dfp",
-];
-
-#[cfg(all(feature = "osmosis-osmosis-usdc_noble", feature = "net_main"))]
-const LEGACY_LEASES: [&str; 1] =
-    ["nolus17zjugw5la8fwa0jyca2tqg28upmjyqjwscc2z4fu54s0cdkh724ql4j6r7"];
-
-#[cfg(not(any(
-    all(feature = "osmosis-osmosis-usdc_noble", feature = "net_main"),
-    all(feature = "osmosis-osmosis-usdc_axelar", feature = "net_main")
-)))]
-const LEGACY_LEASES: [&str; 0] = [];
 
 pub struct Leaser<'a> {
     deps: Deps<'a>,
@@ -111,13 +93,12 @@ pub(super) fn try_migrate_leases<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
 {
     Config::update_lease_code(storage, new_lease)?;
 
-    let legacy_leases = LEGACY_LEASES.into_iter().map(Addr::unchecked);
     let cusomers = Leases::iter(storage, None);
-    migrate::migrate_leases(legacy_leases, cusomers, new_lease, max_leases, migrate_msg)
+    migrate::migrate_leases(cusomers, new_lease, max_leases, migrate_msg)
         .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
@@ -131,19 +112,12 @@ pub(super) fn try_migrate_leases_cont<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
 {
     let lease_code = Config::load(storage)?.lease_code;
 
     let customers = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(
-        iter::empty(),
-        customers,
-        lease_code,
-        max_leases,
-        migrate_msg,
-    )
-    .map(|result| {
+    migrate::migrate_leases(customers, lease_code, max_leases, migrate_msg).map(|result| {
         MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
     })
 }
@@ -158,7 +132,7 @@ pub(super) fn try_close_protocol<ProtocolsRegistryLoader, MsgFactory>(
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn(MigrationKind) -> MigrateMsg,
+    MsgFactory: Fn() -> MigrateMsg,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
     match force {
@@ -225,13 +199,12 @@ mod test {
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use lease::api::{
         open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-        MigrateMsg, MigrationKind,
+        MigrateMsg,
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::{
-        leaser::LEGACY_LEASES,
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
         state::leases::Leases,
         ContractError,
@@ -295,8 +268,7 @@ mod test {
         )
         .unwrap();
         let cw_resp = response::response_only_messages(resp);
-        let update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases =
-            1 + 1 + 1 + 1 + LEGACY_LEASES.len();
+        let update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases = 1 + 1 + 1 + 1;
         assert_eq!(
             update_lpp_update_reserve_migrate_lease_delete_protocol_legacy_leases,
             cw_resp.messages.len()
@@ -352,7 +324,7 @@ mod test {
         }
     }
 
-    fn migrate_msg(kind: MigrationKind) -> MigrateMsg {
-        MigrateMsg { kind }
+    fn migrate_msg() -> MigrateMsg {
+        MigrateMsg {}
     }
 }
