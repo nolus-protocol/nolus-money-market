@@ -27,11 +27,9 @@ where
 
     let cw_resp: CwResponse = messages
         .into_iter()
-        .fold(Default::default(), |res, msg| res.add_submessage(msg));
+        .fold(Default::default(), CwResponse::add_submessage);
 
-    events
-        .into_iter()
-        .fold(cw_resp, |res, event| res.add_event(event))
+    events.into_iter().fold(cw_resp, CwResponse::add_event)
 }
 
 pub fn response_with_messages<T, M, E>(response: T, messages: M) -> Result<CwResponse, E>

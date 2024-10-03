@@ -73,7 +73,7 @@ fn new_msg(
         receiver: receiver.into(),
         timeout_height: None,
         timeout_timestamp: timeout.nanos(),
-        memo: "".into(),
+        memo: String::new(),
     }
 }
 

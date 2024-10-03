@@ -14,7 +14,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         coins,
-        testing::{self, mock_dependencies, mock_env, MockApi, MockQuerier},
+        testing::{self, MockApi, MockQuerier},
         Addr, MemoryStorage, MessageInfo, OwnedDeps,
     },
 };
@@ -102,9 +102,15 @@ pub(crate) fn dummy_feed_prices_msg(
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
-    let mut deps = mock_dependencies();
-    let info = testing::message_info(&Addr::unchecked(CREATOR), &coins(1000, Nls::ticker()));
-    let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let mut deps = testing::mock_dependencies();
+
+    let info = MessageInfo {
+        sender: Addr::unchecked(CREATOR),
+        funds: coins(1000, Nls::ticker()),
+    };
+
+    let res: CwResponse =
+        instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 
     // register single feeder address
@@ -116,7 +122,7 @@ pub(crate) fn setup_test(
         ..
     }: CwResponse = sudo(
         deps.as_mut(),
-        mock_env(),
+        testing::mock_env(),
         SudoMsg::RegisterFeeder {
             feeder_address: CREATOR.to_string(),
         },

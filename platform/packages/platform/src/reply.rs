@@ -102,9 +102,10 @@ where
         .into_result()
         .map_err(Error::ReplyResultError)?
         .msg_responses;
-    if responses.is_empty() {
-        Err(Error::EmptyReply())
+
+    if let [response] = responses.as_slice() {
+        decode_raw(&response.value)
     } else {
-        decode_raw(responses[0].value.as_slice())
+        Err(Error::EmptyReply())
     }
 }

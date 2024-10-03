@@ -133,7 +133,7 @@ pub mod testing {
 
     pub const CODE: Code = Code::unchecked(20);
 
-    pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
+    pub fn valid_contract_handler(_: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
             to_json_binary(&{
                 ContractInfoResponse::new(
