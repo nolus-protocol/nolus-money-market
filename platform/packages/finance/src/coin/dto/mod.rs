@@ -201,28 +201,6 @@ mod test {
     }
 
     #[test]
-    fn serialize_deserialize() {
-        serialize_deserialize_coin::<SuperGroupTestC1>(
-            Amount::MIN,
-            &json::<SuperGroupTestC1>(Amount::MIN),
-        );
-        serialize_deserialize_coin::<SuperGroupTestC1>(123, &json::<SuperGroupTestC1>(123));
-        serialize_deserialize_coin::<SuperGroupTestC1>(
-            Amount::MAX,
-            &json::<SuperGroupTestC1>(Amount::MAX),
-        );
-        serialize_deserialize_coin::<SuperGroupTestC2>(
-            Amount::MIN,
-            &json::<SuperGroupTestC2>(Amount::MIN),
-        );
-        serialize_deserialize_coin::<SuperGroupTestC2>(7368953, &json::<SuperGroupTestC2>(7368953));
-        serialize_deserialize_coin::<SuperGroupTestC2>(
-            Amount::MAX,
-            &json::<SuperGroupTestC2>(Amount::MAX),
-        );
-    }
-
-    #[test]
     fn compatible_deserialization() {
         let coin = Coin::<SuperGroupTestC1>::new(85);
         assert_eq!(
@@ -309,7 +287,7 @@ mod test {
         );
         serialize_deserialize_coin::<SuperGroupTestC1>(
             Amount::MAX,
-            coin_json::<SuperGroupTestC1>(340282366920938463463374607431768211455).as_ref(),
+            coin_json::<SuperGroupTestC1>(Amount::MAX).as_ref(),
         );
         serialize_deserialize_coin::<SuperGroupTestC2>(
             Amount::MIN,
@@ -321,7 +299,7 @@ mod test {
         );
         serialize_deserialize_coin::<SuperGroupTestC2>(
             Amount::MAX,
-            coin_json::<SuperGroupTestC2>(340282366920938463463374607431768211455).as_ref(),
+            coin_json::<SuperGroupTestC2>(Amount::MAX).as_ref(),
         );
     }
 
@@ -389,32 +367,5 @@ mod test {
         G: Group,
     {
         CoinDTO::<G>::from(Coin::<C>::new(amount))
-    }
-
-    fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)
-    where
-        C: CurrencyDef + PartialEq + Debug,
-    {
-        serialize_deserialize_impl(test_coin::<C, C::Group>(amount), exp_txt)
-    }
-
-    fn serialize_deserialize_impl<T>(obj: T, exp_txt: &str)
-    where
-        T: Serialize + DeserializeOwned + PartialEq + Debug,
-    {
-        let obj_bin = cosmwasm_std::to_json_vec(&obj).unwrap();
-        assert_eq!(obj, cosmwasm_std::from_json(&obj_bin).unwrap());
-
-        let obj_txt = String::from_utf8(obj_bin).unwrap();
-        assert_eq!(exp_txt, obj_txt);
-
-        assert_eq!(obj, cosmwasm_std::from_json(exp_txt.as_bytes()).unwrap());
-    }
-
-    fn json<C>(amount: Amount) -> String
-    where
-        C: CurrencyDef,
-    {
-        format!(r#"{{"amount":"{}","ticker":"{}"}}"#, amount, C::ticker(),)
     }
 }
