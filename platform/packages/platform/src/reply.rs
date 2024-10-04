@@ -5,11 +5,14 @@
 use serde::de::DeserializeOwned;
 
 use sdk::{
-    cosmos_sdk_proto::cosmwasm::wasm::v1::{
-        MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
+    cosmos_sdk_proto::{
+        cosmwasm::wasm::v1::{
+            MsgExecuteContractResponse, MsgInstantiateContract2Response,
+            MsgInstantiateContractResponse,
+        },
+        prost::Message,
     },
-    cosmos_sdk_proto::prost::Message,
-    cosmwasm_std::{from_json, Addr, Api, Reply},
+    cosmwasm_std::{from_json, Addr, Api, Reply, SubMsgResponse},
 };
 
 use crate::{error::Error, result::Result};
@@ -97,13 +100,31 @@ fn decode_first_response<M>(reply: Reply) -> Result<M>
 where
     M: Message + Default,
 {
-    let responses = reply
+    reply
         .result
         .into_result()
-        .map_err(Error::ReplyResultError)?
-        .msg_responses;
+        .map_err(Error::ReplyResultError)
+        .and_then(|ref resp| decode_from_responses(resp).or_else(|_| decode_from_data(resp)))
+}
 
-    if let [response] = responses.as_slice() {
+// TODO remove once the [PR][https://github.com/CosmWasm/cw-multi-test/issues/206] got released
+fn decode_from_data<M>(resp: &SubMsgResponse) -> Result<M>
+where
+    M: Message + Default,
+{
+    #[allow(deprecated)]
+    resp.data
+        .as_ref()
+        .ok_or(Error::EmptyReply())
+        .map_err(Into::into)
+        .and_then(|ref data| decode_raw(data))
+}
+
+fn decode_from_responses<M>(resp: &SubMsgResponse) -> Result<M>
+where
+    M: Message + Default,
+{
+    if let [response] = resp.msg_responses.as_slice() {
         decode_raw(&response.value)
     } else {
         Err(Error::EmptyReply())
