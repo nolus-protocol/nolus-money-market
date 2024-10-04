@@ -430,7 +430,7 @@ mod test {
     type ExtraCurrency = SuperGroupTestC1;
 
     const AMOUNT: Amount = 42;
-    const USER: &'static str = "user";
+    const USER: &str = "user";
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
     #[error("Test error")]

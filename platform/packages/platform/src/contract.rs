@@ -87,7 +87,7 @@ pub mod tests {
 
     use super::{validate_addr, CodeId};
 
-    const USER: &'static str = "user";
+    const USER: &str = "user";
 
     #[test]
     fn validate_invalid_addr() {
