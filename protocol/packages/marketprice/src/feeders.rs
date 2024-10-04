@@ -44,14 +44,14 @@ impl PriceFeeders {
             })
     }
 
-    pub fn register(&self, deps: DepsMut<'_>, address: Addr) -> Result<(), PriceFeedersError> {
+    pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
 
-        if db.contains(&address) {
+        if db.contains(&feeder) {
             return Err(PriceFeedersError::FeederAlreadyRegistered {});
         }
 
-        db.insert(address);
+        db.insert(feeder);
 
         self.0.save(deps.storage, &db)?;
 

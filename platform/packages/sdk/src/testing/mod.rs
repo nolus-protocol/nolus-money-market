@@ -44,23 +44,23 @@ pub fn new_inter_chain_msg_queue() -> (InterChainMsgSender, InterChainMsgReceive
 }
 
 pub fn mock_deps_with_contracts<const N: usize>(
-    contracts: [&'static str; N],
+    contracts: [Addr; N],
 ) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     customized_mock_deps_with_contracts(mock_dependencies(), contracts)
 }
 
 pub fn customized_mock_deps_with_contracts<const N: usize>(
     mut deps: OwnedDeps<MockStorage, MockApi, MockQuerier>,
-    contracts: [&'static str; N],
+    contracts: [Addr; N],
 ) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     deps.querier.update_wasm(move |query| match query {
         WasmQuery::ContractInfo { contract_addr }
-            if contracts.contains(&contract_addr.as_str()) =>
+            if contracts.contains(&Addr::unchecked(contract_addr)) =>
         {
             SystemResult::Ok(ContractResult::Ok(
                 cosmwasm_std::to_json_binary(&ContractInfoResponse::new(
                     2,
-                    Addr::unchecked("input"),
+                    user("input"),
                     None,
                     false,
                     None,
@@ -78,8 +78,8 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
         WasmQuery::CodeInfo { code_id } => SystemResult::Ok(ContractResult::Ok(
             cosmwasm_std::to_json_binary(&CodeInfoResponse::new(
                 *code_id,
-                Addr::unchecked(""),
-                Checksum::from_hex("1f4e209a").expect("deserialization succeed"),
+                user(""),
+                Checksum::generate(&[0x1f, 0x4e, 0x20, 0x9a]),
             ))
             .expect("serialization succeed"),
         )),
@@ -93,6 +93,10 @@ pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
     BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
         .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm(WasmKeeper::new())
+}
+
+pub fn user(addr: &str) -> Addr {
+    MockApi::default().addr_make(addr)
 }
 
 mod custom_msg {

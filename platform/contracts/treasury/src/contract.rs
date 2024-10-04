@@ -233,9 +233,9 @@ mod tests {
         cosmwasm_std::{
             coins, from_json,
             testing::{mock_dependencies_with_balance, mock_env},
-            Addr, DepsMut,
+            DepsMut,
         },
-        testing::customized_mock_deps_with_contracts,
+        testing,
     };
 
     use crate::{
@@ -253,8 +253,8 @@ mod tests {
     fn do_instantiate(deps: DepsMut<'_>) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            protocols_registry: Addr::unchecked(PROTOCOLS_REGISTRY_ADDR),
-            timealarms: Addr::unchecked(TIMEALARMS_ADDR),
+            protocols_registry: testing::user(PROTOCOLS_REGISTRY_ADDR),
+            timealarms: testing::user(TIMEALARMS_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: TotalValueLocked::new(0),
@@ -268,7 +268,7 @@ mod tests {
             .unwrap(),
         };
         let info = MessageInfo {
-            sender: Addr::unchecked("creator"),
+            sender: testing::user("creator"),
             funds: vec![cosmwasm_std::coin(1000, "unolus")],
         };
 
@@ -278,9 +278,13 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = customized_mock_deps_with_contracts(
+        let mut deps = testing::customized_mock_deps_with_contracts(
             mock_dependencies_with_balance(&coins(2, "token")),
-            [PROTOCOLS_REGISTRY_ADDR, TIMEALARMS_ADDR, TREASURY_ADDR],
+            [
+                testing::user(PROTOCOLS_REGISTRY_ADDR),
+                testing::user(TIMEALARMS_ADDR),
+                testing::user(TREASURY_ADDR),
+            ],
         );
         do_instantiate(deps.as_mut());
 
@@ -291,9 +295,13 @@ mod tests {
 
     #[test]
     fn configure() {
-        let mut deps = customized_mock_deps_with_contracts(
+        let mut deps = testing::customized_mock_deps_with_contracts(
             mock_dependencies_with_balance(&coins(2, "token")),
-            [PROTOCOLS_REGISTRY_ADDR, TIMEALARMS_ADDR, TREASURY_ADDR],
+            [
+                testing::user(PROTOCOLS_REGISTRY_ADDR),
+                testing::user(TIMEALARMS_ADDR),
+                testing::user(TREASURY_ADDR),
+            ],
         );
 
         do_instantiate(deps.as_mut());

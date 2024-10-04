@@ -75,7 +75,10 @@ fn query_info(
 
 #[cfg(test)]
 pub mod tests {
-    use sdk::cosmwasm_std::{self, testing::MockQuerier, Addr, QuerierWrapper};
+    use sdk::{
+        cosmwasm_std::{self, testing::MockQuerier, QuerierWrapper},
+        testing as sdk_testing,
+    };
 
     use crate::contract::{
         testing::{self, CODE},
@@ -84,12 +87,13 @@ pub mod tests {
 
     use super::{validate_addr, CodeId};
 
+    const USER: &'static str = "user";
+
     #[test]
     fn validate_invalid_addr() {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
-        let address = Addr::unchecked("some address");
-        assert!(validate_addr(querier, &address).is_err());
+        assert!(validate_addr(querier, &sdk_testing::user(USER)).is_err());
     }
 
     #[test]
@@ -98,8 +102,7 @@ pub mod tests {
         mock_querier.update_wasm(testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let address = Addr::unchecked("some address");
-        assert!(validate_addr(querier, &address).is_ok());
+        assert!(validate_addr(querier, &sdk_testing::user(USER)).is_ok());
     }
 
     #[test]
@@ -108,8 +111,7 @@ pub mod tests {
         mock_querier.update_wasm(testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let address = Addr::unchecked("some address");
-        assert!(super::validate_code_id(querier, &address, CODE).is_ok());
+        assert!(super::validate_code_id(querier, &sdk_testing::user(USER), CODE).is_ok());
     }
 
     #[test]
@@ -124,9 +126,12 @@ pub mod tests {
 
 #[cfg(any(feature = "testing", test))]
 pub mod testing {
-    use sdk::cosmwasm_std::{
-        to_json_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
-        WasmQuery,
+    use sdk::{
+        cosmwasm_std::{
+            to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
+            WasmQuery,
+        },
+        testing,
     };
 
     use super::Code;
@@ -135,15 +140,13 @@ pub mod testing {
 
     pub fn valid_contract_handler(_: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
-            to_json_binary(&{
-                ContractInfoResponse::new(
-                    CODE.into(),
-                    Addr::unchecked("creator"),
-                    None,
-                    false,
-                    None,
-                );
-            })
+            to_json_binary(&ContractInfoResponse::new(
+                CODE.into(),
+                testing::user("user"),
+                None,
+                false,
+                None,
+            ))
             .expect("serialization succeedeed"),
         ))
     }

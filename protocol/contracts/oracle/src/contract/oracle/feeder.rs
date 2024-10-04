@@ -23,13 +23,11 @@ impl Feeders {
         Self::FEEDERS.is_registered(storage, address)
     }
 
-    pub(crate) fn try_register(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
-        // check if address is valid
-        let f_address = deps
-            .api
-            .addr_validate(&address)
-            .map_err(ContractError::RegisterFeederAddressValidation)?;
-        Self::FEEDERS.register(deps, f_address).map_err(Into::into)
+    pub(crate) fn try_register(deps: DepsMut<'_>, feeder_txt: String) -> ContractResult<()> {
+        deps.api
+            .addr_validate(&feeder_txt)
+            .map_err(ContractError::RegisterFeederAddressValidation)
+            .and_then(|feeder| Self::FEEDERS.register(deps, feeder).map_err(Into::into))
     }
 
     pub(crate) fn try_remove(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
@@ -57,6 +55,7 @@ mod tests {
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{from_json, testing::mock_env, Addr, DepsMut},
+        testing,
     };
 
     use crate::{
@@ -70,64 +69,72 @@ mod tests {
     fn register_feeder() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
+        let feeder0 = testing::user("addr0000");
+        let feeder1 = testing::user("addr0001");
+
         // register new feeder address
-        register(deps.as_mut(), "addr0000").unwrap();
+        register(deps.as_mut(), &feeder0).unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(2, resp.len());
-        assert!(resp.contains(&Addr::unchecked("addr0000")));
+        assert!(resp.contains(&feeder0));
 
         // should not add the same address twice
-        assert!(register(deps.as_mut(), "addr0000").is_err());
+        assert!(register(deps.as_mut(), &feeder0).is_err());
 
         // register new feeder address
-        register(deps.as_mut(), "addr0001").unwrap();
+        register(deps.as_mut(), &feeder1).unwrap();
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(3, resp.len());
-        assert!(resp.contains(&Addr::unchecked("addr0000")));
-        assert!(resp.contains(&Addr::unchecked("addr0001")));
+        assert!(resp.contains(&feeder0));
+        assert!(resp.contains(&feeder1));
     }
 
     #[test]
     fn remove_feeder() {
         let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        register(deps.as_mut(), "addr0000").unwrap();
-        register(deps.as_mut(), "addr0001").unwrap();
-        register(deps.as_mut(), "addr0002").unwrap();
-        register(deps.as_mut(), "addr0003").unwrap();
+        let feeder0 = testing::user("addr0000");
+        let feeder1 = testing::user("addr0001");
+        let feeder2 = testing::user("addr0002");
+        let feeder3 = testing::user("addr0003");
+
+        register(deps.as_mut(), &feeder0).unwrap();
+        register(deps.as_mut(), &feeder1).unwrap();
+        register(deps.as_mut(), &feeder2).unwrap();
+        register(deps.as_mut(), &feeder3).unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(5, resp.len());
-        assert!(resp.contains(&Addr::unchecked("addr0000")));
-        assert!(resp.contains(&Addr::unchecked("addr0001")));
+        assert!(resp.contains(&feeder0));
+        assert!(resp.contains(&feeder1));
 
-        remove(deps.as_mut(), "addr0000");
-        remove(deps.as_mut(), "addr0001");
+        remove(deps.as_mut(), &feeder0);
+        remove(deps.as_mut(), &feeder1);
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_json(res).unwrap();
         assert_eq!(3, resp.len());
-        assert!(!resp.contains(&Addr::unchecked("addr0000")));
-        assert!(!resp.contains(&Addr::unchecked("addr0001")));
+        assert!(!resp.contains(&feeder0));
+        assert!(!resp.contains(&feeder1));
     }
 
-    fn register(deps: DepsMut<'_>, address: &str) -> ContractResult<CwResponse> {
+    fn register(deps: DepsMut<'_>, feeder: &Addr) -> ContractResult<CwResponse> {
         sudo(
             deps,
             mock_env(),
             SudoMsg::RegisterFeeder {
-                feeder_address: address.to_string(),
+                feeder_address: feeder.to_string(),
             },
         )
     }
 
-    fn remove(deps: DepsMut<'_>, address: &str) {
+    fn remove(deps: DepsMut<'_>, feeder: &Addr) {
         let CwResponse {
             messages,
             attributes,
@@ -138,7 +145,7 @@ mod tests {
             deps,
             mock_env(),
             SudoMsg::RemoveFeeder {
-                feeder_address: address.to_string(),
+                feeder_address: feeder.to_string(),
             },
         )
         .unwrap();

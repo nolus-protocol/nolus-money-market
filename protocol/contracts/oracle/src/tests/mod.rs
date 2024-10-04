@@ -15,8 +15,9 @@ use sdk::{
     cosmwasm_std::{
         coins,
         testing::{self, MockApi, MockQuerier},
-        Addr, MemoryStorage, MessageInfo, OwnedDeps,
+        MemoryStorage, MessageInfo, OwnedDeps,
     },
+    testing as sdk_testing,
 };
 use tree::HumanReadableTree;
 
@@ -105,7 +106,7 @@ pub(crate) fn setup_test(
     let mut deps = testing::mock_dependencies();
 
     let info = MessageInfo {
-        sender: Addr::unchecked(CREATOR),
+        sender: sdk_testing::user(CREATOR),
         funds: coins(1000, Nls::ticker()),
     };
 
@@ -124,7 +125,7 @@ pub(crate) fn setup_test(
         deps.as_mut(),
         testing::mock_env(),
         SudoMsg::RegisterFeeder {
-            feeder_address: CREATOR.to_string(),
+            feeder_address: sdk_testing::user(CREATOR).to_string(),
         },
     )
     .unwrap();

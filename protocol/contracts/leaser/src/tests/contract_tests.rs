@@ -1,3 +1,7 @@
+use cosmwasm_std::{
+    testing::{MockApi, MockQuerier, MockStorage},
+    OwnedDeps,
+};
 use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseC1, LeaseGroup, Lpn};
@@ -20,7 +24,7 @@ use sdk::{
         SubMsg, WasmMsg,
     },
     schemars::{self, JsonSchema},
-    testing::mock_deps_with_contracts,
+    testing as sdk_testing,
 };
 
 use crate::{
@@ -50,11 +54,11 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
     crate::msg::InstantiateMsg {
         lease_code: CodeId::from(lease_code).into(),
         lpp,
-        profit: Addr::unchecked(PROFIT_ADDR),
-        reserve: Addr::unchecked(RESERVE_ADDR),
-        time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
-        market_price_oracle: Addr::unchecked(ORACLE_ADDR),
-        protocols_registry: Addr::unchecked(PROTOCOLS_REGISTRY_ADDR),
+        profit: sdk_testing::user(PROFIT_ADDR),
+        reserve: sdk_testing::user(RESERVE_ADDR),
+        time_alarms: sdk_testing::user(TIMEALARMS_ADDR),
+        market_price_oracle: sdk_testing::user(ORACLE_ADDR),
+        protocols_registry: sdk_testing::user(PROTOCOLS_REGISTRY_ADDR),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent::from_percent(65),
@@ -76,20 +80,20 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
 
 fn owner() -> MessageInfo {
     MessageInfo {
-        sender: Addr::unchecked(CREATOR),
+        sender: sdk_testing::user(CREATOR),
         funds: vec![],
     }
 }
 
 fn customer() -> MessageInfo {
     MessageInfo {
-        sender: Addr::unchecked("addr0000"),
+        sender: sdk_testing::user("addr0000"),
         funds: coins(2, TheCurrency::dex()),
     }
 }
 
 fn setup_test_case(deps: DepsMut<'_>) {
-    let lpp_addr = Addr::unchecked(LPP_ADDR);
+    let lpp_addr = sdk_testing::user(LPP_ADDR);
     let msg = leaser_instantiate_msg(Code::unchecked(1), lpp_addr);
 
     let resp = instantiate(deps, testing::mock_env(), owner(), msg).unwrap();
@@ -114,9 +118,9 @@ fn dex_params() -> ConnectionParams {
 
 #[test]
 fn proper_initialization() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+    let mut deps = deps();
 
-    let lpp_addr = Addr::unchecked(LPP_ADDR);
+    let lpp_addr = sdk_testing::user(LPP_ADDR);
     let lease_code = Code::unchecked(1);
     let msg = leaser_instantiate_msg(lease_code, lpp_addr.clone());
 
@@ -133,7 +137,7 @@ fn proper_initialization() {
 
 #[test]
 fn test_update_config() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+    let mut deps = deps();
 
     let expected_liability = Liability::new(
         Percent::from_percent(55),
@@ -169,7 +173,7 @@ fn test_update_config() {
 #[test]
 #[should_panic(expected = "Healthy % should be < first liquidation %")]
 fn test_update_config_invalid_liability() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+    let mut deps = deps();
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -208,7 +212,7 @@ fn test_update_config_invalid_liability() {
 }
 
 fn open_lease_with(max_ltd: Option<Percent>) {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+    let mut deps = deps();
 
     setup_test_case(deps.as_mut());
 
@@ -249,6 +253,15 @@ fn test_open_lease() {
 fn test_open_lease_with_max_ltd() {
     open_lease_with(None);
     open_lease_with(Some(Percent::from_percent(5)));
+}
+
+fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    sdk_testing::mock_deps_with_contracts([
+        sdk_testing::user(LPP_ADDR),
+        sdk_testing::user(TIMEALARMS_ADDR),
+        sdk_testing::user(PROFIT_ADDR),
+        sdk_testing::user(ORACLE_ADDR),
+    ])
 }
 
 fn lpn_coin(amount: Amount) -> LpnCoinDTO {
