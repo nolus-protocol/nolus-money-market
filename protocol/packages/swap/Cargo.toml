@@ -30,6 +30,10 @@ dex-astroport_main = [
 dex-osmosis = [
     "dep:osmosis-std",
 ]
+dex-test_impl = [
+    "dep:astroport",
+    "sdk/cosmos_proto",
+]
 
 # Optional features
 testing = [
