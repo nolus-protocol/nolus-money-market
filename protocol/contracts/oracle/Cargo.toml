@@ -80,6 +80,3 @@ platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 marketprice = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["schema", "testing"] }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, features = ["testing"] }

@@ -64,6 +64,3 @@ currency = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 reserve = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, features = ["testing"] }

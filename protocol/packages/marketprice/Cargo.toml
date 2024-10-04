@@ -25,6 +25,3 @@ postcard = { workspace = true, features = ["alloc"] }
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, features = ["testing"] }

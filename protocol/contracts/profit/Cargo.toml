@@ -82,6 +82,3 @@ oracle-platform = { workspace = true, features = ["testing"] }
 timealarms = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 swap = { workspace = true, features = ["testing"] }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { workspace = true, features = ["testing"] }
