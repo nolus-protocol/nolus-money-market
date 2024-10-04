@@ -102,7 +102,7 @@ impl Router for Impl {
         "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
 }
 
-#[cfg(feature = "dex-astroport_main")]
+#[cfg(any(feature = "dex-astroport_main", feature = "dex-test_impl"))]
 impl Router for Impl {
     // Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
     const ADDRESS: &'static str =
