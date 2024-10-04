@@ -1240,7 +1240,6 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
- "serde_json",
  "thiserror",
  "versioning",
 ]
