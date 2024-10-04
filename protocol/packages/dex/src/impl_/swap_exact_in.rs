@@ -119,12 +119,15 @@ where
             self.spec.out_currency(),
             PhantomData::<SwapClient>,
         );
+
         let mut filtered_swapper =
             CurrencyFilter::<_, _, _>::new(&mut swapper, self.spec.out_currency());
-        let _res = self.spec.on_coins(&mut filtered_swapper)?;
+
+        #[cfg_attr(not(debug_assertions), expect(unused_variables))]
+        let res = self.spec.on_coins(&mut filtered_swapper)?;
 
         #[cfg(debug_assertions)]
-        self.debug_check(&filtered_swapper, _res);
+        self.debug_check(&filtered_swapper, res);
 
         Ok(swapper.0.into())
     }
@@ -136,6 +139,7 @@ where
             PhantomData<SwapIn>,
             PhantomData<SwapClient>,
         );
+
         impl<I, SwapIn, SwapClient> CoinVisitor for ExactInResponse<I, SwapIn, SwapClient>
         where
             SwapIn: Group,
@@ -152,8 +156,10 @@ where
             where
                 G: Group + MemberOf<Self::GIn>,
             {
-                self.1 += SwapClient::parse_response(&mut self.0)?;
-                Ok(IterNext::Continue)
+                SwapClient::parse_response(&mut self.0)
+                    .inspect(|&amount| self.1 += amount)
+                    .map(|_| IterNext::Continue)
+                    .map_err(Into::into)
             }
         }
 
@@ -165,10 +171,12 @@ where
         );
 
         let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
-        let _res = self.spec.on_coins(&mut filtered_resp)?;
+
+        #[cfg_attr(not(debug_assertions), expect(unused_variables))]
+        let res = self.spec.on_coins(&mut filtered_resp)?;
 
         #[cfg(debug_assertions)]
-        self.debug_check(&filtered_resp, _res);
+        self.debug_check(&filtered_resp, res);
 
         Ok(coin::from_amount_ticker(
             filtered_resp.filtered() + resp.1,
