@@ -25,3 +25,4 @@ postcard = { workspace = true, features = ["alloc"] }
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
+sdk = { workspace = true, features = ["testing"] }
