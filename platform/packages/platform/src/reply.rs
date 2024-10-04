@@ -117,7 +117,7 @@ where
         .as_ref()
         .ok_or(Error::EmptyReply())
         .map_err(Into::into)
-        .and_then(|ref data| decode_raw(data))
+        .and_then(|data| decode_raw(data))
 }
 
 fn decode_from_responses<M>(resp: &SubMsgResponse) -> Result<M>
