@@ -1,4 +1,8 @@
-#[cfg(any(feature = "dex-astroport_main", feature = "dex-astroport_test"))]
+#[cfg(any(
+    feature = "dex-astroport_main",
+    feature = "dex-astroport_test",
+    feature = "dex-test_impl",
+))]
 mod astroport;
 #[cfg(feature = "dex-osmosis")]
 mod osmosis;
@@ -10,6 +14,8 @@ pub type Impl = PrivateImpl;
 #[cfg(feature = "dex-astroport_main")]
 type PrivateImpl = astroport::Impl<astroport::NeutronMain>;
 #[cfg(feature = "dex-astroport_test")]
+type PrivateImpl = astroport::Impl<astroport::NeutronTest>;
+#[cfg(feature = "dex-test_impl")]
 type PrivateImpl = astroport::Impl<astroport::NeutronTest>;
 #[cfg(feature = "dex-osmosis")]
 type PrivateImpl = osmosis::Impl;
