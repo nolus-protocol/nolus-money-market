@@ -14,6 +14,7 @@ use sdk::{
         bindings::types::ProtobufAny,
         sudo::msg::{RequestPacket, SudoMsg},
     },
+    testing,
 };
 
 use crate::common::ADMIN;
@@ -85,13 +86,13 @@ fn do_transfer_no_response(
 
     app.send_tokens(
         sender.clone(),
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         slice::from_ref(cw_coin),
     )
     .unwrap();
 
     app.send_tokens(
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         recipient.clone(),
         &[CwCoin::new(cw_coin.amount.u128(), new_symbol)],
     )

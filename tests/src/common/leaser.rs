@@ -13,7 +13,7 @@ use leaser::{
     query, reply, sudo,
 };
 use platform::contract::{Code, CodeId};
-use sdk::cosmwasm_std::Addr;
+use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
     test_case::{app::App, TestCase},
@@ -61,7 +61,7 @@ impl Instantiator {
     }
 
     pub fn expected_addr() -> Addr {
-        Addr::unchecked("contract5")
+        testing::user("contract5")
     }
 
     #[track_caller]
@@ -101,7 +101,7 @@ impl Instantiator {
             },
         };
 
-        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
+        app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "leaser", None)
             .unwrap()
             .unwrap_response()
     }

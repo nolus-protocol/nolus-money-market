@@ -4,8 +4,8 @@ use cosmwasm_std::{
     IbcQuery, OwnedDeps, SystemError, SystemResult, WasmQuery,
 };
 use cw_multi_test::{
-    BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
-    StakeKeeper, StargateFailing, WasmKeeper,
+    AddressGenerator, BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper,
+    FailingModule, StakeKeeper, StargateFailing, WasmKeeper,
 };
 pub use cw_multi_test::{ContractWrapper as CwContractWrapper, Executor as CwExecutor};
 
@@ -92,11 +92,28 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
 pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
     BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
         .with_custom(CustomMsgModule::new(message_sender))
-        .with_wasm(WasmKeeper::new())
+        .with_wasm(WasmKeeper::new().with_address_generator(TestAddressGenerator))
 }
 
 pub fn user(addr: &str) -> Addr {
     MockApi::default().addr_make(addr)
+}
+
+pub fn contract(code_id: u64, instance_id: u64) -> Addr {
+    user(&format!("contract_{}_{}", code_id, instance_id))
+}
+
+struct TestAddressGenerator;
+impl AddressGenerator for TestAddressGenerator {
+    fn contract_address(
+        &self,
+        _api: &dyn cosmwasm_std::Api,
+        _storage: &mut dyn cosmwasm_std::Storage,
+        code_id: u64,
+        instance_id: u64,
+    ) -> anyhow::Result<Addr> {
+        Ok(contract(code_id, instance_id))
+    }
 }
 
 mod custom_msg {

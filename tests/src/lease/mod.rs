@@ -9,7 +9,10 @@ use finance::{
 };
 use lease::api::query::{StateQuery, StateResponse};
 use leaser::msg::QuoteResponse;
-use sdk::cosmwasm_std::{coin, Addr, Timestamp};
+use sdk::{
+    cosmwasm_std::{coin, Addr, Timestamp},
+    testing,
+};
 
 use crate::common::{
     self, cwcoin, cwcoin_dex,
@@ -64,10 +67,10 @@ pub(super) fn feed_price<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
     >,
 ) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
-    common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), lease_price);
+    common::oracle::feed_price_pair(test_case, testing::user(ADMIN), lease_price);
 
     let payment_price = price_lpn_of::<PaymentCurrency>();
-    common::oracle::feed_price_pair(test_case, Addr::unchecked(ADMIN), payment_price);
+    common::oracle::feed_price_pair(test_case, testing::user(ADMIN), payment_price);
 }
 
 pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase
@@ -105,11 +108,11 @@ where
     .into_generic();
 
     test_case.send_funds_from_admin(
-        Addr::unchecked(USER),
+        testing::user(USER),
         &[cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
     );
 
-    common::oracle::add_feeder(&mut test_case, ADMIN);
+    common::oracle::add_feeder(&mut test_case, testing::user(ADMIN));
 
     feed_price(&mut test_case);
 
@@ -187,7 +190,7 @@ where
     let mut response = test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: currency::dto::<LeaseCurrency, _>(),
@@ -203,7 +206,7 @@ where
     leaser_mod::expect_a_lease(
         &test_case.app,
         test_case.address_book.leaser().clone(),
-        Addr::unchecked(USER),
+        testing::user(USER),
     )
 }
 

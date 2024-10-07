@@ -10,6 +10,7 @@ use finance::{
 };
 use lpp::{
     borrow::InterestRate,
+    error::ContractError,
     msg::{
         BalanceResponse, LppBalanceResponse, PriceResponse, QueryLoanResponse, QueryQuoteResponse,
         RewardsResponse, SudoMsg,
@@ -20,6 +21,7 @@ use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Event, Timestamp},
     cw_multi_test::AppResponse,
+    testing,
 };
 
 use crate::common::{
@@ -101,7 +103,7 @@ fn config_update_parameters() {
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract0"),]
+        &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.lpp()),]
     );
 
     let response: AppResponse = test_case
@@ -116,7 +118,7 @@ fn config_update_parameters() {
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract0"),]
+        &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.lpp()),]
     );
 
     let quote: Config = test_case
@@ -138,7 +140,6 @@ fn config_update_parameters() {
 }
 
 #[test]
-#[should_panic(expected = "Expecting code id 1 for the contract contract0")]
 fn open_loan_unauthorized_contract_id() {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
@@ -155,7 +156,7 @@ fn open_loan_unauthorized_contract_id() {
         .init_profit(24)
         .into_generic();
 
-    () = test_case
+    let err = test_case
         .app
         .execute(
             test_case.address_book.lpp().clone(),
@@ -165,9 +166,13 @@ fn open_loan_unauthorized_contract_id() {
             },
             &[lpn_cwcoin(200)],
         )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+        .unwrap_err();
+    assert!(matches!(
+        err.downcast_ref::<ContractError>(),
+        Some(&ContractError::Platform(
+            platform::error::Error::UnexpectedCode(_, _)
+        ))
+    ))
 }
 
 #[test]
@@ -221,11 +226,11 @@ fn deposit_and_withdraw() {
     let withdraw_amount_nlpn = 1000u128;
     let rest_nlpn = test_deposit / pushed_price - withdraw_amount_nlpn;
 
-    let admin = Addr::unchecked(ADMIN);
+    let admin = testing::user(ADMIN);
 
-    let lender1 = Addr::unchecked("lender1");
-    let lender2 = Addr::unchecked("lender2");
-    let lender3 = Addr::unchecked("lender3");
+    let lender1 = testing::user("lender1");
+    let lender2 = testing::user("lender2");
+    let lender3 = testing::user("lender3");
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
         .init_lpp_with_funds(
@@ -463,9 +468,9 @@ fn deposit_and_withdraw() {
 
 #[test]
 fn loan_open_wrong_id() {
-    let _admin = Addr::unchecked(ADMIN);
-    let lender = Addr::unchecked("lender");
-    let hacker = Addr::unchecked("Mallory");
+    let _admin = testing::user(ADMIN);
+    let lender = testing::user("lender");
+    let hacker = testing::user("Mallory");
 
     let app_balance = 10_000_000_000u128;
     let hacker_balance = 10_000_000;
@@ -517,9 +522,9 @@ fn loan_open_and_repay() {
 
     const YEAR: u64 = Duration::YEAR.nanos();
 
-    let admin = Addr::unchecked(ADMIN);
-    let lender = Addr::unchecked("lender");
-    let hacker = Addr::unchecked("Mallory");
+    let admin = testing::user(ADMIN);
+    let lender = testing::user("lender");
+    let hacker = testing::user("Mallory");
 
     let app_balance = 10_000_000_000u128;
     let hacker_balance = 10_000_000;
@@ -884,9 +889,9 @@ fn compare_lpp_states() {
 
     const YEAR: u64 = Duration::YEAR.nanos();
 
-    let admin = Addr::unchecked(ADMIN);
-    let lender = Addr::unchecked("lender");
-    let hacker = Addr::unchecked("Mallory");
+    let admin = testing::user(ADMIN);
+    let lender = testing::user("lender");
+    let hacker = testing::user("Mallory");
 
     let app_balance = 10_000_000_000u128;
     let hacker_balance = 10_000_000;
@@ -1253,14 +1258,14 @@ fn test_rewards() {
     let lender_reward2 =
         tot_rewards2 * (deposit2 / pushed_price) / (deposit1 + deposit2 / pushed_price);
 
-    let _admin = Addr::unchecked(ADMIN);
+    let _admin = testing::user(ADMIN);
 
-    let lender1 = Addr::unchecked("lender1");
-    let lender2 = Addr::unchecked("lender2");
-    let recipient = Addr::unchecked("recipient");
+    let lender1 = testing::user("lender1");
+    let lender2 = testing::user("lender2");
+    let recipient = testing::user("recipient");
     // simplified
     // TODO: any checks for the sender of rewards?
-    let treasury = Addr::unchecked("treasury");
+    let treasury = testing::user("treasury");
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
@@ -1385,7 +1390,7 @@ fn test_rewards() {
             lender1.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::ClaimRewards {
-                other_recipient: Some(Addr::unchecked("-")),
+                other_recipient: Some(Addr::unchecked("invalid address")),
             },
             &[],
         )

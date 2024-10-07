@@ -278,7 +278,7 @@ mod test {
             Lpn::ticker()
         );
 
-        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
+        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(full_json.into_bytes()), msg);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod test {
             || format!(r#"{{{}}}"#, below.as_ref()),
             |above| format!(r#"{{{}, {}}}"#, below.as_ref(), above.as_ref()),
         );
-        from_json(dbg!(full_json).into_bytes())
+        from_json(full_json.into_bytes())
     }
 
     enum AlarmPrice {

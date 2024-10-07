@@ -16,6 +16,7 @@ use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::sudo::msg::SudoMsg,
+    testing,
 };
 use swap::testing::SwapRequest;
 
@@ -63,7 +64,7 @@ impl Instantiator {
         let mut response: ResponseWithInterChainMsgs<'_, Addr> = app
             .instantiate(
                 code,
-                Addr::unchecked(ADMIN),
+                testing::user(ADMIN),
                 &msg,
                 &[to_cosmwasm(lease_config.downpayment)],
                 "lease",
@@ -163,7 +164,7 @@ pub(crate) struct InstantiatorConfig {
 impl Default for InstantiatorConfig {
     fn default() -> Self {
         Self {
-            customer: Addr::unchecked(USER),
+            customer: testing::user(USER),
             liability_init_percent: Percent::from_percent(65),
             liability_healthy_percent: Percent::from_percent(70),
             liability_first_liq_warn: Percent::from_percent(73),

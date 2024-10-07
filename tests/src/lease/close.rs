@@ -2,7 +2,7 @@ use currencies::{LeaseGroup, PaymentGroup};
 use finance::price;
 use lease::api::{query::StateResponse, ExecuteMsg};
 use platform::coin_legacy::to_cosmwasm_on_dex;
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::common::{
     ibc, leaser as leaser_mod,
@@ -29,7 +29,7 @@ fn state_closed() {
     );
     repay::repay(&mut test_case, lease_addr.clone(), borrowed);
 
-    let customer_addr: Addr = Addr::unchecked(USER);
+    let customer_addr: Addr = testing::user(USER);
     let user_balance: LeaseCoin =
         platform::bank::balance::<_, LeaseGroup>(&customer_addr, test_case.app.query()).unwrap();
 
@@ -108,7 +108,7 @@ fn send_close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle,
     test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             contract_addr,
             &ExecuteMsg::Close {},
             &[],

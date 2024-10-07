@@ -15,6 +15,7 @@ use profit::{
 use sdk::{
     cosmwasm_std::{from_json, Addr, Event},
     cw_multi_test::AppResponse,
+    testing,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
@@ -78,7 +79,7 @@ fn update_config() {
     () = test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             test_case.address_book.profit().clone(),
             &ExecuteMsg::Config {
                 cadence_hours: UPDATED_CACDENCE_HOURS,
@@ -111,7 +112,7 @@ fn update_config_unauthorized() {
     assert!(test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             test_case.address_book.profit().clone(),
             &ExecuteMsg::Config {
                 cadence_hours: UPDATED_CACDENCE_HOURS
@@ -126,7 +127,7 @@ fn update_config_unauthorized() {
 
 #[test]
 fn on_alarm_from_unknown() {
-    let user_addr: Addr = Addr::unchecked(USER);
+    let user_addr: Addr = testing::user(USER);
 
     let mut test_case = test_case::<Lpn>();
 
@@ -161,7 +162,7 @@ fn on_alarm_from_unknown() {
 
 #[test]
 fn on_alarm_zero_balance() {
-    let time_oracle_addr = Addr::unchecked("time");
+    let time_oracle_addr = testing::user("time");
 
     let mut test_case = test_case::<Lpn>();
 
@@ -551,7 +552,7 @@ fn integration_with_time_alarms() {
     let resp = test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 10 },
             &[],

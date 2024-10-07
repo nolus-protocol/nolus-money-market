@@ -17,6 +17,7 @@ use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     cw_multi_test::AppResponse,
+    testing,
 };
 
 use crate::common::{
@@ -383,7 +384,7 @@ where
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             lease_addr.clone(),
             &ExecuteMsg::Repay {},
             slice::from_ref(&payment_cw),

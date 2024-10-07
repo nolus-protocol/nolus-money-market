@@ -1,5 +1,5 @@
 use finance::percent::Percent;
-use sdk::cosmwasm_std::Addr;
+use sdk::{cosmwasm_std::Addr, testing};
 use treasury::{
     msg::InstantiateMsg,
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
@@ -40,15 +40,8 @@ impl Instantiator {
             .unwrap(),
         };
 
-        app.instantiate(
-            code_id,
-            Addr::unchecked(ADMIN),
-            &msg,
-            &[],
-            "dispatcher",
-            None,
-        )
-        .unwrap()
-        .unwrap_response()
+        app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "dispatcher", None)
+            .unwrap()
+            .unwrap_response()
     }
 }

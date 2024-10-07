@@ -8,6 +8,7 @@ use sdk::{
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
+    testing,
 };
 use swap::{
     testing::{ExactAmountInSkel, SwapRequest},
@@ -145,7 +146,7 @@ where
 
     app.send_tokens(
         ica_addr.clone(),
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         &[CwCoin::new(amount_in, dex_denom_in)],
     )
     .unwrap();
@@ -162,7 +163,7 @@ where
     );
 
     app.send_tokens(
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         ica_addr,
         &[CwCoin::new(amount_out, dex_denom_out)],
     )

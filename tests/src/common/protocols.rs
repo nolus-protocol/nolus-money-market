@@ -1,3 +1,5 @@
+use std::u64;
+
 use admin_contract::{
     msg::{
         Dex, Network, ProtocolContractAddresses, ProtocolQueryResponse, ProtocolsQueryResponse,
@@ -8,6 +10,7 @@ use admin_contract::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_json_binary, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo},
+    testing,
 };
 
 use super::{dummy_query, test_case::app::App, CwContractWrapper, MockQueryMsg, ADMIN};
@@ -42,7 +45,7 @@ impl Instantiator {
 
         app.instantiate(
             code_id,
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             &(),
             &[],
             "protocols_register",
@@ -95,11 +98,11 @@ fn protocols_repo_query(
                 network: NETWORK,
                 dex: DEX,
                 contracts: ProtocolContractAddresses {
-                    leaser: addr("DEADCODE"),
-                    lpp: addr("contract0"),
-                    oracle: addr("contract2"),
-                    profit: addr("DEADCODE"),
-                    reserve: addr("DEADCODE"),
+                    leaser: testing::contract(u64::MAX, u64::MAX),
+                    lpp: testing::contract(2, 0),
+                    oracle: testing::contract(4, 2),
+                    profit: testing::contract(u64::MAX, u64::MAX),
+                    reserve: testing::contract(u64::MAX, u64::MAX),
                 },
             })
         }
@@ -121,8 +124,4 @@ fn execute<Req>(
 fn protocol_name(index: u8) -> String {
     const PROTOCOL_NAME: &str = "my_nice_protocol";
     format!("{name}_{index}", name = PROTOCOL_NAME)
-}
-
-fn addr(raw_addr: &str) -> Addr {
-    Addr::unchecked(raw_addr)
 }

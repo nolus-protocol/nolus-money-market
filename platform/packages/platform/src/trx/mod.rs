@@ -82,8 +82,8 @@ mod test {
         // https://testnet.mintscan.io/osmosis-testnet/txs/544AF6D53D1E2C3414A56DA1B2FFD84C7CB35ECF0E6EAD414701D87F8E1DF59C
         const RESP: &str = "EkgKOS9vc21vc2lzLnBvb2xtYW5hZ2VyLnYxYmV0YTEuTXNnU3dhcEV4YWN0QW1vdW50SW5SZXNwb25zZRILCgkxODkwNDgzOTISSAo5L29zbW9zaXMucG9vbG1hbmFnZXIudjFiZXRhMS5Nc2dTd2FwRXhhY3RBbW91bnRJblJlc3BvbnNlEgsKCTE4ODkwNTYzMA==";
         let mut responses = decode_msg_responses(RESP);
-        assert!(dbg!(responses.next()).is_some());
-        assert!(dbg!(responses.next()).is_some());
+        assert!(responses.next().is_some());
+        assert!(responses.next().is_some());
         assert!(responses.next().is_none());
     }
 

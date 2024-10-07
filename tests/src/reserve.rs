@@ -5,7 +5,7 @@ use reserve::{
     api::{ConfigResponse, LpnCurrencyDTO, QueryMsg},
     error::Error as ReserveError,
 };
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
@@ -43,7 +43,7 @@ fn new_lease_code() {
     let err = set_new_lease_code(
         &mut test_case.app,
         reserve.clone(),
-        Addr::unchecked("NOT_THE_LEASE_CODE_ADMIN"),
+        testing::user("NOT_THE_LEASE_CODE_ADMIN"),
         new_lease_code,
     )
     .unwrap_err();
@@ -74,7 +74,7 @@ fn cover_losses_unauthortized() {
     let err = cover_losses_err(
         &mut test_case,
         reserve.clone(),
-        Addr::unchecked("NOT_A_LEASE"),
+        testing::user("NOT_A_LEASE"),
         losses,
     );
     assert!(matches!(

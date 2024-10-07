@@ -1,6 +1,6 @@
 use currencies::Lpns;
 use lease::{api::ExecuteMsg, error::ContractError};
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
@@ -56,7 +56,7 @@ fn swap_on_repay() {
     assert_eq!(query_result, expected_result);
 
     let payment = super::create_payment_coin(1_000);
-    test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin(payment)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin(payment)]);
 
     repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
         let swap_response_err = common::swap::do_swap_with_error(app, lease.clone())
@@ -106,7 +106,7 @@ fn try_heal(
     app: &mut App,
     lease: Addr,
 ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    app.execute(Addr::unchecked(USER), lease, &ExecuteMsg::Heal(), &[])
+    app.execute(testing::user(USER), lease, &ExecuteMsg::Heal(), &[])
 }
 
 fn heal_ok(app: &mut App, lease: Addr) -> ResponseWithInterChainMsgs<'_, ()> {

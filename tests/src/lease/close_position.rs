@@ -17,6 +17,7 @@ use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
+    testing,
 };
 use swap::testing::SwapRequest;
 
@@ -53,7 +54,7 @@ fn close_by_another_user() {
 #[test]
 fn full_close() {
     let lease_amount: LeaseCoin = lease_amount();
-    let customer = Addr::unchecked(USER);
+    let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = true;
@@ -95,7 +96,7 @@ fn partial_close_loan_not_closed() {
     let close_amount: LeaseCoin =
         price::total(principal - 1234567.into(), super::price_lpn_of().inv());
     let repay_principal = price::total(close_amount, super::price_lpn_of());
-    let customer = Addr::unchecked(USER);
+    let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = false;
@@ -147,7 +148,7 @@ fn partial_close_loan_closed() {
     let repay_principal = principal + exp_change;
     let close_amount: LeaseCoin = price::total(repay_principal, super::price_lpn_of().inv());
 
-    let customer = Addr::unchecked(USER);
+    let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = true;
@@ -195,7 +196,7 @@ fn partial_close_invalid_currency() {
     let err = test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             lease,
             &(&ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
                 amount: Coin::<PaymentC5>::from(12345678).into(),
@@ -205,10 +206,12 @@ fn partial_close_invalid_currency() {
         .unwrap_err();
 
     assert_eq!(
-        err.root_cause().downcast_ref::<currency::error::Error>(),
-        Some(&currency::error::Error::currency_mismatch(
-            &currency::dto::<LeaseCurrency, LeaseGroup>(),
-            &currency::dto::<PaymentC5, PaymentGroup>()
+        err.downcast_ref::<ContractError>(),
+        Some(&ContractError::FinanceError(
+            finance::error::Error::CurrencyError(currency::error::Error::currency_mismatch(
+                &currency::dto::<LeaseCurrency, LeaseGroup>(),
+                &currency::dto::<PaymentC5, PaymentGroup>()
+            ))
         ))
     );
 }
@@ -228,10 +231,10 @@ fn partial_close_min_asset() {
 
     let err = test_case
         .app
-        .execute(Addr::unchecked(USER), lease, msg, &[])
+        .execute(testing::user(USER), lease, msg, &[])
         .unwrap_err();
     assert_eq!(
-        err.root_cause().downcast_ref::<ContractError>(),
+        err.downcast_ref::<ContractError>(),
         Some(&ContractError::PositionCloseAmountTooBig(
             min_asset_lpn.into()
         ))
@@ -252,10 +255,10 @@ fn partial_close_min_transaction() {
 
     let err = test_case
         .app
-        .execute(Addr::unchecked(USER), lease, msg, &[])
+        .execute(testing::user(USER), lease, msg, &[])
         .unwrap_err();
     assert_eq!(
-        err.root_cause().downcast_ref::<ContractError>(),
+        err.downcast_ref::<ContractError>(),
         Some(&ContractError::PositionCloseAmountTooSmall(
             min_transaction_lpn.into()
         ))
@@ -370,22 +373,23 @@ fn send_close<'r>(
 ) -> ResponseWithInterChainMsgs<'r, ()> {
     test_case
         .app
-        .execute(Addr::unchecked(USER), contract_addr, msg, &[])
+        .execute(testing::user(USER), contract_addr, msg, &[])
         .unwrap()
         .ignore_response()
 }
 
 fn assert_unauthorized(test_case: &mut LeaseTestCase, lease: Addr, close_msg: ExecuteMsg) {
-    let sender = Addr::unchecked(ADMIN);
+    let sender = testing::user(ADMIN);
     {
+        use access_control::error::Error;
+
         let err = test_case
             .app
             .execute(sender, lease, &close_msg, &[])
             .unwrap_err();
         assert_eq!(
-            err.root_cause()
-                .downcast_ref::<access_control::error::Error>(),
-            Some(&access_control::error::Error::Unauthorized {})
+            err.downcast_ref::<ContractError>(),
+            Some(&ContractError::Unauthorized(Error::Unauthorized {}))
         );
     }
 }

@@ -30,7 +30,7 @@ use sdk::{
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
-    testing::CwContractWrapper,
+    testing::{self, CwContractWrapper},
 };
 use tree::HumanReadableTree;
 
@@ -108,21 +108,18 @@ fn test_lease_serde() {
 #[test]
 fn register_feeder() {
     let mut test_case = create_test_case();
-    let _user = Addr::unchecked(USER);
-    let _admin = Addr::unchecked(ADMIN);
-
-    oracle_mod::add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, testing::user(ADMIN));
 }
 
 #[test]
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    oracle_mod::add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, testing::user(ADMIN));
 
     let response: AppResponse = oracle_mod::feed_price(
         &mut test_case,
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         Coin::<BaseC>::new(5),
         Coin::<Lpn>::new(7),
     );
@@ -138,7 +135,7 @@ fn internal_test_integration_setup_test() {
 #[test]
 fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
-    oracle_mod::add_feeder(&mut test_case, ADMIN);
+    oracle_mod::add_feeder(&mut test_case, testing::user(ADMIN));
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -162,7 +159,7 @@ fn feed_price_with_alarm_issue() {
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         Coin::<BaseC>::new(5),
         Coin::<Lpn>::new(7),
     );
@@ -171,7 +168,8 @@ fn feed_price_with_alarm_issue() {
 #[test]
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
-    oracle_mod::add_feeder(&mut test_case, ADMIN);
+    let feeder = testing::user(ADMIN);
+    oracle_mod::add_feeder(&mut test_case, feeder.clone());
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -194,7 +192,7 @@ fn feed_price_with_alarm() {
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
-        Addr::unchecked(ADMIN),
+        feeder,
         Coin::<PaymentC4>::new(1),
         Coin::<Lpn>::new(5),
     );
@@ -205,7 +203,8 @@ fn overwrite_alarm_and_dispatch() {
     let mut test_case = create_test_case();
     update_tree(&mut test_case, swap_tree());
 
-    oracle_mod::add_feeder(&mut test_case, ADMIN);
+    let feeder = testing::user(ADMIN);
+    oracle_mod::add_feeder(&mut test_case, feeder.clone());
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -246,7 +245,7 @@ fn overwrite_alarm_and_dispatch() {
     // If doesn't panic, then prices should be fed successfully.
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
-        Addr::unchecked(ADMIN),
+        feeder,
         Coin::<PaymentC4>::new(1),
         Coin::<Lpn>::new(5),
     );
@@ -254,7 +253,7 @@ fn overwrite_alarm_and_dispatch() {
     let res: AppResponse = test_case
         .app
         .execute(
-            lease,
+            lease.clone(),
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::DispatchAlarms { max_count: 5 },
             &[],
@@ -264,7 +263,7 @@ fn overwrite_alarm_and_dispatch() {
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract8"),
+        &Event::new("wasm-pricealarm").add_attribute("receiver", lease.as_str()),
     );
 
     platform::tests::assert_event(
@@ -291,7 +290,7 @@ fn open_lease<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAla
     >,
     downpayment: TheCoin,
 ) -> Addr {
-    let customer = Addr::unchecked(ADMIN);
+    let customer = testing::user(ADMIN);
     let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
@@ -328,7 +327,7 @@ fn wrong_timealarms_addr() {
     () = test_case
         .app
         .execute(
-            Addr::unchecked(USER),
+            testing::user(USER),
             test_case.address_book.oracle().clone(),
             &alarm_msg,
             &[],
@@ -342,16 +341,16 @@ fn wrong_timealarms_addr() {
 fn test_config_update() {
     let mut test_case = create_test_case();
 
-    let _admin = Addr::unchecked(ADMIN);
-    let feeder1 = Addr::unchecked("feeder1");
-    let feeder2 = Addr::unchecked("feeder2");
-    let feeder3 = Addr::unchecked("feeder3");
+    let _admin = testing::user(ADMIN);
+    let feeder1 = testing::user("feeder1");
+    let feeder2 = testing::user("feeder2");
+    let feeder3 = testing::user("feeder3");
     let base = 2;
     let quote = 10;
 
-    oracle_mod::add_feeder(&mut test_case, &feeder1);
-    oracle_mod::add_feeder(&mut test_case, &feeder2);
-    oracle_mod::add_feeder(&mut test_case, &feeder3);
+    oracle_mod::add_feeder(&mut test_case, feeder1.clone());
+    oracle_mod::add_feeder(&mut test_case, feeder2.clone());
+    oracle_mod::add_feeder(&mut test_case, feeder3);
 
     oracle_mod::feed_price(
         &mut test_case,
@@ -491,9 +490,9 @@ fn migrate_invalid_swap_tree() {
 fn test_zero_price_dto() {
     let mut test_case = create_test_case();
 
-    let feeder1 = Addr::unchecked("feeder1");
+    let feeder1 = testing::user("feeder1");
 
-    oracle_mod::add_feeder(&mut test_case, &feeder1);
+    oracle_mod::add_feeder(&mut test_case, feeder1.clone());
 
     // can be created only via deserialization
     let price: Price<LeaseC2, Lpn> =
@@ -621,7 +620,7 @@ fn instantiate_dummy_contract(
 ) -> Addr {
     app.instantiate(
         dummy_code,
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         &DummyInstMsg {
             oracle,
             should_fail,
@@ -636,7 +635,7 @@ fn instantiate_dummy_contract(
 
 fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
     app.execute(
-        Addr::unchecked("unlisted_client"),
+        testing::user("unlisted_client"),
         oracle,
         &ExecuteMsg::DispatchAlarms { max_count },
         &[],
@@ -648,7 +647,7 @@ fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppRe
 fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
     () = app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             dummy_contract,
             &DummyExecMsg::ShouldFail(should_fail),
             &[],
@@ -685,9 +684,9 @@ fn price_alarm_rescheduling() {
         false,
     );
 
-    let feeder_addr = Addr::unchecked("feeder");
+    let feeder_addr = testing::user("feeder");
 
-    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.clone());
 
     oracle_mod::feed_price(
         &mut test_case,
@@ -809,9 +808,9 @@ fn price_alarm_rescheduling_with_failing() {
         true,
     );
 
-    let feeder_addr = Addr::unchecked("feeder");
+    let feeder_addr = testing::user("feeder");
 
-    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.clone());
 
     oracle_mod::feed_price(
         &mut test_case,

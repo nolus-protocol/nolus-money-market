@@ -8,7 +8,7 @@ use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{AppResponse, Executor as _},
-    testing::{new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender},
+    testing::{self, InterChainMsgReceiver, InterChainMsgSender},
 };
 
 use super::{
@@ -84,14 +84,14 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
     pub const DEFAULT_LPP_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     pub fn ica_addr(local_addr: &str, id: &str) -> Addr {
-        Addr::unchecked(format!("{local}-ica{id}", local = local_addr, id = id))
+        testing::user(&format!("{local}-ica{id}", local = local_addr, id = id))
     }
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
             InterChainMsgSender,
             InterChainMsgReceiver,
-        ) = new_inter_chain_msg_queue();
+        ) = testing::new_inter_chain_msg_queue();
 
         let mut app: App = App::new(
             mock_app(custom_message_sender, reserve),
@@ -113,7 +113,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlar
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         let _: AppResponse = self
             .app
-            .with_mock_app(|app| app.send_tokens(Addr::unchecked(ADMIN), user_addr, funds))
+            .with_mock_app(|app| app.send_tokens(testing::user(ADMIN), user_addr, funds))
             .unwrap()
             .unwrap_response();
 

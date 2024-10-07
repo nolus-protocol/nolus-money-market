@@ -18,7 +18,7 @@ use oracle::{
 use sdk::{
     cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::AppResponse,
-    testing::{CwContract, CwContractWrapper},
+    testing::{self, CwContract, CwContractWrapper},
 };
 
 use super::{
@@ -57,7 +57,7 @@ impl Instantiator {
 
         app.instantiate(
             code_id,
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             &msg,
             &Vec::default(),
             "oracle",
@@ -100,7 +100,7 @@ pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
         Addr,
         TimeAlarms,
     >,
-    addr: impl Into<String>,
+    feeder: Addr,
 ) {
     let oracle = test_case.address_book.oracle().clone();
 
@@ -109,7 +109,7 @@ pub(crate) fn add_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
         .sudo(
             oracle.clone(),
             &SudoMsg::<PriceCurrencies>::RegisterFeeder {
-                feeder_address: addr.into(),
+                feeder_address: feeder.into(),
             },
         )
         .unwrap()
