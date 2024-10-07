@@ -36,6 +36,8 @@ pub struct CoinDTO<G>
 where
     G: Group,
 {
+    #[serde(with = "super::amount_serde")]
+    #[schemars(with = "String")]
     amount: Amount,
     #[serde(rename = "ticker")] // it is more descriptive on the wire than currency
     currency: CurrencyDTO<G>,
@@ -189,6 +191,27 @@ mod test {
     use crate::coin::{Amount, Coin, CoinDTO};
 
     #[test]
+    fn longer_representation() {
+        let coin = Coin::<SuperGroupTestC1>::new(4215);
+        let coin_len = cosmwasm_std::to_json_vec(&coin).unwrap().len();
+        let coindto_len = cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
+            .unwrap()
+            .len();
+        assert!(coin_len < coindto_len);
+    }
+
+    #[test]
+    fn compatible_deserialization() {
+        let coin = Coin::<SuperGroupTestC1>::new(85);
+        assert_eq!(
+            coin,
+            cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
+                .and_then(cosmwasm_std::from_json::<Coin<SuperGroupTestC1>>)
+                .unwrap()
+        );
+    }
+
+    #[test]
     fn from_amount_ticker_ok() {
         let amount = 20;
         type TheCurrency = SuperGroupTestC1;
@@ -264,7 +287,7 @@ mod test {
         );
         serialize_deserialize_coin::<SuperGroupTestC1>(
             Amount::MAX,
-            coin_json::<SuperGroupTestC1>(340282366920938463463374607431768211455).as_ref(),
+            coin_json::<SuperGroupTestC1>(Amount::MAX).as_ref(),
         );
         serialize_deserialize_coin::<SuperGroupTestC2>(
             Amount::MIN,
@@ -276,7 +299,7 @@ mod test {
         );
         serialize_deserialize_coin::<SuperGroupTestC2>(
             Amount::MAX,
-            coin_json::<SuperGroupTestC2>(340282366920938463463374607431768211455).as_ref(),
+            coin_json::<SuperGroupTestC2>(Amount::MAX).as_ref(),
         );
     }
 

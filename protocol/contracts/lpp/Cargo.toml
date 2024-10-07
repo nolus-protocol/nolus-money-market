@@ -46,8 +46,7 @@ finance = { workspace = true }
 lpp-platform = { workspace = true }
 oracle = { workspace = true, optional = true, features = ["stub_price"] }
 oracle-platform = { workspace = true }
-# TODO remove the testing feature once the storage migration v1 -> v2 is over
-platform = { workspace = true, features = ["testing"] }
+platform = { workspace = true }
 sdk = { workspace = true }
 versioning = { workspace = true, optional = true }
 
@@ -63,6 +62,3 @@ currencies = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-serde_json = { workspace = true }

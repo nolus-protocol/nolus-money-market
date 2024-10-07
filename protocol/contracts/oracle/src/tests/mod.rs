@@ -14,9 +14,10 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         coins,
-        testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
+        testing::{self, MockApi, MockQuerier},
         MemoryStorage, MessageInfo, OwnedDeps,
     },
+    testing as sdk_testing,
 };
 use tree::HumanReadableTree;
 
@@ -102,9 +103,15 @@ pub(crate) fn dummy_feed_prices_msg(
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
-    let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, Nls::ticker()));
-    let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let mut deps = testing::mock_dependencies();
+
+    let info = MessageInfo {
+        sender: sdk_testing::user(CREATOR),
+        funds: coins(1000, Nls::ticker()),
+    };
+
+    let res: CwResponse =
+        instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 
     // register single feeder address
@@ -116,9 +123,9 @@ pub(crate) fn setup_test(
         ..
     }: CwResponse = sudo(
         deps.as_mut(),
-        mock_env(),
+        testing::mock_env(),
         SudoMsg::RegisterFeeder {
-            feeder_address: CREATOR.to_string(),
+            feeder_address: sdk_testing::user(CREATOR).to_string(),
         },
     )
     .unwrap();

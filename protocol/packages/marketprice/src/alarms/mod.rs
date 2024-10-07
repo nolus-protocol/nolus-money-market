@@ -107,7 +107,7 @@ where
     }
 }
 
-type IndexedMap<G> = CwIndexedMap<'static, Addr, NormalizedPrice<G>, AlarmsIndexes<G>>;
+type IndexedMap<G> = CwIndexedMap<Addr, NormalizedPrice<G>, AlarmsIndexes<G>>;
 
 fn alarms_index<G>(alarms_namespace: &'static str, index_namespace: &'static str) -> IndexedMap<G>
 where
@@ -130,7 +130,7 @@ where
     storage: S,
     alarms_below: IndexedMap<G>,
     alarms_above_or_equal: IndexedMap<G>,
-    in_delivery: Deque<'static, AlarmWithSubscriber<G>>,
+    in_delivery: Deque<AlarmWithSubscriber<G>>,
 }
 
 impl<'storage, G, S> PriceAlarms<'storage, G, S>

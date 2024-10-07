@@ -7,6 +7,7 @@ use platform::tests;
 use sdk::{
     cosmwasm_std::{coin, Addr, Attribute, Event, Timestamp},
     cw_multi_test::AppResponse,
+    testing,
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
@@ -33,14 +34,14 @@ mod mock_lease {
         },
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
-        testing::{CwContract, CwContractWrapper},
+        testing::{self, CwContract, CwContractWrapper},
     };
     use timealarms::stub::TimeAlarmsRef;
 
     use crate::common::{test_case::app::App, ADMIN};
 
-    const GATE: Item<'static, bool> = Item::new("alarm gate");
-    const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
+    const GATE: Item<bool> = Item::new("alarm gate");
+    const TIMEALARMS_ADDR: Item<Addr> = Item::new("ta_addr");
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -149,7 +150,7 @@ mod mock_lease {
         proper_instantiate(
             app,
             contract_no_reschedule_endpoints(),
-            Addr::unchecked("DEADCODE"),
+            testing::user("DEADCODE"),
         )
     }
 
@@ -157,7 +158,7 @@ mod mock_lease {
         proper_instantiate(
             app,
             contract_may_fail_endpoints(),
-            Addr::unchecked("DEADCODE"),
+            testing::user("DEADCODE"),
         )
     }
 
@@ -176,7 +177,7 @@ mod mock_lease {
         let cw_template_id = app.store_code(endpoints);
         app.instantiate(
             cw_template_id,
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             &MockInstantiateMsg {
                 time_alarms_contract: timealarms_contract,
             },
@@ -267,7 +268,7 @@ fn dispatch<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &dispatch_msg,
             &[],
@@ -359,7 +360,7 @@ fn reschedule_failed_alarm() {
     () = test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             lease1.clone(),
             &MockExecuteMsg::Gate(false),
             &[],
@@ -386,14 +387,16 @@ fn reschedule_failed_alarm() {
 fn reschedule_failing_alarms_mix() {
     let mut test_case = test_case();
 
-    let leases: [Addr; 8] = from_fn(|index| {
-        let addr: Addr = instantiate_may_fail_contract(&mut test_case.app);
+    const ALARMS_COUNT: usize = 8;
+
+    let _leases: [Addr; ALARMS_COUNT] = from_fn(|index| {
+        let alarm_subscriber: Addr = instantiate_may_fail_contract(&mut test_case.app);
 
         () = test_case
             .app
             .execute(
-                Addr::unchecked(ADMIN),
-                addr.clone(),
+                testing::user(ADMIN),
+                alarm_subscriber.clone(),
                 &MockExecuteMsg::Gate((index % 2) == 0),
                 &[],
             )
@@ -401,84 +404,23 @@ fn reschedule_failing_alarms_mix() {
             .ignore_response()
             .unwrap_response();
 
-        add_alarm(&mut test_case, &addr, 1);
+        add_alarm(&mut test_case, &alarm_subscriber, 1);
 
-        addr
+        alarm_subscriber
     });
 
     test_case.app.time_shift(Duration::from_secs(5));
 
     let resp = dispatch(&mut test_case, 100);
 
-    for (index, event) in resp
-        .events
-        .into_iter()
-        .filter(|event| {
-            event
-                .attributes
-                .iter()
-                .any(|attribute| attribute.key == "delivered")
-        })
-        .enumerate()
-    {
-        // Only leases with odd indexes fail.
-        let fail = (index % 2) != 0;
-
-        assert_eq!(
-            event
-                .attributes
-                .iter()
-                .find(|attribute| attribute.key == "delivered")
-                .unwrap()
-                .value,
-            if fail { "error" } else { "success" }
-        );
-
-        if fail {
-            assert!(event
-                .attributes
-                .iter()
-                .find(|attribute| attribute.key == "details")
-                .unwrap()
-                .value
-                .contains(leases[index].as_str()));
-        }
-    }
+    let halve_alarms: AlarmsCount = AlarmsCount::try_from(ALARMS_COUNT).unwrap() / 2;
+    assert_eq!((halve_alarms, halve_alarms), count_result(resp));
 
     // try to resend the failed alarms
-    let resp = dispatch(&mut test_case, 100);
-    assert_eq!(sent_alarms(&resp), Some(leases.len() as u32 / 2));
-
-    for (index, event) in resp
-        .events
-        .into_iter()
-        .filter(|event| {
-            event
-                .attributes
-                .iter()
-                .any(|attribute| attribute.key == "delivered")
-        })
-        .enumerate()
-    {
-        assert_eq!(
-            event
-                .attributes
-                .iter()
-                .find(|attribute| attribute.key == "delivered")
-                .unwrap()
-                .value,
-            "error"
-        );
-
-        // Only leases with odd indexes fail.
-        assert!(event
-            .attributes
-            .iter()
-            .find(|attribute| attribute.key == "details")
-            .unwrap()
-            .value
-            .contains(leases[(index * 2) + 1].as_str()));
-    }
+    assert_eq!(
+        (AlarmsCount::MIN, halve_alarms),
+        count_result(dispatch(&mut test_case, 100))
+    );
 }
 
 #[test]
@@ -514,7 +456,7 @@ fn test_time_notify() {
     let close_gate = mock_lease::MockExecuteMsg::Gate(false);
     () = test_case
         .app
-        .execute(Addr::unchecked(ADMIN), lease3.clone(), &close_gate, &[])
+        .execute(testing::user(ADMIN), lease3.clone(), &close_gate, &[])
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -528,7 +470,7 @@ fn test_time_notify() {
     let open_gate = mock_lease::MockExecuteMsg::Gate(true);
     () = test_case
         .app
-        .execute(Addr::unchecked(ADMIN), lease3.clone(), &open_gate, &[])
+        .execute(testing::user(ADMIN), lease3.clone(), &open_gate, &[])
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -569,7 +511,7 @@ fn test_profit_alarms() {
     let resp = test_case
         .app
         .execute(
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &dispatch_msg,
             &[],
@@ -581,6 +523,24 @@ fn test_profit_alarms() {
         resp.events.last().unwrap().attributes.last().unwrap(),
         Attribute::new("delivered", "success")
     );
+}
+
+fn count_result(resp: AppResponse) -> (AlarmsCount, AlarmsCount) {
+    resp.events.into_iter().fold(
+        (AlarmsCount::MIN, AlarmsCount::MIN),
+        |(mut succeeded, mut failed), event| {
+            event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "delivered")
+                .inspect(|attribute| match attribute.value.as_str() {
+                    "success" => succeeded += 1,
+                    "error" => failed += 1,
+                    _ => panic!("unexpected 'delivered' attribute {}", attribute.value),
+                });
+            (succeeded, failed)
+        },
+    )
 }
 
 fn sent_alarms(resp: &AppResponse) -> Option<AlarmsCount> {

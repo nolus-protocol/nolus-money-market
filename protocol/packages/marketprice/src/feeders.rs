@@ -24,11 +24,11 @@ pub enum PriceFeedersError {
 }
 
 // state/logic
-pub struct PriceFeeders<'f>(Item<'f, HashSet<Addr>>);
+pub struct PriceFeeders(Item<HashSet<Addr>>);
 
 // this is the core business logic we expose
-impl<'f> PriceFeeders<'f> {
-    pub const fn new(namespace: &'f str) -> Self {
+impl PriceFeeders {
+    pub const fn new(namespace: &'static str) -> Self {
         Self(Item::new(namespace))
     }
 
@@ -44,14 +44,14 @@ impl<'f> PriceFeeders<'f> {
             })
     }
 
-    pub fn register(&self, deps: DepsMut<'_>, address: Addr) -> Result<(), PriceFeedersError> {
+    pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
 
-        if db.contains(&address) {
+        if db.contains(&feeder) {
             return Err(PriceFeedersError::FeederAlreadyRegistered {});
         }
 
-        db.insert(address);
+        db.insert(feeder);
 
         self.0.save(deps.storage, &db)?;
 

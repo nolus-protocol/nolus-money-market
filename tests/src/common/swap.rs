@@ -8,6 +8,7 @@ use sdk::{
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
     neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
+    testing,
 };
 use swap::{
     testing::{ExactAmountInSkel, SwapRequest},
@@ -65,17 +66,12 @@ where
     let requests: Vec<SwapRequest<GIn, GSwap>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
-        .map(
-            |NeutronAny {
-                 type_url,
-                 value: Binary(value),
-             }: NeutronAny| {
-                <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
-                    type_url,
-                    value,
-                })
-            },
-        )
+        .map(|NeutronAny { type_url, value }| {
+            <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
+                type_url,
+                value: value.into(),
+            })
+        })
         .collect();
 
     assert!(!requests.is_empty());
@@ -150,7 +146,7 @@ where
 
     app.send_tokens(
         ica_addr.clone(),
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         &[CwCoin::new(amount_in, dex_denom_in)],
     )
     .unwrap();
@@ -167,7 +163,7 @@ where
     );
 
     app.send_tokens(
-        Addr::unchecked(ADMIN),
+        testing::user(ADMIN),
         ica_addr,
         &[CwCoin::new(amount_out, dex_denom_out)],
     )
@@ -186,7 +182,7 @@ fn send_response<'r>(
     ibc::send_response(
         app,
         inituator_contract_addr.clone(),
-        Binary(platform::trx::encode_msg_responses(
+        Binary::new(platform::trx::encode_msg_responses(
             amounts.iter().copied().map(Impl::build_response),
         )),
     )

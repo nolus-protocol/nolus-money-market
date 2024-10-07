@@ -110,7 +110,10 @@ where
     C::Group: MemberOf<S::Group>,
     S: Symbol,
 {
-    CosmWasmCoin::new(coin.into(), S::symbol(C::definition().dto().definition()))
+    CosmWasmCoin::new(
+        Amount::from(coin),
+        S::symbol(C::definition().dto().definition()),
+    )
 }
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);
@@ -185,7 +188,7 @@ mod test {
     #[test]
     fn from_cosmwasm() {
         let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
-            12,
+            12u8,
             SuperGroupTestC2::bank(),
         ));
         assert_eq!(Ok(Coin::<SuperGroupTestC2>::new(12)), c1);
@@ -193,7 +196,7 @@ mod test {
     #[test]
     fn from_cosmwasm_unexpected() {
         let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
-            12,
+            12u8,
             SuperGroupTestC1::bank(),
         ));
 
@@ -208,7 +211,7 @@ mod test {
         );
 
         let c2 = super::from_cosmwasm::<SuperGroupTestC1>(CosmWasmCoin::new(
-            12,
+            12u8,
             SuperGroupTestC2::bank(),
         ));
 

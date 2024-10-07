@@ -7,7 +7,7 @@ use sdk::{
 };
 use versioning::ReleaseLabel;
 
-const STORE: Item<'_, Contract> = Item::new("contract_state_machine");
+const STORE: Item<Contract> = Item::new("contract_state_machine");
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Contract {

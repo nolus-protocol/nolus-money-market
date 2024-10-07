@@ -12,6 +12,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, AppResponse, ContractWrapper},
+    testing,
 };
 
 use crate::common::{
@@ -49,8 +50,8 @@ fn open_lease_unsupported_currency_by_oracle() {
 fn open_multiple_loans() {
     type LeaseCurrency = LeaseC1;
 
-    let user_addr = Addr::unchecked(USER);
-    let other_user_addr = Addr::unchecked("other_user");
+    let user_addr = testing::user(USER);
+    let other_user_addr = testing::user("other_user");
 
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
@@ -157,7 +158,7 @@ fn test_quote() {
         .init_leaser()
         .into_generic();
 
-    test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin::<Lpn, _>(500)]);
 
     let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(2.into()).is(1.into());
     let feeder = setup_feeder(&mut test_case);
@@ -227,7 +228,7 @@ fn common_quote_with_conversion(
 
     let user_reserve = cwcoin::<LeaseC1, _>(USER_ATOMS);
 
-    let user_addr = Addr::unchecked(USER);
+    let user_addr = testing::user(USER);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&{
         let mut reserve = vec![cwcoin::<Lpn, _>(1_000_000_000)];
@@ -261,9 +262,9 @@ fn common_quote_with_conversion(
 
     test_case.send_funds_from_admin(user_addr, &[user_reserve]);
 
-    let feeder_addr = Addr::unchecked("feeder1");
+    let feeder_addr = testing::user("feeder1");
 
-    oracle_mod::add_feeder(&mut test_case, feeder_addr.as_str());
+    oracle_mod::add_feeder(&mut test_case, feeder_addr.clone());
 
     let dpn_lpn_base = Coin::<PaymentC1>::new(1);
     let dpn_lpn_quote = Coin::<Lpn>::new(2);
@@ -392,8 +393,8 @@ fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeA
         TimeAlarms,
     >,
 ) -> Addr {
-    let feeder = Addr::unchecked("feeder_main");
-    oracle_mod::add_feeder(test_case, &feeder);
+    let feeder = testing::user("feeder_main");
+    oracle_mod::add_feeder(test_case, feeder.clone());
     feeder
 }
 
@@ -402,7 +403,7 @@ fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeA
 fn open_loans_lpp_fails() {
     type LeaseCurrency = LeaseC1;
 
-    let user_addr = Addr::unchecked(USER);
+    let user_addr = testing::user(USER);
     let downpayment = cwcoin::<Lpn, _>(86);
 
     fn mock_lpp_execute(
@@ -481,7 +482,7 @@ where
     DownpaymentC: CurrencyDef,
     DownpaymentC::Group: MemberOf<PriceCurrencies>,
 {
-    let user_addr = Addr::unchecked(USER);
+    let user_addr = testing::user(USER);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin::<Lpn, _>(1_000_000_000),
@@ -509,15 +510,7 @@ where
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
 
-    // 0 => lpp
-    // 1 => time alarms
-    // 2 => oracle
-    // 3 => dummy protocols registry
-    // 4 => treasury
-    // 5 => profit
-    // 6 => reserve
-    let leaser_addr: Addr = test_case.address_book.leaser().clone(); // 7 => leaser
-    let lease_addr: Addr = Addr::unchecked("contract8"); // 8 => lease
+    let leaser_addr: Addr = test_case.address_book.leaser().clone();
 
     if feed_prices {
         oracle_mod::add_feeder(&mut test_case, user_addr.clone());
@@ -550,7 +543,7 @@ where
     );
     let exp_borrow: Coin<Lpn> = quote.borrow.try_into().unwrap();
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             user_addr,
@@ -561,17 +554,16 @@ where
             },
             &[cwcoin(downpayment)],
         )
-        .unwrap()
-        .ignore_response();
+        .unwrap();
 
     response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
 
-    () = response.unwrap_response();
+    let lease = lease_addr(&response.unwrap_response().events);
 
     lease_mod::complete_initialization(
         &mut test_case.app,
         TestCase::DEX_CONNECTION_ID,
-        lease_addr,
+        lease,
         downpayment,
         exp_borrow,
     );
@@ -586,14 +578,14 @@ fn lease_addr(events: &[Event]) -> Addr {
             .get(1)
             .unwrap()
             .value
-            .clone(),
+            .to_owned(),
     )
 }
 
 fn open_loans_insufficient_amount(downpayment: Amount) {
     type LeaseCurrency = LeaseC1;
 
-    let user_addr = Addr::unchecked(USER);
+    let user_addr = testing::user(USER);
     let incoming_funds = cwcoin::<Lpn, _>(200);
     let downpayment_amount = cwcoin::<Lpn, _>(downpayment);
 

@@ -1,5 +1,3 @@
-use astroport::{asset::AssetInfo, router::SwapOperation};
-
 use currency::{
     test::{SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1},
     CurrencyDef as _,
@@ -10,7 +8,10 @@ use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_s
 
 use crate::testing;
 
-use super::{Main, RouterImpl};
+use super::{
+    api::{AssetInfo, SwapOperation},
+    Main, RouterImpl,
+};
 
 #[test]
 fn const_eq_max_allowed_slippage() {

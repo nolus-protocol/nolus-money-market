@@ -203,3 +203,43 @@ fn to_stable(
     convert::from_quote::<_, LpnCurrencies, StableCurrency, PaymentGroup>(oracle, total, querier)
         .map_err(ContractError::ConvertFromQuote)
 }
+
+#[cfg(test)]
+mod test {
+    use currencies::Lpn;
+    use finance::coin::Coin;
+    use platform::coin_legacy;
+    use sdk::cosmwasm_std::{Addr, Coin as CwCoin, MessageInfo};
+
+    pub(super) type TheCurrency = Lpn;
+
+    pub(super) fn lender() -> Addr {
+        const LENDER: &str = "lender";
+
+        Addr::unchecked(LENDER)
+    }
+
+    pub(super) fn lender_msg_no_funds() -> MessageInfo {
+        MessageInfo {
+            sender: lender(),
+            funds: vec![],
+        }
+    }
+
+    pub(super) fn lender_msg_with_funds<F>(funds: F) -> MessageInfo
+    where
+        F: Into<Coin<TheCurrency>>,
+    {
+        MessageInfo {
+            sender: lender(),
+            funds: vec![cwcoin(funds)],
+        }
+    }
+
+    pub(super) fn cwcoin<A>(amount: A) -> CwCoin
+    where
+        A: Into<Coin<TheCurrency>>,
+    {
+        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
+    }
+}

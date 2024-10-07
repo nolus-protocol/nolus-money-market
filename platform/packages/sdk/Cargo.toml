@@ -10,10 +10,10 @@ combinations = [
     { tags = ["ci", "@agnostic"], feature-groups = ["schema-and-storage", "cosmos-or-cosmos-ibc-or-testing", "neutron"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["contract", "cosmos-ibc-or-testing"], always-on = ["contract"], include-rest = true },
 ]
-feature-groups = { schema-and-storage = { members = ["schema", "storage"], at-least-one = false, mutually-exclusive = false }, contract = { members = ["contract", "cosmos", "schema", "storage"], at-least-one = false, mutually-exclusive = true }, cosmos-ibc-or-testing = { members = ["cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true }, cosmos-or-cosmos-ibc-or-testing = { members = ["cosmos", "cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true }, neutron = { members = ["neutron"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { schema-and-storage = { members = ["schema", "storage"], at-least-one = false, mutually-exclusive = false }, contract = { members = ["contract", "schema", "storage"], at-least-one = false, mutually-exclusive = true }, cosmos-ibc-or-testing = { members = ["cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true }, cosmos-or-cosmos-ibc-or-testing = { members = ["cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true }, neutron = { members = ["neutron"], at-least-one = false, mutually-exclusive = false } }
 
 [features]
-contract = ["cosmos", "schema", "storage"]
+contract = ["schema", "storage"]
 schema = ["dep:cosmwasm-schema"]
 storage = ["dep:cw-storage-plus"]
 testing = [
@@ -26,8 +26,8 @@ testing = [
     "dep:thiserror",
     "cosmos_ibc",
 ]
-cosmos_ibc = ["dep:cosmos-sdk-proto", "cosmos", "cosmos-sdk-proto/cosmwasm"]
-cosmos = []
+cosmos_ibc = ["dep:ibc-proto"]
+cosmos_proto = ["dep:cosmos-sdk-proto", "cosmos-sdk-proto/cosmwasm"]
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 
 [dependencies]
@@ -35,6 +35,7 @@ cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true, optional = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }
+ibc-proto = { workspace = true, optional = true }
 neutron-sdk = { workspace = true, optional = true }
 
 data-encoding = { workspace = true, optional = true }

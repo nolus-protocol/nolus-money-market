@@ -4,7 +4,7 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, ReplyId},
-    reply::from_execute,
+    reply,
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 
@@ -86,7 +86,7 @@ where
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(resp.id, Self::OPEN_LOAN_REQ_ID);
 
-        from_execute(resp)
+        reply::from_execute(resp)
             .map_err(Into::into)
             .and_then(|maybe_data| maybe_data.ok_or(ContractError::NoResponseStubError))
     }

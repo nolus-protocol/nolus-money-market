@@ -34,7 +34,7 @@ where
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<PriceG>,
 {
-    const DB_ITEM: Item<'static, SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
+    const DB_ITEM: Item<SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
 
     pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, ContractError>
     where

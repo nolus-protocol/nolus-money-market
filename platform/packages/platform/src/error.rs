@@ -1,10 +1,12 @@
 use std::fmt::Debug;
 
-use prost::DecodeError;
 use thiserror::Error;
 
 use currency::{CurrencyDef, SymbolStatic};
-use sdk::cosmwasm_std::{Addr, Api, StdError};
+use sdk::{
+    cosmos_sdk_proto::prost::DecodeError,
+    cosmwasm_std::{Addr, Api, StdError},
+};
 
 use crate::contract::CodeId;
 

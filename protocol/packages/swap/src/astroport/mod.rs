@@ -1,9 +1,5 @@
 use std::marker::PhantomData;
 
-use astroport::{
-    asset::AssetInfo,
-    router::{ExecuteMsg, SwapOperation, SwapResponseData},
-};
 use serde::{Deserialize, Serialize};
 
 use currency::{self, DexSymbols, Group, SymbolSlice};
@@ -25,6 +21,9 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
+use api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
+
+mod api;
 #[cfg(test)]
 mod test;
 #[cfg(any(test, feature = "testing"))]

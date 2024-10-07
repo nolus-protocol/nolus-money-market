@@ -8,6 +8,7 @@ use finance::{
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
     cw_multi_test::{AppResponse, ContractWrapper},
+    testing,
 };
 use treasury::msg::ConfigResponse;
 
@@ -26,7 +27,7 @@ type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
 fn on_alarm_zero_reward() {
     let mut test_case = new_test_case(Registry::NoProtocol);
 
-    test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin::<Lpn, _>(500)]);
 
     test_case.send_funds_from_admin(
         test_case.address_book.time_alarms().clone(),
@@ -77,7 +78,10 @@ fn test_config() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[Event::new("sudo").add_attribute("_contract_address", "contract4"),]
+        &[
+            Event::new("sudo")
+                .add_attribute("_contract_address", test_case.address_book.treasury()),
+        ]
     );
 
     let resp = query_config(&test_case);
@@ -87,6 +91,7 @@ fn test_config() {
 fn new_test_case(registry: Registry) -> DispatcherTestCase {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
+            // code_id = 2, instance_id = 0
             None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
@@ -113,12 +118,12 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
 
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     const REWARD: Coin<NlsPlatform> = Coin::new(7);
-    let lender = Addr::unchecked(USER);
+    let lender = testing::user(USER);
     let lender_deposit = [cwcoin::<Lpn, _>(500)];
 
     let mut test_case = new_test_case(registry);
-    let feeder1 = Addr::unchecked("feeder1");
-    oracle_mod::add_feeder(&mut test_case, &feeder1);
+    let feeder1 = testing::user("feeder1");
+    oracle_mod::add_feeder(&mut test_case, feeder1.clone());
     let price = price::total_of(Coin::<NlsProtocol>::new(23456789)).is(Coin::<Lpn>::new(100000000));
     oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
 

@@ -97,7 +97,7 @@ macro_rules! version {
     }};
 }
 
-const VERSION_STORAGE_KEY: Item<'static, Version> = Item::new("contract_version");
+const VERSION_STORAGE_KEY: Item<Version> = Item::new("contract_version");
 
 pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
     VERSION_STORAGE_KEY.save(storage, &version)

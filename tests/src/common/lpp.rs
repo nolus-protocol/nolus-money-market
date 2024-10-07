@@ -10,7 +10,7 @@ use lpp::{
 use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
-    testing::CwContract,
+    testing::{self, CwContract},
 };
 
 use super::{
@@ -78,7 +78,7 @@ impl Instantiator {
 
         app.instantiate(
             lpp_id,
-            Addr::unchecked(ADMIN),
+            testing::user(ADMIN),
             &msg,
             init_balance,
             "lpp",

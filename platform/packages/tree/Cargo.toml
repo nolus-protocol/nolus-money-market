@@ -20,4 +20,4 @@ sdk = { workspace = true, optional = true, features = ["schema"] }
 serde = { workspace = true, features = ["std", "derive"] }
 
 [dev-dependencies]
-sdk = { workspace = true, features = ["cosmos"] }
+sdk = { workspace = true }

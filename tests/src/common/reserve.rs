@@ -3,7 +3,7 @@ use reserve::{
     api::InstantiateMsg,
     contract::{execute, instantiate, query},
 };
-use sdk::cosmwasm_std::Addr;
+use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
     leaser::Instantiator as LeaserInstantiator, test_case::app::App, CwContractWrapper, ADMIN,
@@ -24,7 +24,7 @@ impl Instantiator {
             lease_code: CodeId::from(lease_code).into(),
         };
 
-        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "reserve", None)
+        app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "reserve", None)
             .map(|response| response.unwrap_response())
             .unwrap()
     }

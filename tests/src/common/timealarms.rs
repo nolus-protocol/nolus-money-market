@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::Addr;
+use sdk::{cosmwasm_std::Addr, testing};
 use timealarms::{
     contract::{execute, instantiate, reply},
     msg::InstantiateMsg,
@@ -18,15 +18,8 @@ impl Instantiator {
 
         let msg = InstantiateMsg {};
 
-        app.instantiate(
-            code_id,
-            Addr::unchecked(ADMIN),
-            &msg,
-            &[],
-            "timealarms",
-            None,
-        )
-        .unwrap()
-        .unwrap_response()
+        app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "timealarms", None)
+            .unwrap()
+            .unwrap_response()
     }
 }

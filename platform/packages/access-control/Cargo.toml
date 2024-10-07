@@ -11,8 +11,8 @@ combinations = [
 ]
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "storage"] }
+sdk = { workspace = true, features = ["storage"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-sdk = { workspace = true, features = ["cosmos", "storage", "testing"] }
+sdk = { workspace = true, features = ["testing"] }

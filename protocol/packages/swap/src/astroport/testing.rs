@@ -1,10 +1,5 @@
 use std::any::type_name;
 
-use astroport::{
-    asset::AssetInfo,
-    router::{ExecuteMsg, SwapOperation, SwapResponseData},
-};
-
 use currency::{CurrencyDTO, Group, MemberOf};
 use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
@@ -20,7 +15,10 @@ use sdk::{
 
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
-use super::{RequestMsg, ResponseMsg, Router, RouterImpl};
+use super::{
+    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
+    RequestMsg, ResponseMsg, Router, RouterImpl,
+};
 
 impl<R> ExactAmountInSkel for RouterImpl<R>
 where

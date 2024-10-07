@@ -448,6 +448,7 @@ mod test {
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
             .expect("can't open loan");
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(3_000_000)]);
 
         // wait for a year
@@ -528,6 +529,7 @@ mod test {
         )
         .expect("can't open loan");
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
         let loan = Loan::query(deps.as_ref().storage, lease_addr.clone())
@@ -679,6 +681,7 @@ mod test {
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
         let loan_before = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
@@ -734,6 +737,7 @@ mod test {
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
         let payment = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
@@ -804,6 +808,7 @@ mod test {
         assert_eq!(price.get(), Price::identity());
 
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
         lender
             .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
@@ -824,6 +829,7 @@ mod test {
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
         // wait a year
@@ -870,6 +876,7 @@ mod test {
         assert_eq!(excess, Coin::new(0));
 
         deps.querier
+            .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
         let total_lpn = lpp
             .total_lpn(

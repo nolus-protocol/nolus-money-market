@@ -6,6 +6,7 @@ use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
+    testing,
 };
 use swap::testing::SwapRequest;
 
@@ -166,7 +167,7 @@ fn full_liquidation() {
     leaser::assert_no_leases(
         &test_case.app,
         test_case.address_book.leaser().clone(),
-        Addr::unchecked(USER),
+        testing::user(USER),
     )
 }
 
@@ -189,7 +190,7 @@ fn liquidation_warning(base: LeaseCoin, quote: Lpnoin, liability: Percent, level
         .find(|attribute| attribute.key == "customer")
         .expect("Customer attribute not present!");
 
-    assert_eq!(attribute.value, USER);
+    assert_eq!(attribute.value, testing::user(USER).to_string());
 
     let attribute = event
         .attributes
@@ -222,7 +223,7 @@ fn deliver_new_price(
     base: LeaseCoin,
     quote: Lpnoin,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse> {
-    common::oracle::feed_price(test_case, Addr::unchecked(ADMIN), base, quote);
+    common::oracle::feed_price(test_case, testing::user(ADMIN), base, quote);
 
     test_case
         .app

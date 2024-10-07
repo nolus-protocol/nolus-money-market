@@ -4,8 +4,7 @@ use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
 use sdk::{
-    cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Binary,
-    neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
+    cosmos_sdk_proto::Any as CosmosAny, neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
 };
 
 use crate::{
@@ -55,12 +54,12 @@ fn build_request(
 
     let mut msgs = tx.into_iter();
 
-    let NeutronAny {
-        type_url,
-        value: Binary(value),
-    } = msgs.next().unwrap();
+    let NeutronAny { type_url, value } = msgs.next().unwrap();
 
     assert!(msgs.next().is_none());
 
-    CosmosAny { type_url, value }
+    CosmosAny {
+        type_url,
+        value: value.into(),
+    }
 }

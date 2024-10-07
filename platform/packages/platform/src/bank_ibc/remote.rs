@@ -1,11 +1,11 @@
 use currency::{DexSymbols, Group};
 use finance::coin::CoinDTO;
-use prost::Name;
 use sdk::{
-    cosmos_sdk_proto::{
+    cosmos_sdk_proto::prost::Name,
+    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
+    ibc_proto::{
         cosmos::base::v1beta1::Coin as CosmosSdkCoin, ibc::applications::transfer::v1::MsgTransfer,
     },
-    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
 };
 
 use crate::{coin_legacy, ica::HostAccount, result::Result, trx::Transaction};
@@ -38,7 +38,7 @@ impl<'c> Sender<'c> {
     where
         G: Group,
     {
-        dbg!(coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount))
+        coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount)
             .map(into_cosmos_sdk_coin)
             .map(|cosmos_sdk_coin| {
                 self.amounts.push(cosmos_sdk_coin);
@@ -73,6 +73,7 @@ fn new_msg(
         receiver: receiver.into(),
         timeout_height: None,
         timeout_timestamp: timeout.nanos(),
+        memo: String::new(),
     }
 }
 
@@ -100,13 +101,13 @@ mod test {
         CurrencyDef,
     };
     use finance::coin::{Amount, Coin};
-    use prost::Name;
     use sdk::{
-        cosmos_sdk_proto::{
+        cosmos_sdk_proto::prost::Name,
+        cosmwasm_std::{Addr, Timestamp},
+        ibc_proto::{
             cosmos::base::v1beta1::Coin as CosmosSdkCoin,
             ibc::applications::transfer::v1::MsgTransfer,
         },
-        cosmwasm_std::{Addr, Timestamp},
     };
 
     use crate::{

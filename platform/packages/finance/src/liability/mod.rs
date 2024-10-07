@@ -394,7 +394,8 @@ mod test {
             from_json::<Liability>(json),
             Err(StdError::ParseErr {
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace: _
             }) if target_type.contains("Liability") && real_msg.contains(msg)
         ));
     }

@@ -31,7 +31,7 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
+    const STORAGE: Map<Addr, Loan<Lpn>> = Map::new("loans");
 
     pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
         interest::interest(

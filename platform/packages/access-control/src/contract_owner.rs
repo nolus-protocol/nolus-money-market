@@ -10,7 +10,7 @@ pub struct ContractOwnerAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
 {
-    access: SingleUserAccess<'storage, 'static, S>,
+    access: SingleUserAccess<'storage, S>,
 }
 
 impl<'storage, S> ContractOwnerAccess<'storage, S>

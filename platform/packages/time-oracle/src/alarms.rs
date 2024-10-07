@@ -36,7 +36,7 @@ fn indexed_map(namespace_alarms: &'static str, namespace_index: &'static str) ->
     IndexedMap::new(namespace_alarms, indexes)
 }
 
-type IndexedMap = CwIndexedMap<'static, Addr, TimeSeconds, AlarmIndexes>;
+type IndexedMap = CwIndexedMap<Addr, TimeSeconds, AlarmIndexes>;
 
 type AlarmsSelectionIterator<'storage> = iter::Map<
     Box<dyn Iterator<Item = CwResult<(Addr, TimeSeconds)>> + 'storage>,
@@ -49,7 +49,7 @@ where
 {
     storage: S,
     alarms: IndexedMap,
-    in_delivery: Deque<'static, Addr>,
+    in_delivery: Deque<Addr>,
 }
 
 impl<'storage, S> Alarms<'storage, S>

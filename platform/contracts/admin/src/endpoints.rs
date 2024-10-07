@@ -104,9 +104,9 @@ pub fn execute(
                     admin: Some(env.contract.address.into_string()),
                     code_id: code_id.u64(),
                     label,
-                    msg: Binary(message.into_bytes()),
+                    msg: Binary::new(message.into_bytes()),
                     funds: info.funds,
-                    salt: Binary(protocol.into_bytes()),
+                    salt: Binary::new(protocol.into_bytes()),
                 },
                 Default::default(),
             );
@@ -196,7 +196,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 
             let canonical_addr =
-                cosmwasm_std::instantiate2_address(&checksum, &creator, protocol.as_bytes())?;
+                cosmwasm_std::instantiate2_address(checksum.as_ref(), &creator, protocol.as_ref())?;
 
             let addr = deps.api.addr_humanize(&canonical_addr)?;
 

@@ -14,7 +14,7 @@ combinations = [
 migrate = []
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "storage"] }
+sdk = { workspace = true, features = ["storage"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

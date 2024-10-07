@@ -419,6 +419,7 @@ mod test {
     use sdk::{
         cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, QuerierWrapper},
         cw_multi_test::BasicApp,
+        testing,
     };
 
     use crate::{coin_legacy, error::Error};
@@ -429,6 +430,7 @@ mod test {
     type ExtraCurrency = SuperGroupTestC1;
 
     const AMOUNT: Amount = 42;
+    const USER: &str = "user";
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
     #[error("Test error")]
@@ -624,7 +626,7 @@ mod test {
     where
         G: Group,
     {
-        let user: Addr = Addr::unchecked("user");
+        let user = testing::user(USER);
 
         let app = BasicApp::new(|router, _, storage| {
             router.bank.init_balance(storage, &user, coins).unwrap();
@@ -712,7 +714,7 @@ mod test {
     where
         G: Group,
     {
-        let from: Addr = Addr::unchecked("user");
+        let from: Addr = testing::user(USER);
         let to = from.clone();
 
         let app = BasicApp::new(|router, _, storage| {

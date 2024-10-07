@@ -4,7 +4,7 @@ use profit::{
     msg::InstantiateMsg,
     typedefs::CadenceHours,
 };
-use sdk::cosmwasm_std::Addr;
+use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::common::test_case::response::RemoteChain;
 
@@ -45,7 +45,7 @@ impl Instantiator {
             },
         };
 
-        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
+        app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "profit", None)
             .map(|mut response| {
                 response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::PROFIT_ICA_ID);
                 response.unwrap_response()

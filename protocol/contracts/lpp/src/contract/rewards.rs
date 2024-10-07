@@ -76,22 +76,23 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use currencies::Lpn;
-    use finance::{
-        coin::Coin,
-        percent::{bound::BoundToHundredPercent, Percent},
-    };
-    use platform::{coin_legacy, contract::Code};
+    use finance::percent::{bound::BoundToHundredPercent, Percent};
+    use platform::contract::Code;
     use sdk::cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
-        Coin as CwCoin,
+        testing::{mock_dependencies, mock_env, MOCK_CONTRACT_ADDR},
+        Addr,
     };
 
-    use crate::{borrow::InterestRate, contract::lender, state::Config};
-
-    use super::*;
-
-    type TheCurrency = Lpn;
+    use crate::{
+        borrow::InterestRate,
+        contract::{
+            lender, rewards,
+            test::{self, TheCurrency},
+        },
+        error::ContractError,
+        lpp::LiquidityPool,
+        state::Config,
+    };
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
@@ -126,26 +127,20 @@ mod test {
         .unwrap();
 
         // no deposit
-        let info = mock_info("lender", &[]);
-        let response = try_claim_rewards(deps.as_mut(), env.clone(), info, None);
+        let info = test::lender_msg_no_funds();
+        let response = super::try_claim_rewards(deps.as_mut(), env.clone(), info, None);
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
         lpp_balance += deposit;
-        let info = mock_info("lender", &[cwcoin(deposit)]);
+        let info = test::lender_msg_with_funds(deposit);
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
+            .bank
+            .update_balance(MOCK_CONTRACT_ADDR, vec![test::cwcoin(lpp_balance)]);
         lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // pending rewards == 0
-        let info = mock_info("lender", &[]);
-        let response = try_claim_rewards(deps.as_mut(), env, info, None);
+        let info = test::lender_msg_no_funds();
+        let response = rewards::try_claim_rewards(deps.as_mut(), env, info, None);
         assert_eq!(response, Err(ContractError::NoRewards {}));
-    }
-
-    fn cwcoin<A>(amount: A) -> CwCoin
-    where
-        A: Into<Coin<TheCurrency>>,
-    {
-        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }

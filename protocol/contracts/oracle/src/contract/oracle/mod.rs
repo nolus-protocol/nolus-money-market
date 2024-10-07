@@ -227,9 +227,12 @@ mod test_normalized_price_not_found {
     };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
     use marketprice::config::Config as PriceConfig;
-    use sdk::cosmwasm_std::{
-        testing::{MockApi, MockQuerier, MockStorage},
-        Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+    use sdk::{
+        cosmwasm_std::{
+            testing::{MockApi, MockQuerier, MockStorage},
+            Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+        },
+        testing,
     };
 
     use crate::{
@@ -280,7 +283,7 @@ mod test_normalized_price_not_found {
                 api: &MockApi::default(),
                 querier: QuerierWrapper::new(&MockQuerier::<Empty>::new(&[])),
             },
-            String::from("feeder"),
+            testing::user("feeder").to_string(),
         )
         .unwrap();
 

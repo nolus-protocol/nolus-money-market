@@ -12,7 +12,10 @@ use finance::{
     percent::Percent,
     price::{self, dto::PriceDTO, Price},
 };
-use sdk::cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
+use sdk::{
+    cosmwasm_std::{testing::mock_dependencies, DepsMut, Timestamp},
+    testing,
+};
 
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
@@ -28,7 +31,7 @@ fn register_feeder() {
     let mut deps = mock_dependencies();
 
     let control = PriceFeeders::new("foo");
-    let f_address = deps.api.addr_validate("address1").unwrap();
+    let f_address = testing::user("address1");
     let resp = control.is_registered(&deps.storage, &f_address).unwrap();
     assert!(!resp);
 
@@ -44,10 +47,10 @@ fn register_feeder() {
     let res = control.register(deps.as_mut(), f_address);
     assert!(res.is_err());
 
-    let f_address = deps.api.addr_validate("address2").unwrap();
+    let f_address = testing::user("address2");
     control.register(deps.as_mut(), f_address).unwrap();
 
-    let f_address = deps.api.addr_validate("address3").unwrap();
+    let f_address = testing::user("address3");
     control.register(deps.as_mut(), f_address).unwrap();
 
     let feeders = control.get(&deps.storage).unwrap();
@@ -57,7 +60,7 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let deps = mock_dependencies();
-    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -83,7 +86,7 @@ fn marketprice_add_feed_expect_err() {
 fn marketprice_add_feed_empty_vec() {
     let mut deps = mock_dependencies();
     let market = PriceFeeds::new("foo", config());
-    let f_address = deps.api.addr_validate("address1").unwrap();
+    let f_address = testing::user("address1");
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -99,8 +102,8 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let mut deps = mock_dependencies();
-    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
-    let f_address = deps.api.addr_validate("address1").unwrap();
+    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
+    let f_address = testing::user("address1");
 
     let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
     let price2 = price::<SuperGroupTestC5, SubGroupTestC10, _, _>(10000000000, 1000000009);
@@ -153,7 +156,7 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
-    let market: PriceFeeds<'_, SuperGroup> = PriceFeeds::new("foo", config());
+    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
 
     feed_price(
         deps.as_mut(),
@@ -317,7 +320,7 @@ fn marketprice_follow_the_path() {
 
 fn feed_price<C1, C2, G>(
     deps: DepsMut<'_>,
-    market: &PriceFeeds<'_, G>,
+    market: &PriceFeeds<G>,
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
@@ -327,7 +330,7 @@ where
     C2::Group: MemberOf<G>,
     G: Group<TopG = G>,
 {
-    let f_address = deps.api.addr_validate("address1").unwrap();
+    let f_address = testing::user("address1");
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

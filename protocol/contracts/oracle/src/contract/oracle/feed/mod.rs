@@ -19,7 +19,7 @@ mod leg_cmd;
 mod price_querier;
 
 pub struct Feeds<PriceG, BaseC, BaseG> {
-    feeds: PriceFeeds<'static, PriceG>,
+    feeds: PriceFeeds<PriceG>,
     _base_c: PhantomData<BaseC>,
     _base_g: PhantomData<BaseG>,
 }

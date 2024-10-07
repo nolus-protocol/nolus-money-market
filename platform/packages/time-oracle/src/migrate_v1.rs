@@ -39,7 +39,7 @@ pub struct AlarmsOld {
     namespace_alarms: &'static str,
     namespace_index: &'static str,
     namespace_in_delivery: &'static str,
-    next_id: Item<'static, Id>,
+    next_id: Item<Id>,
 }
 
 impl AlarmsOld {
@@ -122,7 +122,7 @@ impl AlarmsOld {
         Ok(())
     }
 
-    fn alarms(&self) -> IndexedMap<'static, TimeSeconds, AlarmOld, AlarmIndexes> {
+    fn alarms(&self) -> IndexedMap<TimeSeconds, AlarmOld, AlarmIndexes> {
         let indexes = AlarmIndexes {
             alarms: MultiIndex::new(|_, d| d.time, self.namespace_alarms, self.namespace_index),
         };

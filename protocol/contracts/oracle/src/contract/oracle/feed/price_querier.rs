@@ -10,7 +10,7 @@ where
     G: Group,
 {
     storage: &'a dyn Storage,
-    feeds: &'a PriceFeeds<'static, G>,
+    feeds: &'a PriceFeeds<G>,
     at: Timestamp,
     total_feeders: usize,
 }
@@ -21,7 +21,7 @@ where
 {
     pub fn new(
         storage: &'a dyn Storage,
-        feeds: &'a PriceFeeds<'static, G>,
+        feeds: &'a PriceFeeds<G>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Self {

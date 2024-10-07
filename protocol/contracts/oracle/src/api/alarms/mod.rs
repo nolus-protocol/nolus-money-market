@@ -278,7 +278,7 @@ mod test {
             Lpn::ticker()
         );
 
-        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(dbg!(full_json).into_bytes()), msg);
+        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(full_json.into_bytes()), msg);
     }
 
     #[test]
@@ -325,10 +325,11 @@ mod test {
     {
         assert!(r.is_err());
         assert!(matches!(
-            dbg!(r),
-            Err(StdError::ParseErr {
+            r,
+            Err(StdError::ParseErr{
                 target_type,
-                msg: real_msg
+                msg: real_msg,
+                backtrace:_,
             }) if target_type.contains("Alarm") && real_msg.contains(msg)
         ));
     }
@@ -397,7 +398,7 @@ mod test {
             || format!(r#"{{{}}}"#, below.as_ref()),
             |above| format!(r#"{{{}, {}}}"#, below.as_ref(), above.as_ref()),
         );
-        from_json(dbg!(full_json).into_bytes())
+        from_json(full_json.into_bytes())
     }
 
     enum AlarmPrice {

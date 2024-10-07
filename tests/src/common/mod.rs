@@ -13,7 +13,7 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        testing::mock_env, to_json_binary, Addr, Binary, BlockInfo, Deps, Empty, Env, StdResult,
+        testing::mock_env, to_json_binary, Binary, BlockInfo, Deps, Empty, Env, StdResult,
         Timestamp,
     },
     testing::{self, new_app, CwApp, InterChainMsgSender},
@@ -133,7 +133,7 @@ pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin
         .build(|router, _, storage| {
             router
                 .bank
-                .init_balance(storage, &Addr::unchecked(ADMIN), funds)
+                .init_balance(storage, &testing::user(ADMIN), funds)
                 .unwrap();
         })
 }

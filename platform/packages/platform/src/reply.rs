@@ -2,14 +2,17 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use prost::Message;
 use serde::de::DeserializeOwned;
 
 use sdk::{
-    cosmos_sdk_proto::cosmwasm::wasm::v1::{
-        MsgExecuteContractResponse, MsgInstantiateContract2Response, MsgInstantiateContractResponse,
+    cosmos_sdk_proto::{
+        cosmwasm::wasm::v1::{
+            MsgExecuteContractResponse, MsgInstantiateContract2Response,
+            MsgInstantiateContractResponse,
+        },
+        prost::Message,
     },
-    cosmwasm_std::{from_json, Addr, Api, Reply},
+    cosmwasm_std::{from_json, Addr, Api, Reply, SubMsgResponse},
 };
 
 use crate::{error::Error, result::Result};
@@ -39,7 +42,7 @@ pub fn from_execute<T>(reply: Reply) -> Result<Option<T>>
 where
     T: DeserializeOwned,
 {
-    decode::<MsgExecuteContractResponse>(reply)
+    decode_first_response::<MsgExecuteContractResponse>(reply)
         .and_then(|data| from_json(data.data).map_err(Error::Serialization))
 }
 
@@ -76,7 +79,7 @@ fn from_instantiate_inner<R>(api: &dyn Api, reply: Reply) -> Result<InstantiateR
 where
     R: InstantiationResponse,
 {
-    let response: R = decode(reply)?;
+    let response: R = decode_first_response(reply)?;
 
     api.addr_validate(response.addr())
         .map_err(|err| Error::CosmWasmAddressInvalid(response.addr().to_string(), err))
@@ -93,16 +96,37 @@ where
     M::decode(message).map_err(Into::into)
 }
 
-fn decode<M>(reply: Reply) -> Result<M>
+fn decode_first_response<M>(reply: Reply) -> Result<M>
 where
     M: Message + Default,
 {
     reply
         .result
         .into_result()
-        .map_err(Error::ReplyResultError)?
-        .data
+        .map_err(Error::ReplyResultError)
+        .and_then(|ref resp| decode_from_responses(resp).or_else(|_| decode_from_data(resp)))
+}
+
+// TODO remove once the [PR][https://github.com/CosmWasm/cw-multi-test/issues/206] got released
+fn decode_from_data<M>(resp: &SubMsgResponse) -> Result<M>
+where
+    M: Message + Default,
+{
+    #[allow(deprecated)]
+    resp.data
+        .as_ref()
         .ok_or(Error::EmptyReply())
         .map_err(Into::into)
-        .and_then(|ref data| decode_raw(data))
+        .and_then(|data| decode_raw(data))
+}
+
+fn decode_from_responses<M>(resp: &SubMsgResponse) -> Result<M>
+where
+    M: Message + Default,
+{
+    if let [response] = resp.msg_responses.as_slice() {
+        decode_raw(&response.value)
+    } else {
+        Err(Error::EmptyReply())
+    }
 }

@@ -71,9 +71,7 @@ impl Pool for MockPool {
                 Ok(Response::messages_with_events(msgs, events))
             }
             DistributeRewards::Fail => Err(ContractError::DistributeLppReward(
-                lpp_platform::error::Error::Std(StdError::GenericErr {
-                    msg: "Error from the MockPool".into(),
-                }),
+                lpp_platform::error::Error::Std(StdError::generic_err("Error from the MockPool")),
             )),
         };
         assert_eq!(self.apr, apr);
