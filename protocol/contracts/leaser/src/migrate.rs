@@ -4,7 +4,7 @@ use lease::api::MigrateMsg;
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
 
-use crate::{msg::MaxLeases, result::ContractResult};
+use crate::{error::ContractError, msg::MaxLeases, result::ContractResult};
 
 pub struct Customer<LeaseIter> {
     customer: Addr,
@@ -13,7 +13,7 @@ pub struct Customer<LeaseIter> {
 
 // #[derive(Default)]
 // #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct MigrationResult {
     pub msgs: Batch,
     pub next_customer: Option<Addr>,
@@ -38,18 +38,34 @@ where
     LI: ExactSizeIterator<Item = Addr>,
     MsgFactory: Fn() -> MigrateMsg,
 {
-    let mut msgs = MigrateBatch::new(lease_code, max_leases);
+    let migration_batch = MigrateBatch::new(lease_code, max_leases);
 
-    customers
-        .find_map(|maybe_customer| match maybe_customer {
-            Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
-            Err(err) => Some(Err(err)),
-        })
-        .transpose()
-        .map(|next_customer| MigrationResult {
-            msgs: msgs.into(),
-            next_customer,
-        })
+    let result: Result<MigrateBatch, MigrateError> =
+        customers.try_fold(migration_batch, |migration_set, maybe_customer| {
+            maybe_customer.map_err(Into::into).and_then(|customer| {
+                migration_set
+                    .migrate_or_be_next(customer, &migrate_msg)
+                    .map_err(Into::into)
+                    .and_then(|outcome| match outcome {
+                        MigrationStatus::Success(migrated) => Ok(migrated),
+                        MigrationStatus::CapacityReached(not_migrated) => {
+                            let incomplete_result = MigrationResult {
+                                msgs: not_migrated.result.msgs,
+                                next_customer: not_migrated.result.next_customer,
+                            };
+                            Err(MigrateError::MigrationIncomplete(incomplete_result))
+                        }
+                    })
+            })
+        });
+
+    match result {
+        Ok(migrate_summary) => Ok(migrate_summary.result),
+        Err(migrate_err) => match migrate_err {
+            MigrateError::MigrationIncomplete(outcome) => Ok(outcome),
+            MigrateError::ContractError(err) => Err(err),
+        },
+    }
 }
 
 impl<LeaseIter> Customer<LeaseIter>
@@ -92,6 +108,11 @@ struct MigrateBatch {
     result: MigrationResult,
 }
 
+enum MigrationStatus {
+    CapacityReached(MigrateBatch),
+    Success(MigrateBatch),
+}
+
 impl MigrateBatch {
     fn new(new_code: Code, max_leases: MaxLeases) -> Self {
         Self::new_with_result(new_code, max_leases, MigrationResult::default())
@@ -105,48 +126,75 @@ impl MigrateBatch {
         }
     }
 
-    /// None if there is enough capacity for all leases, Some(Ok(())) - none migrated due to less available seats, Some(Err) - if an error occurs at some point
+    /// Returns the result of the migration process presented as Ok(MigrationStatus) and ContractError if an error occurs during the migration.
+    /// The MigrationStatus can be:
+    /// - `Success` - All leases were migrated successfully.
+    /// - `CapacityReached` - Indicates that the migration could not be completed due to capacity constraints.
     fn migrate_leases<Leases, MsgFactory>(
-        &mut self,
+        mut self,
         mut leases: Leases,
         migrate_msg: &MsgFactory,
-    ) -> Option<ContractResult<()>>
+    ) -> ContractResult<MigrationStatus>
     where
         Leases: ExactSizeIterator<Item = Addr>,
         MsgFactory: Fn() -> MigrateMsg,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
+
         match maybe_leases_nb {
             Err(err) => Err(err.into()),
             Ok(leases_nb) => {
                 if let Some(left) = self.leases_left.checked_sub(leases_nb) {
                     self.leases_left = left;
-                    leases.find_map(|lease| {
-                        self.msgs
-                            .schedule_migrate_wasm_no_reply(lease, &migrate_msg(), self.new_code)
-                            .map(|()| None)
-                            .map_err(Into::into)
+
+                    leases
+                        .try_fold(self, |mut state, lease| {
+                            let updated_msgs = state.result.msgs.schedule_migrate_wasm_no_reply(
+                                lease,
+                                &migrate_msg(),
+                                state.new_code,
+                            )?;
+
+                            state.result.msgs = updated_msgs;
+
+                            Ok(state)
                         })
-                        .and_then(|updated_msgs| Ok(self.update(updated_msgs, None)))
+                        .map(MigrationStatus::Success)
                 } else {
-                    Some(Ok(()))
+                    Ok(MigrationStatus::CapacityReached(self))
                 }
             }
         }
     }
 
-    /// None if there is enough room for all customer's leases, otherwise return the customer
+    /// Returns the result of the migration process presented as Ok(MigrationStatus) and ContractError if an error occurs during the migration.
+    /// The MigrationStatus can be:
+    /// - `Success` - Indicates that there is enough room for all of the customer's leases,
+    ///   and in this case the customer's address is not passed.
+    /// - `CapacityReached` - Indicates that there was not enough room to migrate all leases,
+    ///   and therefore the address of the current client is passed as the next client.
     fn migrate_or_be_next<LI, MsgFactory>(
-        &mut self,
+        self,
         customer: Customer<LI>,
         migrate_msg: &MsgFactory,
-    ) -> Option<ContractResult<Addr>>
+    ) -> ContractResult<MigrationStatus>
     where
         LI: ExactSizeIterator<Item = Addr>,
         MsgFactory: Fn() -> MigrateMsg,
     {
-        self.migrate_leases(customer.leases, migrate_msg)
-            .map(|completed| completed.map(|()| customer.customer))
+        match self.migrate_leases(customer.leases, migrate_msg) {
+            Ok(status) => match status {
+                MigrationStatus::Success(mut migrated_self) => {
+                    migrated_self.result.next_customer = None;
+                    Ok(MigrationStatus::Success(migrated_self))
+                }
+                MigrationStatus::CapacityReached(mut not_migrated_self) => {
+                    not_migrated_self.result.next_customer = Some(customer.customer);
+                    Ok(MigrationStatus::CapacityReached(not_migrated_self))
+                }
+            },
+            Err(err) => Err(err),
+        }
     }
 }
 
@@ -343,11 +391,13 @@ mod test {
         );
     }
 
-    fn add_expected(mut exp: MigrationResult, lease_addr: Addr, new_code: Code) -> MigrationResult {
-        exp.msgs
-            .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg(), new_code)
-            .unwrap();
-        exp
+    fn add_expected(exp: MigrationResult, lease_addr: Addr, new_code: Code) -> MigrationResult {
+        MigrationResult::new(
+            exp.msgs
+                .schedule_migrate_wasm_no_reply(lease_addr, &migrate_msg(), new_code)
+                .unwrap(),
+            exp.next_customer,
+        )
     }
 
     fn test_customers() -> impl Iterator<Item = ContractResult<Customer<IntoIter<Addr>>>> {
