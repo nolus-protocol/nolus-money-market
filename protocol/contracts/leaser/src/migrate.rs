@@ -11,9 +11,8 @@ pub struct Customer<LeaseIter> {
     leases: LeaseIter,
 }
 
-// #[derive(Default)]
-// #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Default, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct MigrationResult {
     pub msgs: Batch,
     pub next_customer: Option<Addr>,
@@ -204,7 +203,7 @@ impl From<MigrateBatch> for Batch {
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 enum MigrateError {
     #[error("[Leaser] Migration incomplete with next customer")]
     MigrationIncomplete(MigrationResult),
