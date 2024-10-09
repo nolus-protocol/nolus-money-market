@@ -89,11 +89,11 @@ impl Batch {
     }
 
     pub fn schedule_execute_wasm_reply_always_no_funds<M>(
-        &mut self,
+        self,
         addr: Addr,
         msg: &M,
         reply_id: ReplyId,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
     {
@@ -245,22 +245,17 @@ impl Batch {
         self.schedule_msg(SubMsg::reply_on_error(msg, reply_id))
     }
 
-    fn schedule_reply_always<M>(&mut self, msg: M, reply_id: ReplyId)
+    fn schedule_reply_always<M>(self, msg: M, reply_id: ReplyId) -> Self
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg_t(SubMsg::reply_always(msg, reply_id));
+        self.schedule_msg(SubMsg::reply_always(msg, reply_id))
     }
 
     #[inline]
     fn schedule_msg(mut self, msg: SubMsg) -> Self {
         self.msgs.push(msg);
         self
-    }
-
-    #[inline]
-    fn schedule_msg_t(&mut self, msg: SubMsg) {
-        self.msgs.push(msg);
     }
 }
 
