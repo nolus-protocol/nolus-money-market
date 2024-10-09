@@ -32,7 +32,7 @@ impl Batch {
         self.schedule_no_reply(msg)
     }
 
-    pub fn schedule_execute_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
+    pub fn schedule_execute_reply_on_success<M>(self, msg: M, reply_id: ReplyId) -> Self
     where
         M: Into<CosmosMsg>,
     {
@@ -61,11 +61,11 @@ impl Batch {
     }
 
     pub fn schedule_execute_wasm_reply_on_success_no_funds<M>(
-        &mut self,
+        self,
         addr: Addr,
         msg: &M,
         reply_id: ReplyId,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
     {
@@ -74,12 +74,12 @@ impl Batch {
     }
 
     pub fn schedule_execute_wasm_reply_on_success<M, C>(
-        &mut self,
+        self,
         addr: Addr,
         msg: &M,
         funds: Option<Coin<C>>,
         reply_id: ReplyId,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
         C: CurrencyDef,
@@ -115,14 +115,14 @@ impl Batch {
     }
 
     pub fn schedule_instantiate_wasm_reply_on_success<M>(
-        &mut self,
+        self,
         code: Code,
         msg: &M,
         funds: Option<Vec<CoinCw>>,
         label: String,
         admin: Option<Addr>,
         reply_id: ReplyId,
-    ) -> Result<()>
+    ) -> Result<Self>
     where
         M: Serialize + ?Sized,
     {
@@ -231,11 +231,11 @@ impl Batch {
         self.schedule_msg(SubMsg::new(msg))
     }
 
-    fn schedule_reply_on_success<M>(&mut self, msg: M, reply_id: ReplyId)
+    fn schedule_reply_on_success<M>(self, msg: M, reply_id: ReplyId) -> Self
     where
         M: Into<CosmosMsg>,
     {
-        self.schedule_msg_t(SubMsg::reply_on_success(msg, reply_id));
+        self.schedule_msg(SubMsg::reply_on_success(msg, reply_id))
     }
 
     fn schedule_reply_on_error<M>(self, msg: M, reply_id: ReplyId) -> Self

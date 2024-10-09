@@ -65,8 +65,7 @@ pub(super) fn migrate_contract(batches: Batches, address: Addr, migrate: Migrati
         None => batches.post_migration_execute_batch,
     };
 
-    let mut migration_batch = batches.migration_batch;
-    migration_batch.schedule_execute_reply_on_success(
+    let migration_batch = batches.migration_batch.schedule_execute_reply_on_success(
         WasmMsg::Migrate {
             contract_addr: address.into_string(),
             new_code_id: migrate.code_id.u64(),
