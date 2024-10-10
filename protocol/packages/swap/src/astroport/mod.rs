@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{Deserialize, Serialize};
-
 use currency::{self, DexSymbols, Group, SymbolSlice};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
@@ -21,7 +19,7 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-use api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
+use self::api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
 
 mod api;
 #[cfg(test)]
@@ -35,7 +33,6 @@ type ResponseMsg = MsgExecuteContractResponse;
 // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
 const MAX_IMPACT: Decimal = Decimal::percent(50);
 
-#[derive(Serialize, Deserialize)]
 pub struct Impl<R>
 where
     Self: ExactAmountIn,

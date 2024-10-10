@@ -1,7 +1,6 @@
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
-use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group};
 use dex::swap::{Error, ExactAmountIn, Result};
@@ -22,7 +21,6 @@ mod testing;
 type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
-#[derive(Serialize, Deserialize)]
 pub struct Impl;
 
 impl ExactAmountIn for Impl {
