@@ -42,6 +42,10 @@ use crate::{InspectSpec, MigrateSpec};
 use super::{Contract, SwapState};
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "SwapTask: Serialize",
+    deserialize = "SwapTask: Deserialize<'de>",
+))]
 pub struct SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient> {
     spec: SwapTask,
     #[serde(skip)]

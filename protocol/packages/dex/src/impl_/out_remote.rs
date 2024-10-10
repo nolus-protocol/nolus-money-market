@@ -12,6 +12,10 @@ pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
     ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "OpenIca: Serialize, SwapTask: Serialize",
+    deserialize = "OpenIca: Deserialize<'de>, SwapTask: Deserialize<'de>",
+))]
 pub enum State<
     OpenIca,
     SwapTask,
