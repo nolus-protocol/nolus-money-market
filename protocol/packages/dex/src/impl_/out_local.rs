@@ -10,6 +10,10 @@ use crate::{
 use super::swap_task::SwapTask as SwapTaskT;
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "SwapTask: Serialize",
+    deserialize = "SwapTask: Deserialize<'de>",
+))]
 pub enum State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
 where
     SwapTask: SwapTaskT,

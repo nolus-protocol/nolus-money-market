@@ -16,6 +16,7 @@ use crate::{InspectSpec, MigrateSpec};
 use super::{Account, Contract, DexConnectable, Enterable, IcaConnectee, TimeAlarm};
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound(serialize = "S: Serialize", deserialize = "S: Deserialize<'de>"))]
 pub struct InRecovery<S, SEnum> {
     state: S,
     time_alarms: TimeAlarmsRef,
