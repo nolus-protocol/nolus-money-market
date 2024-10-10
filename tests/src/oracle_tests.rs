@@ -528,9 +528,7 @@ fn schedule_alarm(
 ) -> ContractResult<CwResponse> {
     Ok(platform::response::response_only_messages(
         platform::message::Response::messages_only({
-            let mut batch: Batch = Batch::default();
-
-            batch.schedule_execute_wasm_no_reply::<_, BaseC>(
+            Batch::default().schedule_execute_wasm_no_reply::<_, BaseC>(
                 ORACLE_ADDR.load(storage).unwrap(),
                 &ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
@@ -539,9 +537,7 @@ fn schedule_alarm(
                     ),
                 },
                 None,
-            )?;
-
-            batch
+            )?
         }),
     ))
 }

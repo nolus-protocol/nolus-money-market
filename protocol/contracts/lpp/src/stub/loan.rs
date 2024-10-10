@@ -95,13 +95,15 @@ where
 
     fn try_from(stub: LppLoanImpl<Lpn, Lpns>) -> StdResult<Self, Self::Error> {
         let mut batch = Batch::default();
+
         if !stub.repayment.is_zero() {
-            batch.schedule_execute_wasm_no_reply(
+            batch = batch.schedule_execute_wasm_no_reply(
                 stub.lpp_ref.addr().clone(),
                 &ExecuteMsg::<Lpns>::RepayLoan(),
                 Some(stub.repayment),
             )?;
         }
+
         Ok(Self {
             lpp_ref: stub.lpp_ref,
             batch,
@@ -163,13 +165,13 @@ mod test {
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         {
-            let mut exp = Batch::default();
-            exp.schedule_execute_wasm_no_reply(
-                lpp_ref.addr().clone(),
-                &ExecuteMsg::<Lpns>::RepayLoan(),
-                Some(payment1 + payment2),
-            )
-            .unwrap();
+            let exp = Batch::default()
+                .schedule_execute_wasm_no_reply(
+                    lpp_ref.addr().clone(),
+                    &ExecuteMsg::<Lpns>::RepayLoan(),
+                    Some(payment1 + payment2),
+                )
+                .unwrap();
             assert_eq!(exp, batch.batch);
         }
     }
