@@ -39,6 +39,10 @@ use super::{
 ///
 /// Supports up to `CoinsNb::MAX` number of coins.
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "SwapTask: Serialize",
+    deserialize = "SwapTask: Deserialize<'de>",
+))]
 pub struct TransferOut<SwapTask, SEnum, SwapGroup, SwapClient> {
     spec: SwapTask,
     coin_index: CoinsNb,
