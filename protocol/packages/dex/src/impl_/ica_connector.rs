@@ -37,6 +37,10 @@ pub trait IcaConnectee {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "Connectee: Serialize",
+    deserialize = "Connectee: Deserialize<'de>",
+))]
 pub struct IcaConnector<Connectee, SwapResult> {
     connectee: Connectee,
     #[serde(skip)]
