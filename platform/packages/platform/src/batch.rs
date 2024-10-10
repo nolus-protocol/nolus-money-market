@@ -15,10 +15,10 @@ use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, error::Error, result:
 pub type ReplyId = u64;
 
 #[must_use]
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[cfg_attr(
     any(debug_assertions, test, feature = "testing"),
-    derive(Debug, PartialEq, Eq)
+    derive(PartialEq, Eq)
 )]
 pub struct Batch {
     msgs: Vec<SubMsg>,
