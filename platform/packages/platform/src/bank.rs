@@ -186,7 +186,9 @@ where
             C::Group: MemberOf<G> + MemberOf<G::TopG>,
         {
             let mut sender = LazySenderStub::new(self.to);
+
             sender.send(coin);
+
             Ok(sender.into())
         }
     }
@@ -209,7 +211,9 @@ where
     C: CurrencyDef,
 {
     let mut batch = Batch::default();
+
     bank_send_impl(&mut batch, to, [amount]);
+
     batch
 }
 
@@ -246,6 +250,7 @@ where
         C: CurrencyDef,
     {
         debug_assert!(!amount.is_zero());
+
         bank_send_impl(&mut self.batch, to, [amount])
     }
 }
@@ -372,6 +377,7 @@ where
     Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
 {
     type InnerItem;
+
     type Error;
 
     fn reduce_results<F>(&mut self, f: F) -> Option<StdResult<Self::InnerItem, Self::Error>>
@@ -384,6 +390,7 @@ where
     I: Iterator<Item = StdResult<T, E>>,
 {
     type InnerItem = T;
+
     type Error = E;
 
     fn reduce_results<F>(&mut self, mut f: F) -> Option<StdResult<T, E>>
@@ -529,6 +536,7 @@ mod test {
     fn may_received_in_group() {
         let coin = Coin::<TheCurrency>::new(AMOUNT);
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
+
         assert_eq!(
             Some(Ok(true)),
             may_received(iter::once(&in_coin_1), Expect(coin))
@@ -544,8 +552,11 @@ mod test {
 
         let coin_3 = Coin::<TheCurrency>::new(AMOUNT + AMOUNT);
         let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
+
         let cw_amount = &[in_coin_1, in_coin_2, in_coin_3];
+
         assert_eq!(Some(Ok(true)), may_received(cw_amount, Expect(coin_2)));
+
         assert_eq!(Some(Ok(true)), may_received(cw_amount, Expect(coin_3)));
     }
 
@@ -594,6 +605,7 @@ mod test {
         G: Group,
     {
         type Output = ();
+
         type Error = Error;
 
         fn on<C>(self, _: Coin<C>) -> WithCoinResult<G, Self>
@@ -703,14 +715,17 @@ mod test {
         G: Group,
     {
         let from: Addr = testing::user(USER);
+
         let to = from.clone();
 
         let app = BasicApp::new(|router, _, storage| {
             router.bank.init_balance(storage, &from, coins).unwrap();
         });
+
         let querier: QuerierWrapper<'_> = app.wrap();
 
         let msgs = super::bank_send_all::<G>(&from, to, querier).unwrap();
+
         assert_eq!(exp_coins_nb, msgs.len());
     }
 }
