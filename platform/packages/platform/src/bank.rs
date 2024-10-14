@@ -191,8 +191,7 @@ where
         }
     }
 
-    let from_account = account(from, querier);
-    from_account
+    account(from, querier)
         .balances(SendAny::<G> {
             to,
             _g: PhantomData,
