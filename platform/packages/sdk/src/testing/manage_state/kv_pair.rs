@@ -1,21 +1,29 @@
-use data_encoding::DecodeError;
+use crate::cosmwasm_std::HexBinary;
+
+use super::LoadIntoStorageFromFileError;
 
 pub struct KvPair {
-    key: Box<[u8]>,
-    value: Box<[u8]>,
+    key: Vec<u8>,
+    value: Vec<u8>,
 }
 
 impl KvPair {
-    pub const fn from_raw(key: Box<[u8]>, value: Box<[u8]>) -> Self {
-        Self { key, value }
-    }
-
-    pub fn try_from_encoded(key: &[u8], value: &[u8]) -> Result<Self, DecodeError> {
-        data_encoding::HEXUPPER.decode(key).and_then(|key| {
-            data_encoding::BASE64
-                .decode(value)
-                .map(|value| Self::from_raw(key.into_boxed_slice(), value.into_boxed_slice()))
-        })
+    pub fn try_from_encoded(
+        key_encoded: &str,
+        value_encoded: &str,
+    ) -> Result<Self, LoadIntoStorageFromFileError> {
+        HexBinary::from_hex(key_encoded)
+            .map_err(LoadIntoStorageFromFileError::DecodeKey)
+            .and_then(|key| {
+                use base64::{engine::general_purpose, Engine};
+                general_purpose::STANDARD
+                    .decode(value_encoded)
+                    .map_err(LoadIntoStorageFromFileError::DecodeValue)
+                    .map(|value| Self {
+                        key: key.into(),
+                        value,
+                    })
+            })
     }
 
     pub fn key(&self) -> &[u8] {

@@ -34,7 +34,6 @@ versioning = { path = "packages/versioning", default-features = false }
 # General
 anyhow = "1"
 base64 = { version = "0.22", default-features = false }
-data-encoding = "2"
 gcd = "2"
 serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }

@@ -4,8 +4,9 @@ use std::{
     path::Path,
 };
 
-use cosmwasm_std::Storage;
-use data_encoding::DecodeError;
+use base64::DecodeError;
+
+use crate::cosmwasm_std::{StdError, Storage};
 
 use self::kv_pair::KvPair;
 
@@ -52,8 +53,10 @@ pub enum LoadIntoStorageFromFileError {
     Io(io::Error),
     #[error("Delimiter not found!")]
     DelimiterNotFound,
-    #[error("Decoding error has occurred! Cause: {0}")]
-    Decode(DecodeError),
+    #[error("Key decoding error has occurred! Cause: {0}")]
+    DecodeKey(StdError),
+    #[error("Value decoding error has occurred! Cause: {0}")]
+    DecodeValue(DecodeError),
 }
 
 fn try_load_into_storage<S, I, E>(storage: &mut S, mut iter: I) -> Result<(), E>
@@ -61,9 +64,7 @@ where
     S: Storage + ?Sized,
     I: Iterator<Item = Result<KvPair, E>>,
 {
-    iter.try_for_each(|kv_pair| {
-        kv_pair.map(|kv_pair| storage.set(kv_pair.key().as_ref(), kv_pair.value().as_ref()))
-    })
+    iter.try_for_each(|kv_pair| kv_pair.map(|kv_pair| storage.set(kv_pair.key(), kv_pair.value())))
 }
 
 fn parse_csv_lines(
@@ -78,9 +79,9 @@ fn parse_csv_lines(
 
 fn parse_csv_line(line: String) -> Result<KvPair, LoadIntoStorageFromFileError> {
     line.split_once(',')
-        .map(|(key, value)| (key.trim().as_bytes(), value.trim().as_bytes()))
+        .map(|(key, value)| (key.trim(), value.trim()))
         .ok_or(LoadIntoStorageFromFileError::DelimiterNotFound)
         .and_then(|(key, value)| {
-            KvPair::try_from_encoded(key, value).map_err(LoadIntoStorageFromFileError::Decode)
+            KvPair::try_from_encoded(key, value)
         })
 }
