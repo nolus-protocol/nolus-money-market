@@ -578,11 +578,14 @@ mod test {
         where
             G: Group,
         {
-            if self.expected.is_some() {
-                assert_eq!(Some(Ok(())), balances_result)
-            } else {
-                assert_eq!(None, balances_result)
-            }
+            assert_eq!(
+                balances_result,
+                if self.expected.is_some() {
+                    Some(Ok(()))
+                } else {
+                    None
+                }
+            )
         }
     }
 
