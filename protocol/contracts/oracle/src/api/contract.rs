@@ -99,6 +99,8 @@ where
     },
 
     /// Provides all supported prices
+    ///
+    /// Returns `oracle::api::PricesResponse`
     Prices {},
 
     /// Report the base currency as [SymbolOwned]
@@ -122,9 +124,13 @@ where
     },
 
     /// Lists configured swap pairs
+    ///
+    /// Return `oracle;:api::SupportedCurrencyPairsResponse`
     SupportedCurrencyPairs {},
 
     /// Lists configured currencies
+    ///
+    /// Return a `Vec<oracle::api::Currency>`
     Currencies {},
 
     /// Provides a path in the swap tree between two arbitrary currencies
