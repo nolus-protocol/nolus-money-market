@@ -8,3 +8,8 @@ license.workspace = true
 [[package.metadata.cargo-each.combinations]]
 tags = ["ci", "@agnostic"]
 include-rest = true
+
+[dependencies]
+currencies = { workspace = true }
+oracle = { workspace = true, features = ["contract"] }
+sdk = { workspace = true, features = ["testing"] }
