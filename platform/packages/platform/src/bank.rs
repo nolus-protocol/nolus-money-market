@@ -46,9 +46,10 @@ where
 }
 
 /// Ensure a single coin of the specified currency is received by a contract and return it
-pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
+pub fn received_one<C, I>(cw_amount: I) -> Result<Coin<C>>
 where
     C: CurrencyDef,
+    I: IntoIterator<Item = CwCoin>,
 {
     received_one_impl(
         cw_amount,
@@ -59,12 +60,10 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<VisitedG, V>(
-    cw_amount: &Vec<CwCoin>,
-    mut cmd: V,
-) -> Option<WithCoinResult<VisitedG, V>>
+pub fn may_received<'r, VisitedG, I, V>(cw_amount: I, cmd: V) -> Option<WithCoinResult<VisitedG, V>>
 where
     VisitedG: Group,
+    I: IntoIterator<Item = &'r CwCoin>,
     V: WithCoin<VisitedG>,
 {
     if let ControlFlow::Break(result) =
@@ -211,7 +210,7 @@ where
     C: CurrencyDef,
 {
     let mut batch = Batch::default();
-    bank_send_impl(&mut batch, to, &[amount]);
+    bank_send_impl(&mut batch, to, [amount]);
     batch
 }
 
@@ -248,7 +247,7 @@ where
         C: CurrencyDef,
     {
         debug_assert!(!amount.is_zero());
-        bank_send_impl(&mut self.batch, to, &[amount])
+        bank_send_impl(&mut self.batch, to, [amount])
     }
 }
 
@@ -261,39 +260,38 @@ where
     }
 }
 
-fn received_one_impl<NoFundsErr, UnexpFundsErr>(
-    cw_amount: Vec<CwCoin>,
+fn received_one_impl<I, NoFundsErr, UnexpFundsErr>(
+    cw_amount: I,
     no_funds_err: NoFundsErr,
     unexp_funds_err: UnexpFundsErr,
 ) -> Result<CwCoin>
 where
+    I: IntoIterator<Item = CwCoin>,
     NoFundsErr: FnOnce() -> Error,
     UnexpFundsErr: FnOnce() -> Error,
 {
-    match cw_amount.len() {
-        0 => Err(no_funds_err()),
-        1 => {
-            let first = cw_amount
-                .into_iter()
-                .next()
-                .expect("there is at least a coin");
+    let mut iter = cw_amount.into_iter();
+
+    if let Some(first) = iter.next() {
+        if iter.next().is_none() {
             Ok(first)
+        } else {
+            Err(unexp_funds_err())
         }
-        _ => Err(unexp_funds_err()),
+    } else {
+        Err(no_funds_err())
     }
 }
 
-fn bank_send_impl<C>(batch: &mut Batch, to: Addr, amount: &[Coin<C>])
+fn bank_send_impl<C, I>(batch: &mut Batch, to: Addr, amount: I)
 where
     C: CurrencyDef,
+    I: IntoIterator<Item = Coin<C>>,
 {
     bank_send_cosmwasm(
         batch,
         to,
-        amount
-            .iter()
-            .map(|coin| to_cosmwasm_impl(coin.to_owned()))
-            .collect(),
+        amount.into_iter().map(to_cosmwasm_impl).collect(),
     )
 }
 
