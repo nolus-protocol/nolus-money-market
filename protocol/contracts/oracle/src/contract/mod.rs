@@ -213,7 +213,7 @@ fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()>
 fn try_clean_feeds(storage: &mut dyn Storage) -> ContractResult<()> {
     Config::load(storage)
         .map(|cfg| Feeds::<PriceCurrencies, BaseCurrency, BaseCurrencies>::with(cfg.price_config))
-        .and_then(|feeds| Ok(feeds.clean_all(storage)))
+        .map(|feeds| feeds.clean_all(storage))
 }
 
 fn to_json_binary<T>(data: &T) -> ContractResult<Binary>
