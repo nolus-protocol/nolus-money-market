@@ -403,6 +403,7 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::{convert::Infallible, iter, ops::Add};
 
     use currency::{
         test::{
@@ -438,9 +439,8 @@ mod test {
     #[test]
     fn reduce_results_empty() {
         assert_eq!(
-            [const { Ok::<(), TestError>(()) }; 0]
-                .into_iter()
-                .reduce_results(|(), ()| unreachable!()),
+            iter::empty::<Result<Infallible, TestError>>()
+                .reduce_results(|acc, _| { match acc {} }),
             None
         );
     }
@@ -448,9 +448,7 @@ mod test {
     #[test]
     fn reduce_results_1_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1)]
-                .into_iter()
-                .reduce_results(|_, _| unreachable!()),
+            iter::once(Ok::<_, TestError>(1)).reduce_results(|_, _| unreachable!()),
             Some(Ok(1))
         );
     }
@@ -458,9 +456,7 @@ mod test {
     #[test]
     fn reduce_results_3_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Ok(2), Ok(3)]
-                .into_iter()
-                .reduce_results(|acc, element| acc + element),
+            (1..=3).map(Ok::<_, Infallible>).reduce_results(Add::add),
             Some(Ok(6))
         );
     }
@@ -468,9 +464,7 @@ mod test {
     #[test]
     fn reduce_results_1_err() {
         assert_eq!(
-            [Err::<u8, TestError>(TestError)]
-                .into_iter()
-                .reduce_results(|_, _| unreachable!()),
+            iter::once(Err::<Infallible, _>(TestError)).reduce_results(|acc, _| { match acc {} }),
             Some(Err(TestError))
         );
     }
@@ -478,7 +472,7 @@ mod test {
     #[test]
     fn reduce_results_1_ok_1_err() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Err(TestError)]
+            [Ok::<_, TestError>(1), Err(TestError)]
                 .into_iter()
                 .reduce_results(|_, _| unreachable!()),
             Some(Err(TestError))
@@ -513,7 +507,7 @@ mod test {
     fn may_received_no_input() {
         assert_eq!(
             None,
-            may_received(&vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+            may_received(iter::empty(), Expect(Coin::<TheCurrency>::from(AMOUNT)))
         );
     }
 
@@ -528,7 +522,7 @@ mod test {
         assert_eq!(
             None,
             may_received(
-                &vec![in_coin_1, in_coin_2],
+                &[in_coin_1, in_coin_2],
                 Expect(Coin::<TheCurrency>::new(AMOUNT))
             )
         );
@@ -538,7 +532,10 @@ mod test {
     fn may_received_in_group() {
         let coin = Coin::<TheCurrency>::new(AMOUNT);
         let in_coin_1 = coin_legacy::to_cosmwasm(coin);
-        assert_eq!(Some(Ok(true)), may_received(&vec![in_coin_1], Expect(coin)));
+        assert_eq!(
+            Some(Ok(true)),
+            may_received(iter::once(&in_coin_1), Expect(coin))
+        );
     }
 
     #[test]
@@ -550,17 +547,9 @@ mod test {
 
         let coin_3 = Coin::<TheCurrency>::new(AMOUNT + AMOUNT);
         let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
-        assert_eq!(
-            Some(Ok(true)),
-            may_received(
-                &vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
-                Expect(coin_2)
-            )
-        );
-        assert_eq!(
-            Some(Ok(true)),
-            may_received(&vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
-        );
+        let cw_amount = &[in_coin_1, in_coin_2, in_coin_3];
+        assert_eq!(Some(Ok(true)), may_received(cw_amount, Expect(coin_2)));
+        assert_eq!(Some(Ok(true)), may_received(cw_amount, Expect(coin_3)));
     }
 
     #[derive(Clone)]
