@@ -81,7 +81,5 @@ fn parse_csv_line(line: String) -> Result<KvPair, LoadIntoStorageFromFileError> 
     line.split_once(',')
         .map(|(key, value)| (key.trim(), value.trim()))
         .ok_or(LoadIntoStorageFromFileError::DelimiterNotFound)
-        .and_then(|(key, value)| {
-            KvPair::try_from_encoded(key, value)
-        })
+        .and_then(|(key, value)| KvPair::try_from_encoded(key, value))
 }
