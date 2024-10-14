@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{marker::PhantomData, ops::ControlFlow, result::Result as StdResult};
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
@@ -67,17 +67,18 @@ where
     VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
-    let mut may_res = None;
-    for coin in cw_amount {
-        cmd = match from_cosmwasm_any(coin, cmd) {
-            Ok(res) => {
-                may_res = Some(res);
-                break;
-            }
-            Err(cmd) => cmd,
-        }
+    if let ControlFlow::Break(result) =
+        cw_amount
+            .into_iter()
+            .try_fold(cmd, |cmd, coin| match from_cosmwasm_any(coin, cmd) {
+                Ok(result) => ControlFlow::Break(result),
+                Err(cmd) => ControlFlow::Continue(cmd),
+            })
+    {
+        Some(result)
+    } else {
+        None
     }
-    may_res
 }
 
 pub struct BankView<'a> {
