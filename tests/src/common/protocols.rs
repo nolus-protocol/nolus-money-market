@@ -1,5 +1,3 @@
-use std::u64;
-
 use admin_contract::{
     msg::{
         Dex, Network, ProtocolContractAddresses, ProtocolQueryResponse, ProtocolsQueryResponse,
