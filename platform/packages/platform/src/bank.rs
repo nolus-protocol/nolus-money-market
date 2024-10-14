@@ -348,7 +348,7 @@ pub trait Aggregate {
 }
 
 impl Aggregate for () {
-    fn aggregate(self, _: Self) -> Self {}
+    fn aggregate(self, (): Self) -> Self {}
 }
 
 impl Aggregate for Batch {
