@@ -390,11 +390,9 @@ where
     where
         F: FnMut(T, T) -> T,
     {
-        self.next().map(|first: StdResult<T, E>| {
-            first.and_then(|first: T| {
-                self.try_fold(first, |acc: T, element: StdResult<T, E>| {
-                    element.map(|element: T| f(acc, element))
-                })
+        self.next().map(|first| {
+            first.and_then(|first| {
+                self.try_fold(first, |acc, element| element.map(|element| f(acc, element)))
             })
         })
     }
@@ -491,7 +489,7 @@ mod test {
     #[test]
     fn reduce_results_2_ok_1_err_1_ok() {
         assert_eq!(
-            [Ok::<u8, TestError>(1), Ok(2), Err(TestError), Ok(4)]
+            [Ok(1), Ok(2), Err(TestError), Ok(4)]
                 .into_iter()
                 .reduce_results(|acc, element| {
                     assert_ne!(element, 4);
