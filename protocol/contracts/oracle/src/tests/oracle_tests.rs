@@ -6,19 +6,18 @@ use finance::{
     coin::Coin,
     price::{self, base::BasePrice, dto::PriceDTO},
 };
-use platform::{contract, tests};
+use platform::{contract::testing, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        testing::{self, MockQuerier},
+        testing::{self as cw_testing, MockQuerier},
         Addr, Event, MessageInfo,
     },
 };
 
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
-    contract::{execute, query},
-    error,
+    contract, error,
     tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
@@ -36,7 +35,7 @@ fn feed_prices_unknown_feeder() {
         funds: vec![],
     };
 
-    let err = execute(deps.as_mut(), testing::mock_env(), info, msg).unwrap_err();
+    let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
     assert_eq!(ContractError::UnknownFeeder {}, err)
 }
 
@@ -53,12 +52,12 @@ fn feed_direct_price() {
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![generate_price()],
     };
-    let _res = execute(deps.as_mut(), testing::mock_env(), info, msg).unwrap();
+    let _res = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap();
 
     // query price for PaymentC3
-    let res = query(
+    let res = contract::query(
         deps.as_ref(),
-        testing::mock_env(),
+        cw_testing::mock_env(),
         QueryMsg::BasePrice {
             currency: currency::dto::<PaymentC1, PriceCurrencies>().into_super_group(),
         },
@@ -83,12 +82,12 @@ fn feed_indirect_price() {
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![price_a_to_b, price_b_to_c, price_c_to_usdc],
     };
-    let _res = execute(deps.as_mut(), testing::mock_env(), info, msg).unwrap();
+    let _res = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap();
 
     // query price for PaymentC3
-    let res = query(
+    let res = contract::query(
         deps.as_ref(),
-        testing::mock_env(),
+        cw_testing::mock_env(),
         QueryMsg::BasePrice {
             currency: currency::dto::<PaymentC3, PriceCurrencies>().into_super_group(),
         },
@@ -109,9 +108,9 @@ fn query_prices_unsupported_denom() {
     let detached = currency::dto::<PaymentC8, PriceCurrencies>().into_super_group();
     assert_eq!(
         error::unsupported_currency::<_, Lpn>(&detached),
-        query(
+        contract::query(
             deps.as_ref(),
-            testing::mock_env(),
+            cw_testing::mock_env(),
             QueryMsg::BasePrice { currency: detached },
         )
         .unwrap_err()
@@ -130,7 +129,7 @@ fn feed_prices_unsupported_pairs() {
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
-    let err = execute(deps.as_mut(), testing::mock_env(), info, msg).unwrap_err();
+    let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
     assert_eq!(error::unsupported_denom_pairs(&unsupported), err);
 }
 
@@ -143,9 +142,9 @@ fn deliver_alarm() {
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.into()],
     };
-    let feed_resp = execute(
+    let feed_resp = contract::execute(
         deps.as_mut(),
-        testing::mock_env(),
+        cw_testing::mock_env(),
         info.clone(),
         feed_price_msg,
     );
@@ -157,18 +156,18 @@ fn deliver_alarm() {
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
-        let add_alarm_resp = execute(
+        let add_alarm_resp = contract::execute(
             deps.as_mut(),
-            testing::mock_env(),
+            cw_testing::mock_env(),
             info.clone(),
             add_alarm_msg,
         );
         assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
 
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
-        let dispatch_alarms_resp = execute(
+        let dispatch_alarms_resp = contract::execute(
             deps.as_mut(),
-            testing::mock_env(),
+            cw_testing::mock_env(),
             info.clone(),
             dispatch_alarms_msg,
         )
@@ -183,9 +182,9 @@ fn deliver_alarm() {
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
-        let add_alarm_resp = execute(
+        let add_alarm_resp = contract::execute(
             deps.as_mut(),
-            testing::mock_env(),
+            cw_testing::mock_env(),
             info.clone(),
             add_alarm_msg,
         );
@@ -193,9 +192,9 @@ fn deliver_alarm() {
 
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
         let receiver = info.sender.clone();
-        let dispatch_alarms_resp = execute(
+        let dispatch_alarms_resp = contract::execute(
             deps.as_mut(),
-            testing::mock_env(),
+            cw_testing::mock_env(),
             info,
             dispatch_alarms_msg,
         )
@@ -211,7 +210,7 @@ fn deliver_alarm() {
 }
 
 fn setup_receiver(querier: &mut MockQuerier) {
-    querier.update_wasm(contract::testing::valid_contract_handler);
+    querier.update_wasm(testing::valid_contract_handler);
 }
 
 fn sent_alarms(resp: &CwResponse) -> Option<AlarmsCount> {
