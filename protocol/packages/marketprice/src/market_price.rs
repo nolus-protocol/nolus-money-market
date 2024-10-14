@@ -35,6 +35,10 @@ where
         }
     }
 
+    pub fn clean_all(&self, storage: &mut dyn Storage) {
+        self.storage.clear(storage);
+    }
+
     pub fn feed(
         &self,
         storage: &mut dyn Storage,

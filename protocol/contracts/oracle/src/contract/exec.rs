@@ -76,5 +76,5 @@ where
 {
     Config::load(storage)
         .map(|cfg| Feeds::<G, BaseC, BaseG>::with(cfg.price_config))
-        .and_then(|oracle| oracle.feed_prices(storage, block_time, &sender, &prices))
+        .and_then(|feeds| feeds.feed_prices(storage, block_time, &sender, &prices))
 }

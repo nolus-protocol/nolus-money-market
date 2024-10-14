@@ -37,11 +37,6 @@ fn query_prices_from_production_state() {
     .unwrap();
     assert_eq!(3, currencies.len());
 
-    // let price: PricesResponse<PaymentGroup, Lpn, Lpns> =
-    //     cosmwasm_std::from_json(contract::query(deps.as_ref(), env.clone(), QueryMsg::Prices {}).unwrap())
-    //         .unwrap();
-    // dbg!(price.prices);
-
     let price_err = contract::query(deps.as_ref(), env.clone(), QueryMsg::Prices {}).unwrap_err();
     assert!(matches!(
         price_err,
