@@ -7,9 +7,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
-[[package.metadata.cargo-each.combinations]]
-tags = ["ci", "net_dev", "osmosis-osmosis-usdc_axelar"]
-include-rest = true
+[package.metadata.cargo-each]
+combinations = [
+    { tags = ["ci", "@agnostic"], include-rest = true },
+]
 
 [dependencies]
 currencies = { workspace = true }
