@@ -2,7 +2,6 @@ use std::{
     env,
     fs::File,
     io::{self, Write},
-    iter,
     path::{Path, PathBuf},
 };
 
@@ -12,6 +11,7 @@ use topology::{CurrencyDefinitions, Topology};
 
 use self::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol};
 
+mod iter;
 mod currencies_tree;
 mod either;
 mod protocol;
@@ -28,7 +28,7 @@ const NLS_NAME: &str = "Nls";
 const BUILD_REPORT: &str = "CURRENCIES_BUILD_REPORT";
 
 fn main() -> Result<()> {
-    for path in ["build.rs", PROTOCOL_JSON, TOPOLOGY_JSON] {
+    for path in ["build/", PROTOCOL_JSON, TOPOLOGY_JSON] {
         println!("cargo::rerun-if-changed={path}");
     }
 
@@ -132,6 +132,8 @@ where
 }
 
 fn snake_case_to_upper_camel_case(mut input: &str) -> String {
+    use std::iter;
+
     let mut string = String::new();
 
     iter::from_fn(move || {

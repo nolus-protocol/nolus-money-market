@@ -11,7 +11,7 @@ use topology::CurrencyDefinition;
 
 use crate::{protocol::Protocol, LPN_NAME};
 
-use super::module_and_name::ModuleAndName;
+use super::module_and_name::{CurrentModule, ModuleAndName};
 
 pub(super) fn write<W>(
     mut build_report: W,
@@ -44,7 +44,13 @@ where
         let mut in_pool_with = String::new();
 
         for &ticker in children.iter() {
-            let resolved = ModuleAndName::resolve(protocol, host_currency, dex_currencies, ticker)?;
+            let resolved = ModuleAndName::resolve(
+                protocol,
+                host_currency,
+                dex_currencies,
+                ticker,
+                CurrentModule::Lpn,
+            )?;
 
             in_pool_with.push_str(&format!(
                 "
@@ -69,35 +75,35 @@ use currency::{{CurrencyDTO, CurrencyDef, Definition}};
 use sdk::schemars::JsonSchema;
 
 #[derive(
-Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
 pub struct {LPN_NAME}(CurrencyDTO<super::Group>);
 
 impl CurrencyDef for {LPN_NAME} {{
-type Group = super::Group;
+    type Group = super::Group;
 
-fn definition() -> &'static Self {{
-const {{
-    &Self(CurrencyDTO::new(
+    fn definition() -> &'static Self {{
         const {{
-            &Definition::new(
-                {ticker:?},
-                // {host_path}
-                {host_symbol:?},
-                // {dex_path}
-                {dex_symbol:?},
-                {decimals},
-            )
-        }},
-    ))
-}}
-}}
+            &Self(CurrencyDTO::new(
+                const {{
+                    &Definition::new(
+                        {ticker:?},
+                        // {host_path}
+                        {host_symbol:?},
+                        // {dex_path}
+                        {dex_symbol:?},
+                        {decimals},
+                    )
+                }},
+            ))
+        }}
+    }}
 
-fn dto(&self) -> &CurrencyDTO<Self::Group> {{
-&self.0
-}}
+    fn dto(&self) -> &CurrencyDTO<Self::Group> {{
+        &self.0
+    }}
 }}
 {in_pool_with}"#,
             host_path = lpn.host().path(),

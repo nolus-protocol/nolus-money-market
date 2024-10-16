@@ -42,6 +42,11 @@ where
 
     File::create(output_directory.join(FILENAME))
         .with_context(|| format!("Failed to open {FILENAME:?} for writing!"))?
-        .write_fmt(format_args!("pub type Stable = crate::{module}::{name};\n"))
+        .write_fmt(format_args!(
+            "// @generated
+
+pub type Stable = crate::{module}::{name};
+"
+        ))
         .with_context(move || format!("Failed to write contents to {FILENAME:?}!"))
 }
