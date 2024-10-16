@@ -32,14 +32,14 @@ impl CurrentModule {
     }
 
     fn native(&self) -> &'static str {
-        if matches!(self, Self::Lease) {
+        if matches!(self, Self::Native) {
             "self"
         } else {
             "crate::native"
         }
     }
     fn payment_only(&self) -> &'static str {
-        if matches!(self, Self::Lease) {
+        if matches!(self, Self::PaymentOnly) {
             "self"
         } else {
             "crate::payment::only::impl_mod::definitions"
