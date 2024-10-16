@@ -6,10 +6,14 @@ authors.workspace = true
 license.workspace = true
 
 [[package.metadata.cargo-each.combinations]]
-tags = ["ci", "net_dev", "osmosis-osmosis-usdc_axelar"]
-include-rest = true
+tags = ["ci", "@agnostic"]
+
+[[test]]
+name = "oracle"
+required-features = [ "oracle/contract", "sdk/testing" ]
 
 [dependencies]
 currencies = { workspace = true }
-oracle = { workspace = true, features = ["contract"] }
-sdk = { workspace = true, features = ["testing"] }
+oracle = { workspace = true, optional = true }
+sdk = { workspace = true, optional = true }
+

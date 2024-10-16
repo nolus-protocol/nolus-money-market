@@ -3,12 +3,9 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
 };
-use oracle::feed::Feeds;
 use platform::{
     batch::{Emit, Emitter},
-    error as platform_error,
-    message::Response as MessageResponse,
-    response,
+    error as platform_error, response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -17,7 +14,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -73,20 +70,16 @@ pub fn migrate(
     env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
-        deps.storage,
-        CONTRACT_VERSION,
-        try_clean_feeds,
-        ContractError::UpdateSoftware,
-    )
-    .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: (),
-         }| response::response_with_messages(release_label, MessageResponse::default()),
-    )
-    .inspect_err(platform_error::log(deps.api))
+    validate_swap_tree(deps.storage, env.block.time)
+        .and_then(|()| {
+            versioning::update_software(
+                deps.storage,
+                CONTRACT_VERSION,
+                ContractError::UpdateSoftware,
+            )
+        })
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -208,12 +201,6 @@ fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()>
                 .map_err(|e| ContractError::BrokenSwapTree(e.to_string()))
         })
         .map(std::mem::drop)
-}
-
-fn try_clean_feeds(storage: &mut dyn Storage) -> ContractResult<()> {
-    Config::load(storage)
-        .map(|cfg| Feeds::<PriceCurrencies, BaseCurrency, BaseCurrencies>::with(cfg.price_config))
-        .map(|feeds| feeds.clean_all(storage))
 }
 
 fn to_json_binary<T>(data: &T) -> ContractResult<Binary>

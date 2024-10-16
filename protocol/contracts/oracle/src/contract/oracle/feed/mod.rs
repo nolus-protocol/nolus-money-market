@@ -39,10 +39,6 @@ where
         }
     }
 
-    pub(crate) fn clean_all(&self, storage: &mut dyn Storage) {
-        self.feeds.clean_all(storage)
-    }
-
     pub(crate) fn feed_prices(
         &self,
         storage: &mut dyn Storage,
