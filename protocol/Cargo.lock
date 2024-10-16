@@ -1632,7 +1632,6 @@ dependencies = [
 name = "protocol_tests"
 version = "0.1.0"
 dependencies = [
- "currencies",
  "oracle",
  "sdk",
 ]

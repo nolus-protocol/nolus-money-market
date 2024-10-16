@@ -14,7 +14,6 @@ name = "oracle"
 required-features = [ "oracle/contract", "sdk/testing" ]
 
 [dependencies]
-currencies = { workspace = true }
 oracle = { workspace = true, optional = true }
 sdk = { workspace = true, optional = true }
 
