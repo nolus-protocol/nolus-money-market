@@ -1,0 +1,44 @@
+use std::io;
+
+pub(crate) enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<L, R> Iterator for Either<L, R>
+where
+    L: Iterator,
+    R: Iterator<Item = L::Item>,
+{
+    type Item = L::Item;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Either::Left(inner) => inner.next(),
+            Either::Right(inner) => inner.next(),
+        }
+    }
+}
+
+impl<L, R> io::Write for Either<L, R>
+where
+    L: io::Write,
+    R: io::Write,
+{
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            Either::Left(inner) => inner.write(buf),
+            Either::Right(inner) => inner.write(buf),
+        }
+    }
+
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            Either::Left(inner) => inner.flush(),
+            Either::Right(inner) => inner.flush(),
+        }
+    }
+}
