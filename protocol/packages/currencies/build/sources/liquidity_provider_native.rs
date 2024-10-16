@@ -45,11 +45,11 @@ where
 
         for &ticker in children.iter() {
             let resolved = ModuleAndName::resolve(
+                CurrentModule::Lpn,
                 protocol,
                 host_currency,
                 dex_currencies,
                 ticker,
-                CurrentModule::Lpn,
             )?;
 
             in_pool_with.push_str(&format!(

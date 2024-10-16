@@ -28,6 +28,7 @@ where
     multiple_currency::write(
         &mut build_report,
         &output_directory.join("lease.rs"),
+        CurrentModule::Lease,
         &protocol,
         &host_currency,
         &dex_currencies,
@@ -36,7 +37,6 @@ where
             .copied()
             .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
         &currencies_tree,
-        CurrentModule::Lease,
     )?;
 
     liquidity_provider_native::write(
@@ -61,6 +61,7 @@ where
     multiple_currency::write(
         &mut build_report,
         &output_directory.join("payment_only.rs"),
+        CurrentModule::PaymentOnly,
         &protocol,
         &host_currency,
         &dex_currencies,
@@ -68,7 +69,6 @@ where
             !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
         }),
         &currencies_tree,
-        CurrentModule::PaymentOnly,
     )?;
 
     stable::write(build_report, output_directory, &protocol, dex_currencies)
