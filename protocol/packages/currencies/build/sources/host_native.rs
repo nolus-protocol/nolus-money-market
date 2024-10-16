@@ -47,11 +47,11 @@ where
 
         if let Some(ticker) = iter.next() {
             let resolved = ModuleAndName::resolve(
+                CurrentModule::Native,
                 protocol,
                 host_currency,
                 dex_currencies,
                 ticker,
-                CurrentModule::Native,
             )?;
 
             let mut pairs_group = format!(
@@ -62,11 +62,11 @@ where
 
             for ticker in iter {
                 let resolved = ModuleAndName::resolve(
+                    CurrentModule::Native,
                     protocol,
                     host_currency,
                     dex_currencies,
                     ticker,
-                    CurrentModule::Native,
                 )?;
 
                 pairs_group.push_str(&format!(
@@ -88,11 +88,11 @@ where
 
         for &ticker in parents.iter() {
             let resolved = ModuleAndName::resolve(
+                CurrentModule::Native,
                 protocol,
                 host_currency,
                 dex_currencies,
                 ticker,
-                CurrentModule::Native,
             )?;
 
             in_pool_with.push_str(&format!(

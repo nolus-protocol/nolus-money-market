@@ -54,11 +54,11 @@ pub(super) struct ModuleAndName<'module, 'name> {
 
 impl<'currencies_map> ModuleAndName<'static, 'currencies_map> {
     pub fn resolve(
+        current_module: CurrentModule,
         protocol: &Protocol,
         host_currency: &CurrencyDefinition,
         dex_currencies: &'currencies_map BTreeMap<&str, (String, &CurrencyDefinition)>,
         ticker: &str,
-        current_module: CurrentModule,
     ) -> Result<Self> {
         if let Some(name) = dex_currencies.get(ticker).map(|(name, _)| name) {
             Ok(if ticker == protocol.lpn_ticker {

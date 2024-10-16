@@ -15,15 +15,18 @@ use crate::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol}
 
 use super::module_and_name::{CurrentModule, ModuleAndName};
 
+const NON_EXISTENT_DEX_CURRENCY: &'static str =
+    "Queried ticker does not belong to any defined DEX currency!";
+
 pub(super) fn write<'currency, Report, Currencies>(
     build_report: Report,
     output_file: &Path,
+    current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
     currencies: Currencies,
     currencies_tree: &CurrenciesTree<'_, '_, '_, '_>,
-    current_module: CurrentModule,
 ) -> Result<()>
 where
     Report: Write,
@@ -112,9 +115,6 @@ pub(crate) mod definitions {
     use crate::payment;
 ";
 
-        const NON_EXISTENT_DEX_CURRENCY: &'static str =
-            "Queried ticker does not belong to any defined DEX currency!";
-
         if let Some(ticker) = currencies.next() {
             let process_ticker1 = |ticker| {
                 dex_currencies
@@ -134,129 +134,14 @@ pub(crate) mod definitions {
             let mut currency_definitions: String = CURRENCY_DEFINITIONS_PREPEND.into();
 
             let generate_currency_definition = |ticker| {
-                let parents = currencies_tree.parents(ticker);
-
-                let children = currencies_tree.children(ticker);
-
-                [children, parents].into_iter().try_for_each({
-                    |paired_with| {
-                        if paired_with.contains(ticker) {
-                            Err(anyhow!("Currency cannot be in a pool with itself!"))
-                        } else {
-                            Ok(())
-                        }
-                    }
-                })?;
-
-                let &(ref name, currency) = dex_currencies
-                    .get(ticker)
-                    .context(NON_EXISTENT_DEX_CURRENCY)?;
-
-                let pairs_group = {
-                    pairs_group(
-                        current_module,
-                        protocol,
-                        host_currency,
-                        dex_currencies,
-                        children.iter().copied(),
-                    )?
-                };
-
-                let in_pool_with = in_pool_with(
+                Self::generate_currency_definition(
+                    current_module,
                     protocol,
                     host_currency,
                     dex_currencies,
-                    current_module,
-                    parents.iter().copied(),
-                    name,
-                )?;
-
-                Ok([
-                    r#"
-    #[derive(
-        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-    )]
-    #[serde(deny_unknown_fields, rename_all = "snake_case")]
-    #[schemars(crate = "sdk::schemars")]
-    pub struct "#,
-                    name,
-                    r#"(CurrencyDTO<super::super::Group>);
-
-    impl CurrencyDef for "#,
-                    name,
-                    r#" {
-        type Group = super::super::Group;
-
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
-                    const {
-                        &Definition::new(
-                            ""#,
+                    currencies_tree,
                     ticker,
-                    r#"",
-                            // "#,
-                    currency.host().path(),
-                    r#"
-                            ""#,
-                    currency.host().symbol(),
-                    r#"",
-                            // "#,
-                    currency.dex().path(),
-                    r#"
-                            ""#,
-                    currency.dex().symbol(),
-                    r#"",
-                            "#,
-                ]
-                .into_iter()
-                .map(Cow::Borrowed)
-                .chain(iter::once(Cow::Owned(
-                    currency.decimal_digits().to_string(),
-                )))
-                .chain(
-                    [
-                        r#",
-                        )
-                    },
-                ))
-            }
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
-        }
-    }
-
-    impl PairsGroup for "#,
-                        name,
-                        r#" {
-        type CommonGroup = payment::Group;
-
-        fn maybe_visit<M, V>("#,
-                        pairs_group.matcher_parameter_name,
-                        r#": &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            "#,
-                    ]
-                    .into_iter()
-                    .map(Cow::Borrowed),
                 )
-                .chain(pairs_group.sources.map(Cow::Borrowed))
-                .chain(iter::once(
-                    const {
-                        Cow::Borrowed(
-                            r#"
-        }
-    }
-"#,
-                        )
-                    },
-                ))
-                .chain(in_pool_with.map(Cow::Borrowed)))
             };
 
             iter::once(
@@ -265,7 +150,7 @@ pub(crate) mod definitions {
                     .map(Either::Left)
                     .and_then(|processed_1| {
                         generate_currency_definition(ticker)
-                            .map(|processed_2| (processed_1, processed_2))
+                            .map(|currency_definition| (processed_1, currency_definition))
                     }),
             )
             .chain(currencies.map({
@@ -324,6 +209,139 @@ pub(crate) mod definitions {
             }
         }
     }
+
+    fn generate_currency_definition<'r>(
+        current_module: CurrentModule,
+        protocol: &'r Protocol,
+        host_currency: &'r CurrencyDefinition,
+        dex_currencies: &'r BTreeMap<&str, (String, &CurrencyDefinition)>,
+        currencies_tree: &'r CurrenciesTree,
+        ticker: &'r str,
+    ) -> Result<impl Iterator<Item = Cow<'r, str>> + 'r> {
+        let parents = currencies_tree.parents(ticker);
+
+        let children = currencies_tree.children(ticker);
+
+        [children, parents].into_iter().try_for_each({
+            |paired_with| {
+                if paired_with.contains(ticker) {
+                    Err(anyhow!("Currency cannot be in a pool with itself!"))
+                } else {
+                    Ok(())
+                }
+            }
+        })?;
+
+        let &(ref name, currency) = dex_currencies
+            .get(ticker)
+            .context(NON_EXISTENT_DEX_CURRENCY)?;
+
+        let pairs_group = {
+            pairs_group(
+                current_module,
+                protocol,
+                host_currency,
+                dex_currencies,
+                children.iter().copied(),
+            )?
+        };
+
+        let in_pool_with = in_pool_with(
+            current_module,
+            protocol,
+            host_currency,
+            dex_currencies,
+            parents.iter().copied(),
+            name,
+        )?;
+
+        Ok([
+            r#"
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    #[schemars(crate = "sdk::schemars")]
+    pub struct "#,
+            name,
+            r#"(CurrencyDTO<super::super::Group>);
+
+    impl CurrencyDef for "#,
+            name,
+            r#" {
+        type Group = super::super::Group;
+
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const {
+                        &Definition::new(
+                            ""#,
+            ticker,
+            r#"",
+                            // "#,
+            currency.host().path(),
+            r#"
+                            ""#,
+            currency.host().symbol(),
+            r#"",
+                            // "#,
+            currency.dex().path(),
+            r#"
+                            ""#,
+            currency.dex().symbol(),
+            r#"",
+                            "#,
+        ]
+        .into_iter()
+        .map(Cow::Borrowed)
+        .chain(iter::once(Cow::Owned(
+            currency.decimal_digits().to_string(),
+        )))
+        .chain(
+            [
+                r#",
+                        )
+                    },
+                ))
+            }
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
+    }
+
+    impl PairsGroup for "#,
+                name,
+                r#" {
+        type CommonGroup = payment::Group;
+
+        fn maybe_visit<M, V>("#,
+                pairs_group.matcher_parameter_name,
+                r#": &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            "#,
+            ]
+            .into_iter()
+            .map(Cow::Borrowed),
+        )
+        .chain(pairs_group.sources.map(Cow::Borrowed))
+        .chain(iter::once(
+            const {
+                Cow::Borrowed(
+                    r#"
+        }
+    }
+"#,
+                )
+            },
+        ))
+        .chain(in_pool_with.map(Cow::Borrowed)))
+    }
 }
 
 fn pairs_group<'r, 'currencies_map, Children>(
@@ -341,18 +359,18 @@ where
             ";
 
     fn pairs_group_entry<'r>(
+        current_module: CurrentModule,
         protocol: &Protocol,
         host_currency: &CurrencyDefinition,
         dex_currencies: &'r BTreeMap<&str, (String, &CurrencyDefinition)>,
-        current_module: CurrentModule,
         ticker: &str,
     ) -> Result<impl IntoIterator<Item = &'r str>> {
         ModuleAndName::resolve(
+            current_module,
             protocol,
             host_currency,
             dex_currencies,
             ticker,
-            current_module,
         )
         .map(|resolved| {
             [
@@ -368,10 +386,10 @@ where
     if let Some(ticker) = children.next() {
         let process_ticker = |ticker: &str| {
             pairs_group_entry(
+                current_module,
                 protocol,
                 host_currency,
                 dex_currencies,
-                current_module,
                 ticker,
             )
         };
@@ -419,10 +437,10 @@ where
 }
 
 fn in_pool_with<'r, 'parent, Parents>(
+    current_module: CurrentModule,
     protocol: &'r Protocol,
     host_currency: &'r CurrencyDefinition,
     dex_currencies: &'r BTreeMap<&str, (String, &CurrencyDefinition)>,
-    current_module: CurrentModule,
     parents: Parents,
     name: &'r str,
 ) -> Result<impl Iterator<Item = &'r str> + 'r>
@@ -432,11 +450,11 @@ where
     parents
         .map(|ticker| {
             ModuleAndName::resolve(
+                current_module,
                 protocol,
                 host_currency,
                 dex_currencies,
                 ticker,
-                current_module,
             )
             .map(|resolved| {
                 [
