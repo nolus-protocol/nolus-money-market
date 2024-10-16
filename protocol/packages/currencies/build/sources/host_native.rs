@@ -55,7 +55,7 @@ where
             )?;
 
             let mut pairs_group = format!(
-                "currency::maybe_visit_buddy::<crate::{module}::{name}, _, _>(matcher, visitor)",
+                "currency::maybe_visit_buddy::<{module}::{name}, _, _>(matcher, visitor)",
                 module = resolved.module(),
                 name = resolved.name(),
             );
@@ -71,7 +71,7 @@ where
 
                 pairs_group.push_str(&format!(
                     "
-            .or_else(|visitor| currency::maybe_visit_buddy::<crate::{module}::{name}, _, _>(matcher, visitor))",
+            .or_else(|visitor| currency::maybe_visit_buddy::<{module}::{name}, _, _>(matcher, visitor))",
                     module = resolved.module(),
                     name = resolved.name(),
                 ));
@@ -97,7 +97,7 @@ where
 
             in_pool_with.push_str(&format!(
                 "
-impl currency::InPoolWith<crate::{module}::{name}> for {NLS_NAME} {{}}
+impl currency::InPoolWith<{module}::{name}> for {NLS_NAME} {{}}
 ",
                 module = resolved.module(),
                 name = resolved.name(),

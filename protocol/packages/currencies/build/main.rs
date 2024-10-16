@@ -2,6 +2,7 @@ use std::{
     env,
     fs::File,
     io::{self, Write},
+    iter,
     path::{Path, PathBuf},
 };
 
@@ -11,7 +12,6 @@ use topology::{CurrencyDefinitions, Topology};
 
 use self::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol};
 
-mod iter;
 mod currencies_tree;
 mod either;
 mod protocol;
@@ -132,8 +132,6 @@ where
 }
 
 fn snake_case_to_upper_camel_case(mut input: &str) -> String {
-    use std::iter;
-
     let mut string = String::new();
 
     iter::from_fn(move || {

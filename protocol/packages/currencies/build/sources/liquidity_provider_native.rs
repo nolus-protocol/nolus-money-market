@@ -54,7 +54,7 @@ where
 
             in_pool_with.push_str(&format!(
                 "
-impl currency::InPoolWith<crate::{module}::{name}> for {LPN_NAME} {{}}
+impl currency::InPoolWith<{module}::{name}> for {LPN_NAME} {{}}
 ",
                 module = resolved.module(),
                 name = resolved.name(),
