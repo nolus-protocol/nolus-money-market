@@ -6,6 +6,8 @@ use topology::CurrencyDefinition;
 
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
+use self::module_and_name::CurrentModule;
+
 mod host_native;
 mod liquidity_provider_native;
 mod module_and_name;
@@ -34,6 +36,7 @@ where
             .copied()
             .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
         &currencies_tree,
+        CurrentModule::Lease,
     )?;
 
     liquidity_provider_native::write(
@@ -65,6 +68,7 @@ where
             !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
         }),
         &currencies_tree,
+        CurrentModule::PaymentOnly,
     )?;
 
     stable::write(build_report, output_directory, &protocol, dex_currencies)

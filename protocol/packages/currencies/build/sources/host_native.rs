@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     fs,
     io::Write,
@@ -11,7 +12,7 @@ use topology::CurrencyDefinition;
 
 use crate::{protocol::Protocol, NLS_NAME};
 
-use super::module_and_name::ModuleAndName;
+use super::module_and_name::{CurrentModule, ModuleAndName};
 
 pub(super) fn write<W>(
     mut build_report: W,
@@ -29,7 +30,7 @@ where
 
     build_report.write_fmt(format_args!("Host currency ticker: {ticker}\n"))?;
 
-    IntoIterator::into_iter([&children, &parents]).try_for_each({
+    [children, parents].into_iter().try_for_each({
         |paired_with| {
             if paired_with.contains(ticker) {
                 Err(anyhow!(
@@ -42,10 +43,16 @@ where
     })?;
 
     let pairs_group = {
-        let mut iter = children.iter();
+        let mut iter = children.iter().copied();
 
         if let Some(ticker) = iter.next() {
-            let resolved = ModuleAndName::resolve(protocol, host_currency, dex_currencies, ticker)?;
+            let resolved = ModuleAndName::resolve(
+                protocol,
+                host_currency,
+                dex_currencies,
+                ticker,
+                CurrentModule::Native,
+            )?;
 
             let mut pairs_group = format!(
                 "currency::maybe_visit_buddy::<crate::{module}::{name}, _, _>(matcher, visitor)",
@@ -53,21 +60,26 @@ where
                 name = resolved.name(),
             );
 
-            for &ticker in iter {
-                let resolved =
-                    ModuleAndName::resolve(protocol, host_currency, dex_currencies, ticker)?;
+            for ticker in iter {
+                let resolved = ModuleAndName::resolve(
+                    protocol,
+                    host_currency,
+                    dex_currencies,
+                    ticker,
+                    CurrentModule::Native,
+                )?;
 
                 pairs_group.push_str(&format!(
                     "
-    .or_else(|visitor| currency::maybe_visit_buddy::<crate::{module}::{name}, _, _>(matcher, visitor))",
+            .or_else(|visitor| currency::maybe_visit_buddy::<crate::{module}::{name}, _, _>(matcher, visitor))",
                     module = resolved.module(),
                     name = resolved.name(),
                 ));
             }
 
-            pairs_group
+            Cow::Owned(pairs_group)
         } else {
-            "currency::visit_noone(visitor)".into()
+            Cow::Borrowed("currency::visit_noone(visitor)")
         }
     };
 
@@ -75,7 +87,13 @@ where
         let mut in_pool_with = String::new();
 
         for &ticker in parents.iter() {
-            let resolved = ModuleAndName::resolve(protocol, host_currency, dex_currencies, ticker)?;
+            let resolved = ModuleAndName::resolve(
+                protocol,
+                host_currency,
+                dex_currencies,
+                ticker,
+                CurrentModule::Native,
+            )?;
 
             in_pool_with.push_str(&format!(
                 "
@@ -97,55 +115,55 @@ impl currency::InPoolWith<crate::{module}::{name}> for {NLS_NAME} {{}}
 use serde::{{Deserialize, Serialize}};
 
 use currency::{{
-CurrencyDTO, CurrencyDef, Definition, Matcher, MaybePairsVisitorResult, PairsGroup,
-PairsVisitor,
+    CurrencyDTO, CurrencyDef, Definition, Matcher, MaybePairsVisitorResult, PairsGroup,
+    PairsVisitor,
 }};
 use sdk::schemars::JsonSchema;
 
 use crate::payment;
 
 #[derive(
-Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
 pub struct {NLS_NAME}(CurrencyDTO<super::Group>);
 
 impl CurrencyDef for {NLS_NAME} {{
-type Group = super::Group;
+    type Group = super::Group;
 
-fn definition() -> &'static Self {{
-const {{
-    &Self(CurrencyDTO::new(
+    fn definition() -> &'static Self {{
         const {{
-            &Definition::new(
-                {ticker:?},
-                // {host_path}
-                {host_symbol:?},
-                // {dex_path}
-                {dex_symbol:?},
-                {decimals},
-            )
-        }},
-    ))
-}}
-}}
+            &Self(CurrencyDTO::new(
+                const {{
+                    &Definition::new(
+                        {ticker:?},
+                        // {host_path}
+                        {host_symbol:?},
+                        // {dex_path}
+                        {dex_symbol:?},
+                        {decimals},
+                    )
+                }},
+            ))
+        }}
+    }}
 
-fn dto(&self) -> &CurrencyDTO<Self::Group> {{
-&self.0
-}}
+    fn dto(&self) -> &CurrencyDTO<Self::Group> {{
+        &self.0
+    }}
 }}
 
 impl PairsGroup for {NLS_NAME} {{
-type CommonGroup = payment::Group;
+    type CommonGroup = payment::Group;
 
-fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-M: Matcher,
-V: PairsVisitor<Pivot = Self>,
-{{
-{pairs_group}
-}}
+    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    where
+        M: Matcher,
+        V: PairsVisitor<Pivot = Self>,
+    {{
+        {pairs_group}
+    }}
 }}
 {in_pool_with}"#,
             host_path = host_currency.host().path(),
