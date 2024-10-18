@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use currency::Currency;
 use finance::{duration::Duration, fraction::Fraction, price::Price, ratio::Rational};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -19,18 +18,17 @@ pub fn from_observations<'a, IterO, C, QuoteC>(
 ) -> impl Iterator<Item = Sample<C, QuoteC>> + 'a
 where
     IterO: Iterator<Item = &'a Observation<C, QuoteC>> + 'a,
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     SampleBuilder::from(observations, start_from, sample_span)
 }
 
-#[derive(Copy, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct Sample<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     /// Sample with no price means there has not been enough valid data to compute it.
     /// For example, none feed has been received within the validity window.
@@ -39,19 +37,32 @@ where
 
 impl<C, QuoteC> Default for Sample<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     fn default() -> Self {
         Self { price: None }
     }
 }
 
-impl<C, QuoteC> Sample<C, QuoteC>
+impl<C, QuoteC> Clone for Sample<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C, QuoteC> Copy for Sample<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC> Sample<C, QuoteC> {
     pub fn into_maybe_price(self) -> Option<Price<C, QuoteC>> {
         self.price
     }
@@ -60,8 +71,8 @@ where
 struct SampleBuilder<'a, IterO, C, QuoteC>
 where
     IterO: Iterator<Item = &'a Observation<C, QuoteC>>,
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     observations: IterO,
     sample_start: Timestamp,
@@ -73,8 +84,6 @@ where
 
 impl<'a, IterO, C, QuoteC> SampleBuilder<'a, IterO, C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
     IterO: Iterator<Item = &'a Observation<C, QuoteC>>,
 {
     fn from(observations: IterO, start_from: Timestamp, sample_span: Duration) -> Self {
@@ -108,8 +117,8 @@ where
 
 impl<'a, IterO, C, QuoteC> Iterator for SampleBuilder<'a, IterO, C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
     IterO: Iterator<Item = &'a Observation<C, QuoteC>>,
 {
     type Item = Sample<C, QuoteC>;

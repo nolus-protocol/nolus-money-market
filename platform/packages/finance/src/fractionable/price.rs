@@ -1,15 +1,13 @@
 use std::marker::PhantomData;
 
-use currency::Currency;
-
 use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
 
 use super::Fractionable;
 
 impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -21,8 +19,8 @@ where
 
 impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where

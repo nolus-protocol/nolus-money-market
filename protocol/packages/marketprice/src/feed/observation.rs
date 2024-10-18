@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currency::Currency;
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -9,8 +8,8 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Observation<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     feeder_addr: Addr,
     time: Timestamp,
@@ -20,17 +19,13 @@ where
 #[track_caller]
 pub fn valid_since<C, QuoteC>(since: Timestamp) -> impl FnMut(&Observation<C, QuoteC>) -> bool
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
     move |o: &Observation<_, _>| o.time > since
 }
 
-impl<C, QuoteC> Observation<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
+impl<C, QuoteC> Observation<C, QuoteC> {
     pub fn new(
         feeder_addr: Addr,
         time: Timestamp,
