@@ -18,8 +18,65 @@ use super::module_and_name::{CurrentModule, ModuleAndName};
 const NON_EXISTENT_DEX_CURRENCY: &str =
     "Queried ticker does not belong to any defined DEX currency!";
 
+trait SubtypeLifetime<'r>: 'r {
+    type T<'new>: 'new
+    where
+        'r: 'new;
+
+    fn subtype<'new>(self) -> Self::T<'new>
+    where
+        'r: 'new;
+}
+
+impl<'old, T> SubtypeLifetime<'old> for &'old T
+where
+    T: ?Sized,
+{
+    type T<'new> = &'new T
+    where
+        'old: 'new;
+
+    fn subtype<'new>(self) -> Self::T<'new>
+    where
+        'old: 'new,
+    {
+        self
+    }
+}
+
+impl<'old, T> SubtypeLifetime<'old> for &'old mut T
+where
+    T: ?Sized,
+{
+    type T<'new> = &'new mut T
+    where
+        'old: 'new;
+
+    fn subtype<'new>(self) -> Self::T<'new>
+    where
+        'old: 'new,
+    {
+        self
+    }
+}
+
+impl<'old, T> SubtypeLifetime<'old> for Cow<'old, T>
+where
+    T: ToOwned + ?Sized,
+{
+    type T<'new> = Cow<'new, T>
+    where
+        'old: 'new;
+
+    fn subtype<'new>(self) -> Self::T<'new>
+    where
+        'old: 'new,
+    {
+        self
+    }
+}
+
 pub(super) struct SourcesGenerator<
-    'output_file,
     'protocol,
     'host_currency,
     'dex_currencies,
@@ -30,69 +87,328 @@ pub(super) struct SourcesGenerator<
     'parent,
     'children_map,
     'child,
-    Report,
-    Currencies,
 > {
-    pub build_report: Report,
-    pub output_file: &'output_file Path,
-    pub current_module: CurrentModule,
     pub protocol: &'protocol Protocol,
     pub host_currency: &'host_currency CurrencyDefinition,
-    pub dex_currencies: &'dex_currencies BTreeMap<
-        &'dex_currency_ticker str,
-        (String, &'dex_currency_definition CurrencyDefinition),
-    >,
-    pub currencies: Currencies,
+    pub dex_currencies:
+        &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     pub currencies_tree:
         &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
 }
 
-impl<
-        'output_file,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currency,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-        Report,
-        Currencies,
-    >
-    SourcesGenerator<
-        'output_file,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-        Report,
-        Currencies,
-    >
-where
-    Report: Write,
-    Currencies: IntoIterator<Item = &'currency str>,
+impl<'dex_currencies, 'currencies_tree>
+    SourcesGenerator<'_, '_, 'dex_currencies, '_, '_, 'currencies_tree, '_, '_, '_, '_>
 {
-    pub fn generate_and_commit(self) -> Result<()> {
-        let output_file_path = self.output_file;
+    pub fn generate_and_commit<'ticker, BuildReport, Tickers>(
+        &self,
+        build_report: BuildReport,
+        output_file_path: &Path,
+        current_module: CurrentModule,
+        tickers: Tickers,
+    ) -> Result<()>
+    where
+        BuildReport: Write,
+        Tickers: IntoIterator<Item = &'ticker str>,
+    {
+        self.generate_sources(current_module, tickers.into_iter())
+            .and_then(|sources| {
+                File::create(output_file_path)
+                    .map(BufWriter::new)
+                    .context("Failed to open output file for writing!")
+                    .and_then(|output_file| {
+                        commit_sources(output_file_path, output_file, sources, build_report)
+                    })
+            })
+    }
 
-        let GeneratedSources {
-            matcher_parameter_name,
-            maybe_visit,
-            currency_definitions,
-        } = self.generate_sources()?;
+    fn generate_sources<'r, 'ticker, Tickers>(
+        &self,
+        current_module: CurrentModule,
+        mut tickers: Tickers,
+    ) -> Result<
+        FinalizedSources<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Tickers>>,
+    >
+    where
+        'dex_currencies: 'r,
+        'ticker: 'r,
+        Tickers: Iterator<Item = &'ticker str>,
+    {
+        if let Some(ticker) = tickers.next() {
+            generate_non_empty_sources(
+                self.dex_currencies,
+                CurrencyDefinitionGenerator {
+                    current_module,
+                    protocol: self.protocol,
+                    host_currency: self.host_currency,
+                    dex_currencies: self.dex_currencies,
+                    currencies_tree: self.currencies_tree,
+                },
+                ticker,
+                tickers,
+            )
+        } else {
+            Ok(GeneratedSources {
+                currencies_count: 0,
+                matcher_parameter_name: "_",
+                maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
+                currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
+            })
+        }
+        .map(GeneratedSources::finalize)
+    }
+}
 
-        let mut output_file = File::create(output_file_path).map(BufWriter::new)?;
+fn commit_sources<'r, Sources, Output, BuildReport>(
+    output_file_path: &Path,
+    mut output_file: Output,
+    sources: FinalizedSources<Sources>,
+    mut build_report: BuildReport,
+) -> Result<()>
+where
+    Output: Write,
+    BuildReport: Write,
+    Sources: Iterator<Item = Cow<'r, str>>,
+{
+    let FinalizedSources {
+        currencies_count,
+        mut sources,
+    } = sources;
 
+    sources
+        .try_for_each(|segment| output_file.write_all(segment.as_bytes()))
+        .and_then(|()| output_file.flush())
+        .with_context(|| {
+            format!("Failed to write generated sources for output file {output_file_path:?}!")
+        })
+        .and_then(|()| {
+            build_report
+                .write_fmt(format_args!(
+                    "{output_file_path:?}: {currencies_count} currencies emitted.\n",
+                ))
+                .context("Failed to write build report!")
+        })
+}
+
+fn generate_non_empty_sources<
+    'r,
+    'dex_currencies,
+    'currencies_tree,
+    'ticker,
+    Tickers,
+    MaybeVisitRight,
+    CurrencyDefinitionsRight,
+>(
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    currency_definition_generator: CurrencyDefinitionGenerator<
+        '_,
+        '_,
+        'dex_currencies,
+        '_,
+        '_,
+        'currencies_tree,
+        '_,
+        '_,
+        '_,
+        '_,
+    >,
+    head_ticker: &'ticker str,
+    tail_tickers: Tickers,
+) -> Result<
+    GeneratedSources<
+        Either<
+            impl Iterator<Item = &'r str>
+                + use<'r, 'currencies_tree, Tickers, MaybeVisitRight, CurrencyDefinitionsRight>,
+            MaybeVisitRight,
+        >,
+        Either<
+            impl Iterator<Item = Cow<'r, str>>
+                + use<'r, 'currencies_tree, Tickers, MaybeVisitRight, CurrencyDefinitionsRight>,
+            CurrencyDefinitionsRight,
+        >,
+    >,
+>
+where
+    'ticker: 'r,
+    'dex_currencies: 'r,
+    Tickers: Iterator<Item = &'ticker str>,
+{
+    iter::once(
+        process_ticker(dex_currencies, &currency_definition_generator, head_ticker).map(
+            |(maybe_visit_entry, currency_definition)| {
+                (
+                    Either::Left(maybe_visit_entry.into_iter()),
+                    currency_definition,
+                )
+            },
+        ),
+    )
+    .chain(tail_tickers.map({
+        |ticker| {
+            process_ticker(dex_currencies, &currency_definition_generator, ticker).map(
+                |(maybe_visit_entry, currency_definition)| {
+                    (
+                        Either::Right(
+                            iter::once(
+                                "
+                            .or_else(|visitor| ",
+                            )
+                            .chain(maybe_visit_entry)
+                            .chain(iter::once(")")),
+                        ),
+                        currency_definition,
+                    )
+                },
+            )
+        }
+    }))
+    .collect::<Result<_, _>>()
+    .map(postprocess_sources_iterators)
+    .map(
+        |(currencies_count, maybe_visit_body, currency_definitions)| GeneratedSources {
+            currencies_count,
+            matcher_parameter_name: "matcher",
+            maybe_visit: Either::Left(maybe_visit_body),
+            currency_definitions: Either::Left(currency_definitions),
+        },
+    )
+}
+
+fn process_ticker<'r, 'dex_currencies, 'currencies_tree, 'ticker>(
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    currency_definition_generator: &CurrencyDefinitionGenerator<
+        '_,
+        '_,
+        'dex_currencies,
+        '_,
+        '_,
+        'currencies_tree,
+        '_,
+        '_,
+        '_,
+        '_,
+    >,
+    ticker: &'ticker str,
+) -> Result<(
+    impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>,
+    impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>,
+)>
+where
+    'ticker: 'r,
+    'dex_currencies: 'r,
+{
+    maybe_visit_entry(dex_currencies, ticker).and_then(|maybe_visit_entry| {
+        currency_definition_generator
+            .generate(ticker)
+            .map(|currency_definition| (maybe_visit_entry, currency_definition))
+    })
+}
+
+fn postprocess_sources_iterators<
+    'maybe_visit,
+    'currency_definition,
+    MaybeVisit: Iterator<Item = &'maybe_visit str>,
+    CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
+>(
+    sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
+) -> (
+    usize,
+    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
+    impl Iterator<Item = Cow<'currency_definition, str>>
+        + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
+) {
+    const MAYBE_VISIT_BODY_PREPEND: &str = "use currency::maybe_visit_member as visit;
+
+    ";
+
+    const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
+        "
+pub(crate) mod definitions {
+    use serde::{Deserialize, Serialize};
+
+    use currency::{
+        CurrencyDTO, CurrencyDef, Definition, Matcher, MaybePairsVisitorResult, PairsGroup,
+        PairsVisitor,
+    };
+    use sdk::schemars::JsonSchema;
+
+    use crate::payment;
+",
+    );
+
+    const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
+        "}
+",
+    );
+
+    let currencies_count = sources.len();
+
+    let (maybe_visit, currency_definitions): (Vec<_>, Vec<_>) = sources.into_iter().unzip();
+
+    (
+        currencies_count,
+        iter::once(MAYBE_VISIT_BODY_PREPEND).chain(maybe_visit.into_iter().flatten()),
+        iter::once(CURRENCY_DEFINITIONS_PREPEND)
+            .chain(currency_definitions.into_iter().flatten())
+            .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
+    )
+}
+
+type DexCurrencies<'ticker, 'currency_definition> =
+    BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
+
+fn maybe_visit_entry<'dex_currencies>(
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    ticker: &str,
+) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
+    dex_currencies
+        .get(ticker)
+        .context(NON_EXISTENT_DEX_CURRENCY)
+        .map(|(name, _)| {
+            [
+                "visit::<_, self::definitions::",
+                name,
+                ", VisitedG, _>(matcher, visitor)",
+            ]
+        })
+}
+
+struct GeneratedSources<MaybeVisit, CurrencyDefinitions> {
+    currencies_count: usize,
+    matcher_parameter_name: &'static str,
+    maybe_visit: MaybeVisit,
+    currency_definitions: CurrencyDefinitions,
+}
+
+impl<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>
+    GeneratedSources<MaybeVisit, CurrencyDefinitions>
+where
+    'maybe_visit: 'r,
+    'currency_definition: 'r,
+    MaybeVisit: Iterator<Item = &'maybe_visit str>,
+    CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
+{
+    fn finalize(
+        self,
+    ) -> FinalizedSources<
+        impl Iterator<Item = Cow<'r, str>>
+            + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>,
+    > {
+        FinalizedSources {
+            currencies_count: self.currencies_count,
+            sources: Self::finalize_sources(
+                self.matcher_parameter_name,
+                self.maybe_visit,
+                self.currency_definitions,
+            ),
+        }
+    }
+
+    fn finalize_sources(
+        matcher_parameter_name: &'static str,
+        maybe_visit: MaybeVisit,
+        currency_definitions: CurrencyDefinitions,
+    ) -> impl Iterator<Item = Cow<'r, str>>
+           + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions> {
         [
             r#"// @generated
 
@@ -115,158 +431,20 @@ where
     "#,
         ]
         .into_iter()
-        .chain(maybe_visit)
+        .chain(maybe_visit.map(SubtypeLifetime::subtype))
         .chain(iter::once(
             "
 }
 ",
         ))
         .map(Cow::Borrowed)
-        .chain(currency_definitions)
-        .try_for_each(|segment| output_file.write_all(segment.as_bytes()))
-        .and_then(|()| output_file.flush())
-        .with_context(|| {
-            format!("Failed to write generated sources for output file {output_file_path:?}!")
-        })
-    }
-
-    fn generate_sources<'r>(
-        mut self,
-    ) -> Result<
-        GeneratedSources<
-            impl Iterator<Item = &'r str> + use<'r, Report, Currencies>,
-            impl Iterator<Item = Cow<'r, str>> + use<'r, Report, Currencies>,
-        >,
-    >
-    where
-        'dex_currencies: 'r,
-        'currency: 'r,
-    {
-        const MAYBE_VISIT_BODY_PREPEND: &str = "use currency::maybe_visit_member as visit;
-
-    ";
-
-        const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
-            "
-pub(crate) mod definitions {
-    use serde::{Deserialize, Serialize};
-
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, Matcher, MaybePairsVisitorResult, PairsGroup,
-        PairsVisitor,
-    };
-    use sdk::schemars::JsonSchema;
-
-    use crate::payment;
-",
-        );
-
-        const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
-            "}
-",
-        );
-
-        let mut currencies = self.currencies.into_iter();
-
-        if let Some(ticker) = currencies.next() {
-            let currency_definition_generator = CurrencyDefinitionGenerator {
-                current_module: self.current_module,
-                protocol: self.protocol,
-                host_currency: self.host_currency,
-                dex_currencies: self.dex_currencies,
-                currencies_tree: self.currencies_tree,
-            };
-
-            let sources = iter::once(
-                maybe_visit_entry(self.dex_currencies, ticker)
-                    .map(IntoIterator::into_iter)
-                    .map(Either::Left)
-                    .and_then(|maybe_visit_entry| {
-                        currency_definition_generator
-                            .generate(ticker)
-                            .map(|currency_definition| (maybe_visit_entry, currency_definition))
-                    }),
-            )
-            .chain(currencies.map({
-                let maybe_visit_entry = |ticker| {
-                    maybe_visit_entry(self.dex_currencies, ticker)
-                        .map(|maybe_visit_entry| {
-                            iter::once(
-                                "
-        .or_else(|visitor| ",
-                            )
-                            .chain(maybe_visit_entry)
-                            .chain(iter::once(")"))
-                        })
-                        .map(Either::Right)
-                };
-
-                move |ticker| {
-                    maybe_visit_entry(ticker).and_then(|maybe_visit_entry| {
-                        currency_definition_generator
-                            .generate(ticker)
-                            .map(|currency_definition| (maybe_visit_entry, currency_definition))
-                    })
-                }
-            }))
-            .collect::<Result<Vec<_>, _>>()?;
-
-            let currencies_count = sources.len();
-
-            let (maybe_visit_body, currency_definitions) = {
-                let (maybe_visit_body, currency_definitions): (Vec<_>, Vec<_>) =
-                    sources.into_iter().unzip();
-
-                (
-                    iter::once(MAYBE_VISIT_BODY_PREPEND)
-                        .chain(maybe_visit_body.into_iter().flatten()),
-                    iter::once(CURRENCY_DEFINITIONS_PREPEND)
-                        .chain(currency_definitions.into_iter().flatten())
-                        .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
-                )
-            };
-
-            self.build_report
-                .write_fmt(format_args!(
-                    "{output_file:?}: {currencies_count} currencies emitted.\n",
-                    output_file = self.output_file,
-                ))
-                .context("Failed to write build report!")
-                .map(|()| GeneratedSources {
-                    matcher_parameter_name: "matcher",
-                    maybe_visit: Either::Left(maybe_visit_body),
-                    currency_definitions: Either::Left(currency_definitions),
-                })
-        } else {
-            Ok(GeneratedSources {
-                matcher_parameter_name: "_",
-                maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
-                currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
-            })
-        }
+        .chain(currency_definitions.map(SubtypeLifetime::subtype))
     }
 }
 
-fn maybe_visit_entry<'dex_currencies>(
-    dex_currencies: &'dex_currencies BTreeMap<&str, (String, &CurrencyDefinition)>,
-    ticker: &str,
-) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
-    dex_currencies
-        .get(ticker)
-        .context(NON_EXISTENT_DEX_CURRENCY)
-        .map(|(name, _)| {
-            [
-                "visit::<_, self::definitions::",
-                name,
-                ", VisitedG, _>(matcher, visitor)",
-            ]
-        })
-}
-
-struct GeneratedSources<MaybeVisit, CurrencyDefinitions> {
-    matcher_parameter_name: &'static str,
-    maybe_visit: MaybeVisit,
-    currency_definitions: CurrencyDefinitions,
+struct FinalizedSources<Sources> {
+    currencies_count: usize,
+    sources: Sources,
 }
 
 struct CurrencyDefinitionGenerator<
@@ -284,42 +462,17 @@ struct CurrencyDefinitionGenerator<
     current_module: CurrentModule,
     protocol: &'protocol Protocol,
     host_currency: &'host_currency CurrencyDefinition,
-    dex_currencies: &'dex_currencies BTreeMap<
-        &'dex_currency_ticker str,
-        (String, &'dex_currency_definition CurrencyDefinition),
-    >,
+    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
 }
 
-impl<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-    >
-    CurrencyDefinitionGenerator<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-    >
+impl<'dex_currencies, 'currencies_tree>
+    CurrencyDefinitionGenerator<'_, '_, 'dex_currencies, '_, '_, 'currencies_tree, '_, '_, '_, '_>
 {
     fn generate<'r, 'ticker>(
         &self,
         ticker: &'ticker str,
-    ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r>>
+    ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>>
     where
         'dex_currencies: 'r,
         'ticker: 'r,
@@ -356,7 +509,7 @@ impl<
             self.protocol,
             self.host_currency,
             self.dex_currencies,
-            parents.iter().copied().collect::<Vec<_>>().into_iter(),
+            parents.iter().copied(),
             name,
         )?;
 
@@ -434,13 +587,7 @@ impl<
             .into_iter()
             .map(Cow::Borrowed),
         )
-        .chain(
-            pairs_group
-                .sources
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(Cow::Borrowed),
-        )
+        .chain(pairs_group.sources.map(Cow::Borrowed))
         .chain(iter::once(
             const {
                 Cow::Borrowed(
@@ -451,12 +598,7 @@ impl<
                 )
             },
         ))
-        .chain(
-            in_pool_with
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(Cow::Borrowed),
-        ))
+        .chain(in_pool_with.map(Cow::Borrowed)))
     }
 }
 
@@ -464,7 +606,7 @@ fn pairs_group<'dex_currencies, 'child, Children>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
-    dex_currencies: &'dex_currencies BTreeMap<&str, (String, &CurrencyDefinition)>,
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     mut children: Children,
 ) -> Result<PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>>
 where
@@ -478,7 +620,7 @@ where
         current_module: CurrentModule,
         protocol: &Protocol,
         host_currency: &CurrencyDefinition,
-        dex_currencies: &'dex_currencies BTreeMap<&str, (String, &CurrencyDefinition)>,
+        dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
         ticker: &str,
     ) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
         ModuleAndName::resolve(
@@ -553,7 +695,7 @@ fn in_pool_with<'r, 'dex_currencies, 'parent, 'name, Parents>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
-    dex_currencies: &'dex_currencies BTreeMap<&str, (String, &CurrencyDefinition)>,
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     parents: Parents,
     name: &'name str,
 ) -> Result<impl Iterator<Item = &'r str> + use<'r, Parents>>
@@ -583,7 +725,6 @@ where
                     " {}
 ",
                 ]
-                .into_iter()
             })
         })
         .collect::<Result<_, _>>()
