@@ -25,7 +25,7 @@ pub(super) fn write<BuildReport>(
 where
     BuildReport: Write,
 {
-    multiple_currency::SourceGenerator {
+    multiple_currency::SourcesGenerator {
         build_report: &mut build_report,
         output_file: &output_directory.join("lease.rs"),
         current_module: CurrentModule::Lease,
@@ -59,7 +59,7 @@ where
         currencies_tree.children(host_currency.ticker()),
     )?;
 
-    multiple_currency::SourceGenerator {
+    multiple_currency::SourcesGenerator {
         build_report: &mut build_report,
         output_file: &output_directory.join("payment_only.rs"),
         current_module: CurrentModule::PaymentOnly,
