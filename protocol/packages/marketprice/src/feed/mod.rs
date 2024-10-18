@@ -1,47 +1,67 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, marker::PhantomData};
 
-use serde::{Deserialize, Serialize};
-
-use currency::Currency;
 use finance::{fraction::Fraction, percent::Percent, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
 
 use self::observation::Observation;
+pub(crate) use memory::InMemoryObservations as ObservationsStore;
 
+mod memory;
 mod observation;
 mod sample;
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
-pub struct PriceFeed<C, QuoteC>
+pub trait Observations<'item, C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
-    observations: Vec<Observation<C, QuoteC>>,
+    type AsIter: Iterator<Item = &'item Observation<C, QuoteC>>;
+
+    fn retain(&'item mut self, valid_since: Timestamp);
+    fn register(&'item mut self, observation: Observation<C, QuoteC>);
+    fn as_iter(&'item self) -> Self::AsIter;
 }
 
-impl<C, QuoteC> Default for PriceFeed<C, QuoteC>
+pub struct PriceFeed<C, QuoteC, ObservationsImpl>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
+    ObservationsImpl: for<'item> Observations<'item, C, QuoteC>,
+{
+    observations: ObservationsImpl,
+    _c_type: PhantomData<C>,
+    _quote_c_type: PhantomData<QuoteC>,
+}
+
+impl<C, QuoteC, ObservationsImpl> Default for PriceFeed<C, QuoteC, ObservationsImpl>
+where
+    C: 'static,
+    QuoteC: 'static,
+    ObservationsImpl: for<'item> Observations<'item, C, QuoteC> + Default,
 {
     fn default() -> Self {
-        Self {
-            observations: vec![],
-        }
+        Self::with(ObservationsImpl::default())
     }
 }
 
-impl<C, QuoteC> PriceFeed<C, QuoteC>
+impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
+    ObservationsImpl: for<'item> Observations<'item, C, QuoteC>,
 {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn with(observations: ObservationsImpl) -> Self {
+        Self {
+            observations,
+            _c_type: PhantomData,
+            _quote_c_type: PhantomData,
+        }
+    }
+
+    pub fn into_observations(self) -> ObservationsImpl {
+        self.observations
     }
 
     pub fn add_observation(
@@ -52,10 +72,10 @@ where
         valid_since: Timestamp,
     ) -> Self {
         debug_assert!(valid_since < at, "{valid_since} >= {at}");
-        self.observations
-            .retain(observation::valid_since(valid_since));
+        self.observations.retain(valid_since);
 
-        self.observations.push(Observation::new(from, at, price));
+        self.observations
+            .register(Observation::new(from, at, price));
         self
     }
 
@@ -112,7 +132,7 @@ where
     ) -> impl Iterator<Item = &Observation<C, QuoteC>> {
         let mut valid_observations = observation::valid_since(since);
         self.observations
-            .iter()
+            .as_iter()
             .filter(move |&o| valid_observations(o))
     }
 }
@@ -128,7 +148,7 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{config::Config, error::PriceFeedsError};
+    use crate::{config::Config, error::PriceFeedsError, feed::memory::InMemoryObservations};
 
     use super::PriceFeed;
 
@@ -137,6 +157,10 @@ mod test {
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
     const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
+
+    type TestC = SuperGroupTestC4;
+    type TestQuoteC = SuperGroupTestC5;
+    type TestObservations = InMemoryObservations<TestC, TestQuoteC>;
 
     #[test]
     fn old_observations() {
@@ -152,7 +176,7 @@ mod test {
         let feed1_time = block_time - VALIDITY;
         let feed1_price = price(20, 5000);
 
-        let mut feed = PriceFeed::new();
+        let mut feed = PriceFeed::<_, _, TestObservations>::default();
         feed = feed.add_observation(
             feeder1.clone(),
             feed1_time,
@@ -183,7 +207,7 @@ mod test {
         let feed1_time = block_time;
         let feed1_price = price(20, 5000);
 
-        let mut feed = PriceFeed::new();
+        let mut feed = PriceFeed::<_, _, TestObservations>::default();
         feed = feed.add_observation(
             feeder1,
             feed1_time,
@@ -217,7 +241,7 @@ mod test {
         let feed1_time = block_time - validity_period;
         let feed1_price = price(19, 5100);
 
-        let mut feed = PriceFeed::new();
+        let mut feed = PriceFeed::<_, _, TestObservations>::default();
         feed = feed.add_observation(
             feeder1,
             feed1_time,
@@ -286,7 +310,7 @@ mod test {
         let feeder1 = Addr::unchecked("feeder1");
         let feeder2 = Addr::unchecked("feeder2");
 
-        let mut feed = PriceFeed::new();
+        let mut feed = PriceFeed::<_, _, TestObservations>::default();
         feed = feed.add_observation(
             feeder1.clone(),
             s1,
@@ -319,7 +343,7 @@ mod test {
         );
     }
 
-    fn price(c: Amount, q: Amount) -> Price<SuperGroupTestC4, SuperGroupTestC5> {
+    fn price(c: Amount, q: Amount) -> Price<TestC, TestQuoteC> {
         price::total_of(Coin::from(c)).is(Coin::from(q))
     }
 }

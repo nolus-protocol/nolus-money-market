@@ -14,9 +14,16 @@ use sdk::{
     cw_storage_plus::Map,
 };
 
-use crate::{alarms::prefix::Prefix, config::Config, error::PriceFeedsError, feed::PriceFeed};
+use crate::{
+    alarms::prefix::Prefix,
+    config::Config,
+    error::PriceFeedsError,
+    feed::{ObservationsStore, PriceFeed},
+};
 
-pub type PriceFeedBin = Vec<u8>;
+type PriceFeedBin = Vec<u8>;
+type PriceFeedImpl<BaseC, QuoteC> = PriceFeed<BaseC, QuoteC, ObservationsStore<BaseC, QuoteC>>;
+
 pub struct PriceFeeds<PriceG> {
     storage: Map<(SymbolStatic, SymbolStatic), PriceFeedBin>,
     config: Config,
@@ -121,14 +128,18 @@ where
 
 fn load_feed<BaseC, QuoteC>(
     feed_bin: Option<PriceFeedBin>,
-) -> Result<PriceFeed<BaseC, QuoteC>, PriceFeedsError>
+) -> Result<PriceFeedImpl<BaseC, QuoteC>, PriceFeedsError>
 where
     BaseC: Currency,
     QuoteC: Currency,
 {
     feed_bin.map_or_else(
-        || Ok(PriceFeed::<BaseC, QuoteC>::default()),
-        |bin| postcard::from_bytes(&bin).map_err(Into::into),
+        || Ok(PriceFeedImpl::<BaseC, QuoteC>::default()),
+        |bin| {
+            postcard::from_bytes(&bin)
+                .map_err(Into::into)
+                .map(PriceFeedImpl::with)
+        },
     )
 }
 struct PriceCollect<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
@@ -256,7 +267,7 @@ where
             load_feed(self.feed_bin).and_then(|feed| {
                 let feed =
                     feed.add_observation(self.from.clone(), self.at, price, self.valid_since);
-                postcard::to_allocvec(&feed).map_err(Into::into)
+                postcard::to_allocvec(&feed.into_observations()).map_err(Into::into)
             })
         }
     }

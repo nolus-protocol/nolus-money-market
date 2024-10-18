@@ -1,7 +1,7 @@
 pub mod alarms;
 pub mod config;
 pub mod error;
-pub mod feed;
+mod feed;
 pub mod feeders;
 pub mod market_price;
 
