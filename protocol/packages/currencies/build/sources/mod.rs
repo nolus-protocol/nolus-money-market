@@ -25,19 +25,20 @@ pub(super) fn write<BuildReport>(
 where
     BuildReport: Write,
 {
-    multiple_currency::write(
-        &mut build_report,
-        &output_directory.join("lease.rs"),
-        CurrentModule::Lease,
-        &protocol,
-        &host_currency,
-        &dex_currencies,
-        dex_currencies
+    multiple_currency::SourceGenerator {
+        build_report: &mut build_report,
+        output_file: &output_directory.join("lease.rs"),
+        current_module: CurrentModule::Lease,
+        protocol: &protocol,
+        host_currency: &host_currency,
+        dex_currencies: &dex_currencies,
+        currencies: dex_currencies
             .keys()
             .copied()
             .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
-        &currencies_tree,
-    )?;
+        currencies_tree: &currencies_tree,
+    }
+    .write()?;
 
     liquidity_provider_native::write(
         &mut build_report,
@@ -58,18 +59,19 @@ where
         currencies_tree.children(host_currency.ticker()),
     )?;
 
-    multiple_currency::write(
-        &mut build_report,
-        &output_directory.join("payment_only.rs"),
-        CurrentModule::PaymentOnly,
-        &protocol,
-        &host_currency,
-        &dex_currencies,
-        dex_currencies.keys().copied().filter(|&key| {
+    multiple_currency::SourceGenerator {
+        build_report: &mut build_report,
+        output_file: &output_directory.join("payment_only.rs"),
+        current_module: CurrentModule::PaymentOnly,
+        protocol: &protocol,
+        host_currency: &host_currency,
+        dex_currencies: &dex_currencies,
+        currencies: dex_currencies.keys().copied().filter(|&key| {
             !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
         }),
-        &currencies_tree,
-    )?;
+        currencies_tree: &currencies_tree,
+    }
+    .write()?;
 
     stable::write(build_report, output_directory, &protocol, dex_currencies)
 }

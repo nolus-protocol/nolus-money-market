@@ -9,13 +9,13 @@ use topology::Topology;
 
 use crate::protocol::Protocol;
 
-pub(crate) struct CurrenciesTree<'parent_map, 'parent, 'children_map, 'child> {
-    parents: BTreeMap<&'parent_map str, BTreeSet<&'parent str>>,
+pub(crate) struct CurrenciesTree<'parents_map, 'parent, 'children_map, 'child> {
+    parents: BTreeMap<&'parents_map str, BTreeSet<&'parent str>>,
     children: BTreeMap<&'children_map str, BTreeSet<&'child str>>,
 }
 
-impl<'parent_map, 'parent, 'children_map, 'child>
-    CurrenciesTree<'parent_map, 'parent, 'children_map, 'child>
+impl<'parents_map, 'parent, 'children_map, 'child>
+    CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>
 {
     pub fn new<'r>(
         topology: &'r Topology,
