@@ -82,7 +82,7 @@ where
     Report: Write,
     Currencies: IntoIterator<Item = &'currency str>,
 {
-    pub fn write(self) -> Result<()> {
+    pub fn generate_and_commit(self) -> Result<()> {
         let output_file = self.output_file;
 
         let GeneratedSources {
@@ -265,28 +265,12 @@ struct GeneratedSources<MaybeVisit, CurrencyDefinitions> {
     currency_definitions: CurrencyDefinitions,
 }
 
-fn generate_currency_definition<
-    'r,
-    'protocol,
-    'host_currency,
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-    'currencies_tree,
-    'parents_map,
-    'parent,
-    'children_map,
-    'child,
-    'ticker,
->(
+fn generate_currency_definition<'r, 'dex_currencies, 'ticker>(
     current_module: CurrentModule,
-    protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
-    dex_currencies: &'dex_currencies BTreeMap<
-        &'dex_currency_ticker str,
-        (String, &'dex_currency_definition CurrencyDefinition),
-    >,
-    currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
+    protocol: &Protocol,
+    host_currency: &CurrencyDefinition,
+    dex_currencies: &'dex_currencies BTreeMap<&str, (String, &CurrencyDefinition)>,
+    currencies_tree: &CurrenciesTree<'_, '_, '_, '_>,
     ticker: &'ticker str,
 ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r>>
 where

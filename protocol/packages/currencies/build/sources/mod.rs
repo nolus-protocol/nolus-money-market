@@ -38,7 +38,7 @@ where
             .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
         currencies_tree: &currencies_tree,
     }
-    .write()?;
+    .generate_and_commit()?;
 
     liquidity_provider_native::write(
         &mut build_report,
@@ -71,7 +71,7 @@ where
         }),
         currencies_tree: &currencies_tree,
     }
-    .write()?;
+    .generate_and_commit()?;
 
     stable::write(build_report, output_directory, &protocol, dex_currencies)
 }
