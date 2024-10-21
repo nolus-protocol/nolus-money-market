@@ -131,6 +131,9 @@ impl<'dex_currencies, 'currencies_tree>
                     self.dex_currencies,
                     self.currencies_tree,
                 ),
+                "visit",
+                "matcher",
+                "visitor",
                 ticker,
                 tickers,
             )
@@ -138,11 +141,13 @@ impl<'dex_currencies, 'currencies_tree>
                 |NonFinalizedSources {
                      currencies_count,
                      matcher_parameter_name,
+                     visitor_parameter_name,
                      maybe_visit,
                      currency_definitions,
                  }| NonFinalizedSources {
                     currencies_count,
                     matcher_parameter_name,
+                    visitor_parameter_name,
                     maybe_visit: Either::Left(maybe_visit),
                     currency_definitions: Either::Left(currency_definitions),
                 },
@@ -151,6 +156,7 @@ impl<'dex_currencies, 'currencies_tree>
             Ok(NonFinalizedSources {
                 currencies_count: 0,
                 matcher_parameter_name: "_",
+                visitor_parameter_name: "visitor",
                 maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
                 currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
             })
@@ -221,6 +227,9 @@ fn generate_non_empty_sources<'r, 'dex_currencies, 'currencies_tree, 'ticker, Ti
         '_,
         '_,
     >,
+    visit_function: &'static str,
+    matcher_parameter_name: &'static str,
+    visitor_parameter_name: &'static str,
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
 ) -> Result<
@@ -235,32 +244,47 @@ where
     Tickers: Iterator<Item = &'ticker str>,
 {
     iter::once(
-        process_ticker(dex_currencies, &currency_definition_generator, head_ticker).map(
-            |(maybe_visit_entry, currency_definition)| {
-                (
-                    Either::Left(maybe_visit_entry.into_iter()),
-                    currency_definition,
-                )
-            },
-        ),
+        process_ticker(
+            dex_currencies,
+            &currency_definition_generator,
+            visit_function,
+            matcher_parameter_name,
+            visitor_parameter_name,
+            head_ticker,
+        )
+        .map(|(maybe_visit_entry, currency_definition)| {
+            (
+                Either::Left(maybe_visit_entry.into_iter()),
+                currency_definition,
+            )
+        }),
     )
     .chain(tail_tickers.map({
         |ticker| {
-            process_ticker(dex_currencies, &currency_definition_generator, ticker).map(
-                |(maybe_visit_entry, currency_definition)| {
-                    (
-                        Either::Right(
-                            iter::once(
-                                "
-                            .or_else(|visitor| ",
-                            )
-                            .chain(maybe_visit_entry)
-                            .chain(iter::once(")")),
-                        ),
-                        currency_definition,
-                    )
-                },
+            process_ticker(
+                dex_currencies,
+                &currency_definition_generator,
+                visit_function,
+                matcher_parameter_name,
+                visitor_parameter_name,
+                ticker,
             )
+            .map(|(maybe_visit_entry, currency_definition)| {
+                (
+                    Either::Right(
+                        [
+                            "
+        .or_else(|",
+                            visitor_parameter_name,
+                            "| ",
+                        ]
+                        .into_iter()
+                        .chain(maybe_visit_entry)
+                        .chain(iter::once(")")),
+                    ),
+                    currency_definition,
+                )
+            })
         }
     }))
     .collect::<Result<_, _>>()
@@ -272,14 +296,15 @@ where
              currency_definitions,
          }| NonFinalizedSources {
             currencies_count,
-            matcher_parameter_name: "matcher",
+            matcher_parameter_name,
+            visitor_parameter_name,
             maybe_visit,
             currency_definitions,
         },
     )
 }
 
-fn process_ticker<'r, 'dex_currencies, 'currencies_tree, 'ticker>(
+fn process_ticker<'r, 'dex_currencies, 'currencies_tree>(
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     currency_definition_generator: &CurrencyDefinitionGenerator<
         '_,
@@ -293,34 +318,54 @@ fn process_ticker<'r, 'dex_currencies, 'currencies_tree, 'ticker>(
         '_,
         '_,
     >,
-    ticker: &'ticker str,
+    visit_function: &'static str,
+    matcher_parameter_name: &'static str,
+    visitor_parameter_name: &'static str,
+    ticker: &'r str,
 ) -> Result<(
-    impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>,
+    impl IntoIterator<Item = &'r str> + use<'r>,
     impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>,
 )>
 where
-    'ticker: 'r,
     'dex_currencies: 'r,
 {
-    maybe_visit_entry(dex_currencies, ticker).and_then(|maybe_visit_entry| {
+    maybe_visit_entry(
+        dex_currencies,
+        ticker,
+        visit_function,
+        matcher_parameter_name,
+        visitor_parameter_name,
+    )
+    .and_then(|maybe_visit_entry| {
         currency_definition_generator
-            .generate_entry(ticker)
+            .generate_entry(visitor_parameter_name, ticker)
             .map(|currency_definition| (maybe_visit_entry, currency_definition))
     })
 }
 
-fn maybe_visit_entry<'dex_currencies>(
+fn maybe_visit_entry<'r, 'dex_currencies>(
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     ticker: &str,
-) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
+    visit_function: &'static str,
+    matcher_parameter: &'static str,
+    visitor_parameter: &'static str,
+) -> Result<impl IntoIterator<Item = &'r str> + use<'r>>
+where
+    'dex_currencies: 'r,
+{
     dex_currencies
         .get(ticker)
         .context(NON_EXISTENT_DEX_CURRENCY)
         .map(|(name, _)| {
             [
-                "visit::<_, self::definitions::",
+                visit_function,
+                "::<_, self::definitions::",
                 name,
-                ", VisitedG, _>(matcher, visitor)",
+                ", VisitedG, _>(",
+                matcher_parameter,
+                ", ",
+                visitor_parameter,
+                ")",
             ]
         })
 }
@@ -386,6 +431,7 @@ type DexCurrencies<'ticker, 'currency_definition> =
 struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
     currencies_count: usize,
     matcher_parameter_name: &'static str,
+    visitor_parameter_name: &'static str,
     maybe_visit: MaybeVisit,
     currency_definitions: CurrencyDefinitions,
 }
@@ -408,6 +454,7 @@ where
             currencies_count: self.currencies_count,
             sources: Self::finalize_sources(
                 self.matcher_parameter_name,
+                self.visitor_parameter_name,
                 self.maybe_visit,
                 self.currency_definitions,
             ),
@@ -416,6 +463,7 @@ where
 
     fn finalize_sources(
         matcher_parameter_name: &'static str,
+        visitor_parameter_name: &'static str,
         maybe_visit: MaybeVisit,
         currency_definitions: CurrencyDefinitions,
     ) -> impl Iterator<Item = Cow<'r, str>>
@@ -423,7 +471,7 @@ where
         [
             r#"// @generated
 
-use currency::{{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf}};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 
 use crate::payment;
 
@@ -431,7 +479,9 @@ pub(super) fn maybe_visit<M, V, VisitedG>(
     "#,
             matcher_parameter_name,
             r#": &M,
-    visitor: V,
+    "#,
+            visitor_parameter_name,
+            r#": V,
 ) -> MaybeAnyVisitResult<VisitedG, V>
 where
     super::Group: MemberOf<VisitedG>,

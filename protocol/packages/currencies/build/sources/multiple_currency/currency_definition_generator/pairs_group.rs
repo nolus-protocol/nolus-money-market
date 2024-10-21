@@ -17,6 +17,7 @@ pub(super) fn pairs_group<'dex_currencies, 'child, Children>(
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    visitor_parameter_name: &'static str,
     mut children: Children,
 ) -> Result<PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>>
 where
@@ -29,21 +30,28 @@ where
             host_currency,
             dex_currencies,
             ticker,
+            "matcher",
+            visitor_parameter_name,
             children,
         )
         .map(
             |PairsGroup {
                  matcher_parameter_name,
+                 visitor_parameter_name,
                  sources,
              }| PairsGroup {
                 matcher_parameter_name,
+                visitor_parameter_name,
                 sources: Either::Left(sources),
             },
         )
     } else {
         Ok(PairsGroup {
             matcher_parameter_name: "_",
-            sources: Either::Right(iter::once("currency::visit_noone(visitor)")),
+            visitor_parameter_name,
+            sources: Either::Right(
+                ["currency::visit_noone(", visitor_parameter_name, ")"].into_iter(),
+            ),
         })
     }
 }
@@ -54,6 +62,8 @@ fn non_empty_pairs_group<'dex_currencies, 'child, Children>(
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     ticker: &str,
+    matcher_parameter_name: &'static str,
+    visitor_parameter_name: &'static str,
     children: Children,
 ) -> Result<PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>>
 where
@@ -69,6 +79,9 @@ where
             protocol,
             host_currency,
             dex_currencies,
+            "visit",
+            matcher_parameter_name,
+            visitor_parameter_name,
             ticker,
         )
     };
@@ -78,10 +91,13 @@ where
             children
                 .map(|ticker| {
                     process_ticker(ticker).map(|entry| {
-                        iter::once(
+                        [
                             "
-                .or_else(|visitor| ",
-                        )
+                .or_else(|",
+                            visitor_parameter_name,
+                            "| ",
+                        ]
+                        .into_iter()
                         .chain(entry)
                         .chain(iter::once(")"))
                     })
@@ -96,13 +112,15 @@ where
                 })
         })
         .map(|sources| PairsGroup {
-            matcher_parameter_name: "matcher",
+            matcher_parameter_name,
+            visitor_parameter_name,
             sources,
         })
 }
 
 pub(super) struct PairsGroup<I> {
     pub matcher_parameter_name: &'static str,
+    pub visitor_parameter_name: &'static str,
     pub sources: I,
 }
 
@@ -111,6 +129,9 @@ fn entry<'dex_currencies>(
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    visit_function: &'static str,
+    matcher_parameter_name: &'static str,
+    visitor_parameter_name: &'static str,
     ticker: &str,
 ) -> Result<impl IntoIterator<Item = &'dex_currencies str>> {
     ModuleAndName::resolve(
@@ -122,11 +143,16 @@ fn entry<'dex_currencies>(
     )
     .map(|resolved| {
         [
-            "visit::<",
+            visit_function,
+            "::<",
             resolved.module(),
             "::",
             resolved.name(),
-            ", _, _>(matcher, visitor)",
+            ", _, _>(",
+            matcher_parameter_name,
+            ", ",
+            visitor_parameter_name,
+            ")",
         ]
     })
 }
