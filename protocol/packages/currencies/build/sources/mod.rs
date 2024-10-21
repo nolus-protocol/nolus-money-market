@@ -25,12 +25,12 @@ pub(super) fn write<BuildReport>(
 where
     BuildReport: Write,
 {
-    let multiple_currency_source_generator = multiple_currency::SourcesGenerator {
-        protocol: &protocol,
-        host_currency: &host_currency,
-        dex_currencies: &dex_currencies,
-        currencies_tree: &currencies_tree,
-    };
+    let multiple_currency_source_generator = multiple_currency::SourcesGenerator::new(
+        &protocol,
+        &host_currency,
+        &dex_currencies,
+        &currencies_tree,
+    );
 
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
