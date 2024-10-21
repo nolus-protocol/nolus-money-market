@@ -12,6 +12,12 @@ use crate::{
 
 use super::DexCurrencies;
 
+pub(super) struct PairsGroup<I> {
+    pub matcher_parameter_name: &'static str,
+    pub visitor_parameter_name: &'static str,
+    pub sources: I,
+}
+
 pub(super) fn pairs_group<'dex_currencies, 'child, Children>(
     current_module: CurrentModule,
     protocol: &Protocol,
@@ -73,24 +79,22 @@ where
 
             ";
 
-    let process_ticker = |ticker: &str| {
-        entry(
-            current_module,
-            protocol,
-            host_currency,
-            dex_currencies,
-            "visit",
-            matcher_parameter_name,
-            visitor_parameter_name,
-            ticker,
-        )
-    };
+    let visit_entry_template = VisitEntryTemplate::new(
+        current_module,
+        protocol,
+        host_currency,
+        dex_currencies,
+        "visit",
+        matcher_parameter_name,
+        visitor_parameter_name,
+    );
 
-    process_ticker(ticker)
+    visit_entry_template
+        .apply(ticker)
         .and_then(|first_entry| {
             children
                 .map(|ticker| {
-                    process_ticker(ticker).map(|entry| {
+                    visit_entry_template.apply(ticker).map(|entry| {
                         [
                             "
                 .or_else(|",
@@ -118,41 +122,83 @@ where
         })
 }
 
-pub(super) struct PairsGroup<I> {
-    pub matcher_parameter_name: &'static str,
-    pub visitor_parameter_name: &'static str,
-    pub sources: I,
-}
-
-fn entry<'dex_currencies>(
+struct VisitEntryTemplate<
+    'protocol,
+    'host_currency,
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+> {
     current_module: CurrentModule,
-    protocol: &Protocol,
-    host_currency: &CurrencyDefinition,
-    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    protocol: &'protocol Protocol,
+    host_currency: &'host_currency CurrencyDefinition,
+    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     visit_function: &'static str,
     matcher_parameter_name: &'static str,
     visitor_parameter_name: &'static str,
-    ticker: &str,
-) -> Result<impl IntoIterator<Item = &'dex_currencies str>> {
-    ModuleAndName::resolve(
-        current_module,
-        protocol,
-        host_currency,
-        dex_currencies,
-        ticker,
-    )
-    .map(|resolved| {
-        [
+}
+
+impl<
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+    >
+    VisitEntryTemplate<
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+    >
+{
+    const fn new(
+        current_module: CurrentModule,
+        protocol: &'protocol Protocol,
+        host_currency: &'host_currency CurrencyDefinition,
+        dex_currencies: &'dex_currencies DexCurrencies<
+            'dex_currency_ticker,
+            'dex_currency_definition,
+        >,
+        visit_function: &'static str,
+        matcher_parameter_name: &'static str,
+        visitor_parameter_name: &'static str,
+    ) -> Self {
+        Self {
+            current_module,
+            protocol,
+            host_currency,
+            dex_currencies,
             visit_function,
-            "::<",
-            resolved.module(),
-            "::",
-            resolved.name(),
-            ", _, _>(",
             matcher_parameter_name,
-            ", ",
             visitor_parameter_name,
-            ")",
-        ]
-    })
+        }
+    }
+}
+
+impl<'dex_currencies> VisitEntryTemplate<'_, '_, 'dex_currencies, '_, '_> {
+    fn apply(&self, ticker: &str) -> Result<impl IntoIterator<Item = &'dex_currencies str>> {
+        ModuleAndName::resolve(
+            self.current_module,
+            self.protocol,
+            self.host_currency,
+            self.dex_currencies,
+            ticker,
+        )
+        .map(|resolved| {
+            [
+                self.visit_function,
+                "::<",
+                resolved.module(),
+                "::",
+                resolved.name(),
+                ", _, _>(",
+                self.matcher_parameter_name,
+                ", ",
+                self.visitor_parameter_name,
+                ")",
+            ]
+        })
+    }
 }
