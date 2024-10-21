@@ -11,70 +11,15 @@ use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol};
+use crate::{
+    currencies_tree::CurrenciesTree, either::Either, protocol::Protocol,
+    subtype_lifetime::SubtypeLifetime,
+};
 
 use super::module_and_name::{CurrentModule, ModuleAndName};
 
 const NON_EXISTENT_DEX_CURRENCY: &str =
     "Queried ticker does not belong to any defined DEX currency!";
-
-trait SubtypeLifetime<'r>: 'r {
-    type T<'new>: 'new
-    where
-        'r: 'new;
-
-    fn subtype<'new>(self) -> Self::T<'new>
-    where
-        'r: 'new;
-}
-
-impl<'old, T> SubtypeLifetime<'old> for &'old T
-where
-    T: ?Sized,
-{
-    type T<'new> = &'new T
-    where
-        'old: 'new;
-
-    fn subtype<'new>(self) -> Self::T<'new>
-    where
-        'old: 'new,
-    {
-        self
-    }
-}
-
-impl<'old, T> SubtypeLifetime<'old> for &'old mut T
-where
-    T: ?Sized,
-{
-    type T<'new> = &'new mut T
-    where
-        'old: 'new;
-
-    fn subtype<'new>(self) -> Self::T<'new>
-    where
-        'old: 'new,
-    {
-        self
-    }
-}
-
-impl<'old, T> SubtypeLifetime<'old> for Cow<'old, T>
-where
-    T: ToOwned + ?Sized,
-{
-    type T<'new> = Cow<'new, T>
-    where
-        'old: 'new;
-
-    fn subtype<'new>(self) -> Self::T<'new>
-    where
-        'old: 'new,
-    {
-        self
-    }
-}
 
 pub(super) struct SourcesGenerator<
     'protocol,

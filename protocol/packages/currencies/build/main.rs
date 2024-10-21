@@ -16,6 +16,7 @@ mod currencies_tree;
 mod either;
 mod protocol;
 mod sources;
+mod subtype_lifetime;
 
 const PROTOCOL_JSON: &str = "./../../../build-configuration/protocol.json";
 
