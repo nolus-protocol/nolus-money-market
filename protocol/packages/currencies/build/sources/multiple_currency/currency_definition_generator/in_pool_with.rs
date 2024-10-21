@@ -9,13 +9,13 @@ use crate::{
 
 use super::DexCurrencies;
 
-pub(super) fn in_pool_with<'r, 'dex_currencies, 'parent, 'name, Parents>(
+pub(super) fn in_pool_with<'r, 'dex_currencies, 'name, 'parent, Parents>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-    parents: Parents,
     name: &'name str,
+    parents: Parents,
 ) -> Result<impl Iterator<Item = &'r str> + use<'r, Parents>>
 where
     'dex_currencies: 'r,

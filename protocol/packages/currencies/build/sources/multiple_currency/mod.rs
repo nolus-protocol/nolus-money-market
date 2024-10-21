@@ -135,12 +135,12 @@ impl<'dex_currencies, 'currencies_tree>
                 tickers,
             )
             .map(
-                |GeneratedSources {
+                |NonFinalizedSources {
                      currencies_count,
                      matcher_parameter_name,
                      maybe_visit,
                      currency_definitions,
-                 }| GeneratedSources {
+                 }| NonFinalizedSources {
                     currencies_count,
                     matcher_parameter_name,
                     maybe_visit: Either::Left(maybe_visit),
@@ -148,14 +148,14 @@ impl<'dex_currencies, 'currencies_tree>
                 },
             )
         } else {
-            Ok(GeneratedSources {
+            Ok(NonFinalizedSources {
                 currencies_count: 0,
                 matcher_parameter_name: "_",
                 maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
                 currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
             })
         }
-        .map(GeneratedSources::finalize)
+        .map(NonFinalizedSources::finalize)
     }
 }
 
@@ -224,7 +224,7 @@ fn generate_non_empty_sources<'r, 'dex_currencies, 'currencies_tree, 'ticker, Ti
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
 ) -> Result<
-    GeneratedSources<
+    NonFinalizedSources<
         impl Iterator<Item = &'r str> + use<'r, 'currencies_tree, Tickers>,
         impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Tickers>,
     >,
@@ -266,7 +266,11 @@ where
     .collect::<Result<_, _>>()
     .map(postprocess_sources_iterators)
     .map(
-        |(currencies_count, maybe_visit, currency_definitions)| GeneratedSources {
+        |PostprocessedSources {
+             currencies_count,
+             maybe_visit,
+             currency_definitions,
+         }| NonFinalizedSources {
             currencies_count,
             matcher_parameter_name: "matcher",
             maybe_visit,
@@ -321,6 +325,12 @@ fn maybe_visit_entry<'dex_currencies>(
         })
 }
 
+struct PostprocessedSources<MaybeVisit, CurrencyDefinitions> {
+    currencies_count: usize,
+    maybe_visit: MaybeVisit,
+    currency_definitions: CurrencyDefinitions,
+}
+
 fn postprocess_sources_iterators<
     'maybe_visit,
     'currency_definition,
@@ -328,12 +338,11 @@ fn postprocess_sources_iterators<
     CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
 >(
     sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
-) -> (
-    usize,
+) -> PostprocessedSources<
     impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
     impl Iterator<Item = Cow<'currency_definition, str>>
         + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
-) {
+> {
     const MAYBE_VISIT_BODY_PREPEND: &str = "use currency::maybe_visit_member as visit;
 
     ";
@@ -362,19 +371,19 @@ pub(crate) mod definitions {
 
     let (maybe_visit, currency_definitions): (Vec<_>, Vec<_>) = sources.into_iter().unzip();
 
-    (
+    PostprocessedSources {
         currencies_count,
-        iter::once(MAYBE_VISIT_BODY_PREPEND).chain(maybe_visit.into_iter().flatten()),
-        iter::once(CURRENCY_DEFINITIONS_PREPEND)
+        maybe_visit: iter::once(MAYBE_VISIT_BODY_PREPEND).chain(maybe_visit.into_iter().flatten()),
+        currency_definitions: iter::once(CURRENCY_DEFINITIONS_PREPEND)
             .chain(currency_definitions.into_iter().flatten())
             .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
-    )
+    }
 }
 
 type DexCurrencies<'ticker, 'currency_definition> =
     BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
 
-struct GeneratedSources<MaybeVisit, CurrencyDefinitions> {
+struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
     currencies_count: usize,
     matcher_parameter_name: &'static str,
     maybe_visit: MaybeVisit,
@@ -382,7 +391,7 @@ struct GeneratedSources<MaybeVisit, CurrencyDefinitions> {
 }
 
 impl<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>
-    GeneratedSources<MaybeVisit, CurrencyDefinitions>
+    NonFinalizedSources<MaybeVisit, CurrencyDefinitions>
 where
     'maybe_visit: 'r,
     'currency_definition: 'r,
