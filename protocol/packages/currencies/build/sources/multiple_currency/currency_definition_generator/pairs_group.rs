@@ -30,16 +30,15 @@ where
     Children: Iterator<Item = &'child str>,
 {
     if let Some(ticker) = children.next() {
-        non_empty_pairs_group(
+        PairsGroupTemplate::new(
             current_module,
             protocol,
             host_currency,
             dex_currencies,
-            ticker,
             "matcher",
             visitor_parameter_name,
-            children,
         )
+        .apply(ticker, children)
         .map(
             |PairsGroup {
                  matcher_parameter_name,
@@ -62,64 +61,115 @@ where
     }
 }
 
-fn non_empty_pairs_group<'dex_currencies, 'child, Children>(
+struct PairsGroupTemplate<
+    'protocol,
+    'host_currency,
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+> {
     current_module: CurrentModule,
-    protocol: &Protocol,
-    host_currency: &CurrencyDefinition,
-    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-    ticker: &str,
+    protocol: &'protocol Protocol,
+    host_currency: &'host_currency CurrencyDefinition,
+    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     matcher_parameter_name: &'static str,
     visitor_parameter_name: &'static str,
-    children: Children,
-) -> Result<PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>>
-where
-    Children: Iterator<Item = &'child str>,
+}
+
+impl<
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+    >
+    PairsGroupTemplate<
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+    >
 {
-    const PAIRS_GROUP_ENTRIES_PREPEND: &str = "use currency::maybe_visit_buddy as visit;
+    const fn new(
+        current_module: CurrentModule,
+        protocol: &'protocol Protocol,
+        host_currency: &'host_currency CurrencyDefinition,
+        dex_currencies: &'dex_currencies DexCurrencies<
+            'dex_currency_ticker,
+            'dex_currency_definition,
+        >,
+        matcher_parameter_name: &'static str,
+        visitor_parameter_name: &'static str,
+    ) -> Self {
+        Self {
+            current_module,
+            protocol,
+            host_currency,
+            dex_currencies,
+            matcher_parameter_name,
+            visitor_parameter_name,
+        }
+    }
+}
+
+impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
+    fn apply<'child, Children>(
+        &self,
+        ticker: &str,
+        children: Children,
+    ) -> Result<
+        PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>,
+    >
+    where
+        Children: Iterator<Item = &'child str>,
+    {
+        const PAIRS_GROUP_ENTRIES_PREPEND: &str = "use currency::maybe_visit_buddy as visit;
 
             ";
 
-    let visit_entry_template = VisitEntryTemplate::new(
-        current_module,
-        protocol,
-        host_currency,
-        dex_currencies,
-        "visit",
-        matcher_parameter_name,
-        visitor_parameter_name,
-    );
+        let visit_entry_template = VisitEntryTemplate::new(
+            self.current_module,
+            self.protocol,
+            self.host_currency,
+            self.dex_currencies,
+            "visit",
+            self.matcher_parameter_name,
+            self.visitor_parameter_name,
+        );
 
-    visit_entry_template
-        .apply(ticker)
-        .and_then(|first_entry| {
-            children
-                .map(|ticker| {
-                    visit_entry_template.apply(ticker).map(|entry| {
-                        [
-                            "
+        visit_entry_template
+            .apply(ticker)
+            .and_then(|first_entry| {
+                children
+                    .map(|ticker| {
+                        visit_entry_template.apply(ticker).map(|entry| {
+                            [
+                                "
                 .or_else(|",
-                            visitor_parameter_name,
-                            "| ",
-                        ]
-                        .into_iter()
-                        .chain(entry)
-                        .chain(iter::once(")"))
+                                self.visitor_parameter_name,
+                                "| ",
+                            ]
+                            .into_iter()
+                            .chain(entry)
+                            .chain(iter::once(")"))
+                        })
                     })
-                })
-                .collect::<Result<_, _>>()
-                .map(Vec::into_iter)
-                .map(Iterator::flatten)
-                .map(move |rest_of_entries| {
-                    iter::once(PAIRS_GROUP_ENTRIES_PREPEND)
-                        .chain(first_entry)
-                        .chain(rest_of_entries)
-                })
-        })
-        .map(|sources| PairsGroup {
-            matcher_parameter_name,
-            visitor_parameter_name,
-            sources,
-        })
+                    .collect::<Result<_, _>>()
+                    .map(Vec::into_iter)
+                    .map(Iterator::flatten)
+                    .map(move |rest_of_entries| {
+                        iter::once(PAIRS_GROUP_ENTRIES_PREPEND)
+                            .chain(first_entry)
+                            .chain(rest_of_entries)
+                    })
+            })
+            .map(|sources| PairsGroup {
+                matcher_parameter_name: self.matcher_parameter_name,
+                visitor_parameter_name: self.visitor_parameter_name,
+                sources,
+            })
+    }
 }
 
 struct VisitEntryTemplate<

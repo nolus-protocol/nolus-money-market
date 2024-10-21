@@ -11,6 +11,8 @@ use crate::{
 
 use super::{DexCurrencies, NON_EXISTENT_DEX_CURRENCY};
 
+use self::pairs_group::PairsGroup;
+
 mod in_pool_with;
 mod pairs_group;
 
@@ -153,18 +155,19 @@ impl<'dex_currencies, 'currencies_tree>
             })
     }
 
-    fn finalize_entry<'r, 'pairs_group, 'in_pool_with, PairsGroup, InPoolWith>(
+    fn finalize_entry<'r, 'pairs_group, 'in_pool_with, PairsGroupSources, InPoolWithSources>(
         name: &'r str,
         ticker: &'r str,
         currency: &'r CurrencyDefinition,
-        pairs_group: pairs_group::PairsGroup<PairsGroup>,
-        in_pool_with: InPoolWith,
-    ) -> impl Iterator<Item = Cow<'r, str>> + use<'r, 'pairs_group, 'in_pool_with, PairsGroup, InPoolWith>
+        pairs_group: PairsGroup<PairsGroupSources>,
+        in_pool_with: InPoolWithSources,
+    ) -> impl Iterator<Item = Cow<'r, str>>
+           + use<'r, 'pairs_group, 'in_pool_with, PairsGroupSources, InPoolWithSources>
     where
         'pairs_group: 'r,
         'in_pool_with: 'r,
-        PairsGroup: Iterator<Item = &'pairs_group str>,
-        InPoolWith: Iterator<Item = &'in_pool_with str>,
+        PairsGroupSources: Iterator<Item = &'pairs_group str>,
+        InPoolWithSources: Iterator<Item = &'in_pool_with str>,
     {
         [
             r#"
