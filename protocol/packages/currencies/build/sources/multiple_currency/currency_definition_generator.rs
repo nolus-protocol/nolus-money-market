@@ -1,4 +1,4 @@
-use std::{borrow::Cow, iter};
+use std::borrow::Cow;
 
 use anyhow::{anyhow, Context as _, Result};
 
@@ -7,7 +7,10 @@ use topology::CurrencyDefinition;
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
 use super::{
-    super::{in_pool_with, module_and_name::CurrentModule, pairs_group, DexCurrencies},
+    super::{
+        currency_definition, in_pool_with, module_and_name::CurrentModule, pairs_group,
+        DexCurrencies,
+    },
     NON_EXISTENT_DEX_CURRENCY,
 };
 
@@ -137,7 +140,7 @@ impl<'dex_currencies, 'currencies_tree>
                         parents,
                     )
                     .map(|in_pool_with| {
-                        currency_definition(name, ticker, currency).chain(
+                        currency_definition::currency_definition(name, ticker, currency).chain(
                             pairs_group
                                 .chain(in_pool_with)
                                 .map(|value| Cow::Borrowed(value)),
@@ -146,72 +149,4 @@ impl<'dex_currencies, 'currencies_tree>
                 })
             })
     }
-}
-
-fn currency_definition<'r>(
-    name: &'r str,
-    ticker: &'r str,
-    currency: &'r CurrencyDefinition,
-) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
-    [
-        r#"
-    #[derive(
-        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-    )]
-    #[serde(deny_unknown_fields, rename_all = "snake_case")]
-    #[schemars(crate = "sdk::schemars")]
-    pub struct "#,
-        name,
-        r#"(CurrencyDTO<super::super::Group>);
-
-    impl CurrencyDef for "#,
-        name,
-        r#" {
-        type Group = super::super::Group;
-
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
-                    const {
-                        &Definition::new(
-                            ""#,
-        ticker,
-        r#"",
-                            // "#,
-        currency.host().path(),
-        r#"
-                            ""#,
-        currency.host().symbol(),
-        r#"",
-                            // "#,
-        currency.dex().path(),
-        r#"
-                            ""#,
-        currency.dex().symbol(),
-        r#"",
-                            "#,
-    ]
-    .into_iter()
-    .map(Cow::Borrowed)
-    .chain(iter::once(Cow::Owned(
-        currency.decimal_digits().to_string(),
-    )))
-    .chain(iter::once(
-        const {
-            Cow::Borrowed(
-                r#",
-                        )
-                    },
-                ))
-            }
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
-        }
-    }
-"#,
-            )
-        },
-    ))
 }

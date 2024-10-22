@@ -1,0 +1,71 @@
+use std::{borrow::Cow, iter};
+
+use topology::CurrencyDefinition;
+
+pub(super) fn currency_definition<'r>(
+    name: &'r str,
+    ticker: &'r str,
+    currency: &'r CurrencyDefinition,
+) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
+    [
+        r#"
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    #[schemars(crate = "sdk::schemars")]
+    pub struct "#,
+        name,
+        r#"(CurrencyDTO<super::super::Group>);
+
+    impl CurrencyDef for "#,
+        name,
+        r#" {
+        type Group = super::super::Group;
+
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const {
+                        &Definition::new(
+                            ""#,
+        ticker,
+        r#"",
+                            // "#,
+        currency.host().path(),
+        r#"
+                            ""#,
+        currency.host().symbol(),
+        r#"",
+                            // "#,
+        currency.dex().path(),
+        r#"
+                            ""#,
+        currency.dex().symbol(),
+        r#"",
+                            "#,
+    ]
+    .into_iter()
+    .map(Cow::Borrowed)
+    .chain(iter::once(Cow::Owned(
+        currency.decimal_digits().to_string(),
+    )))
+    .chain(iter::once(
+        const {
+            Cow::Borrowed(
+                r#",
+                        )
+                    },
+                ))
+            }
+        }
+
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
+    }
+"#,
+            )
+        },
+    ))
+}
