@@ -140,11 +140,8 @@ impl<'dex_currencies, 'currencies_tree>
                         parents,
                     )
                     .map(|in_pool_with| {
-                        currency_definition::currency_definition(name, ticker, currency).chain(
-                            pairs_group
-                                .chain(in_pool_with)
-                                .map(|value| Cow::Borrowed(value)),
-                        )
+                        currency_definition::currency_definition(name, ticker, currency)
+                            .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed))
                     })
                 })
             })

@@ -28,7 +28,7 @@ where
     let matcher;
 
     if let Some(ticker) = children.next() {
-        matcher = "";
+        matcher = "matcher";
 
         PairsGroupTemplate::new(
             current_module,
@@ -41,24 +41,26 @@ where
         .apply(ticker, children)
         .map(Either::Left)
     } else {
-        matcher = "";
+        matcher = "_";
 
         Ok(Either::Right(iter::once("currency::visit_noone(visitor)")))
     }
     .map(|sources| {
         [
             r#"
-    impl PairsGroup for "#,
+    impl currency::PairsGroup for "#,
             name,
             r#" {
-        type CommonGroup = payment::Group;
+        type CommonGroup = crate::payment::Group;
 
         fn maybe_visit<M, V>("#,
             matcher,
-            r#": &M, visitor: V) -> MaybePairsVisitorResult<V>
+            r#": &M,
+            visitor: V,
+        ) -> currency::MaybePairsVisitorResult<V>
         where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
+            M: currency::Matcher,
+            V: currency::PairsVisitor<Pivot = Self>,
         {
             "#,
         ]

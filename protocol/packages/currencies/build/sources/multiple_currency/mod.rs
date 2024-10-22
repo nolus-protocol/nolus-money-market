@@ -120,7 +120,7 @@ impl<'dex_currencies, 'currencies_tree>
         'ticker: 'r,
         Tickers: Iterator<Item = &'ticker str>,
     {
-        if let Some(ticker) = tickers.next() {
+        if let Some(head_ticker) = tickers.next() {
             generate_non_empty_sources(
                 self.dex_currencies,
                 CurrencyDefinitionGenerator::new(
@@ -133,29 +133,15 @@ impl<'dex_currencies, 'currencies_tree>
                 "visit",
                 "matcher",
                 "visitor",
-                ticker,
+                head_ticker,
                 tickers,
             )
-            .map(
-                |NonFinalizedSources {
-                     currencies_count,
-                     matcher_parameter_name,
-                     visitor_parameter_name,
-                     maybe_visit,
-                     currency_definitions,
-                 }| NonFinalizedSources {
-                    currencies_count,
-                    matcher_parameter_name,
-                    visitor_parameter_name,
-                    maybe_visit: Either::Left(maybe_visit),
-                    currency_definitions: Either::Left(currency_definitions),
-                },
-            )
+            .map(NonFinalizedSources::wrap_either_left)
         } else {
             Ok(NonFinalizedSources {
                 currencies_count: 0,
-                matcher_parameter_name: "_",
-                visitor_parameter_name: "visitor",
+                matcher_parameter: "_",
+                visitor_parameter: "visitor",
                 maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
                 currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
             })
@@ -227,8 +213,8 @@ fn generate_non_empty_sources<'r, 'dex_currencies, 'currencies_tree, 'ticker, Ti
         '_,
     >,
     visit_function: &'static str,
-    matcher_parameter_name: &'static str,
-    visitor_parameter_name: &'static str,
+    matcher_parameter: &'static str,
+    visitor_parameter: &'static str,
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
 ) -> Result<
@@ -242,16 +228,37 @@ where
     'dex_currencies: 'r,
     Tickers: Iterator<Item = &'ticker str>,
 {
-    iter::once(
+    fn else_maybe_visit_entry<'r, MaybeVisitEntry>(
+        visitor_parameter: &'static str,
+        maybe_visit_entry: MaybeVisitEntry,
+    ) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisitEntry>
+    where
+        MaybeVisitEntry: IntoIterator<Item = &'r str>,
+    {
+        [
+            "
+        .or_else(|",
+            visitor_parameter,
+            "| ",
+        ]
+        .into_iter()
+        .chain(maybe_visit_entry)
+        .chain(iter::once(")"))
+    }
+
+    let process_ticker = move |ticker| {
         process_ticker(
             dex_currencies,
             &currency_definition_generator,
             visit_function,
-            matcher_parameter_name,
-            visitor_parameter_name,
-            head_ticker,
+            matcher_parameter,
+            visitor_parameter,
+            ticker,
         )
-        .map(|(maybe_visit_entry, currency_definition)| {
+    };
+
+    iter::once(
+        process_ticker(head_ticker).map(|(maybe_visit_entry, currency_definition)| {
             (
                 Either::Left(maybe_visit_entry.into_iter()),
                 currency_definition,
@@ -259,28 +266,10 @@ where
         }),
     )
     .chain(tail_tickers.map({
-        |ticker| {
-            process_ticker(
-                dex_currencies,
-                &currency_definition_generator,
-                visit_function,
-                matcher_parameter_name,
-                visitor_parameter_name,
-                ticker,
-            )
-            .map(|(maybe_visit_entry, currency_definition)| {
+        move |ticker| {
+            process_ticker(ticker).map(|(maybe_visit_entry, currency_definition)| {
                 (
-                    Either::Right(
-                        [
-                            "
-        .or_else(|",
-                            visitor_parameter_name,
-                            "| ",
-                        ]
-                        .into_iter()
-                        .chain(maybe_visit_entry)
-                        .chain(iter::once(")")),
-                    ),
+                    Either::Right(else_maybe_visit_entry(visitor_parameter, maybe_visit_entry)),
                     currency_definition,
                 )
             })
@@ -293,14 +282,71 @@ where
              currencies_count,
              maybe_visit,
              currency_definitions,
-         }| NonFinalizedSources {
-            currencies_count,
-            matcher_parameter_name,
-            visitor_parameter_name,
-            maybe_visit,
-            currency_definitions,
+         }| {
+            NonFinalizedSources::new(
+                currencies_count,
+                matcher_parameter,
+                visitor_parameter,
+                maybe_visit,
+                currency_definitions,
+            )
         },
     )
+}
+
+fn postprocess_sources_iterators<
+    'maybe_visit,
+    'currency_definition,
+    MaybeVisit: Iterator<Item = &'maybe_visit str>,
+    CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
+>(
+    visit_function: &'static str,
+    sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
+) -> PostprocessedSources<
+    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
+    impl Iterator<Item = Cow<'currency_definition, str>>
+        + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
+> {
+    fn maybe_visit_prepend<'r>(
+        visit_function: &'static str,
+    ) -> impl Iterator<Item = &'r str> + use<'r> {
+        [
+            "use currency::maybe_visit_member as ",
+            visit_function,
+            ";
+
+    ",
+        ]
+        .into_iter()
+    }
+
+    const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
+        "
+pub(crate) mod definitions {",
+    );
+
+    const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
+        "}
+",
+    );
+
+    let currencies_count = sources.len();
+
+    let (maybe_visit, currency_definitions): (Vec<_>, Vec<_>) = sources.into_iter().unzip();
+
+    PostprocessedSources {
+        currencies_count,
+        maybe_visit: maybe_visit_prepend(visit_function).chain(maybe_visit.into_iter().flatten()),
+        currency_definitions: iter::once(CURRENCY_DEFINITIONS_PREPEND)
+            .chain(currency_definitions.into_iter().flatten())
+            .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
+    }
+}
+
+struct PostprocessedSources<MaybeVisit, CurrencyDefinitions> {
+    currencies_count: usize,
+    maybe_visit: MaybeVisit,
+    currency_definitions: CurrencyDefinitions,
 }
 
 fn process_ticker<'r, 'dex_currencies, 'currencies_tree>(
@@ -318,37 +364,13 @@ fn process_ticker<'r, 'dex_currencies, 'currencies_tree>(
         '_,
     >,
     visit_function: &'static str,
-    matcher_parameter_name: &'static str,
-    visitor_parameter_name: &'static str,
+    matcher_parameter: &'static str,
+    visitor_parameter: &'static str,
     ticker: &'r str,
 ) -> Result<(
     impl IntoIterator<Item = &'r str> + use<'r>,
     impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>,
 )>
-where
-    'dex_currencies: 'r,
-{
-    maybe_visit_entry(
-        dex_currencies,
-        ticker,
-        visit_function,
-        matcher_parameter_name,
-        visitor_parameter_name,
-    )
-    .and_then(|maybe_visit_entry| {
-        currency_definition_generator
-            .generate_entry(ticker)
-            .map(|currency_definition| (maybe_visit_entry, currency_definition))
-    })
-}
-
-fn maybe_visit_entry<'r, 'dex_currencies>(
-    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-    ticker: &str,
-    visit_function: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
-) -> Result<impl IntoIterator<Item = &'r str> + use<'r>>
 where
     'dex_currencies: 'r,
 {
@@ -367,74 +389,60 @@ where
                 ")",
             ]
         })
-}
-
-struct PostprocessedSources<MaybeVisit, CurrencyDefinitions> {
-    currencies_count: usize,
-    maybe_visit: MaybeVisit,
-    currency_definitions: CurrencyDefinitions,
-}
-
-fn postprocess_sources_iterators<
-    'maybe_visit,
-    'currency_definition,
-    MaybeVisit: Iterator<Item = &'maybe_visit str>,
-    CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
->(
-    visit_function: &'static str,
-    sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
-) -> PostprocessedSources<
-    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
-    impl Iterator<Item = Cow<'currency_definition, str>>
-        + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
-> {
-    const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
-        "
-pub(crate) mod definitions {
-    use serde::{Deserialize, Serialize};
-
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, Matcher, MaybePairsVisitorResult, PairsGroup,
-        PairsVisitor,
-    };
-    use sdk::schemars::JsonSchema;
-
-    use crate::payment;
-",
-    );
-
-    const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
-        "}
-",
-    );
-
-    let currencies_count = sources.len();
-
-    let (maybe_visit, currency_definitions): (Vec<_>, Vec<_>) = sources.into_iter().unzip();
-
-    PostprocessedSources {
-        currencies_count,
-        maybe_visit: [
-            "use currency::maybe_visit_member as ",
-            visit_function,
-            ";
-
-    ",
-        ]
-        .into_iter()
-        .chain(maybe_visit.into_iter().flatten()),
-        currency_definitions: iter::once(CURRENCY_DEFINITIONS_PREPEND)
-            .chain(currency_definitions.into_iter().flatten())
-            .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
-    }
+        .and_then(|maybe_visit_entry| {
+            currency_definition_generator
+                .generate_entry(ticker)
+                .map(|currency_definition| (maybe_visit_entry, currency_definition))
+        })
 }
 
 struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
     currencies_count: usize,
-    matcher_parameter_name: &'static str,
-    visitor_parameter_name: &'static str,
+    matcher_parameter: &'static str,
+    visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
     currency_definitions: CurrencyDefinitions,
+}
+
+impl<MaybeVisit, CurrencyDefinitions> NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
+    const fn new(
+        currencies_count: usize,
+        matcher_parameter: &'static str,
+        visitor_parameter: &'static str,
+        maybe_visit: MaybeVisit,
+        currency_definitions: CurrencyDefinitions,
+    ) -> Self {
+        Self {
+            currencies_count,
+            matcher_parameter,
+            visitor_parameter,
+            maybe_visit,
+            currency_definitions,
+        }
+    }
+
+    fn wrap_either_left<MaybeVisitRight, CurrencyDefinitionsRight>(
+        self,
+    ) -> NonFinalizedSources<
+        Either<MaybeVisit, MaybeVisitRight>,
+        Either<CurrencyDefinitions, CurrencyDefinitionsRight>,
+    > {
+        let Self {
+            currencies_count,
+            matcher_parameter,
+            visitor_parameter,
+            maybe_visit,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            matcher_parameter,
+            visitor_parameter,
+            maybe_visit: Either::Left(maybe_visit),
+            currency_definitions: Either::Left(currency_definitions),
+        }
+    }
 }
 
 impl<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>
@@ -453,54 +461,35 @@ where
     > {
         FinalizedSources {
             currencies_count: self.currencies_count,
-            sources: Self::finalize_sources(
-                self.matcher_parameter_name,
-                self.visitor_parameter_name,
-                self.maybe_visit,
-                self.currency_definitions,
-            ),
-        }
-    }
-
-    fn finalize_sources(
-        matcher_parameter_name: &'static str,
-        visitor_parameter_name: &'static str,
-        maybe_visit: MaybeVisit,
-        currency_definitions: CurrencyDefinitions,
-    ) -> impl Iterator<Item = Cow<'r, str>>
-           + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions> {
-        [
-            r#"// @generated
-
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
-
-use crate::payment;
+            sources: [
+                r#"// @generated
 
 pub(super) fn maybe_visit<M, V, VisitedG>(
     "#,
-            matcher_parameter_name,
-            r#": &M,
+                self.matcher_parameter,
+                r#": &M,
     "#,
-            visitor_parameter_name,
-            r#": V,
-) -> MaybeAnyVisitResult<VisitedG, V>
+                self.visitor_parameter,
+                r#": V,
+) -> currency::MaybeAnyVisitResult<VisitedG, V>
 where
-    super::Group: MemberOf<VisitedG>,
-    M: Matcher,
-    V: AnyVisitor<VisitedG>,
-    VisitedG: Group<TopG = payment::Group>,
+    super::Group: currency::MemberOf<VisitedG>,
+    M: currency::Matcher,
+    V: currency::AnyVisitor<VisitedG>,
+    VisitedG: currency::Group<TopG = crate::payment::Group>,
 {
     "#,
-        ]
-        .into_iter()
-        .chain(maybe_visit.map(SubtypeLifetime::subtype))
-        .chain(iter::once(
-            "
+            ]
+            .into_iter()
+            .chain(self.maybe_visit.map(SubtypeLifetime::subtype))
+            .chain(iter::once(
+                "
 }
 ",
-        ))
-        .map(Cow::Borrowed)
-        .chain(currency_definitions.map(SubtypeLifetime::subtype))
+            ))
+            .map(Cow::Borrowed)
+            .chain(self.currency_definitions.map(SubtypeLifetime::subtype)),
+        }
     }
 }
 

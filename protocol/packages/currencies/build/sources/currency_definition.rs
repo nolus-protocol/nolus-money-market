@@ -10,24 +10,25 @@ pub(super) fn currency_definition<'r>(
     [
         r#"
     #[derive(
-        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
+        serde::Deserialize, sdk::schemars::JsonSchema,
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     #[schemars(crate = "sdk::schemars")]
     pub struct "#,
         name,
-        r#"(CurrencyDTO<super::super::Group>);
+        r#"(currency::CurrencyDTO<super::super::Group>);
 
-    impl CurrencyDef for "#,
+    impl currency::CurrencyDef for "#,
         name,
         r#" {
         type Group = super::super::Group;
 
         fn definition() -> &'static Self {
             const {
-                &Self(CurrencyDTO::new(
+                &Self(currency::CurrencyDTO::new(
                     const {
-                        &Definition::new(
+                        &currency::Definition::new(
                             ""#,
         ticker,
         r#"",
@@ -60,7 +61,7 @@ pub(super) fn currency_definition<'r>(
             }
         }
 
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+        fn dto(&self) -> &currency::CurrencyDTO<Self::Group> {
             &self.0
         }
     }
