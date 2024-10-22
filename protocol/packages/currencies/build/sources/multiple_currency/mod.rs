@@ -287,7 +287,7 @@ where
         }
     }))
     .collect::<Result<_, _>>()
-    .map(postprocess_sources_iterators)
+    .map(|sources| postprocess_sources_iterators(visit_function, sources))
     .map(
         |PostprocessedSources {
              currencies_count,
@@ -381,16 +381,13 @@ fn postprocess_sources_iterators<
     MaybeVisit: Iterator<Item = &'maybe_visit str>,
     CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
 >(
+    visit_function: &'static str,
     sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
 ) -> PostprocessedSources<
     impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
     impl Iterator<Item = Cow<'currency_definition, str>>
         + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
 > {
-    const MAYBE_VISIT_BODY_PREPEND: &str = "use currency::maybe_visit_member as visit;
-
-    ";
-
     const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
         "
 pub(crate) mod definitions {
@@ -417,7 +414,15 @@ pub(crate) mod definitions {
 
     PostprocessedSources {
         currencies_count,
-        maybe_visit: iter::once(MAYBE_VISIT_BODY_PREPEND).chain(maybe_visit.into_iter().flatten()),
+        maybe_visit: [
+            "use currency::maybe_visit_member as ",
+            visit_function,
+            ";
+
+    ",
+        ]
+        .into_iter()
+        .chain(maybe_visit.into_iter().flatten()),
         currency_definitions: iter::once(CURRENCY_DEFINITIONS_PREPEND)
             .chain(currency_definitions.into_iter().flatten())
             .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
