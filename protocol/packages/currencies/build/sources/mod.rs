@@ -9,9 +9,11 @@ use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 use self::module_and_name::CurrentModule;
 
 mod host_native;
+mod in_pool_with;
 mod liquidity_provider_native;
 mod module_and_name;
 mod multiple_currency;
+mod pairs_group;
 mod stable;
 
 pub(super) fn write<BuildReport>(
@@ -19,7 +21,7 @@ pub(super) fn write<BuildReport>(
     output_directory: &Path,
     protocol: Protocol,
     host_currency: CurrencyDefinition,
-    dex_currencies: BTreeMap<&str, (String, &CurrencyDefinition)>,
+    dex_currencies: DexCurrencies<'_, '_>,
     currencies_tree: CurrenciesTree<'_, '_, '_, '_>,
 ) -> Result<()>
 where
@@ -72,3 +74,6 @@ where
 
     stable::write(build_report, output_directory, &protocol, dex_currencies)
 }
+
+type DexCurrencies<'ticker, 'currency_definition> =
+    BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;

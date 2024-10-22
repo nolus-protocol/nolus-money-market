@@ -4,17 +4,12 @@ use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::{
-    currencies_tree::CurrenciesTree, protocol::Protocol, sources::module_and_name::CurrentModule,
-    subtype_lifetime::SubtypeLifetime,
+use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
+
+use super::{
+    super::{in_pool_with, module_and_name::CurrentModule, pairs_group, DexCurrencies},
+    NON_EXISTENT_DEX_CURRENCY,
 };
-
-use super::{DexCurrencies, NON_EXISTENT_DEX_CURRENCY};
-
-use self::pairs_group::PairsGroup;
-
-mod in_pool_with;
-mod pairs_group;
 
 pub(super) struct CurrencyDefinitionGenerator<
     'protocol,
@@ -137,6 +132,7 @@ impl<'dex_currencies, 'currencies_tree>
                     self.host_currency,
                     self.dex_currencies,
                     visitor_parameter_name,
+                    name,
                     children,
                 )
                 .and_then(|pairs_group| {
@@ -149,40 +145,34 @@ impl<'dex_currencies, 'currencies_tree>
                         parents,
                     )
                     .map(|in_pool_with| {
-                        Self::finalize_entry(name, ticker, currency, pairs_group, in_pool_with)
+                        currency_definition(name, ticker, currency)
+                            .chain(pairs_group.sources.map(|value| Cow::Borrowed(value)))
+                            .chain(in_pool_with.map(|value| Cow::Borrowed(value)))
                     })
                 })
             })
     }
+}
 
-    fn finalize_entry<'r, 'pairs_group, 'in_pool_with, PairsGroupSources, InPoolWithSources>(
-        name: &'r str,
-        ticker: &'r str,
-        currency: &'r CurrencyDefinition,
-        pairs_group: PairsGroup<PairsGroupSources>,
-        in_pool_with: InPoolWithSources,
-    ) -> impl Iterator<Item = Cow<'r, str>>
-           + use<'r, 'pairs_group, 'in_pool_with, PairsGroupSources, InPoolWithSources>
-    where
-        'pairs_group: 'r,
-        'in_pool_with: 'r,
-        PairsGroupSources: Iterator<Item = &'pairs_group str>,
-        InPoolWithSources: Iterator<Item = &'in_pool_with str>,
-    {
-        [
-            r#"
+fn currency_definition<'r>(
+    name: &'r str,
+    ticker: &'r str,
+    currency: &'r CurrencyDefinition,
+) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
+    [
+        r#"
     #[derive(
         Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     #[schemars(crate = "sdk::schemars")]
     pub struct "#,
-            name,
-            r#"(CurrencyDTO<super::super::Group>);
+        name,
+        r#"(CurrencyDTO<super::super::Group>);
 
     impl CurrencyDef for "#,
-            name,
-            r#" {
+        name,
+        r#" {
         type Group = super::super::Group;
 
         fn definition() -> &'static Self {
@@ -191,29 +181,30 @@ impl<'dex_currencies, 'currencies_tree>
                     const {
                         &Definition::new(
                             ""#,
-            ticker,
-            r#"",
+        ticker,
+        r#"",
                             // "#,
-            currency.host().path(),
-            r#"
+        currency.host().path(),
+        r#"
                             ""#,
-            currency.host().symbol(),
-            r#"",
+        currency.host().symbol(),
+        r#"",
                             // "#,
-            currency.dex().path(),
-            r#"
+        currency.dex().path(),
+        r#"
                             ""#,
-            currency.dex().symbol(),
-            r#"",
+        currency.dex().symbol(),
+        r#"",
                             "#,
-        ]
-        .into_iter()
-        .map(Cow::Borrowed)
-        .chain(iter::once(Cow::Owned(
-            currency.decimal_digits().to_string(),
-        )))
-        .chain(
-            [
+    ]
+    .into_iter()
+    .map(Cow::Borrowed)
+    .chain(iter::once(Cow::Owned(
+        currency.decimal_digits().to_string(),
+    )))
+    .chain(iter::once(
+        const {
+            Cow::Borrowed(
                 r#",
                         )
                     },
@@ -225,46 +216,8 @@ impl<'dex_currencies, 'currencies_tree>
             &self.0
         }
     }
-
-    impl PairsGroup for "#,
-                name,
-                r#" {
-        type CommonGroup = payment::Group;
-
-        fn maybe_visit<M, V>("#,
-                pairs_group.matcher_parameter_name,
-                r#": &M, "#,
-                pairs_group.visitor_parameter_name,
-                r#": V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            "#,
-            ]
-            .into_iter()
-            .map(Cow::Borrowed),
-        )
-        .chain(
-            pairs_group
-                .sources
-                .map(SubtypeLifetime::subtype)
-                .map(Cow::Borrowed),
-        )
-        .chain(iter::once(
-            const {
-                Cow::Borrowed(
-                    r#"
-        }
-    }
 "#,
-                )
-            },
-        ))
-        .chain(
-            in_pool_with
-                .map(SubtypeLifetime::subtype)
-                .map(Cow::Borrowed),
-        )
-    }
+            )
+        },
+    ))
 }

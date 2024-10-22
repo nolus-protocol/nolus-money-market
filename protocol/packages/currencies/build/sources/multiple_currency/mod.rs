@@ -1,6 +1,5 @@
 use std::{
     borrow::Cow,
-    collections::BTreeMap,
     fs::File,
     io::{BufWriter, Write},
     iter,
@@ -16,7 +15,7 @@ use crate::{
     subtype_lifetime::SubtypeLifetime,
 };
 
-use super::module_and_name::CurrentModule;
+use super::{module_and_name::CurrentModule, DexCurrencies};
 
 use self::currency_definition_generator::CurrencyDefinitionGenerator;
 
@@ -424,9 +423,6 @@ pub(crate) mod definitions {
             .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
     }
 }
-
-type DexCurrencies<'ticker, 'currency_definition> =
-    BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
 
 struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
     currencies_count: usize,

@@ -1,10 +1,4 @@
-use std::{
-    borrow::Cow,
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    io::Write,
-    path::Path,
-};
+use std::{borrow::Cow, collections::BTreeSet, fs, io::Write, path::Path};
 
 use anyhow::{anyhow, Context as _, Result};
 
@@ -12,14 +6,17 @@ use topology::CurrencyDefinition;
 
 use crate::{protocol::Protocol, NLS_NAME};
 
-use super::module_and_name::{CurrentModule, ModuleAndName};
+use super::{
+    module_and_name::{CurrentModule, ModuleAndName},
+    DexCurrencies,
+};
 
 pub(super) fn write<W>(
     mut build_report: W,
     output_directory: &Path,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
-    dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
+    dex_currencies: &DexCurrencies<'_, '_>,
     parents: &BTreeSet<&str>,
     children: &BTreeSet<&str>,
 ) -> Result<()>

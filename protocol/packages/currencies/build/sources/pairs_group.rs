@@ -8,25 +8,28 @@ use crate::{
     either::Either,
     protocol::Protocol,
     sources::module_and_name::{CurrentModule, ModuleAndName},
+    subtype_lifetime::SubtypeLifetime,
 };
 
 use super::DexCurrencies;
 
-pub(super) struct PairsGroup<I> {
+pub(super) struct PairsGroup<Sources> {
     pub matcher_parameter_name: &'static str,
     pub visitor_parameter_name: &'static str,
-    pub sources: I,
+    pub sources: Sources,
 }
 
-pub(super) fn pairs_group<'dex_currencies, 'child, Children>(
+pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Children>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     visitor_parameter_name: &'static str,
+    name: &'r str,
     mut children: Children,
-) -> Result<PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>>
+) -> Result<PairsGroup<impl Iterator<Item = &'r str> + use<'r, Children>>>
 where
+    'dex_currencies: 'r,
     Children: Iterator<Item = &'child str>,
 {
     if let Some(ticker) = children.next() {
@@ -59,6 +62,42 @@ where
             ),
         })
     }
+    .map(
+        |PairsGroup {
+             matcher_parameter_name,
+             visitor_parameter_name,
+             sources,
+         }| PairsGroup {
+            matcher_parameter_name,
+            visitor_parameter_name,
+            sources: [
+                r#"
+    impl PairsGroup for "#,
+                name,
+                r#" {
+        type CommonGroup = payment::Group;
+
+        fn maybe_visit<M, V>("#,
+                matcher_parameter_name,
+                r#": &M, "#,
+                visitor_parameter_name,
+                r#": V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            "#,
+            ]
+            .into_iter()
+            .chain(sources.map(SubtypeLifetime::subtype))
+            .chain(iter::once(
+                r#"
+        }
+    }
+"#,
+            )),
+        },
+    )
 }
 
 struct PairsGroupTemplate<
