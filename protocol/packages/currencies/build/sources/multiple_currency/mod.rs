@@ -136,15 +136,19 @@ impl<'dex_currencies, 'currencies_tree>
                 head_ticker,
                 tickers,
             )
-            .map(NonFinalizedSources::wrap_either_left)
-        } else {
-            Ok(NonFinalizedSources {
-                currencies_count: 0,
-                matcher_parameter: "_",
-                visitor_parameter: "visitor",
-                maybe_visit: Either::Right(iter::once("currency::visit_noone(visitor)")),
-                currency_definitions: Either::Right(iter::once(const { Cow::Borrowed("") })),
+            .map(|non_finalized_sources| {
+                non_finalized_sources
+                    .map_maybe_visit(Either::Left)
+                    .map_currency_definitions(Either::Left)
             })
+        } else {
+            Ok(NonFinalizedSources::new(
+                0,
+                "_",
+                "visitor",
+                Either::Right(iter::once("currency::visit_noone(visitor)")),
+                const { Either::Right(iter::empty()) },
+            ))
         }
         .map(NonFinalizedSources::finalize)
     }
@@ -228,6 +232,78 @@ where
     'dex_currencies: 'r,
     Tickers: Iterator<Item = &'ticker str>,
 {
+    fun_name(
+        dex_currencies,
+        currency_definition_generator,
+        visit_function,
+        matcher_parameter,
+        visitor_parameter,
+        head_ticker,
+        tail_tickers,
+    )
+    .map(
+        |NonFinalizedSources {
+             currencies_count,
+             matcher_parameter,
+             visitor_parameter,
+             maybe_visit,
+             currency_definitions,
+         }| {
+            const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
+                "
+pub(crate) mod definitions {",
+            );
+
+            const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
+                "}
+",
+            );
+
+            let currency_definitions = iter::once(CURRENCY_DEFINITIONS_PREPEND)
+                .chain(currency_definitions)
+                .chain(iter::once(CURRENCY_DEFINITIONS_APPEND));
+
+            NonFinalizedSources {
+                currencies_count,
+                matcher_parameter,
+                visitor_parameter,
+                maybe_visit,
+                currency_definitions,
+            }
+        },
+    )
+}
+
+fn fun_name<'r, 'ticker, 'dex_currencies, 'currencies_tree, Tickers>(
+    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+    currency_definition_generator: CurrencyDefinitionGenerator<
+        '_,
+        '_,
+        'dex_currencies,
+        '_,
+        '_,
+        'currencies_tree,
+        '_,
+        '_,
+        '_,
+        '_,
+    >,
+    visit_function: &'static str,
+    matcher_parameter: &'static str,
+    visitor_parameter: &'static str,
+    head_ticker: &'ticker str,
+    tail_tickers: Tickers,
+) -> Result<
+    NonFinalizedSources<
+        impl Iterator<Item = &'r str> + use<'r, 'currencies_tree, Tickers>,
+        impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Tickers>,
+    >,
+>
+where
+    'ticker: 'r,
+    'dex_currencies: 'r,
+    Tickers: Iterator<Item = &'ticker str>,
+{
     fn else_maybe_visit_entry<'r, MaybeVisitEntry>(
         visitor_parameter: &'static str,
         maybe_visit_entry: MaybeVisitEntry,
@@ -275,78 +351,45 @@ where
             })
         }
     }))
-    .collect::<Result<_, _>>()
-    .map(|sources| postprocess_sources_iterators(visit_function, sources))
+    .try_fold(
+        NonFinalizedSources::new(0, matcher_parameter, visitor_parameter, vec![], vec![]),
+        |mut accumulator, element| {
+            element.map(|(maybe_visit_entry, currency_definition)| {
+                accumulator.currencies_count += 1;
+
+                accumulator.maybe_visit.push(maybe_visit_entry);
+
+                accumulator.currency_definitions.push(currency_definition);
+
+                accumulator
+            })
+        },
+    )
     .map(
-        |PostprocessedSources {
+        |NonFinalizedSources {
              currencies_count,
+             matcher_parameter,
+             visitor_parameter,
              maybe_visit,
              currency_definitions,
          }| {
-            NonFinalizedSources::new(
+            NonFinalizedSources {
                 currencies_count,
                 matcher_parameter,
                 visitor_parameter,
-                maybe_visit,
-                currency_definitions,
-            )
-        },
-    )
-}
-
-fn postprocess_sources_iterators<
-    'maybe_visit,
-    'currency_definition,
-    MaybeVisit: Iterator<Item = &'maybe_visit str>,
-    CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
->(
-    visit_function: &'static str,
-    sources: Vec<(MaybeVisit, CurrencyDefinitions)>,
-) -> PostprocessedSources<
-    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit, MaybeVisit, CurrencyDefinitions>,
-    impl Iterator<Item = Cow<'currency_definition, str>>
-        + use<'currency_definition, MaybeVisit, CurrencyDefinitions>,
-> {
-    fn maybe_visit_prepend<'r>(
-        visit_function: &'static str,
-    ) -> impl Iterator<Item = &'r str> + use<'r> {
-        [
-            "use currency::maybe_visit_member as ",
-            visit_function,
-            ";
+                maybe_visit: [
+                    "use currency::maybe_visit_member as ",
+                    visit_function,
+                    ";
 
     ",
-        ]
-        .into_iter()
-    }
-
-    const CURRENCY_DEFINITIONS_PREPEND: Cow<'_, str> = Cow::Borrowed(
-        "
-pub(crate) mod definitions {",
-    );
-
-    const CURRENCY_DEFINITIONS_APPEND: Cow<'_, str> = Cow::Borrowed(
-        "}
-",
-    );
-
-    let currencies_count = sources.len();
-
-    let (maybe_visit, currency_definitions): (Vec<_>, Vec<_>) = sources.into_iter().unzip();
-
-    PostprocessedSources {
-        currencies_count,
-        maybe_visit: maybe_visit_prepend(visit_function).chain(maybe_visit.into_iter().flatten()),
-        currency_definitions: iter::once(CURRENCY_DEFINITIONS_PREPEND)
-            .chain(currency_definitions.into_iter().flatten())
-            .chain(iter::once(CURRENCY_DEFINITIONS_APPEND)),
-    }
-}
-
-struct PostprocessedSources<MaybeVisit, CurrencyDefinitions> {
-    currencies_count: usize,
-    maybe_visit: MaybeVisit,
-    currency_definitions: CurrencyDefinitions,
+                ]
+                .into_iter()
+                .chain(maybe_visit.into_iter().flatten()),
+                currency_definitions: currency_definitions.into_iter().flatten(),
+            }
+        },
+    )
 }
 
 fn process_ticker<'r, 'dex_currencies, 'currencies_tree>(
@@ -421,12 +464,10 @@ impl<MaybeVisit, CurrencyDefinitions> NonFinalizedSources<MaybeVisit, CurrencyDe
         }
     }
 
-    fn wrap_either_left<MaybeVisitRight, CurrencyDefinitionsRight>(
-        self,
-    ) -> NonFinalizedSources<
-        Either<MaybeVisit, MaybeVisitRight>,
-        Either<CurrencyDefinitions, CurrencyDefinitionsRight>,
-    > {
+    fn map_maybe_visit<F, R>(self, f: F) -> NonFinalizedSources<R, CurrencyDefinitions>
+    where
+        F: FnOnce(MaybeVisit) -> R,
+    {
         let Self {
             currencies_count,
             matcher_parameter,
@@ -439,8 +480,29 @@ impl<MaybeVisit, CurrencyDefinitions> NonFinalizedSources<MaybeVisit, CurrencyDe
             currencies_count,
             matcher_parameter,
             visitor_parameter,
-            maybe_visit: Either::Left(maybe_visit),
-            currency_definitions: Either::Left(currency_definitions),
+            maybe_visit: f(maybe_visit),
+            currency_definitions,
+        }
+    }
+
+    fn map_currency_definitions<F, R>(self, f: F) -> NonFinalizedSources<MaybeVisit, R>
+    where
+        F: FnOnce(CurrencyDefinitions) -> R,
+    {
+        let Self {
+            currencies_count,
+            matcher_parameter,
+            visitor_parameter,
+            maybe_visit,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            matcher_parameter,
+            visitor_parameter,
+            maybe_visit,
+            currency_definitions: f(currency_definitions),
         }
     }
 }
