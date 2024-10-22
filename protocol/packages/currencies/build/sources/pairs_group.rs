@@ -13,91 +13,64 @@ use crate::{
 
 use super::DexCurrencies;
 
-pub(super) struct PairsGroup<Sources> {
-    pub matcher_parameter_name: &'static str,
-    pub visitor_parameter_name: &'static str,
-    pub sources: Sources,
-}
-
 pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Children>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-    visitor_parameter_name: &'static str,
     name: &'r str,
     mut children: Children,
-) -> Result<PairsGroup<impl Iterator<Item = &'r str> + use<'r, Children>>>
+) -> Result<impl Iterator<Item = &'r str> + use<'r, Children>>
 where
     'dex_currencies: 'r,
     Children: Iterator<Item = &'child str>,
 {
+    let matcher;
+
     if let Some(ticker) = children.next() {
+        matcher = "";
+
         PairsGroupTemplate::new(
             current_module,
             protocol,
             host_currency,
             dex_currencies,
-            "matcher",
-            visitor_parameter_name,
+            matcher,
+            "visitor",
         )
         .apply(ticker, children)
-        .map(
-            |PairsGroup {
-                 matcher_parameter_name,
-                 visitor_parameter_name,
-                 sources,
-             }| PairsGroup {
-                matcher_parameter_name,
-                visitor_parameter_name,
-                sources: Either::Left(sources),
-            },
-        )
+        .map(Either::Left)
     } else {
-        Ok(PairsGroup {
-            matcher_parameter_name: "_",
-            visitor_parameter_name,
-            sources: Either::Right(
-                ["currency::visit_noone(", visitor_parameter_name, ")"].into_iter(),
-            ),
-        })
+        matcher = "";
+
+        Ok(Either::Right(iter::once("currency::visit_noone(visitor)")))
     }
-    .map(
-        |PairsGroup {
-             matcher_parameter_name,
-             visitor_parameter_name,
-             sources,
-         }| PairsGroup {
-            matcher_parameter_name,
-            visitor_parameter_name,
-            sources: [
-                r#"
+    .map(|sources| {
+        [
+            r#"
     impl PairsGroup for "#,
-                name,
-                r#" {
+            name,
+            r#" {
         type CommonGroup = payment::Group;
 
         fn maybe_visit<M, V>("#,
-                matcher_parameter_name,
-                r#": &M, "#,
-                visitor_parameter_name,
-                r#": V) -> MaybePairsVisitorResult<V>
+            matcher,
+            r#": &M, visitor: V) -> MaybePairsVisitorResult<V>
         where
             M: Matcher,
             V: PairsVisitor<Pivot = Self>,
         {
             "#,
-            ]
-            .into_iter()
-            .chain(sources.map(SubtypeLifetime::subtype))
-            .chain(iter::once(
-                r#"
+        ]
+        .into_iter()
+        .chain(sources.map(SubtypeLifetime::subtype))
+        .chain(iter::once(
+            r#"
         }
     }
 "#,
-            )),
-        },
-    )
+        ))
+    })
 }
 
 struct PairsGroupTemplate<
@@ -157,9 +130,7 @@ impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
         &self,
         ticker: &str,
         children: Children,
-    ) -> Result<
-        PairsGroup<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>,
-    >
+    ) -> Result<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>
     where
         Children: Iterator<Item = &'child str>,
     {
@@ -177,37 +148,30 @@ impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
             self.visitor_parameter_name,
         );
 
-        visit_entry_template
-            .apply(ticker)
-            .and_then(|first_entry| {
-                children
-                    .map(|ticker| {
-                        visit_entry_template.apply(ticker).map(|entry| {
-                            [
-                                "
+        visit_entry_template.apply(ticker).and_then(|first_entry| {
+            children
+                .map(|ticker| {
+                    visit_entry_template.apply(ticker).map(|entry| {
+                        [
+                            "
                 .or_else(|",
-                                self.visitor_parameter_name,
-                                "| ",
-                            ]
-                            .into_iter()
-                            .chain(entry)
-                            .chain(iter::once(")"))
-                        })
+                            self.visitor_parameter_name,
+                            "| ",
+                        ]
+                        .into_iter()
+                        .chain(entry)
+                        .chain(iter::once(")"))
                     })
-                    .collect::<Result<_, _>>()
-                    .map(Vec::into_iter)
-                    .map(Iterator::flatten)
-                    .map(move |rest_of_entries| {
-                        iter::once(PAIRS_GROUP_ENTRIES_PREPEND)
-                            .chain(first_entry)
-                            .chain(rest_of_entries)
-                    })
-            })
-            .map(|sources| PairsGroup {
-                matcher_parameter_name: self.matcher_parameter_name,
-                visitor_parameter_name: self.visitor_parameter_name,
-                sources,
-            })
+                })
+                .collect::<Result<_, _>>()
+                .map(Vec::into_iter)
+                .map(Iterator::flatten)
+                .map(move |rest_of_entries| {
+                    iter::once(PAIRS_GROUP_ENTRIES_PREPEND)
+                        .chain(first_entry)
+                        .chain(rest_of_entries)
+                })
+        })
     }
 }
 

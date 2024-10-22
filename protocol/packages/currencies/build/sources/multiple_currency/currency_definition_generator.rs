@@ -85,7 +85,6 @@ impl<'dex_currencies, 'currencies_tree>
 {
     pub(super) fn generate_entry<'r>(
         &self,
-        visitor_parameter_name: &'static str,
         ticker: &'r str,
     ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>>
     where
@@ -101,19 +100,13 @@ impl<'dex_currencies, 'currencies_tree>
         {
             Err(anyhow!("Currency cannot be in a pool with itself!"))
         } else {
-            self.generate_entry_unchecked(
-                ticker,
-                visitor_parameter_name,
-                children.iter().copied(),
-                parents.iter().copied(),
-            )
+            self.generate_entry_unchecked(ticker, children.iter().copied(), parents.iter().copied())
         }
     }
 
     fn generate_entry_unchecked<'r, 'child, 'parent, Children, Parents>(
         &self,
         ticker: &'r str,
-        visitor_parameter_name: &'static str,
         children: Children,
         parents: Parents,
     ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Children, Parents>>
@@ -131,7 +124,6 @@ impl<'dex_currencies, 'currencies_tree>
                     self.protocol,
                     self.host_currency,
                     self.dex_currencies,
-                    visitor_parameter_name,
                     name,
                     children,
                 )
@@ -145,9 +137,11 @@ impl<'dex_currencies, 'currencies_tree>
                         parents,
                     )
                     .map(|in_pool_with| {
-                        currency_definition(name, ticker, currency)
-                            .chain(pairs_group.sources.map(|value| Cow::Borrowed(value)))
-                            .chain(in_pool_with.map(|value| Cow::Borrowed(value)))
+                        currency_definition(name, ticker, currency).chain(
+                            pairs_group
+                                .chain(in_pool_with)
+                                .map(|value| Cow::Borrowed(value)),
+                        )
                     })
                 })
             })

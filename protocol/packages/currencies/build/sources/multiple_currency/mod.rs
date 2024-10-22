@@ -337,7 +337,7 @@ where
     )
     .and_then(|maybe_visit_entry| {
         currency_definition_generator
-            .generate_entry(visitor_parameter_name, ticker)
+            .generate_entry(ticker)
             .map(|currency_definition| (maybe_visit_entry, currency_definition))
     })
 }
