@@ -24,9 +24,9 @@ where
             .lease_currencies_tickers
             .contains(&protocol.stable_currency_ticker)
         {
-            "lease::impl_mod::definitions"
+            "lease::impl_mod"
         } else {
-            "payment::only::impl_mod::definitions"
+            "payment::only::impl_mod"
         };
 
         (

@@ -19,7 +19,7 @@ impl CurrentModule {
         if matches!(self, Self::Lease) {
             "self"
         } else {
-            "crate::lease::impl_mod::definitions"
+            "crate::lease::impl_mod"
         }
     }
 
@@ -42,7 +42,7 @@ impl CurrentModule {
         if matches!(self, Self::PaymentOnly) {
             "self"
         } else {
-            "crate::payment::only::impl_mod::definitions"
+            "crate::payment::only::impl_mod"
         }
     }
 }

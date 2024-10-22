@@ -48,28 +48,28 @@ where
     .map(|sources| {
         [
             r#"
-    impl currency::PairsGroup for "#,
+impl currency::PairsGroup for "#,
             name,
             r#" {
-        type CommonGroup = crate::payment::Group;
+    type CommonGroup = crate::payment::Group;
 
-        fn maybe_visit<M, V>("#,
+    fn maybe_visit<M, V>("#,
             matcher,
             r#": &M,
-            visitor: V,
-        ) -> currency::MaybePairsVisitorResult<V>
-        where
-            M: currency::Matcher,
-            V: currency::PairsVisitor<Pivot = Self>,
-        {
-            "#,
+        visitor: V,
+    ) -> currency::MaybePairsVisitorResult<V>
+    where
+        M: currency::Matcher,
+        V: currency::PairsVisitor<Pivot = Self>,
+    {
+        "#,
         ]
         .into_iter()
         .chain(sources.map(SubtypeLifetime::subtype))
         .chain(iter::once(
             r#"
-        }
     }
+}
 "#,
         ))
     })
@@ -138,7 +138,7 @@ impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
     {
         const PAIRS_GROUP_ENTRIES_PREPEND: &str = "use currency::maybe_visit_buddy as visit;
 
-            ";
+        ";
 
         let visit_entry_template = VisitEntryTemplate::new(
             self.current_module,
@@ -156,7 +156,7 @@ impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
                     visit_entry_template.apply(ticker).map(|entry| {
                         [
                             "
-                .or_else(|",
+            .or_else(|",
                             self.visitor_parameter_name,
                             "| ",
                         ]
