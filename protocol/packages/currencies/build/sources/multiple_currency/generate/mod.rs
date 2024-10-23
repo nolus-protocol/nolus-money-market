@@ -158,37 +158,35 @@ where
         iter::once(
             currency_definition_generator
                 .generate_entry(head_ticker)
-                .map(
-                    |currency_definition_generator::Entry {
-                         maybe_visit,
-                         currency_definition,
-                     }| {
-                        (Either::Left(maybe_visit.into_iter()), currency_definition)
-                    },
-                ),
+                .map(|entry| {
+                    (
+                        Either::Left(entry.maybe_visit.into_iter()),
+                        entry.currency_definition,
+                    )
+                }),
         )
         .chain(tail_tickers.map({
             |ticker| {
-                currency_definition_generator.generate_entry(ticker).map(
-                    |currency_definition_generator::Entry {
-                         maybe_visit,
-                         currency_definition,
-                     }| {
+                currency_definition_generator
+                    .generate_entry(ticker)
+                    .map(|entry| {
                         (
-                            Either::Right(else_maybe_visit_entry(visitor_parameter, maybe_visit)),
-                            currency_definition,
+                            Either::Right(else_maybe_visit_entry(
+                                visitor_parameter,
+                                entry.maybe_visit,
+                            )),
+                            entry.currency_definition,
                         )
-                    },
-                )
+                    })
             }
         }))
         .try_fold(
             NonFinalizedSources::new(0, vec![], vec![]),
             |mut accumulator, element| {
-                element.map(|(maybe_visit_entry, currency_definition)| {
+                element.map(|(maybe_visit, currency_definition)| {
                     accumulator.currencies_count += 1;
 
-                    accumulator.maybe_visit.push(maybe_visit_entry);
+                    accumulator.maybe_visit.push(maybe_visit);
 
                     accumulator.currency_definitions.push(currency_definition);
 
