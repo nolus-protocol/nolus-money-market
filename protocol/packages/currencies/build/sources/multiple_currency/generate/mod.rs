@@ -1,12 +1,10 @@
 use std::{borrow::Cow, iter};
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 
-use crate::{
-    either::Either, sources::module_and_name::CurrentModule, subtype_lifetime::SubtypeLifetime,
-};
+use crate::{either::Either, subtype_lifetime::SubtypeLifetime};
 
-use super::{super::DexCurrencies, SourcesGenerator};
+use super::{super::Generator, SourcesGenerator};
 
 use self::currency_definition_generator::CurrencyDefinitionGenerator;
 
@@ -15,34 +13,56 @@ mod currency_definition_generator;
 const NON_EXISTENT_DEX_CURRENCY: &str =
     "Queried ticker does not belong to any defined DEX currency!";
 
-impl<'dex_currencies, 'currencies_tree>
-    SourcesGenerator<'_, '_, 'dex_currencies, '_, '_, 'currencies_tree, '_, '_, '_, '_>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
+    SourcesGenerator<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'currencies_tree,
+        '_,
+        '_,
+        '_,
+        '_,
+    >
+where
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
 {
-    pub(super) fn generate_sources<'r, 'ticker, Tickers>(
+    pub(super) fn generate_sources<'r, 'generator, 'ticker, Generator, Tickers>(
         &self,
-        current_module: CurrentModule,
+        generator: &'generator Generator,
         mut tickers: Tickers,
     ) -> Result<
-        FinalizedSources<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Tickers>>,
+        FinalizedSources<
+            impl Iterator<Item = Cow<'r, str>>
+                + use<
+                    'r,
+                    'dex_currencies,
+                    'dex_currency_ticker,
+                    'dex_currency_definition,
+                    'currencies_tree,
+                    'generator,
+                    Generator,
+                    Tickers,
+                >,
+        >,
     >
     where
         'dex_currencies: 'r,
         'ticker: 'r,
+        Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
         if let Some(head_ticker) = tickers.next() {
             generate_non_empty_sources(
-                self.dex_currencies,
-                CurrencyDefinitionGenerator::new(
-                    current_module,
-                    self.protocol,
-                    self.host_currency,
-                    self.dex_currencies,
-                    self.currencies_tree,
-                ),
-                "visit",
-                "matcher",
-                "visitor",
+                CurrencyDefinitionGenerator {
+                    dex_currencies: self.dex_currencies,
+                    currencies_tree: self.currencies_tree,
+                    generator,
+                    visit_function: "visit",
+                    matcher_parameter: "matcher",
+                    visitor_parameter: "visitor",
+                },
                 head_ticker,
                 tickers,
             )
@@ -60,34 +80,59 @@ impl<'dex_currencies, 'currencies_tree>
     }
 }
 
-fn generate_non_empty_sources<'r, 'dex_currencies, 'currencies_tree, 'ticker, Tickers>(
-    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+fn generate_non_empty_sources<
+    'r,
+    'protocol,
+    'host_currency,
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+    'currencies_tree,
+    'parents_map,
+    'parent,
+    'children_map,
+    'child,
+    'generator,
+    'ticker,
+    Generator,
+    Tickers,
+>(
     currency_definition_generator: CurrencyDefinitionGenerator<
-        '_,
-        '_,
         'dex_currencies,
-        '_,
-        '_,
+        'dex_currency_ticker,
+        'dex_currency_definition,
         'currencies_tree,
-        '_,
-        '_,
-        '_,
-        '_,
+        'parents_map,
+        'parent,
+        'children_map,
+        'child,
+        'generator,
+        Generator,
     >,
-    visit_function: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
 ) -> Result<
     NonFinalizedSources<
-        impl Iterator<Item = &'r str> + use<'r, 'currencies_tree, Tickers>,
-        impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Tickers>,
+        impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator, Tickers>,
+        impl Iterator<Item = Cow<'r, str>>
+            + use<
+                'r,
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'currencies_tree,
+                'generator,
+                Generator,
+                Tickers,
+            >,
     >,
 >
 where
     'ticker: 'r,
     'dex_currencies: 'r,
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+    Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
     Tickers: Iterator<Item = &'ticker str>,
 {
     {
@@ -109,33 +154,44 @@ where
             .chain(iter::once(")"))
         }
 
-        let process_ticker = move |ticker| {
-            process_ticker(
-                dex_currencies,
-                &currency_definition_generator,
-                visit_function,
-                matcher_parameter,
-                visitor_parameter,
-                ticker,
-            )
-        };
+        let matcher_parameter = currency_definition_generator.matcher_parameter;
+        let visitor_parameter = currency_definition_generator.visitor_parameter;
+        let visit_function = currency_definition_generator.visit_function;
 
         iter::once(
-            process_ticker(head_ticker).map(|(maybe_visit_entry, currency_definition)| {
-                (
-                    Either::Left(maybe_visit_entry.into_iter()),
-                    currency_definition,
-                )
-            }),
+            currency_definition_generator
+                .generate_entry(head_ticker)
+                .map(
+                    |currency_definition_generator::Entry {
+                         maybe_visit,
+                         currency_definition,
+                     }| {
+                        (
+                            Either::Left(maybe_visit.into_iter().map(SubtypeLifetime::subtype)),
+                            currency_definition,
+                        )
+                    },
+                ),
         )
         .chain(tail_tickers.map({
-            move |ticker| {
-                process_ticker(ticker).map(|(maybe_visit_entry, currency_definition)| {
-                    (
-                        Either::Right(else_maybe_visit_entry(visitor_parameter, maybe_visit_entry)),
-                        currency_definition,
-                    )
-                })
+            |ticker| {
+                currency_definition_generator.generate_entry(ticker).map(
+                    |currency_definition_generator::Entry {
+                         maybe_visit,
+                         currency_definition,
+                     }| {
+                        (
+                            Either::Right(
+                                else_maybe_visit_entry(
+                                    currency_definition_generator.visitor_parameter,
+                                    maybe_visit,
+                                )
+                                .map(SubtypeLifetime::subtype),
+                            ),
+                            currency_definition,
+                        )
+                    },
+                )
             }
         }))
         .try_fold(
@@ -152,9 +208,9 @@ where
                 })
             },
         )
-        .map(|non_finalized_sources| {
+        .map(move |non_finalized_sources| {
             non_finalized_sources
-                .map_maybe_visit(|maybe_visit| {
+                .map_maybe_visit(move |maybe_visit| {
                     finalize_non_empty_maybe_visit(
                         matcher_parameter,
                         visitor_parameter,
@@ -228,56 +284,9 @@ where
     ))
 }
 
-fn process_ticker<'r, 'dex_currencies, 'currencies_tree>(
-    dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-    currency_definition_generator: &CurrencyDefinitionGenerator<
-        '_,
-        '_,
-        'dex_currencies,
-        '_,
-        '_,
-        'currencies_tree,
-        '_,
-        '_,
-        '_,
-        '_,
-    >,
-    visit_function: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
-    ticker: &'r str,
-) -> Result<(
-    impl IntoIterator<Item = &'r str> + use<'r>,
-    impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>,
-)>
-where
-    'dex_currencies: 'r,
-{
-    dex_currencies
-        .get(ticker)
-        .context(NON_EXISTENT_DEX_CURRENCY)
-        .map(|(name, _)| {
-            [
-                visit_function,
-                "::<_, self::",
-                name,
-                ", VisitedG, _>(",
-                matcher_parameter,
-                ", ",
-                visitor_parameter,
-                ")",
-            ]
-        })
-        .and_then(|maybe_visit_entry| {
-            currency_definition_generator
-                .generate_entry(ticker)
-                .map(|currency_definition| (maybe_visit_entry, currency_definition))
-        })
-}
-
-fn empty_sources<'r>() -> NonFinalizedSources<
-    impl Iterator<Item = &'r str> + use<'r>,
-    impl Iterator<Item = Cow<'r, str>> + use<'r>,
+fn empty_sources<'maybe_visit, 'currency_definitions>() -> NonFinalizedSources<
+    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit>,
+    impl Iterator<Item = Cow<'currency_definitions, str>> + use<'currency_definitions>,
 > {
     NonFinalizedSources::new(
         0,

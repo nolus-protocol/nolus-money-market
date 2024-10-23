@@ -4,16 +4,14 @@ use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
+use crate::currencies_tree::CurrenciesTree;
 
 use super::{
-    super::super::{in_pool_with, module_and_name::CurrentModule, pairs_group, DexCurrencies},
+    super::super::{DexCurrencies, Generator},
     NON_EXISTENT_DEX_CURRENCY,
 };
 
 pub(super) struct CurrencyDefinitionGenerator<
-    'protocol,
-    'host_currency,
     'dex_currencies,
     'dex_currency_ticker,
     'dex_currency_definition,
@@ -22,71 +20,60 @@ pub(super) struct CurrencyDefinitionGenerator<
     'parent,
     'children_map,
     'child,
+    'generator,
+    Generator,
 > {
-    current_module: CurrentModule,
-    protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
-    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
-    currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
+    pub dex_currencies:
+        &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
+    pub currencies_tree:
+        &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
+    pub generator: &'generator Generator,
+    pub visit_function: &'static str,
+    pub matcher_parameter: &'static str,
+    pub visitor_parameter: &'static str,
 }
 
 impl<
-        'protocol,
-        'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
         'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
+        'generator,
+        Generator,
     >
     CurrencyDefinitionGenerator<
-        'protocol,
-        'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
         'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
+        '_,
+        '_,
+        '_,
+        '_,
+        'generator,
+        Generator,
     >
-{
-    pub(super) const fn new(
-        current_module: CurrentModule,
-        protocol: &'protocol Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
-        dex_currencies: &'dex_currencies DexCurrencies<
-            'dex_currency_ticker,
-            'dex_currency_definition,
-        >,
-        currencies_tree: &'currencies_tree CurrenciesTree<
-            'parents_map,
-            'parent,
-            'children_map,
-            'child,
-        >,
-    ) -> Self {
-        Self {
-            current_module,
-            protocol,
-            host_currency,
-            dex_currencies,
-            currencies_tree,
-        }
-    }
-}
-
-impl<'dex_currencies, 'currencies_tree>
-    CurrencyDefinitionGenerator<'_, '_, 'dex_currencies, '_, '_, 'currencies_tree, '_, '_, '_, '_>
+where
+    Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
-    ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree>>
+    ) -> Result<
+        Entry<
+            impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+            impl Iterator<Item = Cow<'r, str>>
+                + use<
+                    'r,
+                    'dex_currencies,
+                    'dex_currency_ticker,
+                    'dex_currency_definition,
+                    'currencies_tree,
+                    'generator,
+                    Generator,
+                >,
+        >,
+    >
     where
         'dex_currencies: 'r,
     {
@@ -104,13 +91,27 @@ impl<'dex_currencies, 'currencies_tree>
         }
     }
 
-    fn generate_entry_unchecked<'r, 'children_map, 'parents_map>(
+    fn generate_entry_unchecked<'r, 'children, 'child, 'parents, 'parent>(
         &self,
         ticker: &'r str,
-        children: &'children_map BTreeSet<&str>,
-        parents: &'parents_map BTreeSet<&str>,
+        children: &'children BTreeSet<&'child str>,
+        parents: &'parents BTreeSet<&'parent str>,
     ) -> Result<
-        impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, 'children_map, 'parents_map>,
+        Entry<
+            impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+            impl Iterator<Item = Cow<'r, str>>
+                + use<
+                    'r,
+                    'dex_currencies,
+                    'dex_currency_ticker,
+                    'dex_currency_definition,
+                    'currencies_tree,
+                    'children,
+                    'parents,
+                    'generator,
+                    Generator,
+                >,
+        >,
     >
     where
         'dex_currencies: 'r,
@@ -118,31 +119,34 @@ impl<'dex_currencies, 'currencies_tree>
         self.dex_currencies
             .get(ticker)
             .context(NON_EXISTENT_DEX_CURRENCY)
-            .and_then(|&(ref name, currency)| {
-                pairs_group::pairs_group(
-                    self.current_module,
-                    self.protocol,
-                    self.host_currency,
-                    self.dex_currencies,
-                    name,
-                    children.iter().copied(),
-                )
-                .and_then(|pairs_group| {
-                    in_pool_with::in_pool_with(
-                        self.current_module,
-                        self.protocol,
-                        self.host_currency,
-                        self.dex_currencies,
-                        name,
-                        parents.iter().copied(),
-                    )
-                    .map(|in_pool_with| {
-                        currency_definition(name, ticker, currency)
-                            .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed))
+            .and_then(|(name, currency)| {
+                self.generator
+                    .pairs_group(name, parents)
+                    .and_then(|pairs_group| {
+                        self.generator
+                            .in_pool_with(name, children)
+                            .map(|in_pool_with| Entry {
+                                maybe_visit: [
+                                    self.visit_function,
+                                    "::<_, self::",
+                                    name,
+                                    ", VisitedG, _>(",
+                                    self.matcher_parameter,
+                                    ", ",
+                                    self.visitor_parameter,
+                                    ")",
+                                ],
+                                currency_definition: currency_definition(name, ticker, currency)
+                                    .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
+                            })
                     })
-                })
             })
     }
+}
+
+pub(super) struct Entry<MaybeVisit, CurrencyDefinition> {
+    pub maybe_visit: MaybeVisit,
+    pub currency_definition: CurrencyDefinition,
 }
 
 fn currency_definition<'r>(

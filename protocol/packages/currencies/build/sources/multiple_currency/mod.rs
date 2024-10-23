@@ -7,19 +7,15 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use topology::CurrencyDefinition;
+use crate::currencies_tree::CurrenciesTree;
 
-use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
-
-use super::{module_and_name::CurrentModule, DexCurrencies};
+use super::{DexCurrencies, Generator};
 
 use self::generate::FinalizedSources;
 
 mod generate;
 
 pub(super) struct SourcesGenerator<
-    'protocol,
-    'host_currency,
     'dex_currencies,
     'dex_currency_ticker,
     'dex_currency_definition,
@@ -29,8 +25,6 @@ pub(super) struct SourcesGenerator<
     'children_map,
     'child,
 > {
-    protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
 }
@@ -48,8 +42,6 @@ impl<
         'child,
     >
     SourcesGenerator<
-        'protocol,
-        'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
@@ -61,8 +53,6 @@ impl<
     >
 {
     pub const fn new(
-        protocol: &'protocol Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
         dex_currencies: &'dex_currencies DexCurrencies<
             'dex_currency_ticker,
             'dex_currency_definition,
@@ -75,29 +65,37 @@ impl<
         >,
     ) -> Self {
         Self {
-            protocol,
-            host_currency,
             dex_currencies,
             currencies_tree,
         }
     }
 }
 
-impl<'dex_currencies, 'currencies_tree>
-    SourcesGenerator<'_, '_, 'dex_currencies, '_, '_, 'currencies_tree, '_, '_, '_, '_>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
+    SourcesGenerator<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'currencies_tree,
+        '_,
+        '_,
+        '_,
+        '_,
+    >
 {
-    pub fn generate_and_commit<'ticker, BuildReport, Tickers>(
+    pub fn generate_and_commit<'ticker, BuildReport, Generator, Tickers>(
         &self,
         build_report: BuildReport,
         output_file_path: &Path,
-        current_module: CurrentModule,
+        generator: &Generator,
         tickers: Tickers,
     ) -> Result<()>
     where
         BuildReport: Write,
+        Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: IntoIterator<Item = &'ticker str>,
     {
-        self.generate_sources(current_module, tickers.into_iter())
+        self.generate_sources(generator, tickers.into_iter())
             .and_then(|sources| Self::commit(build_report, output_file_path, sources))
     }
 

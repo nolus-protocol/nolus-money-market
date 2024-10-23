@@ -114,9 +114,9 @@ where
     sources::write(
         build_report,
         output_directory,
-        protocol,
-        host_currency,
-        dex_currencies
+        &protocol,
+        &host_currency,
+        &dex_currencies
             .iter()
             .map(|currency_definition| {
                 (
@@ -128,7 +128,7 @@ where
                 )
             })
             .collect(),
-        currencies_tree,
+        &currencies_tree,
     )
 }
 

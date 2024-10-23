@@ -1,10 +1,10 @@
-use std::{collections::BTreeMap, fs::File, io::Write, path::Path};
+use std::{fs::File, io::Write, path::Path};
 
 use anyhow::{Context as _, Result};
 
-use topology::CurrencyDefinition;
-
 use crate::{protocol::Protocol, LPN_NAME};
+
+use super::DexCurrencies;
 
 const FILENAME: &str = "stable.rs";
 
@@ -12,7 +12,7 @@ pub(super) fn write<Report>(
     mut build_report: Report,
     output_directory: &Path,
     protocol: &Protocol,
-    dex_currencies: BTreeMap<&str, (String, &CurrencyDefinition)>,
+    dex_currencies: &DexCurrencies<'_, '_>,
 ) -> Result<()>
 where
     Report: Write,
