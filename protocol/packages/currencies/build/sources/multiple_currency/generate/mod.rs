@@ -150,7 +150,9 @@ where
         }
 
         let matcher_parameter = currency_definition_generator.matcher_parameter;
+
         let visitor_parameter = currency_definition_generator.visitor_parameter;
+
         let visit_function = currency_definition_generator.visit_function;
 
         iter::once(
@@ -177,11 +179,8 @@ where
                      }| {
                         (
                             Either::Right(
-                                else_maybe_visit_entry(
-                                    currency_definition_generator.visitor_parameter,
-                                    maybe_visit,
-                                )
-                                .map(SubtypeLifetime::subtype),
+                                else_maybe_visit_entry(visitor_parameter, maybe_visit)
+                                    .map(SubtypeLifetime::subtype),
                             ),
                             currency_definition,
                         )
