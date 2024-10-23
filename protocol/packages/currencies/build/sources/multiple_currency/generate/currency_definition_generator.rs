@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::BTreeSet, iter};
 
 use anyhow::{anyhow, Context as _, Result};
 
@@ -7,10 +7,7 @@ use topology::CurrencyDefinition;
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
 use super::{
-    super::{
-        currency_definition, in_pool_with, module_and_name::CurrentModule, pairs_group,
-        DexCurrencies,
-    },
+    super::super::{in_pool_with, module_and_name::CurrentModule, pairs_group, DexCurrencies},
     NON_EXISTENT_DEX_CURRENCY,
 };
 
@@ -103,20 +100,20 @@ impl<'dex_currencies, 'currencies_tree>
         {
             Err(anyhow!("Currency cannot be in a pool with itself!"))
         } else {
-            self.generate_entry_unchecked(ticker, children.iter().copied(), parents.iter().copied())
+            self.generate_entry_unchecked(ticker, children, parents)
         }
     }
 
-    fn generate_entry_unchecked<'r, 'child, 'parent, Children, Parents>(
+    fn generate_entry_unchecked<'r, 'children_map, 'parents_map>(
         &self,
         ticker: &'r str,
-        children: Children,
-        parents: Parents,
-    ) -> Result<impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, Children, Parents>>
+        children: &'children_map BTreeSet<&str>,
+        parents: &'parents_map BTreeSet<&str>,
+    ) -> Result<
+        impl Iterator<Item = Cow<'r, str>> + use<'r, 'currencies_tree, 'children_map, 'parents_map>,
+    >
     where
         'dex_currencies: 'r,
-        Children: Iterator<Item = &'child str>,
-        Parents: Iterator<Item = &'parent str>,
     {
         self.dex_currencies
             .get(ticker)
@@ -128,7 +125,7 @@ impl<'dex_currencies, 'currencies_tree>
                     self.host_currency,
                     self.dex_currencies,
                     name,
-                    children,
+                    children.iter().copied(),
                 )
                 .and_then(|pairs_group| {
                     in_pool_with::in_pool_with(
@@ -137,13 +134,82 @@ impl<'dex_currencies, 'currencies_tree>
                         self.host_currency,
                         self.dex_currencies,
                         name,
-                        parents,
+                        parents.iter().copied(),
                     )
                     .map(|in_pool_with| {
-                        currency_definition::currency_definition(name, ticker, currency)
+                        currency_definition(name, ticker, currency)
                             .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed))
                     })
                 })
             })
     }
+}
+
+fn currency_definition<'r>(
+    name: &'r str,
+    ticker: &'r str,
+    currency: &'r CurrencyDefinition,
+) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
+    [
+        r#"
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
+    serde::Deserialize, sdk::schemars::JsonSchema,
+)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[schemars(crate = "sdk::schemars")]
+pub struct "#,
+        name,
+        r#"(currency::CurrencyDTO<super::Group>);
+
+impl currency::CurrencyDef for "#,
+        name,
+        r#" {
+    type Group = super::Group;
+
+    fn definition() -> &'static Self {
+        const {
+            &Self(currency::CurrencyDTO::new(
+                const {
+                    &currency::Definition::new(
+                        ""#,
+        ticker,
+        r#"",
+                        // "#,
+        currency.host().path(),
+        r#"
+                        ""#,
+        currency.host().symbol(),
+        r#"",
+                        // "#,
+        currency.dex().path(),
+        r#"
+                        ""#,
+        currency.dex().symbol(),
+        r#"",
+                        "#,
+    ]
+    .into_iter()
+    .map(Cow::Borrowed)
+    .chain(iter::once(Cow::Owned(
+        currency.decimal_digits().to_string(),
+    )))
+    .chain(iter::once(
+        const {
+            Cow::Borrowed(
+                r#",
+                    )
+                },
+            ))
+        }
+    }
+
+    fn dto(&self) -> &currency::CurrencyDTO<Self::Group> {
+        &self.0
+    }
+}
+"#,
+            )
+        },
+    ))
 }

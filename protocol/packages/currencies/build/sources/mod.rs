@@ -8,7 +8,6 @@ use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
 use self::module_and_name::CurrentModule;
 
-mod currency_definition;
 mod host_native;
 mod in_pool_with;
 mod liquidity_provider_native;
