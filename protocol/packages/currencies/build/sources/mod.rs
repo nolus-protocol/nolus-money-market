@@ -15,7 +15,6 @@ use self::resolved_currency::{CurrentModule, ResolvedCurrency};
 
 mod host_native;
 mod in_pool_with;
-// mod liquidity_provider_native;
 mod multiple_currency;
 mod pairs_group;
 mod resolved_currency;
