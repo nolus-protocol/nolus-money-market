@@ -11,14 +11,14 @@ use topology::CurrencyDefinition;
 
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
-use self::module_and_name::CurrentModule;
+use self::resolved_currency::{CurrentModule, ResolvedCurrency};
 
 mod host_native;
 mod in_pool_with;
-mod liquidity_provider_native;
-mod module_and_name;
+// mod liquidity_provider_native;
 mod multiple_currency;
 mod pairs_group;
+mod resolved_currency;
 mod stable;
 
 trait Captures<T>
@@ -32,6 +32,10 @@ where
     T: ?Sized,
     U: ?Sized,
 {
+}
+
+trait Resolver<'name, 'definition> {
+    fn resolve(&self, ticker: &str) -> Result<ResolvedCurrency<'name, 'definition>>;
 }
 
 trait Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
@@ -166,6 +170,40 @@ impl<
             static_context,
             current_module,
         }
+    }
+}
+
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'definition,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        const PAIRS_GROUP: bool,
+    > Resolver<'dex_currencies, 'definition>
+    for GeneratorImpl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        PAIRS_GROUP,
+    >
+where
+    'host_currency: 'definition,
+    'dex_currencies: 'definition,
+{
+    fn resolve(&self, ticker: &str) -> Result<ResolvedCurrency<'dex_currencies, 'definition>> {
+        ResolvedCurrency::resolve(
+            self.current_module,
+            self.static_context.protocol,
+            self.static_context.host_currency,
+            self.static_context.dex_currencies,
+            ticker,
+        )
     }
 }
 
@@ -316,7 +354,7 @@ where
     BuildReport: Write,
 {
     let multiple_currency_source_generator =
-        multiple_currency::SourcesGenerator::new(&dex_currencies, &currencies_tree);
+        multiple_currency::SourcesGenerator::new(currencies_tree);
 
     let static_context = &GeneratorStaticContext {
         protocol,
@@ -334,13 +372,11 @@ where
             .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
     )?;
 
-    liquidity_provider_native::write(
+    multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
-        output_directory,
-        protocol,
-        host_currency,
-        dex_currencies,
-        currencies_tree.children(&protocol.lpn_ticker),
+        &output_directory.join("lpn.rs"),
+        &GeneratorImpl::without_pairs_group(static_context, CurrentModule::Lpn),
+        iter::once(&*protocol.lpn_ticker),
     )?;
 
     host_native::write(
@@ -362,7 +398,7 @@ where
         }),
     )?;
 
-    stable::write(build_report, output_directory, &protocol, dex_currencies)
+    stable::write(build_report, output_directory, protocol, dex_currencies)
 }
 
 type DexCurrencies<'ticker, 'currency_definition> =

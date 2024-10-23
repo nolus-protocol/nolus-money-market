@@ -18,9 +18,9 @@ mod protocol;
 mod sources;
 mod subtype_lifetime;
 
-const PROTOCOL_JSON: &str = "./../../../build-configuration/protocol.json";
+const PROTOCOL_JSON: &str = "../../../build-configuration/protocol.json";
 
-const TOPOLOGY_JSON: &str = "./../../../build-configuration/topology.json";
+const TOPOLOGY_JSON: &str = "../../../build-configuration/topology.json";
 
 const LPN_NAME: &str = "Lpn";
 

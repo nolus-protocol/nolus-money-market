@@ -4,7 +4,7 @@ use topology::CurrencyDefinition;
 
 use crate::{
     protocol::Protocol,
-    sources::module_and_name::{CurrentModule, ModuleAndName},
+    sources::resolved_currency::{CurrentModule, ResolvedCurrency},
 };
 
 use super::DexCurrencies;
@@ -24,7 +24,7 @@ where
 {
     parents
         .map(|ticker| {
-            ModuleAndName::resolve(
+            ResolvedCurrency::resolve(
                 current_module,
                 protocol,
                 host_currency,

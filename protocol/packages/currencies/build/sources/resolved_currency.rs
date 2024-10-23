@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
-
 use anyhow::{anyhow, Result};
 
 use topology::CurrencyDefinition;
 
 use crate::{protocol::Protocol, LPN_NAME, NLS_NAME};
+
+use super::DexCurrencies;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum CurrentModule {
@@ -47,55 +47,69 @@ impl CurrentModule {
     }
 }
 
-pub(super) struct ModuleAndName<'module, 'name> {
-    module: &'module str,
+pub(super) struct ResolvedCurrency<'name, 'definition> {
+    module: &'static str,
     name: &'name str,
+    definition: &'definition CurrencyDefinition,
 }
 
-impl<'currencies_map> ModuleAndName<'static, 'currencies_map> {
+impl<'host_currency, 'dex_currencies, 'definition> ResolvedCurrency<'dex_currencies, 'definition>
+where
+    'host_currency: 'definition,
+    'dex_currencies: 'definition,
+{
     pub fn resolve(
         current_module: CurrentModule,
         protocol: &Protocol,
-        host_currency: &CurrencyDefinition,
-        dex_currencies: &'currencies_map BTreeMap<&str, (String, &CurrencyDefinition)>,
+        host_currency: &'host_currency CurrencyDefinition,
+        dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
         ticker: &str,
     ) -> Result<Self> {
-        if let Some(name) = dex_currencies.get(ticker).map(|(name, _)| name) {
-            Ok(if ticker == protocol.lpn_ticker {
-                Self {
-                    module: current_module.lpn(),
-                    name: LPN_NAME,
-                }
+        if let Some((name, definition)) = dex_currencies.get(ticker) {
+            let (module, name) = if ticker == protocol.lpn_ticker {
+                (current_module.lpn(), LPN_NAME)
             } else {
-                Self {
-                    module: if protocol.lease_currencies_tickers.contains(ticker) {
+                (
+                    if protocol.lease_currencies_tickers.contains(ticker) {
                         current_module.lease()
                     } else {
                         current_module.payment_only()
                     },
-                    name: name.as_str(),
-                }
+                    name.as_str(),
+                )
+            };
+
+            Ok(Self {
+                module,
+                name,
+                definition,
             })
         } else if ticker == host_currency.ticker() {
             Ok(Self {
                 module: current_module.native(),
                 name: NLS_NAME,
+                definition: host_currency,
             })
         } else {
             Err(anyhow!(
-                "Queried ticker is not defined neither as a DEX currency, nor \
-                as a host currency!",
+                "Failed to resolve module and name because queried ticker \
+                {ticker:?} is not defined neither as a DEX currency, nor as a \
+                host currency!",
             ))
         }
     }
 }
 
-impl<'module, 'name> ModuleAndName<'module, 'name> {
-    pub const fn module(&self) -> &'module str {
+impl<'name, 'definition> ResolvedCurrency<'name, 'definition> {
+    pub const fn module(&self) -> &'static str {
         self.module
     }
 
     pub const fn name(&self) -> &'name str {
         self.name
+    }
+
+    pub const fn definition(&self) -> &'definition CurrencyDefinition {
+        self.definition
     }
 }

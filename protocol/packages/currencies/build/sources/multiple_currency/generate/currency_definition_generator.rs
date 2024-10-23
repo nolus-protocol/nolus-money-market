@@ -6,15 +6,9 @@ use topology::CurrencyDefinition;
 
 use crate::currencies_tree::CurrenciesTree;
 
-use super::{
-    super::super::{DexCurrencies, Generator},
-    NON_EXISTENT_DEX_CURRENCY,
-};
+use super::super::super::{Generator, Resolver};
 
 pub(super) struct CurrencyDefinitionGenerator<
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
     'currencies_tree,
     'parents_map,
     'parent,
@@ -23,8 +17,6 @@ pub(super) struct CurrencyDefinitionGenerator<
     'generator,
     Generator,
 > {
-    pub dex_currencies:
-        &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     pub currencies_tree:
         &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
     pub generator: &'generator Generator,
@@ -34,27 +26,22 @@ pub(super) struct CurrencyDefinitionGenerator<
 }
 
 impl<
+        'host_currency,
         'dex_currencies,
+        'definition,
         'dex_currency_ticker,
         'dex_currency_definition,
         'currencies_tree,
         'generator,
         Generator,
-    >
-    CurrencyDefinitionGenerator<
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        '_,
-        '_,
-        '_,
-        '_,
-        'generator,
-        Generator,
-    >
+    > CurrencyDefinitionGenerator<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>
 where
-    Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+    'host_currency: 'definition,
+    'dex_currencies: 'definition,
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+    Generator: Resolver<'dex_currencies, 'definition>
+        + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
@@ -75,7 +62,7 @@ where
         >,
     >
     where
-        'dex_currencies: 'r,
+        'definition: 'r,
     {
         let parents = self.currencies_tree.parents(ticker);
 
@@ -114,30 +101,34 @@ where
         >,
     >
     where
-        'dex_currencies: 'r,
+        'definition: 'r,
     {
-        self.dex_currencies
-            .get(ticker)
-            .context(NON_EXISTENT_DEX_CURRENCY)
-            .and_then(|(name, currency)| {
+        self.generator
+            .resolve(ticker)
+            .context("Failed to generate currency definition sources!")
+            .and_then(|resolved| {
                 self.generator
-                    .pairs_group(name, parents)
+                    .pairs_group(resolved.name(), children)
                     .and_then(|pairs_group| {
                         self.generator
-                            .in_pool_with(name, children)
+                            .in_pool_with(resolved.name(), parents)
                             .map(|in_pool_with| Entry {
                                 maybe_visit: [
                                     self.visit_function,
                                     "::<_, self::",
-                                    name,
+                                    resolved.name(),
                                     ", VisitedG, _>(",
                                     self.matcher_parameter,
                                     ", ",
                                     self.visitor_parameter,
                                     ")",
                                 ],
-                                currency_definition: currency_definition(name, ticker, currency)
-                                    .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
+                                currency_definition: currency_definition(
+                                    resolved.name(),
+                                    ticker,
+                                    resolved.definition(),
+                                )
+                                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
                             })
                     })
             })

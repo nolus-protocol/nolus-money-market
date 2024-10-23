@@ -9,54 +9,20 @@ use anyhow::{Context, Result};
 
 use crate::currencies_tree::CurrenciesTree;
 
-use super::{DexCurrencies, Generator};
+use super::{Generator, Resolver};
 
 use self::generate::FinalizedSources;
 
 mod generate;
 
-pub(super) struct SourcesGenerator<
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-    'currencies_tree,
-    'parents_map,
-    'parent,
-    'children_map,
-    'child,
-> {
-    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
+pub(super) struct SourcesGenerator<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child> {
     currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
 }
 
-impl<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-    >
-    SourcesGenerator<
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
-    >
+impl<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child>
+    SourcesGenerator<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child>
 {
     pub const fn new(
-        dex_currencies: &'dex_currencies DexCurrencies<
-            'dex_currency_ticker,
-            'dex_currency_definition,
-        >,
         currencies_tree: &'currencies_tree CurrenciesTree<
             'parents_map,
             'parent,
@@ -64,24 +30,22 @@ impl<
             'child,
         >,
     ) -> Self {
-        Self {
-            dex_currencies,
-            currencies_tree,
-        }
+        Self { currencies_tree }
     }
 }
 
-impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
-    SourcesGenerator<
+impl<
+        'host_currency,
         'dex_currencies,
+        'definition,
         'dex_currency_ticker,
         'dex_currency_definition,
-        'currencies_tree,
-        '_,
-        '_,
-        '_,
-        '_,
-    >
+    > SourcesGenerator<'_, '_, '_, '_, '_>
+where
+    'host_currency: 'definition,
+    'dex_currencies: 'definition,
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
 {
     pub fn generate_and_commit<'ticker, BuildReport, Generator, Tickers>(
         &self,
@@ -92,7 +56,8 @@ impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencie
     ) -> Result<()>
     where
         BuildReport: Write,
-        Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+        Generator: Resolver<'dex_currencies, 'definition>
+            + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: IntoIterator<Item = &'ticker str>,
     {
         self.generate_sources(generator, tickers.into_iter())

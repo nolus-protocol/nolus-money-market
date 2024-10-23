@@ -7,7 +7,7 @@ use topology::CurrencyDefinition;
 use crate::{
     either::Either,
     protocol::Protocol,
-    sources::module_and_name::{CurrentModule, ModuleAndName},
+    sources::resolved_currency::{CurrentModule, ResolvedCurrency},
     subtype_lifetime::SubtypeLifetime,
 };
 
@@ -53,7 +53,8 @@ impl currency::PairsGroup for "#,
             r#" {
     type CommonGroup = crate::payment::Group;
 
-    fn maybe_visit<M, V>("#,
+    fn maybe_visit<M, V>(
+        "#,
             matcher,
             r#": &M,
         visitor: V,
@@ -234,7 +235,7 @@ impl<
 
 impl<'dex_currencies> VisitEntryTemplate<'_, '_, 'dex_currencies, '_, '_> {
     fn apply(&self, ticker: &str) -> Result<impl IntoIterator<Item = &'dex_currencies str>> {
-        ModuleAndName::resolve(
+        ResolvedCurrency::resolve(
             self.current_module,
             self.protocol,
             self.host_currency,

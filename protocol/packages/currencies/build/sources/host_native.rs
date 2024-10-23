@@ -7,7 +7,7 @@ use topology::CurrencyDefinition;
 use crate::{protocol::Protocol, NLS_NAME};
 
 use super::{
-    module_and_name::{CurrentModule, ModuleAndName},
+    resolved_currency::{CurrentModule, ResolvedCurrency},
     DexCurrencies,
 };
 
@@ -43,7 +43,7 @@ where
         let mut iter = children.iter().copied();
 
         if let Some(ticker) = iter.next() {
-            let resolved = ModuleAndName::resolve(
+            let resolved = ResolvedCurrency::resolve(
                 CurrentModule::Native,
                 protocol,
                 host_currency,
@@ -58,7 +58,7 @@ where
             );
 
             for ticker in iter {
-                let resolved = ModuleAndName::resolve(
+                let resolved = ResolvedCurrency::resolve(
                     CurrentModule::Native,
                     protocol,
                     host_currency,
@@ -84,7 +84,7 @@ where
         let mut in_pool_with = String::new();
 
         for &ticker in parents.iter() {
-            let resolved = ModuleAndName::resolve(
+            let resolved = ResolvedCurrency::resolve(
                 CurrentModule::Native,
                 protocol,
                 host_currency,

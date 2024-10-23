@@ -4,26 +4,23 @@ use anyhow::Result;
 
 use crate::{either::Either, subtype_lifetime::SubtypeLifetime};
 
-use super::{super::Generator, SourcesGenerator};
+use super::{
+    super::{Generator, Resolver},
+    SourcesGenerator,
+};
 
 use self::currency_definition_generator::CurrencyDefinitionGenerator;
 
 mod currency_definition_generator;
 
-const NON_EXISTENT_DEX_CURRENCY: &str =
-    "Queried ticker does not belong to any defined DEX currency!";
-
-impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
-    SourcesGenerator<
+impl<
+        'host_currency,
         'dex_currencies,
+        'definition,
         'dex_currency_ticker,
         'dex_currency_definition,
         'currencies_tree,
-        '_,
-        '_,
-        '_,
-        '_,
-    >
+    > SourcesGenerator<'currencies_tree, '_, '_, '_, '_>
 where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
@@ -48,15 +45,17 @@ where
         >,
     >
     where
-        'dex_currencies: 'r,
+        'host_currency: 'definition,
+        'dex_currencies: 'definition,
+        'definition: 'r,
         'ticker: 'r,
-        Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+        Generator: Resolver<'dex_currencies, 'definition>
+            + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
         if let Some(head_ticker) = tickers.next() {
             generate_non_empty_sources(
                 CurrencyDefinitionGenerator {
-                    dex_currencies: self.dex_currencies,
                     currencies_tree: self.currencies_tree,
                     generator,
                     visit_function: "visit",
@@ -82,30 +81,23 @@ where
 
 fn generate_non_empty_sources<
     'r,
-    'protocol,
     'host_currency,
     'dex_currencies,
+    'definition,
     'dex_currency_ticker,
     'dex_currency_definition,
     'currencies_tree,
-    'parents_map,
-    'parent,
-    'children_map,
-    'child,
     'generator,
     'ticker,
     Generator,
     Tickers,
 >(
     currency_definition_generator: CurrencyDefinitionGenerator<
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
         'currencies_tree,
-        'parents_map,
-        'parent,
-        'children_map,
-        'child,
+        '_,
+        '_,
+        '_,
+        '_,
         'generator,
         Generator,
     >,
@@ -128,11 +120,14 @@ fn generate_non_empty_sources<
     >,
 >
 where
-    'ticker: 'r,
-    'dex_currencies: 'r,
+    'host_currency: 'definition,
+    'dex_currencies: 'definition,
+    'definition: 'r,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
-    Generator: self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+    'ticker: 'r,
+    Generator: Resolver<'dex_currencies, 'definition>
+        + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
     Tickers: Iterator<Item = &'ticker str>,
 {
     {
