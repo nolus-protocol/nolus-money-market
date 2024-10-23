@@ -163,10 +163,7 @@ where
                          maybe_visit,
                          currency_definition,
                      }| {
-                        (
-                            Either::Left(maybe_visit.into_iter().map(SubtypeLifetime::subtype)),
-                            currency_definition,
-                        )
+                        (Either::Left(maybe_visit.into_iter()), currency_definition)
                     },
                 ),
         )
@@ -178,10 +175,7 @@ where
                          currency_definition,
                      }| {
                         (
-                            Either::Right(
-                                else_maybe_visit_entry(visitor_parameter, maybe_visit)
-                                    .map(SubtypeLifetime::subtype),
-                            ),
+                            Either::Right(else_maybe_visit_entry(visitor_parameter, maybe_visit)),
                             currency_definition,
                         )
                     },
