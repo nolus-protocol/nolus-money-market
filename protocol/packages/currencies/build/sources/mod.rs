@@ -377,7 +377,7 @@ where
 
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
-        &output_directory.join("host_native.rs"),
+        &output_directory.join("native.rs"),
         &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Native),
         iter::once(host_currency.ticker()),
     )?;
