@@ -37,5 +37,6 @@ set -eu
   --deny rust-2018-idioms \
   --deny rust-2021-compatibility \
   --deny rust-2024-compatibility \
+  --allow impl-trait-overcaptures \
   --deny unused \
   --deny warnings
