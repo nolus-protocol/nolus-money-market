@@ -20,6 +20,7 @@ pub(super) struct CurrencyDefinitionGenerator<
     pub currencies_tree:
         &'currencies_tree CurrenciesTree<'parents_of, 'parent, 'children_of, 'child>,
     pub generator: &'generator Generator,
+    pub visited_group: &'static str,
     pub visit_function: &'static str,
     pub matcher_parameter: &'static str,
     pub visitor_parameter: &'static str,
@@ -117,7 +118,9 @@ where
                                     self.visit_function,
                                     "::<_, self::",
                                     resolved.name(),
-                                    ", VisitedG, _>(",
+                                    ", ",
+                                    self.visited_group,
+                                    ", _>(",
                                     self.matcher_parameter,
                                     ", ",
                                     self.visitor_parameter,

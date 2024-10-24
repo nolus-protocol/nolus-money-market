@@ -58,6 +58,7 @@ where
                 CurrencyDefinitionGenerator {
                     currencies_tree: self.currencies_tree,
                     generator,
+                    visited_group: "VisitedG",
                     visit_function: "visit",
                     matcher_parameter: "matcher",
                     visitor_parameter: "visitor",
@@ -149,6 +150,8 @@ where
             .chain(iter::once(")"))
         }
 
+        let visited_group = currency_definition_generator.visited_group;
+
         let matcher_parameter = currency_definition_generator.matcher_parameter;
 
         let visitor_parameter = currency_definition_generator.visitor_parameter;
@@ -198,9 +201,10 @@ where
             non_finalized_sources
                 .map_maybe_visit(move |maybe_visit| {
                     finalize_non_empty_maybe_visit(
+                        visited_group,
+                        visit_function,
                         matcher_parameter,
                         visitor_parameter,
-                        visit_function,
                         maybe_visit.into_iter().flatten(),
                     )
                 })
@@ -212,15 +216,17 @@ where
 }
 
 fn finalize_non_empty_maybe_visit<'r, MaybeVisit>(
+    visited_group: &'static str,
+    visit_function: &'static str,
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
-    visit_function: &'static str,
     maybe_visit: MaybeVisit,
 ) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisit>
 where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {
     finalize_maybe_visit(
+        visited_group,
         matcher_parameter,
         visitor_parameter,
         [
@@ -236,6 +242,7 @@ where
 }
 
 fn finalize_maybe_visit<'r, MaybeVisit>(
+    visited_group: &'static str,
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
@@ -244,22 +251,32 @@ where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {
     [
-        r#"
-pub(super) fn maybe_visit<M, V, VisitedG>(
-    "#,
+        "
+pub(super) fn maybe_visit<M, V, ",
+        visited_group,
+        ">(
+    ",
         matcher_parameter,
-        r#": &M,
-    "#,
+        ": &M,
+    ",
         visitor_parameter,
-        r#": V,
-) -> currency::MaybeAnyVisitResult<VisitedG, V>
+        ": V,
+) -> currency::MaybeAnyVisitResult<",
+        visited_group,
+        ", V>
 where
-    super::Group: currency::MemberOf<VisitedG>,
+    super::Group: currency::MemberOf<",
+        visited_group,
+        ">,
     M: currency::Matcher,
-    V: currency::AnyVisitor<VisitedG>,
-    VisitedG: currency::Group<TopG = crate::payment::Group>,
+    V: currency::AnyVisitor<",
+        visited_group,
+        ">,
+    ",
+        visited_group,
+        ": currency::Group<TopG = crate::payment::Group>,
 {
-    "#,
+    ",
     ]
     .into_iter()
     .chain(maybe_visit)
@@ -276,7 +293,12 @@ fn empty_sources<'maybe_visit, 'currency_definitions>() -> NonFinalizedSources<
 > {
     NonFinalizedSources::new(
         0,
-        finalize_maybe_visit("_", "visitor", iter::once("currency::visit_noone(visitor)")),
+        finalize_maybe_visit(
+            "VisitedG",
+            "_",
+            "visitor",
+            iter::once("currency::visit_noone(visitor)"),
+        ),
         const { iter::empty() },
     )
 }
