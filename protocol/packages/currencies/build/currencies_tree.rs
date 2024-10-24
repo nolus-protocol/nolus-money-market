@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{btree_set, BTreeMap, BTreeSet},
     ops::ControlFlow,
 };
 
@@ -9,18 +9,13 @@ use topology::Topology;
 
 use crate::protocol::Protocol;
 
-pub(crate) struct CurrenciesTree<'parents_map, 'parent, 'children_map, 'child> {
-    parents: BTreeMap<&'parents_map str, BTreeSet<&'parent str>>,
-    children: BTreeMap<&'children_map str, BTreeSet<&'child str>>,
+pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
+    parents: BTreeMap<&'parents_of str, BTreeSet<&'parent str>>,
+    children: BTreeMap<&'children_of str, BTreeSet<&'child str>>,
 }
 
-impl<'parents_map, 'parent, 'children_map, 'child>
-    CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>
-{
-    pub fn new<'r>(
-        topology: &'r Topology,
-        protocol: &Protocol,
-    ) -> Result<CurrenciesTree<'r, 'r, 'r, 'r>> {
+impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
+    pub fn new(topology: &'topology Topology, protocol: &Protocol) -> Result<Self> {
         let result = topology
             .network_dexes(&protocol.dex_network)
             .context("Selected DEX network doesn't define any DEXes!")?
@@ -71,16 +66,50 @@ impl<'parents_map, 'parent, 'children_map, 'child>
             )),
         }
     }
+}
 
-    pub fn parents<'r>(&'r self, ticker: &str) -> &'r BTreeSet<&'parent str> {
-        self.parents
-            .get(ticker)
-            .unwrap_or(const { &BTreeSet::new() })
+impl<'parent, 'child> CurrenciesTree<'_, 'parent, '_, 'child> {
+    pub fn parents<'r>(&'r self, ticker: &str) -> Parents<'r, 'parent> {
+        Parents(
+            self.parents
+                .get(ticker)
+                .unwrap_or(const { &BTreeSet::new() }),
+        )
     }
 
-    pub fn children<'r>(&'r self, ticker: &str) -> &'r BTreeSet<&'child str> {
-        self.children
-            .get(ticker)
-            .unwrap_or(const { &BTreeSet::new() })
+    pub fn children<'r>(&'r self, ticker: &str) -> Children<'r, 'child> {
+        Children(
+            self.children
+                .get(ticker)
+                .unwrap_or(const { &BTreeSet::new() }),
+        )
+    }
+}
+
+pub(crate) struct Parents<'r, 'parent>(&'r BTreeSet<&'parent str>);
+
+impl<'r, 'parent> Parents<'r, 'parent> {
+    pub fn iter(&self) -> btree_set::Iter<'r, &'parent str> {
+        self.0.iter()
+    }
+}
+
+impl<'r, 'parent> AsRef<BTreeSet<&'parent str>> for Parents<'r, 'parent> {
+    fn as_ref(&self) -> &BTreeSet<&'parent str> {
+        self.0
+    }
+}
+
+pub(crate) struct Children<'r, 'child>(&'r BTreeSet<&'child str>);
+
+impl<'r, 'child> Children<'r, 'child> {
+    pub fn iter(&self) -> btree_set::Iter<'r, &'child str> {
+        self.0.iter()
+    }
+}
+
+impl<'r, 'child> AsRef<BTreeSet<&'child str>> for Children<'r, 'child> {
+    fn as_ref(&self) -> &BTreeSet<&'child str> {
+        self.0
     }
 }

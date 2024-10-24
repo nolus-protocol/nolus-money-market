@@ -1,15 +1,13 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    io::Write,
-    iter,
-    path::Path,
-};
+use std::{collections::BTreeMap, io::Write, iter, path::Path};
 
 use anyhow::Result;
 
 use topology::CurrencyDefinition;
 
-use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
+use crate::{
+    currencies_tree::{self, CurrenciesTree},
+    protocol::Protocol,
+};
 
 use self::resolved_currency::{CurrentModule, ResolvedCurrency};
 
@@ -45,12 +43,12 @@ where
     fn pairs_group<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        children: &'children BTreeSet<&'child str>,
+        children: currencies_tree::Children<'children, 'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'children BTreeSet<&'child str>>,
+            + Captures<currencies_tree::Children<'children, 'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -59,12 +57,12 @@ where
     fn in_pool_with<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        parents: &'parents BTreeSet<&'parent str>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'parents BTreeSet<&'parent str>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -231,12 +229,12 @@ where
     fn pairs_group<'r, 'name, 'children, 'child>(
         &self,
         _: &'name str,
-        _: &'children BTreeSet<&'child str>,
+        _: currencies_tree::Children<'children, 'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'children BTreeSet<&'child str>>,
+            + Captures<currencies_tree::Children<'children, 'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -249,12 +247,12 @@ where
     fn in_pool_with<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        parents: &'parents BTreeSet<&'parent str>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'parents BTreeSet<&'parent str>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -295,12 +293,12 @@ where
     fn pairs_group<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        children: &'children BTreeSet<&'child str>,
+        children: currencies_tree::Children<'children, 'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'children BTreeSet<&'child str>>,
+            + Captures<currencies_tree::Children<'children, 'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -319,12 +317,12 @@ where
     fn in_pool_with<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        parents: &'parents BTreeSet<&'parent str>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<&'parents BTreeSet<&'parent str>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,

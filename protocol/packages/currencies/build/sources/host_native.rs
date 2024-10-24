@@ -1,10 +1,10 @@
-use std::{borrow::Cow, collections::BTreeSet, fs, io::Write, path::Path};
+use std::{borrow::Cow, fs, io::Write, path::Path};
 
 use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::{protocol::Protocol, NLS_NAME};
+use crate::{currencies_tree, protocol::Protocol, NLS_NAME};
 
 use super::{
     resolved_currency::{CurrentModule, ResolvedCurrency},
@@ -17,8 +17,8 @@ pub(super) fn write<W>(
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &DexCurrencies<'_, '_>,
-    parents: &BTreeSet<&str>,
-    children: &BTreeSet<&str>,
+    parents: currencies_tree::Parents<'_, '_>,
+    children: currencies_tree::Children<'_, '_>,
 ) -> Result<()>
 where
     W: Write,
@@ -27,17 +27,19 @@ where
 
     build_report.write_fmt(format_args!("Host currency ticker: {ticker}\n"))?;
 
-    [children, parents].into_iter().try_for_each({
-        |paired_with| {
-            if paired_with.contains(ticker) {
-                Err(anyhow!(
-                    "Host's native currency cannot be in a pool with itself!"
-                ))
-            } else {
-                Ok(())
+    [children.as_ref(), parents.as_ref()]
+        .into_iter()
+        .try_for_each({
+            |paired_with| {
+                if paired_with.contains(ticker) {
+                    Err(anyhow!(
+                        "Host's native currency cannot be in a pool with itself!"
+                    ))
+                } else {
+                    Ok(())
+                }
             }
-        }
-    })?;
+        })?;
 
     let pairs_group = {
         let mut iter = children.iter().copied();

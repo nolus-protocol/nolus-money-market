@@ -1,24 +1,24 @@
-use std::{borrow::Cow, collections::BTreeSet, iter};
+use std::{borrow::Cow, iter};
 
 use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::currencies_tree::CurrenciesTree;
+use crate::currencies_tree::{self, CurrenciesTree};
 
 use super::super::super::{Generator, Resolver};
 
 pub(super) struct CurrencyDefinitionGenerator<
     'currencies_tree,
-    'parents_map,
+    'parents_of,
     'parent,
-    'children_map,
+    'children_of,
     'child,
     'generator,
     Generator,
 > {
     pub currencies_tree:
-        &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
+        &'currencies_tree CurrenciesTree<'parents_of, 'parent, 'children_of, 'child>,
     pub generator: &'generator Generator,
     pub visit_function: &'static str,
     pub matcher_parameter: &'static str,
@@ -68,7 +68,7 @@ where
 
         let children = self.currencies_tree.children(ticker);
 
-        if [children, parents]
+        if [children.as_ref(), parents.as_ref()]
             .into_iter()
             .any(|paired_with| paired_with.contains(ticker))
         {
@@ -81,8 +81,8 @@ where
     fn generate_entry_unchecked<'r, 'children, 'child, 'parents, 'parent>(
         &self,
         ticker: &'r str,
-        children: &'children BTreeSet<&'child str>,
-        parents: &'parents BTreeSet<&'parent str>,
+        children: currencies_tree::Children<'children, 'child>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         Entry<
             impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,

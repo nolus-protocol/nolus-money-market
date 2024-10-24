@@ -15,18 +15,18 @@ use self::generate::FinalizedSources;
 
 mod generate;
 
-pub(super) struct SourcesGenerator<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child> {
-    currencies_tree: &'currencies_tree CurrenciesTree<'parents_map, 'parent, 'children_map, 'child>,
+pub(super) struct SourcesGenerator<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child> {
+    currencies_tree: &'currencies_tree CurrenciesTree<'parents_of, 'parent, 'children_of, 'child>,
 }
 
-impl<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child>
-    SourcesGenerator<'currencies_tree, 'parents_map, 'parent, 'children_map, 'child>
+impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child>
+    SourcesGenerator<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child>
 {
     pub const fn new(
         currencies_tree: &'currencies_tree CurrenciesTree<
-            'parents_map,
+            'parents_of,
             'parent,
-            'children_map,
+            'children_of,
             'child,
         >,
     ) -> Self {
