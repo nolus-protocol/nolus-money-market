@@ -11,7 +11,6 @@ use crate::{
 
 use self::resolved_currency::{CurrentModule, ResolvedCurrency};
 
-mod host_native;
 mod in_pool_with;
 mod multiple_currency;
 mod pairs_group;
@@ -376,14 +375,11 @@ where
         iter::once(&*protocol.lpn_ticker),
     )?;
 
-    host_native::write(
+    multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
-        output_directory,
-        protocol,
-        host_currency,
-        dex_currencies,
-        currencies_tree.parents(host_currency.ticker()),
-        currencies_tree.children(host_currency.ticker()),
+        &output_directory.join("host_native.rs"),
+        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Native),
+        iter::once(host_currency.ticker()),
     )?;
 
     multiple_currency_source_generator.generate_and_commit(
