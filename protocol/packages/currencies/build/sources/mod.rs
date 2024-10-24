@@ -17,6 +17,65 @@ mod pairs_group;
 mod resolved_currency;
 mod stable;
 
+pub(super) fn write<BuildReport>(
+    mut build_report: BuildReport,
+    output_directory: &Path,
+    protocol: &Protocol,
+    host_currency: &CurrencyDefinition,
+    dex_currencies: &DexCurrencies<'_, '_>,
+    currencies_tree: &CurrenciesTree<'_, '_, '_, '_>,
+) -> Result<()>
+where
+    BuildReport: Write,
+{
+    let multiple_currency_source_generator =
+        multiple_currency::SourcesGenerator::new(currencies_tree);
+
+    let static_context = &GeneratorStaticContext {
+        protocol,
+        host_currency,
+        dex_currencies,
+    };
+
+    multiple_currency_source_generator.generate_and_commit(
+        &mut build_report,
+        &output_directory.join("lease.rs"),
+        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Lease),
+        dex_currencies
+            .keys()
+            .copied()
+            .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
+    )?;
+
+    multiple_currency_source_generator.generate_and_commit(
+        &mut build_report,
+        &output_directory.join("lpn.rs"),
+        &GeneratorImpl::without_pairs_group(static_context, CurrentModule::Lpn),
+        iter::once(&*protocol.lpn_ticker),
+    )?;
+
+    multiple_currency_source_generator.generate_and_commit(
+        &mut build_report,
+        &output_directory.join("native.rs"),
+        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Native),
+        iter::once(host_currency.ticker()),
+    )?;
+
+    multiple_currency_source_generator.generate_and_commit(
+        &mut build_report,
+        &output_directory.join("payment_only.rs"),
+        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::PaymentOnly),
+        dex_currencies.keys().copied().filter(|&key| {
+            !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
+        }),
+    )?;
+
+    stable::write(build_report, output_directory, protocol, dex_currencies)
+}
+
+type DexCurrencies<'ticker, 'currency_definition> =
+    BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
+
 trait Captures<T>
 where
     T: ?Sized,
@@ -337,62 +396,3 @@ where
         )
     }
 }
-
-pub(super) fn write<BuildReport>(
-    mut build_report: BuildReport,
-    output_directory: &Path,
-    protocol: &Protocol,
-    host_currency: &CurrencyDefinition,
-    dex_currencies: &DexCurrencies<'_, '_>,
-    currencies_tree: &CurrenciesTree<'_, '_, '_, '_>,
-) -> Result<()>
-where
-    BuildReport: Write,
-{
-    let multiple_currency_source_generator =
-        multiple_currency::SourcesGenerator::new(currencies_tree);
-
-    let static_context = &GeneratorStaticContext {
-        protocol,
-        host_currency,
-        dex_currencies,
-    };
-
-    multiple_currency_source_generator.generate_and_commit(
-        &mut build_report,
-        &output_directory.join("lease.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Lease),
-        dex_currencies
-            .keys()
-            .copied()
-            .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
-    )?;
-
-    multiple_currency_source_generator.generate_and_commit(
-        &mut build_report,
-        &output_directory.join("lpn.rs"),
-        &GeneratorImpl::without_pairs_group(static_context, CurrentModule::Lpn),
-        iter::once(&*protocol.lpn_ticker),
-    )?;
-
-    multiple_currency_source_generator.generate_and_commit(
-        &mut build_report,
-        &output_directory.join("native.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Native),
-        iter::once(host_currency.ticker()),
-    )?;
-
-    multiple_currency_source_generator.generate_and_commit(
-        &mut build_report,
-        &output_directory.join("payment_only.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::PaymentOnly),
-        dex_currencies.keys().copied().filter(|&key| {
-            !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
-        }),
-    )?;
-
-    stable::write(build_report, output_directory, protocol, dex_currencies)
-}
-
-type DexCurrencies<'ticker, 'currency_definition> =
-    BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
