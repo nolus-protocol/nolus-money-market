@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 
 use crate::currencies_tree::CurrenciesTree;
 
-use super::{Generator, Resolver};
+use super::{InPoolWithGenerator, MaybeVisitGenerator, PairsGroupGenerator, Resolver};
 
 use self::generate::FinalizedSources;
 
@@ -57,7 +57,9 @@ where
     where
         BuildReport: Write,
         Generator: Resolver<'dex_currencies, 'definition>
-            + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+            + MaybeVisitGenerator
+            + PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+            + InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: IntoIterator<Item = &'ticker str>,
     {
         self.generate_sources(generator, tickers.into_iter())

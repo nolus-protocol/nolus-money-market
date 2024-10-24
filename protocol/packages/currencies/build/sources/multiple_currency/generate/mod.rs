@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{either::Either, subtype_lifetime::SubtypeLifetime};
 
 use super::{
-    super::{Generator, Resolver},
+    super::{InPoolWithGenerator, MaybeVisitGenerator, PairsGroupGenerator, Resolver},
     SourcesGenerator,
 };
 
@@ -50,7 +50,9 @@ where
         'definition: 'r,
         'ticker: 'r,
         Generator: Resolver<'dex_currencies, 'definition>
-            + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+            + MaybeVisitGenerator
+            + PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+            + InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
         if let Some(head_ticker) = tickers.next() {
@@ -106,7 +108,8 @@ fn generate_non_empty_sources<
     tail_tickers: Tickers,
 ) -> Result<
     NonFinalizedSources<
-        impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator, Tickers>,
+        impl Iterator<Item = &'dex_currencies str>
+            + use<'dex_currencies, 'generator, Generator, Tickers>,
         impl Iterator<Item = Cow<'r, str>>
             + use<
                 'r,
@@ -128,7 +131,9 @@ where
     'dex_currency_definition: 'dex_currencies,
     'ticker: 'r,
     Generator: Resolver<'dex_currencies, 'definition>
-        + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+        + MaybeVisitGenerator
+        + PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+        + InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
     Tickers: Iterator<Item = &'ticker str>,
 {
     {
@@ -163,7 +168,10 @@ where
                 .generate_entry(head_ticker)
                 .map(|entry| {
                     (
-                        Either::Left(entry.maybe_visit.into_iter()),
+                        entry
+                            .maybe_visit
+                            .map_left(IntoIterator::into_iter)
+                            .map_left(Either::Left),
                         entry.currency_definition,
                     )
                 }),
@@ -174,22 +182,39 @@ where
                     .generate_entry(ticker)
                     .map(|entry| {
                         (
-                            Either::Right(else_maybe_visit_entry(
-                                visitor_parameter,
-                                entry.maybe_visit,
-                            )),
+                            match entry.maybe_visit {
+                                Either::Left(iter) => Either::Left(Either::Right(
+                                    else_maybe_visit_entry(visitor_parameter, iter),
+                                )),
+                                Either::Right(iter @ iter::Empty { .. }) => Either::Right(iter),
+                            },
                             entry.currency_definition,
                         )
                     })
             }
         }))
         .try_fold(
-            NonFinalizedSources::new(0, vec![], vec![]),
+            NonFinalizedSources::new(
+                0,
+                if <Generator as MaybeVisitGenerator>::GENERATE {
+                    Either::Left(vec![])
+                } else {
+                    Either::Right(iter::empty())
+                },
+                vec![],
+            ),
             |mut accumulator, element| {
                 element.map(|(maybe_visit, currency_definition)| {
                     accumulator.currencies_count += 1;
 
-                    accumulator.maybe_visit.push(maybe_visit);
+                    match (&mut accumulator.maybe_visit, maybe_visit) {
+                        (Either::Left(maybe_visit_iters), Either::Left(entry)) => {
+                            maybe_visit_iters.push(entry)
+                        }
+                        (Either::Left { .. }, Either::Right { .. })
+                        | (Either::Right { .. }, Either::Left { .. }) => unreachable!(),
+                        (Either::Right(iter::Empty { .. }), Either::Right(iter::Empty { .. })) => {}
+                    }
 
                     accumulator.currency_definitions.push(currency_definition);
 
@@ -200,13 +225,15 @@ where
         .map(move |non_finalized_sources| {
             non_finalized_sources
                 .map_maybe_visit(move |maybe_visit| {
-                    finalize_non_empty_maybe_visit(
-                        visited_group,
-                        visit_function,
-                        matcher_parameter,
-                        visitor_parameter,
-                        maybe_visit.into_iter().flatten(),
-                    )
+                    maybe_visit.map_left(|maybe_visit| {
+                        finalize_non_empty_maybe_visit(
+                            visited_group,
+                            visit_function,
+                            matcher_parameter,
+                            visitor_parameter,
+                            maybe_visit.into_iter().flatten(),
+                        )
+                    })
                 })
                 .map_currency_definitions(|currency_definitions| {
                     currency_definitions.into_iter().flatten()

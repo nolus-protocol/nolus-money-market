@@ -28,19 +28,25 @@ pub(super) fn write<BuildReport>(
 where
     BuildReport: Write,
 {
-    let multiple_currency_source_generator =
-        multiple_currency::SourcesGenerator::new(currencies_tree);
-
     let static_context = &GeneratorStaticContext {
         protocol,
         host_currency,
         dex_currencies,
     };
 
+    let builder = GeneratorBuilder::new(static_context);
+
+    let multiple_currency_source_generator =
+        multiple_currency::SourcesGenerator::new(currencies_tree);
+
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
         &output_directory.join("lease.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Lease),
+        &builder
+            .with_current_module(CurrentModule::Lease)
+            .with_maybe_visit::<true>()
+            .with_pairs_group::<true>()
+            .build(),
         dex_currencies
             .keys()
             .copied()
@@ -50,21 +56,33 @@ where
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
         &output_directory.join("lpn.rs"),
-        &GeneratorImpl::without_pairs_group(static_context, CurrentModule::Lpn),
+        &builder
+            .with_current_module(CurrentModule::Lpn)
+            .with_maybe_visit::<false>()
+            .with_pairs_group::<false>()
+            .build(),
         iter::once(&*protocol.lpn_ticker),
     )?;
 
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
         &output_directory.join("native.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::Native),
+        &builder
+            .with_current_module(CurrentModule::Native)
+            .with_maybe_visit::<false>()
+            .with_pairs_group::<true>()
+            .build(),
         iter::once(host_currency.ticker()),
     )?;
 
     multiple_currency_source_generator.generate_and_commit(
         &mut build_report,
         &output_directory.join("payment_only.rs"),
-        &GeneratorImpl::with_pairs_group(static_context, CurrentModule::PaymentOnly),
+        &builder
+            .with_current_module(CurrentModule::PaymentOnly)
+            .with_maybe_visit::<true>()
+            .with_pairs_group::<true>()
+            .build(),
         dex_currencies.keys().copied().filter(|&key| {
             !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
         }),
@@ -93,7 +111,11 @@ trait Resolver<'name, 'definition> {
     fn resolve(&self, ticker: &str) -> Result<ResolvedCurrency<'name, 'definition>>;
 }
 
-trait Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+trait MaybeVisitGenerator {
+    const GENERATE: bool;
+}
+
+trait PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
 where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
@@ -111,7 +133,13 @@ where
     where
         'dex_currencies: 'r,
         'name: 'r;
+}
 
+trait InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+where
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+{
     fn in_pool_with<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
@@ -139,14 +167,19 @@ struct GeneratorStaticContext<
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
 }
 
-struct GeneratorImpl<
+#[derive(Clone, Copy)]
+struct GeneratorBuilder<
     'static_context,
     'protocol,
     'host_currency,
     'dex_currencies,
     'dex_currency_ticker,
     'dex_currency_definition,
-    const PAIRS_GROUP: bool,
+    CurrentModule,
+    const MAYBE_VISIT_SET: bool,
+    const MAYBE_VISIT_VALUE: bool,
+    const PAIRS_GROUP_SET: bool,
+    const PAIRS_GROUP_VALUE: bool,
 > {
     static_context: &'static_context GeneratorStaticContext<
         'protocol,
@@ -166,17 +199,21 @@ impl<
         'dex_currency_ticker,
         'dex_currency_definition,
     >
-    GeneratorImpl<
+    GeneratorBuilder<
         'static_context,
         'protocol,
         'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
+        (),
+        false,
+        false,
+        false,
         false,
     >
 {
-    const fn without_pairs_group(
+    const fn new(
         static_context: &'static_context GeneratorStaticContext<
             'protocol,
             'host_currency,
@@ -184,9 +221,62 @@ impl<
             'dex_currency_ticker,
             'dex_currency_definition,
         >,
-        current_module: CurrentModule,
     ) -> Self {
         Self {
+            static_context,
+            current_module: (),
+        }
+    }
+}
+
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        const PAIRS_GROUP_SET: bool,
+        const PAIRS_GROUP_VALUE: bool,
+        const IN_POOL_WITH_SET: bool,
+        const IN_POOL_WITH_VALUE: bool,
+    >
+    GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        (),
+        PAIRS_GROUP_SET,
+        PAIRS_GROUP_VALUE,
+        IN_POOL_WITH_SET,
+        IN_POOL_WITH_VALUE,
+    >
+{
+    fn with_current_module(
+        self,
+        current_module: CurrentModule,
+    ) -> GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        PAIRS_GROUP_SET,
+        PAIRS_GROUP_VALUE,
+        IN_POOL_WITH_SET,
+        IN_POOL_WITH_VALUE,
+    > {
+        let Self {
+            static_context,
+            current_module: (),
+        } = self;
+
+        GeneratorBuilder {
             static_context,
             current_module,
         }
@@ -200,32 +290,169 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
+        CurrentModule,
+        const PAIRS_GROUP_SET: bool,
+        const PAIRS_GROUP_VALUE: bool,
     >
-    GeneratorImpl<
+    GeneratorBuilder<
         'static_context,
         'protocol,
         'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        true,
+        CurrentModule,
+        false,
+        false,
+        PAIRS_GROUP_SET,
+        PAIRS_GROUP_VALUE,
     >
 {
-    const fn with_pairs_group(
-        static_context: &'static_context GeneratorStaticContext<
-            'protocol,
-            'host_currency,
-            'dex_currencies,
-            'dex_currency_ticker,
-            'dex_currency_definition,
-        >,
-        current_module: CurrentModule,
-    ) -> Self {
-        Self {
+    fn with_maybe_visit<const MAYBE_VISIT_VALUE: bool>(
+        self,
+    ) -> GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        true,
+        MAYBE_VISIT_VALUE,
+        PAIRS_GROUP_SET,
+        PAIRS_GROUP_VALUE,
+    > {
+        let Self {
+            static_context,
+            current_module,
+        } = self;
+
+        GeneratorBuilder {
             static_context,
             current_module,
         }
     }
+}
+
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        const MAYBE_VISIT_SET: bool,
+        const MAYBE_VISIT_VALUE: bool,
+    >
+    GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        MAYBE_VISIT_SET,
+        MAYBE_VISIT_VALUE,
+        false,
+        false,
+    >
+{
+    fn with_pairs_group<const PAIRS_GROUP_VALUE: bool>(
+        self,
+    ) -> GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        MAYBE_VISIT_SET,
+        MAYBE_VISIT_VALUE,
+        true,
+        PAIRS_GROUP_VALUE,
+    > {
+        let Self {
+            static_context,
+            current_module,
+        } = self;
+
+        GeneratorBuilder {
+            static_context,
+            current_module,
+        }
+    }
+}
+
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        const MAYBE_VISIT: bool,
+        const PAIRS_GROUP: bool,
+    >
+    GeneratorBuilder<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        CurrentModule,
+        true,
+        MAYBE_VISIT,
+        true,
+        PAIRS_GROUP,
+    >
+{
+    fn build(
+        self,
+    ) -> GeneratorImpl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        MAYBE_VISIT,
+        PAIRS_GROUP,
+    > {
+        let Self {
+            static_context,
+            current_module,
+        } = self;
+
+        GeneratorImpl {
+            static_context,
+            current_module,
+        }
+    }
+}
+
+struct GeneratorImpl<
+    'static_context,
+    'protocol,
+    'host_currency,
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+    const MAYBE_VISIT: bool,
+    const PAIRS_GROUP: bool,
+> {
+    static_context: &'static_context GeneratorStaticContext<
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+    >,
+    current_module: CurrentModule,
 }
 
 impl<
@@ -236,6 +463,7 @@ impl<
         'definition,
         'dex_currency_ticker,
         'dex_currency_definition,
+        const MAYBE_VISIT: bool,
         const PAIRS_GROUP: bool,
     > Resolver<'dex_currencies, 'definition>
     for GeneratorImpl<
@@ -245,6 +473,7 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
+        MAYBE_VISIT,
         PAIRS_GROUP,
     >
 where
@@ -269,7 +498,9 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-    > Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+        const MAYBE_VISIT: bool,
+        const PAIRS_GROUP: bool,
+    > MaybeVisitGenerator
     for GeneratorImpl<
         'static_context,
         'protocol,
@@ -277,6 +508,33 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
+        MAYBE_VISIT,
+        PAIRS_GROUP,
+    >
+where
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+{
+    const GENERATE: bool = MAYBE_VISIT;
+}
+
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        const MAYBE_VISIT: bool,
+    > PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+    for GeneratorImpl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        MAYBE_VISIT,
         false,
     >
 where
@@ -300,31 +558,6 @@ where
     {
         const { Ok(iter::empty()) }
     }
-
-    #[inline]
-    fn in_pool_with<'r, 'name, 'parents, 'parent>(
-        &self,
-        name: &'name str,
-        parents: currencies_tree::Parents<'parents, 'parent>,
-    ) -> Result<
-        impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
-    >
-    where
-        'dex_currencies: 'r,
-        'name: 'r,
-    {
-        in_pool_with::in_pool_with(
-            self.current_module,
-            self.static_context.protocol,
-            self.static_context.host_currency,
-            self.static_context.dex_currencies,
-            name,
-            parents.iter().copied(),
-        )
-    }
 }
 
 impl<
@@ -334,7 +567,8 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-    > Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+        const MAYBE_VISIT: bool,
+    > PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for GeneratorImpl<
         'static_context,
         'protocol,
@@ -342,6 +576,7 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
+        MAYBE_VISIT,
         true,
     >
 where
@@ -371,7 +606,30 @@ where
             children.iter().copied(),
         )
     }
+}
 
+impl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        const MAYBE_VISIT: bool,
+        const PAIRS_GROUP: bool,
+    > InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+    for GeneratorImpl<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        MAYBE_VISIT,
+        PAIRS_GROUP,
+    >
+{
+    #[inline]
     fn in_pool_with<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,

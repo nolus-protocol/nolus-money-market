@@ -5,6 +5,18 @@ pub(crate) enum Either<L, R> {
     Right(R),
 }
 
+impl<L, R> Either<L, R> {
+    pub fn map_left<F, NewL>(self, f: F) -> Either<NewL, R>
+    where
+        F: FnOnce(L) -> NewL,
+    {
+        match self {
+            Either::Left(left) => Either::Left(f(left)),
+            Either::Right(right) => Either::Right(right),
+        }
+    }
+}
+
 impl<L, R> Iterator for Either<L, R>
 where
     L: Iterator,

@@ -4,9 +4,14 @@ use anyhow::{anyhow, Context as _, Result};
 
 use topology::CurrencyDefinition;
 
-use crate::currencies_tree::{self, CurrenciesTree};
+use crate::{
+    currencies_tree::{self, CurrenciesTree},
+    either::Either,
+};
 
-use super::super::super::{Generator, Resolver};
+use super::super::super::{
+    InPoolWithGenerator, MaybeVisitGenerator, PairsGroupGenerator, Resolver,
+};
 
 pub(super) struct CurrencyDefinitionGenerator<
     'currencies_tree,
@@ -42,14 +47,19 @@ where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     Generator: Resolver<'dex_currencies, 'definition>
-        + self::Generator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
+        + MaybeVisitGenerator
+        + PairsGroupGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+        + InPoolWithGenerator<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
     ) -> Result<
         Entry<
-            impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+            Either<
+                impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+                iter::Empty<&'dex_currencies str>,
+            >,
             impl Iterator<Item = Cow<'r, str>>
                 + use<
                     'r,
@@ -86,7 +96,10 @@ where
         parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         Entry<
-            impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+            Either<
+                impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+                iter::Empty<&'dex_currencies str>,
+            >,
             impl Iterator<Item = Cow<'r, str>>
                 + use<
                     'r,
@@ -114,18 +127,22 @@ where
                         self.generator
                             .in_pool_with(resolved.name(), parents)
                             .map(|in_pool_with| Entry {
-                                maybe_visit: [
-                                    self.visit_function,
-                                    "::<_, self::",
-                                    resolved.name(),
-                                    ", ",
-                                    self.visited_group,
-                                    ", _>(",
-                                    self.matcher_parameter,
-                                    ", ",
-                                    self.visitor_parameter,
-                                    ")",
-                                ],
+                                maybe_visit: if <Generator as MaybeVisitGenerator>::GENERATE {
+                                    Either::Left([
+                                        self.visit_function,
+                                        "::<_, self::",
+                                        resolved.name(),
+                                        ", ",
+                                        self.visited_group,
+                                        ", _>(",
+                                        self.matcher_parameter,
+                                        ", ",
+                                        self.visitor_parameter,
+                                        ")",
+                                    ])
+                                } else {
+                                    Either::Right(iter::empty())
+                                },
                                 currency_definition: currency_definition(
                                     resolved.name(),
                                     ticker,
