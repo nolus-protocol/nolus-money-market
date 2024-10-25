@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use crate::{
     channels,
     currency::{self, Currency},
@@ -38,47 +40,44 @@ impl Topology {
         'self_: 'currency,
         'currency: 'network,
     {
-        // Shadow to shrink reference's lifetime.
-        let mut currency = currency;
-
-        let mut traversed_networks = vec![dex_network];
-
-        let mut dex_symbol = symbol::Builder::NEW;
-
-        Ok(loop {
-            match currency {
-                Currency::Native(native) => {
-                    break DexResolvedCurrency {
+        try_trampoline(
+            ResolvedNonHostIbcCurrency {
+                traversed_networks: vec![dex_network],
+                dex_symbol: symbol::Builder::NEW,
+                currency,
+            },
+            |ResolvedNonHostIbcCurrency {
+                 traversed_networks,
+                 dex_symbol,
+                 currency,
+             }| {
+                match currency {
+                    Currency::Native(native) => Ok(ControlFlow::Break(DexResolvedCurrency {
                         traversed_networks,
                         dex_symbol,
                         currency: native,
                         host_local: false,
-                    };
-                }
-                Currency::Ibc(ibc) if ibc.network() == self.host_network.name() => {
-                    break Self::resolve_host_currency(
-                        &self.host_network,
-                        host_to_dex_path,
-                        traversed_networks,
-                        dex_symbol,
-                        ibc,
-                    );
-                }
-                Currency::Ibc(ibc) => {
-                    ResolvedNonHostIbcCurrency {
-                        traversed_networks,
-                        dex_symbol,
-                        currency,
-                    } = Self::resolve_non_host_ibc_currency(
+                    })),
+                    Currency::Ibc(ibc) if ibc.network() == self.host_network.name() => {
+                        Ok(ControlFlow::Break(Self::resolve_host_currency(
+                            &self.host_network,
+                            host_to_dex_path,
+                            traversed_networks,
+                            dex_symbol,
+                            ibc,
+                        )))
+                    }
+                    Currency::Ibc(ibc) => Self::resolve_non_host_ibc_currency(
                         &self.networks,
                         channels,
                         traversed_networks,
                         dex_symbol,
                         ibc,
-                    )?;
+                    )
+                    .map(ControlFlow::Continue),
                 }
-            }
-        })
+            },
+        )
     }
 
     fn resolve_host_currency<'host_network, 'network, 'currency>(
@@ -256,4 +255,27 @@ where
     traversed_networks: Vec<&'network network::Id>,
     dex_symbol: symbol::Builder,
     currency: &'currency Currency,
+}
+
+fn trampoline<Continue, Break, F>(mut value: Continue, mut f: F) -> Break
+where
+    F: FnMut(Continue) -> ControlFlow<Break, Continue>,
+{
+    loop {
+        match f(value) {
+            ControlFlow::Continue(continue_with) => value = continue_with,
+            ControlFlow::Break(break_with) => break break_with,
+        }
+    }
+}
+
+fn try_trampoline<F, Continue, Break, Error>(value: Continue, mut f: F) -> Result<Break, Error>
+where
+    F: FnMut(Continue) -> Result<ControlFlow<Break, Continue>, Error>,
+{
+    trampoline(value, move |value| match f(value) {
+        Ok(ControlFlow::Continue(continue_with)) => ControlFlow::Continue(continue_with),
+        Ok(ControlFlow::Break(break_with)) => ControlFlow::Break(Ok(break_with)),
+        Err(error) => ControlFlow::Break(Err(error)),
+    })
 }
