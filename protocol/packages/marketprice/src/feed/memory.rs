@@ -1,5 +1,3 @@
-// use std::collections::HashMap;
-
 use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::Timestamp;
 
@@ -26,11 +24,15 @@ where
     }
 }
 
-impl<C, QuoteC> ObservationsRead<C, QuoteC> for InMemoryObservations<C, QuoteC>
+impl<C, QuoteC> ObservationsRead for InMemoryObservations<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
+    type C = C;
+
+    type QuoteC = QuoteC;
+
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -45,7 +47,7 @@ where
     }
 }
 
-impl<C, QuoteC> Observations<C, QuoteC> for InMemoryObservations<C, QuoteC>
+impl<C, QuoteC> Observations for InMemoryObservations<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -69,7 +71,7 @@ impl ObservationsReadRepo for InMemoryRepo {
         &self,
         _c: &CurrencyDTO<G>,
         _quote_c: &CurrencyDTO<G>,
-    ) -> impl ObservationsRead<C, QuoteC>
+    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
@@ -84,7 +86,7 @@ impl ObservationsRepo for InMemoryRepo {
         &mut self,
         _c: &CurrencyDTO<G>,
         _quote_c: &CurrencyDTO<G>,
-    ) -> impl Observations<C, QuoteC>
+    ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,

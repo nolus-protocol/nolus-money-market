@@ -5,33 +5,36 @@ use crate::error::PriceFeedsError;
 
 use super::Observation;
 
-pub trait ObservationsRead<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
+pub trait ObservationsRead {
+    type C: 'static;
+
+    type QuoteC: 'static;
+
     fn len(&self) -> usize;
 
     fn as_iter(
         &self,
     ) -> Result<
-        impl Iterator<Item = Result<Observation<C, QuoteC>, PriceFeedsError>>,
+        impl Iterator<Item = Result<Observation<Self::C, Self::QuoteC>, PriceFeedsError>>,
         PriceFeedsError,
     >;
 }
 
-pub trait Observations<C, QuoteC>
+pub trait Observations
 where
-    Self: ObservationsRead<C, QuoteC>,
-    C: 'static,
-    QuoteC: 'static,
+    Self: ObservationsRead,
+    Self::C: 'static,
+    Self::QuoteC: 'static,
 {
     fn retain(&mut self, valid_since: Timestamp) -> Result<(), PriceFeedsError>;
 
     /// Register a newer observation
     ///
     /// The observation time must always flow monotonically forward!
-    fn register(&mut self, observation: Observation<C, QuoteC>) -> Result<(), PriceFeedsError>;
+    fn register(
+        &mut self,
+        observation: Observation<Self::C, Self::QuoteC>,
+    ) -> Result<(), PriceFeedsError>;
 }
 
 pub trait ObservationsReadRepo {
@@ -39,7 +42,7 @@ pub trait ObservationsReadRepo {
         &self,
         c: &CurrencyDTO<G>,
         quote_c: &CurrencyDTO<G>,
-    ) -> impl ObservationsRead<C, QuoteC>
+    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
@@ -54,7 +57,7 @@ where
         &mut self,
         c: &CurrencyDTO<G>,
         quote_c: &CurrencyDTO<G>,
-    ) -> impl Observations<C, QuoteC>
+    ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,

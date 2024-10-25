@@ -49,7 +49,7 @@ impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
     C: 'static,
     QuoteC: 'static,
-    ObservationsImpl: ObservationsRead<C, QuoteC>,
+    ObservationsImpl: ObservationsRead<C = C, QuoteC = QuoteC>,
 {
     /// Calculate the price of this feed
     ///
@@ -132,7 +132,7 @@ impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
     C: 'static,
     QuoteC: 'static,
-    ObservationsImpl: Observations<C, QuoteC>,
+    ObservationsImpl: Observations<C = C, QuoteC = QuoteC>,
 {
     pub fn add_observation(
         mut self,
@@ -175,9 +175,8 @@ mod test {
 
     type TestC = SuperGroupTestC4;
     type TestQuoteC = SuperGroupTestC5;
-    // type TestObservations = InMemoryObservations<TestC, TestQuoteC>;
 
-    fn feed() -> PriceFeed<TestC, TestQuoteC, impl Observations<TestC, TestQuoteC>> {
+    fn feed() -> PriceFeed<TestC, TestQuoteC, impl Observations<C = TestC, QuoteC = TestQuoteC>> {
         PriceFeed::with(InMemoryObservations::<TestC, TestQuoteC>::new())
     }
 

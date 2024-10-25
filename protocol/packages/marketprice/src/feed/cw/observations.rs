@@ -37,12 +37,16 @@ where
     }
 }
 
-impl<'storage, C, QuoteC, S> ObservationsRead<C, QuoteC> for Deque<'storage, C, QuoteC, S>
+impl<'storage, C, QuoteC, S> ObservationsRead for Deque<'storage, C, QuoteC, S>
 where
     C: 'static,
     QuoteC: 'static,
     S: Deref<Target = dyn Storage + 'storage>,
 {
+    type C = C;
+
+    type QuoteC = QuoteC;
+
     fn len(&self) -> usize {
         self.storage
             .len(self.store.deref())
@@ -62,7 +66,7 @@ where
     }
 }
 
-impl<'storage, C, QuoteC, S> Observations<C, QuoteC> for Deque<'storage, C, QuoteC, S>
+impl<'storage, C, QuoteC, S> Observations for Deque<'storage, C, QuoteC, S>
 where
     C: 'static,
     QuoteC: 'static,

@@ -49,7 +49,7 @@ where
         &self,
         c: &currency::CurrencyDTO<G>,
         quote_c: &currency::CurrencyDTO<G>,
-    ) -> impl ObservationsRead<C, QuoteC>
+    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
@@ -67,7 +67,7 @@ where
         &mut self,
         c: &CurrencyDTO<G>,
         quote_c: &CurrencyDTO<G>,
-    ) -> impl Observations<C, QuoteC>
+    ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
