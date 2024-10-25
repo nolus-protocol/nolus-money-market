@@ -31,8 +31,8 @@ where
 
     fn storage_ns<G>(
         &self,
-        c: currency::CurrencyDTO<G>,
-        quote_c: currency::CurrencyDTO<G>,
+        c: &currency::CurrencyDTO<G>,
+        quote_c: &currency::CurrencyDTO<G>,
     ) -> String
     where
         G: Group,
@@ -47,8 +47,8 @@ where
 {
     fn observations_read<C, QuoteC, G>(
         &self,
-        c: currency::CurrencyDTO<G>,
-        quote_c: currency::CurrencyDTO<G>,
+        c: &currency::CurrencyDTO<G>,
+        quote_c: &currency::CurrencyDTO<G>,
     ) -> impl ObservationsRead<C, QuoteC>
     where
         C: 'static,
@@ -65,8 +65,8 @@ where
 {
     fn observations<C, QuoteC, G>(
         &mut self,
-        c: CurrencyDTO<G>,
-        quote_c: CurrencyDTO<G>,
+        c: &CurrencyDTO<G>,
+        quote_c: &CurrencyDTO<G>,
     ) -> impl Observations<C, QuoteC>
     where
         C: 'static,

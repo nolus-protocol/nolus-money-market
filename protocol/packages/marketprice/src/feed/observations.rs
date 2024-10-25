@@ -37,8 +37,8 @@ where
 pub trait ObservationsReadRepo {
     fn observations_read<C, QuoteC, G>(
         &self,
-        c: CurrencyDTO<G>,
-        quote_c: CurrencyDTO<G>,
+        c: &CurrencyDTO<G>,
+        quote_c: &CurrencyDTO<G>,
     ) -> impl ObservationsRead<C, QuoteC>
     where
         C: 'static,
@@ -52,8 +52,8 @@ where
 {
     fn observations<C, QuoteC, G>(
         &mut self,
-        c: CurrencyDTO<G>,
-        quote_c: CurrencyDTO<G>,
+        c: &CurrencyDTO<G>,
+        quote_c: &CurrencyDTO<G>,
     ) -> impl Observations<C, QuoteC>
     where
         C: 'static,

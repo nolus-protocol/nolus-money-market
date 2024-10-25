@@ -67,8 +67,8 @@ pub struct InMemoryRepo;
 impl ObservationsReadRepo for InMemoryRepo {
     fn observations_read<C, QuoteC, G>(
         &self,
-        _c: CurrencyDTO<G>,
-        _quote_c: CurrencyDTO<G>,
+        _c: &CurrencyDTO<G>,
+        _quote_c: &CurrencyDTO<G>,
     ) -> impl ObservationsRead<C, QuoteC>
     where
         C: 'static,
@@ -82,8 +82,8 @@ impl ObservationsReadRepo for InMemoryRepo {
 impl ObservationsRepo for InMemoryRepo {
     fn observations<C, QuoteC, G>(
         &mut self,
-        _c: CurrencyDTO<G>,
-        _quote_c: CurrencyDTO<G>,
+        _c: &CurrencyDTO<G>,
+        _quote_c: &CurrencyDTO<G>,
     ) -> impl Observations<C, QuoteC>
     where
         C: 'static,

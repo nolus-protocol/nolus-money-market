@@ -70,7 +70,7 @@ where
             feeds: self,
             at,
             total_feeders,
-            c_dto: quote_in_price_group,
+            c_dto: &quote_in_price_group,
             root_dto: quote_c,
             price: Price::<QuoteC, QuoteC>::identity(),
             _quote_g: PhantomData,
@@ -80,8 +80,8 @@ where
 
     pub fn price_of_feed<C, QuoteC>(
         &self,
-        amount_c: CurrencyDTO<PriceG>,
-        quote_c: CurrencyDTO<PriceG>,
+        amount_c: &CurrencyDTO<PriceG>,
+        quote_c: &CurrencyDTO<PriceG>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
@@ -160,7 +160,7 @@ where
             {
                 PriceFeed::with(
                     self.observations
-                        .observations::<C, QuoteC, G>(self.amount_c, self.quote_c),
+                        .observations::<C, QuoteC, G>(&self.amount_c, &self.quote_c),
                 )
                 .add_observation(self.from, self.at, price, self.valid_since)
                 .map(mem::drop)
@@ -181,8 +181,17 @@ where
     }
 }
 
-struct PriceCollect<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
-where
+struct PriceCollect<
+    'a,
+    'config,
+    'currency,
+    Iter,
+    QuoteC,
+    G,
+    QuoteQuoteC,
+    QuoteG,
+    ObservationsRepoImpl,
+> where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: Currency + MemberOf<G>,
     G: Group,
@@ -193,13 +202,13 @@ where
     feeds: &'a PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
     total_feeders: usize,
-    c_dto: CurrencyDTO<G>,
+    c_dto: &'currency CurrencyDTO<G>,
     root_dto: CurrencyDTO<QuoteG>,
     price: Price<QuoteC, QuoteQuoteC>,
     _quote_g: PhantomData<QuoteG>,
 }
-impl<'a, 'config, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
-    PriceCollect<'a, 'config, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
+impl<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
+    PriceCollect<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: CurrencyDef,
@@ -210,12 +219,23 @@ where
     QuoteG: Group,
     ObservationsRepoImpl: ObservationsReadRepo,
 {
-    fn advance<NextC>(
+    fn advance<'new_currency, NextC>(
         self,
         accumulator: Price<NextC, QuoteC>,
-        c_dto: CurrencyDTO<G>,
-    ) -> PriceCollect<'a, 'config, Iter, NextC, G, QuoteC, QuoteG, ObservationsRepoImpl>
+        c_dto: &'new_currency CurrencyDTO<G>,
+    ) -> PriceCollect<
+        'a,
+        'config,
+        'new_currency,
+        Iter,
+        NextC,
+        G,
+        QuoteC,
+        QuoteG,
+        ObservationsRepoImpl,
+    >
     where
+        'currency: 'new_currency,
         NextC: Currency + MemberOf<G>,
     {
         PriceCollect {
@@ -238,8 +258,19 @@ where
         }
     }
 }
-impl<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl> AnyVisitor<G>
-    for PriceCollect<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
+impl<'a, 'config, 'currency, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
+    AnyVisitor<G>
+    for PriceCollect<
+        'a,
+        'config,
+        'currency,
+        Iter,
+        QuoteC,
+        G,
+        QuoteQuoteC,
+        QuoteG,
+        ObservationsRepoImpl,
+    >
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: CurrencyDef,
@@ -260,13 +291,13 @@ where
     {
         let next_c = def.into_super_group::<G>();
         let next_price = self.feeds.price_of_feed::<C, QuoteC>(
-            next_c,
+            &next_c,
             self.c_dto,
             self.at,
             self.total_feeders,
         )?;
         let total_price = next_price * self.price;
-        self.advance(total_price, next_c).do_collect()
+        self.advance(total_price, &next_c).do_collect()
     }
 }
 

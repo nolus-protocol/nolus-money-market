@@ -36,8 +36,8 @@ pub trait PriceQuerier {
 
     fn price<C, QuoteC>(
         &self,
-        amount_c: CurrencyDTO<Self::CurrencyGroup>,
-        quote_c: CurrencyDTO<Self::CurrencyGroup>,
+        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
     ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
@@ -53,8 +53,8 @@ where
 
     fn price<C, QuoteC>(
         &self,
-        amount_c: CurrencyDTO<Self::CurrencyGroup>,
-        quote_c: CurrencyDTO<Self::CurrencyGroup>,
+        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
     ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
