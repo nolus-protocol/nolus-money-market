@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, mem};
 
 use currency::{
     self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
@@ -15,66 +15,40 @@ use sdk::{
 };
 
 use crate::{
-    alarms::prefix::Prefix,
     config::Config,
     error::PriceFeedsError,
-    feed::{ObservationsStore, PriceFeed},
+    feed::{ObservationsReadRepo, ObservationsRepo, PriceFeed},
 };
 
-type PriceFeedBin = Vec<u8>;
-type PriceFeedImpl<BaseC, QuoteC> = PriceFeed<BaseC, QuoteC, ObservationsStore<BaseC, QuoteC>>;
-
-pub struct PriceFeeds<PriceG> {
-    storage: Map<(SymbolStatic, SymbolStatic), PriceFeedBin>,
-    config: Config,
+pub struct PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
+    observations_repo: ObservationsRepoImpl,
+    config: &'config Config,
     _g: PhantomData<PriceG>,
 }
 
-impl<PriceG> PriceFeeds<PriceG>
-where
-    PriceG: Group<TopG = PriceG>,
-{
-    pub const fn new(namespace: &'static str, config: Config) -> Self {
+impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
+    pub fn wipe_out_v2(store: &mut dyn Storage) {
+        const NAMESPACE: &str = "market_price";
+        Map::<(SymbolStatic, SymbolStatic), Vec<u8>>::new(NAMESPACE).clear(store);
+    }
+
+    pub const fn new(observations_repo: ObservationsRepoImpl, config: &'config Config) -> Self {
         Self {
-            storage: Map::new(namespace),
+            observations_repo,
             config,
             _g: PhantomData,
         }
     }
+}
 
-    pub fn feed(
-        &self,
-        storage: &mut dyn Storage,
-        at: Timestamp,
-        sender_raw: &Addr,
-        prices: &[PriceDTO<PriceG>],
-    ) -> Result<(), PriceFeedsError> {
-        for price in prices {
-            self.storage.update(
-                storage,
-                (
-                    price.base().currency().first_key(),
-                    price.quote().currency().first_key(),
-                ),
-                |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
-                    add_observation(
-                        feed,
-                        sender_raw,
-                        at,
-                        *price,
-                        self.config.feed_valid_since(at),
-                    )
-                },
-            )?;
-        }
-
-        Ok(())
-    }
-
+impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
+where
+    PriceG: Group<TopG = PriceG>,
+    ObservationsRepoImpl: ObservationsReadRepo,
+{
     pub fn price<'m, 'a, QuoteC, QuoteG, Iter>(
         &'m self,
         quote_c: CurrencyDTO<QuoteG>,
-        storage: &'a dyn Storage,
         at: Timestamp,
         total_feeders: usize,
         leaf_to_root: Iter,
@@ -94,10 +68,9 @@ where
         PriceCollect {
             root_to_leaf,
             feeds: self,
-            storage,
             at,
             total_feeders,
-            c_dto: &quote_in_price_group,
+            c_dto: quote_in_price_group,
             root_dto: quote_c,
             price: Price::<QuoteC, QuoteC>::identity(),
             _quote_g: PhantomData,
@@ -107,9 +80,8 @@ where
 
     pub fn price_of_feed<C, QuoteC>(
         &self,
-        amount_c: &CurrencyDTO<PriceG>,
-        quote_c: &CurrencyDTO<PriceG>,
-        storage: &dyn Storage,
+        amount_c: CurrencyDTO<PriceG>,
+        quote_c: CurrencyDTO<PriceG>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
@@ -119,30 +91,97 @@ where
         QuoteC: Currency,
         QuoteC: MemberOf<PriceG>,
     {
-        let feed_bin = self
-            .storage
-            .may_load(storage, (amount_c.first_key(), quote_c.first_key()))?;
-        load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at, total_feeders))
+        PriceFeed::with(
+            self.observations_repo
+                .observations_read::<C, QuoteC, PriceG>(amount_c, quote_c),
+        )
+        .calc_price(&self.config, at, total_feeders)
     }
 }
 
-fn load_feed<BaseC, QuoteC>(
-    feed_bin: Option<PriceFeedBin>,
-) -> Result<PriceFeedImpl<BaseC, QuoteC>, PriceFeedsError>
+impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
 where
-    BaseC: Currency,
-    QuoteC: Currency,
+    PriceG: Group<TopG = PriceG>,
+    ObservationsRepoImpl: ObservationsRepo,
 {
-    feed_bin.map_or_else(
-        || Ok(PriceFeedImpl::<BaseC, QuoteC>::default()),
-        |bin| {
-            postcard::from_bytes(&bin)
-                .map_err(Into::into)
-                .map(PriceFeedImpl::with)
-        },
-    )
+    /// Feed new price observations
+    ///
+    /// The time `at` must always flow monotonically forward!
+    pub fn feed(
+        &mut self,
+        at: Timestamp,
+        sender_raw: Addr,
+        prices: &[PriceDTO<PriceG>], // TODO pass by value to avoid the deref below
+    ) -> Result<(), PriceFeedsError> {
+        prices.iter().try_for_each(|price| {
+            self.add_observation(
+                sender_raw.clone(),
+                at,
+                *price,
+                self.config.feed_valid_since(at),
+            )
+        })
+    }
+
+    fn add_observation(
+        &mut self,
+        from: Addr,
+        at: Timestamp,
+        price: PriceDTO<PriceG>,
+        valid_since: Timestamp,
+    ) -> Result<(), PriceFeedsError> {
+        debug_assert!(valid_since < at);
+        struct AddObservation<'feeds, G, ObservationsRepoImpl>
+        where
+            G: Group,
+        {
+            observations: &'feeds mut ObservationsRepoImpl,
+            amount_c: CurrencyDTO<G>,
+            quote_c: CurrencyDTO<G>,
+            from: Addr,
+            at: Timestamp,
+            valid_since: Timestamp,
+            group: PhantomData<G>,
+        }
+
+        impl<'feeds, G, ObservationsRepoImpl> WithPrice for AddObservation<'feeds, G, ObservationsRepoImpl>
+        where
+            G: Group<TopG = G>,
+            ObservationsRepoImpl: ObservationsRepo,
+        {
+            type G = G;
+            type Output = ();
+            type Error = PriceFeedsError;
+
+            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+            where
+                C: Currency,
+                QuoteC: Currency,
+            {
+                PriceFeed::with(
+                    self.observations
+                        .observations::<C, QuoteC, G>(self.amount_c, self.quote_c),
+                )
+                .add_observation(self.from, self.at, price, self.valid_since)
+                .map(mem::drop)
+            }
+        }
+        with_price::execute(
+            price,
+            AddObservation {
+                observations: &mut self.observations_repo,
+                amount_c: price.base().currency(),
+                quote_c: price.quote().currency(),
+                from,
+                at,
+                valid_since,
+                group: PhantomData,
+            },
+        )
+    }
 }
-struct PriceCollect<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
+
+struct PriceCollect<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: Currency + MemberOf<G>,
@@ -151,38 +190,37 @@ where
     QuoteG: Group,
 {
     root_to_leaf: Iter,
-    feeds: &'a PriceFeeds<G>,
-    storage: &'a dyn Storage,
+    feeds: &'a PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
     total_feeders: usize,
-    c_dto: &'def CurrencyDTO<G>,
+    c_dto: CurrencyDTO<G>,
     root_dto: CurrencyDTO<QuoteG>,
     price: Price<QuoteC, QuoteQuoteC>,
     _quote_g: PhantomData<QuoteG>,
 }
-impl<'a, 'def, Iter, C, G, QuoteC, QuoteG> PriceCollect<'a, 'def, Iter, C, G, QuoteC, QuoteG>
+impl<'a, 'config, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
+    PriceCollect<'a, 'config, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     C: CurrencyDef,
     C::Group: MemberOf<G>,
-    G: Group<TopG = G>,
+    G: 'a + Group<TopG = G>,
     QuoteC: CurrencyDef,
     QuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
+    ObservationsRepoImpl: ObservationsReadRepo,
 {
-    fn advance<'new_def, NextC>(
+    fn advance<NextC>(
         self,
         accumulator: Price<NextC, QuoteC>,
-        c_dto: &'new_def CurrencyDTO<G>,
-    ) -> PriceCollect<'a, 'new_def, Iter, NextC, G, QuoteC, QuoteG>
+        c_dto: CurrencyDTO<G>,
+    ) -> PriceCollect<'a, 'config, Iter, NextC, G, QuoteC, QuoteG, ObservationsRepoImpl>
     where
-        'def: 'new_def,
         NextC: Currency + MemberOf<G>,
     {
         PriceCollect {
             root_to_leaf: self.root_to_leaf,
             feeds: self.feeds,
-            storage: self.storage,
             at: self.at,
             total_feeders: self.total_feeders,
             c_dto,
@@ -200,8 +238,8 @@ where
         }
     }
 }
-impl<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG> AnyVisitor<G>
-    for PriceCollect<'a, 'def, Iter, QuoteC, G, QuoteQuoteC, QuoteG>
+impl<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl> AnyVisitor<G>
+    for PriceCollect<'a, 'config, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
     QuoteC: CurrencyDef,
@@ -210,6 +248,7 @@ where
     QuoteQuoteC: CurrencyDef,
     QuoteQuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
+    ObservationsRepoImpl: ObservationsReadRepo,
 {
     type Output = BasePrice<G, QuoteQuoteC, QuoteG>;
     type Error = PriceFeedsError;
@@ -221,66 +260,14 @@ where
     {
         let next_c = def.into_super_group::<G>();
         let next_price = self.feeds.price_of_feed::<C, QuoteC>(
-            &next_c,
+            next_c,
             self.c_dto,
-            self.storage,
             self.at,
             self.total_feeders,
         )?;
         let total_price = next_price * self.price;
-        self.advance(total_price, &next_c).do_collect()
+        self.advance(total_price, next_c).do_collect()
     }
-}
-
-fn add_observation<G>(
-    feed_bin: Option<PriceFeedBin>,
-    from: &Addr,
-    at: Timestamp,
-    price: PriceDTO<G>,
-    valid_since: Timestamp,
-) -> Result<PriceFeedBin, PriceFeedsError>
-where
-    G: Group<TopG = G>,
-{
-    debug_assert!(valid_since < at);
-    struct AddObservation<'a, G> {
-        feed_bin: Option<PriceFeedBin>,
-        from: &'a Addr,
-        at: Timestamp,
-        valid_since: Timestamp,
-        group: PhantomData<G>,
-    }
-
-    impl<'a, G> WithPrice for AddObservation<'a, G>
-    where
-        G: Group<TopG = G>,
-    {
-        type G = G;
-        type Output = PriceFeedBin;
-        type Error = PriceFeedsError;
-
-        fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-        where
-            C: Currency,
-            QuoteC: Currency,
-        {
-            load_feed(self.feed_bin).and_then(|feed| {
-                let feed =
-                    feed.add_observation(self.from.clone(), self.at, price, self.valid_since);
-                postcard::to_allocvec(&feed.into_observations()).map_err(Into::into)
-            })
-        }
-    }
-    with_price::execute(
-        price,
-        AddObservation {
-            feed_bin,
-            from,
-            at,
-            valid_since,
-            group: PhantomData,
-        },
-    )
 }
 
 #[cfg(test)]
@@ -295,13 +282,12 @@ mod test {
         percent::Percent,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{Addr, MemoryStorage, Timestamp};
+    use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{error::PriceFeedsError, market_price::Config};
+    use crate::{error::PriceFeedsError, feed::InMemoryRepo, market_price::Config};
 
     use super::PriceFeeds;
 
-    const FEEDS_NAMESPACE: &str = "feeds";
     const FEEDER: &str = "0xifeege";
     const TOTAL_FEEDERS: usize = 1;
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
@@ -313,14 +299,13 @@ mod test {
 
     #[test]
     fn no_feed() {
-        let feeds = PriceFeeds::<SuperGroup>::new(FEEDS_NAMESPACE, config());
-        let storage = MemoryStorage::new();
+        let config = config();
+        let feeds = PriceFeeds::new(InMemoryRepo, &config);
 
         assert_eq!(
             Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC1, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [&currency::dto::<SuperGroupTestC1, _>(),].into_iter()
@@ -331,7 +316,6 @@ mod test {
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC1, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -350,23 +334,16 @@ mod test {
                 .is(Coin::<SubGroupTestC10>::new(18500))
         }
 
-        let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
-        let mut storage = MemoryStorage::new();
-
+        let config = config();
+        let mut feeds = PriceFeeds::new(InMemoryRepo, &config);
         feeds
-            .feed(
-                &mut storage,
-                NOW,
-                &Addr::unchecked(FEEDER),
-                &[build_price().into()],
-            )
+            .feed(NOW, Addr::unchecked(FEEDER), &[build_price().into()])
             .unwrap();
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC1, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -380,7 +357,6 @@ mod test {
             Ok(build_price().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 currency::dto::<SubGroupTestC10, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -394,8 +370,8 @@ mod test {
 
     #[test]
     fn feed_pairs() {
-        let feeds = PriceFeeds::<SuperGroup>::new(FEEDS_NAMESPACE, config());
-        let mut storage = MemoryStorage::new();
+        let config = config();
+        let mut feeds = PriceFeeds::new(InMemoryRepo, &config);
         let new_price75: Price<SuperGroupTestC5, SuperGroupTestC3> =
             price::total_of(Coin::new(1)).is(Coin::new(2));
         let new_price56 =
@@ -405,9 +381,8 @@ mod test {
 
         feeds
             .feed(
-                &mut storage,
                 NOW,
-                &Addr::unchecked(FEEDER),
+                Addr::unchecked(FEEDER),
                 &[new_price51.into(), new_price75.into(), new_price56.into()],
             )
             .unwrap();
@@ -416,7 +391,6 @@ mod test {
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC2, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC2, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -430,7 +404,6 @@ mod test {
             Ok(new_price75.into()),
             feeds.price::<SuperGroupTestC3, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC3, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -444,7 +417,6 @@ mod test {
             Ok(new_price56.into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC4, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -458,7 +430,6 @@ mod test {
             Ok(new_price51.into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 currency::dto::<SubGroupTestC10, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -472,7 +443,6 @@ mod test {
             Ok((new_price75 * new_price56).into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC4, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -487,7 +457,6 @@ mod test {
             Ok((new_price75 * new_price51).into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 currency::dto::<SubGroupTestC10, _>(),
-                &storage,
                 NOW,
                 TOTAL_FEEDERS,
                 [

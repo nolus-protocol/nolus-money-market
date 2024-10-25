@@ -13,10 +13,12 @@ use finance::{
     price::{self, dto::PriceDTO, Price},
 };
 use sdk::{
-    cosmwasm_std::{testing::mock_dependencies, DepsMut, Timestamp},
+    cosmwasm_std::{testing::mock_dependencies, Timestamp},
     testing,
 };
 
+use crate::feed::InMemoryRepo;
+use crate::feed::ObservationsRepo;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
@@ -59,8 +61,8 @@ fn register_feeder() {
 
 #[test]
 fn marketprice_add_feed_expect_err() {
-    let deps = mock_dependencies();
-    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
+    let config = config();
+    let market = PriceFeeds::new(InMemoryRepo, &config);
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -69,7 +71,6 @@ fn marketprice_add_feed_expect_err() {
     let expected_err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
             currency::dto::<SuperGroupTestC3, _>(),
-            &deps.storage,
             ts,
             TOTAL_FEEDERS,
             [
@@ -84,8 +85,8 @@ fn marketprice_add_feed_expect_err() {
 
 #[test]
 fn marketprice_add_feed_empty_vec() {
-    let mut deps = mock_dependencies();
-    let market = PriceFeeds::new("foo", config());
+    let config = config();
+    let mut market = PriceFeeds::new(InMemoryRepo, &config);
     let f_address = testing::user("address1");
 
     let now = SystemTime::now()
@@ -94,15 +95,13 @@ fn marketprice_add_feed_empty_vec() {
     let ts = Timestamp::from_seconds(now.as_secs());
 
     let prices: Vec<PriceDTO<SuperGroup>> = Vec::new();
-    market
-        .feed(&mut deps.storage, ts, &f_address, &prices)
-        .unwrap();
+    market.feed(ts, f_address, &prices).unwrap();
 }
 
 #[test]
 fn marketprice_add_feed() {
-    let mut deps = mock_dependencies();
-    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
+    let config = config();
+    let mut market = PriceFeeds::new(InMemoryRepo, &config);
     let f_address = testing::user("address1");
 
     let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
@@ -116,13 +115,10 @@ fn marketprice_add_feed() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    market
-        .feed(&mut deps.storage, ts, &f_address, &prices)
-        .unwrap();
+    market.feed(ts, f_address, &prices).unwrap();
     let err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
             currency::dto::<SuperGroupTestC3, _>(),
-            &deps.storage,
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
             [
@@ -138,7 +134,6 @@ fn marketprice_add_feed() {
         let price_resp = market
             .price::<SuperGroupTestC3, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC3, _>(),
-                &deps.storage,
                 ts,
                 TOTAL_FEEDERS,
                 [
@@ -155,73 +150,63 @@ fn marketprice_add_feed() {
 
 #[test]
 fn marketprice_follow_the_path() {
-    let mut deps = mock_dependencies();
-    let market: PriceFeeds<SuperGroup> = PriceFeeds::new("foo", config());
+    let config = config();
+    let mut market = PriceFeeds::new(InMemoryRepo, &config);
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC3, SubGroupTestC10, _, _>(1, 1),
     )
     .unwrap();
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC1, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC3, SuperGroupTestC5, _, _>(1, 1),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC5, SuperGroupTestC1, _, _>(1, 2),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC1, SuperGroupTestC5, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC4, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SuperGroupTestC2, SuperGroupTestC3, _, _>(1, 3),
     )
     .unwrap();
 
     let last_feed_time = feed_price(
-        deps.as_mut(),
-        &market,
+        &mut market,
         price::<SubGroupTestC6, SuperGroupTestC2, _, _>(1, 3),
     )
     .unwrap();
@@ -229,7 +214,6 @@ fn marketprice_follow_the_path() {
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
             currency::dto::<SuperGroupTestC2, _>(),
-            &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
             [
@@ -250,7 +234,6 @@ fn marketprice_follow_the_path() {
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
             currency::dto::<SuperGroupTestC2, _>(),
-            &deps.storage,
             last_feed_time,
             TOTAL_FEEDERS,
             [
@@ -267,7 +250,6 @@ fn marketprice_follow_the_path() {
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC2, _>(),
-                &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
@@ -285,7 +267,6 @@ fn marketprice_follow_the_path() {
         market
             .price::<SuperGroupTestC5, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC5, _>(),
-                &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
@@ -303,7 +284,6 @@ fn marketprice_follow_the_path() {
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
                 currency::dto::<SuperGroupTestC2, _>(),
-                &deps.storage,
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
@@ -318,9 +298,8 @@ fn marketprice_follow_the_path() {
     );
 }
 
-fn feed_price<C1, C2, G>(
-    deps: DepsMut<'_>,
-    market: &PriceFeeds<G>,
+fn feed_price<C1, C2, G, ObservationsRepoT>(
+    market: &mut PriceFeeds<'_, G, ObservationsRepoT>,
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where
@@ -329,6 +308,7 @@ where
     C2: CurrencyDef,
     C2::Group: MemberOf<G>,
     G: Group<TopG = G>,
+    ObservationsRepoT: ObservationsRepo,
 {
     let f_address = testing::user("address1");
 
@@ -339,8 +319,7 @@ where
 
     let price = PriceDTO::<G>::from(price);
 
-    market.feed(deps.storage, ts, &f_address, &[price])?;
-    Ok(ts)
+    market.feed(ts, f_address, &[price]).map(|()| ts)
 }
 
 fn config() -> Config {

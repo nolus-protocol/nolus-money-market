@@ -68,7 +68,7 @@ where
                     .ok()
                     .map(|parent_price| {
                         self.price_querier
-                            .price::<B, Q>(dto1, dto2)
+                            .price::<B, Q>(*dto1, *dto2)
                             .map(|res_price| {
                                 res_price.map(|price| {
                                     (i + 1, BasePrice::from_price(price * parent_price, *dto1))

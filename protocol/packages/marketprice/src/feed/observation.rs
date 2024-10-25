@@ -17,7 +17,7 @@ where
 }
 
 #[track_caller]
-pub fn valid_since<C, QuoteC>(since: Timestamp) -> impl FnMut(&Observation<C, QuoteC>) -> bool
+pub fn valid_since<C, QuoteC>(since: Timestamp) -> impl Fn(&Observation<C, QuoteC>) -> bool
 where
     C: 'static,
     QuoteC: 'static,
@@ -48,5 +48,20 @@ impl<C, QuoteC> Observation<C, QuoteC> {
 
     pub fn seen(&self, before_or_at: Timestamp) -> bool {
         self.time <= before_or_at
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl<C, QuoteC> Clone for Observation<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            feeder_addr: self.feeder_addr.clone(),
+            time: self.time,
+            price: self.price,
+        }
     }
 }

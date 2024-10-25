@@ -20,7 +20,6 @@ sdk = { workspace = true, features = ["storage", "schema"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-postcard = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }

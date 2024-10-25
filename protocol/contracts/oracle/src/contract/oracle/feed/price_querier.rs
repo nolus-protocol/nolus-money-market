@@ -1,27 +1,25 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::Price;
-use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
-use sdk::cosmwasm_std::{Storage, Timestamp};
+use marketprice::{error::PriceFeedsError, market_price::PriceFeeds, ObservationsReadRepo};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::ContractError;
 
-pub struct FedPrices<'a, G>
+pub struct FedPrices<'a, 'config, G, Observations>
 where
     G: Group,
 {
-    storage: &'a dyn Storage,
-    feeds: &'a PriceFeeds<G>,
+    feeds: &'a PriceFeeds<'config, G, Observations>,
     at: Timestamp,
     total_feeders: usize,
 }
 
-impl<'a, G> FedPrices<'a, G>
+impl<'a, 'config, G, Observations> FedPrices<'a, 'config, G, Observations>
 where
     G: Group,
 {
     pub fn new(
-        storage: &'a dyn Storage,
-        feeds: &'a PriceFeeds<G>,
+        feeds: &'a PriceFeeds<'config, G, Observations>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Self {
@@ -29,7 +27,6 @@ where
             feeds,
             at,
             total_feeders,
-            storage,
         }
     }
 }
@@ -39,32 +36,33 @@ pub trait PriceQuerier {
 
     fn price<C, QuoteC>(
         &self,
-        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
-        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
+        amount_c: CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: CurrencyDTO<Self::CurrencyGroup>,
     ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
         QuoteC: Currency + MemberOf<Self::CurrencyGroup>;
 }
 
-impl<'a, G> PriceQuerier for FedPrices<'a, G>
+impl<'a, 'config, G, Observations> PriceQuerier for FedPrices<'a, 'config, G, Observations>
 where
     G: Group<TopG = G>,
+    Observations: ObservationsReadRepo,
 {
     type CurrencyGroup = G;
 
     fn price<C, QuoteC>(
         &self,
-        amount_c: &CurrencyDTO<Self::CurrencyGroup>,
-        quote_c: &CurrencyDTO<Self::CurrencyGroup>,
+        amount_c: CurrencyDTO<Self::CurrencyGroup>,
+        quote_c: CurrencyDTO<Self::CurrencyGroup>,
     ) -> Result<Option<Price<C, QuoteC>>, ContractError>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
         QuoteC: Currency + MemberOf<Self::CurrencyGroup>,
     {
-        let price =
-            self.feeds
-                .price_of_feed(amount_c, quote_c, self.storage, self.at, self.total_feeders);
+        let price = self
+            .feeds
+            .price_of_feed(amount_c, quote_c, self.at, self.total_feeders);
         maybe_price(price)
     }
 }
@@ -76,10 +74,13 @@ where
     B: Currency,
     Q: Currency,
 {
-    Ok(price.map(Some).or_else(|err| match err {
-        PriceFeedsError::NoPrice() => Ok(None),
-        _ => Err(err),
-    })?)
+    price
+        .map(Some)
+        .or_else(|err| match err {
+            PriceFeedsError::NoPrice() => Ok(None),
+            _ => Err(err),
+        })
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

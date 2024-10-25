@@ -1,56 +1,40 @@
 use std::{collections::HashSet, marker::PhantomData};
 
 use finance::{fraction::Fraction, percent::Percent, price::Price};
+use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
 
-use self::observation::Observation;
-pub(crate) use memory::InMemoryObservations as ObservationsStore;
+#[cfg(any(test, feature = "testing"))]
+pub use self::memory::InMemoryRepo;
+pub(crate) use self::observation::{valid_since, Observation};
+pub use self::{
+    cw::Repo,
+    observations::{ObservationsReadRepo, ObservationsRepo},
+};
 
+mod cw;
+#[cfg(any(test, feature = "testing"))]
 mod memory;
 mod observation;
+mod observations;
 mod sample;
-
-pub trait Observations<'item, C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    type AsIter: Iterator<Item = &'item Observation<C, QuoteC>>;
-
-    fn retain(&'item mut self, valid_since: Timestamp);
-    fn register(&'item mut self, observation: Observation<C, QuoteC>);
-    fn as_iter(&'item self) -> Self::AsIter;
-}
 
 pub struct PriceFeed<C, QuoteC, ObservationsImpl>
 where
     C: 'static,
     QuoteC: 'static,
-    ObservationsImpl: for<'item> Observations<'item, C, QuoteC>,
 {
     observations: ObservationsImpl,
     _c_type: PhantomData<C>,
     _quote_c_type: PhantomData<QuoteC>,
 }
 
-impl<C, QuoteC, ObservationsImpl> Default for PriceFeed<C, QuoteC, ObservationsImpl>
-where
-    C: 'static,
-    QuoteC: 'static,
-    ObservationsImpl: for<'item> Observations<'item, C, QuoteC> + Default,
-{
-    fn default() -> Self {
-        Self::with(ObservationsImpl::default())
-    }
-}
-
 impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
     C: 'static,
     QuoteC: 'static,
-    ObservationsImpl: for<'item> Observations<'item, C, QuoteC>,
 {
     pub fn with(observations: ObservationsImpl) -> Self {
         Self {
@@ -59,26 +43,14 @@ where
             _quote_c_type: PhantomData,
         }
     }
+}
 
-    pub fn into_observations(self) -> ObservationsImpl {
-        self.observations
-    }
-
-    pub fn add_observation(
-        mut self,
-        from: Addr,
-        at: Timestamp,
-        price: Price<C, QuoteC>,
-        valid_since: Timestamp,
-    ) -> Self {
-        debug_assert!(valid_since < at, "{valid_since} >= {at}");
-        self.observations.retain(valid_since);
-
-        self.observations
-            .register(Observation::new(from, at, price));
-        self
-    }
-
+impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
+where
+    C: 'static,
+    QuoteC: 'static,
+    ObservationsImpl: ObservationsRead<C, QuoteC>,
+{
     /// Calculate the price of this feed
     ///
     /// Provide no price if there are no observations from at least configurable percentage * <number_of_whitelisted_feeders>.
@@ -92,13 +64,14 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError> {
         let valid_since = config.feed_valid_since(at);
-        if !self.has_enough_feeders(valid_since, config, total_feeders) {
+        let observations = self.valid_observations(valid_since)?; //TODO integrate filtering and enough-feeders check into samples builder
+
+        if !self.has_enough_feeders(observations.iter(), config, total_feeders) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        let observations = self.valid_observations(valid_since);
-
-        let samples = sample::from_observations(observations, valid_since, config.sample_period());
+        let samples =
+            sample::from_observations(observations.iter(), valid_since, config.sample_period());
 
         let discount_factor = config.discount_factor();
 
@@ -115,25 +88,67 @@ where
             .ok_or(PriceFeedsError::NoPrice {})
     }
 
-    fn has_enough_feeders(&self, since: Timestamp, config: &Config, total_feeders: usize) -> bool {
-        self.count_unique_feeders(since) >= config.min_feeders(total_feeders)
-    }
-
-    fn count_unique_feeders(&self, since: Timestamp) -> usize {
-        self.valid_observations(since)
-            .map(Observation::feeder)
-            .collect::<HashSet<_>>()
-            .len()
-    }
-
     fn valid_observations(
         &self,
         since: Timestamp,
-    ) -> impl Iterator<Item = &Observation<C, QuoteC>> {
-        let mut valid_observations = observation::valid_since(since);
+    ) -> Result<Vec<Observation<C, QuoteC>>, PriceFeedsError> {
+        let valid_observations = observation::valid_since(since);
+        self.observations.as_iter().and_then(|mut items| {
+            items.try_fold(
+                Vec::with_capacity(self.observations.len()),
+                |mut acc, may_item| {
+                    may_item.map(|item| {
+                        if valid_observations(&item) {
+                            acc.push(item);
+                        }
+                        acc
+                    })
+                },
+            )
+        })
+    }
+
+    fn has_enough_feeders<'items, Observations>(
+        &self,
+        items: Observations,
+        config: &Config,
+        total_feeders: usize,
+    ) -> bool
+    where
+        Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
+    {
+        self.count_unique_feeders(items) >= config.min_feeders(total_feeders)
+    }
+
+    fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> usize
+    where
+        Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
+    {
+        items.map(Observation::feeder).collect::<HashSet<_>>().len()
+    }
+}
+
+impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
+where
+    C: 'static,
+    QuoteC: 'static,
+    ObservationsImpl: Observations<C, QuoteC>,
+{
+    pub fn add_observation(
+        mut self,
+        from: Addr,
+        at: Timestamp,
+        price: Price<C, QuoteC>,
+        valid_since: Timestamp,
+    ) -> Result<Self, PriceFeedsError> {
+        debug_assert!(valid_since < at, "{valid_since} >= {at}");
         self.observations
-            .as_iter()
-            .filter(move |&o| valid_observations(o))
+            .retain(valid_since)
+            .and_then(|()| {
+                self.observations
+                    .register(Observation::new(from, at, price))
+            })
+            .map(|()| self)
     }
 }
 
@@ -150,7 +165,7 @@ mod test {
 
     use crate::{config::Config, error::PriceFeedsError, feed::memory::InMemoryObservations};
 
-    use super::PriceFeed;
+    use super::{Observations, PriceFeed};
 
     const ONE_FEEDER: usize = 1;
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
@@ -160,7 +175,11 @@ mod test {
 
     type TestC = SuperGroupTestC4;
     type TestQuoteC = SuperGroupTestC5;
-    type TestObservations = InMemoryObservations<TestC, TestQuoteC>;
+    // type TestObservations = InMemoryObservations<TestC, TestQuoteC>;
+
+    fn feed() -> PriceFeed<TestC, TestQuoteC, impl Observations<TestC, TestQuoteC>> {
+        PriceFeed::with(InMemoryObservations::<TestC, TestQuoteC>::new())
+    }
 
     #[test]
     fn old_observations() {
@@ -176,13 +195,15 @@ mod test {
         let feed1_time = block_time - VALIDITY;
         let feed1_price = price(20, 5000);
 
-        let mut feed = PriceFeed::<_, _, TestObservations>::default();
-        feed = feed.add_observation(
-            feeder1.clone(),
-            feed1_time,
-            feed1_price,
-            config.feed_valid_since(feed1_time),
-        );
+        let mut feed = feed();
+        feed = feed
+            .add_observation(
+                feeder1.clone(),
+                feed1_time,
+                feed1_price,
+                config.feed_valid_since(feed1_time),
+            )
+            .unwrap();
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
@@ -191,7 +212,9 @@ mod test {
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
-        feed = feed.add_observation(feeder1, feed2_time, feed2_price, feed1_time);
+        feed = feed
+            .add_observation(feeder1, feed2_time, feed2_price, feed1_time)
+            .unwrap();
         assert_eq!(
             Ok(feed2_price),
             feed.calc_price(&config, block_time, ONE_FEEDER)
@@ -207,13 +230,15 @@ mod test {
         let feed1_time = block_time;
         let feed1_price = price(20, 5000);
 
-        let mut feed = PriceFeed::<_, _, TestObservations>::default();
-        feed = feed.add_observation(
-            feeder1,
-            feed1_time,
-            feed1_price,
-            block_time - validity_period,
-        );
+        let mut feed = feed();
+        feed = feed
+            .add_observation(
+                feeder1,
+                feed1_time,
+                feed1_price,
+                block_time - validity_period,
+            )
+            .unwrap();
 
         let config = Config::new(
             Percent::HUNDRED,
@@ -241,23 +266,27 @@ mod test {
         let feed1_time = block_time - validity_period;
         let feed1_price = price(19, 5100);
 
-        let mut feed = PriceFeed::<_, _, TestObservations>::default();
-        feed = feed.add_observation(
-            feeder1,
-            feed1_time,
-            feed1_price,
-            feed1_time - validity_period,
-        );
+        let mut feed = feed();
+        feed = feed
+            .add_observation(
+                feeder1,
+                feed1_time,
+                feed1_price,
+                feed1_time - validity_period,
+            )
+            .unwrap();
 
         let feeder2 = Addr::unchecked("feeder2");
         let feed2_time = block_time - validity_period + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
-        feed = feed.add_observation(
-            feeder2,
-            feed2_time,
-            feed2_price,
-            feed2_time - validity_period,
-        );
+        feed = feed
+            .add_observation(
+                feeder2,
+                feed2_time,
+                feed2_price,
+                feed2_time - validity_period,
+            )
+            .unwrap();
 
         let config = Config::new(
             Percent::from_percent(50),
@@ -310,32 +339,42 @@ mod test {
         let feeder1 = Addr::unchecked("feeder1");
         let feeder2 = Addr::unchecked("feeder2");
 
-        let mut feed = PriceFeed::<_, _, TestObservations>::default();
-        feed = feed.add_observation(
-            feeder1.clone(),
-            s1,
-            price(19, 5160),
-            config.feed_valid_since(s1),
-        );
-        feed = feed.add_observation(
-            feeder1.clone(),
-            s21,
-            price(19, 5500),
-            config.feed_valid_since(s21),
-        );
-        feed = feed.add_observation(
-            feeder1.clone(),
-            s22,
-            price(19, 5000 + 10),
-            config.feed_valid_since(s22),
-        );
-        feed = feed.add_observation(
-            feeder2,
-            s22,
-            price(19, 5000 - 10),
-            config.feed_valid_since(s22),
-        );
-        feed = feed.add_observation(feeder1, s3, price(19, 5000), config.feed_valid_since(s3));
+        let mut feed = feed();
+        feed = feed
+            .add_observation(
+                feeder1.clone(),
+                s1,
+                price(19, 5160),
+                config.feed_valid_since(s1),
+            )
+            .unwrap();
+        feed = feed
+            .add_observation(
+                feeder1.clone(),
+                s21,
+                price(19, 5500),
+                config.feed_valid_since(s21),
+            )
+            .unwrap();
+        feed = feed
+            .add_observation(
+                feeder1.clone(),
+                s22,
+                price(19, 5000 + 10),
+                config.feed_valid_since(s22),
+            )
+            .unwrap();
+        feed = feed
+            .add_observation(
+                feeder2,
+                s22,
+                price(19, 5000 - 10),
+                config.feed_valid_since(s22),
+            )
+            .unwrap();
+        feed = feed
+            .add_observation(feeder1, s3, price(19, 5000), config.feed_valid_since(s3))
+            .unwrap();
 
         assert_eq!(
             Ok(price(19, 5010)),

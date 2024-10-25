@@ -1,48 +1,95 @@
-use std::slice::Iter;
+// use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-
-use currency::Currency;
+use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::Timestamp;
+
+use crate::error::PriceFeedsError;
 
 use super::{
     observation::{self, Observation},
-    Observations,
+    observations::{ObservationsReadRepo, ObservationsRepo},
+    Observations, ObservationsRead,
 };
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
 pub(crate) struct InMemoryObservations<C, QuoteC>(Vec<Observation<C, QuoteC>>)
 where
     C: 'static,
     QuoteC: 'static;
 
-impl<'item, C, QuoteC> Observations<'item, C, QuoteC> for InMemoryObservations<C, QuoteC>
+impl<C, QuoteC> InMemoryObservations<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
-    type AsIter = Iter<'item, Observation<C, QuoteC>>;
-
-    fn retain(&'item mut self, valid_since: Timestamp) {
-        self.0.retain(observation::valid_since(valid_since))
-    }
-
-    fn register(&'item mut self, observation: Observation<C, QuoteC>) {
-        self.0.push(observation);
-    }
-
-    fn as_iter(&'item self) -> Self::AsIter {
-        self.0.iter()
+    pub(crate) fn new() -> Self {
+        Self(Default::default())
     }
 }
 
-impl<C, QuoteC> Default for InMemoryObservations<C, QuoteC>
+impl<C, QuoteC> ObservationsRead<C, QuoteC> for InMemoryObservations<C, QuoteC>
 where
-    C: Currency,
-    QuoteC: Currency,
+    C: 'static,
+    QuoteC: 'static,
 {
-    fn default() -> Self {
-        Self(Default::default())
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn as_iter(
+        &self,
+    ) -> Result<
+        impl Iterator<Item = Result<Observation<C, QuoteC>, PriceFeedsError>>,
+        PriceFeedsError,
+    > {
+        Ok(self.0.clone().into_iter().map(Result::Ok))
+    }
+}
+
+impl<C, QuoteC> Observations<C, QuoteC> for InMemoryObservations<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn retain(&mut self, valid_since: Timestamp) -> Result<(), PriceFeedsError> {
+        self.0.retain(observation::valid_since(valid_since));
+        Ok(())
+    }
+
+    fn register(&mut self, observation: Observation<C, QuoteC>) -> Result<(), PriceFeedsError> {
+        self.0.push(observation);
+        Ok(())
+    }
+}
+
+// pub struct InMemoryRepo(HashMap<(CurrencyDTO<G>, CurrencyDTO<G>), InMemoryObservations<>>);
+pub struct InMemoryRepo;
+
+impl ObservationsReadRepo for InMemoryRepo {
+    fn observations_read<C, QuoteC, G>(
+        &self,
+        _c: CurrencyDTO<G>,
+        _quote_c: CurrencyDTO<G>,
+    ) -> impl ObservationsRead<C, QuoteC>
+    where
+        C: 'static,
+        QuoteC: 'static,
+        G: Group,
+    {
+        InMemoryObservations::new()
+    }
+}
+
+impl ObservationsRepo for InMemoryRepo {
+    fn observations<C, QuoteC, G>(
+        &mut self,
+        _c: CurrencyDTO<G>,
+        _quote_c: CurrencyDTO<G>,
+    ) -> impl Observations<C, QuoteC>
+    where
+        C: 'static,
+        QuoteC: 'static,
+        G: Group,
+    {
+        InMemoryObservations::new()
     }
 }

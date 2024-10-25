@@ -11,13 +11,13 @@ use super::observation::Observation;
 /// takes the last by feeder, and computes an average for each period.
 /// If there are no observations for a period, the sample from the last
 /// period is yielded again.
-pub fn from_observations<'a, IterO, C, QuoteC>(
-    observations: IterO,
+pub fn from_observations<'a, Observations, C, QuoteC>(
+    observations: Observations,
     start_from: Timestamp,
     sample_span: Duration,
 ) -> impl Iterator<Item = Sample<C, QuoteC>> + 'a
 where
-    IterO: Iterator<Item = &'a Observation<C, QuoteC>> + 'a,
+    Observations: Iterator<Item = &'a Observation<C, QuoteC>> + 'a,
     C: 'static,
     QuoteC: 'static,
 {
@@ -108,7 +108,7 @@ where
             let sum = values.fold(*first, |acc, current| acc + *current);
             let part = Rational::new(1, prices_number);
             let avg = Fraction::<usize>::of(&part, sum);
-            self.last_sample = Sample { price: Some(avg) }
+            self.last_sample = Sample { price: Some(avg) } //TODO migrate it from a member data to return value
         }
         self.sample_prices.clear();
         self.sample_start += self.sample_span;
