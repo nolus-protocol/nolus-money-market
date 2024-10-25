@@ -44,7 +44,7 @@ impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, Observat
 impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
 where
     PriceG: Group<TopG = PriceG>,
-    ObservationsRepoImpl: ObservationsReadRepo,
+    ObservationsRepoImpl: ObservationsReadRepo<Group = PriceG>,
 {
     pub fn price<'m, 'a, QuoteC, QuoteG, Iter>(
         &'m self,
@@ -93,16 +93,16 @@ where
     {
         PriceFeed::with(
             self.observations_repo
-                .observations_read::<C, QuoteC, PriceG>(amount_c, quote_c),
+                .observations_read::<C, QuoteC>(amount_c, quote_c),
         )
-        .calc_price(&self.config, at, total_feeders)
+        .calc_price(self.config, at, total_feeders)
     }
 }
 
 impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
 where
     PriceG: Group<TopG = PriceG>,
-    ObservationsRepoImpl: ObservationsRepo,
+    ObservationsRepoImpl: ObservationsRepo<Group = PriceG>,
 {
     /// Feed new price observations
     ///
@@ -147,7 +147,7 @@ where
         impl<'feeds, G, ObservationsRepoImpl> WithPrice for AddObservation<'feeds, G, ObservationsRepoImpl>
         where
             G: Group<TopG = G>,
-            ObservationsRepoImpl: ObservationsRepo,
+            ObservationsRepoImpl: ObservationsRepo<Group = G>,
         {
             type G = G;
             type Output = ();
@@ -160,7 +160,7 @@ where
             {
                 PriceFeed::with(
                     self.observations
-                        .observations::<C, QuoteC, G>(&self.amount_c, &self.quote_c),
+                        .observations::<C, QuoteC>(&self.amount_c, &self.quote_c),
                 )
                 .add_observation(self.from, self.at, price, self.valid_since)
                 .map(mem::drop)
@@ -217,7 +217,7 @@ where
     QuoteC: CurrencyDef,
     QuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
-    ObservationsRepoImpl: ObservationsReadRepo,
+    ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
 {
     fn advance<'new_currency, NextC>(
         self,
@@ -279,7 +279,7 @@ where
     QuoteQuoteC: CurrencyDef,
     QuoteQuoteC::Group: MemberOf<QuoteG> + MemberOf<G>,
     QuoteG: Group,
-    ObservationsRepoImpl: ObservationsReadRepo,
+    ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
 {
     type Output = BasePrice<G, QuoteQuoteC, QuoteG>;
     type Error = PriceFeedsError;
@@ -331,7 +331,7 @@ mod test {
     #[test]
     fn no_feed() {
         let config = config();
-        let feeds = PriceFeeds::new(InMemoryRepo, &config);
+        let feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
 
         assert_eq!(
             Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
@@ -366,7 +366,7 @@ mod test {
         }
 
         let config = config();
-        let mut feeds = PriceFeeds::new(InMemoryRepo, &config);
+        let mut feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
         feeds
             .feed(NOW, Addr::unchecked(FEEDER), &[build_price().into()])
             .unwrap();
@@ -402,7 +402,7 @@ mod test {
     #[test]
     fn feed_pairs() {
         let config = config();
-        let mut feeds = PriceFeeds::new(InMemoryRepo, &config);
+        let mut feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
         let new_price75: Price<SuperGroupTestC5, SuperGroupTestC3> =
             price::total_of(Coin::new(1)).is(Coin::new(2));
         let new_price56 =

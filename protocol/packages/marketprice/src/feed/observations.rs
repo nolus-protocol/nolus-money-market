@@ -38,28 +38,28 @@ where
 }
 
 pub trait ObservationsReadRepo {
-    fn observations_read<C, QuoteC, G>(
+    type Group: Group;
+
+    fn observations_read<C, QuoteC>(
         &self,
-        c: &CurrencyDTO<G>,
-        quote_c: &CurrencyDTO<G>,
+        c: &CurrencyDTO<Self::Group>,
+        quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
-        QuoteC: 'static,
-        G: Group;
+        QuoteC: 'static;
 }
 
 pub trait ObservationsRepo
 where
     Self: ObservationsReadRepo,
 {
-    fn observations<C, QuoteC, G>(
+    fn observations<C, QuoteC>(
         &mut self,
-        c: &CurrencyDTO<G>,
-        quote_c: &CurrencyDTO<G>,
+        c: &CurrencyDTO<Self::Group>,
+        quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,
-        QuoteC: 'static,
-        G: Group;
+        QuoteC: 'static;
 }

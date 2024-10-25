@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::Storage;
@@ -13,27 +16,29 @@ use crate::{
 
 use super::observations::Deque;
 
-pub struct Repo<'storage, S>
+pub struct Repo<'storage, S, G>
 where
     S: Deref<Target = dyn Storage + 'storage>,
 {
     root_ns: &'static str,
     storage: S,
+    _group: PhantomData<G>,
 }
 
-impl<'storage, S> Repo<'storage, S>
+impl<'storage, S, G> Repo<'storage, S, G>
 where
     S: Deref<Target = dyn Storage + 'storage>,
+    G: Group,
 {
     pub fn new(root_ns: &'static str, storage: S) -> Self {
-        Self { root_ns, storage }
+        Self {
+            root_ns,
+            storage,
+            _group: PhantomData,
+        }
     }
 
-    fn storage_ns<G>(
-        &self,
-        c: &currency::CurrencyDTO<G>,
-        quote_c: &currency::CurrencyDTO<G>,
-    ) -> String
+    fn storage_ns(&self, c: &currency::CurrencyDTO<G>, quote_c: &currency::CurrencyDTO<G>) -> String
     where
         G: Group,
     {
@@ -41,14 +46,17 @@ where
     }
 }
 
-impl<'storage, S> ObservationsReadRepo for Repo<'storage, S>
+impl<'storage, S, G> ObservationsReadRepo for Repo<'storage, S, G>
 where
     S: Deref<Target = dyn Storage + 'storage>,
+    G: Group,
 {
-    fn observations_read<C, QuoteC, G>(
+    type Group = G;
+
+    fn observations_read<C, QuoteC>(
         &self,
-        c: &currency::CurrencyDTO<G>,
-        quote_c: &currency::CurrencyDTO<G>,
+        c: &currency::CurrencyDTO<Self::Group>,
+        quote_c: &currency::CurrencyDTO<Self::Group>,
     ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
@@ -59,14 +67,15 @@ where
     }
 }
 
-impl<'storage, S> ObservationsRepo for Repo<'storage, S>
+impl<'storage, S, G> ObservationsRepo for Repo<'storage, S, G>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    G: Group,
 {
-    fn observations<C, QuoteC, G>(
+    fn observations<C, QuoteC>(
         &mut self,
-        c: &CurrencyDTO<G>,
-        quote_c: &CurrencyDTO<G>,
+        c: &CurrencyDTO<Self::Group>,
+        quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,

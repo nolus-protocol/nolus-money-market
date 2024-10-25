@@ -171,7 +171,7 @@ where
     fn calc_all_prices<'self_, 'tree, 'feeds, 'st>(
         &'self_ self,
         tree: &'tree SupportedPairs<PriceG, BaseC>,
-        feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st)>>,
+        feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st), PriceG>>,
         at: Timestamp,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'feeds
     where
@@ -189,14 +189,14 @@ where
 
     fn feeds_read_only(
         &self,
-    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &(dyn Storage + 'storage)>> {
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &(dyn Storage + 'storage), PriceG>> {
         Self::feeds(&self.config.price_config, self.storage.deref())
     }
 
     fn feeds<'repo_storage, RepoStorage>(
         config: &PriceConfig,
         repo_storage: RepoStorage,
-    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'repo_storage, RepoStorage>>
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'repo_storage, RepoStorage, PriceG>>
     where
         RepoStorage: Deref<Target = dyn Storage + 'repo_storage>,
     {
@@ -216,7 +216,7 @@ where
     const EVENT_TYPE: &'static str = "pricealarm";
 
     pub(super) fn wipe_out_v2(store: &mut dyn Storage) {
-        Feeds::<PriceG, BaseC, BaseG, Repo<S>>::wipe_out_v2(store)
+        Feeds::<PriceG, BaseC, BaseG, Repo<'_, S, PriceG>>::wipe_out_v2(store)
     }
 
     pub(super) fn try_feed_prices(
@@ -281,7 +281,8 @@ where
 
     fn feeds_read_write(
         &mut self,
-    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &mut (dyn Storage + 'storage)>> {
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &mut (dyn Storage + 'storage), PriceG>>
+    {
         Self::feeds(&self.config.price_config, self.storage.deref_mut())
     }
 }

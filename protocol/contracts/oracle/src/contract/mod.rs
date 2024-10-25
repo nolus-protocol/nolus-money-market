@@ -210,7 +210,8 @@ fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()>
 }
 
 fn try_clean_feeds(store: &mut dyn Storage) -> ContractResult<()> {
-    Ok(Oracle::<'_, &mut dyn Storage>::wipe_out_v2(store))
+    Oracle::<'_, &mut dyn Storage>::wipe_out_v2(store);
+    Ok(())
 }
 
 fn to_json_binary<T>(data: &T) -> ContractResult<Binary>

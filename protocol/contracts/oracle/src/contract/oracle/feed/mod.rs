@@ -48,7 +48,7 @@ where
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
-    Observations: ObservationsReadRepo,
+    Observations: ObservationsReadRepo<Group = PriceG>,
 {
     pub fn all_prices_iter<'r, 'self_, 'storage, I>(
         &'self_ self,
@@ -94,7 +94,7 @@ where
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
-    Observations: ObservationsRepo,
+    Observations: ObservationsRepo<Group = PriceG>,
 {
     pub(crate) fn feed_prices(
         &mut self,
@@ -174,7 +174,7 @@ mod test {
             Ok(self
                 .0
                 .get(&(amount_c.first_key(), quote_c.first_key()))
-                .map(|dto| dto.as_specific(&amount_c, &quote_c)))
+                .map(|dto| dto.as_specific(amount_c, quote_c)))
         }
     }
 
@@ -213,7 +213,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let mut oracle = Feeds::with(&config, InMemoryRepo);
+            let mut oracle = Feeds::with(&config, InMemoryRepo::new());
 
             oracle
                 .feed_prices(
@@ -266,7 +266,7 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let mut oracle = Feeds::with(&config, InMemoryRepo);
+            let mut oracle = Feeds::with(&config, InMemoryRepo::new());
 
             oracle
                 .feed_prices(

@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::Timestamp;
 
@@ -64,13 +66,24 @@ where
 }
 
 // pub struct InMemoryRepo(HashMap<(CurrencyDTO<G>, CurrencyDTO<G>), InMemoryObservations<>>);
-pub struct InMemoryRepo;
+pub struct InMemoryRepo<G>(PhantomData<G>);
 
-impl ObservationsReadRepo for InMemoryRepo {
-    fn observations_read<C, QuoteC, G>(
+impl<G> InMemoryRepo<G> {
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<G> ObservationsReadRepo for InMemoryRepo<G>
+where
+    G: Group,
+{
+    type Group = G;
+
+    fn observations_read<C, QuoteC>(
         &self,
-        _c: &CurrencyDTO<G>,
-        _quote_c: &CurrencyDTO<G>,
+        _c: &CurrencyDTO<Self::Group>,
+        _quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
     where
         C: 'static,
@@ -81,11 +94,14 @@ impl ObservationsReadRepo for InMemoryRepo {
     }
 }
 
-impl ObservationsRepo for InMemoryRepo {
-    fn observations<C, QuoteC, G>(
+impl<G> ObservationsRepo for InMemoryRepo<G>
+where
+    G: Group,
+{
+    fn observations<C, QuoteC>(
         &mut self,
-        _c: &CurrencyDTO<G>,
-        _quote_c: &CurrencyDTO<G>,
+        _c: &CurrencyDTO<Self::Group>,
+        _quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl Observations<C = C, QuoteC = QuoteC>
     where
         C: 'static,
@@ -93,5 +109,11 @@ impl ObservationsRepo for InMemoryRepo {
         G: Group,
     {
         InMemoryObservations::new()
+    }
+}
+
+impl<G> Default for InMemoryRepo<G> {
+    fn default() -> Self {
+        Self::new()
     }
 }

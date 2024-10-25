@@ -47,7 +47,7 @@ pub trait PriceQuerier {
 impl<'a, 'config, G, Observations> PriceQuerier for FedPrices<'a, 'config, G, Observations>
 where
     G: Group<TopG = G>,
-    Observations: ObservationsReadRepo,
+    Observations: ObservationsReadRepo<Group = G>,
 {
     type CurrencyGroup = G;
 

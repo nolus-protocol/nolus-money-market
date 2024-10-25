@@ -62,7 +62,7 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let config = config();
-    let market = PriceFeeds::new(InMemoryRepo, &config);
+    let market = PriceFeeds::new(InMemoryRepo::new(), &config);
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -86,7 +86,7 @@ fn marketprice_add_feed_expect_err() {
 #[test]
 fn marketprice_add_feed_empty_vec() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo, &config);
+    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
     let f_address = testing::user("address1");
 
     let now = SystemTime::now()
@@ -101,7 +101,7 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo, &config);
+    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
     let f_address = testing::user("address1");
 
     let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
@@ -151,7 +151,7 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo, &config);
+    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
 
     feed_price(
         &mut market,
@@ -308,7 +308,7 @@ where
     C2: CurrencyDef,
     C2::Group: MemberOf<G>,
     G: Group<TopG = G>,
-    ObservationsRepoT: ObservationsRepo,
+    ObservationsRepoT: ObservationsRepo<Group = G>,
 {
     let f_address = testing::user("address1");
 
