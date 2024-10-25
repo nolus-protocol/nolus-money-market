@@ -195,10 +195,43 @@ where
         host_to_dex_path: &[host_to_dex::Channel<'_>],
         ticker: &currency::Id,
     ) -> Result<HostLocality, error::ResolveCurrency> {
+        let (bank_symbol, mut network_windows) = Self::initial_bank_symbol_and_path(
+            &self.traversed_networks,
+            host_network,
+            host_to_dex_path,
+        );
+
+        network_windows
+            .try_fold(bank_symbol, Self::fold_bank_side_in_windows(channels))
+            .map(|bank_symbol| {
+                CurrencyDefinition::new(
+                    ticker.as_ref().into(),
+                    bank_symbol.add_symbol(self.currency.symbol()),
+                    self.dex_symbol.add_symbol(self.currency.symbol()),
+                    self.currency.decimal_digits(),
+                )
+            })
+            .map(|currency_definition| {
+                if self.host_local {
+                    HostLocality::Local(currency_definition)
+                } else {
+                    HostLocality::Remote(currency_definition)
+                }
+            })
+    }
+
+    fn initial_bank_symbol_and_path<'traversed_networks, 'traversed_network_id>(
+        traversed_networks: &'traversed_networks [&'traversed_network_id network::Id],
+        host_network: &network::Host,
+        host_to_dex_path: &[host_to_dex::Channel<'_>],
+    ) -> (
+        symbol::Builder,
+        impl Iterator<Item = [&'traversed_network_id network::Id; 2]>
+            + Captures<&'traversed_networks [&'traversed_network_id network::Id]>,
+    ) {
         let mut bank_symbol = symbol::Builder::NEW;
 
-        let bank_symbol_traversal_start = self
-            .traversed_networks
+        let traversal_start = traversed_networks
             .iter()
             .enumerate()
             .find_map(|(index, &network)| (*network == *host_network.name()).then_some(index))
@@ -210,41 +243,54 @@ where
                 0
             });
 
-        self.traversed_networks[bank_symbol_traversal_start..]
-            .windows(2)
-            .try_for_each(|networks| {
-                let &[source_network, remote_network] = networks else {
-                    unreachable!("Window slice should be exactly two elements.");
-                };
-
-                channels
-                    .get(source_network)
-                    .and_then(|connected_networks| connected_networks.get(remote_network))
-                    .ok_or_else(
-                        #[cold]
-                        || {
-                            error::ResolveCurrency::NetworksNotConnected(
-                                source_network.as_ref().into(),
-                                remote_network.as_ref().into(),
+        (
+            bank_symbol,
+            // TODO [feature=array_windows]
+            //  PR: https://github.com/rust-lang/rust/issues/75027
+            //  Change `windows` to `array_windows` and remove `unreachable!`
+            //  use.
+            traversed_networks[traversal_start..]
+                .windows(2)
+                .map(|networks| {
+                    networks.try_into().unwrap_or_else(
+                        #[inline]
+                        |error| {
+                            unreachable!(
+                                "Window slice should be exactly two elements! \
+                                Error: {error:?}"
                             )
                         },
                     )
-                    .map(|&channel_id| bank_symbol.add_channel(channel_id))
-            })
-            .map(|()| {
-                let currency_definition = CurrencyDefinition::new(
-                    ticker.as_ref().into(),
-                    bank_symbol.add_symbol(self.currency.symbol()),
-                    self.dex_symbol.add_symbol(self.currency.symbol()),
-                    self.currency.decimal_digits(),
-                );
+                }),
+        )
+    }
 
-                if self.host_local {
-                    HostLocality::Local(currency_definition)
-                } else {
-                    HostLocality::Remote(currency_definition)
-                }
-            })
+    fn fold_bank_side_in_windows<'channels, 'channels_network, 'channel_id, 'network_id>(
+        channels: &'channels channels::Map<'channels_network, 'channel_id>,
+    ) -> impl FnMut(
+        symbol::Builder,
+        [&'network_id network::Id; 2],
+    ) -> Result<symbol::Builder, error::ResolveCurrency>
+           + Captures<&'channels channels::Map<'channels_network, 'channel_id>> {
+        |mut bank_symbol, [source_network, remote_network]| {
+            channels
+                .get(source_network)
+                .and_then(|connected_networks| connected_networks.get(remote_network))
+                .copied()
+                .ok_or_else(
+                    #[cold]
+                    || {
+                        error::ResolveCurrency::NetworksNotConnected(
+                            source_network.as_ref().into(),
+                            remote_network.as_ref().into(),
+                        )
+                    },
+                )
+                .map(|channel_id| {
+                    bank_symbol.add_channel(channel_id);
+                })
+                .map(|()| bank_symbol)
+        }
     }
 }
 
@@ -255,6 +301,21 @@ where
     traversed_networks: Vec<&'network network::Id>,
     dex_symbol: symbol::Builder,
     currency: &'currency Currency,
+}
+
+// TODO [1.82]
+//  Remove in favour of precise capturing syntax, `impl Trait + uses<...>`.
+trait Captures<T>
+where
+    T: ?Sized,
+{
+}
+
+impl<T, U> Captures<U> for T
+where
+    T: ?Sized,
+    U: ?Sized,
+{
 }
 
 fn trampoline<Continue, Break, F>(mut value: Continue, mut f: F) -> Break
