@@ -42,11 +42,11 @@ where
     pub(crate) fn feed_prices(
         &self,
         storage: &mut dyn Storage,
+        tree: &SupportedPairs<PriceG, BaseC>,
         block_time: Timestamp,
-        sender_raw: &Addr,
+        sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<(), ContractError> {
-        let tree = SupportedPairs::<PriceG, BaseC>::load(storage)?;
         if let Some(unsupported) = prices.iter().find(|price| {
             !tree.swap_pairs_df().any(
                 |SwapLeg {
@@ -206,8 +206,9 @@ mod test {
             oracle
                 .feed_prices(
                     &mut storage,
+                    &tree,
                     env.block.time,
-                    &Addr::unchecked("feeder"),
+                    Addr::unchecked("feeder"),
                     &[
                         tests::dto_price::<PaymentC4, _, BaseCurrency>(2, 1),
                         tests::dto_price::<PaymentC1, _, BaseCurrency>(5, 1),
@@ -259,8 +260,9 @@ mod test {
             oracle
                 .feed_prices(
                     &mut storage,
+                    &tree,
                     env.block.time,
-                    &Addr::unchecked("feeder"),
+                    Addr::unchecked("feeder"),
                     &[
                         // tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1), a gap for PaymentC7
                         tests::dto_price::<PaymentC4, _, BaseCurrency>(2, 1),

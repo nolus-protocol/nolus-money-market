@@ -9,6 +9,7 @@ use finance::price::{
         with_price::{self, WithPrice},
         BasePrice,
     },
+    dto::PriceDTO,
     Price,
 };
 use marketprice::config::Config as PriceConfig;
@@ -217,6 +218,23 @@ where
     const REPLY_ID: Id = 0;
     const EVENT_TYPE: &'static str = "pricealarm";
 
+    pub(super) fn try_feed_prices(
+        &mut self,
+        block_time: Timestamp,
+        sender: Addr,
+        prices: Vec<PriceDTO<PriceG>>,
+    ) -> ContractResult<()> {
+        self.tree().and_then(|tree| {
+            self.feeds_read_write().feed_prices(
+                self.storage.deref_mut(),
+                &tree,
+                block_time,
+                sender,
+                &prices,
+            )
+        })
+    }
+
     pub(super) fn try_notify_alarms(
         &mut self,
         block_time: Timestamp,
@@ -264,6 +282,10 @@ where
 
         assert_eq!(set.len(), subscribers.len());
     }
+
+    fn feeds_read_write(&mut self) -> Feeds<PriceG, BaseC, BaseG> {
+        Self::feeds(&self.config.price_config, self.storage.deref_mut())
+    }
 }
 
 #[cfg(test)]
@@ -293,6 +315,7 @@ mod test_normalized_price_not_found {
 
     type NlsCoin = Coin<Nls>;
     type BaseCoin = Coin<BaseCurrency>;
+    type TestSupportedPairs = SupportedPairs<PriceCurrencies, BaseCurrency>;
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
 
@@ -314,7 +337,11 @@ mod test_normalized_price_not_found {
 
         add_alarm(&mut storage);
 
-        feed_price(&price_config, &mut storage);
+        feed_price(
+            &price_config,
+            &TestSupportedPairs::load(&storage).unwrap(),
+            &mut storage,
+        );
 
         dispatch_and_deliver(&mut storage, 1);
 
@@ -360,12 +387,17 @@ mod test_normalized_price_not_found {
     }
 
     #[track_caller]
-    fn feed_price(price_config: &PriceConfig, storage: &mut dyn Storage) {
+    fn feed_price(
+        price_config: &PriceConfig,
+        tree: &TestSupportedPairs,
+        storage: &mut dyn Storage,
+    ) {
         Feeds::<PriceCurrencies, BaseCurrency, BaseCurrencies>::with(price_config.clone())
             .feed_prices(
                 storage,
+                tree,
                 NOW,
-                &Addr::unchecked("feeder"),
+                Addr::unchecked("feeder"),
                 &[price::total_of(PRICE_BASE).is(PRICE_QUOTE).into()],
             )
             .unwrap();

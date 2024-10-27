@@ -95,7 +95,7 @@ fn marketprice_add_feed_empty_vec() {
 
     let prices: Vec<PriceDTO<SuperGroup>> = Vec::new();
     market
-        .feed(&mut deps.storage, ts, &f_address, &prices)
+        .feed(&mut deps.storage, ts, f_address, &prices)
         .unwrap();
 }
 
@@ -117,7 +117,7 @@ fn marketprice_add_feed() {
     let ts = Timestamp::from_seconds(now.as_secs());
 
     market
-        .feed(&mut deps.storage, ts, &f_address, &prices)
+        .feed(&mut deps.storage, ts, f_address, &prices)
         .unwrap();
     let err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
@@ -339,7 +339,7 @@ where
 
     let price = PriceDTO::<G>::from(price);
 
-    market.feed(deps.storage, ts, &f_address, &[price])?;
+    market.feed(deps.storage, ts, f_address, &[price])?;
     Ok(ts)
 }
 

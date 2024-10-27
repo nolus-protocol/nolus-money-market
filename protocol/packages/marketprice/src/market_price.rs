@@ -46,7 +46,7 @@ where
         &self,
         storage: &mut dyn Storage,
         at: Timestamp,
-        sender_raw: &Addr,
+        sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
@@ -59,7 +59,7 @@ where
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
                     add_observation(
                         feed,
-                        sender_raw,
+                        sender_raw.clone(),
                         at,
                         *price,
                         self.config.feed_valid_since(at),
@@ -234,7 +234,7 @@ where
 
 fn add_observation<G>(
     feed_bin: Option<PriceFeedBin>,
-    from: &Addr,
+    from: Addr,
     at: Timestamp,
     price: PriceDTO<G>,
     valid_since: Timestamp,
@@ -243,15 +243,15 @@ where
     G: Group<TopG = G>,
 {
     debug_assert!(valid_since < at);
-    struct AddObservation<'a, G> {
+    struct AddObservation<G> {
         feed_bin: Option<PriceFeedBin>,
-        from: &'a Addr,
+        from: Addr,
         at: Timestamp,
         valid_since: Timestamp,
         group: PhantomData<G>,
     }
 
-    impl<'a, G> WithPrice for AddObservation<'a, G>
+    impl<G> WithPrice for AddObservation<G>
     where
         G: Group<TopG = G>,
     {
@@ -357,7 +357,7 @@ mod test {
             .feed(
                 &mut storage,
                 NOW,
-                &Addr::unchecked(FEEDER),
+                Addr::unchecked(FEEDER),
                 &[build_price().into()],
             )
             .unwrap();
@@ -407,7 +407,7 @@ mod test {
             .feed(
                 &mut storage,
                 NOW,
-                &Addr::unchecked(FEEDER),
+                Addr::unchecked(FEEDER),
                 &[new_price51.into(), new_price75.into(), new_price56.into()],
             )
             .unwrap();
