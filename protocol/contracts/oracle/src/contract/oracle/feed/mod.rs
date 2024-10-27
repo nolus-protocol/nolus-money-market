@@ -184,16 +184,18 @@ mod test {
             PaymentC7, PaymentGroup as PriceCurrencies,
         };
         use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
-        use marketprice::{config::Config, InMemoryRepo};
+        use marketprice::{config::Config, Repo};
         use sdk::cosmwasm_std::{
             testing::{self, MockStorage},
-            Addr,
+            Addr, Storage,
         };
 
         use super::BaseCurrency;
         use crate::{
             contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, test_tree, tests,
         };
+
+        const ROOT_NS: &str = "root";
 
         #[test]
         fn normal() {
@@ -213,7 +215,8 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let mut oracle = Feeds::with(&config, InMemoryRepo::new());
+            let storage_ptr: &mut dyn Storage = &mut storage;
+            let mut oracle = Feeds::with(&config, Repo::new(ROOT_NS, storage_ptr));
 
             oracle
                 .feed_prices(
@@ -266,7 +269,8 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let mut oracle = Feeds::with(&config, InMemoryRepo::new());
+            let storage_ptr: &mut dyn Storage = &mut storage;
+            let mut oracle = Feeds::with(&config, Repo::new(ROOT_NS, storage_ptr));
 
             oracle
                 .feed_prices(

@@ -11,9 +11,10 @@ use crate::{
     api::{DispatchAlarmsResponse, ExecuteMsg},
     contract::alarms::MarketAlarms,
     result::ContractResult,
+    ContractError,
 };
 
-use super::Oracle;
+use super::{oracle::feeder::Feeders, Oracle};
 
 pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies>(
     deps: DepsMut<'_>,
@@ -30,8 +31,17 @@ where
     PaymentGroup: Group<TopG = PaymentGroup>,
 {
     match msg {
-        ExecuteMsg::FeedPrices { prices } => Oracle::load(deps.storage)?
-            .try_feed_prices(env.block.time, sender, prices)
+        ExecuteMsg::FeedPrices { prices } => Feeders::is_feeder(deps.storage, &sender)
+            .map_err(ContractError::LoadFeeders)
+            .and_then(|found| {
+                if found {
+                    Ok(())
+                } else {
+                    Err(ContractError::UnknownFeeder {})
+                }
+            })
+            .and_then(|()| Oracle::load(deps.storage))
+            .and_then(|mut oracle| oracle.try_feed_prices(env.block.time, sender, prices))
             .map(|()| Default::default()),
         ExecuteMsg::DispatchAlarms { max_count } => Oracle::load(deps.storage)?
             .try_notify_alarms(env.block.time, max_count)

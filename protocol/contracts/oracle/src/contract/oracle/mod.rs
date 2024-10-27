@@ -310,14 +310,13 @@ mod test_normalized_price_not_found {
         test_tree,
     };
 
-    use super::{feed::Feeds, feeder::Feeders, Oracle};
+    use super::{feed::Feeds, feeder::Feeders, Oracle, ROOT_NAMESPACE};
 
     type NlsCoin = Coin<Nls>;
     type BaseCoin = Coin<BaseCurrency>;
     type TestSupportedPairs = SupportedPairs<PriceCurrencies, BaseCurrency>;
 
     const NOW: Timestamp = Timestamp::from_seconds(1);
-    const TEST_NS: &str = "test_feeds";
 
     const PRICE_BASE: NlsCoin = Coin::new(1);
     const PRICE_QUOTE: BaseCoin = Coin::new(1);
@@ -390,7 +389,7 @@ mod test_normalized_price_not_found {
         tree: &TestSupportedPairs,
         storage: &mut dyn Storage,
     ) {
-        Feeds::<_, _, BaseCurrencies, _>::with(price_config, Repo::new(TEST_NS, storage))
+        Feeds::<_, _, BaseCurrencies, _>::with(price_config, Repo::new(ROOT_NAMESPACE, storage))
             .feed_prices(
                 tree,
                 NOW,

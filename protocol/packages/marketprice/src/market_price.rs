@@ -313,13 +313,14 @@ mod test {
         percent::Percent,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage, Timestamp};
 
-    use crate::{error::PriceFeedsError, feed::InMemoryRepo, market_price::Config};
+    use crate::{error::PriceFeedsError, market_price::Config, Repo};
 
     use super::PriceFeeds;
 
     const FEEDER: &str = "0xifeege";
+    const ROOT_NS: &str = "root_ns";
     const TOTAL_FEEDERS: usize = 1;
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
@@ -331,7 +332,9 @@ mod test {
     #[test]
     fn no_feed() {
         let config = config();
-        let feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
+        let mut storage = MockStorage::new();
+        let storage_dyn_ref: &mut dyn Storage = &mut storage;
+        let feeds = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
         assert_eq!(
             Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
@@ -366,7 +369,9 @@ mod test {
         }
 
         let config = config();
-        let mut feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
+        let mut storage = MockStorage::new();
+        let storage_dyn_ref: &mut dyn Storage = &mut storage;
+        let mut feeds = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
         feeds
             .feed(NOW, Addr::unchecked(FEEDER), &[build_price().into()])
             .unwrap();
@@ -402,7 +407,9 @@ mod test {
     #[test]
     fn feed_pairs() {
         let config = config();
-        let mut feeds = PriceFeeds::new(InMemoryRepo::new(), &config);
+        let mut storage = MockStorage::new();
+        let storage_dyn_ref: &mut dyn Storage = &mut storage;
+        let mut feeds = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
         let new_price75: Price<SuperGroupTestC5, SuperGroupTestC3> =
             price::total_of(Coin::new(1)).is(Coin::new(2));
         let new_price56 =

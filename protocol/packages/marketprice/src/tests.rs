@@ -12,17 +12,20 @@ use finance::{
     percent::Percent,
     price::{self, dto::PriceDTO, Price},
 };
+use sdk::cosmwasm_std::testing::MockStorage;
+use sdk::cosmwasm_std::Storage;
 use sdk::{
     cosmwasm_std::{testing::mock_dependencies, Timestamp},
     testing,
 };
 
-use crate::feed::InMemoryRepo;
 use crate::feed::ObservationsRepo;
+use crate::Repo;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
 
+const ROOT_NS: &str = "root_ns";
 const TOTAL_FEEDERS: usize = 1;
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
@@ -62,7 +65,9 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let config = config();
-    let market = PriceFeeds::new(InMemoryRepo::new(), &config);
+    let mut storage = MockStorage::new();
+    let storage_dyn_ref: &mut dyn Storage = &mut storage;
+    let market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -86,7 +91,9 @@ fn marketprice_add_feed_expect_err() {
 #[test]
 fn marketprice_add_feed_empty_vec() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
+    let mut storage = MockStorage::new();
+    let storage_dyn_ref: &mut dyn Storage = &mut storage;
+    let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
     let now = SystemTime::now()
@@ -101,7 +108,9 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
+    let mut storage = MockStorage::new();
+    let storage_dyn_ref: &mut dyn Storage = &mut storage;
+    let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
     let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
@@ -151,7 +160,9 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let config = config();
-    let mut market = PriceFeeds::new(InMemoryRepo::new(), &config);
+    let mut storage = MockStorage::new();
+    let storage_dyn_ref: &mut dyn Storage = &mut storage;
+    let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
     feed_price(
         &mut market,
