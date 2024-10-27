@@ -41,7 +41,6 @@ where
     BaseG: Group,
 {
     storage: S,
-    tree: SupportedPairs<PriceG, BaseC>,
     feeders: usize,
     feeds: Feeds<PriceG, BaseC, BaseG>,
 }
@@ -55,16 +54,16 @@ where
     BaseG: Group + MemberOf<PriceG>,
 {
     pub fn load(storage: S) -> Result<Self, ContractError> {
-        let tree = SupportedPairs::load(storage.deref())?;
-        let feeders =
-            Feeders::total_registered(storage.deref()).map_err(ContractError::LoadFeeders)?;
-        Config::load(storage.deref())
-            .map(|cfg| Feeds::<PriceG, BaseC, BaseG>::with(cfg.price_config))
-            .map(|feeds| Self {
-                storage,
-                tree,
-                feeders,
-                feeds,
+        Feeders::total_registered(storage.deref())
+            .map_err(ContractError::LoadFeeders)
+            .and_then(|feeders| {
+                Config::load(storage.deref())
+                    .map(|cfg| Feeds::<PriceG, BaseC, BaseG>::with(cfg.price_config))
+                    .map(|feeds| Self {
+                        storage,
+                        feeders,
+                        feeds,
+                    })
             })
     }
 
@@ -72,16 +71,19 @@ where
         &self,
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
-        MarketAlarms::new(self.storage.deref())
-            .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(block_time))
-            .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
+        self.tree().and_then(|tree| {
+            MarketAlarms::new(self.storage.deref())
+                .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(&tree, block_time))
+                .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
+        })
     }
 
     pub(super) fn try_query_prices(
         &self,
         block_time: Timestamp,
     ) -> Result<Vec<BasePrice<PriceG, BaseC, BaseG>>, ContractError> {
-        self.calc_all_prices(block_time).collect()
+        self.tree()
+            .and_then(|tree| self.calc_all_prices(&tree, block_time).collect())
     }
 
     pub(super) fn try_query_base_price(
@@ -89,8 +91,10 @@ where
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
-        self.feeds
-            .calc_base_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
+        self.tree().and_then(|tree| {
+            self.feeds
+                .calc_base_price(self.storage.deref(), &tree, currency, at, self.feeders)
+        })
     }
 
     pub(super) fn try_query_stable_price<StableCurrency>(
@@ -152,16 +156,23 @@ where
             })
     }
 
-    fn calc_all_prices(
-        &self,
+    fn calc_all_prices<'self_, 'tree, 'feeds>(
+        &'self_ self,
+        tree: &'tree SupportedPairs<PriceG, BaseC>,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + '_ {
-        self.feeds.all_prices_iter(
-            self.storage.deref(),
-            self.tree.swap_pairs_df(),
-            at,
-            self.feeders,
-        )
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'feeds
+    where
+        'storage: 'self_,
+        'self_: 'feeds,
+        'tree: 'feeds,
+        'storage: 'feeds,
+    {
+        self.feeds
+            .all_prices_iter(self.storage.deref(), tree.swap_pairs_df(), at, self.feeders)
+    }
+
+    fn tree(&self) -> ContractResult<SupportedPairs<PriceG, BaseC>> {
+        SupportedPairs::load(self.storage.deref())
     }
 }
 
@@ -181,11 +192,13 @@ where
         block_time: Timestamp,
         max_count: u32,
     ) -> ContractResult<(u32, MessageResponse)> {
-        let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
-            .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(block_time))?
-            .take(max_count.try_into()?)
-            .collect::<ContractResult<Vec<Addr>>>()?;
+        let subscribers: Vec<Addr> = self.tree().and_then(|tree| {
+            MarketAlarms::new(self.storage.deref())
+                .ensure_no_in_delivery()?
+                .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(&tree, block_time))?
+                .take(max_count.try_into()?)
+                .collect::<ContractResult<Vec<Addr>>>()
+        })?;
 
         #[cfg(debug_assertions)]
         Self::assert_unique_subscribers(&subscribers);
