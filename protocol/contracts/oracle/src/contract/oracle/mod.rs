@@ -90,7 +90,7 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> ContractResultResult<BasePrice<PriceG, BaseC, BaseG>> {
+    ) -> ContractResult<BasePrice<PriceG, BaseC, BaseG>> {
         self.tree().and_then(|tree| {
             self.feeds
                 .calc_base_price(self.storage.deref(), &tree, currency, at, self.feeders)
