@@ -31,7 +31,7 @@ pub mod feed;
 pub mod feeder;
 
 pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
-    Result<BasePrice<PriceG, OracleBase, OracleBaseG>, ContractError>;
+    ContractResult<BasePrice<PriceG, OracleBase, OracleBaseG>>;
 
 pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
@@ -53,7 +53,7 @@ where
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
 {
-    pub fn load(storage: S) -> Result<Self, ContractError> {
+    pub fn load(storage: S) -> ContractResult<Self> {
         Feeders::total_registered(storage.deref())
             .map_err(ContractError::LoadFeeders)
             .and_then(|feeders| {
@@ -70,7 +70,7 @@ where
     pub(super) fn try_query_alarms(
         &self,
         block_time: Timestamp,
-    ) -> Result<AlarmsStatusResponse, ContractError> {
+    ) -> ContractResult<AlarmsStatusResponse> {
         self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
                 .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(&tree, block_time))
@@ -81,7 +81,7 @@ where
     pub(super) fn try_query_prices(
         &self,
         block_time: Timestamp,
-    ) -> Result<Vec<BasePrice<PriceG, BaseC, BaseG>>, ContractError> {
+    ) -> ContractResult<Vec<BasePrice<PriceG, BaseC, BaseG>>> {
         self.tree()
             .and_then(|tree| self.calc_all_prices(&tree, block_time).collect())
     }
@@ -90,7 +90,7 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
+    ) -> ContractResultResult<BasePrice<PriceG, BaseC, BaseG>> {
         self.tree().and_then(|tree| {
             self.feeds
                 .calc_base_price(self.storage.deref(), &tree, currency, at, self.feeders)
@@ -101,7 +101,7 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> Result<BasePrice<PriceG, StableCurrency, PriceG>, ContractError>
+    ) -> ContractResult<BasePrice<PriceG, StableCurrency, PriceG>>
     where
         StableCurrency: CurrencyDef,
         StableCurrency::Group: MemberOf<PriceG>,
