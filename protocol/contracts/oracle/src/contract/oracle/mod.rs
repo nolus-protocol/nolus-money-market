@@ -11,6 +11,7 @@ use finance::price::{
     },
     Price,
 };
+use marketprice::config::Config as PriceConfig;
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -42,7 +43,10 @@ where
 {
     storage: S,
     feeders: usize,
-    feeds: Feeds<PriceG, BaseC, BaseG>,
+    config: Config,
+    _price_g: PhantomData<PriceG>,
+    _base_c: PhantomData<BaseC>,
+    _base_g: PhantomData<BaseG>,
 }
 
 impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG>
@@ -57,13 +61,14 @@ where
         Feeders::total_registered(storage.deref())
             .map_err(ContractError::LoadFeeders)
             .and_then(|feeders| {
-                Config::load(storage.deref())
-                    .map(|cfg| Feeds::<PriceG, BaseC, BaseG>::with(cfg.price_config))
-                    .map(|feeds| Self {
-                        storage,
-                        feeders,
-                        feeds,
-                    })
+                Config::load(storage.deref()).map(|config| Self {
+                    storage,
+                    feeders,
+                    config,
+                    _price_g: PhantomData,
+                    _base_c: PhantomData,
+                    _base_g: PhantomData,
+                })
             })
     }
 
@@ -73,7 +78,11 @@ where
     ) -> ContractResult<AlarmsStatusResponse> {
         self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
-                .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(&tree, block_time))
+                .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(
+                    &tree,
+                    &self.feeds_read_only(),
+                    block_time,
+                ))
                 .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
         })
     }
@@ -82,8 +91,10 @@ where
         &self,
         block_time: Timestamp,
     ) -> ContractResult<Vec<BasePrice<PriceG, BaseC, BaseG>>> {
-        self.tree()
-            .and_then(|tree| self.calc_all_prices(&tree, block_time).collect())
+        self.tree().and_then(|tree| {
+            self.calc_all_prices(&tree, &self.feeds_read_only(), block_time)
+                .collect()
+        })
     }
 
     pub(super) fn try_query_base_price(
@@ -92,8 +103,13 @@ where
         currency: &CurrencyDTO<PriceG>,
     ) -> ContractResult<BasePrice<PriceG, BaseC, BaseG>> {
         self.tree().and_then(|tree| {
-            self.feeds
-                .calc_base_price(self.storage.deref(), &tree, currency, at, self.feeders)
+            self.feeds_read_only().calc_base_price(
+                self.storage.deref(),
+                &tree,
+                currency,
+                at,
+                self.feeders,
+            )
         })
     }
 
@@ -159,6 +175,7 @@ where
     fn calc_all_prices<'self_, 'tree, 'feeds>(
         &'self_ self,
         tree: &'tree SupportedPairs<PriceG, BaseC>,
+        feeds: &'feeds Feeds<PriceG, BaseC, BaseG>,
         at: Timestamp,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'feeds
     where
@@ -167,12 +184,25 @@ where
         'tree: 'feeds,
         'storage: 'feeds,
     {
-        self.feeds
-            .all_prices_iter(self.storage.deref(), tree.swap_pairs_df(), at, self.feeders)
+        feeds.all_prices_iter(self.storage.deref(), tree.swap_pairs_df(), at, self.feeders)
     }
 
     fn tree(&self) -> ContractResult<SupportedPairs<PriceG, BaseC>> {
         SupportedPairs::load(self.storage.deref())
+    }
+
+    fn feeds_read_only(&self) -> Feeds<PriceG, BaseC, BaseG> {
+        Self::feeds(&self.config.price_config, self.storage.deref())
+    }
+
+    fn feeds<'repo_storage, RepoStorage>(
+        config: &PriceConfig,
+        _repo_storage: RepoStorage,
+    ) -> Feeds<PriceG, BaseC, BaseG>
+    where
+        RepoStorage: Deref<Target = dyn Storage + 'repo_storage>,
+    {
+        Feeds::with(config.clone())
     }
 }
 
@@ -195,7 +225,11 @@ where
         let subscribers: Vec<Addr> = self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
                 .ensure_no_in_delivery()?
-                .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(&tree, block_time))?
+                .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(
+                    &tree,
+                    &self.feeds_read_only(),
+                    block_time,
+                ))?
                 .take(max_count.try_into()?)
                 .collect::<ContractResult<Vec<Addr>>>()
         })?;
