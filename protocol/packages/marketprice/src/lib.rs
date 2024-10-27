@@ -1,5 +1,3 @@
-#[cfg(any(test, feature = "testing"))]
-pub use feed::InMemoryRepo;
 pub use feed::{ObservationsReadRepo, ObservationsRepo, Repo};
 
 pub mod alarms;

@@ -6,8 +6,6 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
 
-#[cfg(any(test, feature = "testing"))]
-pub use self::memory::InMemoryRepo;
 pub(crate) use self::observation::{valid_since, Observation};
 pub use self::{
     cw::Repo,
@@ -15,7 +13,7 @@ pub use self::{
 };
 
 mod cw;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 mod memory;
 mod observation;
 mod observations;
@@ -163,9 +161,9 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{config::Config, error::PriceFeedsError, feed::memory::InMemoryObservations};
+    use crate::{config::Config, error::PriceFeedsError};
 
-    use super::{Observations, PriceFeed};
+    use super::{memory::InMemoryObservations, Observations, PriceFeed};
 
     const ONE_FEEDER: usize = 1;
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
