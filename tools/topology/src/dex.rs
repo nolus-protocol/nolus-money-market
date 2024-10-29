@@ -1,22 +1,12 @@
-use std::{
-    borrow::Borrow,
-    collections::BTreeMap,
-    hash::{Hash, Hasher},
-};
+use std::{borrow::Borrow, collections::BTreeMap};
 
 use serde::Deserialize;
 
 use crate::swap_pairs::SwapPairs;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(transparent)]
 pub(crate) struct Id(String);
-
-impl Hash for Id {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
-    }
-}
 
 impl Borrow<str> for Id {
     fn borrow(&self) -> &str {
