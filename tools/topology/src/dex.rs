@@ -5,6 +5,7 @@ use serde::Deserialize;
 use crate::swap_pairs::SwapPairs;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Id(String);
 
@@ -15,6 +16,7 @@ impl Borrow<str> for Id {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Deserialize)]
+#[repr(transparent)]
 #[serde(transparent)]
 pub struct Dexes(BTreeMap<Id, Dex>);
 
