@@ -5,6 +5,7 @@ pub(crate) use self::endpoint::Endpoint;
 mod endpoint;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Id(String);
 

@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use serde::Deserialize;
 
 pub(crate) use self::{ibc::Ibc, native::Native};
@@ -5,9 +7,16 @@ pub(crate) use self::{ibc::Ibc, native::Native};
 mod ibc;
 mod native;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[repr(transparent)]
 #[serde(transparent)]
-pub(crate) struct Id(String);
+pub struct Id(String);
+
+impl Borrow<str> for Id {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
 
 impl AsRef<str> for Id {
     #[inline]

@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{channel, network};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
 pub(crate) struct Map<'network, 'channel_id>(
     BTreeMap<&'network network::Id, ConnectedNetworks<'network, 'channel_id>>,
 );
@@ -111,6 +112,7 @@ impl<'network, 'channel_id> MutableMap<'network, 'channel_id> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
 pub(crate) struct ConnectedNetworks<'network, 'channel_id>(
     BTreeMap<&'network network::Id, &'channel_id channel::Id>,
 );

@@ -10,6 +10,10 @@ pub enum CurrencyDefinitions {
     HostNotConnectedToDex,
     #[error("Error occurred while resolving currency! {0}")]
     ResolveCurrency(#[from] ResolveCurrency),
+    #[error("Host network's currency already defined!")]
+    HostCurrencyAlreadyDefined,
+    #[error("Host network's currency not defined in selected DEX network!")]
+    HostCurrencyNotDefined,
 }
 
 #[derive(Debug, Error)]

@@ -1,28 +1,17 @@
-use std::{
-    borrow::Borrow,
-    hash::{Hash, Hasher},
-};
+use std::borrow::Borrow;
 
 use serde::Deserialize;
 
-use crate::currencies::Currencies;
+use crate::{currencies::Currencies, dex::Dexes};
 
-pub(crate) use self::host::Host as HostNetwork;
+pub(crate) use self::host::Host;
 
-use self::amm_pool::AmmPool;
-
-mod amm_pool;
 mod host;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Id(String);
-
-impl Hash for Id {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
-    }
-}
 
 impl Borrow<str> for Id {
     fn borrow(&self) -> &str {
@@ -38,9 +27,11 @@ impl AsRef<str> for Id {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[serde(from = "self::Raw")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Network {
     currencies: Currencies,
+    #[serde(default)]
+    dexes: Dexes,
 }
 
 impl Network {
@@ -48,19 +39,9 @@ impl Network {
     pub const fn currencies(&self) -> &Currencies {
         &self.currencies
     }
-}
 
-impl From<Raw> for Network {
     #[inline]
-    fn from(Raw { currencies, .. }: Raw) -> Self {
-        Self { currencies }
+    pub const fn dexes(&self) -> &Dexes {
+        &self.dexes
     }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub(crate) struct Raw {
-    currencies: Currencies,
-    #[serde(default, rename = "amm_pools")]
-    _amm_pools: Vec<AmmPool>,
 }
