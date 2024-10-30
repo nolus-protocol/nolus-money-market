@@ -73,7 +73,6 @@ where
             c_dto: &quote_in_price_group,
             root_dto: quote_c,
             price: Price::<QuoteC, QuoteC>::identity(),
-            _quote_g: PhantomData,
         }
         .do_collect()
     }
@@ -205,7 +204,6 @@ struct PriceCollect<
     c_dto: &'currency CurrencyDTO<G>,
     root_dto: CurrencyDTO<QuoteG>,
     price: Price<QuoteC, QuoteQuoteC>,
-    _quote_g: PhantomData<QuoteG>, // TODO remove
 }
 impl<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
     PriceCollect<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
@@ -246,7 +244,6 @@ where
             c_dto,
             root_dto: self.root_dto,
             price: accumulator,
-            _quote_g: self._quote_g,
         }
     }
 
