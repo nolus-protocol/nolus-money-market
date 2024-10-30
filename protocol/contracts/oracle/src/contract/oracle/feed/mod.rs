@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf, PairsGroup};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{
     config::Config, market_price::PriceFeeds, ObservationsReadRepo, ObservationsRepo,
@@ -45,7 +45,7 @@ impl<'config, PriceG, BaseC, BaseG, Observations>
 impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
-    BaseC: CurrencyDef,
+    BaseC: CurrencyDef + PairsGroup<CommonGroup = PriceG>,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
     Observations: ObservationsReadRepo<Group = PriceG>,

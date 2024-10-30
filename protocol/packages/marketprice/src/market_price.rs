@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, mem};
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
-    SymbolStatic,
+    self, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
+    PairsVisitor, PairsVisitorResult, SymbolStatic,
 };
 use finance::price::{
     base::BasePrice,
@@ -56,7 +56,7 @@ where
     where
         'm: 'a,
         PriceG: Group<TopG = PriceG>,
-        QuoteC: CurrencyDef,
+        QuoteC: CurrencyDef + PairsGroup<CommonGroup = PriceG>,
         QuoteC::Group: MemberOf<QuoteG> + MemberOf<PriceG>,
         QuoteG: Group + MemberOf<PriceG>,
         Iter: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
@@ -205,13 +205,13 @@ struct PriceCollect<
     c_dto: &'currency CurrencyDTO<G>,
     root_dto: CurrencyDTO<QuoteG>,
     price: Price<QuoteC, QuoteQuoteC>,
-    _quote_g: PhantomData<QuoteG>,
+    _quote_g: PhantomData<QuoteG>, // TODO remove
 }
 impl<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
     PriceCollect<'a, 'config, 'currency, Iter, C, G, QuoteC, QuoteG, ObservationsRepoImpl>
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    C: CurrencyDef,
+    C: CurrencyDef + PairsGroup<CommonGroup = G>,
     C::Group: MemberOf<G>,
     G: 'a + Group<TopG = G>,
     QuoteC: CurrencyDef,
@@ -236,7 +236,7 @@ where
     >
     where
         'currency: 'new_currency,
-        NextC: Currency + MemberOf<G>,
+        NextC: Currency + MemberOf<G> + PairsGroup<CommonGroup = G>,
     {
         PriceCollect {
             root_to_leaf: self.root_to_leaf,
@@ -252,14 +252,14 @@ where
 
     fn do_collect(mut self) -> Result<BasePrice<G, QuoteC, QuoteG>, PriceFeedsError> {
         if let Some(next_currency) = self.root_to_leaf.next() {
-            next_currency.into_currency_type(self)
+            next_currency.into_pair_member_type(self)
         } else {
             Ok(self.price.into())
         }
     }
 }
 impl<'a, 'config, 'currency, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsRepoImpl>
-    AnyVisitor<G>
+    PairsVisitor
     for PriceCollect<
         'a,
         'config,
@@ -273,7 +273,7 @@ impl<'a, 'config, 'currency, Iter, QuoteC, G, QuoteQuoteC, QuoteG, ObservationsR
     >
 where
     Iter: Iterator<Item = &'a CurrencyDTO<G>>,
-    QuoteC: CurrencyDef,
+    QuoteC: CurrencyDef + PairsGroup<CommonGroup = G>,
     QuoteC::Group: MemberOf<G>,
     G: Group<TopG = G>,
     QuoteQuoteC: CurrencyDef,
@@ -281,12 +281,14 @@ where
     QuoteG: Group,
     ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
 {
+    type Pivot = QuoteC;
+
     type Output = BasePrice<G, QuoteQuoteC, QuoteG>;
     type Error = PriceFeedsError;
 
-    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> PairsVisitorResult<Self>
     where
-        C: CurrencyDef,
+        C: CurrencyDef + InPoolWith<Self::Pivot> + PairsGroup<CommonGroup = G>,
         C::Group: MemberOf<G>,
     {
         let next_c = def.into_super_group::<G>();

@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, PairsGroup};
 use finance::price::{
     base::{
         with_price::{self, WithPrice},
@@ -56,7 +56,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group<TopG = PriceG>,
-    BaseC: CurrencyDef,
+    BaseC: CurrencyDef + PairsGroup<CommonGroup = PriceG>,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
 {
@@ -208,7 +208,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     PriceG: Group<TopG = PriceG> + Clone,
-    BaseC: CurrencyDef,
+    BaseC: CurrencyDef + PairsGroup<CommonGroup = PriceG>,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
 {
@@ -237,7 +237,7 @@ where
         max_count: u32,
     ) -> ContractResult<(u32, MessageResponse)> {
         let subscribers: Vec<Addr> = self.tree().and_then(|tree| {
-            MarketAlarms::<'_, _, PriceG>::new(self.storage.deref())
+            MarketAlarms::new(self.storage.deref())
                 .ensure_no_in_delivery()?
                 .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(
                     &tree,
