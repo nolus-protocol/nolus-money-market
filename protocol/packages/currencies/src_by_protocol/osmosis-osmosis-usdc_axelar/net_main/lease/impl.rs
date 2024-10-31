@@ -156,15 +156,6 @@ define_currency!(
 );
 
 define_currency!(
-    StTia,
-    "ST_TIA",
-    "ibc/8D4FC51F696E03711B9B37A5787FB89BD2DDBAF788813478B002D552A12F9157", // transfer/channel-0/transfer/channel-326/stutia
-    "ibc/698350B8A61D575025F3ED13E9AC9C0F45C89DEFE92F76D5838F1D3C1A7FF7C9", // transfer/channel-326/stutia
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Jkl,
     "JKL",
     "ibc/28F026607184B151F1F7D7F5D8AE644528550EB05203A28B6233DFA923669876", // transfer/channel-0/transfer/channel-412/ujkl
@@ -227,7 +218,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Cro, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Juno, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Tia, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, StTia, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Jkl, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, MilkTia, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Pica, VisitedG, _>(matcher, visitor))
@@ -458,21 +448,7 @@ impl PairsGroup for Tia {
         maybe_visit::<Osmo, _, _>(matcher, visitor)
     }
 }
-impl InPoolWith<StTia> for Tia {}
 impl InPoolWith<MilkTia> for Tia {}
-
-impl PairsGroup for StTia {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<Tia, _, _>(matcher, visitor)
-    }
-}
 
 impl PairsGroup for MilkTia {
     type CommonGroup = PaymentGroup;
@@ -542,7 +518,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Dym, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Dym, Osmo, Pica, StAtom, StOsmo, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -553,7 +529,6 @@ mod test {
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Tia, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<StTia, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Dym, LeaseGroup>();
         maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::dex());
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::bank());
