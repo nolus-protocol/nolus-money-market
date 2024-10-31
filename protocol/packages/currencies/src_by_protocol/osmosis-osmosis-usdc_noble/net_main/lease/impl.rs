@@ -183,15 +183,6 @@ define_currency!(
 );
 
 define_currency!(
-    Pica,
-    "PICA",
-    "ibc/7F2DC2A595EDCAEC1C03D607C6DC3C79EDDC029A53D16C0788835C1A9AA06306", // transfer/channel-0/transfer/channel-1279/ppica
-    "ibc/56D7C03B8F6A07AD322EEE1BEF3AE996E09D1C1E34C27CF37E0D4A0AC5972516", // transfer/channel-1279/ppica
-    LeaseGroup,
-    12
-);
-
-define_currency!(
     Dym,
     "DYM",
     "ibc/9C7F70E92CCBA0F2DC94796B0682955E090676EA7A2F8E0A4611956B79CB4406", // transfer/channel-0/transfer/channel-19774/adym
@@ -266,7 +257,6 @@ where
         .or_else(|visitor| maybe_visit::<_, StTia, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Jkl, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, MilkTia, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Pica, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Dym, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cudos, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, AllBtc, VisitedG, _>(matcher, visitor))
@@ -329,7 +319,6 @@ impl InPoolWith<Tia> for Osmo {}
 impl InPoolWith<Jkl> for Osmo {}
 impl InPoolWith<Cudos> for Osmo {}
 impl InPoolWith<Dym> for Osmo {}
-impl InPoolWith<Pica> for Osmo {}
 
 impl PairsGroup for StOsmo {
     type CommonGroup = PaymentGroup;
@@ -541,19 +530,6 @@ impl PairsGroup for MilkTia {
     }
 }
 
-impl PairsGroup for Pica {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<Osmo, _, _>(matcher, visitor)
-    }
-}
-
 impl PairsGroup for Dym {
     type CommonGroup = PaymentGroup;
 
@@ -636,7 +612,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Cudos, Dym, Osmo, Pica, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
+    use super::{Atom, Cudos, Dym, Osmo, StAtom, StOsmo, StTia, Tia, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -667,7 +643,6 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Tia, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Pica, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Dym, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::ticker());
