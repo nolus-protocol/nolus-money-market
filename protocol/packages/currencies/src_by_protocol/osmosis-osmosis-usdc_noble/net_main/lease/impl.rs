@@ -93,15 +93,6 @@ define_currency!(
 );
 
 define_currency!(
-    Strd,
-    "STRD",
-    "ibc/04CA9067228BB51F1C39A506DA00DF07E1496D8308DD21E8EF66AD6169FA722B", // transfer/channel-0/transfer/channel-326/ustrd
-    "ibc/A8CA5EE328FA10C9519DF6057DA1F69682D28F7D0F5CCC7ECB72E3DCA2D157A4", // transfer/channel-326/ustrd
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Inj,
     "INJ",
     "ibc/4DE84C92C714009D07AFEA7350AB3EC383536BB0FAAD7AF9C0F1A0BEA169304E", // transfer/channel-0/transfer/channel-122/inj
@@ -220,7 +211,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Akt, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Axl, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, QAtom, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, Strd, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Inj, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Scrt, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cro, VisitedG, _>(matcher, visitor))
@@ -280,7 +270,6 @@ impl InPoolWith<Wbtc> for Osmo {}
 impl InPoolWith<StOsmo> for Osmo {}
 impl InPoolWith<Akt> for Osmo {}
 impl InPoolWith<Axl> for Osmo {}
-impl InPoolWith<Strd> for Osmo {}
 impl InPoolWith<Scrt> for Osmo {}
 impl InPoolWith<Cro> for Osmo {}
 impl InPoolWith<Tia> for Osmo {}
@@ -362,19 +351,6 @@ impl PairsGroup for QAtom {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<Atom, _, _>(matcher, visitor)
-    }
-}
-
-impl PairsGroup for Strd {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<Osmo, _, _>(matcher, visitor)
     }
 }
 
