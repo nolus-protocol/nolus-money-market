@@ -84,15 +84,6 @@ define_currency!(
 );
 
 define_currency!(
-    QAtom,
-    "Q_ATOM",
-    "ibc/317FCA2D7554F55BBCD0019AB36F7FEA18B6D161F462AF5E565068C719A29F20", // transfer/channel-0/transfer/channel-522/uqatom
-    "ibc/FA602364BEC305A696CBDF987058E99D8B479F0318E47314C49173E8838C5BAC", // transfer/channel-522/uqatom
-    LeaseGroup,
-    6
-);
-
-define_currency!(
     Inj,
     "INJ",
     "ibc/4DE84C92C714009D07AFEA7350AB3EC383536BB0FAAD7AF9C0F1A0BEA169304E", // transfer/channel-0/transfer/channel-122/inj
@@ -210,7 +201,6 @@ where
         .or_else(|visitor| maybe_visit::<_, Wbtc, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Akt, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Axl, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| maybe_visit::<_, QAtom, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Inj, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Scrt, VisitedG, _>(matcher, visitor))
         .or_else(|visitor| maybe_visit::<_, Cro, VisitedG, _>(matcher, visitor))
@@ -237,7 +227,6 @@ impl PairsGroup for Atom {
     }
 }
 impl InPoolWith<StAtom> for Atom {}
-impl InPoolWith<QAtom> for Atom {}
 impl InPoolWith<Osmo> for Atom {}
 
 impl PairsGroup for StAtom {
@@ -338,19 +327,6 @@ impl PairsGroup for Axl {
     {
         use currency::maybe_visit_buddy as maybe_visit;
         maybe_visit::<Osmo, _, _>(matcher, visitor)
-    }
-}
-
-impl PairsGroup for QAtom {
-    type CommonGroup = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<Atom, _, _>(matcher, visitor)
     }
 }
 
