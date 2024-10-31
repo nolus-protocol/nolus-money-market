@@ -25,6 +25,8 @@ where
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> PairsVisitorResult<Self>
     where
-        C: CurrencyDef + InPoolWith<Self::Pivot> + PairsGroup<CommonGroup = <Self::Pivot as PairsGroup>::CommonGroup>,
+        C: CurrencyDef
+            + InPoolWith<Self::Pivot>
+            + PairsGroup<CommonGroup = <Self::Pivot as PairsGroup>::CommonGroup>,
         C::Group: MemberOf<<Self::Pivot as PairsGroup>::CommonGroup>;
 }

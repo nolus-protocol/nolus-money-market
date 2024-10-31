@@ -115,7 +115,9 @@ where
 pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
 where
     M: Matcher,
-    C: CurrencyDef + InPoolWith<V::Pivot> + PairsGroup<CommonGroup = <V::Pivot as PairsGroup>::CommonGroup>,
+    C: CurrencyDef
+        + InPoolWith<V::Pivot>
+        + PairsGroup<CommonGroup = <V::Pivot as PairsGroup>::CommonGroup>,
     C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
     V: PairsVisitor,
 {
