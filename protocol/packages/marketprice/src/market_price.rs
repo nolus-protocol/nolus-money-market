@@ -117,7 +117,6 @@ where
                 C: CurrencyDef + PairsGroup<CommonGroup = <G as Group>::TopG>,
                 C::Group: MemberOf<G> + MemberOf<<G as Group>::TopG>,
             {
-                dbg!(def);
                 let c_in_price_group = def.into_super_group::<G>();
                 PriceCollect {
                     leaf_to_base: self.leaf_to_base,
@@ -342,7 +341,6 @@ where
 
     fn do_collect(mut self) -> Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError> {
         if let Some(next_currency) = self.leaf_to_base.next() {
-            dbg!(next_currency);
             next_currency.into_pair_member_type(self)
         } else {
             debug_assert_eq!(self.current_c, &currency::dto::<BaseC, BaseG>());
@@ -585,7 +583,6 @@ mod test {
                 .into_iter()
             )
         );
-        dbg!("222");
         assert_eq!(
             Ok((new_price21 * new_price14).into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
@@ -600,7 +597,6 @@ mod test {
                 .into_iter()
             )
         );
-        dbg!("333");
         assert_eq!(
             Ok((new_price21 * new_price110).into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
