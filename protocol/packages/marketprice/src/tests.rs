@@ -75,7 +75,6 @@ fn marketprice_add_feed_expect_err() {
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
-            currency::dto::<SuperGroupTestC3, _>(),
             ts,
             TOTAL_FEEDERS,
             [
@@ -127,7 +126,6 @@ fn marketprice_add_feed() {
     market.feed(ts, f_address, &prices).unwrap();
     let err = market
         .price::<SuperGroupTestC3, SuperGroup, _>(
-            currency::dto::<SuperGroupTestC3, _>(),
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
             [
@@ -142,7 +140,6 @@ fn marketprice_add_feed() {
     {
         let price_resp = market
             .price::<SuperGroupTestC3, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC3, _>(),
                 ts,
                 TOTAL_FEEDERS,
                 [
@@ -224,7 +221,6 @@ fn marketprice_follow_the_path() {
 
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
-            currency::dto::<SuperGroupTestC2, _>(),
             last_feed_time,
             TOTAL_FEEDERS,
             [
@@ -244,7 +240,6 @@ fn marketprice_follow_the_path() {
     // first and second part of denom pair are the same
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
-            currency::dto::<SuperGroupTestC2, _>(),
             last_feed_time,
             TOTAL_FEEDERS,
             [
@@ -260,7 +255,6 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC2, _>(),
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
@@ -277,7 +271,6 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC5, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC5, _>(),
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
@@ -294,7 +287,6 @@ fn marketprice_follow_the_path() {
     assert_eq!(
         market
             .price::<SuperGroupTestC2, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC2, _>(),
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [

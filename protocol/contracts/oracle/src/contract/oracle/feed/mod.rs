@@ -77,14 +77,12 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
-        self.feeds
-            .price::<BaseC, _, _>(
-                currency::dto::<BaseC, _>(),
-                at,
-                total_feeders,
-                tree.load_path(currency)?,
-            )
-            .map_err(Into::<ContractError>::into)
+        tree.load_path(currency)
+            .and_then(|leaf_to_base_currencies| {
+                self.feeds
+                    .price::<BaseC, _, _>(at, total_feeders, leaf_to_base_currencies)
+                    .map_err(Into::<ContractError>::into)
+            })
     }
 }
 

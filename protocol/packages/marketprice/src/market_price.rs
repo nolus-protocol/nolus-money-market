@@ -48,7 +48,6 @@ where
 {
     pub fn price<'m, 'a, BaseC, BaseG, CurrenciesToBaseC>(
         &'m self,
-        _quote_c: CurrencyDTO<BaseG>, // TODO remove
         at: Timestamp,
         total_feeders: usize,
         mut leaf_to_base: CurrenciesToBaseC,
@@ -450,7 +449,6 @@ mod test {
         assert_eq!(
             Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC1, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [&currency::dto::<SuperGroupTestC1, _>(),].into_iter()
@@ -460,7 +458,6 @@ mod test {
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC1, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -490,7 +487,6 @@ mod test {
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC1, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -503,7 +499,6 @@ mod test {
         assert_eq!(
             Ok(build_price().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
-                currency::dto::<SubGroupTestC10, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -539,7 +534,6 @@ mod test {
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
             feeds.price::<SuperGroupTestC3, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC3, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -552,7 +546,6 @@ mod test {
         assert_eq!(
             Ok(new_price21.into()),
             feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC1, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -565,7 +558,6 @@ mod test {
         assert_eq!(
             Ok(new_price14.into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC4, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -578,7 +570,6 @@ mod test {
         assert_eq!(
             Ok(new_price110.into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
-                currency::dto::<SubGroupTestC10, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -591,7 +582,6 @@ mod test {
         assert_eq!(
             Ok((new_price21 * new_price14).into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
-                currency::dto::<SuperGroupTestC4, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
@@ -605,7 +595,6 @@ mod test {
         assert_eq!(
             Ok((new_price21 * new_price110).into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
-                currency::dto::<SubGroupTestC10, _>(),
                 NOW,
                 TOTAL_FEEDERS,
                 [
