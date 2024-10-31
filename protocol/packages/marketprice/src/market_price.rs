@@ -61,10 +61,6 @@ where
         BaseG: Group + MemberOf<PriceG>,
         CurrenciesToBaseC: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
     {
-        // let mut root_to_leaf = leaf_to_base.rev();
-        // let _root = root_to_leaf.next();
-        // let quote_in_price_group = quote_c.into_super_group::<PriceG>();
-        // debug_assert_eq!(_root, Some(&quote_in_price_group));
         struct CurrencyResolver<
             'config,
             'feeds,
@@ -139,10 +135,8 @@ where
                 .do_collect()
             }
         }
-        leaf_to_base
-            .next()
-            .expect("a non-empty chain of currencies to calculate price for the first one")
-            .into_currency_type(CurrencyResolver {
+        if let Some(c) = leaf_to_base.next() {
+            c.into_currency_type(CurrencyResolver {
                 _currencies_lifetime: PhantomData,
                 feeds: self,
                 at,
@@ -151,6 +145,9 @@ where
                 _base_g: PhantomData,
                 leaf_to_base,
             })
+        } else {
+            unreachable!("a non-empty chain of currencies to calculate price for the first one")
+        }
     }
 
     pub fn price_of_feed<C, QuoteC>(
