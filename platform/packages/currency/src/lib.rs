@@ -10,7 +10,7 @@ pub use crate::{
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
 };
 
@@ -115,7 +115,7 @@ where
 pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
 where
     M: Matcher,
-    C: CurrencyDef + InPoolWith<V::Pivot>,
+    C: CurrencyDef + InPoolWith<V::Pivot> + PairsGroup<CommonGroup = <V::Pivot as PairsGroup>::CommonGroup>,
     C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
     V: PairsVisitor,
 {

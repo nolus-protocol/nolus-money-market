@@ -2,8 +2,10 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
-use marketprice::{config::Config, market_price::PriceFeeds};
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use marketprice::{
+    config::Config, market_price::PriceFeeds, ObservationsReadRepo, ObservationsRepo,
+};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
@@ -18,30 +20,80 @@ use super::PriceResult;
 mod leg_cmd;
 mod price_querier;
 
-pub struct Feeds<PriceG, BaseC, BaseG> {
-    feeds: PriceFeeds<PriceG>,
+pub struct Feeds<'config, PriceG, BaseC, BaseG, Observations> {
+    feeds: PriceFeeds<'config, PriceG, Observations>,
     _base_c: PhantomData<BaseC>,
     _base_g: PhantomData<BaseG>,
 }
 
-impl<PriceG, BaseC, BaseG> Feeds<PriceG, BaseC, BaseG>
+impl<'config, PriceG, BaseC, BaseG, Observations>
+    Feeds<'config, PriceG, BaseC, BaseG, Observations>
+{
+    pub(crate) fn with(config: &'config Config, observations: Observations) -> Self {
+        Self {
+            feeds: PriceFeeds::new(observations, config),
+            _base_c: PhantomData,
+            _base_g: PhantomData,
+        }
+    }
+}
+
+impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
+    Observations: ObservationsReadRepo<Group = PriceG>,
 {
-    pub(crate) fn with(config: Config) -> Self {
-        Self {
-            feeds: PriceFeeds::new("market_price", config),
-            _base_c: PhantomData,
-            _base_g: PhantomData,
-        }
+    pub fn all_prices_iter<'r, 'self_, 'storage, I>(
+        &'self_ self,
+        swap_pairs_df: I,
+        at: Timestamp,
+        total_feeders: usize,
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'r
+    where
+        'self_: 'r,
+        I: Iterator<Item = SwapLeg<PriceG>> + 'r,
+    {
+        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, '_, PriceG, Observations>> =
+            LegCmd::new(FedPrices::new(&self.feeds, at, total_feeders));
+
+        swap_pairs_df
+            .scan(cmd, |cmd, leg: SwapLeg<PriceG>| {
+                Some(currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose())
+            })
+            .flatten()
     }
 
-    pub(crate) fn feed_prices(
+    pub fn calc_base_price(
         &self,
-        storage: &mut dyn Storage,
+        tree: &SupportedPairs<PriceG, BaseC>,
+        currency: &CurrencyDTO<PriceG>,
+        at: Timestamp,
+        total_feeders: usize,
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
+        self.feeds
+            .price::<BaseC, _, _>(
+                currency::dto::<BaseC, _>(),
+                at,
+                total_feeders,
+                tree.load_path(currency)?,
+            )
+            .map_err(Into::<ContractError>::into)
+    }
+}
+
+impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
+where
+    PriceG: Group<TopG = PriceG>,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseG: Group + MemberOf<PriceG>,
+    Observations: ObservationsRepo<Group = PriceG>,
+{
+    pub(crate) fn feed_prices(
+        &mut self,
         tree: &SupportedPairs<PriceG, BaseC>,
         block_time: Timestamp,
         sender_raw: Addr,
@@ -64,53 +116,9 @@ where
             Err(error::unsupported_denom_pairs(unsupported))
         } else {
             self.feeds
-                .feed(storage, block_time, sender_raw, prices)
+                .feed(block_time, sender_raw, prices)
                 .map_err(Into::into)
         }
-    }
-
-    pub fn all_prices_iter<'r, 'self_, 'storage, I>(
-        &'self_ self,
-        storage: &'storage dyn Storage,
-        swap_pairs_df: I,
-        at: Timestamp,
-        total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'r
-    where
-        'self_: 'r,
-        'storage: 'r,
-        I: Iterator<Item = SwapLeg<PriceG>> + 'r,
-    {
-        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, PriceG>> =
-            LegCmd::new(FedPrices::new(storage, &self.feeds, at, total_feeders));
-
-        swap_pairs_df
-            .scan(cmd, |cmd, leg: SwapLeg<PriceG>| {
-                Some(currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose())
-            })
-            .flatten()
-    }
-
-    pub fn calc_base_price(
-        &self,
-        storage: &dyn Storage,
-        tree: &SupportedPairs<PriceG, BaseC>,
-        currency: &CurrencyDTO<PriceG>,
-        at: Timestamp,
-        total_feeders: usize,
-    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
-        let dto = self
-            .feeds
-            .price::<BaseC, _, _>(
-                currency::dto::<BaseC, _>(),
-                storage,
-                at,
-                total_feeders,
-                tree.load_path(currency)?,
-            )
-            .map_err(Into::<ContractError>::into)?;
-        Ok(dto)
-        // BasePrice::from_dto_price(dto, &currency::dto::<BaseC, _>()).map_err(Into::into)
     }
 }
 
@@ -172,16 +180,18 @@ mod test {
             PaymentC7, PaymentGroup as PriceCurrencies,
         };
         use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
-        use marketprice::config::Config;
+        use marketprice::{config::Config, Repo};
         use sdk::cosmwasm_std::{
             testing::{self, MockStorage},
-            Addr,
+            Addr, Storage,
         };
 
         use super::BaseCurrency;
         use crate::{
             contract::oracle::feed::Feeds, state::supported_pairs::SupportedPairs, test_tree, tests,
         };
+
+        const ROOT_NS: &str = "root";
 
         #[test]
         fn normal() {
@@ -201,11 +211,11 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceCurrencies, BaseCurrency, BaseCurrencies> = Feeds::with(config);
+            let storage_ptr: &mut dyn Storage = &mut storage;
+            let mut oracle = Feeds::with(&config, Repo::new(ROOT_NS, storage_ptr));
 
             oracle
                 .feed_prices(
-                    &mut storage,
                     &tree,
                     env.block.time,
                     Addr::unchecked("feeder"),
@@ -221,7 +231,7 @@ mod test {
                 .unwrap();
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
+                .all_prices_iter(tree.swap_pairs_df(), env.block.time, 1)
                 .flatten()
                 .collect();
 
@@ -255,11 +265,11 @@ mod test {
                 Percent::from_percent(50),
             );
 
-            let oracle: Feeds<PriceCurrencies, BaseCurrency, BaseCurrencies> = Feeds::with(config);
+            let storage_ptr: &mut dyn Storage = &mut storage;
+            let mut oracle = Feeds::with(&config, Repo::new(ROOT_NS, storage_ptr));
 
             oracle
                 .feed_prices(
-                    &mut storage,
                     &tree,
                     env.block.time,
                     Addr::unchecked("feeder"),
@@ -282,7 +292,7 @@ mod test {
             ];
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
+                .all_prices_iter(tree.swap_pairs_df(), env.block.time, 1)
                 .collect::<Result<_, _>>()
                 .unwrap();
 

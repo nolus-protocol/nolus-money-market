@@ -14,7 +14,7 @@ use crate::{
 use super::{PriceDTO, WithPrice};
 
 /// Execute the provided price command on a valid price
-pub fn execute<G, Cmd>(price: PriceDTO<G>, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd>(price: &PriceDTO<G>, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
 where
     G: Group<TopG = G>,
     Cmd: WithPrice<G = G>,

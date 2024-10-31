@@ -7,7 +7,7 @@ use std::{
 
 #[cfg(any(test, feature = "testing"))]
 use currency::CurrencyDef;
-use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, Group, InPoolWith, MemberOf};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -207,7 +207,7 @@ pub trait WithPrice {
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> StdResult<Self::Output, Self::Error>
     where
         C: Currency + MemberOf<Self::G>,
-        QuoteC: Currency + MemberOf<Self::G>;
+        QuoteC: Currency + MemberOf<Self::G> + InPoolWith<C>;
 }
 
 pub trait WithBase<C>

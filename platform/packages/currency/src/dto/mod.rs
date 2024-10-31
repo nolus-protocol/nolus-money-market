@@ -75,7 +75,7 @@ where
         V: PairsVisitor,
     {
         self.may_into_pair_member_type(visitor)
-            .unwrap_or_else(|_| self.unexpected())
+            .unwrap_or_else(|_| self.unknown_buddy::<V::Pivot, _>())
     }
 
     pub fn into_super_group<SuperG>(self) -> CurrencyDTO<SuperG>
@@ -156,6 +156,17 @@ where
             r#"Found an invalid currency instance! "{:?}" did not match "{}" !"#,
             self,
             G::DESCR,
+        )
+    }
+
+    fn unknown_buddy<P, R>(self) -> R
+    where
+        P: PairsGroup,
+    {
+        panic!(
+            r#"Found an unknown currency "{:?}" in the pairs group of "{}" !"#,
+            self,
+            std::any::type_name::<P>(),
         )
     }
 }

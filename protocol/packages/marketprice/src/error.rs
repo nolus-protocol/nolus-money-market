@@ -25,13 +25,16 @@ pub enum PriceFeedsError {
     Finance(#[from] finance::error::Error),
 
     #[error("[Market Price; Feeds] {0}")]
-    FeedSerdeError(String),
-}
+    FeedsRetrieve(StdError),
 
-impl From<postcard::Error> for PriceFeedsError {
-    fn from(err: postcard::Error) -> Self {
-        Self::FeedSerdeError(format!("Error during (de-)serialization: {}", err))
-    }
+    #[error("[Market Price; Feeds] {0}")]
+    FeedRead(StdError),
+
+    #[error("[Market Price; Feeds] {0}")]
+    FeedPush(StdError),
+
+    #[error("[Market Price; Feeds] {0}")]
+    FeedRemove(StdError),
 }
 
 pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<(), PriceFeedsError> {

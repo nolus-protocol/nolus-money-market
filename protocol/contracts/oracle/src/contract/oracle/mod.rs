@@ -12,7 +12,7 @@ use finance::price::{
     dto::PriceDTO,
     Price,
 };
-use marketprice::config::Config as PriceConfig;
+use marketprice::{config::Config as PriceConfig, Repo};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -31,6 +31,8 @@ use self::feeder::Feeders;
 
 pub mod feed;
 pub mod feeder;
+
+const ROOT_NAMESPACE: &str = "o11s";
 
 pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
     ContractResult<BasePrice<PriceG, OracleBase, OracleBaseG>>;
@@ -104,13 +106,8 @@ where
         currency: &CurrencyDTO<PriceG>,
     ) -> ContractResult<BasePrice<PriceG, BaseC, BaseG>> {
         self.tree().and_then(|tree| {
-            self.feeds_read_only().calc_base_price(
-                self.storage.deref(),
-                &tree,
-                currency,
-                at,
-                self.feeders,
-            )
+            self.feeds_read_only()
+                .calc_base_price(&tree, currency, at, self.feeders)
         })
     }
 
@@ -173,10 +170,10 @@ where
             })
     }
 
-    fn calc_all_prices<'self_, 'tree, 'feeds>(
+    fn calc_all_prices<'self_, 'tree, 'feeds, 'st>(
         &'self_ self,
         tree: &'tree SupportedPairs<PriceG, BaseC>,
-        feeds: &'feeds Feeds<PriceG, BaseC, BaseG>,
+        feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st), PriceG>>,
         at: Timestamp,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'feeds
     where
@@ -185,25 +182,27 @@ where
         'tree: 'feeds,
         'storage: 'feeds,
     {
-        feeds.all_prices_iter(self.storage.deref(), tree.swap_pairs_df(), at, self.feeders)
+        feeds.all_prices_iter(tree.swap_pairs_df(), at, self.feeders)
     }
 
     fn tree(&self) -> ContractResult<SupportedPairs<PriceG, BaseC>> {
         SupportedPairs::load(self.storage.deref())
     }
 
-    fn feeds_read_only(&self) -> Feeds<PriceG, BaseC, BaseG> {
+    fn feeds_read_only(
+        &self,
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &(dyn Storage + 'storage), PriceG>> {
         Self::feeds(&self.config.price_config, self.storage.deref())
     }
 
     fn feeds<'repo_storage, RepoStorage>(
         config: &PriceConfig,
-        _repo_storage: RepoStorage,
-    ) -> Feeds<PriceG, BaseC, BaseG>
+        repo_storage: RepoStorage,
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'repo_storage, RepoStorage, PriceG>>
     where
         RepoStorage: Deref<Target = dyn Storage + 'repo_storage>,
     {
-        Feeds::with(config.clone())
+        Feeds::with(config, Repo::new(ROOT_NAMESPACE, repo_storage))
     }
 }
 
@@ -225,13 +224,8 @@ where
         prices: Vec<PriceDTO<PriceG>>,
     ) -> ContractResult<()> {
         self.tree().and_then(|tree| {
-            self.feeds_read_write().feed_prices(
-                self.storage.deref_mut(),
-                &tree,
-                block_time,
-                sender,
-                &prices,
-            )
+            self.feeds_read_write()
+                .feed_prices(&tree, block_time, sender, &prices)
         })
     }
 
@@ -283,7 +277,10 @@ where
         assert_eq!(set.len(), subscribers.len());
     }
 
-    fn feeds_read_write(&mut self) -> Feeds<PriceG, BaseC, BaseG> {
+    fn feeds_read_write(
+        &mut self,
+    ) -> Feeds<'_, PriceG, BaseC, BaseG, Repo<'storage, &mut (dyn Storage + 'storage), PriceG>>
+    {
         Self::feeds(&self.config.price_config, self.storage.deref_mut())
     }
 }
@@ -295,7 +292,7 @@ mod test_normalized_price_not_found {
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
-    use marketprice::config::Config as PriceConfig;
+    use marketprice::{config::Config as PriceConfig, Repo};
     use sdk::{
         cosmwasm_std::{
             testing::{MockApi, MockQuerier, MockStorage},
@@ -311,7 +308,7 @@ mod test_normalized_price_not_found {
         test_tree,
     };
 
-    use super::{feed::Feeds, feeder::Feeders, Oracle};
+    use super::{feed::Feeds, feeder::Feeders, Oracle, ROOT_NAMESPACE};
 
     type NlsCoin = Coin<Nls>;
     type BaseCoin = Coin<BaseCurrency>;
@@ -363,12 +360,10 @@ mod test_normalized_price_not_found {
 
         Config::new(price_config.clone()).store(storage).unwrap();
 
-        SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(
-            test_tree::dummy_swap_tree().into_tree(),
-        )
-        .unwrap()
-        .save(storage)
-        .unwrap();
+        TestSupportedPairs::new::<StableCurrency>(test_tree::dummy_swap_tree().into_tree())
+            .unwrap()
+            .save(storage)
+            .unwrap();
     }
 
     #[track_caller]
@@ -392,9 +387,8 @@ mod test_normalized_price_not_found {
         tree: &TestSupportedPairs,
         storage: &mut dyn Storage,
     ) {
-        Feeds::<PriceCurrencies, BaseCurrency, BaseCurrencies>::with(price_config.clone())
+        Feeds::<_, _, BaseCurrencies, _>::with(price_config, Repo::new(ROOT_NAMESPACE, storage))
             .feed_prices(
-                storage,
                 tree,
                 NOW,
                 Addr::unchecked("feeder"),

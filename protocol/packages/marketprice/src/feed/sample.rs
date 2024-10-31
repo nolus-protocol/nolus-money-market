@@ -62,11 +62,7 @@ where
 {
 }
 
-impl<C, QuoteC> Sample<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
+impl<C, QuoteC> Sample<C, QuoteC> {
     pub fn into_maybe_price(self) -> Option<Price<C, QuoteC>> {
         self.price
     }
@@ -112,7 +108,7 @@ where
             let sum = values.fold(*first, |acc, current| acc + *current);
             let part = Rational::new(1, prices_number);
             let avg = Fraction::<usize>::of(&part, sum);
-            self.last_sample = Sample { price: Some(avg) }
+            self.last_sample = Sample { price: Some(avg) } //TODO migrate it from a member data to return value
         }
         self.sample_prices.clear();
         self.sample_start += self.sample_span;
