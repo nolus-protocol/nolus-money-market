@@ -18,7 +18,7 @@ pub mod swap_pairs;
 mod symbol;
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(from = "self::Raw")]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Topology {
     host_network: network::Host,
     networks: Networks,
@@ -112,31 +112,4 @@ impl Topology {
 pub struct CurrencyDefinitions {
     pub host_currency: CurrencyDefinition,
     pub dex_currencies: Vec<CurrencyDefinition>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-struct Raw {
-    host_network: network::Host,
-    networks: Networks,
-    channels: Vec<Channel>,
-    #[serde(rename = "definitions")]
-    _definitions: Option<Vec<String>>,
-}
-
-impl From<Raw> for Topology {
-    fn from(
-        Raw {
-            host_network,
-            networks,
-            channels,
-            ..
-        }: Raw,
-    ) -> Self {
-        Self {
-            host_network,
-            networks,
-            channels,
-        }
-    }
 }
