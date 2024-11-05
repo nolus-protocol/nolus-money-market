@@ -112,11 +112,9 @@ fn new_msg(
 
 impl<'c> From<Sender<'c>> for Batch {
     fn from(sender: Sender<'c>) -> Self {
-        let batch = Self::default();
-
         sender
             .into_ibc_msgs()
-            .fold(batch, |batch, msg| batch.schedule_execute_no_reply(msg))
+            .fold(Self::default(), Self::schedule_execute_no_reply)
     }
 }
 

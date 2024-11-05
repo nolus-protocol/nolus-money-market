@@ -55,12 +55,12 @@ pub(crate) fn execute(
         .map(MessageResponse::messages_only)
 }
 
-pub(super) fn migrate_contract(batches: Batches, address: Addr, migrate: MigrationSpec) -> Batches {
+pub(super) fn migrate_contract(address: Addr, migrate: MigrationSpec, batches: Batches) -> Batches {
     let post_migration_execute_batch = match migrate.post_migrate_execute_msg {
         Some(post_migrate_execute_msg) => execute_contract(
-            batches.post_migration_execute_batch,
             address.clone(),
             post_migrate_execute_msg,
+            batches.post_migration_execute_batch,
         ),
         None => batches.post_migration_execute_batch,
     };
@@ -198,11 +198,7 @@ trait MigrateContracts: ForEachPair<Item = Addr> + Sized {
         batches: Batches,
         migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<MigrationSpec>,
     ) -> Batches {
-        self.for_each_pair(
-            migration_msgs,
-            batches,
-            |address, migration_spec, batches| migrate_contract(batches, address, migration_spec),
-        )
+        self.for_each_pair(migration_msgs, batches, migrate_contract)
     }
 
     fn maybe_migrate(
@@ -215,7 +211,7 @@ trait MigrateContracts: ForEachPair<Item = Addr> + Sized {
             batches,
             |address, migration_spec, batches| {
                 if let Some(migration_spec) = migration_spec {
-                    migrate_contract(batches, address, migration_spec)
+                    migrate_contract(address, migration_spec, batches)
                 } else {
                     batches
                 }
@@ -230,9 +226,7 @@ trait ExecuteContracts: ForEachPair<Item = Addr> + Sized {
         batch: Batch,
         execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<String>,
     ) -> Batch {
-        self.for_each_pair(execute_messages, batch, |address, migration_spec, batch| {
-            execute_contract(batch, address, migration_spec)
-        })
+        self.for_each_pair(execute_messages, batch, execute_contract)
     }
 
     fn maybe_execute(
@@ -242,7 +236,7 @@ trait ExecuteContracts: ForEachPair<Item = Addr> + Sized {
     ) -> Batch {
         self.for_each_pair(execute_messages, batch, |address, migration_spec, batch| {
             if let Some(migration_spec) = migration_spec {
-                execute_contract(batch, address, migration_spec)
+                execute_contract(address, migration_spec, batch)
             } else {
                 batch
             }
@@ -261,7 +255,7 @@ where
     state_contracts::load_all(storage).and_then(f)
 }
 
-fn execute_contract(batch: Batch, address: Addr, execute_message: String) -> Batch {
+fn execute_contract(address: Addr, execute_message: String, batch: Batch) -> Batch {
     batch.schedule_execute_no_reply(WasmMsg::Execute {
         contract_addr: address.into_string(),
         msg: Binary::new(execute_message.into_bytes()),

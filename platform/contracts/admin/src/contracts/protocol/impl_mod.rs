@@ -17,11 +17,7 @@ impl ProtocolContracts<Addr> {
         let post_migration_execute_batch = Batch::default();
         let batches = Batches::default();
 
-        self.for_each_pair(
-            migration_msgs,
-            batches,
-            |address, migration_spec, batches| migrate_contract(batches, address, migration_spec),
-        );
+        self.for_each_pair(migration_msgs, batches, migrate_contract);
 
         migration_batch.merge(post_migration_execute_batch)
     }
