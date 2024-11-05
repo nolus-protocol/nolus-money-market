@@ -26,6 +26,7 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
+// Only marketprice::feed::Observation<C, QuoteC> relies on Coin's (de-)serialization
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Coin<C> {
     #[serde(with = "amount_serde")]

@@ -12,16 +12,16 @@ use crate::{
     api::{LeaseAssetCurrencies, LeaseCoin, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::{with_lease::WithLease, DebtStatus, Lease as LeaseDO},
+    lease::{with_lease::WithLease, CloseStatus, Lease as LeaseDO},
     position::{Cause, Liquidation},
 };
 
-pub(crate) fn check_debt<Asset, Lpp, Oracle>(
+pub(crate) fn check_close<Asset, Lpp, Oracle>(
     lease: &LeaseDO<Asset, Lpp, Oracle>,
     when: &Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
-) -> ContractResult<DebtStatusDTO>
+) -> ContractResult<CloseStatusDTO>
 where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
@@ -29,7 +29,7 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
-        .check_debt(when, time_alarms, price_alarms)
+        .check_close(when, time_alarms, price_alarms)
         .map(Into::into)
 }
 
@@ -39,7 +39,7 @@ pub(crate) struct Cmd<'a> {
     price_alarms: &'a OracleRef,
 }
 
-pub(crate) enum DebtStatusDTO {
+pub(crate) enum CloseStatusDTO {
     NoDebt,
     NewAlarms {
         current_liability: Zone,
@@ -64,22 +64,22 @@ pub(crate) struct FullLiquidationDTO {
     pub cause: Cause,
 }
 
-impl<Asset> From<DebtStatus<Asset>> for DebtStatusDTO
+impl<Asset> From<CloseStatus<Asset>> for CloseStatusDTO
 where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
-    fn from(value: DebtStatus<Asset>) -> Self {
+    fn from(value: CloseStatus<Asset>) -> Self {
         match value {
-            DebtStatus::NoDebt => Self::NoDebt,
-            DebtStatus::NewAlarms {
+            CloseStatus::NoDebt => Self::NoDebt,
+            CloseStatus::NewAlarms {
                 current_liability,
                 alarms,
             } => Self::NewAlarms {
                 current_liability,
                 alarms,
             },
-            DebtStatus::NeedLiquidation(liquidation) => Self::NeedLiquidation(liquidation.into()),
+            CloseStatus::NeedLiquidation(liquidation) => Self::NeedLiquidation(liquidation.into()),
         }
     }
 }
@@ -115,7 +115,7 @@ impl<'a> Cmd<'a> {
 }
 
 impl<'a> WithLease for Cmd<'a> {
-    type Output = DebtStatusDTO;
+    type Output = CloseStatusDTO;
 
     type Error = ContractError;
 
@@ -129,6 +129,6 @@ impl<'a> WithLease for Cmd<'a> {
         Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
-        check_debt(&lease, self.now, self.time_alarms, self.price_alarms)
+        check_close(&lease, self.now, self.time_alarms, self.price_alarms)
     }
 }

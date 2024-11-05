@@ -23,6 +23,7 @@ mod dto;
 #[cfg_attr(test, derive(Debug))]
 pub struct Spec {
     liability: Liability,
+    // close: ClosePolicy,
     min_asset: LpnCoin,
     min_transaction: LpnCoin,
 }
@@ -243,7 +244,7 @@ impl Spec {
         match self.validate_close_amount(asset, liquidation, asset_in_lpns) {
             Err(ContractError::PositionCloseAmountTooSmall(_)) => None,
             Err(ContractError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
-            Err(_) => unreachable!(),
+            Err(_) => unreachable!(), // TODO extract the two ContractError variants to a dedicated type to avoid this match arm
             Ok(()) => {
                 debug_assert!(liquidation < asset);
                 Some(Liquidation::Partial {

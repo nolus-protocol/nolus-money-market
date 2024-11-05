@@ -9,7 +9,7 @@ use crate::{
         LeaseCoin,
     },
     contract::{
-        cmd::{LiquidationStatus, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
+        cmd::{CloseStatusDTO, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
         state::{
             opened::{
                 active, alarm,
@@ -86,7 +86,7 @@ where
             RepayResult {
                 response,
                 loan_paid,
-                liquidation,
+                close_status,
             },
         ) = lease.update(
             RepayCmd::new(
@@ -101,9 +101,9 @@ where
             querier,
         )?;
 
-        match liquidation {
-            LiquidationStatus::NoDebt => Ok(finish_repay(loan_paid, response, lease)),
-            LiquidationStatus::NewAlarms {
+        match close_status {
+            CloseStatusDTO::NoDebt => Ok(finish_repay(loan_paid, response, lease)),
+            CloseStatusDTO::NewAlarms {
                 current_liability,
                 alarms,
             } => {
@@ -111,7 +111,7 @@ where
                     alarm::build_resp(&lease, current_liability, alarms).merge_with(response);
                 Ok(finish_repay(loan_paid, response, lease))
             }
-            LiquidationStatus::NeedLiquidation(liquidation) => {
+            CloseStatusDTO::NeedLiquidation(liquidation) => {
                 liquidation::start(lease, liquidation, response, env, querier)
             }
         }

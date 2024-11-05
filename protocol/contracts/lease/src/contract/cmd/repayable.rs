@@ -18,7 +18,7 @@ use crate::{
     loan::RepayReceipt,
 };
 
-use super::{check_debt, LiquidationStatus};
+use super::{check_close, CloseStatusDTO};
 
 pub(crate) trait RepayFn {
     fn do_repay<Asset, Lpp, Oracle, Profit>(
@@ -97,7 +97,7 @@ impl SplitDTOOut for RepayLeaseResult {
 pub(crate) struct RepayResult {
     pub response: MessageResponse,
     pub loan_paid: bool,
-    pub liquidation: LiquidationStatus,
+    pub close_status: CloseStatusDTO,
 }
 
 impl<'a, RepayableT, EmitterT> WithLease for Repay<'a, RepayableT, EmitterT>
@@ -128,7 +128,8 @@ where
             .do_repay(&mut lease, amount, self.now, &mut profit_sender)?;
         let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
-        let liquidation = check_debt::check_debt(&lease, self.now, &self.alarms.0, &self.alarms.1)?;
+        let close_status =
+            check_close::check_close(&lease, self.now, &self.alarms.0, &self.alarms.1)?;
 
         lease
             .try_into_dto(self.profit, self.alarms.0, self.reserve)
@@ -145,7 +146,7 @@ where
                                 events,
                             ),
                             loan_paid: receipt.close(),
-                            liquidation,
+                            close_status,
                         },
                     }
                 },

@@ -14,11 +14,13 @@ use crate::{
     position::Position,
 };
 
-pub(super) use self::{debt::DebtStatus, dto::LeaseDTO, paid::Lease as LeasePaid, state::State};
+pub(super) use self::{
+    check_close::CloseStatus, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
+};
 
 mod alarm;
+mod check_close;
 mod close;
-mod debt;
 mod dto;
 mod due;
 mod paid;

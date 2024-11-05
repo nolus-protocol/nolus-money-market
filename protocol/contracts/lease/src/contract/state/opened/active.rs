@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timest
 use crate::{
     api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
     contract::{
-        cmd::{LiquidationStatus, LiquidationStatusCmd, ObtainPayment, OpenLoanRespResult},
+        cmd::{CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
         Lease,
     },
@@ -99,21 +99,21 @@ impl Active {
     fn try_on_alarm(self, querier: QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         let time_alarms_ref = self.lease.lease.time_alarms.clone();
         let oracle_ref = self.lease.lease.oracle.clone();
-        let liquidation_status = self.lease.lease.clone().execute(
-            LiquidationStatusCmd::new(&env.block.time, &time_alarms_ref, &oracle_ref),
+        let close_status = self.lease.lease.clone().execute(
+            CloseStatusCmd::new(&env.block.time, &time_alarms_ref, &oracle_ref),
             querier,
         )?;
 
-        match liquidation_status {
-            LiquidationStatus::NoDebt => Ok(Response::no_msgs(self)),
-            LiquidationStatus::NewAlarms {
+        match close_status {
+            CloseStatusDTO::NoDebt => Ok(Response::no_msgs(self)),
+            CloseStatusDTO::NewAlarms {
                 current_liability,
                 alarms,
             } => Ok(Response::from(
                 alarm::build_resp(&self.lease, current_liability, alarms),
                 self,
             )),
-            LiquidationStatus::NeedLiquidation(liquidation) => liquidation::start(
+            CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
                 self.lease,
                 liquidation,
                 MessageResponse::default(),

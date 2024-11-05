@@ -17,7 +17,7 @@ use crate::{
     position::{Position, PositionDTO},
 };
 
-use super::{check_debt, LiquidationStatus};
+use super::{check_close, CloseStatusDTO};
 
 pub(crate) fn open_lease(
     form: NewLeaseForm,
@@ -85,18 +85,18 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             Lease::new(self.lease_addr, self.form.customer, position, loan, oracle)
         };
 
-        let alarms = match check_debt::check_debt(
+        let alarms = match check_close::check_close(
             &lease,
             self.now,
             &self.time_alarms,
             &self.price_alarms,
         )? {
-            LiquidationStatus::NoDebt => unreachable!(),
-            LiquidationStatus::NewAlarms {
+            CloseStatusDTO::NoDebt => unreachable!(),
+            CloseStatusDTO::NewAlarms {
                 current_liability: _,
                 alarms,
             } => alarms,
-            LiquidationStatus::NeedLiquidation(_) => unreachable!(),
+            CloseStatusDTO::NeedLiquidation(_) => unreachable!(),
         };
 
         lease
