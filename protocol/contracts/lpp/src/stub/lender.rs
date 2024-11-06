@@ -72,7 +72,7 @@ where
     Lpns: Group,
 {
     fn open_loan_req(self, amount: Coin<Lpn>) -> Result<Batch> {
-        let id = self.id().clone();
+        let id = self.id();
         self.batch
             .schedule_execute_wasm_reply_on_success_no_funds(
                 id,

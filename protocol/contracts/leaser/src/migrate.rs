@@ -81,18 +81,13 @@ impl MigrationResult {
     where
         F: FnOnce(Batch) -> ContractResult<Batch>,
     {
-        let (msgs, next_customer) = (self.msgs, self.next_customer);
-
-        add_fn(msgs).map(|batch| MigrationResult {
-            msgs: batch,
-            next_customer,
+        add_fn(self.msgs).map(|msgs| Self {
+            msgs,
+            next_customer: self.next_customer,
         })
     }
 
-    fn default() -> Self {
-        Self::new(Batch::default(), None)
-    }
-
+    #[cfg(test)]
     fn new(msgs: Batch, next_customer: Option<Addr>) -> Self {
         Self {
             msgs,

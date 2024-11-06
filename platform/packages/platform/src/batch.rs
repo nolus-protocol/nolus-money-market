@@ -15,10 +15,10 @@ use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, error::Error, result:
 pub type ReplyId = u64;
 
 #[must_use]
-#[derive(Default, Debug)]
+#[derive(Default)]
 #[cfg_attr(
     any(debug_assertions, test, feature = "testing"),
-    derive(PartialEq, Eq)
+    derive(Debug, PartialEq, Eq)
 )]
 pub struct Batch {
     msgs: Vec<SubMsg>,
@@ -46,7 +46,6 @@ impl Batch {
         Self::wasm_exec_msg_no_funds(addr, msg).map(|wasm_msg| self.schedule_no_reply(wasm_msg))
     }
 
-    // TODO get self by value
     pub fn schedule_execute_wasm_no_reply<M, C>(
         self,
         addr: Addr,

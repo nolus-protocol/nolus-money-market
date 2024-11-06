@@ -56,14 +56,16 @@ pub(crate) fn execute(
 }
 
 pub(super) fn migrate_contract(address: Addr, migrate: MigrationSpec, batches: Batches) -> Batches {
-    let post_migration_execute_batch = match migrate.post_migrate_execute_msg {
-        Some(post_migrate_execute_msg) => execute_contract(
-            address.clone(),
-            post_migrate_execute_msg,
-            batches.post_migration_execute_batch,
-        ),
-        None => batches.post_migration_execute_batch,
-    };
+    let post_migration_execute_batch =
+        if let Some(post_migrate_execute_msg) = migrate.post_migrate_execute_msg {
+            execute_contract(
+                address.clone(),
+                post_migrate_execute_msg,
+                batches.post_migration_execute_batch,
+            )
+        } else {
+            batches.post_migration_execute_batch
+        };
 
     let migration_batch = batches.migration_batch.schedule_execute_reply_on_success(
         WasmMsg::Migrate {
@@ -263,7 +265,8 @@ fn execute_contract(address: Addr, execute_message: String, batch: Batch) -> Bat
     })
 }
 
-pub(crate) struct Batches {
+#[derive(Default)]
+pub(super) struct Batches {
     migration_batch: Batch,
     post_migration_execute_batch: Batch,
 }
@@ -274,9 +277,5 @@ impl Batches {
             migration_batch,
             post_migration_execute_batch,
         }
-    }
-
-    pub(crate) fn default() -> Self {
-        Batches::new(Batch::default(), Batch::default())
     }
 }

@@ -94,15 +94,16 @@ where
     type Error = ContractError;
 
     fn try_from(stub: LppLoanImpl<Lpn, Lpns>) -> StdResult<Self, Self::Error> {
-        let mut batch = Batch::default();
-
-        if !stub.repayment.is_zero() {
-            batch = batch.schedule_execute_wasm_no_reply(
-                stub.lpp_ref.addr().clone(),
-                &ExecuteMsg::<Lpns>::RepayLoan(),
-                Some(stub.repayment),
-            )?;
-        }
+        let batch = (!stub.repayment.is_zero())
+            .then(|| {
+                Batch::default().schedule_execute_wasm_no_reply(
+                    stub.lpp_ref.addr().clone(),
+                    &ExecuteMsg::<Lpns>::RepayLoan(),
+                    Some(stub.repayment),
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Batch::default);
 
         Ok(Self {
             lpp_ref: stub.lpp_ref,

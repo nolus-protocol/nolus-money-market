@@ -526,20 +526,23 @@ fn schedule_alarm(
     base: Amount,
     quote: Amount,
 ) -> ContractResult<CwResponse> {
-    Ok(platform::response::response_only_messages(
-        platform::message::Response::messages_only({
-            Batch::default().schedule_execute_wasm_no_reply::<_, BaseC>(
-                ORACLE_ADDR.load(storage).unwrap(),
-                &ExecuteMsg::AddPriceAlarm {
-                    alarm: Alarm::new(
-                        price::total_of::<BaseC>(base.into()).is::<Lpn>(quote.into()),
-                        None,
-                    ),
-                },
-                None,
-            )?
-        }),
-    ))
+    Batch::default()
+        .schedule_execute_wasm_no_reply::<_, BaseC>(
+            ORACLE_ADDR.load(storage).unwrap(),
+            &ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(
+                    price::total_of::<BaseC>(base.into()).is::<Lpn>(quote.into()),
+                    None,
+                ),
+            },
+            None,
+        )
+        .map_err(Into::into)
+        .map(|batch| {
+            platform::response::response_only_messages(platform::message::Response::messages_only(
+                batch,
+            ))
+        })
 }
 
 fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
