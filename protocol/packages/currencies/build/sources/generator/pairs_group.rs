@@ -13,21 +13,21 @@ use crate::{
 
 use super::DexCurrencies;
 
-pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Children>(
+pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Parents>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &CurrencyDefinition,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     name: &'r str,
-    mut children: Children,
-) -> Result<impl Iterator<Item = &'r str> + use<'r, Children>>
+    mut parents: Parents,
+) -> Result<impl Iterator<Item = &'r str> + use<'r, Parents>>
 where
     'dex_currencies: 'r,
-    Children: Iterator<Item = &'child str>,
+    Parents: Iterator<Item = &'child str>,
 {
     let matcher;
 
-    if let Some(ticker) = children.next() {
+    if let Some(ticker) = parents.next() {
         matcher = "matcher";
 
         PairsGroupTemplate::new(
@@ -38,7 +38,7 @@ where
             matcher,
             "visitor",
         )
-        .apply(ticker, children)
+        .apply(ticker, parents)
         .map(Either::Left)
     } else {
         matcher = "_";
