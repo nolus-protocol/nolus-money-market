@@ -10,4 +10,5 @@ pub(crate) struct Protocol {
     pub lpn_ticker: String,
     pub stable_currency_ticker: String,
     pub lease_currencies_tickers: BTreeSet<String>,
+    pub payment_only_currencies_tickers: BTreeSet<String>,
 }

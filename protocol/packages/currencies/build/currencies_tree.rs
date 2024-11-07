@@ -1,11 +1,15 @@
 use std::{
-    collections::{btree_set, BTreeMap, BTreeSet},
+    borrow::Borrow,
+    collections::{
+        btree_map::{self, BTreeMap},
+        btree_set::{self, BTreeSet},
+    },
     ops::ControlFlow,
 };
 
 use anyhow::{anyhow, Context as _, Result};
 
-use topology::Topology;
+use topology::{swap_pairs::PairTargets, Topology};
 
 use crate::protocol::Protocol;
 
@@ -15,7 +19,11 @@ pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
 }
 
 impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
-    pub fn new(topology: &'topology Topology, protocol: &Protocol) -> Result<Self> {
+    pub fn new(
+        topology: &'topology Topology,
+        protocol: &Protocol,
+        host_currency_ticker: &str,
+    ) -> Result<Self> {
         let result = topology
             .network_dexes(&protocol.dex_network)
             .context("Selected DEX network doesn't define any DEXes!")?
@@ -23,47 +31,64 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
             .context("Selected DEX network doesn't define such DEX!")?
             .swap_pairs()
             .iter()
+            .map(|(ticker, targets)| (ticker.borrow(), targets))
+            .filter(|&(ticker, _)| {
+                super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
+            })
             .try_fold(
                 const {
-                    CurrenciesTree {
+                    Self {
                         parents: const { BTreeMap::<_, BTreeSet<_>>::new() },
                         children: const { BTreeMap::<_, BTreeSet<_>>::new() },
                     }
                 },
-                |CurrenciesTree {
-                     mut parents,
-                     mut children,
-                 },
-                 (from, targets)| {
-                    if children
-                        .insert(from.as_ref(), targets.iter().map(AsRef::as_ref).collect())
-                        .is_some()
-                    {
-                        ControlFlow::Break(())
-                    } else {
-                        let result = targets.iter().map(AsRef::as_ref).try_for_each(|target| {
-                            if parents.entry(target).or_default().insert(from.as_ref()) {
-                                ControlFlow::Continue(())
-                            } else {
-                                ControlFlow::Break(())
-                            }
-                        });
-
-                        match result {
-                            ControlFlow::Continue(()) => {
-                                ControlFlow::Continue(CurrenciesTree { parents, children })
-                            }
-                            ControlFlow::Break(()) => ControlFlow::Break(()),
-                        }
-                    }
+                |currencies_tree, (ticker, targets)| {
+                    currencies_tree.process_targets(protocol, host_currency_ticker, ticker, targets)
                 },
             );
 
         match result {
-            ControlFlow::Continue(swap_tree) => Ok(swap_tree),
+            ControlFlow::Continue(currencies_tree) => Ok(currencies_tree),
             ControlFlow::Break(()) => Err(anyhow!(
                 "Currency ticker duplication detected in swap pairs!"
             )),
+        }
+    }
+
+    fn process_targets(
+        mut self,
+        protocol: &Protocol,
+        host_currency_ticker: &str,
+        ticker: &'topology str,
+        targets: &'topology PairTargets,
+    ) -> ControlFlow<(), Self> {
+        let btree_map::Entry::Vacant(entry) = self.children.entry(ticker) else {
+            return ControlFlow::Break(());
+        };
+
+        let inverse_targets = entry.insert(
+            targets
+                .iter()
+                .map(Borrow::<str>::borrow)
+                .filter(|&ticker| {
+                    super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
+                })
+                .collect(),
+        );
+
+        let result = inverse_targets
+            .iter()
+            .try_fold(self.parents, |mut parents, target| {
+                if parents.entry(target).or_default().insert(ticker) {
+                    ControlFlow::Continue(parents)
+                } else {
+                    ControlFlow::Break(())
+                }
+            });
+
+        match result {
+            ControlFlow::Continue(parents) => ControlFlow::Continue(Self { parents, ..self }),
+            ControlFlow::Break(()) => ControlFlow::Break(()),
         }
     }
 }
