@@ -63,7 +63,6 @@ where
         &mut build_report,
         output_directory,
         builder,
-        dex_currencies,
         protocol,
     )?;
 
@@ -133,7 +132,6 @@ fn write_payment_only<BuildReport>(
     build_report: &mut BuildReport,
     output_directory: &Path,
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
-    dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
     protocol: &Protocol,
 ) -> Result<()>
 where
@@ -143,9 +141,10 @@ where
         build_report,
         &output_directory.join("payment_only.rs"),
         &builder.payment_only(),
-        dex_currencies.keys().copied().filter(|&key| {
-            !(key == protocol.lpn_ticker || protocol.lease_currencies_tickers.contains(key))
-        }),
+        protocol
+            .payment_only_currencies_tickers
+            .iter()
+            .map(Borrow::borrow),
     )
 }
 
