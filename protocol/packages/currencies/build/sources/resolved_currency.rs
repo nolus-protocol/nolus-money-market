@@ -70,21 +70,20 @@ where
         dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
         ticker: &str,
     ) -> Result<Self> {
-        if let Some((name, definition)) = dex_currencies.get(ticker) {
-            let (module, name) = if ticker == protocol.lpn_ticker {
-                (current_module.lpn(), LPN_NAME)
+        if let Some(&(ref name, definition)) = dex_currencies.get(ticker) {
+            if ticker == protocol.lpn_ticker {
+                Ok((current_module.lpn(), LPN_NAME))
+            } else if protocol.lease_currencies_tickers.contains(ticker) {
+                Ok((current_module.lease(), name.as_str()))
+            } else if protocol.payment_only_currencies_tickers.contains(ticker) {
+                Ok((current_module.payment_only(), name.as_str()))
             } else {
-                (
-                    if protocol.lease_currencies_tickers.contains(ticker) {
-                        current_module.lease()
-                    } else {
-                        current_module.payment_only()
-                    },
-                    name.as_str(),
-                )
-            };
-
-            Ok(Self {
+                Err(anyhow!(
+                    "Failed to resolve module because queried ticker belongs \
+                    to a currency that is not assigned to any group."
+                ))
+            }
+            .map(|(module, name)| Self {
                 module,
                 name,
                 definition,

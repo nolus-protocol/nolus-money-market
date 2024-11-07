@@ -105,16 +105,15 @@ where
         );
     }
 
-    let currencies_tree = CurrenciesTree::new(&topology, &protocol)?;
-
-    sources::write(
-        build_report,
-        output_directory,
-        &protocol,
-        &host_currency,
-        &dex_currencies
-            .iter()
-            .map(|currency_definition| {
+    let dex_currencies = dex_currencies
+        .iter()
+        .filter_map(|currency_definition| {
+            filter_selected_currencies(
+                &protocol,
+                host_currency.ticker(),
+                currency_definition.ticker(),
+            )
+            .then(|| {
                 (
                     currency_definition.ticker(),
                     (
@@ -123,7 +122,27 @@ where
                     ),
                 )
             })
-            .collect(),
-        &currencies_tree,
+        })
+        .collect();
+
+    sources::write(
+        build_report,
+        output_directory,
+        &protocol,
+        &host_currency,
+        &dex_currencies,
+        &CurrenciesTree::new(&topology, &protocol, host_currency.ticker())?,
     )
+}
+
+#[inline]
+fn filter_selected_currencies(
+    protocol: &Protocol,
+    host_currency_ticker: &str,
+    ticker: &str,
+) -> bool {
+    ticker == host_currency_ticker
+        || ticker == protocol.lpn_ticker
+        || protocol.lease_currencies_tickers.contains(ticker)
+        || protocol.payment_only_currencies_tickers.contains(ticker)
 }
