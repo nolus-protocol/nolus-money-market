@@ -28,11 +28,11 @@ pub(super) fn write<BuildReport>(
 where
     BuildReport: Write,
 {
+    let generator = writer::Writer::new(currencies_tree);
+
     let static_context = &generator::StaticContext::new(protocol, host_currency, dex_currencies);
 
     let builder = generator::Builder::new(static_context);
-
-    let generator = writer::Writer::new(currencies_tree);
 
     write_lease(
         &generator,
