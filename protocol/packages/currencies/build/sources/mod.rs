@@ -79,7 +79,7 @@ fn write_lease<BuildReport>(
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
     dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
     protocol: &Protocol,
-) -> std::result::Result<(), anyhow::Error>
+) -> Result<()>
 where
     BuildReport: Write,
 {
@@ -101,7 +101,7 @@ fn write_lpn<BuildReport>(
     output_directory: &Path,
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
     protocol: &Protocol,
-) -> std::result::Result<(), anyhow::Error>
+) -> Result<()>
 where
     BuildReport: Write,
 {
@@ -120,7 +120,7 @@ fn write_native<BuildReport>(
     output_directory: &Path,
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
     host_currency: &CurrencyDefinition,
-) -> std::result::Result<(), anyhow::Error>
+) -> Result<()>
 where
     BuildReport: Write,
 {
@@ -140,7 +140,7 @@ fn write_payment_only<BuildReport>(
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
     dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
     protocol: &Protocol,
-) -> std::result::Result<(), anyhow::Error>
+) -> Result<()>
 where
     BuildReport: Write,
 {
