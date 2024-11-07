@@ -294,15 +294,15 @@ where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
 {
-    fn pairs_group<'r, 'name, 'children, 'child>(
+    fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        children: currencies_tree::Children<'children, 'child>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Children<'children, 'child>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -333,15 +333,15 @@ where
     'dex_currency_definition: 'dex_currencies,
 {
     #[inline]
-    fn pairs_group<'r, 'name, 'children, 'child>(
+    fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         _: &'name str,
-        _: currencies_tree::Children<'children, 'child>,
+        _: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Children<'children, 'child>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -375,15 +375,15 @@ where
     'dex_currency_definition: 'dex_currencies,
 {
     #[inline]
-    fn pairs_group<'r, 'name, 'children, 'child>(
+    fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        children: currencies_tree::Children<'children, 'child>,
+        parents: currencies_tree::Parents<'parents, 'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Children<'children, 'child>>,
+            + Captures<currencies_tree::Parents<'parents, 'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -395,7 +395,7 @@ where
             self.static_context.host_currency,
             self.static_context.dex_currencies,
             name,
-            children.iter().copied(),
+            parents.iter().copied(),
         )
     }
 }
@@ -405,15 +405,15 @@ where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
 {
-    fn in_pool_with<'r, 'name, 'parents, 'parent>(
+    fn in_pool_with<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        parents: currencies_tree::Parents<'parents, 'parent>,
+        children: currencies_tree::Children<'children, 'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
+            + Captures<currencies_tree::Children<'children, 'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -442,15 +442,15 @@ impl<
     >
 {
     #[inline]
-    fn in_pool_with<'r, 'name, 'parents, 'parent>(
+    fn in_pool_with<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        parents: currencies_tree::Parents<'parents, 'parent>,
+        children: currencies_tree::Children<'children, 'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
+            + Captures<currencies_tree::Children<'children, 'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -464,9 +464,9 @@ impl<
 
         let dex_currencies = self.static_context.dex_currencies;
 
-        let parents = parents.iter().copied();
-
-        parents
+        children
+            .iter()
+            .copied()
             .map(|ticker| {
                 ResolvedCurrency::resolve(
                     current_module,

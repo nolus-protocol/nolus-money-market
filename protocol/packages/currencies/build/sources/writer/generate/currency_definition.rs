@@ -173,10 +173,10 @@ where
             .context("Failed to generate currency definition sources!")
             .and_then(|resolved| {
                 self.generator
-                    .pairs_group(resolved.name(), children)
+                    .pairs_group(resolved.name(), parents)
                     .and_then(|pairs_group| {
                         self.generator
-                            .in_pool_with(resolved.name(), parents)
+                            .in_pool_with(resolved.name(), children)
                             .map(|in_pool_with| GeneratedSourceEntry {
                                 maybe_visit: if <Generator as generator::MaybeVisit>::GENERATE {
                                     Either::Left([
