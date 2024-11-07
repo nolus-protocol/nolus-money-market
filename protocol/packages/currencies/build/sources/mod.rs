@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs::File, io::Write, iter, path::Path};
+use std::{borrow::Borrow, collections::BTreeMap, fs::File, io::Write, iter, path::Path};
 
 use anyhow::{Context as _, Result};
 
@@ -39,7 +39,6 @@ where
         &mut build_report,
         output_directory,
         builder,
-        dex_currencies,
         protocol,
     )?;
 
@@ -77,7 +76,6 @@ fn write_lease<BuildReport>(
     build_report: &mut BuildReport,
     output_directory: &Path,
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
-    dex_currencies: &BTreeMap<&str, (String, &CurrencyDefinition)>,
     protocol: &Protocol,
 ) -> Result<()>
 where
@@ -87,10 +85,7 @@ where
         build_report,
         &output_directory.join("lease.rs"),
         &builder.lease(),
-        dex_currencies
-            .keys()
-            .copied()
-            .filter(|&key| protocol.lease_currencies_tickers.contains(key)),
+        protocol.lease_currencies_tickers.iter().map(Borrow::borrow),
     )
 }
 
