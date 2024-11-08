@@ -13,7 +13,7 @@ use crate::{
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::{with_lease::WithLease, CloseStatus, Lease as LeaseDO},
-    position::{Cause, Liquidation},
+    position::{Cause, CloseStrategy, Liquidation},
 };
 
 pub(crate) fn check_close<Asset, Lpp, Oracle>(
@@ -40,12 +40,13 @@ pub(crate) struct Cmd<'a> {
 }
 
 pub(crate) enum CloseStatusDTO {
-    NoDebt,
-    NewAlarms {
+    Paid,
+    None {
         current_liability: Zone,
         alarms: Batch,
     },
     NeedLiquidation(LiquidationDTO),
+    CloseAsked(CloseStrategy),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,15 +72,16 @@ where
 {
     fn from(value: CloseStatus<Asset>) -> Self {
         match value {
-            CloseStatus::NoDebt => Self::NoDebt,
-            CloseStatus::NewAlarms {
+            CloseStatus::Paid => Self::Paid,
+            CloseStatus::None {
                 current_liability,
                 alarms,
-            } => Self::NewAlarms {
+            } => Self::None {
                 current_liability,
                 alarms,
             },
             CloseStatus::NeedLiquidation(liquidation) => Self::NeedLiquidation(liquidation.into()),
+            CloseStatus::CloseAsked(strategy) => Self::CloseAsked(strategy),
         }
     }
 }

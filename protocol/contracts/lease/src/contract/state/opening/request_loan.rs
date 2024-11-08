@@ -45,7 +45,7 @@ impl RequestLoan {
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
-                spec.form.position_spec.clone(),
+                spec.form.position_spec,
                 info.funds,
                 spec.form.max_ltd,
                 oracle.clone(),

@@ -102,8 +102,8 @@ where
         )?;
 
         match close_status {
-            CloseStatusDTO::NoDebt => Ok(finish_repay(loan_paid, response, lease)),
-            CloseStatusDTO::NewAlarms {
+            CloseStatusDTO::Paid => Ok(finish_repay(loan_paid, response, lease)),
+            CloseStatusDTO::None {
                 current_liability,
                 alarms,
             } => {
@@ -113,6 +113,10 @@ where
             }
             CloseStatusDTO::NeedLiquidation(liquidation) => {
                 liquidation::start(lease, liquidation, response, env, querier)
+            }
+            CloseStatusDTO::CloseAsked(_strategy) => {
+                todo!("TODO reset the Stop-Loss or Take-Profit trigger fired after payment (incl. liquidation or manual close)
+                 and check again the lease close status")
             }
         }
     }

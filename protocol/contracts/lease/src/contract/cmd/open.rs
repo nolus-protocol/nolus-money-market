@@ -91,12 +91,13 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             &self.time_alarms,
             &self.price_alarms,
         )? {
-            CloseStatusDTO::NoDebt => unreachable!(),
-            CloseStatusDTO::NewAlarms {
+            CloseStatusDTO::Paid => unreachable!(),
+            CloseStatusDTO::None {
                 current_liability: _,
                 alarms,
             } => alarms,
-            CloseStatusDTO::NeedLiquidation(_) => unreachable!(),
+            CloseStatusDTO::NeedLiquidation(_) => unreachable!("TODO PR#116"),
+            CloseStatusDTO::CloseAsked(_) => unreachable!(),
         };
 
         lease

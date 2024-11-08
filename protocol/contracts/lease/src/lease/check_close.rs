@@ -10,7 +10,7 @@ use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, Price},
-    position::{Debt, DueTrait, Liquidation},
+    position::{CloseStrategy, Debt, DueTrait, Liquidation},
 };
 
 use super::Lease;
@@ -36,7 +36,7 @@ where
         self.price_of_lease_currency()
             .map(|asset_in_lpns| self.position.debt(&due, asset_in_lpns))
             .and_then(|debt| match debt {
-                Debt::No => Ok(CloseStatus::NoDebt),
+                Debt::No => Ok(CloseStatus::Paid),
                 Debt::Ok { zone, recheck_in } => self
                     .reschedule(
                         now,
@@ -46,7 +46,7 @@ where
                         time_alarms,
                         price_alarms,
                     )
-                    .map(|alarms| CloseStatus::NewAlarms {
+                    .map(|alarms| CloseStatus::None {
                         alarms,
                         current_liability: zone,
                     }),
@@ -63,10 +63,12 @@ pub(crate) enum CloseStatus<Asset>
 where
     Asset: Currency,
 {
-    NoDebt,
-    NewAlarms {
+    Paid,
+    None {
         current_liability: Zone,
         alarms: Batch,
     },
     NeedLiquidation(Liquidation<Asset>),
+    #[allow(dead_code)]
+    CloseAsked(CloseStrategy),
 }

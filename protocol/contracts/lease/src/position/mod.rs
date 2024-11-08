@@ -9,6 +9,7 @@ use crate::{
     finance::{LpnCoin, Price},
 };
 
+pub use close::Strategy as CloseStrategy;
 pub use dto::{PositionDTO, WithPosition, WithPositionResult};
 pub use interest::{Due as DueTrait, OverdueCollection};
 pub use spec::{Spec, SpecDTO};

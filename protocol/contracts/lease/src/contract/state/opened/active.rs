@@ -105,8 +105,8 @@ impl Active {
         )?;
 
         match close_status {
-            CloseStatusDTO::NoDebt => Ok(Response::no_msgs(self)),
-            CloseStatusDTO::NewAlarms {
+            CloseStatusDTO::Paid => Ok(Response::no_msgs(self)),
+            CloseStatusDTO::None {
                 current_liability,
                 alarms,
             } => Ok(Response::from(
@@ -120,6 +120,7 @@ impl Active {
                 env,
                 querier,
             ),
+            CloseStatusDTO::CloseAsked(_strategy) => todo!("TODO start position close"),
         }
     }
 
