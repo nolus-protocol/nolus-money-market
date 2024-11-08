@@ -15,9 +15,9 @@ pub struct Policy {
 
 /// A strategy triggered to close the position automatically
 ///
-/// If a recent price movement have the position's LTV trigger a full close as per the configured `Policy` 
+/// If a recent price movement have the position's LTV trigger a full close as per the configured `Policy`
 /// then the close strategy carries details.
-/// 
+///
 /// A full close of the position is triggered if:
 /// - a Stop Loss is set up and a price decline have the position's LTV become higher than the specified percent, or
 /// - a Take Profit is set up and a price rise have the position's LTV become lower than the specified percent.

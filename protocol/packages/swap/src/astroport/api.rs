@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Addr, Decimal, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     /// Receive receives a message of type [`Cw20ReceiveMsg`] and processes it depending on the received template
@@ -28,7 +27,6 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
 #[serde(rename_all = "snake_case")]
 pub enum SwapOperation {
     /// Native swap
@@ -48,14 +46,12 @@ pub enum SwapOperation {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
 #[serde(rename_all = "snake_case")]
 pub struct SwapResponseData {
     pub return_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Hash, Eq)]
-#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
     /// Non-native Token
@@ -65,6 +61,5 @@ pub enum AssetInfo {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
 #[serde(rename_all = "snake_case")]
 pub struct Cw20ReceiveMsg; // originally definied in [cw20][https://crates.io/crates/cw20], unused in this codebase
