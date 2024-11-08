@@ -120,7 +120,7 @@ impl InterestPaymentSpec {
     }
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Clone, Copy, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(
     feature = "skel",
     derive(Deserialize),

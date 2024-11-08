@@ -31,7 +31,7 @@ pub(crate) fn open_lease(
     debug_assert_eq!(asset.currency(), form.currency);
     debug_assert!(asset.amount() > 0);
 
-    let position = PositionDTO::new(asset, form.position_spec.clone());
+    let position = PositionDTO::new(asset, form.position_spec.into());
     let profit = ProfitRef::new(form.loan.profit.clone(), &querier)?;
     let reserve = ReserveRef::try_new(form.reserve.clone(), &querier)?;
     let cmd = LeaseFactory {

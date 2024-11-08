@@ -16,22 +16,30 @@ use crate::{
     position::{Cause, Debt, Liquidation},
 };
 
-use super::{interest::OverdueCollection, DueTrait};
+use super::{close::Policy as ClosePolicy, interest::OverdueCollection, DueTrait};
+pub use dto::SpecDTO;
 
 mod dto;
 
+#[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Spec {
     liability: Liability,
-    // close: ClosePolicy,
+    close: ClosePolicy,
     min_asset: LpnCoin,
     min_transaction: LpnCoin,
 }
 
 impl Spec {
-    pub fn new(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
+    pub fn new(
+        liability: Liability,
+        close: ClosePolicy,
+        min_asset: LpnCoin,
+        min_transaction: LpnCoin,
+    ) -> Self {
         let obj = Self {
             liability,
+            close,
             min_asset,
             min_transaction,
         };
@@ -39,6 +47,15 @@ impl Spec {
         obj
     }
 
+    #[cfg(test)]
+    pub fn no_close(liability: Liability, min_asset: LpnCoin, min_transaction: LpnCoin) -> Self {
+        Self::new(
+            liability,
+            ClosePolicy::default(),
+            min_asset,
+            min_transaction,
+        )
+    }
     /// Calculate the borrow amount.
     /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
     /// or the borrow amount is less than the minimum transaction amount.
@@ -375,7 +392,7 @@ mod test_calc_borrow {
             Percent::from_percent(80),
             Duration::from_hours(1),
         );
-        Spec::new(liability, min_asset.into(), min_transaction.into())
+        Spec::no_close(liability, min_asset.into(), min_transaction.into())
     }
 
     fn coin_lpn(amount: Amount) -> Coin<TestLpn> {
@@ -1108,7 +1125,7 @@ mod test_debt {
             max,
             RECALC_IN,
         );
-        Spec::new(liability, min_asset.into(), min_transaction.into())
+        Spec::no_close(liability, min_asset.into(), min_transaction.into())
     }
 }
 
@@ -1163,7 +1180,7 @@ mod test_validate_payment {
             Percent::from_percent(80),
             Duration::from_hours(1),
         );
-        Spec::new(liability, min_asset.into(), min_transaction.into())
+        Spec::no_close(liability, min_asset.into(), min_transaction.into())
     }
 
     fn price<PaymentC, Lpn>(
@@ -1279,7 +1296,7 @@ mod test_validate_close {
             Percent::from_percent(80),
             Duration::from_hours(1),
         );
-        Spec::new(liability, min_asset.into(), min_transaction.into())
+        Spec::no_close(liability, min_asset.into(), min_transaction.into())
     }
 
     fn price<Asset, Lpn>(price_asset: Asset, price_lpn: Lpn) -> Price<TestCurrency, TestLpn>

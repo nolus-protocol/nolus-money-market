@@ -8,18 +8,18 @@ use finance::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{open::PositionSpecDTO, LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractError,
 };
 
-use super::{Position, Spec};
+use super::{Position, Spec, SpecDTO};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct PositionDTO {
     amount: CoinDTO<LeaseAssetCurrencies>,
-    spec: PositionSpecDTO,
+    spec: SpecDTO,
 }
 
 pub type WithPositionResult<V> = Result<<V as WithPosition>::Output, <V as WithPosition>::Error>;
@@ -35,7 +35,7 @@ pub trait WithPosition {
 }
 
 impl PositionDTO {
-    pub(crate) fn new(amount: CoinDTO<LeaseAssetCurrencies>, spec: PositionSpecDTO) -> Self {
+    pub(crate) fn new(amount: CoinDTO<LeaseAssetCurrencies>, spec: SpecDTO) -> Self {
         Self { amount, spec }
     }
 
@@ -51,7 +51,7 @@ impl PositionDTO {
     {
         struct WithAmount<V> {
             cmd: V,
-            spec: PositionSpecDTO,
+            spec: SpecDTO,
         }
 
         impl<V> WithCoin<LeaseAssetCurrencies> for WithAmount<V>

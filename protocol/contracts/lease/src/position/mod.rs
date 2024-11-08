@@ -11,9 +11,10 @@ use crate::{
 
 pub use dto::{PositionDTO, WithPosition, WithPositionResult};
 pub use interest::{Due as DueTrait, OverdueCollection};
-pub use spec::Spec;
+pub use spec::{Spec, SpecDTO};
 pub use status::{Cause, Debt, Liquidation};
 
+mod close;
 mod dto;
 mod interest;
 mod spec;

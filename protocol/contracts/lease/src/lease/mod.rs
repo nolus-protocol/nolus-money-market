@@ -316,7 +316,7 @@ mod tests {
             Percent::from_percent(80),
             RECHECK_TIME,
         );
-        let position_spec = PositionSpec::new(
+        let position_spec = PositionSpec::no_close(
             liability,
             Coin::<TestLpn>::new(15_000_000),
             Coin::<TestLpn>::new(10_000),

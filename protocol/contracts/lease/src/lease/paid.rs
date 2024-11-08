@@ -143,7 +143,7 @@ mod tests {
             Percent::from_percent(80),
             Duration::from_days(3),
         );
-        let spec = Spec::new(
+        let spec = Spec::no_close(
             liability,
             Coin::<TestLpn>::new(15_000_000),
             Coin::<TestLpn>::new(10_000),
