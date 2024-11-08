@@ -159,7 +159,7 @@ fn test_update_config() {
 
     let msg = SudoMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        lease_position_spec: expected_position_spec.clone(),
+        lease_position_spec: expected_position_spec,
         lease_due_period: expected_due_period,
     };
 
