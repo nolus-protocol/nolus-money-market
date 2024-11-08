@@ -33,25 +33,28 @@ where
     ) -> ContractResult<CloseStatus<Asset>> {
         let due = self.loan.state(now);
 
-        self.price_of_lease_currency()
-            .map(|asset_in_lpns| self.position.debt(&due, asset_in_lpns))
-            .and_then(|debt| match debt {
-                Debt::No => Ok(CloseStatus::Paid),
-                Debt::Ok { zone, recheck_in } => self
-                    .reschedule(
-                        now,
-                        recheck_in,
-                        &zone,
-                        due.total_due(),
-                        time_alarms,
-                        price_alarms,
-                    )
-                    .map(|alarms| CloseStatus::None {
-                        alarms,
-                        current_liability: zone,
-                    }),
-                Debt::Bad(liquidation) => Ok(CloseStatus::NeedLiquidation(liquidation)),
-            })
+        self.price_of_lease_currency().and_then(|asset_in_lpns| {
+            self.position
+                .check_close(asset_in_lpns)
+                .map(|close| Ok(CloseStatus::CloseAsked(close)))
+                .unwrap_or_else(|| match self.position.debt(&due, asset_in_lpns) {
+                    Debt::No => Ok(CloseStatus::Paid),
+                    Debt::Ok { zone, recheck_in } => self
+                        .reschedule(
+                            now,
+                            recheck_in,
+                            &zone,
+                            due.total_due(),
+                            time_alarms,
+                            price_alarms,
+                        )
+                        .map(|alarms| CloseStatus::None {
+                            alarms,
+                            current_liability: zone,
+                        }),
+                    Debt::Bad(liquidation) => Ok(CloseStatus::NeedLiquidation(liquidation)),
+                })
+        })
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {
@@ -69,6 +72,5 @@ where
         alarms: Batch,
     },
     NeedLiquidation(Liquidation<Asset>),
-    #[allow(dead_code)]
     CloseAsked(CloseStrategy),
 }

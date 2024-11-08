@@ -68,6 +68,11 @@ where
         self.spec.debt(self.amount, due, asset_in_lpns)
     }
 
+    pub fn check_close(&self, _asset_in_lpns: Price<Asset>) -> Option<CloseStrategy> {
+        None
+        // todo!("Position::check_close")
+    }
+
     /// Check if the amount can be used for repayment.
     /// Return `error::ContractError::InsufficientPayment` when the payment amount
     /// is less than the minimum transaction amount.

@@ -21,7 +21,6 @@ pub struct Policy {
 /// A full close of the position is triggered if:
 /// - a Stop Loss is set up and a price decline have the position's LTV become higher than the specified percent, or
 /// - a Take Profit is set up and a price rise have the position's LTV become lower than the specified percent.
-#[allow(dead_code)]
 pub enum Strategy {
     StopLoss(Percent),
     TakeProfit(Percent),
