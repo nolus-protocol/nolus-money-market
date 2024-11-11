@@ -182,86 +182,22 @@
       }
     }
   },
-  "channels": [
-    {
-      "a": {
-        "network": "NOLUS",
-        "ch": "channel-0"
-      },
-      "b": {
-        "network": "OSMOSIS",
-        "ch": "channel-1636"
-      }
+  "channels": {
+    "NEUTRON": {
+      "AXELAR": "channel-8",
+      "COSMOS_HUB": "channel-1",
+      "NOLUS": "channel-209"
     },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-3"
-      },
-      "b": {
-        "network": "AXELAR",
-        "ch": "channel-227"
-      }
+    "NOLUS": {
+      "NEUTRON": "channel-116",
+      "OSMOSIS": "channel-0"
     },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-73"
-      },
-      "b": {
-        "network": "AKASH",
-        "ch": "channel-1"
-      }
-    },
-    {
-      "a": {
-        "network": "COSMOS_HUB",
-        "ch": "channel-2500"
-      },
-      "b": {
-        "network": "OSMOSIS",
-        "ch": "channel-12"
-      }
-    },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-1"
-      },
-      "b": {
-        "network": "JUNO",
-        "ch": "channel-190"
-      }
-    },
-    {
-      "a": {
-        "network": "NOLUS",
-        "ch": "channel-116"
-      },
-      "b": {
-        "network": "NEUTRON",
-        "ch": "channel-209"
-      }
-    },
-    {
-      "a": {
-        "network": "NEUTRON",
-        "ch": "channel-8"
-      },
-      "b": {
-        "network": "AXELAR",
-        "ch": "channel-237"
-      }
-    },
-    {
-      "a": {
-        "network": "NEUTRON",
-        "ch": "channel-1"
-      },
-      "b": {
-        "network": "COSMOS_HUB",
-        "ch": "channel-16"
-      }
+    "OSMOSIS": {
+      "AKASH": "channel-73",
+      "AXELAR": "channel-3",
+      "COSMOS_HUB": "channel-12",
+      "JUNO": "channel-1",
+      "NOLUS": "channel-1636"
     }
-  ]
+  }
 }

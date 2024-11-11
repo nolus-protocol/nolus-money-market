@@ -105,86 +105,34 @@
       }
     }
   },
-  "channels": [
-    {
-      "a": {
-        "network": "Host",
-        "ch": "channel-0"
-      },
-      "b": {
-        "network": "DexIntermediate1",
-        "ch": "channel-11"
-      }
+  "channels": {
+    "Host": {
+      "DexIntermediate1": "channel-0"
     },
-    {
-      "a": {
-        "network": "DexIntermediate1",
-        "ch": "channel-10"
-      },
-      "b": {
-        "network": "DexIntermediate2",
-        "ch": "channel-101"
-      }
+    "DexIntermediate1": {
+      "Host": "channel-11",
+      "DexIntermediate2": "channel-10"
     },
-    {
-      "a": {
-        "network": "DexIntermediate2",
-        "ch": "channel-100"
-      },
-      "b": {
-        "network": "DexIntermediate3",
-        "ch": "channel-1001"
-      }
+    "DexIntermediate2": {
+      "DexIntermediate1": "channel-101",
+      "DexIntermediate3": "channel-100"
     },
-    {
-      "a": {
-        "network": "DexIntermediate3",
-        "ch": "channel-1000"
-      },
-      "b": {
-        "network": "Dex",
-        "ch": "channel-10001"
-      }
+    "DexIntermediate3": {
+      "DexIntermediate2": "channel-1001",
+      "Dex": "channel-1000"
     },
-    {
-      "a": {
-        "network": "Dex",
-        "ch": "channel-10000"
-      },
-      "b": {
-        "network": "FarIntermediate1",
-        "ch": "channel-100001"
-      }
+    "Dex": {
+      "DexIntermediate3": "channel-10001",
+      "FarIntermediate1": "channel-10000"
     },
-    {
-      "a": {
-        "network": "FarIntermediate1",
-        "ch": "channel-100000"
-      },
-      "b": {
-        "network": "FarIntermediate2",
-        "ch": "channel-1000001"
-      }
+    "FarIntermediate1": {
+      "FarIntermediate2": "channel-100000"
     },
-    {
-      "a": {
-        "network": "FarIntermediate2",
-        "ch": "channel-1000000"
-      },
-      "b": {
-        "network": "FarIntermediate3",
-        "ch": "channel-10000001"
-      }
+    "FarIntermediate2": {
+      "FarIntermediate3": "channel-1000000"
     },
-    {
-      "a": {
-        "network": "FarIntermediate3",
-        "ch": "channel-10000000"
-      },
-      "b": {
-        "network": "FarNet",
-        "ch": "channel-100000001"
-      }
+    "FarIntermediate3": {
+      "FarNet": "channel-10000000"
     }
-  ]
+  }
 }
