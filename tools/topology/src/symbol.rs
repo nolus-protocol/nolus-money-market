@@ -23,11 +23,13 @@ impl Symbol {
 pub(crate) struct Builder(Inner);
 
 impl Builder {
-    // TODO replace with following after upgrade to Rust 1.79+:
+    // TODO [1.79]
+    //  Replace with following:
     //  ```
     //  pub const fn new() -> Self {
     //      const { Self(Inner::Native) }
     //  }
+    //  ```
     pub const NEW: Self = Self(Inner::Native);
 
     pub fn add_channel(&mut self, channel: &channel::Id) {
