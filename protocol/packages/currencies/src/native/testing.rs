@@ -6,7 +6,7 @@ use currency::{
 };
 use sdk::schemars::JsonSchema;
 
-use crate::{lease::impl_mod::LeaseC5, lpn::impl_mod::Lpn, payment};
+use crate::{lease::LeaseC5, lpn::Lpn, payment};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,

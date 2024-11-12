@@ -2,8 +2,8 @@
 pub use self::payment::*;
 pub use self::{
     lease::Group as LeaseGroup,
-    lpn::{impl_mod::Lpn, Group as Lpns},
-    native::{impl_mod::Nls, Group as Native},
+    lpn::{Group as Lpns, Lpn},
+    native::{Group as Native, Nls},
     payment::{Group as PaymentGroup, OnlyGroup as PaymentOnlyGroup},
     stable::Stable,
 };
