@@ -7,7 +7,10 @@ use crate::{lease, lpn, native};
 
 pub use self::only::Group as OnlyGroup;
 #[cfg(feature = "testing")]
-pub use self::testing::*;
+pub use self::testing::{
+    PaymentC1, PaymentC2, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentC8,
+    PaymentC9,
+};
 
 pub(crate) mod only;
 #[cfg(feature = "testing")]
