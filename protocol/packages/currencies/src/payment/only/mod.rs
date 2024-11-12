@@ -6,13 +6,16 @@ use sdk::schemars::JsonSchema;
 use crate::payment;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) mod impl_mod {
+pub(crate) use self::impl_mod::*;
+
+#[cfg(not(feature = "testing"))]
+mod impl_mod {
     include!(concat!(env!("OUT_DIR"), "/payment_only.rs"));
 }
 
 #[cfg(feature = "testing")]
 #[path = "testing.rs"]
-pub(crate) mod impl_mod;
+mod impl_mod;
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,

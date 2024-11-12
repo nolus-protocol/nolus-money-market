@@ -6,7 +6,7 @@ use currency::{
 };
 use sdk::schemars::JsonSchema;
 
-use crate::{lpn::impl_mod::Lpn, native::impl_mod::Nls, payment};
+use crate::{lpn::Lpn, native::Nls, payment};
 
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
@@ -322,8 +322,8 @@ mod test {
     use currency::CurrencyDef as _;
 
     use crate::{
-        lpn::{impl_mod::Lpn, Group as Lpns},
-        native::impl_mod::Nls,
+        lpn::{Group as Lpns, Lpn},
+        native::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
