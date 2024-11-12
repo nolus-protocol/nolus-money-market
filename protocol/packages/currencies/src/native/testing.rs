@@ -6,17 +6,19 @@ use currency::{
 };
 use sdk::schemars::JsonSchema;
 
-use crate::{lease::LeaseC5, lpn::Lpn, payment};
+use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
+
+use super::Group as NativeGroup;
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct Nls(CurrencyDTO<super::Group>);
+pub struct Nls(CurrencyDTO<NativeGroup>);
 
 impl CurrencyDef for Nls {
-    type Group = super::Group;
+    type Group = NativeGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -34,7 +36,7 @@ impl CurrencyDef for Nls {
 }
 
 impl PairsGroup for Nls {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
