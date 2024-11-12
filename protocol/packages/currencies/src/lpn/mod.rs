@@ -6,7 +6,7 @@ use currency::{
 };
 use sdk::schemars::JsonSchema;
 
-use crate::payment;
+use crate::payment::Group as PaymentGroup;
 
 pub use self::impl_mod::Lpn;
 
@@ -29,7 +29,7 @@ pub enum Group {}
 impl currency::Group for Group {
     const DESCR: &'static str = "lpns";
 
-    type TopG = payment::Group;
+    type TopG = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
@@ -56,10 +56,10 @@ impl currency::Group for Group {
 
 impl MemberOf<Self> for Group {}
 
-impl MemberOf<payment::Group> for Group {}
+impl MemberOf<PaymentGroup> for Group {}
 
 impl PairsGroup for Lpn {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
