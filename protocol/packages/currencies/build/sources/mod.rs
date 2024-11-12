@@ -6,6 +6,8 @@ use topology::CurrencyDefinition;
 
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
+use self::resolved_currency::{CurrentModule, ResolvedCurrency};
+
 mod generator;
 mod resolved_currency;
 mod writer;
@@ -66,7 +68,13 @@ where
         protocol,
     )?;
 
-    write_stable(build_report, output_directory, protocol, dex_currencies)
+    write_stable(
+        build_report,
+        output_directory,
+        host_currency,
+        dex_currencies,
+        protocol,
+    )
 }
 
 #[inline]
@@ -151,30 +159,25 @@ where
 fn write_stable<Report>(
     mut build_report: Report,
     output_directory: &Path,
-    protocol: &Protocol,
+    host_currency: &CurrencyDefinition,
     dex_currencies: &DexCurrencies<'_, '_>,
+    protocol: &Protocol,
 ) -> Result<()>
 where
     Report: Write,
 {
     const FILENAME: &str = "stable.rs";
 
-    let (module, name) = if protocol.stable_currency_ticker == protocol.lpn_ticker {
-        ("lpn::impl_mod", LPN_NAME)
-    } else {
-        let module = if protocol
-            .lease_currencies_tickers
-            .contains(&protocol.stable_currency_ticker)
-        {
-            "lease::impl_mod"
-        } else {
-            "payment::only::impl_mod"
-        };
+    let (module, name) = {
+        let resolved = ResolvedCurrency::resolve(
+            CurrentModule::Stable,
+            protocol,
+            host_currency,
+            dex_currencies,
+            &protocol.stable_currency_ticker,
+        )?;
 
-        (
-            module,
-            &*dex_currencies[&*protocol.stable_currency_ticker].0,
-        )
+        (resolved.module(), resolved.name())
     };
 
     build_report.write_fmt(format_args!(
@@ -187,7 +190,7 @@ where
         .write_fmt(format_args!(
             "// @generated
 
-pub type Stable = crate::{module}::{name};
+pub type Stable = {module}::{name};
 "
         ))
         .with_context(move || format!("Failed to write contents to {FILENAME:?}!"))
