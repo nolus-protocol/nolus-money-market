@@ -1,8 +1,6 @@
 use std::iter;
 
 pub(super) fn snake_case_to_upper_camel_case(mut input: &str) -> String {
-    let mut string = String::new();
-
     iter::from_fn(move || {
         input
             .find('_')
@@ -15,19 +13,16 @@ pub(super) fn snake_case_to_upper_camel_case(mut input: &str) -> String {
                 substring
             })
     })
-    .for_each(|substring| {
+    .flat_map(|substring| {
         let mut chars = substring.chars();
 
-        if let Some(first_character) = chars.next() {
-            string.push(first_character.to_ascii_uppercase());
-
-            chars
-                .map(|ch| ch.to_ascii_lowercase())
-                .for_each(|ch| string.push(ch));
-        }
-    });
-
-    string
+        chars
+            .next()
+            .map(|first_character| first_character.to_ascii_uppercase())
+            .into_iter()
+            .chain(chars.map(|ch| ch.to_ascii_lowercase()))
+    })
+    .collect()
 }
 
 #[test]
