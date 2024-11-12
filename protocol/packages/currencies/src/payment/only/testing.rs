@@ -1,6 +1,6 @@
 use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
 
-use crate::PaymentGroup;
+use super::super::Group as PaymentGroup;
 
 #[inline]
 pub(super) fn maybe_visit<M, V, VisitedG>(_: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>

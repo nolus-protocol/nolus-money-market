@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars::JsonSchema;
 
-use crate::{lease, lpn, native};
+use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
 pub use self::only::Group as OnlyGroup;
 #[cfg(feature = "testing")]
@@ -34,10 +34,10 @@ impl currency::Group for Group {
         M: Matcher,
         V: AnyVisitor<Self>,
     {
-        lease::Group::maybe_visit_member(matcher, visitor)
-            .or_else(|visitor| lpn::Group::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| native::Group::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| only::Group::maybe_visit_member(matcher, visitor))
+        LeaseGroup::maybe_visit_member(matcher, visitor)
+            .or_else(|visitor| LpnGroup::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| NativeGroup::maybe_visit_member(matcher, visitor))
+            .or_else(|visitor| OnlyGroup::maybe_visit_member(matcher, visitor))
     }
 
     #[cold]

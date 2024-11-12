@@ -6,17 +6,19 @@ use currency::{
 };
 use sdk::schemars::JsonSchema;
 
-use crate::{lpn::Lpn, native::Nls, payment};
+use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
+
+use super::Group as LeaseGroup;
 
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
     visitor: V,
 ) -> MaybeAnyVisitResult<VisitedG, V>
 where
-    super::Group: MemberOf<VisitedG>,
+    LeaseGroup: MemberOf<VisitedG>,
     M: Matcher,
     V: AnyVisitor<VisitedG>,
-    VisitedG: Group<TopG = payment::Group>,
+    VisitedG: Group<TopG = PaymentGroup>,
 {
     use currency::maybe_visit_member as visit;
 
@@ -34,10 +36,10 @@ where
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC1(CurrencyDTO<super::Group>);
+pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC1 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -55,7 +57,7 @@ impl CurrencyDef for LeaseC1 {
 }
 
 impl PairsGroup for LeaseC1 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -75,10 +77,10 @@ impl PairsGroup for LeaseC1 {
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC2(CurrencyDTO<super::Group>);
+pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC2 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -96,7 +98,7 @@ impl CurrencyDef for LeaseC2 {
 }
 
 impl PairsGroup for LeaseC2 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -121,10 +123,10 @@ impl InPoolWith<LeaseC4> for LeaseC2 {}
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC3(CurrencyDTO<super::Group>);
+pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC3 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -142,7 +144,7 @@ impl CurrencyDef for LeaseC3 {
 }
 
 impl PairsGroup for LeaseC3 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -163,10 +165,10 @@ impl InPoolWith<LeaseC1> for LeaseC3 {}
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC4(CurrencyDTO<super::Group>);
+pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC4 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -184,7 +186,7 @@ impl CurrencyDef for LeaseC4 {
 }
 
 impl PairsGroup for LeaseC4 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -203,10 +205,10 @@ impl PairsGroup for LeaseC4 {
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC5(CurrencyDTO<super::Group>);
+pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC5 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -224,7 +226,7 @@ impl CurrencyDef for LeaseC5 {
 }
 
 impl PairsGroup for LeaseC5 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -243,10 +245,10 @@ impl PairsGroup for LeaseC5 {
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC6(CurrencyDTO<super::Group>);
+pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC6 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -264,7 +266,7 @@ impl CurrencyDef for LeaseC6 {
 }
 
 impl PairsGroup for LeaseC6 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(_: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -282,10 +284,10 @@ impl PairsGroup for LeaseC6 {
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct LeaseC7(CurrencyDTO<super::Group>);
+pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC7 {
-    type Group = super::Group;
+    type Group = LeaseGroup;
 
     #[inline]
     fn definition() -> &'static Self {
@@ -303,7 +305,7 @@ impl CurrencyDef for LeaseC7 {
 }
 
 impl PairsGroup for LeaseC7 {
-    type CommonGroup = payment::Group;
+    type CommonGroup = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
@@ -330,9 +332,7 @@ mod test {
         },
     };
 
-    use super::{
-        super::Group as LeaseGroup, LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7,
-    };
+    use super::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7, LeaseGroup};
 
     #[test]
     fn maybe_visit_on_ticker() {

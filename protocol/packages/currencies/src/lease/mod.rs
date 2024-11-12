@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
 use sdk::schemars::JsonSchema;
 
-use crate::payment;
+use crate::payment::Group as PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
 pub(crate) use self::impl_mod::*;
@@ -29,7 +29,7 @@ pub enum Group {}
 impl currency::Group for Group {
     const DESCR: &'static str = "lease";
 
-    type TopG = payment::Group;
+    type TopG = PaymentGroup;
 
     #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
@@ -52,7 +52,7 @@ impl currency::Group for Group {
 
 impl MemberOf<Self> for Group {}
 
-impl MemberOf<payment::Group> for Group {}
+impl MemberOf<PaymentGroup> for Group {}
 
 #[cfg(all(feature = "testing", test))]
 mod test {
