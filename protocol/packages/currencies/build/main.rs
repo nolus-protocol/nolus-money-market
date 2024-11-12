@@ -107,21 +107,21 @@ where
 
     let dex_currencies = dex_currencies
         .iter()
-        .filter_map(|currency_definition| {
+        .filter(|currency_definition| {
             filter_selected_currencies(
                 &protocol,
                 host_currency.ticker(),
                 currency_definition.ticker(),
             )
-            .then(|| {
+        })
+        .map(|currency_definition| {
+            (
+                currency_definition.ticker(),
                 (
-                    currency_definition.ticker(),
-                    (
-                        convert_case::snake_case_to_upper_camel_case(currency_definition.ticker()),
-                        currency_definition,
-                    ),
-                )
-            })
+                    convert_case::snake_case_to_upper_camel_case(currency_definition.ticker()),
+                    currency_definition,
+                ),
+            )
         })
         .collect();
 
