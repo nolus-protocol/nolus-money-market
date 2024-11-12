@@ -162,13 +162,9 @@ where
     'channels: 'network,
     'channels: 'channel_id,
 {
-    let mut connected_networks = path
-        .connected_networks
-        .iter()
-        .map(|(connected_network, chanel_id)| (connected_network, chanel_id))
-        .filter(|&(network, _)| {
-            matches!(set_traversed(network), TraverseNetworkOutput::NewNetwork)
-        });
+    let mut connected_networks = path.connected_networks.iter().filter(|&(network, _)| {
+        matches!(set_traversed(network), TraverseNetworkOutput::NewNetwork)
+    });
 
     let last_endpoint = connected_networks.next_back();
 
