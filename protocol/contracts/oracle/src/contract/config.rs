@@ -8,7 +8,7 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractErro
 
 #[cfg(test)]
 mod tests {
-    use currencies::{Lpn, PaymentC9, PaymentGroup as PriceCurrencies};
+    use currencies::{testing::PaymentC9, Lpn, PaymentGroup as PriceCurrencies};
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,

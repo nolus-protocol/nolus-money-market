@@ -171,10 +171,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use serde::Serialize;
     use std::fmt::{Display, Formatter, Result as FmtResult};
 
-    use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseGroup, Lpn, Lpns, PaymentGroup};
+    use serde::Serialize;
+
+    use currencies::{
+        testing::{LeaseC1, LeaseC2, LeaseC3},
+        LeaseGroup, Lpn, Lpns, PaymentGroup,
+    };
     use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},

@@ -385,7 +385,7 @@ mod test_calc_borrow {
 #[cfg(test)]
 mod test_debt {
 
-    use currencies::{Lpn, PaymentC3};
+    use currencies::{testing::PaymentC3, Lpn};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -1113,7 +1113,7 @@ mod test_debt {
 
 #[cfg(test)]
 mod test_validate_payment {
-    use currencies::{LeaseC1, Lpn};
+    use currencies::{testing::LeaseC1, Lpn};
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -1179,7 +1179,7 @@ mod test_validate_payment {
 
 #[cfg(test)]
 mod test_validate_close {
-    use currencies::{Lpn, PaymentC3};
+    use currencies::{testing::PaymentC3, Lpn};
     use finance::{
         coin::Coin,
         duration::Duration,
