@@ -8,15 +8,17 @@ use crate::{
     native::Nls,
 };
 
+use super::Group as LpnGroup;
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 #[schemars(crate = "sdk::schemars")]
-pub struct Lpn(CurrencyDTO<super::Group>);
+pub struct Lpn(CurrencyDTO<LpnGroup>);
 
 impl CurrencyDef for Lpn {
-    type Group = super::Group;
+    type Group = LpnGroup;
 
     #[inline]
     fn definition() -> &'static Self {
