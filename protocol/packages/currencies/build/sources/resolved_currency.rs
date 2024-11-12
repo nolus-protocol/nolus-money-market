@@ -12,6 +12,7 @@ pub(super) enum CurrentModule {
     Lpn,
     Native,
     PaymentOnly,
+    Stable,
 }
 
 impl CurrentModule {
