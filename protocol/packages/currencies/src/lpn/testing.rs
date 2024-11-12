@@ -4,8 +4,8 @@ use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith};
 use sdk::schemars::JsonSchema;
 
 use crate::{
-    lease::impl_mod::{LeaseC2, LeaseC7},
-    native::impl_mod::Nls,
+    lease::{LeaseC2, LeaseC7},
+    native::Nls,
 };
 
 #[derive(

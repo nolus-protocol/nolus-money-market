@@ -5,16 +5,16 @@ use sdk::schemars::JsonSchema;
 
 use crate::payment;
 
-use self::impl_mod::Nls;
+pub use self::impl_mod::Nls;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) mod impl_mod {
+mod impl_mod {
     include!(concat!(env!("OUT_DIR"), "/native.rs"));
 }
 
 #[cfg(feature = "testing")]
 #[path = "testing.rs"]
-pub(crate) mod impl_mod;
+mod impl_mod;
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,
@@ -56,7 +56,7 @@ mod test {
     use currency::CurrencyDef as _;
 
     use crate::{
-        lpn::impl_mod::Lpn,
+        lpn::Lpn,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,

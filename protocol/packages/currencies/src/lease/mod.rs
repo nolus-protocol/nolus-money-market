@@ -6,13 +6,18 @@ use sdk::schemars::JsonSchema;
 use crate::payment;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) mod impl_mod {
+pub(crate) use self::impl_mod::*;
+#[cfg(feature = "testing")]
+pub use self::impl_mod::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
+
+#[cfg(not(feature = "testing"))]
+mod impl_mod {
     include!(concat!(env!("OUT_DIR"), "/lease.rs"));
 }
 
 #[cfg(feature = "testing")]
 #[path = "testing.rs"]
-pub(crate) mod impl_mod;
+mod impl_mod;
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,
@@ -54,8 +59,8 @@ mod test {
     use currency::CurrencyDef as _;
 
     use crate::{
-        lpn::impl_mod::Lpn,
-        native::impl_mod::Nls,
+        lpn::Lpn,
+        native::Nls,
         test_impl::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,

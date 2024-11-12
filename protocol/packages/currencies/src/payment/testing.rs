@@ -1,6 +1,8 @@
-// brings `LeaseC*` types
-pub use crate::lease::impl_mod::*;
-use crate::{lpn::impl_mod::Lpn, native::impl_mod::Nls};
+use crate::{
+    lease::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7},
+    lpn::Lpn,
+    native::Nls,
+};
 
 pub type PaymentC1 = Nls;
 pub type PaymentC2 = Lpn;
