@@ -4,10 +4,9 @@ use std::{
         btree_map::{self, BTreeMap},
         btree_set::{self, BTreeSet},
     },
-    ops::ControlFlow,
 };
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result};
 
 use topology::{swap_pairs::PairTargets, Topology};
 
@@ -19,12 +18,17 @@ pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
 }
 
 impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
+    const EMPTY: Self = Self {
+        parents: BTreeMap::<_, BTreeSet<_>>::new(),
+        children: BTreeMap::<_, BTreeSet<_>>::new(),
+    };
+
     pub fn new(
         topology: &'topology Topology,
         protocol: &Protocol,
         host_currency_ticker: &str,
     ) -> Result<Self> {
-        let result = topology
+        topology
             .network_dexes(&protocol.dex_network)
             .context("Selected DEX network doesn't define any DEXes!")?
             .get(&protocol.dex)
@@ -35,24 +39,9 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
             .filter(|&(ticker, _)| {
                 super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
             })
-            .try_fold(
-                const {
-                    Self {
-                        parents: const { BTreeMap::<_, BTreeSet<_>>::new() },
-                        children: const { BTreeMap::<_, BTreeSet<_>>::new() },
-                    }
-                },
-                |currencies_tree, (ticker, targets)| {
-                    currencies_tree.process_targets(protocol, host_currency_ticker, ticker, targets)
-                },
-            );
-
-        match result {
-            ControlFlow::Continue(currencies_tree) => Ok(currencies_tree),
-            ControlFlow::Break(()) => Err(anyhow!(
-                "Currency ticker duplication detected in swap pairs!"
-            )),
-        }
+            .try_fold(Self::EMPTY, |currencies_tree, (ticker, targets)| {
+                currencies_tree.process_targets(protocol, host_currency_ticker, ticker, targets)
+            })
     }
 
     fn process_targets(
@@ -61,35 +50,33 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
         host_currency_ticker: &str,
         ticker: &'topology str,
         targets: &'topology PairTargets,
-    ) -> ControlFlow<(), Self> {
+    ) -> Result<Self> {
+        const DUPLICATED_TICKER_ERROR: &'static str =
+            "Currency ticker duplication detected in swap pairs!";
+
         let btree_map::Entry::Vacant(entry) = self.children.entry(ticker) else {
-            return ControlFlow::Break(());
+            return Err(anyhow::Error::msg(DUPLICATED_TICKER_ERROR));
         };
 
-        let inverse_targets = entry.insert(
-            targets
-                .iter()
-                .map(Borrow::<str>::borrow)
-                .filter(|&ticker| {
-                    super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
-                })
-                .collect(),
-        );
-
-        let result = inverse_targets
+        entry
+            .insert(
+                targets
+                    .iter()
+                    .map(Borrow::<str>::borrow)
+                    .filter(|&ticker| {
+                        super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
+                    })
+                    .collect(),
+            )
             .iter()
             .try_fold(self.parents, |mut parents, target| {
                 if parents.entry(target).or_default().insert(ticker) {
-                    ControlFlow::Continue(parents)
+                    Ok(parents)
                 } else {
-                    ControlFlow::Break(())
+                    Err(anyhow::Error::msg(DUPLICATED_TICKER_ERROR))
                 }
-            });
-
-        match result {
-            ControlFlow::Continue(parents) => ControlFlow::Continue(Self { parents, ..self }),
-            ControlFlow::Break(()) => ControlFlow::Break(()),
-        }
+            })
+            .map(|parents| Self { parents, ..self })
     }
 }
 
