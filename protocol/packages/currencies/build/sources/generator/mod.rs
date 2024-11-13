@@ -478,7 +478,7 @@ impl<
                 .map(|resolved| {
                     [
                         "
-impl currency::InPoolWith<",
+    impl currency::InPoolWith<",
                         resolved.module(),
                         "::",
                         resolved.name(),

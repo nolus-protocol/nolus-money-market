@@ -8,7 +8,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::payment::Group as PaymentGroup;
 
-pub use self::impl_mod::Lpn;
+pub use self::impl_mod::definitions::Lpn;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {

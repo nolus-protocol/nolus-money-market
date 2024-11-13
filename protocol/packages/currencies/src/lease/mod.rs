@@ -6,9 +6,11 @@ use sdk::schemars::{self, JsonSchema};
 use crate::payment::Group as PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) use self::impl_mod::*;
+pub(crate) use self::impl_mod::definitions::*;
 #[cfg(feature = "testing")]
-pub use self::impl_mod::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
+pub use self::impl_mod::definitions::{
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7,
+};
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -66,7 +68,7 @@ mod test {
         },
     };
 
-    use super::{impl_mod::LeaseC1, Group};
+    use super::{impl_mod::definitions::LeaseC1, Group};
 
     #[test]
     fn maybe_visit_on_ticker() {

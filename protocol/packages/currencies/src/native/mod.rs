@@ -5,7 +5,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::payment::Group as PaymentGroup;
 
-pub use self::impl_mod::Nls;
+pub use self::impl_mod::definitions::Nls;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -62,7 +62,7 @@ mod test {
         },
     };
 
-    use super::{impl_mod::Nls, Group as NativeGroup};
+    use super::{Group as NativeGroup, Nls};
 
     #[test]
     fn maybe_visit_on_ticker() {

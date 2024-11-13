@@ -1,14 +1,10 @@
-use serde::{Deserialize, Serialize};
+use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
 
-use currency::{
-    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, InPoolWith, Matcher,
-    MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
-};
-use sdk::schemars::{self, JsonSchema};
-
-use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
+use crate::payment::Group as PaymentGroup;
 
 use super::Group as LeaseGroup;
+
+use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
@@ -31,284 +27,298 @@ where
         .or_else(|visitor| visit::<_, LeaseC7, VisitedG, _>(matcher, visitor))
 }
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
+pub(super) mod definitions {
+    use serde::{Deserialize, Serialize};
 
-impl CurrencyDef for LeaseC1 {
-    type Group = LeaseGroup;
+    use currency::{
+        CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
+        PairsGroup, PairsVisitor,
+    };
+    use sdk::schemars::{self, JsonSchema};
 
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC1", "ibc/bank_LC1", "ibc/dex_LC1", 6) },
-            ))
+    use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
+
+    use super::super::Group as LeaseGroup;
+
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC1 {
+        type Group = LeaseGroup;
+
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC1", "ibc/bank_LC1", "ibc/dex_LC1", 6) },
+                ))
+            }
+        }
+
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    impl PairsGroup for LeaseC1 {
+        type CommonGroup = PaymentGroup;
 
-impl PairsGroup for LeaseC1 {
-    type CommonGroup = PaymentGroup;
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
-
-        visit::<LeaseC2, _, _>(matcher, visitor)
-            .or_else(|visitor| visit::<LeaseC3, _, _>(matcher, visitor))
-    }
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC2 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC2", "ibc/bank_LC2", "ibc/dex_LC2", 6) },
-            ))
+            visit::<LeaseC2, _, _>(matcher, visitor)
+                .or_else(|visitor| visit::<LeaseC3, _, _>(matcher, visitor))
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
 
-impl PairsGroup for LeaseC2 {
-    type CommonGroup = PaymentGroup;
+    impl CurrencyDef for LeaseC2 {
+        type Group = LeaseGroup;
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC2", "ibc/bank_LC2", "ibc/dex_LC2", 6) },
+                ))
+            }
+        }
 
-        visit::<Lpn, _, _>(matcher, visitor)
-    }
-}
-
-impl InPoolWith<LeaseC1> for LeaseC2 {}
-
-impl InPoolWith<LeaseC3> for LeaseC2 {}
-
-impl InPoolWith<LeaseC4> for LeaseC2 {}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC3 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC3", "ibc/bank_LC3", "ibc/dex_LC3", 6) },
-            ))
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    impl PairsGroup for LeaseC2 {
+        type CommonGroup = PaymentGroup;
 
-impl PairsGroup for LeaseC3 {
-    type CommonGroup = PaymentGroup;
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
-
-        visit::<LeaseC2, _, _>(matcher, visitor)
-    }
-}
-
-impl InPoolWith<LeaseC1> for LeaseC3 {}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC4 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 18) },
-            ))
+            visit::<Lpn, _, _>(matcher, visitor)
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    impl InPoolWith<LeaseC1> for LeaseC2 {}
 
-impl PairsGroup for LeaseC4 {
-    type CommonGroup = PaymentGroup;
+    impl InPoolWith<LeaseC3> for LeaseC2 {}
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
+    impl InPoolWith<LeaseC4> for LeaseC2 {}
 
-        visit::<LeaseC2, _, _>(matcher, visitor)
-    }
-}
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
+    impl CurrencyDef for LeaseC3 {
+        type Group = LeaseGroup;
 
-impl CurrencyDef for LeaseC5 {
-    type Group = LeaseGroup;
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC3", "ibc/bank_LC3", "ibc/dex_LC3", 6) },
+                ))
+            }
+        }
 
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC5", "ibc/bank_LC5", "ibc/dex_LC5", 6) },
-            ))
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    impl PairsGroup for LeaseC3 {
+        type CommonGroup = PaymentGroup;
 
-impl PairsGroup for LeaseC5 {
-    type CommonGroup = PaymentGroup;
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
-
-        visit::<Nls, _, _>(matcher, visitor)
-    }
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC6 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 8) },
-            ))
+            visit::<LeaseC2, _, _>(matcher, visitor)
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
+    impl InPoolWith<LeaseC1> for LeaseC3 {}
 
-impl PairsGroup for LeaseC6 {
-    type CommonGroup = PaymentGroup;
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
 
-    #[inline]
-    fn maybe_visit<M, V>(_: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        // let's stay detached from the swap tree for some corner cases.
-        currency::visit_noone(visitor)
-    }
-}
+    impl CurrencyDef for LeaseC4 {
+        type Group = LeaseGroup;
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 18) },
+                ))
+            }
+        }
 
-impl CurrencyDef for LeaseC7 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn definition() -> &'static Self {
-        const {
-            &Self(CurrencyDTO::new(
-                const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 4) },
-            ))
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
         }
     }
 
-    #[inline]
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
+    impl PairsGroup for LeaseC4 {
+        type CommonGroup = PaymentGroup;
+
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
+
+            visit::<LeaseC2, _, _>(matcher, visitor)
+        }
     }
-}
 
-impl PairsGroup for LeaseC7 {
-    type CommonGroup = PaymentGroup;
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
 
-    #[inline]
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        use currency::maybe_visit_buddy as visit;
+    impl CurrencyDef for LeaseC5 {
+        type Group = LeaseGroup;
 
-        visit::<Lpn, _, _>(matcher, visitor)
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC5", "ibc/bank_LC5", "ibc/dex_LC5", 6) },
+                ))
+            }
+        }
+
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
+    }
+
+    impl PairsGroup for LeaseC5 {
+        type CommonGroup = PaymentGroup;
+
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
+
+            visit::<Nls, _, _>(matcher, visitor)
+        }
+    }
+
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC6 {
+        type Group = LeaseGroup;
+
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 8) },
+                ))
+            }
+        }
+
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
+    }
+
+    impl PairsGroup for LeaseC6 {
+        type CommonGroup = PaymentGroup;
+
+        #[inline]
+        fn maybe_visit<M, V>(_: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            // let's stay detached from the swap tree for some corner cases.
+            currency::visit_noone(visitor)
+        }
+    }
+
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC7 {
+        type Group = LeaseGroup;
+
+        #[inline]
+        fn definition() -> &'static Self {
+            const {
+                &Self(CurrencyDTO::new(
+                    const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 4) },
+                ))
+            }
+        }
+
+        #[inline]
+        fn dto(&self) -> &CurrencyDTO<Self::Group> {
+            &self.0
+        }
+    }
+
+    impl PairsGroup for LeaseC7 {
+        type CommonGroup = PaymentGroup;
+
+        #[inline]
+        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        where
+            M: Matcher,
+            V: PairsVisitor<Pivot = Self>,
+        {
+            use currency::maybe_visit_buddy as visit;
+
+            visit::<Lpn, _, _>(matcher, visitor)
+        }
     }
 }
 

@@ -181,7 +181,7 @@ where
                                 maybe_visit: if <Generator as generator::MaybeVisit>::GENERATE {
                                     Either::Left([
                                         self.visit_function,
-                                        "::<_, self::",
+                                        "::<_, self::definitions::",
                                         resolved.name(),
                                         ", ",
                                         self.visited_group,
@@ -213,42 +213,42 @@ fn currency_definition<'r>(
 ) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
     [
         r#"
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
-    serde::Deserialize, sdk::schemars::JsonSchema,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
-pub struct "#,
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
+        serde::Deserialize, sdk::schemars::JsonSchema,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    #[schemars(crate = "sdk::schemars")]
+    pub struct "#,
         name,
-        r#"(currency::CurrencyDTO<super::Group>);
+        r#"(currency::CurrencyDTO<super::super::Group>);
 
-impl currency::CurrencyDef for "#,
+    impl currency::CurrencyDef for "#,
         name,
         r#" {
-    type Group = super::Group;
+        type Group = super::super::Group;
 
-    fn definition() -> &'static Self {
-        const {
-            &Self(currency::CurrencyDTO::new(
-                const {
-                    &currency::Definition::new(
-                        ""#,
+        fn definition() -> &'static Self {
+            const {
+                &Self(currency::CurrencyDTO::new(
+                    const {
+                        &currency::Definition::new(
+                            ""#,
         ticker,
         r#"",
-                        // "#,
+                            // "#,
         currency.host().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.host().symbol(),
         r#"",
-                        // "#,
+                            // "#,
         currency.dex().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.dex().symbol(),
         r#"",
-                        "#,
+                            "#,
     ]
     .into_iter()
     .map(Cow::Borrowed)
@@ -259,16 +259,16 @@ impl currency::CurrencyDef for "#,
         const {
             Cow::Borrowed(
                 r#",
-                    )
-                },
-            ))
+                        )
+                    },
+                ))
+            }
+        }
+
+        fn dto(&self) -> &currency::CurrencyDTO<Self::Group> {
+            &self.0
         }
     }
-
-    fn dto(&self) -> &currency::CurrencyDTO<Self::Group> {
-        &self.0
-    }
-}
 "#,
             )
         },
