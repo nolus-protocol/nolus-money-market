@@ -464,8 +464,20 @@ where
             currencies_count: self.currencies_count,
             sources: iter::once("// @generated\n")
                 .chain(self.maybe_visit.map(SubtypeLifetime::subtype))
+                .chain(iter::once(
+                    r#"
+pub(super) mod definitions {"#,
+                ))
                 .map(Cow::Borrowed)
-                .chain(self.currency_definitions.map(SubtypeLifetime::subtype)),
+                .chain(self.currency_definitions.map(SubtypeLifetime::subtype))
+                .chain(iter::once(
+                    const {
+                        Cow::Borrowed(
+                            r#"}
+"#,
+                        )
+                    },
+                )),
         }
     }
 }
