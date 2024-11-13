@@ -17,6 +17,7 @@ pub use status::{Cause, Debt, Liquidation};
 
 mod close;
 mod dto;
+mod error;
 mod interest;
 mod spec;
 mod status;
@@ -68,9 +69,12 @@ where
         self.spec.debt(self.amount, due, asset_in_lpns)
     }
 
-    pub fn check_close(&self, _asset_in_lpns: Price<Asset>) -> Option<CloseStrategy> {
-        None
-        // todo!("Position::check_close")
+    /// Check if the position is subject of a full close due to trigerred close policy
+    pub fn check_close<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Option<CloseStrategy>
+    where
+        Due: DueTrait,
+    {
+        self.spec.check_close(self.amount, due, asset_in_lpns)
     }
 
     /// Check if the amount can be used for repayment.

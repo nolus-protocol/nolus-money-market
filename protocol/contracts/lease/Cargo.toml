@@ -41,7 +41,7 @@ contract = [
     "dep:enum_dispatch",
     "dep:versioning",
 ]
-skel = [
+skel = [ # TODO reassess if it is still needed
     "dep:access-control",
     "dep:dex",
     "dep:lpp",
