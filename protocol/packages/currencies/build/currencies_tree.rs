@@ -51,8 +51,7 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
         ticker: &'topology str,
         targets: &'topology PairTargets,
     ) -> Result<Self> {
-        const DUPLICATED_TICKER_ERROR: &'static str =
-            "Currency ticker duplication detected in swap pairs!";
+        const DUPLICATED_TICKER_ERROR: &str = "Currency ticker duplication detected in swap pairs!";
 
         let btree_map::Entry::Vacant(entry) = self.children.entry(ticker) else {
             return Err(anyhow::Error::msg(DUPLICATED_TICKER_ERROR));
