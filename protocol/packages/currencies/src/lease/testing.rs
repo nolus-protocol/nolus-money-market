@@ -4,7 +4,7 @@ use currency::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, InPoolWith, Matcher,
     MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
 };
-use sdk::schemars::JsonSchema;
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
 
@@ -35,7 +35,6 @@ where
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC1 {
@@ -76,7 +75,6 @@ impl PairsGroup for LeaseC1 {
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC2 {
@@ -122,7 +120,6 @@ impl InPoolWith<LeaseC4> for LeaseC2 {}
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC3 {
@@ -164,7 +161,6 @@ impl InPoolWith<LeaseC1> for LeaseC3 {}
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC4 {
@@ -204,7 +200,6 @@ impl PairsGroup for LeaseC4 {
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC5 {
@@ -244,7 +239,6 @@ impl PairsGroup for LeaseC5 {
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC6 {
@@ -283,7 +277,6 @@ impl PairsGroup for LeaseC6 {
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
 
 impl CurrencyDef for LeaseC7 {
