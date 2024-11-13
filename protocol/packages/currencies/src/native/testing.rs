@@ -4,7 +4,7 @@ use currency::{
     CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult, PairsGroup,
     PairsVisitor,
 };
-use sdk::schemars::JsonSchema;
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
 
@@ -14,7 +14,6 @@ use super::Group as NativeGroup;
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct Nls(CurrencyDTO<NativeGroup>);
 
 impl CurrencyDef for Nls {
