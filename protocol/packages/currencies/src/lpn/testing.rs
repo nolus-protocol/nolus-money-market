@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith};
-use sdk::schemars::JsonSchema;
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     lease::{LeaseC2, LeaseC7},
@@ -14,7 +14,6 @@ use super::Group as LpnGroup;
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub struct Lpn(CurrencyDTO<LpnGroup>);
 
 impl CurrencyDef for Lpn {
