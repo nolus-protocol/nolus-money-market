@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
-use sdk::schemars::JsonSchema;
+use sdk::schemars::{self, JsonSchema};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -20,7 +20,6 @@ mod impl_mod;
     Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-#[schemars(crate = "sdk::schemars")]
 pub enum Group {}
 
 impl currency::Group for Group {
