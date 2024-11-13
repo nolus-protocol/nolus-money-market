@@ -1,4 +1,11 @@
-use finance::{fraction::Fraction, fractionable::Percentable, percent::Percent};
+use std::fmt::Debug;
+
+use finance::{
+    fraction::Fraction,
+    fractionable::{Fractionable, Percentable},
+    percent::Percent,
+    zero::Zero,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::api::position::{ChangeCmd, ClosePolicyChange};
@@ -13,8 +20,8 @@ use super::error::{Error as PositionError, Result as PositionResult};
 #[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Policy {
-    stop_loss: Option<Percent>,
     take_profit: Option<Percent>,
+    stop_loss: Option<Percent>,
 }
 
 /// A strategy triggered to close the position automatically
@@ -42,7 +49,16 @@ impl From<ChangeCmd> for Option<Percent> {
 }
 
 impl Policy {
-    pub fn change_policy(self, cmd: ClosePolicyChange) -> PositionResult<Self> {
+    pub fn change_policy<P>(
+        self,
+        cmd: ClosePolicyChange,
+        lease_asset: P,
+        total_due: P,
+    ) -> PositionResult<Self>
+    where
+        P: Copy + Debug + PartialOrd + Percentable + Zero,
+        Percent: Fractionable<P>,
+    {
         Self {
             stop_loss: cmd
                 .stop_loss
@@ -51,7 +67,7 @@ impl Policy {
                 .take_profit
                 .map_or_else(|| self.take_profit, Option::<Percent>::from),
         }
-        .check_invariant()
+        .check_invariant(lease_asset, total_due)
     }
 
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
@@ -62,39 +78,75 @@ impl Policy {
             .or_else(|| self.may_take_profit(lease_asset, total_due))
     }
 
-    fn check_invariant(self) -> PositionResult<Self> {
-        self.stop_loss
-            .map(|sl| {
-                self.take_profit
-                    .map(|tp| {
-                        if sl >= tp {
-                            Ok(self)
-                        } else {
-                            Err(PositionError::invalid_close_policy(sl, tp))
-                        }
-                    })
-                    .unwrap_or(Ok(self))
-            })
-            .unwrap_or(Ok(self))
+    fn check_invariant<P>(self, lease_asset: P, total_due: P) -> PositionResult<Self>
+    where
+        P: Copy + Debug + Percentable + PartialOrd + Zero,
+        Percent: Fractionable<P>,
+    {
+        self.check_no_take_profit(lease_asset, total_due)
+            .and_then(|()| self.check_no_stop_loss(lease_asset, total_due))
+            .map(|()| self)
     }
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
         P: Percentable + PartialOrd,
     {
-        self.stop_loss.map_or(None, |stop_loss| {
+        self.stop_loss.and_then(|stop_loss| {
             (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
         })
+    }
+
+    fn check_no_stop_loss<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
+    where
+        P: Copy + Debug + Percentable + PartialOrd + Zero,
+        Percent: Fractionable<P>,
+    {
+        self.may_stop_loss(lease_asset, total_due).map_or_else(
+            || Ok(()),
+            |_| {
+                Err(PositionError::trigger_stop_loss(
+                    ltv(total_due, lease_asset),
+                    self.stop_loss
+                        .expect("Stop loss is present if it is triggered!"),
+                ))
+            },
+        )
     }
 
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
         P: Percentable + PartialOrd,
     {
-        self.take_profit.map_or(None, |take_profit| {
+        self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
         })
     }
+
+    fn check_no_take_profit<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
+    where
+        P: Copy + Debug + Percentable + PartialOrd + Zero,
+        Percent: Fractionable<P>,
+    {
+        self.may_take_profit(lease_asset, total_due).map_or_else(
+            || Ok(()),
+            |_| {
+                Err(PositionError::trigger_take_profit(
+                    ltv(total_due, lease_asset),
+                    self.take_profit
+                        .expect("Take profit is present if it is triggered!"),
+                ))
+            },
+        )
+    }
+}
+
+fn ltv<P>(total_due: P, lease_asset: P) -> Percent
+where
+    P: Copy + Debug + PartialEq + Zero,
+    Percent: Fractionable<P>,
+{
+    Percent::from_ratio(total_due, lease_asset)
 }
 
 #[cfg(test)]
@@ -207,7 +259,7 @@ mod test {
     }
 
     mod change_policy {
-        use finance::percent::Percent;
+        use finance::{fraction::Fraction, percent::Percent};
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
@@ -218,10 +270,14 @@ mod test {
         fn none() {
             assert_eq!(
                 Ok(Policy::default()),
-                Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: None,
-                    take_profit: None,
-                })
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        stop_loss: None,
+                        take_profit: None,
+                    },
+                    1000,
+                    200
+                )
             );
         }
 
@@ -230,21 +286,29 @@ mod test {
             let sl = Percent::from_percent(45);
             assert_eq!(
                 Ok(Policy {
+                    take_profit: None,
                     stop_loss: Some(sl),
-                    take_profit: None,
                 }),
-                Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: Some(ChangeCmd::Set(sl)),
-                    take_profit: None,
-                })
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        take_profit: None,
+                        stop_loss: Some(ChangeCmd::Set(sl)),
+                    },
+                    1000,
+                    449
+                )
             );
 
             assert_eq!(
                 Ok(Policy::default()),
-                Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: Some(ChangeCmd::Reset),
-                    take_profit: None,
-                })
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        stop_loss: Some(ChangeCmd::Reset),
+                        take_profit: None,
+                    },
+                    100,
+                    45
+                )
             );
         }
 
@@ -253,60 +317,123 @@ mod test {
             let tp = Percent::from_percent(45);
             assert_eq!(
                 Ok(Policy {
-                    stop_loss: None,
                     take_profit: Some(tp),
-                }),
-                Policy::default().change_policy(ClosePolicyChange {
                     stop_loss: None,
-                    take_profit: Some(ChangeCmd::Set(tp)),
-                })
+                }),
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        take_profit: Some(ChangeCmd::Set(tp)),
+                        stop_loss: None,
+                    },
+                    100,
+                    45
+                )
             );
 
             assert_eq!(
                 Ok(Policy::default()),
-                Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: None,
-                    take_profit: Some(ChangeCmd::Reset),
-                })
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        take_profit: Some(ChangeCmd::Reset),
+                        stop_loss: None,
+                    },
+                    1000,
+                    451
+                )
             );
         }
 
         #[test]
-        fn invariant() {
+        fn invariant_no_current_ltv() {
             let lower = Percent::from_percent(45);
             let higher = Percent::from_percent(55);
 
-            let may_p = Policy::default().change_policy(ClosePolicyChange {
-                stop_loss: Some(ChangeCmd::Set(higher)),
-                take_profit: Some(ChangeCmd::Set(lower)),
-            });
+            let may_p = Policy::default().change_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(lower)),
+                    stop_loss: Some(ChangeCmd::Set(higher)),
+                },
+                100,
+                47,
+            );
             assert_eq!(
                 Ok(Policy {
-                    stop_loss: Some(higher),
                     take_profit: Some(lower),
+                    stop_loss: Some(higher),
                 }),
                 may_p
             );
 
-            let may_p_1 = may_p.unwrap().change_policy(ClosePolicyChange {
-                stop_loss: Some(ChangeCmd::Set(lower)),
-                take_profit: Some(ChangeCmd::Reset),
-            });
+            let may_p_1 = may_p.unwrap().change_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Reset),
+                    stop_loss: Some(ChangeCmd::Set(lower)),
+                },
+                1000,
+                449,
+            );
             assert_eq!(
                 Ok(Policy {
-                    stop_loss: Some(lower),
                     take_profit: None,
+                    stop_loss: Some(lower),
                 }),
                 may_p_1
             );
 
-            let may_p_2 = may_p_1.unwrap().change_policy(ClosePolicyChange {
-                stop_loss: None,
-                take_profit: Some(ChangeCmd::Set(higher)),
-            });
+            let may_p_2 = may_p_1.unwrap().change_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(higher)),
+                    stop_loss: None,
+                },
+                100,
+                higher.of(100),
+            );
             assert_eq!(
-                Err(PositionError::invalid_close_policy(lower, higher)),
+                Err(PositionError::trigger_stop_loss(higher, lower)),
                 may_p_2
+            );
+        }
+
+        #[test]
+        fn invariant_full() {
+            const THOUSAND: u32 = 1000;
+            let lower = Percent::from_percent(45);
+            let higher = Percent::from_percent(55);
+            let lease_invalid1 = higher - Percent::from_permille(1);
+            let lease_invalid2 = lower;
+
+            assert_eq!(
+                Err(PositionError::trigger_take_profit(lease_invalid1, higher,)),
+                Policy::default()
+                    .change_policy(
+                        ClosePolicyChange {
+                            take_profit: Some(ChangeCmd::Set(lower)),
+                            stop_loss: Some(ChangeCmd::Set(higher)),
+                        },
+                        THOUSAND,
+                        lower.of(THOUSAND)
+                    )
+                    .unwrap()
+                    .change_policy(
+                        ClosePolicyChange {
+                            take_profit: Some(ChangeCmd::Set(higher)),
+                            stop_loss: Some(ChangeCmd::Reset),
+                        },
+                        THOUSAND,
+                        lease_invalid1.of(THOUSAND)
+                    )
+            );
+
+            assert_eq!(
+                Err(PositionError::trigger_stop_loss(lease_invalid2, lower)),
+                Policy::default().change_policy(
+                    ClosePolicyChange {
+                        take_profit: None,
+                        stop_loss: Some(ChangeCmd::Set(lease_invalid2)),
+                    },
+                    THOUSAND,
+                    lease_invalid2.of(THOUSAND)
+                )
             );
         }
     }

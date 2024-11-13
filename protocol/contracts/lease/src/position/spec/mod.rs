@@ -60,15 +60,27 @@ impl Spec {
         )
     }
 
-    pub fn change_close_policy(self, cmd: ClosePolicyChange) -> PositionResult<Self> {
-        self.close.change_policy(cmd).map(|close_policy| {
-            Self::new(
-                self.liability,
-                close_policy,
-                self.min_asset,
-                self.min_transaction,
-            )
-        })
+    pub fn change_close_policy<Asset, Due>(
+        self,
+        cmd: ClosePolicyChange,
+        asset: Coin<Asset>,
+        due: &Due,
+        asset_in_lpns: Price<Asset>,
+    ) -> PositionResult<Self>
+    where
+        Asset: Currency,
+        Due: DueTrait,
+    {
+        self.close
+            .change_policy(cmd, asset, Self::to_assets(due.total_due(), asset_in_lpns))
+            .map(|close_policy| {
+                Self::new(
+                    self.liability,
+                    close_policy,
+                    self.min_asset,
+                    self.min_transaction,
+                )
+            })
     }
 
     /// Calculate the borrow amount.

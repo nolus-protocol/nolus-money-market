@@ -45,7 +45,7 @@ impl Percent {
 
     pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
     where
-        FractionUnit: Zero + Debug + Copy + PartialEq,
+        FractionUnit: Copy + Debug + PartialEq + Zero,
         Self: Fractionable<FractionUnit>,
     {
         Rational::new(nominator, denominator).of(Percent::HUNDRED)

@@ -970,10 +970,15 @@ mod test_check_close {
 
         let stop_loss_trigger = Percent::from_percent(46);
         let spec = spec
-            .change_close_policy(ClosePolicyChange {
-                stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
-                take_profit: None,
-            })
+            .change_close_policy(
+                ClosePolicyChange {
+                    take_profit: None,
+                    stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
+                },
+                1000.into(),
+                &super::due(550, 0),
+                super::price(1, 2),
+            )
             .unwrap();
 
         assert_eq!(
@@ -989,10 +994,15 @@ mod test_check_close {
         );
 
         let spec = spec
-            .change_close_policy(ClosePolicyChange {
-                stop_loss: Some(ChangeCmd::Reset),
-                take_profit: Some(ChangeCmd::Set(stop_loss_trigger)),
-            })
+            .change_close_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(stop_loss_trigger)),
+                    stop_loss: Some(ChangeCmd::Reset),
+                },
+                1000.into(),
+                &super::due(920, 0),
+                super::price(1, 2),
+            )
             .unwrap();
 
         assert_eq!(
@@ -1019,10 +1029,15 @@ mod test_check_close {
 
         let take_profit_trigger = Percent::from_percent(46);
         let spec = spec
-            .change_close_policy(ClosePolicyChange {
-                stop_loss: None,
-                take_profit: Some(ChangeCmd::Set(take_profit_trigger)),
-            })
+            .change_close_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(take_profit_trigger)),
+                    stop_loss: None,
+                },
+                1000.into(),
+                &super::due(920, 0),
+                super::price(1, 2),
+            )
             .unwrap();
 
         assert_eq!(
@@ -1038,10 +1053,15 @@ mod test_check_close {
         );
 
         let spec = spec
-            .change_close_policy(ClosePolicyChange {
-                stop_loss: Some(ChangeCmd::Set(take_profit_trigger)),
-                take_profit: Some(ChangeCmd::Reset),
-            })
+            .change_close_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Reset),
+                    stop_loss: Some(ChangeCmd::Set(take_profit_trigger)),
+                },
+                1000.into(),
+                &super::due(550, 0),
+                super::price(1, 2),
+            )
             .unwrap();
 
         assert_eq!(

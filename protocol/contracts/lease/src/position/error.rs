@@ -23,18 +23,31 @@ pub enum Error {
 
     // #[error("[Lease] The position past this close should worth at least {0}")]
     // PositionCloseAmountTooBig(LpnCoinDTO),
-    #[error("[Position] Invalid close policy! Take profit percent '{take_profit}' should not be higher than the stop loss percent '{stop_loss}'!")]
-    InvalidClosePolicy {
-        stop_loss: Percent,
+    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger a position close due to a take profit at '{take_profit}'!")]
+    TriggerTakeProfit {
+        lease_ltv: Percent,
         take_profit: Percent,
+    },
+
+    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger a position close due to a stop loss at '{stop_loss}'!")]
+    TriggerStopLoss {
+        lease_ltv: Percent,
+        stop_loss: Percent,
     },
 }
 
 impl Error {
-    pub fn invalid_close_policy(stop_loss: Percent, take_profit: Percent) -> Self {
-        Self::InvalidClosePolicy {
-            stop_loss,
+    pub fn trigger_take_profit(lease_ltv: Percent, take_profit: Percent) -> Self {
+        Self::TriggerTakeProfit {
+            lease_ltv,
             take_profit,
+        }
+    }
+
+    pub fn trigger_stop_loss(lease_ltv: Percent, stop_loss: Percent) -> Self {
+        Self::TriggerStopLoss {
+            lease_ltv,
+            stop_loss,
         }
     }
 }
