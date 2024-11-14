@@ -19,20 +19,19 @@ impl Native {
     }
 }
 
-impl TryFrom<Raw> for Native {
-    type Error = std::num::ParseIntError;
-
-    fn try_from(
+impl From<Raw> for Native {
+    #[inline]
+    fn from(
         Raw {
             symbol,
             decimal_digits,
             ..
         }: Raw,
-    ) -> Result<Self, Self::Error> {
-        decimal_digits.parse().map(|decimal_digits| Self {
+    ) -> Self {
+        Self {
             symbol,
             decimal_digits,
-        })
+        }
     }
 }
 
@@ -42,5 +41,5 @@ struct Raw {
     #[serde(rename = "name")]
     _name: String,
     symbol: super::Id,
-    decimal_digits: String,
+    decimal_digits: u8,
 }

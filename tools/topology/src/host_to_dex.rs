@@ -3,7 +3,11 @@ use std::{
     mem,
 };
 
-use crate::{channel, channels, error, network};
+use crate::{
+    channel,
+    channels::{self, Channels},
+    error, network,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Channel<'channel_id> {
@@ -34,29 +38,29 @@ impl<'channel_id> Channel<'channel_id> {
     }
 }
 
-pub(crate) fn find_path<'channels_map>(
-    channels: &'channels_map channels::Map<'_, '_>,
+pub(crate) fn find_path<'channels>(
+    channels: &'channels Channels,
     host_network: &network::Id,
     dex_network: &network::Id,
-) -> Result<Vec<Channel<'channels_map>>, error::CurrencyDefinitions> {
+) -> Result<Vec<Channel<'channels>>, error::CurrencyDefinitions> {
     direct_host_to_dex_path(channels, host_network, dex_network).map_or_else(
         || indirect_host_to_dex_path(channels, host_network, dex_network),
         |channel| Ok(vec![channel]),
     )
 }
 
-fn direct_host_to_dex_path<'channels_map>(
-    channels: &'channels_map channels::Map<'_, '_>,
+fn direct_host_to_dex_path<'channels>(
+    channels: &'channels Channels,
     host_network: &network::Id,
     dex_network: &network::Id,
-) -> Option<Channel<'channels_map>> {
+) -> Option<Channel<'channels>> {
     channels.get(host_network).and_then(|connected_networks| {
-        connected_networks.get(dex_network).map(|&channel_id| {
+        connected_networks.get(dex_network).map(|channel_id| {
             let Some(connected_networks) = channels.get(dex_network) else {
                 unreachable_counterpart_should_be_filled_in();
             };
 
-            let Some(&counterpart_channel_id) = connected_networks.get(host_network) else {
+            let Some(counterpart_channel_id) = connected_networks.get(host_network) else {
                 unreachable_counterpart_should_be_filled_in();
             };
 
@@ -65,13 +69,9 @@ fn direct_host_to_dex_path<'channels_map>(
     })
 }
 
-struct Path<'network, 'channels_map, 'channels_network, 'channel_id>
-where
-    'channels_network: 'network,
-{
+struct Path<'network, 'channels, 'channel_id> {
     pub network: &'network network::Id,
-    pub connected_networks:
-        &'channels_map channels::ConnectedNetworks<'channels_network, 'channel_id>,
+    pub connected_networks: &'channels channels::ConnectedNetworks,
     pub walked_channels: Vec<Channel<'channel_id>>,
 }
 
@@ -80,11 +80,11 @@ enum TraverseNetworkOutput {
     NewNetwork,
 }
 
-fn indirect_host_to_dex_path<'channels_map>(
-    channels: &'channels_map channels::Map<'_, '_>,
+fn indirect_host_to_dex_path<'channels>(
+    channels: &'channels Channels,
     host_network: &network::Id,
     dex_network: &network::Id,
-) -> Result<Vec<Channel<'channels_map>>, error::CurrencyDefinitions> {
+) -> Result<Vec<Channel<'channels>>, error::CurrencyDefinitions> {
     let mut paths_to_explore = initial_host_to_dex_paths(channels, host_network)?;
 
     let mut set_traversed = {
@@ -116,25 +116,22 @@ fn indirect_host_to_dex_path<'channels_map>(
     }
 }
 
-fn initial_host_to_dex_paths<'channels_map, 'channels_network, 'channel_id>(
-    channels: &'channels_map channels::Map<'channels_network, 'channel_id>,
+fn initial_host_to_dex_paths<'channels>(
+    channels: &'channels Channels,
     host_network: &network::Id,
-) -> Result<
-    VecDeque<Path<'channels_network, 'channels_map, 'channels_network, 'channel_id>>,
-    error::CurrencyDefinitions,
-> {
+) -> Result<VecDeque<Path<'channels, 'channels, 'channels>>, error::CurrencyDefinitions> {
     channels
         .get(host_network)
         .ok_or(error::CurrencyDefinitions::HostNotConnectedToDex)
         .map(|connected_networks| {
             connected_networks
                 .iter()
-                .map(|(&network, &channel_id)| {
+                .map(|(network, channel_id)| {
                     let Some(connected_networks) = channels.get(network) else {
                         unreachable_counterpart_should_be_filled_in();
                     };
 
-                    let Some(&counterpart_channel_id) = connected_networks.get(host_network) else {
+                    let Some(counterpart_channel_id) = connected_networks.get(host_network) else {
                         unreachable_counterpart_should_be_filled_in();
                     };
 
@@ -150,28 +147,24 @@ fn initial_host_to_dex_paths<'channels_map, 'channels_network, 'channel_id>(
 
 fn explore_path_breadth_first<
     'network,
-    'channels_map,
-    'channels_network,
+    'channels,
     'channel_id,
-    DiscoverPath: FnMut(Path<'network, 'channels_map, 'channels_network, 'channel_id>),
+    DiscoverPath: FnMut(Path<'network, 'channels, 'channel_id>),
     TraverseNetwork: FnMut(&'network network::Id) -> TraverseNetworkOutput,
 >(
-    channels: &'channels_map channels::Map<'channels_network, 'channel_id>,
+    channels: &'channels Channels,
     dex_network: &network::Id,
     mut discovered_path: DiscoverPath,
     mut set_traversed: TraverseNetwork,
-    mut path: Path<'network, 'channels_map, 'channels_network, 'channel_id>,
+    mut path: Path<'network, 'channels, 'channel_id>,
 ) -> Option<Vec<Channel<'channel_id>>>
 where
-    'channels_network: 'network,
+    'channels: 'network,
+    'channels: 'channel_id,
 {
-    let mut connected_networks = path
-        .connected_networks
-        .iter()
-        .map(|(&connected_network, &chanel_id)| (connected_network, chanel_id))
-        .filter(|&(network, _)| {
-            matches!(set_traversed(network), TraverseNetworkOutput::NewNetwork)
-        });
+    let mut connected_networks = path.connected_networks.iter().filter(|&(network, _)| {
+        matches!(set_traversed(network), TraverseNetworkOutput::NewNetwork)
+    });
 
     let last_endpoint = connected_networks.next_back();
 
@@ -183,7 +176,7 @@ where
                 unreachable_counterpart_should_be_filled_in();
             };
 
-            let Some(&counterpart_channel_id) = connected_networks.get(path.network) else {
+            let Some(counterpart_channel_id) = connected_networks.get(path.network) else {
                 unreachable_counterpart_should_be_filled_in();
             };
 

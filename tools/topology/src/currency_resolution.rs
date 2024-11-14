@@ -1,7 +1,7 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    channels,
+    channels::Channels,
     currency::{self, Currency},
     currency_definition::CurrencyDefinition,
     error, host_to_dex, network,
@@ -13,7 +13,7 @@ impl Topology {
     pub(super) fn resolve_currency(
         &self,
         dex_network: &network::Id,
-        channels: &channels::Map<'_, '_>,
+        channels: &Channels,
         host_to_dex_path: &[host_to_dex::Channel<'_>],
         ticker: &currency::Id,
         currency: &Currency,
@@ -29,15 +29,16 @@ impl Topology {
             })
     }
 
-    fn resolve_dex_side<'self_, 'network, 'currency>(
+    fn resolve_dex_side<'self_, 'network, 'channels, 'currency>(
         &'self_ self,
         dex_network: &'network network::Id,
-        channels: &channels::Map<'network, '_>,
+        channels: &'channels Channels,
         host_to_dex_path: &[host_to_dex::Channel<'_>],
         currency: &'currency Currency,
     ) -> Result<DexResolvedCurrency<'network, 'currency>, error::ResolveCurrency>
     where
         'self_: 'currency,
+        'channels: 'network,
         'currency: 'network,
     {
         try_trampoline(
@@ -109,21 +110,21 @@ impl Topology {
         }
     }
 
-    fn resolve_non_host_ibc_currency<'networks, 'network, 'currency, 'channel_id>(
+    fn resolve_non_host_ibc_currency<'networks, 'network, 'channels, 'currency>(
         networks: &'networks Networks,
-        channels: &channels::Map<'network, 'channel_id>,
+        channels: &'channels Channels,
         mut traversed_networks: Vec<&'network network::Id>,
         mut dex_symbol: symbol::Builder,
         ibc: &'currency currency::Ibc,
     ) -> Result<ResolvedNonHostIbcCurrency<'network, 'currency>, error::ResolveCurrency>
     where
-        'networks: 'currency,
-        'currency: 'network,
+        'networks: 'network + 'currency,
+        'channels: 'network,
     {
         if traversed_networks.contains(&ibc.network()) {
             Err(error::ResolveCurrency::CycleCreated)
         } else {
-            if let Some(&channel_id) = channels
+            if let Some(channel_id) = channels
                 .get(traversed_networks.last().unwrap_or_else(
                     #[inline]
                     || {
@@ -191,7 +192,7 @@ where
     fn resolve_bank_side(
         self,
         host_network: &network::Host,
-        channels: &channels::Map<'_, '_>,
+        channels: &Channels,
         host_to_dex_path: &[host_to_dex::Channel<'_>],
         ticker: &currency::Id,
     ) -> Result<HostLocality, error::ResolveCurrency> {
@@ -265,18 +266,17 @@ where
         )
     }
 
-    fn fold_bank_side_in_windows<'channels, 'channels_network, 'channel_id, 'network_id>(
-        channels: &'channels channels::Map<'channels_network, 'channel_id>,
+    fn fold_bank_side_in_windows<'channels, 'network_id>(
+        channels: &'channels Channels,
     ) -> impl FnMut(
         symbol::Builder,
         [&'network_id network::Id; 2],
     ) -> Result<symbol::Builder, error::ResolveCurrency>
-           + Captures<&'channels channels::Map<'channels_network, 'channel_id>> {
+           + Captures<&'channels Channels> {
         |mut bank_symbol, [source_network, remote_network]| {
             channels
                 .get(source_network)
                 .and_then(|connected_networks| connected_networks.get(remote_network))
-                .copied()
                 .ok_or_else(
                     #[cold]
                     || {
