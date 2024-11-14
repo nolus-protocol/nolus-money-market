@@ -75,7 +75,11 @@ impl Policy {
         P: Percentable + PartialOrd + Copy,
     {
         self.may_stop_loss(lease_asset, total_due)
-            .or_else(|| self.may_take_profit(lease_asset, total_due))
+            .map(Strategy::StopLoss)
+            .or_else(|| {
+                self.may_take_profit(lease_asset, total_due)
+                    .map(Strategy::TakeProfit)
+            })
     }
 
     fn check_invariant<P>(self, lease_asset: P, total_due: P) -> PositionResult<Self>
@@ -88,13 +92,12 @@ impl Policy {
             .map(|()| self)
     }
 
-    fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
+    fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Percent>
     where
         P: Percentable + PartialOrd,
     {
-        self.stop_loss.and_then(|stop_loss| {
-            (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
-        })
+        self.stop_loss
+            .filter(|stop_loss| stop_loss.of(lease_asset) <= total_due)
     }
 
     fn check_no_stop_loss<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
@@ -104,23 +107,21 @@ impl Policy {
     {
         self.may_stop_loss(lease_asset, total_due).map_or_else(
             || Ok(()),
-            |_| {
+            |stop_loss| {
                 Err(PositionError::trigger_stop_loss(
                     ltv(total_due, lease_asset),
-                    self.stop_loss
-                        .expect("Stop loss is present if it is triggered!"),
+                    stop_loss,
                 ))
             },
         )
     }
 
-    fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
+    fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Percent>
     where
         P: Percentable + PartialOrd,
     {
-        self.take_profit.and_then(|take_profit| {
-            (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
-        })
+        self.take_profit
+            .filter(|take_profit| take_profit.of(lease_asset) > total_due)
     }
 
     fn check_no_take_profit<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
@@ -130,11 +131,10 @@ impl Policy {
     {
         self.may_take_profit(lease_asset, total_due).map_or_else(
             || Ok(()),
-            |_| {
+            |take_profit| {
                 Err(PositionError::trigger_take_profit(
                     ltv(total_due, lease_asset),
-                    self.take_profit
-                        .expect("Take profit is present if it is triggered!"),
+                    take_profit,
                 ))
             },
         )
