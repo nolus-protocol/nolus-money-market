@@ -7,7 +7,11 @@ use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse, DownpaymentCoin},
+    api::{
+        position::{FullClose, PositionClose},
+        query::StateResponse,
+        DownpaymentCoin,
+    },
     contract::{
         cmd::{CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult},
         state::{Handler, Response},
@@ -120,7 +124,12 @@ impl Active {
                 env,
                 querier,
             ),
-            CloseStatusDTO::CloseAsked(_strategy) => todo!("TODO start position close"),
+            CloseStatusDTO::CloseAsked(_strategy) => customer_close::start(
+                PositionClose::FullClose(FullClose {}),
+                self.lease,
+                &env,
+                querier,
+            ),
         }
     }
 

@@ -97,7 +97,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
                 alarms,
             } => alarms,
             CloseStatusDTO::NeedLiquidation(_) => unreachable!("TODO PR#116"),
-            CloseStatusDTO::CloseAsked(_) => unreachable!(),
+            CloseStatusDTO::CloseAsked(_) => unreachable!("no triggers have been set"),
         };
 
         lease

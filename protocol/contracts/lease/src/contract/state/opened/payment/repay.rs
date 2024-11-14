@@ -5,6 +5,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
+        position::{FullClose, PositionClose},
         query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin,
     },
@@ -13,7 +14,7 @@ use crate::{
         state::{
             opened::{
                 active, alarm,
-                close::{liquidation, Closable},
+                close::{customer_close, liquidation, Closable},
             },
             paid, Response,
         },
@@ -22,6 +23,7 @@ use crate::{
     error::ContractResult,
     event::Type,
     finance::LpnCoinDTO,
+    position::CloseStrategy,
 };
 
 use super::Repayable;
@@ -114,10 +116,17 @@ where
             CloseStatusDTO::NeedLiquidation(liquidation) => {
                 liquidation::start(lease, liquidation, response, env, querier)
             }
-            CloseStatusDTO::CloseAsked(_strategy) => {
-                todo!("TODO reset the Stop-Loss or Take-Profit trigger fired after payment (incl. liquidation or manual close)
-                 and check again the lease close status")
-            }
+            CloseStatusDTO::CloseAsked(strategy) => match strategy {
+                CloseStrategy::TakeProfit(_tp) => {
+                    todo!("reset TakeProfit")
+                }
+                CloseStrategy::StopLoss(_sl) => customer_close::start(
+                    PositionClose::FullClose(FullClose {}),
+                    lease,
+                    &env,
+                    querier,
+                ),
+            },
         }
     }
 }
