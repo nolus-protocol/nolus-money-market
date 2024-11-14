@@ -123,7 +123,7 @@ where
                 CloseStrategy::StopLoss(_sl) => customer_close::start(
                     PositionClose::FullClose(FullClose {}),
                     lease,
-                    &env,
+                    env,
                     querier,
                 ),
             },

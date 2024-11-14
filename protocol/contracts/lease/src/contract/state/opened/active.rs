@@ -127,7 +127,7 @@ impl Active {
             CloseStatusDTO::CloseAsked(_strategy) => customer_close::start(
                 PositionClose::FullClose(FullClose {}),
                 self.lease,
-                &env,
+                env,
                 querier,
             ),
         }
