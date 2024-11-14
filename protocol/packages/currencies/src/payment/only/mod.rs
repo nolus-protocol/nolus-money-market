@@ -6,6 +6,7 @@ use sdk::schemars::{self, JsonSchema};
 use super::Group as PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
+#[allow(unused_imports)]
 pub(crate) use self::impl_mod::definitions::*;
 
 #[cfg(not(feature = "testing"))]
