@@ -3,6 +3,8 @@ use std::result::Result as StdResult;
 use finance::percent::Percent;
 use thiserror::Error;
 
+use super::CloseStrategy;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     // TODO move the following definitions from the lease ContractError down here
@@ -23,31 +25,18 @@ pub enum Error {
 
     // #[error("[Lease] The position past this close should worth at least {0}")]
     // PositionCloseAmountTooBig(LpnCoinDTO),
-    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger a position close due to a take profit at '{take_profit}'!")]
-    TriggerTakeProfit {
+    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger '{strategy}'!")]
+    TriggerClose {
         lease_ltv: Percent,
-        take_profit: Percent,
-    },
-
-    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger a position close due to a stop loss at '{stop_loss}'!")]
-    TriggerStopLoss {
-        lease_ltv: Percent,
-        stop_loss: Percent,
+        strategy: CloseStrategy,
     },
 }
 
 impl Error {
-    pub fn trigger_take_profit(lease_ltv: Percent, take_profit: Percent) -> Self {
-        Self::TriggerTakeProfit {
+    pub fn trigger_close(lease_ltv: Percent, strategy: CloseStrategy) -> Self {
+        Self::TriggerClose {
             lease_ltv,
-            take_profit,
-        }
-    }
-
-    pub fn trigger_stop_loss(lease_ltv: Percent, stop_loss: Percent) -> Self {
-        Self::TriggerStopLoss {
-            lease_ltv,
-            stop_loss,
+            strategy,
         }
     }
 }

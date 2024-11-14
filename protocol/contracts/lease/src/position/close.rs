@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use finance::{
     fraction::Fraction,
@@ -32,8 +32,7 @@ pub struct Policy {
 /// A full close of the position is triggered if:
 /// - a Stop Loss is set up and a price decline have the position's LTV become higher than the specified percent, or
 /// - a Take Profit is set up and a price rise have the position's LTV become lower than the specified percent.
-#[derive(PartialEq, Eq)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Strategy {
     StopLoss(Percent),
     TakeProfit(Percent),
@@ -83,9 +82,15 @@ impl Policy {
         P: Copy + Debug + Percentable + PartialOrd + Zero,
         Percent: Fractionable<P>,
     {
-        self.check_no_take_profit(lease_asset, total_due)
-            .and_then(|()| self.check_no_stop_loss(lease_asset, total_due))
-            .map(|()| self)
+        self.may_trigger(lease_asset, total_due).map_or_else(
+            || Ok(self),
+            |strategy| {
+                Err(PositionError::trigger_close(
+                    ltv(total_due, lease_asset),
+                    strategy,
+                ))
+            },
+        )
     }
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
@@ -97,23 +102,6 @@ impl Policy {
         })
     }
 
-    fn check_no_stop_loss<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
-    where
-        P: Copy + Debug + Percentable + PartialOrd + Zero,
-        Percent: Fractionable<P>,
-    {
-        self.may_stop_loss(lease_asset, total_due).map_or_else(
-            || Ok(()),
-            |_| {
-                Err(PositionError::trigger_stop_loss(
-                    ltv(total_due, lease_asset),
-                    self.stop_loss
-                        .expect("Stop loss is present if it is triggered!"),
-                ))
-            },
-        )
-    }
-
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
         P: Percentable + PartialOrd,
@@ -121,23 +109,6 @@ impl Policy {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
         })
-    }
-
-    fn check_no_take_profit<P>(&self, lease_asset: P, total_due: P) -> PositionResult<()>
-    where
-        P: Copy + Debug + Percentable + PartialOrd + Zero,
-        Percent: Fractionable<P>,
-    {
-        self.may_take_profit(lease_asset, total_due).map_or_else(
-            || Ok(()),
-            |_| {
-                Err(PositionError::trigger_take_profit(
-                    ltv(total_due, lease_asset),
-                    self.take_profit
-                        .expect("Take profit is present if it is triggered!"),
-                ))
-            },
-        )
     }
 }
 
@@ -147,6 +118,19 @@ where
     Percent: Fractionable<P>,
 {
     Percent::from_ratio(total_due, lease_asset)
+}
+
+impl Display for Strategy {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        fn dump(description: &str, arg: &Percent, f: &mut Formatter<'_>) -> FmtResult {
+            f.write_str(description).and_then(|()| Display::fmt(arg, f))
+        }
+
+        match self {
+            Strategy::TakeProfit(tp) => dump("take profit below ", tp, f),
+            Strategy::StopLoss(sl) => dump("stop loss above or equal to ", sl, f),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -263,7 +247,7 @@ mod test {
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
-            position::{close::Policy, error::Error as PositionError},
+            position::{close::Policy, error::Error as PositionError, CloseStrategy},
         };
 
         #[test]
@@ -389,7 +373,10 @@ mod test {
                 higher.of(100),
             );
             assert_eq!(
-                Err(PositionError::trigger_stop_loss(higher, lower)),
+                Err(PositionError::trigger_close(
+                    higher,
+                    CloseStrategy::StopLoss(lower)
+                )),
                 may_p_2
             );
         }
@@ -403,7 +390,10 @@ mod test {
             let lease_invalid2 = lower;
 
             assert_eq!(
-                Err(PositionError::trigger_take_profit(lease_invalid1, higher,)),
+                Err(PositionError::trigger_close(
+                    lease_invalid1,
+                    CloseStrategy::TakeProfit(higher),
+                )),
                 Policy::default()
                     .change_policy(
                         ClosePolicyChange {
@@ -425,7 +415,10 @@ mod test {
             );
 
             assert_eq!(
-                Err(PositionError::trigger_stop_loss(lease_invalid2, lower)),
+                Err(PositionError::trigger_close(
+                    lease_invalid2,
+                    CloseStrategy::StopLoss(lower)
+                )),
                 Policy::default().change_policy(
                     ClosePolicyChange {
                         take_profit: None,
@@ -435,6 +428,28 @@ mod test {
                     lease_invalid2.of(THOUSAND)
                 )
             );
+        }
+    }
+
+    mod display {
+        use finance::percent::Percent;
+
+        use crate::position::CloseStrategy;
+
+        #[test]
+        fn take_profit() {
+            assert_eq!(
+                "take profit below 45%",
+                format!("{}", CloseStrategy::TakeProfit(Percent::from_percent(45)))
+            )
+        }
+
+        #[test]
+        fn stop_loss() {
+            assert_eq!(
+                "stop loss above or equal to 55.4%",
+                format!("{}", CloseStrategy::StopLoss(Percent::from_permille(554)))
+            )
         }
     }
 }
