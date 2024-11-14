@@ -151,7 +151,6 @@ where
 
 #[cfg(test)]
 mod test {
-
     mod may_trigger {
         use finance::{coin::Amount, percent::Percent};
 
