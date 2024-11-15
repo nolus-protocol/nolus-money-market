@@ -27,11 +27,9 @@ impl AsRef<str> for Id {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(from = "Raw")]
 pub(crate) struct Network {
     currencies: Currencies,
-    #[serde(default)]
-    dexes: Dexes,
 }
 
 impl Network {
@@ -39,9 +37,18 @@ impl Network {
     pub const fn currencies(&self) -> &Currencies {
         &self.currencies
     }
+}
 
-    #[inline]
-    pub const fn dexes(&self) -> &Dexes {
-        &self.dexes
+impl From<Raw> for Network {
+    fn from(Raw { currencies, .. }: Raw) -> Self {
+        Self { currencies }
     }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+struct Raw {
+    currencies: Currencies,
+    #[serde(default, rename = "dexes")]
+    _dexes: Dexes,
 }
