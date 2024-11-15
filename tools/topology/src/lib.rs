@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use serde::Deserialize;
 
 use self::{channels::Channels, currency_resolution::HostLocality, networks::Networks};
@@ -73,6 +75,7 @@ impl Topology {
             })
             .and_then(|()| {
                 host_currency
+                    .map(HostCurrency)
                     .map(|host_currency| CurrencyDefinitions {
                         host_currency,
                         dex_currencies: dex_currencies_definitions,
@@ -90,6 +93,23 @@ impl Topology {
 
 #[derive(Debug)]
 pub struct CurrencyDefinitions {
-    pub host_currency: CurrencyDefinition,
+    pub host_currency: HostCurrency,
     pub dex_currencies: Vec<CurrencyDefinition>,
+}
+
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct HostCurrency(CurrencyDefinition);
+
+impl AsRef<CurrencyDefinition> for HostCurrency {
+    fn as_ref(&self) -> &CurrencyDefinition {
+        &self.0
+    }
+}
+
+impl Borrow<CurrencyDefinition> for HostCurrency {
+    fn borrow(&self) -> &CurrencyDefinition {
+        &self.0
+    }
 }
