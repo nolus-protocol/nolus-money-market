@@ -1,14 +1,17 @@
+# Build descriptors
+/build-configuration/
+
 # Build results
-/target
-artifacts
+**/target
+/artifacts
 
 # Rust Toolchain files
 **/rust-toolchain
 **/rust-toolchain.toml
 
-# Rustfmt configuration files
-**/rustfmt.toml
-!/rustfmt.toml
+# Cargo configuration
+**/.cargo
+!/.cargo/
 
 # Cargo+Git helper file (https://github.com/rust-lang/cargo/blob/0.44.1/src/cargo/sources/git/utils.rs#L320-L327)
 .cargo-ok
@@ -22,7 +25,6 @@ artifacts
 # IDEs
 *.iml
 .idea
-/artifacts
 .vscode
 
 # Deploying process
