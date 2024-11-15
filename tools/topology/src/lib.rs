@@ -102,6 +102,12 @@ pub struct CurrencyDefinitions {
 #[repr(transparent)]
 pub struct HostCurrency(CurrencyDefinition);
 
+impl HostCurrency {
+    pub fn ticker(&self) -> &str {
+        self.0.ticker()
+    }
+}
+
 impl AsRef<CurrencyDefinition> for HostCurrency {
     fn as_ref(&self) -> &CurrencyDefinition {
         &self.0
