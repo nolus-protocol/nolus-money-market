@@ -17,6 +17,7 @@ mod either;
 mod protocol;
 mod sources;
 mod subtype_lifetime;
+mod swap_pairs;
 
 const PROTOCOL_JSON: &str = "../../../build-configuration/protocol.json";
 
@@ -116,6 +117,6 @@ where
         &protocol,
         &host_currency,
         &protocol.dex_currencies(&host_currency, &dex_currencies),
-        &CurrenciesTree::new(&topology, &protocol, &host_currency)?,
+        &CurrenciesTree::new(&protocol, &host_currency)?,
     )
 }
