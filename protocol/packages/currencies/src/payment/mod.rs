@@ -27,7 +27,6 @@ impl currency::Group for Group {
 
     type TopG = Self;
 
-    #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -39,14 +38,12 @@ impl currency::Group for Group {
             .or_else(|visitor| OnlyGroup::maybe_visit_member(matcher, visitor))
     }
 
-    #[cold]
-    #[inline]
     fn maybe_visit_member<M, V>(_: &M, _: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
         V: AnyVisitor<Self::TopG>,
     {
-        unimplemented!()
+        unreachable!()
     }
 }
 
