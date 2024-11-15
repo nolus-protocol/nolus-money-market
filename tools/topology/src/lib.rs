@@ -11,12 +11,11 @@ mod currencies;
 pub mod currency;
 mod currency_definition;
 mod currency_resolution;
-pub mod dex;
+mod dex;
 pub mod error;
 mod host_to_dex;
 mod network;
 mod networks;
-pub mod swap_pairs;
 mod symbol;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,12 +81,6 @@ impl Topology {
                     })
                     .ok_or(error::CurrencyDefinitions::HostCurrencyNotDefined)
             })
-    }
-
-    pub fn network_dexes(&self, network: &str) -> Option<&dex::Dexes> {
-        self.networks
-            .get_id_and_network(network)
-            .map(|(_, network)| network.dexes())
     }
 }
 
