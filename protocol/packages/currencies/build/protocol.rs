@@ -4,17 +4,41 @@ use serde::Deserialize;
 
 use topology::{CurrencyDefinition, HostCurrency};
 
-use crate::{convert_case, sources::DexCurrencies};
+use crate::{convert_case, sources::DexCurrencies, swap_pairs::SwapPairs};
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(from = "Raw")]
 pub(crate) struct Protocol {
     pub dex_network: String,
-    pub dex: String,
     pub lpn_ticker: String,
     pub stable_currency_ticker: String,
     pub lease_currencies_tickers: BTreeSet<String>,
     pub payment_only_currencies_tickers: BTreeSet<String>,
+    pub swap_pairs: SwapPairs,
+}
+
+impl From<Raw> for Protocol {
+    #[inline]
+    fn from(
+        Raw {
+            dex_network,
+            lpn_ticker,
+            stable_currency_ticker,
+            lease_currencies_tickers,
+            payment_only_currencies_tickers,
+            swap_pairs,
+            ..
+        }: Raw,
+    ) -> Self {
+        Self {
+            dex_network,
+            lpn_ticker,
+            stable_currency_ticker,
+            lease_currencies_tickers,
+            payment_only_currencies_tickers,
+            swap_pairs,
+        }
+    }
 }
 
 impl Protocol {
@@ -47,4 +71,17 @@ impl Protocol {
             })
             .collect()
     }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+struct Raw {
+    #[serde(rename = "dex")]
+    _dex: String,
+    dex_network: String,
+    lpn_ticker: String,
+    stable_currency_ticker: String,
+    lease_currencies_tickers: BTreeSet<String>,
+    payment_only_currencies_tickers: BTreeSet<String>,
+    swap_pairs: SwapPairs,
 }

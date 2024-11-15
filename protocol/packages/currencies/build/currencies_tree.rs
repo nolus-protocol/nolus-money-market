@@ -7,34 +7,26 @@ use std::{
     marker::PhantomData,
 };
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 
-use topology::{swap_pairs::PairTargets, HostCurrency, Topology};
+use topology::HostCurrency;
 
-use crate::protocol::Protocol;
+use crate::{protocol::Protocol, swap_pairs::PairTargets};
 
 pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
     parents: BTreeMap<&'parents_of str, Parents<'parent>>,
     children: BTreeMap<&'children_of str, Children<'child>>,
 }
 
-impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
+impl<'protocol> CurrenciesTree<'protocol, 'protocol, 'protocol, 'protocol> {
     const EMPTY: Self = Self {
         parents: BTreeMap::new(),
         children: BTreeMap::new(),
     };
 
-    pub fn new(
-        topology: &'topology Topology,
-        protocol: &Protocol,
-        host_currency: &HostCurrency,
-    ) -> Result<Self> {
-        topology
-            .network_dexes(&protocol.dex_network)
-            .context("Selected DEX network doesn't define any DEXes!")?
-            .get(&protocol.dex)
-            .context("Selected DEX network doesn't define such DEX!")?
-            .swap_pairs()
+    pub fn new(protocol: &'protocol Protocol, host_currency: &HostCurrency) -> Result<Self> {
+        protocol
+            .swap_pairs
             .iter()
             .map(|(ticker, targets)| (ticker.borrow(), targets))
             .filter(|&(ticker, _)| protocol.is_protocol_currency(host_currency, ticker))
@@ -47,8 +39,8 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
         mut self,
         protocol: &Protocol,
         host_currency: &HostCurrency,
-        ticker: &'topology str,
-        targets: &'topology PairTargets,
+        ticker: &'protocol str,
+        targets: &'protocol PairTargets,
     ) -> Result<Self> {
         const DUPLICATED_TICKER_ERROR: &str = "Currency ticker duplication detected in swap pairs!";
 
