@@ -6,60 +6,19 @@
       "native": {
         "name": "Nolus",
         "symbol": "unls",
-        "decimal_digits": "6"
+        "decimal_digits": 6
       }
     }
   },
   "networks": {
-    "OSMOSIS": {
+    "AKASH": {
       "currencies": {
-        "OSMO": {
-          "native": {
-            "name": "Osmosis OSMO",
-            "symbol": "uosmo",
-            "decimal_digits": "6"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-osmo.svg"
-        },
-        "USDC_AXELAR": {
-          "ibc": {
-            "network": "AXELAR",
-            "currency": "USDC"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-usdc.svg"
-        },
-        "ATOM": {
-          "ibc": {
-            "network": "COSMOS_HUB",
-            "currency": "ATOM"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-atom.svg"
-        },
-        "NLS": {
-          "ibc": {
-            "network": "NOLUS",
-            "currency": "NLS"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-nls.svg"
-        },
         "AKT": {
-          "ibc": {
-            "network": "AKASH",
-            "currency": "AKT"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-akt.svg"
-        },
-        "JUNO": {
-          "ibc": {
-            "network": "JUNO",
-            "currency": "JUNO"
-          },
-          "icon": "https://nolus.io/currencies/osmosis-juno.svg"
-        }
-      },
-      "dexes": {
-        "osmosis": {
-          "type": "osmosis"
+          "native": {
+            "name": "Akash",
+            "symbol": "uakt",
+            "decimal_digits": 6
+          }
         }
       }
     },
@@ -67,9 +26,23 @@
       "currencies": {
         "USDC": {
           "native": {
-            "name": "Usdc",
+            "name": "Axelar USDC",
             "symbol": "uausdc",
-            "decimal_digits": "6"
+            "decimal_digits": 6
+          }
+        },
+        "WBTC": {
+          "native": {
+            "name": "WBTC",
+            "symbol": "btc-satoshi",
+            "decimal_digits": 8
+          }
+        },
+        "WETH": {
+          "native": {
+            "name": "WETH",
+            "symbol": "eth-wei",
+            "decimal_digits": 18
           }
         }
       }
@@ -80,18 +53,7 @@
           "native": {
             "name": "Cosmos Hub ATOM",
             "symbol": "uatom",
-            "decimal_digits": "6"
-          }
-        }
-      }
-    },
-    "AKASH": {
-      "currencies": {
-        "AKT": {
-          "native": {
-            "name": "Akash",
-            "symbol": "uakt",
-            "decimal_digits": "6"
+            "decimal_digits": 6
           }
         }
       }
@@ -102,41 +64,41 @@
           "native": {
             "name": "Juno",
             "symbol": "ujunox",
-            "decimal_digits": "6"
+            "decimal_digits": 6
           }
         }
       }
     },
     "NEUTRON": {
       "currencies": {
-        "NTRN": {
-          "native": {
-            "name": "Neutron",
-            "symbol": "untrn",
-            "decimal_digits": "6"
-          },
-          "icon": "https://nolus.io/currencies/neutron-ntrn.svg"
-        },
-        "USDC_AXELAR": {
-          "ibc": {
-            "network": "AXELAR",
-            "currency": "USDC"
-          },
-          "icon": "https://nolus.io/currencies/neutron-usdc.svg"
-        },
         "ATOM": {
           "ibc": {
             "network": "COSMOS_HUB",
             "currency": "ATOM"
           },
-          "icon": "https://nolus.io/currencies/neutron-atom.svg"
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-atom.svg"
         },
         "NLS": {
           "ibc": {
             "network": "NOLUS",
             "currency": "NLS"
           },
-          "icon": "https://nolus.io/currencies/neutron-nls.svg"
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-nls.svg"
+        },
+        "NTRN": {
+          "native": {
+            "name": "Neutron",
+            "symbol": "untrn",
+            "decimal_digits": 6
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-ntrn.svg"
+        },
+        "USDC_AXELAR": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-usdc.svg"
         }
       },
       "dexes": {
@@ -144,118 +106,97 @@
           "type": "astroport_test"
         }
       }
+    },
+    "OSMOSIS": {
+      "currencies": {
+        "AKT": {
+          "ibc": {
+            "network": "AKASH",
+            "currency": "AKT"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-akt.svg"
+        },
+        "ATOM": {
+          "ibc": {
+            "network": "COSMOS_HUB",
+            "currency": "ATOM"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-atom.svg"
+        },
+        "JUNO": {
+          "ibc": {
+            "network": "JUNO",
+            "currency": "JUNO"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-juno.svg"
+        },
+        "NLS": {
+          "ibc": {
+            "network": "NOLUS",
+            "currency": "NLS"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-nls.svg"
+        },
+        "OSMO": {
+          "native": {
+            "name": "Osmosis OSMO",
+            "symbol": "uosmo",
+            "decimal_digits": 6
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-osmo.svg"
+        },
+        "USDC": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-usdc.svg"
+        },
+        "USDC_AXELAR": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-usdc.svg"
+        },
+        "WBTC": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "WBTC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-wbtc.svg"
+        },
+        "WETH": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "WETH"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-weth.svg"
+        }
+      },
+      "dexes": {
+        "osmosis": {
+          "type": "osmosis"
+        }
+      }
     }
   },
-  "channels": [
-    {
-      "a": {
-        "network": "NOLUS",
-        "ch": "channel-0"
-      },
-      "b": {
-        "network": "OSMOSIS",
-        "ch": "channel-1636"
-      }
+  "channels": {
+    "NEUTRON": {
+      "AXELAR": "channel-8",
+      "COSMOS_HUB": "channel-1",
+      "NOLUS": "channel-1035"
     },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-3"
-      },
-      "b": {
-        "network": "AXELAR",
-        "ch": "channel-227"
-      }
+    "NOLUS": {
+      "NEUTRON": "channel-3",
+      "OSMOSIS": "channel-0"
     },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-73"
-      },
-      "b": {
-        "network": "AKASH",
-        "ch": "channel-1"
-      }
-    },
-    {
-      "a": {
-        "network": "COSMOS_HUB",
-        "ch": "channel-2500"
-      },
-      "b": {
-        "network": "OSMOSIS",
-        "ch": "channel-12"
-      }
-    },
-    {
-      "a": {
-        "network": "OSMOSIS",
-        "ch": "channel-1"
-      },
-      "b": {
-        "network": "JUNO",
-        "ch": "channel-190"
-      }
-    },
-    {
-      "a": {
-        "network": "NOLUS",
-        "ch": "channel-116"
-      },
-      "b": {
-        "network": "NEUTRON",
-        "ch": "channel-209"
-      }
-    },
-    {
-      "a": {
-        "network": "NEUTRON",
-        "ch": "channel-8"
-      },
-      "b": {
-        "network": "AXELAR",
-        "ch": "channel-237"
-      }
-    },
-    {
-      "a": {
-        "network": "NEUTRON",
-        "ch": "channel-1"
-      },
-      "b": {
-        "network": "COSMOS_HUB",
-        "ch": "channel-16"
-      }
+    "OSMOSIS": {
+      "AKASH": "channel-73",
+      "AXELAR": "channel-3",
+      "COSMOS_HUB": "channel-12",
+      "JUNO": "channel-1",
+      "NOLUS": "channel-8244"
     }
-  ],
-  "definitions": [
-    "This is the descriptor of the network topology and currencies of interest for the Nolus AMM protocol.",
-    "",
-    "The network topology is represented as a collection of networks and the ICS-20 transfer channels that connect them.",
-    "Some networks may have DEX services available. Each DEX is uniquely named and should have a type supported by Nolus.",
-    "The supported types are `osmosis`, `astroport_test`, and `astroport_main`.",
-    "",
-    "On a given network, each currency is identified by its 'ticker'. A currency with ticker NLS on a network NOLUS is required.",
-    "The Nolus network description should not contain other currencies. They are defined in the 'protocols' object.",
-    "",
-    "A currency is either native or ibc on a network. In the latter case it points to the 'burning' currency residing at a network",
-    "that is at one hop distance. In the former case it is described with name, symbol and number of decimal digits.",
-    "",
-    "The 'name' is a human-readable description of the currency",
-    "",
-    "The 'symbol' is the base denomination of the currency at its native chain.",
-    "",
-    "The 'decimal_digits' value represents the number of decimal digits this denomination has.",
-    "For example, '6' for OSMO means 10^6 units of its base denomination uosmo are equal to 1 OSMO",
-    "",
-    "The 'icon' is an optional currency attribute that provides a visual representation of the currency at that network and the others",
-    "where the currency might be sent over ibc. In other workds, if there is no icon attribute of an ibc originating currency then ",
-    "the icon is derived from the network and currency it points to. This might be applied multiple times traversing the ibc path ",
-    "toward its native network.",
-    "",
-    "The currency symbol at a given network is either equal to the currency 'symbol' if it is a native for that network, or ",
-    "'ibc/' + sha256('transfer' + '/' + ch[0] + '/' + ... + 'transfer' + '/' + ch[k] + '/' + symbol) if it is a native on ",
-    "network 'K' reachable through a sequence of channels with names 'ch[0]', 'ch[1]' ... 'ch[k]' at their minting side.",
-    "More info is available [here](https://github.com/cosmos/ibc-go/blob/c86d27fc280cfb342a9e4689b381e5823441b694/modules/apps/transfer/types/trace.go#L19)."
-  ]
+  }
 }
