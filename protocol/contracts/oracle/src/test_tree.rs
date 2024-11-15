@@ -1,6 +1,6 @@
 use currencies::{
-    Lpn as BaseCurrency, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7,
-    PaymentC9, PaymentGroup as PriceCurrencies,
+    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentC9},
+    Lpn as BaseCurrency, PaymentGroup as PriceCurrencies,
 };
 use currency::CurrencyDef;
 use tree::HumanReadableTree;

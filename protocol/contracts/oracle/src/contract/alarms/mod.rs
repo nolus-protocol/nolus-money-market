@@ -176,8 +176,8 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{
+        testing::{PaymentC5, PaymentC6, PaymentC7},
         Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
-        {PaymentC5, PaymentC6, PaymentC7},
     };
     use sdk::cosmwasm_std::testing::MockStorage;
 

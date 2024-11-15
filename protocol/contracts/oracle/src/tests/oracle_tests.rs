@@ -1,6 +1,6 @@
 use currencies::{
-    LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8,
-    PaymentGroup as PriceCurrencies,
+    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8},
+    LeaseGroup, Lpn, Lpns, PaymentGroup as PriceCurrencies,
 };
 use finance::{
     coin::Coin,
