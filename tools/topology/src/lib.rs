@@ -118,3 +118,9 @@ impl Borrow<CurrencyDefinition> for HostCurrency {
         &self.0
     }
 }
+
+impl From<HostCurrency> for CurrencyDefinition {
+    fn from(HostCurrency(currency_definition): HostCurrency) -> Self {
+        currency_definition
+    }
+}
