@@ -130,7 +130,7 @@ where
         build_report,
         &output_directory.join("native.rs"),
         &builder.native(),
-        iter::once(CurrencyDefinition::ticker(host_currency.borrow())),
+        iter::once(host_currency.ticker()),
     )
 }
 

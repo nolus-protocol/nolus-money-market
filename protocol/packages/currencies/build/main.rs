@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow as _,
     env,
     fs::File,
     io::{self, Write},
@@ -8,7 +7,7 @@ use std::{
 
 use anyhow::{anyhow, bail, Context as _, Result};
 
-use topology::{CurrencyDefinition, CurrencyDefinitions, Topology};
+use topology::{CurrencyDefinitions, Topology};
 
 use self::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol};
 
@@ -97,14 +96,14 @@ where
         dex_currencies,
     } = topology.currency_definitions(&protocol.dex_network)?;
 
-    if protocol.lpn_ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
+    if protocol.lpn_ticker == host_currency.ticker() {
         bail!(
             "Liquidity provider's currency cannot be the same as the host \
                 network's native currency!",
         );
     }
 
-    if protocol.stable_currency_ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
+    if protocol.stable_currency_ticker == host_currency.ticker() {
         bail!(
             "Stable currency cannot be the same as the host network's native \
                 currency!",
