@@ -59,27 +59,7 @@
       },
       "dexes": {
         "osmosis": {
-          "type": "osmosis",
-          "swap_pairs": {
-            "AKT": [
-              "OSMO"
-            ],
-            "ATOM": [
-              "OSMO"
-            ],
-            "OSMO": [
-              "AKT",
-              "ATOM"
-            ],
-            "NLS": [
-              "AKT",
-              "ATOM"
-            ],
-            "USDC_AXELAR": [
-              "NLS",
-              "OSMO"
-            ]
-          }
+          "type": "osmosis"
         }
       }
     },
@@ -161,19 +141,7 @@
       },
       "dexes": {
         "astroport": {
-          "type": "astroport_test",
-          "swap_pairs": {
-            "NTRN": [
-              "NLS"
-            ],
-            "NLS": [
-              "NTRN"
-            ],
-            "USDC_AXELAR": [
-              "ATOM",
-              "NTRN"
-            ]
-          }
+          "type": "astroport_test"
         }
       }
     }
