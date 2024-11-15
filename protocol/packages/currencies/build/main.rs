@@ -32,14 +32,14 @@ fn main() -> Result<()> {
 
     println!("cargo::rerun-if-env-changed={BUILD_REPORT}");
 
-    let output_directory: &Path = &PathBuf::from(
-        env::var_os("OUT_DIR").context("Cargo did not set `OUT_DIR` environment variable!")?,
-    );
-
     if env::var_os("CARGO_FEATURE_TESTING").is_some() {
         Ok(())
     } else if check_for_definitions()? {
         let build_report = build_report_writer()?;
+
+        let output_directory: &Path = &PathBuf::from(
+            env::var_os("OUT_DIR").context("Cargo did not set `OUT_DIR` environment variable!")?,
+        );
 
         let topology = File::open(TOPOLOGY_JSON)
             .context(r#"Failed to open "topology.json"!"#)
