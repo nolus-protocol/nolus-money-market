@@ -11,7 +11,7 @@ fn currency_definitions_generator(
         .currency_definitions(dex)
         .expect("Failed to create currency definitions!");
 
-    IntoIterator::into_iter([currency_definitions.host_currency])
+    IntoIterator::into_iter([currency_definitions.host_currency.into()])
         .chain(currency_definitions.dex_currencies)
 }
 
