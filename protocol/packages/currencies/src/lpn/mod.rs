@@ -30,7 +30,6 @@ impl currency::Group for Group {
 
     type TopG = PaymentGroup;
 
-    #[inline]
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -41,7 +40,6 @@ impl currency::Group for Group {
         visit::<_, Lpn, _, _>(matcher, visitor)
     }
 
-    #[inline]
     fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
     where
         M: Matcher,
