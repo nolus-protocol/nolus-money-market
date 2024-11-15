@@ -1,4 +1,4 @@
-use currencies::{LeaseC1, Lpn, Lpns, Native, Nls};
+use currencies::{testing::LeaseC1, Lpn, Lpns, Native, Nls};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

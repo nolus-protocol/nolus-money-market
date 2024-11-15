@@ -155,8 +155,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     pub(super) use currencies::PaymentGroup as PriceG;
-    use currencies::{Lpn, PaymentC7};
-
+    use currencies::{testing::PaymentC7, Lpn};
     use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,

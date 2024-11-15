@@ -93,8 +93,8 @@ mod test {
     use std::collections::HashMap;
 
     use currencies::{
-        Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5,
-        PaymentC6, PaymentGroup as PaymentCurrencies,
+        testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6},
+        Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PaymentCurrencies,
     };
 
     use crate::tests;
