@@ -143,8 +143,8 @@ where
     fn generate_entry_unchecked<'r, 'children, 'child, 'parents, 'parent>(
         &self,
         ticker: &'r str,
-        children: currencies_tree::Children<'children, 'child>,
-        parents: currencies_tree::Parents<'parents, 'parent>,
+        children: &'children currencies_tree::Children<'child>,
+        parents: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         GeneratedSourceEntry<
             Either<

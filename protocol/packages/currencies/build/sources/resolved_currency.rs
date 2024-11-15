@@ -1,6 +1,8 @@
+use std::borrow::Borrow;
+
 use anyhow::{anyhow, Result};
 
-use topology::CurrencyDefinition;
+use topology::{CurrencyDefinition, HostCurrency};
 
 use crate::protocol::Protocol;
 
@@ -67,7 +69,7 @@ where
     pub fn resolve(
         current_module: CurrentModule,
         protocol: &Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
+        host_currency: &'host_currency HostCurrency,
         dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
         ticker: &str,
     ) -> Result<Self> {
@@ -89,11 +91,11 @@ where
                 name,
                 definition,
             })
-        } else if ticker == host_currency.ticker() {
+        } else if ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
             Ok(Self {
                 module: current_module.native(),
                 name: NLS_NAME,
-                definition: host_currency,
+                definition: host_currency.borrow(),
             })
         } else {
             Err(anyhow!(

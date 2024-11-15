@@ -2,7 +2,7 @@ use std::{borrow::Borrow, collections::BTreeMap, fs::File, io::Write, iter, path
 
 use anyhow::{Context as _, Result};
 
-use topology::CurrencyDefinition;
+use topology::{CurrencyDefinition, HostCurrency};
 
 use crate::{currencies_tree::CurrenciesTree, protocol::Protocol};
 
@@ -16,14 +16,14 @@ const LPN_NAME: &str = "Lpn";
 
 const NLS_NAME: &str = "Nls";
 
-type DexCurrencies<'ticker, 'currency_definition> =
+pub(crate) type DexCurrencies<'ticker, 'currency_definition> =
     BTreeMap<&'ticker str, (String, &'currency_definition CurrencyDefinition)>;
 
-pub(super) fn write<BuildReport>(
+pub(crate) fn write<BuildReport>(
     mut build_report: BuildReport,
     output_directory: &Path,
     protocol: &Protocol,
-    host_currency: &CurrencyDefinition,
+    host_currency: &HostCurrency,
     dex_currencies: &DexCurrencies<'_, '_>,
     currencies_tree: &CurrenciesTree<'_, '_, '_, '_>,
 ) -> Result<()>
@@ -121,7 +121,7 @@ fn write_native<BuildReport>(
     build_report: &mut BuildReport,
     output_directory: &Path,
     builder: generator::Builder<'_, '_, '_, '_, '_, '_>,
-    host_currency: &CurrencyDefinition,
+    host_currency: &HostCurrency,
 ) -> Result<()>
 where
     BuildReport: Write,
@@ -130,7 +130,7 @@ where
         build_report,
         &output_directory.join("native.rs"),
         &builder.native(),
-        iter::once(host_currency.ticker()),
+        iter::once(CurrencyDefinition::ticker(host_currency.borrow())),
     )
 }
 
@@ -159,7 +159,7 @@ where
 fn write_stable<Report>(
     mut build_report: Report,
     output_directory: &Path,
-    host_currency: &CurrencyDefinition,
+    host_currency: &HostCurrency,
     dex_currencies: &DexCurrencies<'_, '_>,
     protocol: &Protocol,
 ) -> Result<()>

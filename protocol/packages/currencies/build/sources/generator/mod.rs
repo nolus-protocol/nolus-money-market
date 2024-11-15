@@ -1,7 +1,8 @@
 use std::iter;
 
 use anyhow::Result;
-use topology::CurrencyDefinition;
+
+use topology::HostCurrency;
 
 use crate::{currencies_tree, protocol::Protocol};
 
@@ -36,7 +37,7 @@ pub(super) struct StaticContext<
     'dex_currency_definition,
 > {
     protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
+    host_currency: &'host_currency HostCurrency,
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
 }
 
@@ -58,7 +59,7 @@ impl<
     #[inline]
     pub const fn new(
         protocol: &'protocol Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
+        host_currency: &'host_currency HostCurrency,
         dex_currencies: &'dex_currencies DexCurrencies<
             'dex_currency_ticker,
             'dex_currency_definition,
@@ -297,12 +298,12 @@ where
     fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        parents: currencies_tree::Parents<'parents, 'parent>,
+        parents: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
+            + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -336,12 +337,12 @@ where
     fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         _: &'name str,
-        _: currencies_tree::Parents<'parents, 'parent>,
+        _: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
+            + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -378,12 +379,12 @@ where
     fn pairs_group<'r, 'name, 'parents, 'parent>(
         &self,
         name: &'name str,
-        parents: currencies_tree::Parents<'parents, 'parent>,
+        parents: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Parents<'parents, 'parent>>,
+            + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -408,12 +409,12 @@ where
     fn in_pool_with<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        children: currencies_tree::Children<'children, 'child>,
+        children: &'children currencies_tree::Children<'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Children<'children, 'child>>,
+            + Captures<&'children currencies_tree::Children<'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -445,12 +446,12 @@ impl<
     fn in_pool_with<'r, 'name, 'children, 'child>(
         &self,
         name: &'name str,
-        children: currencies_tree::Children<'children, 'child>,
+        children: &'children currencies_tree::Children<'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
             + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
             + Captures<&'name str>
-            + Captures<currencies_tree::Children<'children, 'child>>,
+            + Captures<&'children currencies_tree::Children<'child>>,
     >
     where
         'dex_currencies: 'r,

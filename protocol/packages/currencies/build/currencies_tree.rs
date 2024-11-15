@@ -4,29 +4,30 @@ use std::{
         btree_map::{self, BTreeMap},
         btree_set::{self, BTreeSet},
     },
+    marker::PhantomData,
 };
 
 use anyhow::{Context as _, Result};
 
-use topology::{swap_pairs::PairTargets, Topology};
+use topology::{swap_pairs::PairTargets, HostCurrency, Topology};
 
 use crate::protocol::Protocol;
 
 pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
-    parents: BTreeMap<&'parents_of str, BTreeSet<&'parent str>>,
-    children: BTreeMap<&'children_of str, BTreeSet<&'child str>>,
+    parents: BTreeMap<&'parents_of str, Parents<'parent>>,
+    children: BTreeMap<&'children_of str, Children<'child>>,
 }
 
 impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
     const EMPTY: Self = Self {
-        parents: BTreeMap::<_, BTreeSet<_>>::new(),
-        children: BTreeMap::<_, BTreeSet<_>>::new(),
+        parents: BTreeMap::new(),
+        children: BTreeMap::new(),
     };
 
     pub fn new(
         topology: &'topology Topology,
         protocol: &Protocol,
-        host_currency_ticker: &str,
+        host_currency: &HostCurrency,
     ) -> Result<Self> {
         topology
             .network_dexes(&protocol.dex_network)
@@ -36,18 +37,16 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
             .swap_pairs()
             .iter()
             .map(|(ticker, targets)| (ticker.borrow(), targets))
-            .filter(|&(ticker, _)| {
-                super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
-            })
+            .filter(|&(ticker, _)| protocol.is_protocol_currency(host_currency, ticker))
             .try_fold(Self::EMPTY, |currencies_tree, (ticker, targets)| {
-                currencies_tree.process_targets(protocol, host_currency_ticker, ticker, targets)
+                currencies_tree.process_targets(protocol, host_currency, ticker, targets)
             })
     }
 
     fn process_targets(
         mut self,
         protocol: &Protocol,
-        host_currency_ticker: &str,
+        host_currency: &HostCurrency,
         ticker: &'topology str,
         targets: &'topology PairTargets,
     ) -> Result<Self> {
@@ -58,18 +57,21 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
         };
 
         entry
-            .insert(
+            .insert(Children::new(
                 targets
                     .iter()
                     .map(Borrow::<str>::borrow)
-                    .filter(|&ticker| {
-                        super::filter_selected_currencies(protocol, host_currency_ticker, ticker)
-                    })
+                    .filter(|&ticker| protocol.is_protocol_currency(host_currency, ticker))
                     .collect(),
-            )
+            ))
             .iter()
             .try_fold(self.parents, |mut parents, target| {
-                if parents.entry(target).or_default().insert(ticker) {
+                if parents
+                    .entry(target)
+                    .or_insert(const { Parents::new(BTreeSet::new()) })
+                    .set
+                    .insert(ticker)
+                {
                     Ok(parents)
                 } else {
                     Err(anyhow::Error::msg(DUPLICATED_TICKER_ERROR))
@@ -80,51 +82,50 @@ impl<'topology> CurrenciesTree<'topology, 'topology, 'topology, 'topology> {
 }
 
 impl<'parent, 'child> CurrenciesTree<'_, 'parent, '_, 'child> {
-    pub fn parents<'r>(&'r self, ticker: &str) -> Parents<'r, 'parent> {
-        Parents(
-            self.parents
-                .get(ticker)
-                .unwrap_or(const { &BTreeSet::new() }),
-        )
+    pub fn parents<'r>(&'r self, ticker: &str) -> &'r Parents<'parent> {
+        self.parents
+            .get(ticker)
+            .unwrap_or(const { &Parents::new(BTreeSet::new()) })
     }
 
-    pub fn children<'r>(&'r self, ticker: &str) -> Children<'r, 'child> {
-        Children(
-            self.children
-                .get(ticker)
-                .unwrap_or(const { &BTreeSet::new() }),
-        )
+    pub fn children<'r>(&'r self, ticker: &str) -> &'r Children<'child> {
+        self.children
+            .get(ticker)
+            .unwrap_or(const { &Children::new(BTreeSet::new()) })
     }
 }
 
-pub(crate) struct Parents<'r, 'parent>(&'r BTreeSet<&'parent str>);
+#[repr(transparent)]
+pub(crate) struct SetNewtype<'ticker, Marker> {
+    set: BTreeSet<&'ticker str>,
+    _marker: PhantomData<Marker>,
+}
 
-impl<'r, 'parent> Parents<'r, 'parent> {
+impl<'ticker, Marker> SetNewtype<'ticker, Marker> {
+    const fn new(set: BTreeSet<&'ticker str>) -> Self {
+        Self {
+            set,
+            _marker: PhantomData,
+        }
+    }
+
     #[inline]
-    pub fn iter(&self) -> btree_set::Iter<'r, &'parent str> {
-        self.0.iter()
+    pub fn iter(&self) -> btree_set::Iter<'_, &'ticker str> {
+        self.set.iter()
     }
 }
 
-impl<'r, 'parent> AsRef<BTreeSet<&'parent str>> for Parents<'r, 'parent> {
+impl<'ticker, Marker> AsRef<BTreeSet<&'ticker str>> for SetNewtype<'ticker, Marker> {
     #[inline]
-    fn as_ref(&self) -> &BTreeSet<&'parent str> {
-        self.0
+    fn as_ref(&self) -> &BTreeSet<&'ticker str> {
+        &self.set
     }
 }
 
-pub(crate) struct Children<'r, 'child>(&'r BTreeSet<&'child str>);
+pub(crate) enum ParentsMarker {}
 
-impl<'r, 'child> Children<'r, 'child> {
-    #[inline]
-    pub fn iter(&self) -> btree_set::Iter<'r, &'child str> {
-        self.0.iter()
-    }
-}
+pub(crate) type Parents<'parent> = SetNewtype<'parent, ParentsMarker>;
 
-impl<'r, 'child> AsRef<BTreeSet<&'child str>> for Children<'r, 'child> {
-    #[inline]
-    fn as_ref(&self) -> &BTreeSet<&'child str> {
-        self.0
-    }
-}
+pub(crate) enum ChildrenMarker {}
+
+pub(crate) type Children<'children> = SetNewtype<'children, ChildrenMarker>;

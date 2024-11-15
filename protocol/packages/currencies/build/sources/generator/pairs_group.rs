@@ -2,7 +2,7 @@ use std::iter;
 
 use anyhow::Result;
 
-use topology::CurrencyDefinition;
+use topology::HostCurrency;
 
 use crate::{
     either::Either,
@@ -16,7 +16,7 @@ use super::DexCurrencies;
 pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Parents>(
     current_module: CurrentModule,
     protocol: &Protocol,
-    host_currency: &CurrencyDefinition,
+    host_currency: &HostCurrency,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     name: &'r str,
     mut parents: Parents,
@@ -85,7 +85,7 @@ struct PairsGroupTemplate<
 > {
     current_module: CurrentModule,
     protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
+    host_currency: &'host_currency HostCurrency,
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     matcher_parameter_name: &'static str,
     visitor_parameter_name: &'static str,
@@ -110,7 +110,7 @@ impl<
     const fn new(
         current_module: CurrentModule,
         protocol: &'protocol Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
+        host_currency: &'host_currency HostCurrency,
         dex_currencies: &'dex_currencies DexCurrencies<
             'dex_currency_ticker,
             'dex_currency_definition,
@@ -188,7 +188,7 @@ struct VisitEntryTemplate<
 > {
     current_module: CurrentModule,
     protocol: &'protocol Protocol,
-    host_currency: &'host_currency CurrencyDefinition,
+    host_currency: &'host_currency HostCurrency,
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
     visit_function: &'static str,
     matcher_parameter_name: &'static str,
@@ -214,7 +214,7 @@ impl<
     const fn new(
         current_module: CurrentModule,
         protocol: &'protocol Protocol,
-        host_currency: &'host_currency CurrencyDefinition,
+        host_currency: &'host_currency HostCurrency,
         dex_currencies: &'dex_currencies DexCurrencies<
             'dex_currency_ticker,
             'dex_currency_definition,
