@@ -56,31 +56,6 @@
           },
           "icon": "https://nolus.io/currencies/osmosis-juno.svg"
         }
-      },
-      "dexes": {
-        "osmosis": {
-          "type": "osmosis",
-          "swap_pairs": {
-            "ATOM": [
-              "OSMO"
-            ],
-            "AKT": [
-              "OSMO"
-            ],
-            "NLS": [
-              "USDC_AXELAR"
-            ],
-            "OSMO": [
-              "ATOM",
-              "AKT",
-              "USDC_AXELAR"
-            ],
-            "USDC_AXELAR": [
-              "NLS",
-              "OSMO"
-            ]
-          }
-        }
       }
     },
     "AXELAR": {
@@ -157,27 +132,6 @@
             "currency": "NLS"
           },
           "icon": "https://nolus.io/currencies/neutron-nls.svg"
-        }
-      },
-      "dexes": {
-        "astroport": {
-          "type": "astroport_test",
-          "swap_pairs": {
-            "ATOM": [
-              "USDC_AXELAR"
-            ],
-            "NTRN": [
-              "NLS",
-              "USDC_AXELAR"
-            ],
-            "NLS": [
-              "NTRN"
-            ],
-            "USDC_AXELAR": [
-              "ATOM",
-              "NTRN"
-            ]
-          }
         }
       }
     }
