@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 
-use currencies::{LeaseC1, LeaseGroup, Lpn};
+use currencies::{testing::LeaseC1, LeaseGroup, Lpn};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use finance::{
     coin::{Amount, Coin},

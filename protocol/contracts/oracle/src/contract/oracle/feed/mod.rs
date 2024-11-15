@@ -178,8 +178,8 @@ mod test {
 
     mod all_prices_iter {
         use currencies::{
-            Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6,
-            PaymentC7, PaymentGroup as PriceCurrencies,
+            testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+            Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
         };
         use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
         use marketprice::{config::Config, Repo};

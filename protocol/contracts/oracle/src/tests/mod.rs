@@ -1,6 +1,7 @@
 use currencies::{
-    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentC1,
-    PaymentC3, PaymentC4, PaymentC5, PaymentGroup as PriceCurrencies,
+    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5},
+    LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
+    PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::{

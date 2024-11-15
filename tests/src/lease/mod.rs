@@ -1,4 +1,7 @@
-use currencies::{LeaseC2, LeaseGroup, Lpn, PaymentC1, PaymentGroup};
+use currencies::{
+    testing::{LeaseC2, PaymentC1},
+    LeaseGroup, Lpn, PaymentGroup,
+};
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},

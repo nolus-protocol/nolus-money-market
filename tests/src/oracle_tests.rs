@@ -1,11 +1,11 @@
-use currency::CurrencyDef;
 use serde::{Deserialize, Serialize};
 
 use currencies::{
-    LeaseC1, LeaseC2, LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpn, Lpns,
-    Lpns as BaseCurrencies, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentGroup,
-    PaymentGroup as PriceCurrencies,
+    testing::{LeaseC1, LeaseC2, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+    LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpn, Lpns,
+    Lpns as BaseCurrencies, PaymentGroup, PaymentGroup as PriceCurrencies,
 };
+use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

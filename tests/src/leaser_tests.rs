@@ -1,6 +1,6 @@
 use currencies::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC6, LeaseC7, LeaseGroup as LeaseCurrencies, Lpn, Lpns,
-    PaymentC1, PaymentGroup as PriceCurrencies,
+    testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC6, LeaseC7, PaymentC1},
+    LeaseGroup as LeaseCurrencies, Lpn, Lpns, PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDef, MemberOf};
 use finance::{

@@ -223,7 +223,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currencies::{LeaseC1, LeaseGroup, Lpn, Lpns, PaymentC1, PaymentC9};
+    use currencies::{
+        testing::{LeaseC1, PaymentC1, PaymentC9},
+        LeaseGroup, Lpn, Lpns,
+    };
     use finance::{duration::Duration, percent::Percent, price};
     use sdk::cosmwasm_std::{self, testing::mock_env};
 

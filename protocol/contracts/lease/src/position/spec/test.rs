@@ -1,4 +1,4 @@
-use currencies::{Lpn, PaymentC3};
+use currencies::{testing::PaymentC3, Lpn};
 use finance::{
     coin::Coin,
     duration::Duration,

@@ -195,8 +195,8 @@ mod tests {
     use std::cmp::Ordering;
 
     use ::currencies::{
-        LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, Lpn, Nls, PaymentC4,
-        PaymentGroup as PriceCurrencies,
+        testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, PaymentC4},
+        Lpn, Nls, PaymentGroup as PriceCurrencies,
     };
     use currency::{CurrencyDTO, CurrencyDef, MemberOf};
     use sdk::cosmwasm_std::{self, testing};
