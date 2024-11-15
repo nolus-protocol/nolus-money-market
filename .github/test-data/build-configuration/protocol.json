@@ -8,5 +8,25 @@
     "AKT",
     "JUNO",
     "OSMO"
-  ]
+  ],
+  "swap_pairs": {
+    "AKT": [
+      "OSMO"
+    ],
+    "ATOM": [
+      "OSMO"
+    ],
+    "OSMO": [
+      "AKT",
+      "ATOM"
+    ],
+    "NLS": [
+      "AKT",
+      "ATOM"
+    ],
+    "USDC_AXELAR": [
+      "NLS",
+      "OSMO"
+    ]
+  }
 }
