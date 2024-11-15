@@ -97,7 +97,6 @@ pub struct CurrencyDefinitions {
     pub dex_currencies: Vec<CurrencyDefinition>,
 }
 
-
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct HostCurrency(CurrencyDefinition);
