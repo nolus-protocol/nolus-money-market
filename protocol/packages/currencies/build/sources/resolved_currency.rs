@@ -91,7 +91,7 @@ where
                 name,
                 definition,
             })
-        } else if ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
+        } else if ticker == host_currency.ticker() {
             Ok(Self {
                 module: current_module.native(),
                 name: NLS_NAME,

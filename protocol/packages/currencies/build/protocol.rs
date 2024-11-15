@@ -1,4 +1,4 @@
-use std::{borrow::Borrow as _, collections::BTreeSet};
+use std::collections::BTreeSet;
 
 use serde::Deserialize;
 
@@ -20,7 +20,7 @@ pub(crate) struct Protocol {
 impl Protocol {
     #[inline]
     pub(super) fn is_protocol_currency(&self, host_currency: &HostCurrency, ticker: &str) -> bool {
-        ticker == CurrencyDefinition::ticker(host_currency.borrow())
+        ticker == host_currency.ticker()
             || ticker == self.lpn_ticker
             || self.lease_currencies_tickers.contains(ticker)
             || self.payment_only_currencies_tickers.contains(ticker)
