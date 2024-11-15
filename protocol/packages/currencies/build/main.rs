@@ -1,13 +1,14 @@
 use std::{
+    borrow::Borrow as _,
     env,
     fs::File,
     io::{self, Write},
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 
-use topology::{CurrencyDefinitions, Topology};
+use topology::{CurrencyDefinition, CurrencyDefinitions, Topology};
 
 use self::{currencies_tree::CurrenciesTree, either::Either, protocol::Protocol};
 
@@ -35,45 +36,50 @@ fn main() -> Result<()> {
         env::var_os("OUT_DIR").context("Cargo did not set `OUT_DIR` environment variable!")?,
     );
 
-    let files_exist = IntoIterator::into_iter([PROTOCOL_JSON, TOPOLOGY_JSON])
+    if env::var_os("CARGO_FEATURE_TESTING").is_some() {
+        Ok(())
+    } else if check_for_definitions()? {
+        let build_report = build_report_writer()?;
+
+        let topology = File::open(TOPOLOGY_JSON)
+            .context(r#"Failed to open "topology.json"!"#)
+            .and_then(|file| {
+                serde_json::from_reader(file).context("Failed to parse topology JSON!")
+            })?;
+
+        let protocol = File::open(PROTOCOL_JSON)
+            .context(r#"Failed to open "protocol.json"!"#)
+            .and_then(|file| {
+                serde_json::from_reader(file).context("Failed to parse protocol JSON!")
+            })?;
+
+        generate_currencies(build_report, output_directory, topology, protocol)
+    } else {
+        Err(anyhow!(
+            "Topology and protocol definitions don't exist while `tesing` \
+            feature is not selected!"
+        ))
+    }
+}
+
+fn check_for_definitions() -> Result<bool> {
+    IntoIterator::into_iter([PROTOCOL_JSON, TOPOLOGY_JSON])
         .map(Path::new)
         .map(Path::try_exists)
         .try_fold(true, |all_exist, result| {
             result
                 .map(|exists| all_exist && exists)
                 .context("Failed to check whether JSON descriptor file exists!")
-        })?;
+        })
+}
 
-    let build_report = if let Some(report_file) = env::var_os(BUILD_REPORT) {
-        if files_exist {
-            Either::Left(
-                File::create(report_file).context("Failed to open build report for writing!")?,
-            )
-        } else {
-            bail!(
-                "`{BUILD_REPORT:?}` environment variable set but topology \
-                and/or protocol descriptors don't exist!",
-            );
-        }
+fn build_report_writer() -> Result<impl Write> {
+    if let Some(report_file) = env::var_os(BUILD_REPORT) {
+        File::create(report_file)
+            .context("Failed to open build report for writing!")
+            .map(Either::Left)
     } else {
-        Either::Right(io::stderr())
-    };
-
-    if files_exist {
-        generate_currencies(
-            build_report,
-            output_directory,
-            serde_json::from_reader(
-                File::open(TOPOLOGY_JSON).context("Failed to open \"topology.json\"!")?,
-            )
-            .context("Failed to parse topology JSON!")?,
-            serde_json::from_reader(
-                File::open(PROTOCOL_JSON).context("Failed to open \"protocol.json\"!")?,
-            )
-            .context("Failed to parse protocol JSON!")?,
-        )
-    } else {
-        Ok(())
+        Ok(Either::Right(io::stderr()))
     }
 }
 
@@ -91,58 +97,26 @@ where
         dex_currencies,
     } = topology.currency_definitions(&protocol.dex_network)?;
 
-    if *protocol.lpn_ticker == *host_currency.ticker() {
+    if protocol.lpn_ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
         bail!(
             "Liquidity provider's currency cannot be the same as the host \
                 network's native currency!",
         );
     }
 
-    if *protocol.stable_currency_ticker == *host_currency.ticker() {
+    if protocol.stable_currency_ticker == CurrencyDefinition::ticker(host_currency.borrow()) {
         bail!(
             "Stable currency cannot be the same as the host network's native \
                 currency!",
         );
     }
 
-    let dex_currencies = dex_currencies
-        .iter()
-        .filter(|currency_definition| {
-            filter_selected_currencies(
-                &protocol,
-                host_currency.ticker(),
-                currency_definition.ticker(),
-            )
-        })
-        .map(|currency_definition| {
-            (
-                currency_definition.ticker(),
-                (
-                    convert_case::snake_case_to_upper_camel_case(currency_definition.ticker()),
-                    currency_definition,
-                ),
-            )
-        })
-        .collect();
-
     sources::write(
         build_report,
         output_directory,
         &protocol,
         &host_currency,
-        &dex_currencies,
-        &CurrenciesTree::new(&topology, &protocol, host_currency.ticker())?,
+        &protocol.dex_currencies(&host_currency, &dex_currencies),
+        &CurrenciesTree::new(&topology, &protocol, &host_currency)?,
     )
-}
-
-#[inline]
-fn filter_selected_currencies(
-    protocol: &Protocol,
-    host_currency_ticker: &str,
-    ticker: &str,
-) -> bool {
-    ticker == host_currency_ticker
-        || ticker == protocol.lpn_ticker
-        || protocol.lease_currencies_tickers.contains(ticker)
-        || protocol.payment_only_currencies_tickers.contains(ticker)
 }
