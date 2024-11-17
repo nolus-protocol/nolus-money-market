@@ -20,7 +20,6 @@ mod dto;
 mod error;
 mod interest;
 mod spec;
-mod status;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Position<Asset> {
@@ -113,7 +112,7 @@ where
     /// Calculate the price at which the lease reaches given ltv.
     pub(crate) fn price_at(
         &self,
-        level: Level,
+        level: Level, //TODO take LTV
         total_due: LpnCoin,
     ) -> ContractResult<Price<Asset>> {
         debug_assert!(!total_due.is_zero());

@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, duration::Duration, liability::Zone, percent::Percent};
@@ -20,19 +22,31 @@ pub enum Liquidation<Asset> {
 #[cfg_attr(test, derive(Debug))]
 pub enum Debt<Asset> {
     No,
-    Ok { zone: Zone, recheck_in: Duration },
+    /// Represent an open position with no immediate close required
+    Ok {
+        /// The position's debt results to an LTV% within the `liability` zone
+        liability: Zone,
+        /// The position would be steady, i.e. no automatic close, if its LTV% falls within the provided range.
+        /// The `steadiness` is always a sub-range of the `liability` zone's range.
+        steadiness: Range<Percent>,
+        /// When is recommended to check again the position debt
+        recheck_in: Duration,
+    },
     Bad(Liquidation<Asset>),
 }
 
 impl<Asset> Debt<Asset> {
     #[cfg(test)]
-    pub(crate) fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
-        debug_assert!(!amount.is_zero());
-        Self::Bad(Liquidation::Partial { amount, cause })
+    pub(crate) fn curable(sell_to_cover_debt: Coin<Asset>, cause: Cause) -> Self {
+        debug_assert!(!sell_to_cover_debt.is_zero());
+        Self::Bad(Liquidation::Partial {
+            amount: sell_to_cover_debt,
+            cause,
+        })
     }
 
     #[cfg(test)]
-    pub(crate) fn full(cause: Cause) -> Self {
+    pub(crate) fn unmanageable(cause: Cause) -> Self {
         Self::Bad(Liquidation::Full(cause))
     }
 }

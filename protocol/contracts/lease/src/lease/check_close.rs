@@ -35,11 +35,14 @@ where
 
         self.price_of_lease_currency().and_then(|asset_in_lpns| {
             self.position
-                .check_close(&due, asset_in_lpns)
+                .check_close(asset_in_lpns)
                 .map(|close| Ok(CloseStatus::CloseAsked(close)))
-                .unwrap_or_else(|| match self.position.debt(&due, asset_in_lpns) {
+                .unwrap_or_else(|()| self.position.debt(&due, asset_in_lpns))
+                .and_then(|debt| match debt {
                     Debt::No => Ok(CloseStatus::Paid),
-                    Debt::Ok { zone, recheck_in } => self
+                    //TODO use core::ops::Range<Percent> to represent an LTV range, and core::ops::RangeBounds::contains()
+                    Debt::Ok { liability: zone, recheck_in } => 
+                    self
                         .reschedule(
                             now,
                             recheck_in,
