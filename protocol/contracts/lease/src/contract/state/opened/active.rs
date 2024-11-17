@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{
-        position::{FullClose, PositionClose},
+        position::{ClosePolicyChange, FullClose, PositionClose},
         query::StateResponse,
         DownpaymentCoin,
     },
@@ -23,7 +23,10 @@ use crate::{
 
 use super::{
     alarm, balance,
-    close::{customer_close, liquidation},
+    close::{
+        customer_close, liquidation,
+        policy::{ChangeCmd, ChangePolicyResult},
+    },
     event,
     repay::{
         self,
@@ -151,6 +154,10 @@ impl Active {
                     .map_err(Into::into)
             })
     }
+
+    fn check_owner_access(&self, client: &Addr) -> ContractResult<()> {
+        access_control::check(&self.lease.lease.customer, client).map_err(Into::into)
+    }
 }
 
 impl Handler for Active {
@@ -174,9 +181,69 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)
-            .map_err(Into::into)
+        self.check_owner_access(&info.sender)
             .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
+    }
+
+    fn change_close_policy(
+        self,
+        cmd: ClosePolicyChange,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.check_owner_access(&info.sender)
+            .and_then(|()| {
+                let profit = self.lease.lease.loan.profit().clone();
+                let price_alarms = self.lease.lease.oracle;
+                let time_alarms = self.lease.lease.time_alarms;
+                let reserve = self.lease.lease.reserve;
+
+                self.lease
+                    .update(
+                        ChangeCmd::new(
+                            cmd,
+                            env.block.time,
+                            profit,
+                            time_alarms,
+                            price_alarms,
+                            reserve,
+                        ),
+                        querier,
+                    )
+                    .and_then(
+                        |(lease, ChangePolicyResult { close_status, msgs })| match close_status {
+                            // TODO consider introducing an abstraction, for example `CloseProcessor`, with 4 implementations for each of the arms
+                            CloseStatusDTO::Paid => Ok(finish_repay(loan_paid, response, lease)),
+                            CloseStatusDTO::None {
+                                current_liability,
+                                alarms,
+                            } => {
+                                let response = alarm::build_resp(&lease, current_liability, alarms)
+                                    .merge_with(response);
+                                Ok(finish_repay(loan_paid, response, lease))
+                            }
+                            CloseStatusDTO::NeedLiquidation(liquidation) => {
+                                liquidation::start(lease, liquidation, response, env, querier)
+                            }
+                            CloseStatusDTO::CloseAsked(strategy) => match strategy {
+                                CloseStrategy::TakeProfit(_tp) => {
+                                    todo!("reset TakeProfit")
+                                }
+                                CloseStrategy::StopLoss(_sl) => customer_close::start(
+                                    PositionClose::FullClose(FullClose {}),
+                                    lease,
+                                    env,
+                                    querier,
+                                ),
+                            },
+                        },
+                    )
+            })
+            // .map(|lease| {
+            //     let events = Emitter::of_type("");
+            //     Response::from(events.into(), Self::new(lease))
+            // })
     }
 
     fn on_time_alarm(

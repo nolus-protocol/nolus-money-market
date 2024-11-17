@@ -96,7 +96,7 @@ impl SplitDTOOut for RepayLeaseResult {
 
 pub(crate) struct RepayResult {
     pub response: MessageResponse,
-    pub loan_paid: bool,
+    pub loan_paid: bool, // TODO remove it since it overlaps with CloseStatusDTO::Paid
     pub close_status: CloseStatusDTO,
 }
 

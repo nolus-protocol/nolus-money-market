@@ -16,7 +16,7 @@ use crate::{
     position::{Cause, CloseStrategy, Liquidation},
 };
 
-pub(crate) fn check_close<Asset, Lpp, Oracle>(
+pub(super) fn check_close<Asset, Lpp, Oracle>(
     lease: &LeaseDO<Asset, Lpp, Oracle>,
     when: &Timestamp,
     time_alarms: &TimeAlarmsRef,

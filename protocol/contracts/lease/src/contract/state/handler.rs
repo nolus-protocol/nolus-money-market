@@ -4,13 +4,21 @@ use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse},
+    api::{
+        position::{ClosePolicyChange, PositionClose},
+        query::StateResponse,
+    },
     error::{ContractError, ContractResult},
 };
 
 use super::State;
 
 pub(crate) type Response = StateMachineResponse<State>;
+
+/// The Lease State Machine API
+///
+/// Most of the methods provide a default, `ContractError::UnsupportedOperation`, implementation
+/// since only a subset of the operations are supported by each Lease state.
 #[enum_dispatch]
 pub(crate) trait Handler
 where
@@ -44,6 +52,16 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("close position")
+    }
+
+    fn change_close_policy(
+        self,
+        _cmd: ClosePolicyChange,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        err("change close policy")
     }
 
     fn close(

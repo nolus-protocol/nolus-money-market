@@ -25,7 +25,7 @@ mod dto;
 mod test;
 
 #[derive(Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Spec {
     liability: Liability,
     close: ClosePolicy,
@@ -71,8 +71,9 @@ impl Spec {
         Asset: Currency,
         Due: DueTrait,
     {
+        let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
         self.close
-            .change_policy(cmd, asset, Self::to_assets(due.total_due(), asset_in_lpns))
+            .change_policy(cmd, asset, total_due)
             .map(|close_policy| {
                 Self::new(
                     self.liability,

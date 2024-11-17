@@ -91,13 +91,13 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             &self.time_alarms,
             &self.price_alarms,
         )? {
-            CloseStatusDTO::Paid => unreachable!(),
+            CloseStatusDTO::Paid => unimplemented!("a freshly open lease should have some due amount"),
             CloseStatusDTO::None {
                 current_liability: _,
                 alarms,
             } => alarms,
-            CloseStatusDTO::NeedLiquidation(_) => unreachable!("TODO PR#116"),
-            CloseStatusDTO::CloseAsked(_) => unreachable!("no triggers have been set"),
+            CloseStatusDTO::NeedLiquidation(_) => todo!("TODO PR#116"),
+            CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
         };
 
         lease

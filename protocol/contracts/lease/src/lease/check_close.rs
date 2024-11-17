@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{position::ClosePolicyChange, LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, Price},
     position::{CloseStrategy, Debt, DueTrait, Liquidation},
@@ -54,6 +54,20 @@ where
                         }),
                     Debt::Bad(liquidation) => Ok(CloseStatus::NeedLiquidation(liquidation)),
                 })
+        })
+    }
+
+    pub(crate) fn change_close_policy(
+        &mut self,
+        cmd: ClosePolicyChange,
+        now: &Timestamp,
+    ) -> ContractResult<()> {
+        let due = self.loan.state(now);
+
+        self.price_of_lease_currency().and_then(|asset_in_lpns| {
+            self.position
+                .change_close_policy(cmd, &due, asset_in_lpns)
+                .map_err(Into::into)
         })
     }
 

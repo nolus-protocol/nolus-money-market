@@ -14,7 +14,7 @@ use reserve::error::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::{api::PaymentCoin, finance::LpnCoinDTO};
+use crate::{api::PaymentCoin, finance::LpnCoinDTO, position::PositionError};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -53,6 +53,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     ReserveError(#[from] ReserveError),
+
+    #[error("[Lease] {0}")]
+    PositionError(#[from] PositionError),
 
     #[error("[Lease] No payment sent")]
     NoPaymentError(),

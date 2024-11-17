@@ -24,6 +24,7 @@ use super::payment::Repayable;
 
 pub mod customer_close;
 pub mod liquidation;
+pub mod policy;
 pub mod sell_asset;
 
 pub(crate) trait Closable {
