@@ -1,19 +1,13 @@
-use currency::{CurrencyDef, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{duration::Duration, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::{
-    api::alarms::Alarm,
-    stub::{AsAlarms, PriceAlarms as PriceAlarmsTrait},
-};
+use oracle::api::alarms::Alarm;
 use oracle_platform::Oracle as OracleTrait;
-use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractResult,
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency, OracleRef},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
 };
 
@@ -24,54 +18,46 @@ where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
 {
-    pub(super) fn reschedule(
+    pub(super) fn steadiness(
         &self,
         now: &Timestamp,
         recheck_in: Duration,
         liquidation_zone: &Zone,
         total_due: LpnCoin,
-        time_alarms: &TimeAlarmsRef,
-        price_alarms: &OracleRef,
-    ) -> ContractResult<Batch> {
-        let next_recheck = now + recheck_in;
-
-        time_alarms
-            .setup_alarm(next_recheck)
-            .map_err(Into::into)
-            .and_then(|schedule_time_alarm| {
-                let mut price_alarms = price_alarms.as_alarms::<LeaseAssetCurrencies>();
-                self.reschedule_price_alarm(liquidation_zone, total_due, &mut price_alarms)
-                    .map(|_| schedule_time_alarm.merge(price_alarms.into()))
-            })
+    ) -> Steadiness<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies> {
+        Steadiness {
+            by: now + recheck_in,
+            within: self.price_range(liquidation_zone, total_due),
+        }
     }
 
-    fn reschedule_price_alarm<PriceAlarms>(
+    fn price_range(
         &self,
         liquidation_zone: &Zone,
         total_due: LpnCoin,
-        price_alarms: &mut PriceAlarms,
-    ) -> ContractResult<()>
-    where
-        PriceAlarms:
-            PriceAlarmsTrait<LeaseAssetCurrencies, BaseC = LpnCurrency, BaseG = LpnCurrencies>,
-    {
+    ) -> Alarm<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies> {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         debug_assert!(!total_due.is_zero());
 
-        let below = self.position.price_at(liquidation_zone.high(), total_due)?;
+        let below = self.position.price_at(liquidation_zone.high(), total_due);
 
         let above_or_equal = liquidation_zone
             .low()
-            .map(|low| self.position.price_at(low, total_due))
-            .transpose()?;
+            .map(|low| self.position.price_at(low, total_due));
 
-        price_alarms
-            .add_alarm(Alarm::<LeaseAssetCurrencies, _, _>::new(
-                below,
-                above_or_equal,
-            ))
-            .map_err(Into::into)
+        Alarm::new(below, above_or_equal)
     }
+}
+
+pub(super) struct Steadiness<G, Lpn, Lpns>
+where
+    G: Group,
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns> + MemberOf<G::TopG>,
+    Lpns: Group,
+{
+    by: Timestamp,
+    within: Alarm<G, Lpn, Lpns>,
 }
 
 #[cfg(test)]
@@ -118,7 +104,7 @@ mod tests {
             lease.loan.state(&now)
         };
         let alarm_msgs = lease
-            .reschedule(
+            .steadiness(
                 &LEASE_START,
                 RECHECK_TIME,
                 &Zone::no_warnings(liability_alarm_on),
@@ -174,7 +160,7 @@ mod tests {
             Price::identity(),
         );
         let alarm_msgs = lease
-            .reschedule(
+            .steadiness(
                 &reschedule_at,
                 RECHECK_TIME,
                 &zone,

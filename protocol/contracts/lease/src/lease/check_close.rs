@@ -13,7 +13,7 @@ use crate::{
     position::{CloseStrategy, Debt, DueTrait, Liquidation},
 };
 
-use super::Lease;
+use super::{steady::Steadiness, Lease};
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
@@ -40,16 +40,14 @@ where
                 .unwrap_or_else(|| match self.position.debt(&due, asset_in_lpns) {
                     Debt::No => Ok(CloseStatus::Paid),
                     Debt::Ok { zone, recheck_in } => self
-                        .reschedule(
+                        .steadiness(
                             now,
                             recheck_in,
                             &zone,
                             due.total_due(),
-                            time_alarms,
-                            price_alarms,
                         )
                         .map(|alarms| CloseStatus::None {
-                            alarms,
+                            steadiness: alarms,
                             current_liability: zone,
                         }),
                     Debt::Bad(liquidation) => Ok(CloseStatus::NeedLiquidation(liquidation)),
@@ -69,7 +67,7 @@ where
     Paid,
     None {
         current_liability: Zone,
-        alarms: Batch,
+        steadiness: Steadiness<>,
     },
     NeedLiquidation(Liquidation<Asset>),
     CloseAsked(CloseStrategy),

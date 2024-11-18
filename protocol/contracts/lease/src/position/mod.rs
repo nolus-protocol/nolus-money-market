@@ -115,11 +115,11 @@ where
         &self,
         level: Level,
         total_due: LpnCoin,
-    ) -> ContractResult<Price<Asset>> {
+    ) -> Price<Asset> {
         debug_assert!(!total_due.is_zero());
         debug_assert!(!level.ltv().is_zero());
 
-        Ok(total_of(level.ltv().of(self.amount)).is(total_due))
+        total_of(level.ltv().of(self.amount)).is(total_due)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

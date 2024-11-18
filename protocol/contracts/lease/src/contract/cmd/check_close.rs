@@ -75,7 +75,7 @@ where
             CloseStatus::Paid => Self::Paid,
             CloseStatus::None {
                 current_liability,
-                alarms,
+                steadiness: alarms,
             } => Self::None {
                 current_liability,
                 alarms,
