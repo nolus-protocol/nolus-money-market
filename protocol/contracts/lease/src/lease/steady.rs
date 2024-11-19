@@ -180,7 +180,7 @@ mod tests {
         use cosmwasm_std::Timestamp;
         use currencies::{LeaseGroup, Lpns};
         use finance::{coin::Coin, price};
-        use oracle::api::alarms::{ExecuteMsg as PriceAlarmsCmd, Alarm};
+        use oracle::api::alarms::{Alarm, ExecuteMsg as PriceAlarmsCmd};
         use oracle_platform::OracleRef;
         use platform::batch::Batch;
         use sdk::cosmwasm_std::{self, Addr, WasmMsg};
