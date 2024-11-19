@@ -29,8 +29,8 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
-        .check_close(when, time_alarms, price_alarms)
-        .map(Into::into)
+        .check_close(when)
+        .and_then(|status| CloseStatusDTO::try_from_do(status, time_alarms, price_alarms))
 }
 
 pub(crate) struct Cmd<'a> {
@@ -65,23 +65,31 @@ pub(crate) struct FullLiquidationDTO {
     pub cause: Cause,
 }
 
-impl<Asset> From<CloseStatus<Asset>> for CloseStatusDTO
-where
-    Asset: CurrencyDef,
-    Asset::Group: MemberOf<LeaseAssetCurrencies>,
-{
-    fn from(value: CloseStatus<Asset>) -> Self {
-        match value {
-            CloseStatus::Paid => Self::Paid,
+impl CloseStatusDTO {
+    fn try_from_do<Asset>(
+        status: CloseStatus<Asset>,
+        time_alarms: &TimeAlarmsRef,
+        price_alarms: &OracleRef,
+    ) -> ContractResult<Self>
+    where
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies>,
+    {
+        match status {
+            CloseStatus::Paid => Ok(Self::Paid),
             CloseStatus::None {
                 current_liability,
-                alarms,
-            } => Self::None {
-                current_liability,
-                alarms,
-            },
-            CloseStatus::NeedLiquidation(liquidation) => Self::NeedLiquidation(liquidation.into()),
-            CloseStatus::CloseAsked(strategy) => Self::CloseAsked(strategy),
+                steadiness,
+            } => steadiness
+                .try_into_alarms(time_alarms, price_alarms)
+                .map(|alarms| Self::None {
+                    current_liability,
+                    alarms,
+                }),
+            CloseStatus::NeedLiquidation(liquidation) => {
+                Ok(Self::NeedLiquidation(liquidation.into()))
+            }
+            CloseStatus::CloseAsked(strategy) => Ok(Self::CloseAsked(strategy)),
         }
     }
 }

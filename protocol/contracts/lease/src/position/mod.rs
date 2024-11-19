@@ -111,15 +111,11 @@ where
     }
 
     /// Calculate the price at which the lease reaches given ltv.
-    pub(crate) fn price_at(
-        &self,
-        level: Level,
-        total_due: LpnCoin,
-    ) -> ContractResult<Price<Asset>> {
+    pub(crate) fn price_at(&self, level: Level, total_due: LpnCoin) -> Price<Asset> {
         debug_assert!(!total_due.is_zero());
         debug_assert!(!level.ltv().is_zero());
 
-        Ok(total_of(level.ltv().of(self.amount)).is(total_due))
+        total_of(level.ltv().of(self.amount)).is(total_due)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {
