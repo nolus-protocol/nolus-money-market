@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, duration::Duration, liability::Zone, percent::Percent};
+use finance::{coin::Coin, liability::Zone, percent::Percent};
+
+use super::steady::Steadiness;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
@@ -18,9 +20,18 @@ pub enum Liquidation<Asset> {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(test, derive(Debug))]
-pub enum Debt<Asset> {
+pub enum Debt<Asset>
+where
+    Asset: 'static,
+{
     No,
-    Ok { zone: Zone, recheck_in: Duration },
+    /// Represent an open position with no immediate close required
+    Ok {
+        /// The position's debt results to an LTV% within the `liability` zone
+        zone: Zone,
+        /// The `steadiness`'s range is always a sub-range of the zone's range.
+        steadiness: Steadiness<Asset>,
+    },
     Bad(Liquidation<Asset>),
 }
 

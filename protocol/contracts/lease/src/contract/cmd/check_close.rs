@@ -30,7 +30,7 @@ where
 {
     lease
         .check_close(when)
-        .and_then(|status| CloseStatusDTO::try_from_do(status, time_alarms, price_alarms))
+        .and_then(|status| CloseStatusDTO::try_from_do(status, when, time_alarms, price_alarms))
 }
 
 pub(crate) struct Cmd<'a> {
@@ -68,6 +68,7 @@ pub(crate) struct FullLiquidationDTO {
 impl CloseStatusDTO {
     fn try_from_do<Asset>(
         status: CloseStatus<Asset>,
+        when: &Timestamp,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Self>
@@ -81,7 +82,7 @@ impl CloseStatusDTO {
                 current_liability,
                 steadiness,
             } => steadiness
-                .try_into_alarms(time_alarms, price_alarms)
+                .try_into_alarms(when, time_alarms, price_alarms)
                 .map(|alarms| Self::None {
                     current_liability,
                     alarms,

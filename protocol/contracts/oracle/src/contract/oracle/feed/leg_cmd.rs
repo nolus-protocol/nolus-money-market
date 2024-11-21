@@ -71,7 +71,7 @@ where
                             .price::<B, Q>(dto1, dto2)
                             .map(|res_price| {
                                 res_price.map(|price| {
-                                    (i + 1, BasePrice::from_price(price * parent_price, *dto1))
+                                    (i + 1, BasePrice::from_price(&(price * parent_price), *dto1))
                                 })
                             })
                     })

@@ -1,19 +1,18 @@
 use currency::{Currency, CurrencyDef, MemberOf};
-use finance::{
-    coin::Coin, duration::Duration, fraction::Fraction, liability::Level, price::total_of,
-};
+use finance::{coin::Coin, duration::Duration};
 
 use crate::{
     api::LeasePaymentCurrencies,
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, Price},
+    finance::Price,
 };
 
 pub use close::Strategy as CloseStrategy;
 pub use dto::{PositionDTO, WithPosition, WithPositionResult};
 pub use interest::{Due as DueTrait, OverdueCollection};
 pub use spec::{Spec, SpecDTO};
-pub use status::{Cause, Debt, Liquidation};
+pub(crate) use status::{Cause, Debt, Liquidation};
+pub(crate) use steady::Steadiness;
 
 mod close;
 mod dto;
@@ -21,6 +20,7 @@ mod error;
 mod interest;
 mod spec;
 mod status;
+mod steady;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Position<Asset> {
@@ -62,6 +62,9 @@ where
         self.spec.overdue_collection_in(due)
     }
 
+    /// Determine the debt status of a position
+    ///
+    /// Pre: `self.check_close(...) == None`
     pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Debt<Asset>
     where
         Due: DueTrait,
@@ -108,14 +111,6 @@ where
     ) -> ContractResult<()> {
         self.spec
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
-    }
-
-    /// Calculate the price at which the lease reaches given ltv.
-    pub(crate) fn price_at(&self, level: Level, total_due: LpnCoin) -> Price<Asset> {
-        debug_assert!(!total_due.is_zero());
-        debug_assert!(!level.ltv().is_zero());
-
-        total_of(level.ltv().of(self.amount)).is(total_due)
     }
 
     fn invariant_held(&self) -> ContractResult<()> {

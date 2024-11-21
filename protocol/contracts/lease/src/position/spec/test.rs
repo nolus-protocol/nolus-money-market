@@ -161,11 +161,16 @@ mod test_debt {
     use finance::{
         coin::Coin,
         duration::Duration,
+        fraction::Fraction,
         liability::{Liability, Zone},
         percent::Percent,
+        price::Price,
+        range::RightOpenRange,
     };
 
-    use crate::position::{close::Policy as ClosePolicy, Cause, Debt, Spec};
+    use crate::position::{close::Policy as ClosePolicy, Cause, Debt, Spec, Steadiness};
+
+    use super::TestCurrency;
 
     type TestLpn = Lpn;
 
@@ -196,42 +201,42 @@ mod test_debt {
             spec.debt(asset, &super::due(1, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 1)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(1, 0), super::price(5, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 1)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(50, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 50)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(25, 0), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 25)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(51, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 51)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(17, 0), super::price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 17)
             },
         );
     }
@@ -246,28 +251,28 @@ mod test_debt {
             spec.debt(asset, &super::due(50, 14), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 50)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(25, 4), super::price(2, 3)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 25)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(51, 14), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 51)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(17, 4), super::price(3, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 17)
             },
         );
     }
@@ -282,28 +287,28 @@ mod test_debt {
             spec.debt(asset, &super::due(711, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 711)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(237, 0), super::price(3, 1)),
             Debt::Ok {
                 zone: Zone::no_warnings(warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_to(warn_ltv, asset, 237)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(712, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(178, 0), super::price(4, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 178)
             },
         );
         assert_eq!(
@@ -318,28 +323,28 @@ mod test_debt {
             spec.debt(asset, &super::due(712, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(103, 0), super::price(7, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 103)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(722, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 722)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(361, 0), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 361)
             },
         );
     }
@@ -354,21 +359,21 @@ mod test_debt {
             spec.debt(asset, &super::due(712, 2), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(356, 1), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 356)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(721, 2), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 721)
             },
         );
         assert_eq!(
@@ -391,28 +396,28 @@ mod test_debt {
             spec.debt(asset, &super::due(122, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv - STEP, warn_ltv, asset, 122)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(15, 0), super::price(8, 1)),
             Debt::Ok {
                 zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv - STEP, warn_ltv, asset, 15)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(123, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 123)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(82, 0), super::price(3, 2)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 82)
             },
         );
         assert_eq!(
@@ -423,21 +428,21 @@ mod test_debt {
             spec.debt(asset, &super::due(132, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 132)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(66, 0), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 66)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(133, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 133)
             },
         );
     }
@@ -452,14 +457,14 @@ mod test_debt {
             spec.debt(asset, &super::due(128, 4), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 128)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(32, 1), super::price(4, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 32)
             },
         );
         assert_eq!(
@@ -479,21 +484,21 @@ mod test_debt {
             spec.debt(asset, &super::due(380, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 380)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(190, 0), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 190)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(381, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 381)
             },
         );
         assert_eq!(
@@ -508,7 +513,7 @@ mod test_debt {
             spec.debt(asset, &super::due(390, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 390)
             },
         );
         assert_eq!(
@@ -534,28 +539,28 @@ mod test_debt {
             spec.debt(asset, &super::due(380, 1), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 380)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(126, 1), super::price(3, 1)),
             Debt::Ok {
                 zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 126)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(381, 375), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 381)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(391, 385), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 391)
             },
         );
         assert_eq!(
@@ -566,14 +571,14 @@ mod test_debt {
             spec.debt(asset, &super::due(392, 0), super::price(1, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 392)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(364, 0), super::price(2, 1)),
             Debt::Ok {
                 zone: Zone::third(warn_third_ltv, max_ltv),
-                recheck_in: RECALC_IN
+                steadiness: steady_in(warn_third_ltv, max_ltv, asset, 364)
             },
         );
         assert_eq!(
@@ -827,7 +832,6 @@ mod test_debt {
         assert!(initial < max - STEP - STEP - STEP);
 
         let healthy = initial + Percent::ZERO;
-        let max = healthy + max - initial;
         let third_liquidity_warning = max - STEP;
         let second_liquidity_warning = third_liquidity_warning - STEP;
         let first_liquidity_warning = second_liquidity_warning - STEP;
@@ -847,6 +851,43 @@ mod test_debt {
             min_asset.into(),
             min_transaction.into(),
         )
+    }
+
+    fn steady_to<C, D>(ltv: Percent, asset: C, due: D) -> Steadiness<TestCurrency>
+    where
+        C: Into<Coin<TestCurrency>> + Copy,
+        D: Into<Coin<TestLpn>> + Copy,
+    {
+        Steadiness::new(
+            RECALC_IN,
+            RightOpenRange::up_to(ltv).invert(ltv_to_price(asset, due)),
+        )
+    }
+
+    fn steady_in<C, D>(
+        ltv_from: Percent,
+        ltv_to: Percent,
+        asset: C,
+        due: D,
+    ) -> Steadiness<TestCurrency>
+    where
+        C: Into<Coin<TestCurrency>> + Copy,
+        D: Into<Coin<TestLpn>> + Copy,
+    {
+        Steadiness::new(
+            RECALC_IN,
+            RightOpenRange::up_to(ltv_to)
+                .cut_to(ltv_from)
+                .invert(ltv_to_price(asset, due)),
+        )
+    }
+
+    fn ltv_to_price<C, D>(asset: C, due: D) -> impl FnMut(Percent) -> Price<TestCurrency, TestLpn>
+    where
+        C: Into<Coin<TestCurrency>> + Copy,
+        D: Into<Coin<TestLpn>> + Copy,
+    {
+        move |ltv| super::price(ltv.of(asset.into()), due.into())
     }
 }
 

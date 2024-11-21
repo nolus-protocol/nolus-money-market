@@ -4,6 +4,7 @@ use finance::{
     fraction::Fraction,
     fractionable::{Fractionable, Percentable},
     percent::Percent,
+    range::{Ascending, RightOpenRange},
     zero::Zero,
 };
 use serde::{Deserialize, Serialize};
@@ -15,7 +16,8 @@ use super::error::{Error as PositionError, Result as PositionResult};
 /// Close position policy
 ///
 /// Not designed to be used as an input API component! Invariant checks are not done on deserialization!
-///
+/// A position is subject to close if its LTV pertains to the right-open intervals (-inf., `take_profit`),
+/// or [`stop_loss`, +inf)
 #[derive(Copy, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -67,6 +69,23 @@ impl Policy {
                 .map_or_else(|| self.take_profit, Option::<Percent>::from),
         }
         .check_invariant(lease_asset, total_due)
+    }
+
+    /// Determine the 'no-close' intersection with the provided range
+    ///
+    /// Pre: `self.may_trigger() == None` for ltv contained in `during`.
+    /// This implies that `during` is not a sub-range of any of the policy ranges.
+    pub fn no_close(
+        &self,
+        during: RightOpenRange<Percent, Ascending>,
+    ) -> RightOpenRange<Percent, Ascending> {
+        // we may have implemented this in a more conscise form if we have introduced other kind of ranges,
+        // for example, RangeFrom
+        let tp_cut = self
+            .take_profit
+            .map_or_else(|| during, |tp| during.cut_to(tp));
+        self.stop_loss
+            .map_or_else(|| tp_cut, |sl| tp_cut.cut_from(sl))
     }
 
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
@@ -450,6 +469,92 @@ mod test {
                 "stop loss above or equal to 55.4%",
                 format!("{}", CloseStrategy::StopLoss(Percent::from_permille(554)))
             )
+        }
+    }
+
+    mod no_close {
+        use finance::{
+            percent::Percent,
+            range::{Ascending, RightOpenRange},
+        };
+
+        use crate::position::close::Policy;
+
+        #[test]
+        fn unbound() {
+            const GAP: Percent = Percent::from_permille(50);
+
+            let below = Percent::from_percent(36);
+            let tp_in = below - GAP - GAP;
+            let sl_in = below - GAP;
+            let tp_out = below + GAP;
+            let sl_out = below + GAP + GAP;
+
+            let range = RightOpenRange::up_to(below);
+            no_close(None, None, range, range);
+
+            no_close(Some(sl_out), None, range, range);
+            no_close(Some(sl_in), None, range, RightOpenRange::up_to(sl_in));
+
+            no_close(None, Some(tp_in), range, range.cut_to(tp_in));
+            no_close(None, Some(tp_out), range, range.cut_to(tp_out)); //empty range!
+
+            no_close(Some(sl_out), Some(tp_in), range, range.cut_to(tp_in));
+            no_close(Some(sl_out), Some(tp_out), range, range.cut_to(tp_out)); //empty range!
+            no_close(
+                Some(sl_in),
+                Some(tp_in),
+                range,
+                range.cut_to(tp_in).cut_from(sl_in),
+            );
+            no_close(Some(sl_in), Some(tp_out), range, range.cut_to(tp_out)); //empty range!
+        }
+
+        #[test]
+        fn bound() {
+            const GAP: Percent = Percent::from_permille(50);
+
+            let below = Percent::from_percent(36);
+            let above = below - GAP - GAP;
+            let tp_out = above - GAP;
+            let tp_in = above;
+            let sl_in = below - GAP;
+            let sl_out = below + GAP;
+
+            let range = RightOpenRange::up_to(below).cut_to(above);
+            no_close(None, None, range, range);
+
+            no_close(Some(sl_out), None, range, range);
+            no_close(Some(sl_in), None, range, range.cut_from(sl_in));
+
+            no_close(None, Some(tp_in), range, range.cut_to(tp_in));
+            no_close(None, Some(tp_out), range, range);
+
+            no_close(Some(sl_out), Some(tp_in), range, range.cut_to(tp_in));
+            no_close(Some(sl_out), Some(tp_out), range, range);
+            no_close(
+                Some(sl_in),
+                Some(tp_in),
+                range,
+                range.cut_to(tp_in).cut_from(sl_in),
+            );
+            no_close(Some(sl_in), Some(tp_out), range, range.cut_from(sl_in));
+        }
+
+        fn no_close(
+            sl: Option<Percent>,
+            tp: Option<Percent>,
+            during: RightOpenRange<Percent, Ascending>,
+            exp: RightOpenRange<Percent, Ascending>,
+        ) {
+            assert_eq!(
+                exp,
+                Policy {
+                    stop_loss: sl,
+                    take_profit: tp,
+                }
+                .no_close(during)
+            );
         }
     }
 }

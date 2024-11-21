@@ -249,12 +249,12 @@ where
     }
 }
 
-impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
+impl<C, QuoteC> Ord for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
@@ -263,7 +263,17 @@ where
 
         let b: DoubleAmount = self.amount.into();
         let c: DoubleAmount = other.amount_quote.into();
-        (a * d).partial_cmp(&(b * c))
+        (a * d).cmp(&(b * c))
+    }
+}
+
+impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 

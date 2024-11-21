@@ -8,10 +8,10 @@ use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency, Price},
-    position::{CloseStrategy, Debt, DueTrait, Liquidation},
+    position::{CloseStrategy, Debt, Liquidation, Steadiness},
 };
 
-use super::{steady::Steadiness, Lease};
+use super::Lease;
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
@@ -32,9 +32,9 @@ where
                 .map(|close| CloseStatus::CloseAsked(close))
                 .unwrap_or_else(|| match self.position.debt(&due, asset_in_lpns) {
                     Debt::No => CloseStatus::Paid,
-                    Debt::Ok { zone, recheck_in } => CloseStatus::None {
-                        steadiness: self.steadiness(now, recheck_in, &zone, due.total_due()),
+                    Debt::Ok { zone, steadiness } => CloseStatus::None {
                         current_liability: zone,
+                        steadiness,
                     },
                     Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
                 })

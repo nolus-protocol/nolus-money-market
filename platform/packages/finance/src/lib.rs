@@ -8,6 +8,7 @@ pub mod liability;
 pub mod percent;
 pub mod period;
 pub mod price;
+pub mod range;
 pub mod ratio;
 pub mod zero;
 

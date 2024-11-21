@@ -44,7 +44,7 @@ where
     QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
     QuoteG: Group,
 {
-    pub fn from_price<C>(price: Price<C, QuoteC>, c_dto: CurrencyDTO<BaseG>) -> Self
+    pub fn from_price<C>(price: &Price<C, QuoteC>, c_dto: CurrencyDTO<BaseG>) -> Self
     where
         C: Currency + MemberOf<BaseG>,
     {
@@ -142,6 +142,20 @@ where
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
+        Self::from(&price)
+    }
+}
+
+impl<C, G, QuoteC, QuoteG> From<&Price<C, QuoteC>> for BasePrice<G, QuoteC, QuoteG>
+where
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    G: Group,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+    QuoteG: Group,
+{
+    fn from(price: &Price<C, QuoteC>) -> Self {
         Self::from_price(price, C::definition().dto().into_super_group())
     }
 }

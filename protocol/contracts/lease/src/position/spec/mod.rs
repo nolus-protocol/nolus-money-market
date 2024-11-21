@@ -4,6 +4,7 @@ use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
+    fraction::Fraction,
     liability::Liability,
     percent::Percent,
     price::{self},
@@ -13,7 +14,7 @@ use crate::{
     api::{position::ClosePolicyChange, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
-    position::{error::Result as PositionResult, Cause, Debt, Liquidation},
+    position::{error::Result as PositionResult, steady::Steadiness, Cause, Debt, Liquidation},
 };
 
 use super::{close::Policy as ClosePolicy, interest::OverdueCollection, CloseStrategy, DueTrait};
@@ -122,6 +123,9 @@ impl Spec {
         self.overdue_collection(due).start_in()
     }
 
+    /// Determine the debt status of a position
+    ///
+    /// Pre: `self.check_close(...) == None`
     pub fn debt<Asset, Due>(
         &self,
         asset: Coin<Asset>,
@@ -132,15 +136,16 @@ impl Spec {
         Asset: Currency,
         Due: DueTrait,
     {
+        debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
         let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
 
         self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
             .map(Debt::Bad)
             .unwrap_or_else(|| {
-                let ltv = Percent::from_ratio(total_due, asset);
+                let asset_ltv = Percent::from_ratio(total_due, asset);
                 // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
-                self.no_liquidation(due, ltv.min(self.liability.third_liq_warn()))
+                self.no_liquidation(asset, due, asset_ltv.min(self.liability.third_liq_warn()))
             })
     }
 
@@ -314,20 +319,33 @@ impl Spec {
         }
     }
 
-    fn no_liquidation<Asset, Due>(&self, due: &Due, ltv: Percent) -> Debt<Asset>
+    fn no_liquidation<Asset, Due>(
+        &self,
+        asset: Coin<Asset>,
+        due: &Due,
+        asset_ltv: Percent,
+    ) -> Debt<Asset>
     where
         Asset: Currency,
         Due: DueTrait,
     {
-        debug_assert!(ltv < self.liability.max());
+        debug_assert!(asset_ltv < self.liability.max());
         if due.total_due().is_zero() {
             Debt::No
         } else {
+            let zone = self.liability.zone_of(asset_ltv);
+            let within = self.close.no_close(zone.range());
+            debug_assert!(within.contains(&asset_ltv));
             Debt::Ok {
-                zone: self.liability.zone_of(ltv),
-                recheck_in: self
-                    .overdue_collection_in(due)
-                    .min(self.liability.recalculation_time()),
+                zone,
+                steadiness: Steadiness::new(
+                    self.overdue_collection_in(due)
+                        .min(self.liability.recalculation_time()),
+                    within.invert(|ltv| {
+                        debug_assert!(!ltv.is_zero());
+                        price::total_of(ltv.of(asset)).is(due.total_due())
+                    }),
+                ),
             }
         }
     }

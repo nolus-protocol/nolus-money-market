@@ -23,10 +23,8 @@ mod close;
 mod dto;
 mod due;
 mod paid;
-mod range;
 mod repay;
 mod state;
-mod steady;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 pub(crate) mod with_lease_paid;
@@ -194,14 +192,6 @@ mod tests {
     pub(super) type TestLpn = Lpn;
     pub(super) type TestCurrency = PaymentC7;
     pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
-
-    pub fn loan<Lpn>() -> LoanResponse<Lpn> {
-        LoanResponse {
-            principal_due: Coin::from(100),
-            annual_interest_rate: Percent::from_percent(10),
-            interest_paid: LEASE_START,
-        }
-    }
 
     // TODO migrate to using lpp::stub::unchecked_lpp_loan
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
