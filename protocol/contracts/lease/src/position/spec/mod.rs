@@ -334,14 +334,15 @@ impl Spec {
             Debt::No
         } else {
             let zone = self.liability.zone_of(asset_ltv);
-            let within = self.close.no_close(zone.range());
-            debug_assert!(within.contains(&asset_ltv));
+            debug_assert!(zone.range().contains(&asset_ltv));
+            let steady_within = self.close.no_close(zone.range());
+            debug_assert!(steady_within.contains(&asset_ltv));
             Debt::Ok {
                 zone,
                 steadiness: Steadiness::new(
                     self.overdue_collection_in(due)
                         .min(self.liability.recalculation_time()),
-                    within.invert(|ltv| {
+                    steady_within.invert(|ltv| {
                         debug_assert!(!ltv.is_zero());
                         price::total_of(ltv.of(asset)).is(due.total_due())
                     }),

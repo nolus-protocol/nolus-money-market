@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
@@ -87,7 +86,6 @@ where
             lease,
             RepayResult {
                 response,
-                loan_paid,
                 close_status,
             },
         ) = lease.update(
@@ -104,14 +102,14 @@ where
         )?;
 
         match close_status {
-            CloseStatusDTO::Paid => Ok(finish_repay(loan_paid, response, lease)),
+            CloseStatusDTO::Paid => Ok(Response::from(response, paid::Active::new(lease))),
             CloseStatusDTO::None {
                 current_liability,
                 alarms,
             } => {
                 let response =
                     alarm::build_resp(&lease, current_liability, alarms).merge_with(response);
-                Ok(finish_repay(loan_paid, response, lease))
+                Ok(Response::from(response, active::Active::new(lease)))
             }
             CloseStatusDTO::NeedLiquidation(liquidation) => {
                 liquidation::start(lease, liquidation, response, env, querier)
@@ -128,13 +126,5 @@ where
                 ),
             },
         }
-    }
-}
-
-fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) -> Response {
-    if loan_paid {
-        Response::from(repay_response, paid::Active::new(lease))
-    } else {
-        Response::from(repay_response, active::Active::new(lease))
     }
 }

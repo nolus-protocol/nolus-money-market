@@ -96,7 +96,6 @@ impl SplitDTOOut for RepayLeaseResult {
 
 pub(crate) struct RepayResult {
     pub response: MessageResponse,
-    pub loan_paid: bool,
     pub close_status: CloseStatusDTO,
 }
 
@@ -130,6 +129,7 @@ where
 
         let close_status =
             check_close::check_close(&lease, self.now, &self.alarms.0, &self.alarms.1)?;
+        debug_assert!(!(receipt.close() ^ matches!(close_status, CloseStatusDTO::Paid))); // receipt.close() <=> status is CloseStatusDTO::Paid
 
         lease
             .try_into_dto(self.profit, self.alarms.0, self.reserve)
@@ -145,7 +145,6 @@ where
                                 messages.merge(profit_sender.into()),
                                 events,
                             ),
-                            loan_paid: receipt.close(),
                             close_status,
                         },
                     }
