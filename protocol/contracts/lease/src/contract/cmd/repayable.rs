@@ -99,7 +99,7 @@ pub(crate) struct RepayResult {
     pub close_status: CloseStatusDTO,
 }
 
-impl<'a, RepayableT, EmitterT> WithLease for Repay<'a, RepayableT, EmitterT>
+impl<RepayableT, EmitterT> WithLease for Repay<'_, RepayableT, EmitterT>
 where
     RepayableT: RepayFn,
     EmitterT: Emitter,

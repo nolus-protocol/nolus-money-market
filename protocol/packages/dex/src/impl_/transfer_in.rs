@@ -26,7 +26,7 @@ where
         querier: QuerierWrapper<'a>,
         currency_g: PhantomData<G>,
     }
-    impl<'a, G> WithCoin<G> for CheckBalance<'a, G>
+    impl<G> WithCoin<G> for CheckBalance<'_, G>
     where
         G: Group,
     {

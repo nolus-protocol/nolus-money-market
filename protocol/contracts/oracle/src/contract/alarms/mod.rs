@@ -143,8 +143,8 @@ where
     price_alarms: &'alarms mut PriceAlarms<'storage, G, S>,
 }
 
-impl<'storage, 'alarms, S, G, BaseC, BaseG> WithPrice<BaseC>
-    for AddAlarmsCmd<'storage, 'alarms, S, G, BaseC, BaseG>
+impl<'storage, S, G, BaseC, BaseG> WithPrice<BaseC>
+    for AddAlarmsCmd<'storage, '_, S, G, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,

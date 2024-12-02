@@ -65,7 +65,7 @@ where
     }
 }
 
-impl<'a, Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'a, Lpn, Lpns>
+impl<Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'_, Lpn, Lpns>
 where
     Lpn: CurrencyDef,
     Lpn::Group: MemberOf<Lpns>,
@@ -101,8 +101,8 @@ where
     }
 }
 
-impl<'a, Lpn, Lpns> From<LppLenderStub<'a, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>> {
-    fn from(stub: LppLenderStub<'a, Lpn, Lpns>) -> Self {
+impl<Lpn, Lpns> From<LppLenderStub<'_, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>> {
+    fn from(stub: LppLenderStub<'_, Lpn, Lpns>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
             batch: stub.batch,

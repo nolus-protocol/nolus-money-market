@@ -81,7 +81,7 @@ where
             _group: PhantomData<G>,
         }
 
-        impl<'a, GIn> CoinVisitor for SendWorker<'a, GIn>
+        impl<GIn> CoinVisitor for SendWorker<'_, GIn>
         where
             GIn: Group,
         {

@@ -33,16 +33,8 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child>
     }
 }
 
-impl<
-        'host_currency,
-        'dex_currencies,
-        'definition,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    > Writer<'_, '_, '_, '_, '_>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition> Writer<'_, '_, '_, '_, '_>
 where
-    'host_currency: 'definition,
-    'dex_currencies: 'definition,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
 {
@@ -56,7 +48,7 @@ where
     ) -> Result<()>
     where
         BuildReport: Write,
-        Generator: generator::Resolver<'dex_currencies, 'definition>
+        Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
             + generator::MaybeVisit
             + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,

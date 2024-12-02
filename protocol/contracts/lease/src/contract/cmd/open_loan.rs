@@ -43,7 +43,7 @@ impl<'a> OpenLoanReq<'a> {
     }
 }
 
-impl<'a> WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'a> {
+impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'_> {
     type Output = OpenLoanReqResult;
 
     type Error = ContractError;
@@ -79,7 +79,7 @@ struct DownpaymentHandler<'a> {
     oracle: OracleRef,
     querier: QuerierWrapper<'a>,
 }
-impl<'a> WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'a> {
+impl WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'_> {
     type Output = (DownpaymentCoin, LpnCoin);
 
     type Error = ContractError;

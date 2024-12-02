@@ -39,7 +39,7 @@ pub struct AlarmsIterator<'alarms, G>(iter::Chain<BoxedIter<'alarms, G>, BoxedIt
 where
     G: Group + Clone;
 
-impl<'alarms, G> Iterator for AlarmsIterator<'alarms, G>
+impl<G> Iterator for AlarmsIterator<'_, G>
 where
     G: Group + Clone,
 {
@@ -68,7 +68,7 @@ where
     }
 }
 
-impl<'a, G> PrimaryKey<'a> for NormalizedPrice<G>
+impl<G> PrimaryKey<'_> for NormalizedPrice<G>
 where
     G: Group + Clone,
 {
@@ -85,7 +85,7 @@ where
     }
 }
 
-impl<'a, G> Prefixer<'a> for NormalizedPrice<G>
+impl<G> Prefixer<'_> for NormalizedPrice<G>
 where
     G: Group + Clone,
 {

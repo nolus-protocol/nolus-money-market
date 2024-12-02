@@ -20,7 +20,7 @@ impl<'spec> Cmd<'spec> {
     }
 }
 
-impl<'spec> WithLease for Cmd<'spec> {
+impl WithLease for Cmd<'_> {
     type Output = ();
 
     type Error = ContractError;

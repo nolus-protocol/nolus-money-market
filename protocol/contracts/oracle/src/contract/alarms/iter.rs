@@ -79,8 +79,8 @@ where
     }
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG> Iterator
-    for Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
+impl<'storage, S, I, PriceG, BaseC, BaseG> Iterator
+    for Iter<'storage, '_, S, I, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
     I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,

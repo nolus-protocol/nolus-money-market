@@ -92,8 +92,8 @@ where
         where
             SwapOut: Group;
 
-        impl<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient> CoinVisitor
-            for SwapWorker<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
+        impl<SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient> CoinVisitor
+            for SwapWorker<'_, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
         where
             SwapPathImpl: SwapPath<SwapInOut>,
             SwapIn: Group + MemberOf<SwapInOut>,

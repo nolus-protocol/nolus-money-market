@@ -42,7 +42,7 @@ impl<'config, PriceG, BaseC, BaseG, Observations>
     }
 }
 
-impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
+impl<PriceG, BaseC, BaseG, Observations> Feeds<'_, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
@@ -86,7 +86,7 @@ where
     }
 }
 
-impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
+impl<PriceG, BaseC, BaseG, Observations> Feeds<'_, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,

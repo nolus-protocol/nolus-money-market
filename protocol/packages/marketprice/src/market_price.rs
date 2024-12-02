@@ -41,7 +41,7 @@ impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, Observat
     }
 }
 
-impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
+impl<PriceG, ObservationsRepoImpl> PriceFeeds<'_, PriceG, ObservationsRepoImpl>
 where
     PriceG: Group<TopG = PriceG>,
     ObservationsRepoImpl: ObservationsReadRepo<Group = PriceG>,
@@ -168,7 +168,7 @@ where
     }
 }
 
-impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl>
+impl<PriceG, ObservationsRepoImpl> PriceFeeds<'_, PriceG, ObservationsRepoImpl>
 where
     PriceG: Group<TopG = PriceG>,
     ObservationsRepoImpl: ObservationsRepo<Group = PriceG>,
@@ -213,7 +213,7 @@ where
             group: PhantomData<G>,
         }
 
-        impl<'feeds, G, ObservationsRepoImpl> WithPrice for AddObservation<'feeds, G, ObservationsRepoImpl>
+        impl<G, ObservationsRepoImpl> WithPrice for AddObservation<'_, G, ObservationsRepoImpl>
         where
             G: Group<TopG = G>,
             ObservationsRepoImpl: ObservationsRepo<Group = G>,
@@ -352,22 +352,11 @@ where
         }
     }
 }
-impl<
-        'a,
-        'config,
-        'currency,
-        CurrenciesToBaseC,
-        C,
-        CurrentC,
-        G,
-        BaseC,
-        BaseG,
-        ObservationsRepoImpl,
-    > PairsVisitor
+impl<'a, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl> PairsVisitor
     for PriceCollect<
         'a,
-        'config,
-        'currency,
+        '_,
+        '_,
         CurrenciesToBaseC,
         C,
         CurrentC,

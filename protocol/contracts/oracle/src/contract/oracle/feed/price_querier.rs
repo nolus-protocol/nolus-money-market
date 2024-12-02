@@ -44,7 +44,7 @@ pub trait PriceQuerier {
         QuoteC: Currency + MemberOf<Self::CurrencyGroup>;
 }
 
-impl<'a, 'config, G, Observations> PriceQuerier for FedPrices<'a, 'config, G, Observations>
+impl<G, Observations> PriceQuerier for FedPrices<'_, '_, G, Observations>
 where
     G: Group<TopG = G>,
     Observations: ObservationsReadRepo<Group = G>,

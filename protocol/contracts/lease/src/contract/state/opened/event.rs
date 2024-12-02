@@ -39,7 +39,7 @@ impl<'env> PaymentEmitter<'env> {
         Self(env)
     }
 }
-impl<'env> RepayEmitter for PaymentEmitter<'env> {
+impl RepayEmitter for PaymentEmitter<'_> {
     fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> Emitter {
         state_event::emit_payment_int(Type::PaidActive, self.0, lease, receipt)
     }

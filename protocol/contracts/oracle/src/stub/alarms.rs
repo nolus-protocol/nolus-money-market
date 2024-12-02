@@ -64,7 +64,7 @@ where
     batch: Batch,
 }
 
-impl<'a, OracleBase, OracleBaseG> AlarmsStub<'a, OracleBase, OracleBaseG>
+impl<OracleBase, OracleBaseG> AlarmsStub<'_, OracleBase, OracleBaseG>
 where
     OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
@@ -74,8 +74,8 @@ where
     }
 }
 
-impl<'a, AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies>
-    for AlarmsStub<'a, OracleBase, OracleBaseG>
+impl<AlarmCurrencies, OracleBase, OracleBaseG> PriceAlarms<AlarmCurrencies>
+    for AlarmsStub<'_, OracleBase, OracleBaseG>
 where
     AlarmCurrencies: Group,
     OracleBase: CurrencyDef,
@@ -99,12 +99,12 @@ where
     }
 }
 
-impl<'a, OracleBase, OracleBaseG> From<AlarmsStub<'a, OracleBase, OracleBaseG>> for Batch
+impl<OracleBase, OracleBaseG> From<AlarmsStub<'_, OracleBase, OracleBaseG>> for Batch
 where
     OracleBase: Currency + MemberOf<OracleBaseG>,
     OracleBaseG: Group,
 {
-    fn from(stub: AlarmsStub<'a, OracleBase, OracleBaseG>) -> Self {
+    fn from(stub: AlarmsStub<'_, OracleBase, OracleBaseG>) -> Self {
         stub.batch
     }
 }

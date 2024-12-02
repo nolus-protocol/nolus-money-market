@@ -10,14 +10,8 @@ use self::currency_definition::CurrencyDefinition;
 
 mod currency_definition;
 
-impl<
-        'host_currency,
-        'dex_currencies,
-        'definition,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-    > Writer<'currencies_tree, '_, '_, '_, '_>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
+    Writer<'currencies_tree, '_, '_, '_, '_>
 where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
@@ -42,11 +36,9 @@ where
         >,
     >
     where
-        'host_currency: 'definition,
-        'dex_currencies: 'definition,
-        'definition: 'r,
+        'dex_currencies: 'r,
         'ticker: 'r,
-        Generator: generator::Resolver<'dex_currencies, 'definition>
+        Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
             + generator::MaybeVisit
             + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,

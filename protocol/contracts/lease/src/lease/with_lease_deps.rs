@@ -58,7 +58,7 @@ struct FactoryStage1<'r, Cmd> {
     querier: QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd> WithPosition for FactoryStage1<'r, Cmd>
+impl<Cmd> WithPosition for FactoryStage1<'_, Cmd>
 where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
@@ -91,7 +91,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
     querier: QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Asset> WithLppLoan<LpnCurrency, LpnCurrencies> for FactoryStage2<'r, Cmd, Asset>
+impl<Cmd, Asset> WithLppLoan<LpnCurrency, LpnCurrencies> for FactoryStage2<'_, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: CurrencyDef,

@@ -100,7 +100,7 @@ where
                 below_price: &'a BasePrice<BaseG, QuoteC, QuoteG>,
             }
 
-            impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
+            impl<BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'_, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
                 QuoteC: CurrencyDef,
