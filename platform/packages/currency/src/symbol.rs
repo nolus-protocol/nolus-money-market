@@ -32,9 +32,10 @@ where
 
     type Group = G;
 
-    type Symbol<SubG> = Tickers<SubG>
+    type Symbol<SubG>
+        = Tickers<SubG>
     where
-    SubG: Group;
+        SubG: Group;
 
     fn symbol(def: &Definition) -> SymbolStatic {
         def.ticker
@@ -58,9 +59,10 @@ where
 
     type Group = G;
 
-    type Symbol<SubG> = BankSymbols<SubG>
+    type Symbol<SubG>
+        = BankSymbols<SubG>
     where
-    SubG: Group;
+        SubG: Group;
 
     fn symbol(def: &Definition) -> SymbolStatic {
         def.bank_symbol
@@ -85,9 +87,10 @@ where
 
     type Group = G;
 
-    type Symbol<SubG> = DexSymbols<SubG>
+    type Symbol<SubG>
+        = DexSymbols<SubG>
     where
-    SubG: Group;
+        SubG: Group;
 
     fn symbol(def: &Definition) -> SymbolStatic {
         def.dex_symbol

@@ -33,7 +33,8 @@ impl<K, V> Map for BTreeMap<K, V> {
 
     type Value = V;
 
-    type Values<'r> = std::collections::btree_map::Values<'r, K, V>
+    type Values<'r>
+        = std::collections::btree_map::Values<'r, K, V>
     where
         Self::Key: 'r,
         Self::Value: 'r;
