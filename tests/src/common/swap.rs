@@ -28,14 +28,14 @@ use super::{
 #[derive(Debug, Eq)]
 pub struct DexDenom<'r>(&'r str);
 
-impl<'r, 't> PartialEq<DexDenom<'t>> for DexDenom<'r> {
+impl PartialEq<DexDenom<'_>> for DexDenom<'_> {
     #[inline]
-    fn eq(&self, other: &DexDenom<'t>) -> bool {
+    fn eq(&self, other: &DexDenom<'_>) -> bool {
         self.0 == other.0
     }
 }
 
-impl<'r, Rhs> PartialEq<Rhs> for DexDenom<'r>
+impl<Rhs> PartialEq<Rhs> for DexDenom<'_>
 where
     str: PartialEq<Rhs::Target>,
     Rhs: Deref + ?Sized,
