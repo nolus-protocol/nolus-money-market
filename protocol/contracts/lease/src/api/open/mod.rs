@@ -77,49 +77,6 @@ pub struct LoanForm {
     pub due_period: Duration,
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(
-    feature = "skel",
-    derive(Deserialize),
-    serde(deny_unknown_fields, try_from = "unchecked::InterestPaymentSpec")
-)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-pub struct InterestPaymentSpec {
-    /// How long is a period for which the interest is due
-    due_period: Duration,
-    /// How long after the due period ends the interest may be paid before initiating a liquidation
-    grace_period: Duration,
-}
-
-#[cfg(feature = "skel")]
-impl InterestPaymentSpec {
-    #[cfg(any(test, feature = "testing"))]
-    pub fn new(due_period: Duration, grace_period: Duration) -> Self {
-        let res = Self {
-            due_period,
-            grace_period,
-        };
-        debug_assert_eq!(Ok(()), res.invariant_held());
-        res
-    }
-
-    pub fn grace_period(&self) -> Duration {
-        self.grace_period
-    }
-
-    pub fn due_period(&self) -> Duration {
-        self.due_period
-    }
-
-    fn invariant_held(&self) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<InterestPaymentSpec>(
-            self.due_period == Duration::default(),
-            "The interest due period should be with non-zero length",
-        )
-    }
-}
-
 #[derive(Serialize, Clone, Copy, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(
     feature = "skel",
@@ -181,45 +138,6 @@ impl PositionSpecDTO {
 
     fn check(invariant: bool, msg: &str) -> ContractResult<()> {
         ContractError::broken_invariant_if::<Self>(!invariant, msg)
-    }
-}
-
-#[cfg(all(test, feature = "skel"))]
-mod test_invariant {
-    use finance::duration::Duration;
-    use sdk::cosmwasm_std::{from_json, StdError};
-
-    use super::InterestPaymentSpec;
-
-    #[test]
-    #[should_panic = "non-zero length"]
-    fn due_period_zero() {
-        new_invalid(Duration::default(), Duration::from_hours(2));
-    }
-
-    #[test]
-    fn due_period_zero_json() {
-        let r = from_json(br#"{"due_period": 0, "grace_period": 10}"#);
-        assert_err(r, "non-zero length");
-    }
-
-    fn new_invalid(due_period: Duration, grace_period: Duration) {
-        let _p = InterestPaymentSpec::new(due_period, grace_period);
-        #[cfg(not(debug_assertions))]
-        {
-            _p.invariant_held().expect("should have returned an error");
-        }
-    }
-
-    fn assert_err(r: Result<InterestPaymentSpec, StdError>, msg: &str) {
-        assert!(matches!(
-            r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("InterestPaymentSpec") && real_msg.contains(msg)
-        ));
     }
 }
 

@@ -2,7 +2,6 @@ use cosmwasm_std::{
     testing::{MockApi, MockQuerier, MockStorage},
     OwnedDeps,
 };
-use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseC1, LeaseGroup, Lpn};
 use currency::{CurrencyDTO, CurrencyDef as _};
@@ -13,7 +12,7 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{
-    open::{ConnectionParams, Ics20Channel, InterestPaymentSpec, PositionSpecDTO},
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     LpnCoinDTO,
 };
 use platform::contract::{Code, CodeId};
@@ -23,7 +22,6 @@ use sdk::{
         coins, from_json, testing, to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo,
         SubMsg, WasmMsg,
     },
-    schemars::{self, JsonSchema},
     testing as sdk_testing,
 };
 
@@ -168,47 +166,6 @@ fn test_update_config() {
     let config = query_config(deps.as_ref());
     assert_eq!(expected_position_spec, config.lease_position_spec);
     assert_eq!(expected_due_period, config.lease_due_period);
-}
-
-#[test]
-#[should_panic(expected = "Healthy % should be < first liquidation %")]
-fn test_update_config_invalid_liability() {
-    let mut deps = deps();
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
-    #[serde(rename_all = "snake_case")]
-    pub enum MockSudoMsg {
-        Config {
-            lease_interest_rate_margin: Percent,
-            lease_position_spec: PositionSpecDTO,
-            lease_interest_payment: InterestPaymentSpec,
-        },
-    }
-
-    let liability = Liability::new(
-        Percent::from_percent(55),
-        Percent::from_percent(110),
-        Percent::ZERO,
-        Percent::from_percent(55),
-        Percent::from_percent(110),
-        Percent::from_percent(165),
-        Duration::from_secs(100),
-    );
-
-    let mock_msg = MockSudoMsg::Config {
-        lease_interest_rate_margin: Percent::from_percent(5),
-        lease_position_spec: PositionSpecDTO::new(liability, lpn_coin(6_433_000), lpn_coin(99_000)),
-        lease_interest_payment: InterestPaymentSpec::new(
-            Duration::from_secs(20),
-            Duration::from_secs(10),
-        ),
-    };
-
-    let msg: SudoMsg = from_json(to_json_binary(&mock_msg).unwrap()).unwrap();
-
-    setup_test_case(deps.as_mut());
-
-    sudo(deps.as_mut(), testing::mock_env(), msg).unwrap();
 }
 
 fn open_lease_with(max_ltd: Option<Percent>) {
