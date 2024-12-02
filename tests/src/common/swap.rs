@@ -81,7 +81,7 @@ where
 
 pub(crate) fn do_swap<I, F>(
     app: &mut App,
-    inituator_contract_addr: Addr,
+    initiator_contract_addr: Addr,
     ica_addr: Addr,
     requests: I,
     price_f: F,
@@ -92,7 +92,7 @@ where
 {
     do_swap_with::<PaymentGroup, PaymentGroup, I, F>(
         app,
-        inituator_contract_addr,
+        initiator_contract_addr,
         ica_addr,
         requests,
         price_f,
@@ -101,7 +101,7 @@ where
 
 pub(crate) fn do_swap_with<GIn, GSwap, I, F>(
     app: &mut App,
-    inituator_contract_addr: Addr,
+    initiator_contract_addr: Addr,
     ica_addr: Addr,
     requests: I,
     mut price_f: F,
@@ -118,7 +118,7 @@ where
         })
         .collect();
 
-    send_response(app, inituator_contract_addr, &amounts)
+    send_response(app, initiator_contract_addr, &amounts)
 }
 
 pub(crate) fn do_swap_with_error(
@@ -174,14 +174,14 @@ where
 
 fn send_response<'r>(
     app: &'r mut App,
-    inituator_contract_addr: Addr,
+    initiator_contract_addr: Addr,
     amounts: &[Amount],
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     use swap::testing::ExactAmountInSkel as _;
 
     ibc::send_response(
         app,
-        inituator_contract_addr.clone(),
+        initiator_contract_addr.clone(),
         Binary::new(platform::trx::encode_msg_responses(
             amounts.iter().copied().map(Impl::build_response),
         )),
