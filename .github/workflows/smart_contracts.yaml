@@ -125,6 +125,7 @@ jobs:
           - "false"
         tool:
           - "cargo-audit"
+          - "cargo-nextest"
           - "cargo-udeps"
           - "git-cliff"
         include:
@@ -319,6 +320,13 @@ jobs:
           local: "true"
           no-fetching: "false"
           tool: "cargo-each"
+      - name: "Install `cargo-nextest` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "false"
+          no-fetching: "false"
+          tool: "cargo-nextest"
       - name: "Copy CI build configuration"
         run: |-
           "cp" \
@@ -330,6 +338,7 @@ jobs:
             ${{ matrix.dex-type }}
           profile: |-
             ${{ matrix.profile }}
+          USE_NEXTEST: "1"
           workspace: |-
             ${{ matrix.workspace }}
         name: "Run instance tests"
