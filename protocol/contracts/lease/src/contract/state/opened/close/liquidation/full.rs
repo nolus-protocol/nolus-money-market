@@ -57,10 +57,11 @@ impl CloseAlgo for Spec {
 
     type ChangeSender = Self::ProfitSender;
 
-    type PaymentEmitter<'this, 'env> = LiquidationEmitter<'this, 'env>
+    type PaymentEmitter<'this, 'env>
+        = LiquidationEmitter<'this, 'env>
     where
-    Self: 'this,
-    'env: 'this;
+        Self: 'this,
+        'env: 'this;
 
     fn profit_sender(&self, lease: &Lease) -> Self::ProfitSender {
         lease.lease.loan.profit().clone().into_stub()
