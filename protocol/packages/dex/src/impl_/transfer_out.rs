@@ -254,8 +254,11 @@ impl<SwapTask, SEnum, SwapGroup, SwapClient> TimeAlarm
 where
     SwapTask: SwapTaskT,
 {
-    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
-        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
+    fn setup_alarm(&self, r#for: Timestamp) -> Result<Batch> {
+        self.spec
+            .time_alarm()
+            .setup_alarm(r#for)
+            .map_err(Into::into)
     }
 }
 
