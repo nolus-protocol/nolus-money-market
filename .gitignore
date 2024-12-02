@@ -1,5 +1,5 @@
 # Build descriptors
-/build-configuration/
+/build-configuration
 
 # Build results
 **/target
