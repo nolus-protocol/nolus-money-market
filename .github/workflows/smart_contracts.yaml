@@ -144,10 +144,32 @@ jobs:
           local: "${{ matrix.local }}"
           no-fetching: "true"
           tool: "${{ matrix.tool }}"
+  check-lock-files:
+    needs:
+      - "load-configuration"
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: true
+      matrix:
+        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
+    name: |-
+      Check lock files [${{ matrix.workspace }}]
+    steps:
+      - uses: "actions/checkout@v4"
+      - if: |-
+          github.ref_type == 'tag'
+        name: "Load configuration"
+        run: |-
+          "cargo" \
+            "update" \
+            --locked
+        working-directory: |-
+          ${{ matrix.workspace }}
   workspace_check:
     needs:
       - "load-configuration"
       - "prepare_tool_caches"
+      - "check-lock-files"
     runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
@@ -191,6 +213,8 @@ jobs:
     needs:
       - "load-configuration"
       - "prepare_tool_caches"
+      - "check-lock-files"
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -199,7 +223,6 @@ jobs:
         workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
     name: |-
       Instance-level lints [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
-    runs-on: "ubuntu-latest"
     steps:
       - name: "Update Rust"
         run: |-
@@ -240,6 +263,8 @@ jobs:
     needs:
       - "load-configuration"
       - "prepare_tool_caches"
+      - "check-lock-files"
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -247,7 +272,6 @@ jobs:
         workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
     name: |-
       Check instance dependencies [${{ matrix.workspace }}; ${{ matrix.dex-type }}]
-    runs-on: "ubuntu-latest"
     steps:
       - name: "Update Rust"
         run: |-
@@ -298,6 +322,7 @@ jobs:
     needs:
       - "load-configuration"
       - "prepare_tool_caches"
+      - "check-lock-files"
     runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
@@ -353,7 +378,6 @@ jobs:
             "${profile:?}"
   build:
     needs:
-      - "load-configuration"
       - "workspace_check"
       - "instance_lint"
       - "instance_check_deps"
