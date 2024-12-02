@@ -149,6 +149,13 @@ struct GeneratedSourceEntry<MaybeVisit, CurrencyDefinition> {
     currency_definition: CurrencyDefinition,
 }
 
+type PerCurrencySourcesResult<'dex_currencies, MaybeVisit, CurrencyDefinition> = Result<
+    NonFinalizedSources<
+        Either<Vec<MaybeVisit>, iter::Empty<&'dex_currencies str>>,
+        Vec<CurrencyDefinition>,
+    >,
+>;
+
 fn per_currency_sources<
     'r,
     'host_currency,
@@ -165,29 +172,20 @@ fn per_currency_sources<
     generator: CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>,
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
-) -> Result<
-    NonFinalizedSources<
-        Either<
-            Vec<
-                impl Iterator<Item = &'dex_currencies str>
-                    + use<'dex_currencies, 'generator, Generator, Tickers>,
-            >,
-            iter::Empty<&'dex_currencies str>,
+) -> PerCurrencySourcesResult<
+    'dex_currencies,
+    impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, 'generator, Generator, Tickers>,
+    impl Iterator<Item = Cow<'r, str>>
+        + use<
+            'r,
+            'dex_currencies,
+            'dex_currency_ticker,
+            'dex_currency_definition,
+            'currencies_tree,
+            'generator,
+            Generator,
+            Tickers,
         >,
-        Vec<
-            impl Iterator<Item = Cow<'r, str>>
-                + use<
-                    'r,
-                    'dex_currencies,
-                    'dex_currency_ticker,
-                    'dex_currency_definition,
-                    'currencies_tree,
-                    'generator,
-                    Generator,
-                    Tickers,
-                >,
-        >,
-    >,
 >
 where
     'host_currency: 'definition,

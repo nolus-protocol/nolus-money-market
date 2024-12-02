@@ -9,6 +9,10 @@ use crate::{
 
 use super::{super::super::generator, GeneratedSourceEntry};
 
+pub(super) type GenerateEntryResult<'dex_currency, MaybeVisit, CurrencyDefinition> = Result<
+    GeneratedSourceEntry<Either<MaybeVisit, iter::Empty<&'dex_currency str>>, CurrencyDefinition>,
+>;
+
 pub(super) struct CurrencyDefinition<
     'currencies_tree,
     'parents_of,
@@ -103,23 +107,19 @@ where
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
-    ) -> Result<
-        GeneratedSourceEntry<
-            Either<
-                impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
-                iter::Empty<&'dex_currencies str>,
+    ) -> GenerateEntryResult<
+        'dex_currencies,
+        impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+        impl Iterator<Item = Cow<'r, str>>
+            + use<
+                'r,
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'currencies_tree,
+                'generator,
+                Generator,
             >,
-            impl Iterator<Item = Cow<'r, str>>
-                + use<
-                    'r,
-                    'dex_currencies,
-                    'dex_currency_ticker,
-                    'dex_currency_definition,
-                    'currencies_tree,
-                    'generator,
-                    Generator,
-                >,
-        >,
     >
     where
         'definition: 'r,
@@ -143,25 +143,21 @@ where
         ticker: &'r str,
         children: &'children currencies_tree::Children<'child>,
         parents: &'parents currencies_tree::Parents<'parent>,
-    ) -> Result<
-        GeneratedSourceEntry<
-            Either<
-                impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
-                iter::Empty<&'dex_currencies str>,
+    ) -> GenerateEntryResult<
+        'dex_currencies,
+        impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+        impl Iterator<Item = Cow<'r, str>>
+            + use<
+                'r,
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'currencies_tree,
+                'children,
+                'parents,
+                'generator,
+                Generator,
             >,
-            impl Iterator<Item = Cow<'r, str>>
-                + use<
-                    'r,
-                    'dex_currencies,
-                    'dex_currency_ticker,
-                    'dex_currency_definition,
-                    'currencies_tree,
-                    'children,
-                    'parents,
-                    'generator,
-                    Generator,
-                >,
-        >,
     >
     where
         'definition: 'r,
