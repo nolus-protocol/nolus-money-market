@@ -5,6 +5,8 @@ use crate::error::PriceFeedsError;
 
 use super::Observation;
 
+pub type Result<T, E = PriceFeedsError> = std::result::Result<T, E>;
+
 pub trait ObservationsRead {
     type C: 'static;
 
@@ -12,12 +14,7 @@ pub trait ObservationsRead {
 
     fn len(&self) -> usize;
 
-    fn as_iter(
-        &self,
-    ) -> Result<
-        impl Iterator<Item = Result<Observation<Self::C, Self::QuoteC>, PriceFeedsError>>,
-        PriceFeedsError,
-    >;
+    fn as_iter(&self) -> Result<impl Iterator<Item = Result<Observation<Self::C, Self::QuoteC>>>>;
 }
 
 pub trait Observations
@@ -26,15 +23,12 @@ where
     Self::C: 'static,
     Self::QuoteC: 'static,
 {
-    fn retain(&mut self, valid_since: Timestamp) -> Result<(), PriceFeedsError>;
+    fn retain(&mut self, valid_since: Timestamp) -> Result<()>;
 
     /// Register a newer observation
     ///
     /// The observation time must always flow monotonically forward!
-    fn register(
-        &mut self,
-        observation: Observation<Self::C, Self::QuoteC>,
-    ) -> Result<(), PriceFeedsError>;
+    fn register(&mut self, observation: Observation<Self::C, Self::QuoteC>) -> Result<()>;
 }
 
 pub trait ObservationsReadRepo {
