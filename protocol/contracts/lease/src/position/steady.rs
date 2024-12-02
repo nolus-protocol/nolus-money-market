@@ -70,8 +70,8 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Timestamp;
+    use currencies::{testing::PaymentC3, Lpn};
     use currencies::{LeaseGroup, Lpns};
-    use currencies::{Lpn, PaymentC3};
     use finance::fraction::Fraction;
     use finance::percent::Percent;
     use finance::range::RightOpenRange;
