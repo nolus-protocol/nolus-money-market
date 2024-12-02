@@ -35,18 +35,52 @@ readonly mode
 
 . "${script_dir:?}/setup.sh"
 
-if "cargo" \
-  -- \
-  "each" \
-  "run" \
-  --tag "ci" \
-  --tag "${dex_type:?}" \
-  -- \
-  --quiet \
-  "test" \
-  --all-targets \
-  --profile "${profile:?}" \
-  --quiet
+cargo_each() {
+  "cargo" \
+    -- \
+    "each" \
+    "run" \
+    --tag "ci" \
+    --tag "${dex_type:?}" \
+    -- \
+    "${@:?}"
+}
+
+case "${USE_NEXTEST-"0"}" in
+  ("0")
+    run_tests() {
+      "cargo_each" \
+        --quiet \
+        "test" \
+        --all-targets \
+        --profile "${profile:?}" \
+        --quiet
+    }
+    ;;
+  ("1")
+    run_tests() {
+      "cargo_each" \
+        "nextest" \
+        "run" \
+        --all-targets \
+        --cargo-profile "${profile:?}" \
+        --cargo-quiet \
+        --final-status-level="fail" \
+        --hide-progress-bar \
+        --no-fail-fast \
+        --no-tests="warn" \
+        --retries "0" \
+        --status-level "none" \
+        --success-output "never"
+    }
+    ;;
+  (*)
+    "error" "Environment variable \"USE_NEXTEST\" set to a value other than 0 \
+or 1!"
+    ;;
+esac
+
+if run_tests
 then
   "log" "Tests passed."
 else
