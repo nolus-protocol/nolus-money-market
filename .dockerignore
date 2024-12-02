@@ -4,7 +4,6 @@
 **/target/
 **/*.md
 **/*Containerfile
-**/*.Containerfile
 **/.*ignore
 **/LICENSE
 **/clippy.toml
