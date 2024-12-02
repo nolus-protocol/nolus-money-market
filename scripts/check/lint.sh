@@ -25,7 +25,7 @@ set -eu
   "clippy" \
   --all-targets \
   --quiet \
-  "${@:?}" \
+  "${@}" \
   -- \
   --allow clippy::large_enum_variant \
   --deny clippy::all \
