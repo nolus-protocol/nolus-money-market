@@ -223,26 +223,13 @@ pub(super) trait Resolver<'name, 'definition> {
 }
 
 impl<
-        'static_context,
-        'protocol,
         'host_currency,
         'dex_currencies,
         'definition,
-        'dex_currency_ticker,
-        'dex_currency_definition,
         const MAYBE_VISIT: bool,
         const PAIRS_GROUP: bool,
     > Resolver<'dex_currencies, 'definition>
-    for Generator<
-        'static_context,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        MAYBE_VISIT,
-        PAIRS_GROUP,
-    >
+    for Generator<'_, '_, 'host_currency, 'dex_currencies, '_, '_, MAYBE_VISIT, PAIRS_GROUP>
 where
     'host_currency: 'definition,
     'dex_currencies: 'definition,
@@ -264,9 +251,6 @@ pub(super) trait MaybeVisit {
 }
 
 impl<
-        'static_context,
-        'protocol,
-        'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
@@ -274,9 +258,9 @@ impl<
         const PAIRS_GROUP: bool,
     > MaybeVisit
     for Generator<
-        'static_context,
-        'protocol,
-        'host_currency,
+        '_,
+        '_,
+        '_,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,

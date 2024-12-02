@@ -83,7 +83,6 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, G
 }
 
 impl<
-        'host_currency,
         'dex_currencies,
         'definition,
         'dex_currency_ticker,
@@ -93,7 +92,6 @@ impl<
         Generator,
     > CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>
 where
-    'host_currency: 'definition,
     'dex_currencies: 'definition,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
