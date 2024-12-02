@@ -21,7 +21,7 @@ where
     D: Deserializer<'de>,
 {
     struct StrVisitor;
-    impl<'de> Visitor<'de> for StrVisitor {
+    impl Visitor<'_> for StrVisitor {
         type Value = Amount;
 
         fn expecting(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {

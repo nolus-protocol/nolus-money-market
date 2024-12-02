@@ -118,7 +118,7 @@ where
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);
 
-impl<'a, CDef, COut> SingleVisitor<CDef> for CoinTransformer<'a, COut>
+impl<CDef, COut> SingleVisitor<CDef> for CoinTransformer<'_, COut>
 where
     CDef: CurrencyDef,
     COut: 'static,
@@ -134,7 +134,7 @@ where
 
 struct CoinTransformerAny<'a, VisitedG, V>(&'a CosmWasmCoin, PhantomData<VisitedG>, V);
 
-impl<'a, VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'a, VisitedG, V>
+impl<VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'_, VisitedG, V>
 where
     VisitedG: Group,
     V: WithCoin<VisitedG>,

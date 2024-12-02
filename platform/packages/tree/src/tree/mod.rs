@@ -174,7 +174,7 @@ impl<'r, T> Iterator for TreeIter<'r, T> {
     }
 }
 
-impl<'r, T> DoubleEndedIterator for TreeIter<'r, T> {
+impl<T> DoubleEndedIterator for TreeIter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.range
             .next_back()

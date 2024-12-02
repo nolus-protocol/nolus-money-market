@@ -74,13 +74,13 @@ struct TimeAlarmsStub<'a> {
     batch: Batch,
 }
 
-impl<'a> TimeAlarmsStub<'a> {
+impl TimeAlarmsStub<'_> {
     fn addr(&self) -> &Addr {
         &self.time_alarms_ref.addr
     }
 }
 
-impl<'a> TimeAlarms for TimeAlarmsStub<'a> {
+impl TimeAlarms for TimeAlarmsStub<'_> {
     fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
             self.addr().clone(),

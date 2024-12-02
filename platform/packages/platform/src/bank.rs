@@ -91,7 +91,7 @@ impl<'a> BankView<'a> {
     }
 }
 
-impl<'a> BankAccountView for BankView<'a> {
+impl BankAccountView for BankView<'_> {
     fn balance<C, G>(&self) -> Result<Coin<C>>
     where
         C: CurrencyDef,

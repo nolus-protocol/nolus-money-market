@@ -72,7 +72,7 @@ where
     cmd: Cmd,
 }
 
-impl<'amount, G, Price, Cmd> AnyVisitorPair for PriceAmountVisitor<'amount, G, Price, Cmd>
+impl<G, Price, Cmd> AnyVisitorPair for PriceAmountVisitor<'_, G, Price, Cmd>
 where
     G: Group<TopG = G>,
     Price: PriceFactory<G = G>,

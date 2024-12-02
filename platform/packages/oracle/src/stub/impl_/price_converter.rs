@@ -43,8 +43,8 @@ where
     }
 }
 
-impl<'a, CurrencyG, TopG, QuoteC, QuoteG, PriceReqT> Oracle<CurrencyG>
-    for OracleStub<'a, TopG, QuoteC, QuoteG, PriceReqT>
+impl<CurrencyG, TopG, QuoteC, QuoteG, PriceReqT> Oracle<CurrencyG>
+    for OracleStub<'_, TopG, QuoteC, QuoteG, PriceReqT>
 where
     CurrencyG: Group + MemberOf<TopG>,
     TopG: Group,
@@ -81,8 +81,8 @@ where
     }
 }
 
-impl<'a, TopG, QuoteC, QuoteG, PriceReq> AsRef<OracleRef<QuoteC, QuoteG>>
-    for OracleStub<'a, TopG, QuoteC, QuoteG, PriceReq>
+impl<TopG, QuoteC, QuoteG, PriceReq> AsRef<OracleRef<QuoteC, QuoteG>>
+    for OracleStub<'_, TopG, QuoteC, QuoteG, PriceReq>
 where
     TopG: Group,
     QuoteC: Currency + MemberOf<QuoteG>,

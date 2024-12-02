@@ -25,7 +25,7 @@ where
     }
 }
 
-impl<'a, VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'a, VisitedG, V>
+impl<VisitedG, V> AnyVisitor<VisitedG> for CoinTransformerAny<'_, VisitedG, V>
 where
     VisitedG: Group,
     V: WithCoin<VisitedG>,

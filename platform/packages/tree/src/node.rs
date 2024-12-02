@@ -94,13 +94,13 @@ impl<'r, T> NodeRef<'r, T> {
     }
 }
 
-impl<'r, T> Clone for NodeRef<'r, T> {
+impl<T> Clone for NodeRef<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'r, T> Copy for NodeRef<'r, T> {}
+impl<T> Copy for NodeRef<'_, T> {}
 
 pub struct ParentsIter<'r, T> {
     inner: ParentsIterInner<'r, T>,

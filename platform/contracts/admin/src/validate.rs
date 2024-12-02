@@ -59,7 +59,7 @@ where
     }
 }
 
-impl<'r, M> Validate for ValidateValues<'r, M>
+impl<M> Validate for ValidateValues<'_, M>
 where
     M: Map,
     M::Value: Validate,

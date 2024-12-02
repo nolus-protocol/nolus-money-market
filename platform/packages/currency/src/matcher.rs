@@ -16,7 +16,7 @@ where
 struct SymbolMatcher<'a, S>(&'a SymbolSlice, PhantomData<S>)
 where
     S: ?Sized;
-impl<'a, S> Matcher for SymbolMatcher<'a, S>
+impl<S> Matcher for SymbolMatcher<'_, S>
 where
     S: Symbol + ?Sized,
 {
