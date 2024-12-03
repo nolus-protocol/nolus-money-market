@@ -27,16 +27,16 @@ set -eu
   --quiet \
   "${@}" \
   -- \
-  --allow clippy::large_enum_variant \
-  --deny clippy::all \
-  --deny clippy::unwrap_used \
-  --deny clippy::unwrap_in_result \
-  --deny future-incompatible \
-  --deny nonstandard-style \
-  --deny refining-impl-trait \
-  --deny rust-2018-idioms \
-  --deny rust-2021-compatibility \
-  --deny rust-2024-compatibility \
-  --allow impl-trait-overcaptures \
-  --deny unused \
-  --deny warnings
+  --allow "clippy::large_enum_variant" \
+  --deny "clippy::all" \
+  --deny "clippy::unwrap_used" \
+  --deny "clippy::unwrap_in_result" \
+  --deny "future-incompatible" \
+  --deny "nonstandard-style" \
+  --deny "refining-impl-trait" \
+  --deny "rust-2018-idioms" \
+  --deny "rust-2021-compatibility" \
+  --deny "rust-2024-compatibility" \
+  --allow "impl-trait-overcaptures" \
+  --deny "unused" \
+  --deny "warnings"
