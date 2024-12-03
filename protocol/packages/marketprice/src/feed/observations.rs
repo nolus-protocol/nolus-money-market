@@ -5,7 +5,7 @@ use crate::error::PriceFeedsError;
 
 use super::Observation;
 
-pub type Result<T, E = PriceFeedsError> = std::result::Result<T, E>;
+pub type Result<T> = std::result::Result<T, PriceFeedsError>;
 
 pub trait ObservationsRead {
     type C: 'static;
