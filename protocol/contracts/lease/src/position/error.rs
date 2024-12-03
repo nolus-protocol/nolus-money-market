@@ -10,7 +10,7 @@ use super::CloseStrategy;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Lease] {0}")]
-    FinanceError(#[from] FinanceError),
+    Finance(#[from] FinanceError),
 
     #[error("[Lease] The asset amount should worth at least {0}")]
     InsufficientAssetAmount(LpnCoinDTO),
