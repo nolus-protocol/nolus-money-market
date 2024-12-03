@@ -10,17 +10,16 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::finance::LpnCoinDTO;
 #[cfg(feature = "skel")]
-use crate::{error::ContractError, error::ContractResult};
+use crate::error_de::ErrorDe;
+use crate::finance::LpnCoinDTO;
 
 use super::LeaseAssetCurrencies;
 
 #[cfg(feature = "skel")]
 mod unchecked;
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(feature = "skel", derive(Deserialize))]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseContract {
@@ -34,8 +33,7 @@ pub struct NewLeaseContract {
     pub finalizer: Addr,
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(feature = "skel", derive(Deserialize))]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseForm {
@@ -59,8 +57,7 @@ pub struct NewLeaseForm {
     pub market_price_oracle: Addr,
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(feature = "skel", derive(Deserialize))]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 /// The value remains intact.
@@ -98,7 +95,28 @@ pub struct PositionSpecDTO {
 
 #[cfg(feature = "skel")]
 impl PositionSpecDTO {
-    #[cfg(any(test, feature = "contract", feature = "testing"))]
+    fn invariant_held(&self) -> Result<(), ErrorDe> {
+        Self::check(
+            !self.min_asset.is_zero(),
+            "Min asset amount should be positive",
+        )
+        .and(Self::check(
+            !self.min_transaction.is_zero(),
+            "Min transaction amount should be positive",
+        ))
+        .and(Self::check(
+            self.min_asset.currency() == self.min_transaction.currency(),
+            "The currency of min asset should be the same as the currency of min transaction",
+        ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> Result<(), ErrorDe> {
+        ErrorDe::broken_invariant_if::<Self>(!invariant, msg)
+    }
+}
+
+#[cfg(any(test, feature = "contract", feature = "testing"))]
+impl PositionSpecDTO {
     pub(crate) fn new_internal(
         liability: Liability,
         min_asset: LpnCoinDTO,
@@ -119,25 +137,6 @@ impl PositionSpecDTO {
         obj.invariant_held()
             .expect("PositionSpecDTO invariant to be held");
         obj
-    }
-
-    fn invariant_held(&self) -> ContractResult<()> {
-        Self::check(
-            !self.min_asset.is_zero(),
-            "Min asset amount should be positive",
-        )
-        .and(Self::check(
-            !self.min_transaction.is_zero(),
-            "Min transaction amount should be positive",
-        ))
-        .and(Self::check(
-            self.min_asset.currency() == self.min_transaction.currency(),
-            "The currency of min asset should be the same as the currency of min transaction",
-        ))
-    }
-
-    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 }
 

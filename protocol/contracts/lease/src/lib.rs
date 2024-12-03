@@ -1,8 +1,10 @@
 pub mod api;
 #[cfg(feature = "contract")]
 pub mod contract;
-#[cfg(feature = "skel")]
+#[cfg(feature = "contract")]
 pub mod error;
+#[cfg(feature = "skel")]
+pub mod error_de;
 #[cfg(feature = "contract")]
 mod event;
 mod finance;

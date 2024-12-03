@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use finance::liability::Liability;
 
-use crate::{error::ContractError, finance::LpnCoinDTO};
+use crate::{error_de::ErrorDe, finance::LpnCoinDTO};
 
 use super::PositionSpecDTO as ValidatedPositionSpec;
 
@@ -16,7 +16,7 @@ pub(super) struct PositionSpecDTO {
 }
 
 impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
-    type Error = ContractError;
+    type Error = ErrorDe;
 
     fn try_from(value: PositionSpecDTO) -> Result<Self, Self::Error> {
         let res = Self {
