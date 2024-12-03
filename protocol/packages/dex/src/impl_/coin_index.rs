@@ -17,7 +17,7 @@ where
 }
 
 struct CoinsIndexVisitor<'a, V>(CoinsNb, &'a mut V);
-impl<'a, V> CoinsIndexVisitor<'a, V> {
+impl<V> CoinsIndexVisitor<'_, V> {
     fn at_coin(&self) -> bool {
         self.0 == CoinsNb::default()
     }
@@ -27,7 +27,7 @@ impl<'a, V> CoinsIndexVisitor<'a, V> {
     }
 }
 
-impl<'a, V> CoinVisitor for CoinsIndexVisitor<'a, V>
+impl<V> CoinVisitor for CoinsIndexVisitor<'_, V>
 where
     V: CoinVisitor<Result = ()>,
 {

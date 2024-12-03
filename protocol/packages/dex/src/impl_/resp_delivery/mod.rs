@@ -37,6 +37,10 @@ pub type ICAOpenResponseDelivery<H, ForwardToInnerMsg> =
 /// If the first delivery fails the `ResponseDelivery` leverages the time alarms' guaranteed delivery
 /// scheduling a time alarm to make a delivery attempt on the next alarms dispatch cycle.
 #[derive(Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "H: Serialize, R: Serialize",
+    deserialize = "H: Deserialize<'de>, R: Deserialize<'de>",
+))]
 pub struct ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery> {
     handler: H,
     response: R,

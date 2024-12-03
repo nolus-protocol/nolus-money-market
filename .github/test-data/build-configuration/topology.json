@@ -1,0 +1,202 @@
+{
+  "host_network": {
+    "name": "NOLUS",
+    "currency": {
+      "id": "NLS",
+      "native": {
+        "name": "Nolus",
+        "symbol": "unls",
+        "decimal_digits": 6
+      }
+    }
+  },
+  "networks": {
+    "AKASH": {
+      "currencies": {
+        "AKT": {
+          "native": {
+            "name": "Akash",
+            "symbol": "uakt",
+            "decimal_digits": 6
+          }
+        }
+      }
+    },
+    "AXELAR": {
+      "currencies": {
+        "USDC": {
+          "native": {
+            "name": "Axelar USDC",
+            "symbol": "uausdc",
+            "decimal_digits": 6
+          }
+        },
+        "WBTC": {
+          "native": {
+            "name": "WBTC",
+            "symbol": "btc-satoshi",
+            "decimal_digits": 8
+          }
+        },
+        "WETH": {
+          "native": {
+            "name": "WETH",
+            "symbol": "eth-wei",
+            "decimal_digits": 18
+          }
+        }
+      }
+    },
+    "COSMOS_HUB": {
+      "currencies": {
+        "ATOM": {
+          "native": {
+            "name": "Cosmos Hub ATOM",
+            "symbol": "uatom",
+            "decimal_digits": 6
+          }
+        }
+      }
+    },
+    "JUNO": {
+      "currencies": {
+        "JUNO": {
+          "native": {
+            "name": "Juno",
+            "symbol": "ujunox",
+            "decimal_digits": 6
+          }
+        }
+      }
+    },
+    "NEUTRON": {
+      "currencies": {
+        "ATOM": {
+          "ibc": {
+            "network": "COSMOS_HUB",
+            "currency": "ATOM"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-atom.svg"
+        },
+        "NLS": {
+          "ibc": {
+            "network": "NOLUS",
+            "currency": "NLS"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-nls.svg"
+        },
+        "NTRN": {
+          "native": {
+            "name": "Neutron",
+            "symbol": "untrn",
+            "decimal_digits": 6
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-ntrn.svg"
+        },
+        "USDC_AXELAR": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/neutron-usdc.svg"
+        }
+      },
+      "dexes": {
+        "astroport": {
+          "type": "astroport_test"
+        }
+      }
+    },
+    "OSMOSIS": {
+      "currencies": {
+        "AKT": {
+          "ibc": {
+            "network": "AKASH",
+            "currency": "AKT"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-akt.svg"
+        },
+        "ATOM": {
+          "ibc": {
+            "network": "COSMOS_HUB",
+            "currency": "ATOM"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-atom.svg"
+        },
+        "JUNO": {
+          "ibc": {
+            "network": "JUNO",
+            "currency": "JUNO"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-juno.svg"
+        },
+        "NLS": {
+          "ibc": {
+            "network": "NOLUS",
+            "currency": "NLS"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-nls.svg"
+        },
+        "OSMO": {
+          "native": {
+            "name": "Osmosis OSMO",
+            "symbol": "uosmo",
+            "decimal_digits": 6
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-osmo.svg"
+        },
+        "USDC": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-usdc.svg"
+        },
+        "USDC_AXELAR": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "USDC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-usdc.svg"
+        },
+        "WBTC": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "WBTC"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-wbtc.svg"
+        },
+        "WETH": {
+          "ibc": {
+            "network": "AXELAR",
+            "currency": "WETH"
+          },
+          "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-weth.svg"
+        }
+      },
+      "dexes": {
+        "osmosis": {
+          "type": "osmosis"
+        }
+      }
+    }
+  },
+  "channels": {
+    "NEUTRON": {
+      "AXELAR": "channel-8",
+      "COSMOS_HUB": "channel-1",
+      "NOLUS": "channel-1035"
+    },
+    "NOLUS": {
+      "NEUTRON": "channel-3",
+      "OSMOSIS": "channel-0"
+    },
+    "OSMOSIS": {
+      "AKASH": "channel-73",
+      "AXELAR": "channel-3",
+      "COSMOS_HUB": "channel-12",
+      "JUNO": "channel-1",
+      "NOLUS": "channel-8244"
+    }
+  }
+}

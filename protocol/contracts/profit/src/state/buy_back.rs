@@ -176,7 +176,8 @@ impl<I> TryFind for I where I: Iterator {}
 #[cfg(test)]
 mod tests {
     use currencies::{
-        Lpns, PaymentGroup, {Lpn, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+        testing::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+        Lpn, Lpns, PaymentGroup,
     };
     use currency::{never::Never, Group, MemberOf};
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};

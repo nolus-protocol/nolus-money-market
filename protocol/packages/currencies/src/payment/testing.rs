@@ -1,6 +1,8 @@
-pub use crate::lease::testing::*; // brings LeaseC? types
-use crate::lpn::Lpn;
-use crate::native::Nls;
+use crate::{
+    lease::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7},
+    lpn::Lpn,
+    native::Nls,
+};
 
 pub type PaymentC1 = Nls;
 pub type PaymentC2 = Lpn;

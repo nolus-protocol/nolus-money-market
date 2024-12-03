@@ -16,7 +16,7 @@ impl<'liq, 'env> LiquidationEmitter<'liq, 'env> {
         Self { cause, amount, env }
     }
 }
-impl<'liq, 'env> RepayEmitter for LiquidationEmitter<'liq, 'env> {
+impl RepayEmitter for LiquidationEmitter<'_, '_> {
     fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> Emitter {
         let emitter = emit_payment_int(Type::Liquidation, self.env, lease, receipt);
         emit_liquidation_cause(emitter, self.cause).emit_coin_dto("amount", &self.amount)
@@ -33,7 +33,7 @@ impl<'env> PositionCloseEmitter<'env> {
         Self { amount, env }
     }
 }
-impl<'env> RepayEmitter for PositionCloseEmitter<'env> {
+impl RepayEmitter for PositionCloseEmitter<'_> {
     fn emit(self, lease: &Addr, receipt: &RepayReceipt) -> Emitter {
         let emitter = emit_payment_int(Type::ClosePosition, self.env, lease, receipt);
         emitter.emit_coin_dto("amount", &self.amount)

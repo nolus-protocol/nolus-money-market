@@ -49,7 +49,7 @@ pub(crate) trait RemoteChain {
     ) -> Vec<ProtobufAny>;
 }
 
-impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
+impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
     #[track_caller]
     fn expect_empty(&mut self) {
         assert_eq!(self.receiver.try_recv().ok(), None);

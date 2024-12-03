@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "swap"
 version = "0.1.1"
@@ -7,55 +9,48 @@ license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["astroport", "test"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["neutron-astroport-usdc_axelar"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["astroport", "main"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_axelar", "neutron-astroport-usdc_noble"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-usdc_axelar"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["testing"], always-on = ["osmosis"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["osmosis-osmosis-statom", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-usdc_axelar", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["ci", "$dex"], always-on = ["$dex"], feature-groups = ["dex"], include-rest = true, generics = { "$dex" = "dex" } },
 ]
-feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { dex = { members = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis", "dex-test_impl"], at-least-one = true, mutually-exclusive = true } }
 
 [features]
-# TODO get rid of main and test and specialize astroport into ~_main and ~_test when the CI builds protocols provided as input
-# instead of implicitly building them in matrix
-main = []
-test = []
-
-astroport = [
-    "sdk/cosmos_proto",
+# Mandatory features
+dex-astroport_test = [
     "dep:astroport",
-    "dep:currency",
-    "dep:dex",
-    "dep:finance",
-    "dep:oracle",
-    "dep:platform",
-    "dep:sdk",
-    "dep:serde",
+    "sdk/cosmos_proto",
 ]
-osmosis = [
+dex-astroport_main = [
+    "dep:astroport",
+    "sdk/cosmos_proto",
+]
+dex-osmosis = [
     "dep:osmosis-std",
-    "dep:currency",
-    "dep:dex",
-    "dep:finance",
-    "dep:oracle",
-    "dep:platform",
-    "dep:sdk",
-    "dep:serde",
+]
+dex-test_impl = [
+    "dep:astroport",
+    "sdk/cosmos_proto",
 ]
 
-testing = ["finance/testing", "dep:serde", "dex/testing"]
+# Optional features
+testing = [
+    "currency/testing",
+    "dex/testing",
+    "finance/testing",
+    "sdk/cosmos_ibc",
+]
 
 [dependencies]
-currency = { workspace = true, optional = true }
-dex = { workspace = true, optional = true }
-finance = { workspace = true, optional = true }
-oracle = { workspace = true, optional = true, features = ["stub_swap"] }
-platform = { workspace = true, optional = true }
-sdk = { workspace = true, optional = true }
+dex = { workspace = true }
+oracle = { workspace = true, features = ["stub_swap"] }
+
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true }
 
 astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
-serde = { workspace = true, optional = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }

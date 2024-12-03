@@ -123,7 +123,7 @@ where
     }
 }
 
-impl<'dtos, VisitedG, G1, G2> AnyVisitorPair for ExpectPair<'dtos, VisitedG, G1, G2>
+impl<VisitedG, G1, G2> AnyVisitorPair for ExpectPair<'_, VisitedG, G1, G2>
 where
     VisitedG: Group<TopG = VisitedG>,
     G1: Group + MemberOf<VisitedG>,

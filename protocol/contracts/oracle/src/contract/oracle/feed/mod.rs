@@ -42,7 +42,7 @@ impl<'config, PriceG, BaseC, BaseG, Observations>
     }
 }
 
-impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
+impl<PriceG, BaseC, BaseG, Observations> Feeds<'_, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
@@ -50,15 +50,15 @@ where
     BaseG: Group + MemberOf<PriceG>,
     Observations: ObservationsReadRepo<Group = PriceG>,
 {
-    pub fn all_prices_iter<'r, 'self_, 'storage, I>(
+    pub fn all_prices_iter<'self_, 'iterator, I>(
         &'self_ self,
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'r
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>
+           + use<'self_, 'iterator, PriceG, BaseC, BaseG, Observations, I>
     where
-        'self_: 'r,
-        I: Iterator<Item = SwapLeg<PriceG>> + 'r,
+        I: Iterator<Item = SwapLeg<PriceG>> + 'iterator,
     {
         let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, '_, PriceG, Observations>> =
             LegCmd::new(FedPrices::new(&self.feeds, at, total_feeders));
@@ -86,7 +86,7 @@ where
     }
 }
 
-impl<'config, PriceG, BaseC, BaseG, Observations> Feeds<'config, PriceG, BaseC, BaseG, Observations>
+impl<PriceG, BaseC, BaseG, Observations> Feeds<'_, PriceG, BaseC, BaseG, Observations>
 where
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
@@ -178,8 +178,8 @@ mod test {
 
     mod all_prices_iter {
         use currencies::{
-            Lpns as BaseCurrencies, PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6,
-            PaymentC7, PaymentGroup as PriceCurrencies,
+            testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
+            Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
         };
         use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
         use marketprice::{config::Config, Repo};

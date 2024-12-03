@@ -1,0 +1,21 @@
+{
+  "dex": "osmosis",
+  "dex_network": "OSMOSIS",
+  "lpn_ticker": "OSMO",
+  "stable_currency_ticker": "USDC_AXELAR",
+  "lease_currencies_tickers": [
+    "USDC_AXELAR"
+  ],
+  "payment_only_currencies_tickers": [
+    "ATOM"
+  ],
+  "swap_pairs": {
+    "OSMO": [
+      "ATOM",
+      "USDC_AXELAR"
+    ],
+    "USDC_AXELAR": [
+      "NLS"
+    ]
+  }
+}

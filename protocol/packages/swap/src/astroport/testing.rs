@@ -1,4 +1,4 @@
-use std::any::type_name;
+use std::any;
 
 use currency::{CurrencyDTO, Group, MemberOf};
 use dex::swap::ExactAmountIn;
@@ -17,10 +17,10 @@ use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{
     api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
-    RequestMsg, ResponseMsg, Router, RouterImpl,
+    Impl, RequestMsg, ResponseMsg, Router,
 };
 
-impl<R> ExactAmountInSkel for RouterImpl<R>
+impl<R> ExactAmountInSkel for Impl<R>
 where
     Self: ExactAmountIn,
     R: Router,
@@ -39,7 +39,7 @@ where
 
         assert_eq!(
             contract,
-            R::ROUTER_ADDR,
+            R::ADDRESS,
             "Expected message to be addressed to currently selected router!"
         );
 
@@ -47,17 +47,17 @@ where
 
         let ExecuteMsg::ExecuteSwapOperations {
             operations,
-            minimum_receive: None,
-            to: None,
-            max_spread: Some(Self::MAX_IMPACT),
+            minimum_receive: None {},
+            to: None {},
+            max_spread: Some(super::MAX_IMPACT),
         } = cosmwasm_std::from_json(msg).unwrap_or_else(|_| {
             panic!(
                 r#"Expected message to be from type "{}""#,
-                type_name::<ExecuteMsg>()
+                any::type_name::<ExecuteMsg>()
             )
         })
         else {
-            testing::pattern_match_else("ExecuteSwapOperations");
+            testing::pattern_match_else(any::type_name::<RequestMsg>())
         };
 
         let swap_path =
@@ -141,7 +141,7 @@ where
     G: Group,
 {
     if let [token_in] = funds.as_slice() {
-        crate::testing::parse_dex_token(&token_in.amount, &token_in.denom)
+        testing::parse_dex_token(&token_in.amount, &token_in.denom)
     } else {
         unimplemented!("Expected only one type of token!");
     }

@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use serde::{Deserialize, Serialize};
-
 use currency::{self, DexSymbols, Group, SymbolSlice};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
@@ -21,7 +19,7 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-use api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
+use self::api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
 
 mod api;
 #[cfg(test)]
@@ -32,34 +30,19 @@ mod testing;
 type RequestMsg = MsgExecuteContract;
 type ResponseMsg = MsgExecuteContractResponse;
 
-trait Router {
-    const ROUTER_ADDR: &'static str;
+// 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
+const MAX_IMPACT: Decimal = Decimal::percent(50);
+
+pub struct Impl<R>
+where
+    Self: ExactAmountIn,
+    R: Router,
+{
+    _router: PhantomData<R>,
+    _never: Never,
 }
 
-pub struct Main {}
-
-impl Router for Main {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
-    const ROUTER_ADDR: &'static str =
-        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
-}
-
-pub struct Test {}
-
-impl Router for Test {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-    const ROUTER_ADDR: &'static str =
-        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct RouterImpl<R>(PhantomData<R>);
-
-impl<R> RouterImpl<R> {
-    const MAX_IMPACT: Decimal = Decimal::percent(50); // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
-}
-
-impl<R> ExactAmountIn for RouterImpl<R>
+impl<R> ExactAmountIn for Impl<R>
 where
     R: Router,
 {
@@ -80,12 +63,12 @@ where
             operations: to_operations::<GSwap>(&token_in.denom, swap_path),
             minimum_receive: None, // disable checks on the received amount
             to: None,              // means the sender
-            max_spread: Some(Self::MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
+            max_spread: Some(MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
         })
         .map_err(Into::into)
         .map(|msg| RequestMsg {
             sender: sender.into(),
-            contract: R::ROUTER_ADDR.into(),
+            contract: R::ADDRESS.into(),
             msg,
             funds: vec![token_in],
         })
@@ -111,6 +94,28 @@ where
             .map(|swap_resp| swap_resp.return_amount.into())
     }
 }
+
+pub trait Router {
+    const ADDRESS: &'static str;
+}
+
+pub struct NeutronMain {}
+
+impl Router for NeutronMain {
+    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
+    const ADDRESS: &'static str =
+        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
+}
+
+pub struct NeutronTest {}
+
+impl Router for NeutronTest {
+    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
+    const ADDRESS: &'static str =
+        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
+}
+
+enum Never {}
 
 fn to_operations<'a, G>(
     token_in_denom: &'a SymbolSlice,

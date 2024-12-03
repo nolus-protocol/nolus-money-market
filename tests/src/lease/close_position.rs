@@ -1,4 +1,4 @@
-use currencies::{LeaseGroup, PaymentC5, PaymentGroup};
+use currencies::{testing::PaymentC5, LeaseGroup, PaymentGroup};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},

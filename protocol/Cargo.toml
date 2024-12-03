@@ -7,6 +7,9 @@ members = [
 
 resolver = "2"
 
+[workspace.lints.rust]
+unexpected_cfgs = { level = "forbid" }
+
 [workspace.package]
 edition = "2021"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
@@ -43,13 +46,17 @@ sdk = { path = "../platform/packages/sdk", default-features = false }
 tree = { path = "../platform/packages/tree", default-features = false }
 versioning = { path = "../platform/packages/versioning", default-features = false }
 
+# Tools Packages
+topology = { path = "../tools/topology" }
+
 # General
+anyhow = "1"
 base64 = { version = "0.22", default-features = false }
+enum_dispatch = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = "1"
 postcard = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
-enum_dispatch = { version = "0.3", default-features = false }
 
 # CosmWasm
 # Required as a dependency by `entry_point` attribute macro

@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use serde::Deserialize;
 
 use self::{channels::Channels, currency_resolution::HostLocality, networks::Networks};
@@ -9,12 +11,11 @@ mod currencies;
 pub mod currency;
 mod currency_definition;
 mod currency_resolution;
-pub mod dex;
+mod dex;
 pub mod error;
 mod host_to_dex;
 mod network;
 mod networks;
-pub mod swap_pairs;
 mod symbol;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -73,6 +74,7 @@ impl Topology {
             })
             .and_then(|()| {
                 host_currency
+                    .map(HostCurrency)
                     .map(|host_currency| CurrencyDefinitions {
                         host_currency,
                         dex_currencies: dex_currencies_definitions,
@@ -80,16 +82,38 @@ impl Topology {
                     .ok_or(error::CurrencyDefinitions::HostCurrencyNotDefined)
             })
     }
-
-    pub fn network_dexes(&self, network: &str) -> Option<&dex::Dexes> {
-        self.networks
-            .get_id_and_network(network)
-            .map(|(_, network)| network.dexes())
-    }
 }
 
 #[derive(Debug)]
 pub struct CurrencyDefinitions {
-    pub host_currency: CurrencyDefinition,
+    pub host_currency: HostCurrency,
     pub dex_currencies: Vec<CurrencyDefinition>,
+}
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct HostCurrency(CurrencyDefinition);
+
+impl HostCurrency {
+    pub fn ticker(&self) -> &str {
+        self.0.ticker()
+    }
+}
+
+impl AsRef<CurrencyDefinition> for HostCurrency {
+    fn as_ref(&self) -> &CurrencyDefinition {
+        &self.0
+    }
+}
+
+impl Borrow<CurrencyDefinition> for HostCurrency {
+    fn borrow(&self) -> &CurrencyDefinition {
+        &self.0
+    }
+}
+
+impl From<HostCurrency> for CurrencyDefinition {
+    fn from(HostCurrency(currency_definition): HostCurrency) -> Self {
+        currency_definition
+    }
 }

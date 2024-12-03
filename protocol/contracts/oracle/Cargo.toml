@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "oracle"
 version = "0.5.22"
@@ -7,40 +9,21 @@ license.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "$net", "$protocol"], always-on = ["contract", "$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol" } },
-    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["build", "$net", "$protocol"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["net", "protocol", "$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$net" = "net", "$protocol" = "protocol", "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"], "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], feature-groups = ["$[contract-and-testing]-or-stubs"], always-on = ["$net", "$protocol"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"], "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-akt", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
+    { tags = ["ci", "@agnostic"], feature-groups = ["$[contract-and-testing]-or-stubs"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } },
 ]
-feature-groups = { net = { members = ["net_dev", "net_test", "net_main"], at-least-one = true, mutually-exclusive = true }, protocol = { members = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar"], at-least-one = true, mutually-exclusive = true }, contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs = { members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-net_dev = ["contract"]
-net_test = ["contract"]
-net_main = ["contract"]
-
-neutron-astroport-usdc_axelar = ["contract"]
-neutron-astroport-usdc_noble = ["contract"]
-osmosis-osmosis-akt = ["contract"]
-osmosis-osmosis-all_btc = ["contract"]
-osmosis-osmosis-all_sol = ["contract"]
-osmosis-osmosis-osmo = ["contract"]
-osmosis-osmosis-statom = ["contract"]
-osmosis-osmosis-usdc_axelar = ["contract"]
-osmosis-osmosis-usdc_noble = ["contract"]
-
 contract = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
     "sdk/contract",
     "dep:cosmwasm-std",
-    "dep:currencies",
     "dep:marketprice",
     "dep:versioning",
 ]
@@ -78,5 +61,6 @@ currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
+oracle = { workspace = true, features = ["contract"] }
 marketprice = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["schema", "testing"] }

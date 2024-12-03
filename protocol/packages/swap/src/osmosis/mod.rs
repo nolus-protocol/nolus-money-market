@@ -1,7 +1,6 @@
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
-use serde::{Deserialize, Serialize};
 
 use currency::{DexSymbols, Group};
 use dex::swap::{Error, ExactAmountIn, Result};
@@ -12,7 +11,7 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::Coin as CwCoin};
+use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Coin as CwCoin};
 
 #[cfg(test)]
 mod test;
@@ -22,8 +21,9 @@ mod testing;
 type RequestMsg = MsgSwapExactAmountIn;
 type ResponseMsg = MsgSwapExactAmountInResponse;
 
-#[derive(Serialize, Deserialize)]
-pub struct Impl;
+pub enum Impl
+where
+    Self: ExactAmountIn, {}
 
 impl ExactAmountIn for Impl {
     fn build_request<GIn, GSwap>(
@@ -59,18 +59,17 @@ impl ExactAmountIn for Impl {
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = Any>,
+        I: Iterator<Item = CosmosAny>,
     {
-        use std::str::FromStr;
-
-        let resp = trx_resps
+        trx_resps
             .next()
-            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
-
-        let amount = trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::TYPE_URL)?
-            .token_out_amount;
-
-        Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
+            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))
+            .and_then(|response| {
+                trx::decode_msg_response::<_, ResponseMsg>(response, ResponseMsg::TYPE_URL)
+                    .map_err(Into::into)
+            })
+            .map(|response| response.token_out_amount)
+            .and_then(|amount| amount.parse().map_err(|_| Error::InvalidAmount(amount)))
     }
 }
 

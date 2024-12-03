@@ -100,7 +100,7 @@ where
                 below_price: &'a BasePrice<BaseG, QuoteC, QuoteG>,
             }
 
-            impl<'a, BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'a, BaseG, QuoteC, QuoteG>
+            impl<BaseG, QuoteC, QuoteG> WithPrice<QuoteC> for BaseCurrencyType<'_, BaseG, QuoteC, QuoteG>
             where
                 BaseG: Group,
                 QuoteC: CurrencyDef,
@@ -171,10 +171,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use serde::Serialize;
     use std::fmt::{Display, Formatter, Result as FmtResult};
 
-    use currencies::{LeaseC1, LeaseC2, LeaseC3, LeaseGroup, Lpn, Lpns, PaymentGroup};
+    use serde::Serialize;
+
+    use currencies::{
+        testing::{LeaseC1, LeaseC2, LeaseC3},
+        LeaseGroup, Lpn, Lpns, PaymentGroup,
+    };
     use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},

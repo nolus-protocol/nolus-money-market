@@ -53,7 +53,7 @@ impl<'r> Quote<'r> {
     }
 }
 
-impl<'r> WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'r> {
+impl WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'_> {
     type Output = QuoteResponse;
     type Error = ContractError;
 

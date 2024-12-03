@@ -33,7 +33,8 @@ impl<K, V> Map for BTreeMap<K, V> {
 
     type Value = V;
 
-    type Values<'r> = std::collections::btree_map::Values<'r, K, V>
+    type Values<'r>
+        = std::collections::btree_map::Values<'r, K, V>
     where
         Self::Key: 'r,
         Self::Value: 'r;
@@ -58,7 +59,7 @@ where
     }
 }
 
-impl<'r, M> Validate for ValidateValues<'r, M>
+impl<M> Validate for ValidateValues<'_, M>
 where
     M: Map,
     M::Value: Validate,

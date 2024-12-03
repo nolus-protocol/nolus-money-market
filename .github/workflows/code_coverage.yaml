@@ -1,4 +1,4 @@
-name: "<Callable> Code coverage"
+name: "Code coverage"
 run-name: "Running code coverage for smart contracts"
 
 on:

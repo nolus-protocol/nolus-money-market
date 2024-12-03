@@ -45,7 +45,7 @@ where
         self.pass_any
     }
 }
-impl<'a, V, GIn, GFilter> CoinVisitor for CurrencyFilter<'a, V, GIn, GFilter>
+impl<V, GIn, GFilter> CoinVisitor for CurrencyFilter<'_, V, GIn, GFilter>
 where
     V: CoinVisitor<GIn = GIn, Result = IterNext>,
     GIn: Group,

@@ -34,7 +34,7 @@ impl IntoRepayable for Spec {
 }
 
 impl Closable for Spec {
-    fn amount<'a>(&'a self, lease: &'a Lease) -> &LeaseCoin {
+    fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         lease.lease.position.amount()
     }
 
@@ -57,10 +57,11 @@ impl CloseAlgo for Spec {
 
     type ChangeSender = Self::ProfitSender;
 
-    type PaymentEmitter<'this, 'env> = LiquidationEmitter<'this, 'env>
+    type PaymentEmitter<'this, 'env>
+        = LiquidationEmitter<'this, 'env>
     where
-    Self: 'this,
-    'env: 'this;
+        Self: 'this,
+        'env: 'this;
 
     fn profit_sender(&self, lease: &Lease) -> Self::ProfitSender {
         lease.lease.loan.profit().clone().into_stub()

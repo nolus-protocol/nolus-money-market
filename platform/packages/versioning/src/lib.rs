@@ -87,6 +87,8 @@ macro_rules! package_version {
     }};
 }
 
+// TODO [Edition=2024] Remove `#[expect]`.
+#[expect(edition_2024_expr_fragment_specifier)]
 #[macro_export]
 macro_rules! version {
     ($storage: expr) => {{

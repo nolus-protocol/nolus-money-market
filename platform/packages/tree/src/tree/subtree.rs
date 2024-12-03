@@ -71,7 +71,7 @@ impl<'r, T> From<Subtree<'r, T>> for NodeRef<'r, T> {
     }
 }
 
-impl<'r, T> FindBy for Subtree<'r, T> {
+impl<T> FindBy for Subtree<'_, T> {
     type Item = T;
 
     fn find_by<F>(&self, f: F) -> Option<NodeRef<'_, T>>

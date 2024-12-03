@@ -33,7 +33,7 @@ where
 struct RatioUpcast<'a, U, R>(PhantomData<U>, &'a R)
 where
     R: Ratio<U>;
-impl<'a, U, R> Ratio<Amount> for RatioUpcast<'a, U, R>
+impl<U, R> Ratio<Amount> for RatioUpcast<'_, U, R>
 where
     U: Into<Amount>,
     R: Ratio<U>,
@@ -52,7 +52,7 @@ where
 
 const EXPECT_MSG: &str = "usize should convert into u128";
 
-impl<'a, R> Ratio<Amount> for RatioTryUpcast<'a, R>
+impl<R> Ratio<Amount> for RatioTryUpcast<'_, R>
 where
     R: Ratio<usize>,
 {

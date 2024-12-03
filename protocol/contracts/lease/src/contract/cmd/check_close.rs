@@ -125,7 +125,7 @@ impl<'a> Cmd<'a> {
     }
 }
 
-impl<'a> WithLease for Cmd<'a> {
+impl WithLease for Cmd<'_> {
     type Output = CloseStatusDTO;
 
     type Error = ContractError;

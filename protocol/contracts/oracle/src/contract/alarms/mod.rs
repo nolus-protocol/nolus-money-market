@@ -143,8 +143,8 @@ where
     price_alarms: &'alarms mut PriceAlarms<'storage, G, S>,
 }
 
-impl<'storage, 'alarms, S, G, BaseC, BaseG> WithPrice<BaseC>
-    for AddAlarmsCmd<'storage, 'alarms, S, G, BaseC, BaseG>
+impl<'storage, S, G, BaseC, BaseG> WithPrice<BaseC>
+    for AddAlarmsCmd<'storage, '_, S, G, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
@@ -176,8 +176,8 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{
+        testing::{PaymentC5, PaymentC6, PaymentC7},
         Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
-        {PaymentC5, PaymentC6, PaymentC7},
     };
     use sdk::cosmwasm_std::testing::MockStorage;
 

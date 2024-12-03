@@ -1,22 +1,32 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use serde::{Deserialize, Serialize};
+
+use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use sdk::schemars::{self, JsonSchema};
+
+use super::Group as PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) use r#impl as impl_mod;
-#[cfg(feature = "testing")]
-pub(crate) use testing as impl_mod;
-
-use crate::PaymentGroup;
+#[allow(unused_imports)]
+pub(crate) use self::impl_mod::definitions::*;
 
 #[cfg(not(feature = "testing"))]
-pub(crate) mod r#impl;
+mod impl_mod {
+    include!(concat!(env!("OUT_DIR"), "/payment_only.rs"));
+}
+
 #[cfg(feature = "testing")]
-pub(crate) mod testing;
+#[path = "testing.rs"]
+mod impl_mod;
 
-#[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq)]
-pub struct PaymentOnlyGroup {}
+#[derive(
+    Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum Group {}
 
-impl Group for PaymentOnlyGroup {
+impl currency::Group for Group {
     const DESCR: &'static str = "payment only";
+
     type TopG = PaymentGroup;
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
@@ -36,5 +46,6 @@ impl Group for PaymentOnlyGroup {
     }
 }
 
-impl MemberOf<PaymentGroup> for PaymentOnlyGroup {}
-impl MemberOf<Self> for PaymentOnlyGroup {}
+impl MemberOf<Self> for Group {}
+
+impl MemberOf<PaymentGroup> for Group {}

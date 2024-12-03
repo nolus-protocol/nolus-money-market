@@ -4,7 +4,7 @@ use currency::Group;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapPath;
 use platform::{ica::HostAccount, trx::Transaction};
-use sdk::{cosmos_sdk_proto::Any, cosmwasm_std::StdError};
+use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::StdError};
 
 pub trait ExactAmountIn {
     /// `swap_path` should be a non-empty list
@@ -23,7 +23,7 @@ pub trait ExactAmountIn {
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = Any>;
+        I: Iterator<Item = CosmosAny>;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

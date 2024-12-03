@@ -58,7 +58,7 @@ struct LeaseFactory<'a> {
     now: &'a Timestamp,
 }
 
-impl<'a> WithLeaseDeps for LeaseFactory<'a> {
+impl WithLeaseDeps for LeaseFactory<'_> {
     type Output = IntoDTOResult;
     type Error = ContractError;
 

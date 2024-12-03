@@ -91,7 +91,7 @@ impl<'a> BankView<'a> {
     }
 }
 
-impl<'a> BankAccountView for BankView<'a> {
+impl BankAccountView for BankView<'_> {
     fn balance<C, G>(&self) -> Result<Coin<C>>
     where
         C: CurrencyDef,
@@ -439,7 +439,7 @@ mod test {
     #[test]
     fn reduce_results_empty() {
         assert_eq!(
-            [Ok::<(), TestError>(()); 0]
+            [const { Ok::<(), TestError>(()) }; 0]
                 .into_iter()
                 .reduce_results(|(), ()| unreachable!()),
             None

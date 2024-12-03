@@ -1,3 +1,5 @@
+lints = { workspace = true }
+
 [package]
 name = "currencies"
 version = "0.1.0"
@@ -5,11 +7,11 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+build = "build/main.rs"
+
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "$net", "$protocol"], include-rest = true, generics = { "$net" = ["net_dev", "net_test", "net_main"], "$protocol" = ["neutron-astroport-usdc_axelar", "osmosis-osmosis-usdc_axelar"] } },
-    { tags = ["ci", "$net", "$protocol"], include-rest = true, generics = { "$net" = ["net_dev", "net_test"], "$protocol" = ["osmosis-osmosis-osmo"] } },
-    { tags = ["ci", "$net", "$protocol"], include-rest = true, generics = { "$net" = ["net_main"], "$protocol" = ["neutron-astroport-usdc_noble", "osmosis-osmosis-all_btc", "osmosis-osmosis-all_sol", "osmosis-osmosis-statom", "osmosis-osmosis-usdc_noble"] } },
+    { tags = ["ci", "@agnostic"], include-rest = true },
 ]
 
 [lib]
@@ -27,3 +29,10 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+
+[build-dependencies]
+topology = { workspace = true }
+
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

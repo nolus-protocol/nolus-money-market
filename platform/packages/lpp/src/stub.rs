@@ -24,7 +24,7 @@ impl<'a> Stub<'a> {
     }
 }
 
-impl<'a> Lpp for Stub<'a> {
+impl Lpp for Stub<'_> {
     fn balance(&self, oracle: Addr) -> Result<CoinStable> {
         self.querier
             .query_wasm_smart::<CoinDTO<PlatformGroup>>(

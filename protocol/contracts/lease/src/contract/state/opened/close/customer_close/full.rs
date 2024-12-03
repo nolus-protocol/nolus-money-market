@@ -57,7 +57,8 @@ impl CloseAlgo for Spec {
 
     type ChangeSender = Self::ProfitSender;
 
-    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'env>
+    type PaymentEmitter<'this, 'env>
+        = PositionCloseEmitter<'env>
     where
         Self: 'this,
         'env: 'this;
