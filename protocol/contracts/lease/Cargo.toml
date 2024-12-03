@@ -47,9 +47,9 @@ testing = [
     "currencies/testing",
     "currency/testing",
     "finance/testing",
-    "dep:lpp",
+    # "dep:lpp",
     "lpp/testing",
-    "dep:profit",
+    # "dep:profit",
     "profit/testing",
 ]
 
