@@ -27,7 +27,11 @@ where
         self.oracle
             .price_of::<PaymentC>()
             .map_err(Into::into)
-            .and_then(|price| self.position.validate_payment(payment, price))
+            .and_then(|price| {
+                self.position
+                    .validate_payment(payment, price)
+                    .map_err(Into::into)
+            })
     }
 
     pub(crate) fn repay<Profit>(

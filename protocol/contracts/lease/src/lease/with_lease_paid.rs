@@ -2,9 +2,8 @@ use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, MemberOf}
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractError,
     finance::LpnCurrencies,
-    position::{Position, WithPosition, WithPositionResult},
+    position::{Position, PositionError, WithPosition, WithPositionResult},
 };
 
 use super::LeaseDTO;
@@ -31,7 +30,7 @@ where
     finance::error::Error: Into<Cmd::Error>,
     currency::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
-    ContractError: Into<Cmd::Error>,
+    PositionError: Into<Cmd::Error>,
 {
     lease_dto
         .position

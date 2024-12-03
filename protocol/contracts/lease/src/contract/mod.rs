@@ -4,8 +4,8 @@ use dex::{Account, ConnectionParams, DexConnectable};
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
-    error::ContractError,
     lease::{with_lease::WithLease, LeaseDTO},
+    position::PositionError,
 };
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
@@ -50,7 +50,7 @@ impl Lease {
         Cmd: WithLease,
         Cmd::Output: SplitDTOOut,
         Cmd::Error:
-            From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
+            From<lpp::error::ContractError> + From<finance::error::Error> + From<PositionError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,

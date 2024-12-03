@@ -40,8 +40,11 @@ where
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
 {
     pub(crate) fn validate_close(&self, amount: Coin<Asset>) -> ContractResult<()> {
-        self.price_of_lease_currency()
-            .and_then(|asset_in_lpns| self.position.validate_close_amount(amount, asset_in_lpns))
+        self.price_of_lease_currency().and_then(|asset_in_lpns| {
+            self.position
+                .validate_close_amount(amount, asset_in_lpns)
+                .map_err(Into::into)
+        })
     }
 
     pub(crate) fn close_partial<Profit>(

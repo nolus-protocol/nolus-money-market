@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::open::PositionSpecDTO,
-    error::{ContractError, ContractResult},
-    position::{close::Policy as ClosePolicy, Spec},
+    position::{close::Policy as ClosePolicy, PositionError, PositionResult, Spec},
 };
 
 /// Position specification past position open
@@ -40,9 +39,9 @@ impl From<PositionSpecDTO> for SpecDTO {
 }
 
 impl TryFrom<PositionSpecDTO> for Spec {
-    type Error = ContractError;
+    type Error = PositionError;
 
-    fn try_from(value: PositionSpecDTO) -> ContractResult<Self> {
+    fn try_from(value: PositionSpecDTO) -> PositionResult<Self> {
         SpecDTO::from(value).try_into()
     }
 }
@@ -61,9 +60,9 @@ impl From<Spec> for SpecDTO {
 }
 
 impl TryFrom<SpecDTO> for Spec {
-    type Error = ContractError;
+    type Error = PositionError;
 
-    fn try_from(dto: SpecDTO) -> ContractResult<Self> {
+    fn try_from(dto: SpecDTO) -> PositionResult<Self> {
         dto.r#const
             .min_asset
             .try_into()

@@ -81,7 +81,7 @@ mod test_calc_borrow {
         percent::Percent,
     };
 
-    use crate::error::ContractError;
+    use crate::position::PositionError;
 
     use super::TestLpn;
 
@@ -92,7 +92,7 @@ mod test_calc_borrow {
         let downpayment_less = spec.calc_borrow_amount(299.into(), None);
         assert!(matches!(
             downpayment_less,
-            Err(ContractError::InsufficientTransactionAmount(_))
+            Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
         let borrow = spec.calc_borrow_amount(300.into(), None);
@@ -106,7 +106,7 @@ mod test_calc_borrow {
         let borrow_less = spec.calc_borrow_amount(300.into(), Some(Percent::from_percent(99)));
         assert!(matches!(
             borrow_less,
-            Err(ContractError::InsufficientTransactionAmount(_))
+            Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
         let borrow = spec.calc_borrow_amount(300.into(), Some(Percent::from_percent(100)));
@@ -120,7 +120,7 @@ mod test_calc_borrow {
         let borrow_1 = spec.calc_borrow_amount(349.into(), None);
         assert!(matches!(
             borrow_1,
-            Err(ContractError::InsufficientAssetAmount(_))
+            Err(PositionError::InsufficientAssetAmount(_))
         ));
 
         let borrow_2 = spec.calc_borrow_amount(350.into(), None);
@@ -129,7 +129,7 @@ mod test_calc_borrow {
         let borrow_3 = spec.calc_borrow_amount(550.into(), Some(Percent::from_percent(81)));
         assert!(matches!(
             borrow_3,
-            Err(ContractError::InsufficientAssetAmount(_))
+            Err(PositionError::InsufficientAssetAmount(_))
         ));
 
         let borrow_3 = spec.calc_borrow_amount(550.into(), Some(Percent::from_percent(82)));
@@ -892,7 +892,7 @@ mod test_debt {
 }
 
 mod test_validate_payment {
-    use crate::error::ContractError;
+    use crate::position::PositionError;
 
     #[test]
     fn insufficient_payment() {
@@ -900,7 +900,7 @@ mod test_validate_payment {
         let result_1 = spec.validate_payment(15.into(), super::price(1, 1));
         assert!(matches!(
             result_1,
-            Err(ContractError::InsufficientPayment(_))
+            Err(PositionError::InsufficientTransactionAmount(_))
         ));
         let result_2 = spec.validate_payment(16.into(), super::price(1, 1));
         assert!(result_2.is_ok());
@@ -908,7 +908,7 @@ mod test_validate_payment {
         let result_3 = spec.validate_payment(45.into(), super::price(3, 1));
         assert!(matches!(
             result_3,
-            Err(ContractError::InsufficientPayment(_))
+            Err(PositionError::InsufficientTransactionAmount(_))
         ));
         let result_4 = spec.validate_payment(8.into(), super::price(1, 2));
         assert!(result_4.is_ok());
@@ -916,7 +916,7 @@ mod test_validate_payment {
 }
 
 mod test_validate_close {
-    use crate::error::ContractError;
+    use crate::position::PositionError;
 
     #[test]
     fn too_small_amount() {
@@ -926,13 +926,13 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(asset, 14.into(), super::price(1, 1));
         assert!(matches!(
             result_1,
-            Err(ContractError::PositionCloseAmountTooSmall(_))
+            Err(PositionError::PositionCloseAmountTooSmall(_))
         ));
 
         let result_2 = spec.validate_close_amount(asset, 6.into(), super::price(1, 2));
         assert!(matches!(
             result_2,
-            Err(ContractError::PositionCloseAmountTooSmall(_))
+            Err(PositionError::PositionCloseAmountTooSmall(_))
         ));
     }
 
@@ -956,13 +956,13 @@ mod test_validate_close {
         let result_1 = spec.validate_close_amount(asset, 76.into(), super::price(1, 1));
         assert!(matches!(
             result_1,
-            Err(ContractError::PositionCloseAmountTooBig(_))
+            Err(PositionError::PositionCloseAmountTooBig(_))
         ));
 
         let result_2 = spec.validate_close_amount(asset, 64.into(), super::price(3, 2));
         assert!(matches!(
             result_2,
-            Err(ContractError::PositionCloseAmountTooBig(_))
+            Err(PositionError::PositionCloseAmountTooBig(_))
         ));
     }
 

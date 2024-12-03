@@ -1,14 +1,11 @@
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{coin::Coin, duration::Duration};
 
-use crate::{
-    api::LeasePaymentCurrencies,
-    error::{ContractError, ContractResult},
-    finance::Price,
-};
+use crate::{api::LeasePaymentCurrencies, finance::Price};
 
 pub use close::Strategy as CloseStrategy;
 pub use dto::{PositionDTO, WithPosition, WithPositionResult};
+pub use error::{Error as PositionError, Result as PositionResult};
 pub use interest::{Due as DueTrait, OverdueCollection};
 pub use spec::{Spec, SpecDTO};
 pub(crate) use status::{Cause, Debt, Liquidation};
@@ -33,9 +30,8 @@ where
     Asset: Currency,
 {
     pub fn new(amount: Coin<Asset>, spec: Spec) -> Self {
-        let obj = Self { amount, spec };
-        debug_assert_eq!(Ok(()), obj.invariant_held());
-        obj
+        debug_assert!(!amount.is_zero(), "The amount should be positive");
+        Self { amount, spec }
     }
 
     pub(crate) fn amount(&self) -> Coin<Asset> {
@@ -81,13 +77,13 @@ where
     }
 
     /// Check if the amount can be used for repayment.
-    /// Return `error::ContractError::InsufficientPayment` when the payment amount
+    /// Return `error::PositionError::InsufficientTransactionAmount` when the payment amount
     /// is less than the minimum transaction amount.
     pub fn validate_payment<PaymentC>(
         &self,
         payment: Coin<PaymentC>,
         payment_currency_in_lpns: Price<PaymentC>,
-    ) -> ContractResult<()>
+    ) -> PositionResult<()>
     where
         PaymentC: CurrencyDef,
         PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
@@ -97,27 +93,19 @@ where
     }
 
     /// Check if the amount can be used to close the position.
-    /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
+    /// Return `error::PositionError::PositionCloseAmountTooSmall` when a partial close is requested
     /// with amount less than the minimum transaction position parameter sent on lease open. Refer to
     /// `NewLeaseForm::position_spec`.
     ///
-    /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
+    /// Return `error::PositionError::PositionCloseAmountTooBig` when a partial close is requested
     /// with amount that would decrease a position less than the minimum asset parameter sent on
     /// lease open. Refer to `NewLeaseForm::position_spec`.
     pub fn validate_close_amount(
         &self,
         close_amount: Coin<Asset>,
         asset_in_lpns: Price<Asset>,
-    ) -> ContractResult<()> {
+    ) -> PositionResult<()> {
         self.spec
             .validate_close_amount(self.amount, close_amount, asset_in_lpns)
-    }
-
-    fn invariant_held(&self) -> ContractResult<()> {
-        Self::check(!self.amount.is_zero(), "The amount should be positive")
-    }
-
-    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 }

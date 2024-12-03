@@ -61,12 +61,12 @@ impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'_> {
         )
         .ok_or_else(Self::Error::NoPaymentError)??;
 
-        if downpayment_lpn.is_zero() {
-            return Err(Self::Error::InsufficientPayment(downpayment));
-        }
-
         PositionSpec::try_from(self.position_spec)
-            .and_then(|spec| spec.calc_borrow_amount(downpayment_lpn, self.max_ltd))
+            .map_err(ContractError::from)
+            .and_then(|spec| {
+                spec.calc_borrow_amount(downpayment_lpn, self.max_ltd)
+                    .map_err(ContractError::from)
+            })
             .and_then(|borrow_lpn| lpp.open_loan_req(borrow_lpn).map_err(ContractError::from))
             .map(|()| Self::Output {
                 batch: lpp.into().batch,

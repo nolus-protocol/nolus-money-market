@@ -12,12 +12,13 @@ use finance::{
 
 use crate::{
     api::{position::ClosePolicyChange, LeasePaymentCurrencies},
-    error::{ContractError, ContractResult},
     finance::{LpnCoin, Price},
-    position::{error::Result as PositionResult, steady::Steadiness, Cause, Debt, Liquidation},
 };
 
-use super::{close::Policy as ClosePolicy, interest::OverdueCollection, CloseStrategy, DueTrait};
+use super::{
+    close::Policy as ClosePolicy, interest::OverdueCollection, steady::Steadiness, Cause,
+    CloseStrategy, Debt, DueTrait, Liquidation, PositionError, PositionResult,
+};
 pub use dto::SpecDTO;
 
 mod dto;
@@ -41,14 +42,17 @@ impl Spec {
         min_asset: LpnCoin,
         min_transaction: LpnCoin,
     ) -> Self {
-        let obj = Self {
+        debug_assert!(!min_asset.is_zero(), "Min asset amount should be positive",);
+        debug_assert!(
+            !min_transaction.is_zero(),
+            "Min transaction amount should be positive",
+        );
+        Self {
             liability,
             close,
             min_asset,
             min_transaction,
-        };
-        debug_assert_eq!(Ok(()), obj.invariant_held());
-        obj
+        }
     }
 
     #[cfg(test)]
@@ -85,29 +89,29 @@ impl Spec {
     }
 
     /// Calculate the borrow amount.
-    /// Return 'error::ContractError::InsufficientTransactionAmount' when either the downpayment
+    /// Return 'error::PositionError::InsufficientTransactionAmount' when either the downpayment
     /// or the borrow amount is less than the minimum transaction amount.
-    /// Return 'error::ContractError::InsufficientAssetAmount' when the lease (downpayment + borrow)
+    /// Return 'error::PositionError::InsufficientAssetAmount' when the lease (downpayment + borrow)
     /// is less than the minimum asset amount.
     pub fn calc_borrow_amount(
         &self,
         downpayment: LpnCoin,
         may_max_ltd: Option<Percent>,
-    ) -> ContractResult<LpnCoin> {
+    ) -> PositionResult<LpnCoin> {
         let one = Price::identity();
 
         if !self.valid_transaction(downpayment, one) {
-            Err(ContractError::InsufficientTransactionAmount(
+            Err(PositionError::InsufficientTransactionAmount(
                 self.min_transaction.into(),
             ))
         } else {
             let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
             if !self.valid_transaction(borrow, one) {
-                Err(ContractError::InsufficientTransactionAmount(
+                Err(PositionError::InsufficientTransactionAmount(
                     self.min_transaction.into(),
                 ))
             } else if !self.valid_asset(downpayment.add(borrow), one) {
-                Err(ContractError::InsufficientAssetAmount(
+                Err(PositionError::InsufficientAssetAmount(
                     self.min_asset.into(),
                 ))
             } else {
@@ -165,13 +169,13 @@ impl Spec {
     }
 
     /// Check if the amount can be used for repayment.
-    /// Return `error::ContractError::InsufficientPayment` when the payment amount
+    /// Return `error::PositionError::InsufficientTransactionAmount` when the payment amount
     /// is less than the minimum transaction amount.
     pub fn validate_payment<PaymentC>(
         &self,
         payment: Coin<PaymentC>,
         payment_currency_in_lpns: Price<PaymentC>,
-    ) -> ContractResult<()>
+    ) -> PositionResult<()>
     where
         PaymentC: CurrencyDef,
         PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
@@ -179,18 +183,18 @@ impl Spec {
         if self.valid_transaction(payment, payment_currency_in_lpns) {
             Ok(())
         } else {
-            Err(ContractError::InsufficientPayment(
-                Self::to_assets(self.min_transaction, payment_currency_in_lpns).into(),
+            Err(PositionError::InsufficientTransactionAmount(
+                self.min_transaction.into(),
             ))
         }
     }
 
     /// Check if the amount can be used to close the position.
-    /// Return `error::ContractError::PositionCloseAmountTooSmall` when a partial close is requested
+    /// Return `error::PositionError::PositionCloseAmountTooSmall` when a partial close is requested
     /// with amount less than the minimum transaction position parameter sent on lease open. Refer to
     /// `NewLeaseForm::position_spec`.
     ///
-    /// Return `error::ContractError::PositionCloseAmountTooBig` when a partial close is requested
+    /// Return `error::PositionError::PositionCloseAmountTooBig` when a partial close is requested
     /// with amount that would decrease a position less than the minimum asset parameter sent on
     /// lease open. Refer to `NewLeaseForm::position_spec`.
     pub fn validate_close_amount<Asset>(
@@ -198,7 +202,7 @@ impl Spec {
         asset: Coin<Asset>,
         close_amount: Coin<Asset>,
         asset_in_lpns: Price<Asset>,
-    ) -> ContractResult<()>
+    ) -> PositionResult<()>
     where
         Asset: Currency,
     {
@@ -206,30 +210,15 @@ impl Spec {
             if self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
                 Ok(())
             } else {
-                Err(ContractError::PositionCloseAmountTooBig(
+                Err(PositionError::PositionCloseAmountTooBig(
                     self.min_asset.into(),
                 ))
             }
         } else {
-            Err(ContractError::PositionCloseAmountTooSmall(
+            Err(PositionError::PositionCloseAmountTooSmall(
                 self.min_transaction.into(),
             ))
         }
-    }
-
-    fn invariant_held(&self) -> ContractResult<()> {
-        Self::check(
-            !self.min_asset.is_zero(),
-            "Min asset amount should be positive",
-        )
-        .and(Self::check(
-            !self.min_transaction.is_zero(),
-            "Min transaction amount should be positive",
-        ))
-    }
-
-    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
-        ContractError::broken_invariant_if::<Self>(!invariant, msg)
     }
 
     fn valid_transaction<TransactionC>(
@@ -306,9 +295,9 @@ impl Spec {
         Asset: Currency,
     {
         match self.validate_close_amount(asset, liquidation, asset_in_lpns) {
-            Err(ContractError::PositionCloseAmountTooSmall(_)) => None,
-            Err(ContractError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
-            Err(_) => unreachable!(), // TODO extract the two ContractError variants to a dedicated type to avoid this match arm
+            Err(PositionError::PositionCloseAmountTooSmall(_)) => None,
+            Err(PositionError::PositionCloseAmountTooBig(_)) => Some(Liquidation::Full(cause)),
+            Err(_) => unreachable!(), // TODO extract the two PositionError variants to a dedicated type to avoid this match arm
             Ok(()) => {
                 debug_assert!(liquidation < asset);
                 Some(Liquidation::Partial {

@@ -5,9 +5,8 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, LppRef, OracleRef},
-    position::{Position, PositionDTO, WithPosition, WithPositionResult},
+    position::{Position, PositionDTO, PositionError, WithPosition, WithPositionResult},
 };
 
 pub trait WithLeaseDeps {
@@ -38,7 +37,7 @@ pub fn execute<Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
+    Cmd::Error: From<lpp::error::ContractError> + From<finance::error::Error> + From<PositionError>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
     position.with_position(FactoryStage1 {

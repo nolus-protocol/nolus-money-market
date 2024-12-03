@@ -14,7 +14,7 @@ use reserve::error::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::{api::PaymentCoin, finance::LpnCoinDTO};
+use crate::position::PositionError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -54,23 +54,11 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     ReserveError(#[from] ReserveError),
 
+    #[error("[Lease] {0}")]
+    PositionError(#[from] PositionError),
+
     #[error("[Lease] No payment sent")]
     NoPaymentError(),
-
-    #[error("[Lease] Insufficient payment amount {0}")]
-    InsufficientPayment(PaymentCoin),
-
-    #[error("[Lease] The asset amount should worth at least {0}")]
-    InsufficientAssetAmount(LpnCoinDTO),
-
-    #[error("[Lease] The transaction amount should worth at least {0}")]
-    InsufficientTransactionAmount(LpnCoinDTO),
-
-    #[error("[Lease] The position close amount should worth at least {0}")]
-    PositionCloseAmountTooSmall(LpnCoinDTO),
-
-    #[error("[Lease] The position past this close should worth at least {0}")]
-    PositionCloseAmountTooBig(LpnCoinDTO),
 
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),

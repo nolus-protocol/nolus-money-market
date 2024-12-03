@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractError,
+    position::PositionError,
 };
 
 use super::{Position, Spec, SpecDTO};
@@ -47,7 +47,7 @@ impl PositionDTO {
     where
         V: WithPosition,
         FinanceError: Into<V::Error>,
-        ContractError: Into<V::Error>,
+        PositionError: Into<V::Error>,
     {
         struct WithAmount<V> {
             cmd: V,
@@ -57,7 +57,7 @@ impl PositionDTO {
         impl<V> WithCoin<LeaseAssetCurrencies> for WithAmount<V>
         where
             V: WithPosition,
-            ContractError: Into<V::Error>,
+            PositionError: Into<V::Error>,
         {
             type Output = V::Output;
 

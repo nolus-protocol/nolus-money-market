@@ -8,10 +8,9 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::LoanDTO,
-    position::{Position, PositionDTO},
+    position::{Position, PositionDTO, PositionError},
 };
 
 use super::{
@@ -62,7 +61,7 @@ impl LeaseDTO {
     where
         Cmd: WithLease,
         Cmd::Error:
-            From<lpp::error::ContractError> + From<finance::error::Error> + From<ContractError>,
+            From<lpp::error::ContractError> + From<finance::error::Error> + From<PositionError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::error::ContractError: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,
