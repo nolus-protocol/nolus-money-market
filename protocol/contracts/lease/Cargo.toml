@@ -47,10 +47,6 @@ testing = [
     "currencies/testing",
     "currency/testing",
     "finance/testing",
-    # "dep:lpp",
-    "lpp/testing",
-    # "dep:profit",
-    "profit/testing",
 ]
 
 [dependencies]

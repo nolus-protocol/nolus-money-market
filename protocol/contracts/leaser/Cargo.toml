@@ -22,7 +22,7 @@ testing = ["currency/testing", "lease/testing"]
 [dependencies]
 admin_contract = { workspace = true }
 lease = { workspace = true, features = ["skel"] }
-lpp = { workspace = true }
+lpp = { workspace = true, features = ["stub"] }
 oracle-platform = { workspace = true }
 reserve = { workspace = true, features = ["stub"] }
 
