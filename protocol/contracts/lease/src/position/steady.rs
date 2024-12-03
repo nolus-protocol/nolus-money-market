@@ -69,21 +69,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp;
-    use currencies::{testing::PaymentC3, Lpn};
-    use currencies::{LeaseGroup, Lpns};
-    use finance::fraction::Fraction;
-    use finance::percent::Percent;
-    use finance::range::RightOpenRange;
-    use finance::{coin::Coin, duration::Duration, price};
+    use currencies::{testing::PaymentC3, LeaseGroup, Lpn, Lpns};
+    use finance::{
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price,
+        range::RightOpenRange,
+    };
     use oracle::api::alarms::{Alarm, ExecuteMsg as PriceAlarmsCmd};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{self, Addr, WasmMsg};
+    use sdk::cosmwasm_std::{self, Addr, Timestamp, WasmMsg};
     use timealarms::{msg::ExecuteMsg as TimeAlarmsCmd, stub::TimeAlarmsRef};
 
-    use crate::api::LeaseAssetCurrencies;
-    use crate::position::Steadiness;
+    use crate::{api::LeaseAssetCurrencies, position::Steadiness};
 
     const TIME_ALARMS_ADDR: &str = "timealarms";
     const ORACLE_ADDR: &str = "oracle";
