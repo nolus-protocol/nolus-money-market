@@ -30,6 +30,8 @@ contract = [
     "dep:enum_dispatch",
     "skel",
     "sdk/contract",
+    "dep:lpp",
+    "dep:profit",
     "dep:reserve",
     "dep:swap",
     "dep:versioning",
