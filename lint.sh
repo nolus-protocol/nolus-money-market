@@ -28,48 +28,92 @@ case "${#:?}" in
   ("0")
     repo_root="$(cd "../" && "pwd")"
     ;;
-  ("1")
+  (*)
     case "${1:?}" in
-      ("--help")
-        "echo" \
-          "First argument of the script has to be the name of the workspace to \
-run the linter in.
-Without an argument, the current directory is assumed to the active workspace."
+      ([!-]*)
+        repo_root="$("pwd")"
 
-        exit "0"
+        cd "./${1:?}"
+
+        shift
+        ;;
+      (*)
+        repo_root="$(cd "../" && "pwd")"
         ;;
     esac
 
-    repo_root="$("pwd")"
+    while :
+    do
+      case "${1:?}" in
+        ("--help")
+          "echo" "First argument of the script to be either a flag (start with \
+leading '-') or the name of the workspace to run the linter in.
+Without arguments and when the first argument is a flag, the current directory \
+is assumed to the active workspace."
+  
+          exit "0"
+          ;;
+        ("-p"|"--package")
+          package="${2:?}"
+          readonly package
 
-    cd "./${1:?}"
+          shift 2
+          ;;
+        ("--")
+          shift
 
-    shift
-    ;;
-  (*)
-    "echo" \
-      "Error!
-\"${0:?}\" requires at most one argument, the name of the workspace!
-Instead got ${#:?} arguments!" \
-      >&2
+          break
+          ;;
+        (*)
+          "echo" \
+            "" \
+            >&2
+          ;;
+      esac
+
+      case "${#:?}" in
+        ("0")
+          break
+          ;;
+      esac
+    done
     ;;
 esac
-
 readonly repo_root
+: "${repo_root:?}"
 
 . "${repo_root:?}/scripts/check/configuration.sh"
 
+run_base() {
+  "cargo" \
+      "each" \
+      "run" \
+      --external-command \
+      --tag "ci" \
+      "${@:?}"
+}
+
+run_with_package() {
+  case "${package+"1"}" in
+    ("1")
+      "run_base" \
+        --package "${package:?}" \
+        "${@:?}"
+      ;;
+    (*)
+      "run_base" "${@:?}"
+      ;;
+  esac
+}
+
 while read -r profile
 do
-  "cargo" \
-    "each" \
-    "run" \
-    --external-command \
-    --tag "ci" \
+  "run_with_package" \
     -- \
     "sh" \
     "${repo_root:?}/scripts/check/lint.sh" \
-    --profile "${profile:?}"
+    --profile "${profile:?}" \
+    "${@}"
 done <<EOF
 ${profiles:?}
 EOF
