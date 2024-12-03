@@ -95,7 +95,7 @@ where
                 &env.block.time,
                 self.0.emitter_fn(env),
                 profit,
-                (time_alarms, price_alarms),
+                (time_alarms, &price_alarms),
                 reserve,
             ),
             querier,
@@ -116,7 +116,7 @@ where
             }
             CloseStatusDTO::CloseAsked(strategy) => match strategy {
                 CloseStrategy::TakeProfit(_tp) => {
-                    todo!("reset TakeProfit")
+                    unimplemented!("a Take Profit past payment should have been ignored")
                 }
                 CloseStrategy::StopLoss(_sl) => customer_close::start(
                     PositionClose::FullClose(FullClose {}),

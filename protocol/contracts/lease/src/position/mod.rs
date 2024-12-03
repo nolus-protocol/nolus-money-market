@@ -76,6 +76,23 @@ where
         self.spec.check_close(self.amount, due, asset_in_lpns)
     }
 
+    pub fn change_close_policy<Due>(
+        &mut self,
+        cmd: ClosePolicyChange,
+        due: &Due,
+        asset_in_lpns: Price<Asset>,
+    ) -> PositionResult<()>
+    where
+        Asset: Currency,
+        Due: DueTrait,
+    {
+        self.spec
+            .change_close_policy(cmd, self.amount, due, asset_in_lpns)
+            .map(|spec| {
+                self.spec = spec;
+            })
+    }
+
     /// Check if the amount can be used for repayment.
     /// Return `error::PositionError::InsufficientTransactionAmount` when the payment amount
     /// is less than the minimum transaction amount.

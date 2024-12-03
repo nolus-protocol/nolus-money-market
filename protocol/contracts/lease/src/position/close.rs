@@ -73,7 +73,7 @@ impl Policy {
 
     /// Determine the 'no-close' intersection with the provided range
     ///
-    /// Pre: `self.may_trigger() == None` for ltv contained in `during`.
+    /// Pre: `self.may_trigger() == None` for an ltv contained in `during`.
     /// This implies that `during` is not a sub-range of any of the policy ranges.
     pub fn no_close(
         &self,

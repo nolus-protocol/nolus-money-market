@@ -29,6 +29,12 @@ pub enum Error {
         lease_ltv: Percent,
         strategy: CloseStrategy,
     },
+
+    #[error("[Position] Invalid close policy! The new strategy '{strategy}' exceeds the max lease liability LTV '{max_ltv}'!")]
+    ExceedLiquidation {
+        strategy: CloseStrategy,
+        max_ltv: Percent,
+    },
 }
 
 impl Error {
@@ -37,6 +43,10 @@ impl Error {
             lease_ltv,
             strategy,
         }
+    }
+
+    pub fn exceed_liquidation(max_ltv: Percent, strategy: CloseStrategy) -> Self {
+        Self::ExceedLiquidation { max_ltv, strategy }
     }
 }
 

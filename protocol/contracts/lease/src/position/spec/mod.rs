@@ -7,7 +7,7 @@ use finance::{
     fraction::Fraction,
     liability::Liability,
     percent::Percent,
-    price::{self},
+    price::{self}, range::RightOpenRange,
 };
 
 use crate::{
@@ -27,7 +27,7 @@ mod dto;
 mod test;
 
 #[derive(Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Spec {
     liability: Liability,
     close: ClosePolicy,
@@ -76,8 +76,10 @@ impl Spec {
         Asset: Currency,
         Due: DueTrait,
     {
+        let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
+
         self.close
-            .change_policy(cmd, asset, Self::to_assets(due.total_due(), asset_in_lpns))
+            .change_policy(cmd, asset, total_due)
             .map(|close_policy| {
                 Self::new(
                     self.liability,
@@ -85,7 +87,7 @@ impl Spec {
                     self.min_asset,
                     self.min_transaction,
                 )
-            })
+            }).and_then(|obj| obj.invariant_held())
     }
 
     /// Calculate the borrow amount.
@@ -221,6 +223,29 @@ impl Spec {
         }
     }
 
+<<<<<<< Updated upstream
+=======
+    fn invariant_held(&self) -> ContractResult<()> {
+        Self::check(
+            !self.min_asset.is_zero(),
+            "Min asset amount should be positive",
+        )
+        .and(Self::check(
+            !self.min_transaction.is_zero(),
+            "Min transaction amount should be positive",
+        ))
+        .and(self.close.no_close(RightOpenRange::up_to(Liability::TOP_MAX_BOUND)) == self.close.no_close((RightOpenRange::up_to(self.liability.max()))
+        Self::check(
+            !self.min_transaction.is_zero(),
+            "Min transaction amount should be positive",
+        ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> ContractResult<()> {
+        ContractError::broken_invariant_if::<Self>(!invariant, msg)
+    }
+
+>>>>>>> Stashed changes
     fn valid_transaction<TransactionC>(
         &self,
         amount: Coin<TransactionC>,

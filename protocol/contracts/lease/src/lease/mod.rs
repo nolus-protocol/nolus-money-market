@@ -149,7 +149,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::ops::Add;
 
     use serde::{Deserialize, Serialize};
@@ -184,13 +184,13 @@ mod tests {
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
-    pub(super) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
+    pub(crate) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
     pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
-    pub(super) type TestLpn = Lpn;
-    pub(super) type TestCurrency = PaymentC7;
-    pub(super) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
+    pub(crate) type TestLpn = Lpn;
+    pub(crate) type TestCurrency = PaymentC7;
+    pub(crate) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 
     // TODO migrate to using lpp::stub::unchecked_lpp_loan
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -270,16 +270,6 @@ mod tests {
     impl From<OracleLocalStub> for OracleRef {
         fn from(stub: OracleLocalStub) -> Self {
             stub.ref_
-        }
-    }
-
-    pub struct ProfitLocalStub {
-        pub batch: Batch,
-    }
-
-    impl From<ProfitLocalStub> for Batch {
-        fn from(stub: ProfitLocalStub) -> Self {
-            stub.batch
         }
     }
 
