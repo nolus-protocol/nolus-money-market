@@ -20,23 +20,46 @@
 
 set -eu
 
-"cargo" \
+append_lint_flags() {
+  "${@:?}" \
+    -- \
+    --allow "clippy::large_enum_variant" \
+    --deny "clippy::all" \
+    --deny "clippy::unwrap_used" \
+    --deny "clippy::unwrap_in_result" \
+    --deny "future-incompatible" \
+    --deny "nonstandard-style" \
+    --deny "refining-impl-trait" \
+    --deny "rust-2018-idioms" \
+    --deny "rust-2021-compatibility" \
+    --deny "rust-2024-compatibility" \
+    --allow "impl-trait-overcaptures" \
+    --deny "unused" \
+    --deny "warnings"
+}
+
+append_quiet_and_lints() {
+  case "${RUN_CLIPPY_QUIET-"0"}" in
+    ("0")
+      "append_lint_flags" "${@:?}"
+      ;;  
+    ("1")
+      "append_lint_flags" \
+        "${@:?}" \
+        --quiet
+      ;;
+    (*)
+      "echo" \
+        "Environment variable \"RUN_CLIPPY_QUIET\" is set to value other than \
+zero or one!" \
+        >&2
+      ;;
+  esac
+}
+
+"append_quiet_and_lints" \
+  "cargo" \
   -- \
   "clippy" \
   --all-targets \
-  --quiet \
-  "${@}" \
-  -- \
-  --allow "clippy::large_enum_variant" \
-  --deny "clippy::all" \
-  --deny "clippy::unwrap_used" \
-  --deny "clippy::unwrap_in_result" \
-  --deny "future-incompatible" \
-  --deny "nonstandard-style" \
-  --deny "refining-impl-trait" \
-  --deny "rust-2018-idioms" \
-  --deny "rust-2021-compatibility" \
-  --deny "rust-2024-compatibility" \
-  --allow "impl-trait-overcaptures" \
-  --deny "unused" \
-  --deny "warnings"
+  "${@}"
