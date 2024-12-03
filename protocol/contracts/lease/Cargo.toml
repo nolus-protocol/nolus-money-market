@@ -25,21 +25,19 @@ dex-osmosis = ["contract", "swap/dex-osmosis"]
 dex-test_impl = ["contract", "swap/dex-test_impl"]
 
 contract = [
+    "dep:access-control",
     "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "skel",
     "sdk/contract",
+    "dep:reserve",
     "dep:swap",
     "dep:versioning",
 ]
 skel = [
-    "dep:access-control",
-    "dep:lpp",
     "dep:oracle",
     "dep:oracle-platform",
     "dep:platform",
-    "dep:profit",
-    "dep:reserve",
     "dep:timealarms",
     "dep:thiserror",
 ]
