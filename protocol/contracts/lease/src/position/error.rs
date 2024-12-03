@@ -9,19 +9,19 @@ use super::CloseStrategy;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Lease] {0}")]
+    #[error("[Position] {0}")]
     Finance(#[from] FinanceError),
 
-    #[error("[Lease] The asset amount should worth at least {0}")]
+    #[error("[Position] The asset amount should worth at least {0}")]
     InsufficientAssetAmount(LpnCoinDTO),
 
-    #[error("[Lease] The transaction amount should worth at least {0}")]
+    #[error("[Position] The transaction amount should worth at least {0}")]
     InsufficientTransactionAmount(LpnCoinDTO),
 
-    #[error("[Lease] The position close amount should worth at least {0}")]
+    #[error("[Position] The position close amount should worth at least {0}")]
     PositionCloseAmountTooSmall(LpnCoinDTO),
 
-    #[error("[Lease] The position past this close should worth at least {0}")]
+    #[error("[Position] The position past this close should worth at least {0}")]
     PositionCloseAmountTooBig(LpnCoinDTO),
 
     #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger '{strategy}'!")]
