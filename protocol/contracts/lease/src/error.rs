@@ -14,7 +14,7 @@ use reserve::error::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
-use crate::position::PositionError;
+pub use crate::position::PositionError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

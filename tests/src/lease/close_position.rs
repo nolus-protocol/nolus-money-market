@@ -11,7 +11,7 @@ use lease::{
         query::StateResponse,
         ExecuteMsg,
     },
-    error::ContractError,
+    error::{ContractError, PositionError},
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -235,8 +235,8 @@ fn partial_close_min_asset() {
         .unwrap_err();
     assert_eq!(
         err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionCloseAmountTooBig(
-            min_asset_lpn.into()
+        Some(&ContractError::PositionError(
+            PositionError::PositionCloseAmountTooBig(min_asset_lpn.into())
         ))
     );
 }
@@ -259,8 +259,8 @@ fn partial_close_min_transaction() {
         .unwrap_err();
     assert_eq!(
         err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionCloseAmountTooSmall(
-            min_transaction_lpn.into()
+        Some(&ContractError::PositionError(
+            PositionError::PositionCloseAmountTooSmall(min_transaction_lpn.into())
         ))
     );
 }
