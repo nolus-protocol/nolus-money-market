@@ -247,6 +247,7 @@ jobs:
             ${{ matrix.dex-type }}
           profile: |-
             ${{ matrix.profile }}
+          RUN_CLIPPY_QUIET: "1"
           workspace: |-
             ${{ matrix.workspace }}
         name: "Run instance-level lints"
