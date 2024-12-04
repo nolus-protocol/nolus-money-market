@@ -15,6 +15,9 @@ combinations = [
 ]
 feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
+[package.metadata.cargo-udeps]
+ignore = { development = ["lpp", "profit"] }
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
