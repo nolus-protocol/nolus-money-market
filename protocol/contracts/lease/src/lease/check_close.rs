@@ -5,7 +5,7 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{position::ClosePolicyChange, LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency, Price},
     position::{CloseStrategy, Debt, Liquidation, Steadiness},
@@ -38,6 +38,20 @@ where
                     },
                     Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
                 })
+        })
+    }
+
+    pub(crate) fn change_close_policy(
+        &mut self,
+        cmd: ClosePolicyChange,
+        now: &Timestamp,
+    ) -> ContractResult<()> {
+        let due = self.loan.state(now);
+
+        self.price_of_lease_currency().and_then(|asset_in_lpns| {
+            self.position
+                .change_close_policy(cmd, &due, asset_in_lpns)
+                .map_err(Into::into)
         })
     }
 

@@ -16,6 +16,7 @@ combinations = [
 feature-groups = { testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
 [package.metadata.cargo-udeps]
+# these dev-dependencies are not used in 'skel'
 ignore = { development = ["lpp", "profit"] }
 
 [lib]
@@ -78,13 +79,15 @@ thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-timealarms = { workspace = true, features = ["testing"] }
-lpp = { workspace = true, features = ["testing"] }
-profit = { workspace = true, features = ["testing"] }
-oracle = { workspace = true, features = ["testing"] }
-oracle-platform = { workspace = true, features = ["testing"] }
-finance = { workspace = true, features = ["testing"] }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }
+lpp = { workspace = true, features = ["testing"] }
+oracle = { workspace = true, features = ["testing"] }
+oracle-platform = { workspace = true, features = ["testing"] }
+profit = { workspace = true, features = ["testing"] }
+reserve = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
+timealarms = { workspace = true, features = ["testing"] }
+

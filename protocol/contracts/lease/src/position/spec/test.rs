@@ -14,6 +14,8 @@ use crate::{
 
 use super::Spec;
 
+const MAX_DEBT: Percent = Percent::from_permille(800);
+
 type TestCurrency = PaymentC3;
 type TestLpn = Lpn;
 
@@ -56,7 +58,7 @@ where
         Percent::from_percent(73),
         Percent::from_percent(75),
         Percent::from_percent(78),
-        Percent::from_percent(80),
+        MAX_DEBT,
         Duration::from_hours(1),
     );
     Spec::new(
@@ -996,8 +998,30 @@ mod test_check_close {
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
-        position::CloseStrategy,
+        position::{CloseStrategy, PositionError},
     };
+
+    #[test]
+    fn set_higher_than_max() {
+        let spec = super::spec(40, 10);
+
+        let stop_loss_trigger = super::MAX_DEBT;
+        assert_eq!(
+            Err(PositionError::liquidation_conflict(
+                super::MAX_DEBT,
+                CloseStrategy::StopLoss(super::MAX_DEBT)
+            )),
+            spec.change_close_policy(
+                ClosePolicyChange {
+                    take_profit: None,
+                    stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
+                },
+                1000.into(),
+                &super::due(550, 0),
+                super::price(1, 2),
+            )
+        );
+    }
 
     #[test]
     fn set_reset_stop_loss() {
@@ -1010,6 +1034,21 @@ mod test_check_close {
         );
 
         let stop_loss_trigger = Percent::from_percent(46);
+        assert_eq!(
+            Err(PositionError::trigger_close(
+                Percent::from_ratio(920, 1000 * 2),
+                CloseStrategy::StopLoss(stop_loss_trigger)
+            )),
+            spec.change_close_policy(
+                ClosePolicyChange {
+                    take_profit: None,
+                    stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
+                },
+                1000.into(),
+                &super::due(920, 0),
+                super::price(1, 2),
+            )
+        );
         let spec = spec
             .change_close_policy(
                 ClosePolicyChange {
@@ -1069,6 +1108,21 @@ mod test_check_close {
         );
 
         let take_profit_trigger = Percent::from_percent(46);
+        assert_eq!(
+            Err(PositionError::trigger_close(
+                Percent::from_ratio(919, 1000 * 2),
+                CloseStrategy::TakeProfit(take_profit_trigger)
+            )),
+            spec.change_close_policy(
+                ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(take_profit_trigger)),
+                    stop_loss: None,
+                },
+                1000.into(),
+                &super::due(919, 0),
+                super::price(1, 2),
+            )
+        );
         let spec = spec
             .change_close_policy(
                 ClosePolicyChange {

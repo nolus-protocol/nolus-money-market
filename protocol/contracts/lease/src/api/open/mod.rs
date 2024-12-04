@@ -19,7 +19,8 @@ use super::LeaseAssetCurrencies;
 #[cfg(feature = "skel")]
 mod unchecked;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseContract {
@@ -33,7 +34,8 @@ pub struct NewLeaseContract {
     pub finalizer: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct NewLeaseForm {
@@ -57,7 +59,8 @@ pub struct NewLeaseForm {
     pub market_price_oracle: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 /// The value remains intact.
@@ -115,7 +118,7 @@ impl PositionSpecDTO {
     }
 }
 
-#[cfg(any(test, feature = "contract", feature = "testing"))]
+#[cfg(feature = "contract")]
 impl PositionSpecDTO {
     pub(crate) fn new_internal(
         liability: Liability,

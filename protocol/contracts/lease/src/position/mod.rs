@@ -1,7 +1,10 @@
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{coin::Coin, duration::Duration};
 
-use crate::{api::LeasePaymentCurrencies, finance::Price};
+use crate::{
+    api::{position::ClosePolicyChange, LeasePaymentCurrencies},
+    finance::Price,
+};
 
 pub use close::Strategy as CloseStrategy;
 pub use dto::{PositionDTO, WithPosition, WithPositionResult};
@@ -74,6 +77,23 @@ where
         Due: DueTrait,
     {
         self.spec.check_close(self.amount, due, asset_in_lpns)
+    }
+
+    pub fn change_close_policy<Due>(
+        &mut self,
+        cmd: ClosePolicyChange,
+        due: &Due,
+        asset_in_lpns: Price<Asset>,
+    ) -> PositionResult<()>
+    where
+        Asset: Currency,
+        Due: DueTrait,
+    {
+        self.spec
+            .change_close_policy(cmd, self.amount, due, asset_in_lpns)
+            .map(|spec| {
+                self.spec = spec;
+            })
     }
 
     /// Check if the amount can be used for repayment.

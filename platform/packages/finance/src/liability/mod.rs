@@ -50,6 +50,8 @@ pub struct Liability {
 }
 
 impl Liability {
+    const MAX_TOP_BOUND: Percent = Percent::HUNDRED;
+
     #[track_caller]
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
@@ -163,7 +165,7 @@ impl Liability {
             self.third_liq_warn < self.max,
             "Third liquidation % should be < max %",
         )?;
-        check(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
+        check(self.max <= Self::MAX_TOP_BOUND, "Max % should be <= 100%")?;
         check(
             self.recalc_time >= Duration::HOUR,
             "Recalculation cadence should be >= 1h",

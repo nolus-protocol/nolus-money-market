@@ -1,13 +1,15 @@
-use std::ops::Add;
+use std::{fmt::Debug, ops::Add};
 
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
     fraction::Fraction,
+    fractionable::Fractionable,
     liability::Liability,
     percent::Percent,
     price::{self},
+    zero::Zero,
 };
 
 use crate::{
@@ -27,7 +29,7 @@ mod dto;
 mod test;
 
 #[derive(Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Spec {
     liability: Liability,
     close: ClosePolicy,
@@ -47,6 +49,7 @@ impl Spec {
             !min_transaction.is_zero(),
             "Min transaction amount should be positive",
         );
+        debug_assert!(close.liquidation_check(liability.max()).is_ok());
         Self {
             liability,
             close,
@@ -76,8 +79,22 @@ impl Spec {
         Asset: Currency,
         Due: DueTrait,
     {
+        let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
+
         self.close
-            .change_policy(cmd, asset, Self::to_assets(due.total_due(), asset_in_lpns))
+            .change_policy(cmd)
+            .and_then(|close_policy| close_policy.liquidation_check(self.liability.max()))
+            .and_then(|close_policy| {
+                close_policy.may_trigger(asset, total_due).map_or_else(
+                    || Ok(close_policy),
+                    |strategy| {
+                        Err(PositionError::trigger_close(
+                            Self::ltv(total_due, asset),
+                            strategy,
+                        ))
+                    },
+                )
+            })
             .map(|close_policy| {
                 Self::new(
                     self.liability,
@@ -345,6 +362,14 @@ impl Spec {
         Due: DueTrait,
     {
         due.overdue_collection(self.min_transaction)
+    }
+
+    fn ltv<P>(total_due: P, lease_asset: P) -> Percent
+    where
+        P: Copy + Debug + PartialEq + Zero,
+        Percent: Fractionable<P>,
+    {
+        Percent::from_ratio(total_due, lease_asset)
     }
 
     fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Coin<Asset>
