@@ -30,8 +30,6 @@ contract = [
     "dep:enum_dispatch",
     "skel",
     "sdk/contract",
-    "dep:lpp",
-    "dep:profit",
     "dep:reserve",
     "dep:swap",
     "dep:versioning",
@@ -39,6 +37,8 @@ contract = [
 skel = [
     "dep:oracle",
     "dep:oracle-platform",
+    "dep:lpp",
+    "dep:profit",
     "dep:platform",
     "dep:timealarms",
     "dep:thiserror",
@@ -47,7 +47,10 @@ testing = [
     "currencies/testing",
     "currency/testing",
     "finance/testing",
-]
+    "dep:lpp",
+    "lpp/testing",
+    "dep:profit",
+    "profit/testing",]
 
 [dependencies]
 profit = { workspace = true, optional = true, features = ["stub"] }
