@@ -8,7 +8,10 @@ use finance::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::api::position::{ChangeCmd, ClosePolicyChange};
+use crate::api::{
+    position::{ChangeCmd, ClosePolicyChange},
+    query::opened::ClosePolicy,
+};
 
 use super::error::{Error as PositionError, Result as PositionResult};
 
@@ -132,6 +135,12 @@ impl Policy {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
         })
+    }
+}
+
+impl From<Policy> for ClosePolicy {
+    fn from(value: Policy) -> Self {
+        Self::new(value.take_profit, value.stop_loss)
     }
 }
 

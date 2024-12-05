@@ -1,3 +1,4 @@
+use opened::ClosePolicy;
 use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, percent::Percent};
@@ -38,6 +39,7 @@ pub enum StateResponse {
         overdue_collect_in: Duration,
         due_margin: LpnCoinDTO,
         due_interest: LpnCoinDTO,
+        close_policy: ClosePolicy,
         validity: Timestamp,
         in_progress: Option<opened::OngoingTrx>,
     },
@@ -68,11 +70,26 @@ pub(crate) mod opening {
 }
 
 pub(crate) mod opened {
+    use finance::percent::Percent;
     #[cfg(any(test, feature = "testing"))]
     use serde::Deserialize;
     use serde::Serialize;
 
     use crate::api::{LeaseCoin, PaymentCoin};
+
+    /// The data transport type of the configured Lease close policy
+    ///
+    /// Designed for use in query responses only!
+    #[derive(Serialize)]
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        derive(Clone, Default, PartialEq, Eq, Debug, Deserialize)
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct ClosePolicy {
+        take_profit: Option<Percent>,
+        stop_loss: Option<Percent>,
+    }
 
     #[derive(Serialize)]
     #[cfg_attr(
@@ -118,6 +135,16 @@ pub(crate) mod opened {
         Swap,
         TransferInInit,
         TransferInFinish,
+    }
+
+    #[cfg(feature = "contract")]
+    impl ClosePolicy {
+        pub fn new(tp: Option<Percent>, sl: Option<Percent>) -> Self {
+            Self {
+                take_profit: tp,
+                stop_loss: sl,
+            }
+        }
     }
 }
 

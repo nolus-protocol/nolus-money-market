@@ -107,6 +107,7 @@ where
             overdue_collect_in,
             due_margin: loan.due_margin_interest,
             due_interest: loan.due_interest,
+            close_policy: self.position.close_policy(),
             validity: now,
         }
     }
@@ -171,6 +172,10 @@ pub mod tests {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
+        api::{
+            position::{ChangeCmd, ClosePolicyChange},
+            query::opened::ClosePolicy,
+        },
         finance::{LpnCurrencies, OracleRef},
         loan::Loan,
         position::{Position, Spec as PositionSpec},
@@ -329,10 +334,20 @@ pub mod tests {
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
-        let lease = open_lease(lease_amount, loan.clone());
+        let mut lease = open_lease(lease_amount, loan.clone());
 
         let state_since_open = Duration::from_nanos(150);
         let state_at = LEASE_START.add(state_since_open);
+        let take_profit = Percent::from_percent(20);
+        lease
+            .change_close_policy(
+                ClosePolicyChange {
+                    stop_loss: None,
+                    take_profit: Some(ChangeCmd::Set(take_profit)),
+                },
+                &state_at,
+            )
+            .unwrap();
         let res = lease.state(state_at);
         let exp = State {
             amount: lease_amount,
@@ -344,6 +359,7 @@ pub mod tests {
             overdue_collect_in,
             due_margin: lpn_coin(0),
             due_interest: lpn_coin(0),
+            close_policy: ClosePolicy::new(Some(take_profit), None),
             validity: state_at,
         };
 

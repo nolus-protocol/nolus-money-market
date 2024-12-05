@@ -13,7 +13,10 @@ use finance::{
 };
 
 use crate::{
-    api::{position::ClosePolicyChange, LeasePaymentCurrencies},
+    api::{
+        position::ClosePolicyChange, query::opened::ClosePolicy as APIClosePolicy,
+        LeasePaymentCurrencies,
+    },
     finance::{LpnCoin, Price},
 };
 
@@ -66,6 +69,10 @@ impl Spec {
             min_asset,
             min_transaction,
         )
+    }
+
+    pub fn close_policy(&self) -> APIClosePolicy {
+        self.close.into()
     }
 
     pub fn change_close_policy<Asset, Due>(

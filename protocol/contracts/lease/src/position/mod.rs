@@ -2,7 +2,7 @@ use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{coin::Coin, duration::Duration};
 
 use crate::{
-    api::{position::ClosePolicyChange, LeasePaymentCurrencies},
+    api::{position::ClosePolicyChange, query::opened::ClosePolicy, LeasePaymentCurrencies},
     finance::Price,
 };
 
@@ -69,6 +69,13 @@ where
         Due: DueTrait,
     {
         self.spec.debt(self.amount, due, asset_in_lpns)
+    }
+
+    /// Export the close policy state for querying purposes
+    ///
+    /// Do not use it to implent any business logic!
+    pub fn close_policy(&self) -> ClosePolicy {
+        self.spec.close_policy()
     }
 
     /// Check if the position is subject of a full close due to trigerred close policy

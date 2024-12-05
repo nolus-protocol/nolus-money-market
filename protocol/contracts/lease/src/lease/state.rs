@@ -1,9 +1,9 @@
 use finance::{coin::Coin, duration::Duration, percent::Percent};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::finance::LpnCoin;
+use crate::{api::query::opened::ClosePolicy, finance::LpnCoin};
 
-#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Eq, PartialEq))]
 pub struct State<Asset> {
     pub amount: Coin<Asset>,
     pub interest_rate: Percent,
@@ -14,6 +14,8 @@ pub struct State<Asset> {
     pub overdue_collect_in: Duration,
     pub due_margin: LpnCoin,
     pub due_interest: LpnCoin,
+    // Intentionally not using the internal domain type close::Policy
+    pub close_policy: ClosePolicy,
     pub validity: Timestamp,
 }
 
