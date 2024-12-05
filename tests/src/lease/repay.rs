@@ -1,5 +1,6 @@
 use std::slice;
 
+use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use currency::CurrencyDef;
 use finance::{
@@ -21,7 +22,6 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing,
 };
-use swap::testing::SwapRequest;
 
 use crate::common::{
     self, cwcoin, ibc,
