@@ -170,7 +170,7 @@ where
         Self::check_close_with_init(
             &mut lease,
             receipt.close(),
-            &self.now,
+            self.now,
             &self.alarms.0,
             self.alarms.1,
         )
