@@ -118,9 +118,27 @@ impl PositionSpecDTO {
     }
 }
 
-#[cfg(feature = "contract")]
+#[cfg(feature = "skel")]
 impl PositionSpecDTO {
+    #[cfg(feature = "contract")]
     pub(crate) fn new_internal(
+        liability: Liability,
+        min_asset: LpnCoinDTO,
+        min_transaction: LpnCoinDTO,
+    ) -> Self {
+        Self::new_unchecked(liability, min_asset, min_transaction)
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn new(liability: Liability, min_asset: LpnCoinDTO, min_transaction: LpnCoinDTO) -> Self {
+        let obj = Self::new_unchecked(liability, min_asset, min_transaction);
+        obj.invariant_held()
+            .expect("PositionSpecDTO invariant to be held");
+        obj
+    }
+
+    #[cfg(any(test, feature = "testing", feature = "contract"))]
+    fn new_unchecked(
         liability: Liability,
         min_asset: LpnCoinDTO,
         min_transaction: LpnCoinDTO,
@@ -131,14 +149,6 @@ impl PositionSpecDTO {
             min_transaction,
         };
         debug_assert_eq!(Ok(()), obj.invariant_held());
-        obj
-    }
-
-    #[cfg(any(test, feature = "testing"))]
-    pub fn new(liability: Liability, min_asset: LpnCoinDTO, min_transaction: LpnCoinDTO) -> Self {
-        let obj = Self::new_internal(liability, min_asset, min_transaction);
-        obj.invariant_held()
-            .expect("PositionSpecDTO invariant to be held");
         obj
     }
 }
