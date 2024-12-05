@@ -17,7 +17,7 @@ feature-groups = { testing = { members = ["testing"], at-least-one = false, mutu
 
 [package.metadata.cargo-udeps]
 # these dev-dependencies are not used in 'skel'
-ignore = { development = ["lpp", "profit"] }
+ignore = { development = ["lpp", "profit", "reserve"] }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
