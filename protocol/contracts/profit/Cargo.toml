@@ -89,5 +89,4 @@ finance = { workspace = true }
 oracle = { workspace = true, features = ["testing"] }
 oracle-platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
-swap = { workspace = true, features = ["dex-test_impl", "testing"] }
 timealarms = { workspace = true, features = ["testing"] }
