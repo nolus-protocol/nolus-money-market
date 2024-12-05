@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
-    api::{position::PositionClose, query::StateResponse},
+    api::{
+        position::{ClosePolicyChange, PositionClose},
+        query::StateResponse,
+    },
     error::ContractResult,
 };
 
@@ -40,6 +43,16 @@ where
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.handler.repay(querier, env, info)
+    }
+
+    fn change_close_policy(
+        self,
+        change: ClosePolicyChange,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.handler.change_close_policy(change, querier, env, info)
     }
 
     fn close_position(

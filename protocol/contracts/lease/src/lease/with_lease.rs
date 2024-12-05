@@ -13,6 +13,10 @@ pub trait WithLease {
     type Output;
     type Error;
 
+    // TODO pass a TimeAlarmsRef, a ReserveRef, and a ProfitRef to avoid
+    // 1) passing them through the implementers, and
+    // 2) cloning them from the LeaseDTO
+
     fn exec<Asset, LppLoan, Oracle>(
         self,
         lease: Lease<Asset, LppLoan, Oracle>,

@@ -11,7 +11,11 @@ use sdk::{
 use swap::Impl;
 
 use crate::{
-    api::{open::NewLeaseContract, position::PositionClose, query::StateResponse},
+    api::{
+        open::NewLeaseContract,
+        position::{ClosePolicyChange, PositionClose},
+        query::StateResponse,
+    },
     contract::api::Contract,
     error::ContractResult,
 };

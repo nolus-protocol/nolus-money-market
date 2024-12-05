@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseGroup, PaymentGroup};
 use finance::coin::CoinDTO;
+use position::ClosePolicyChange;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -36,6 +37,26 @@ pub enum ExecuteMsg {
     ///
     /// The funds should be sent attached to the message
     Repay(),
+
+    /// Change the Lease automatic close policy
+    ///
+    /// The lease owner can set Stop Loss, SL, or/and TakeProfit, TP, triggers after the lease has been fully opened.
+    /// They may be set up and removed individually, or together until the lease is fully paid, fully closed, or fully liquidated.
+    /// The trigger of SL and TP is defined as LTV percent such as 0 < TP% <= current LTV% < SL% < Liquidation%.
+    /// Note that the Liquidation% is set on the Lease Open time and remains intact over the Lease Lifetime.
+    ///
+    /// A Full Close of the position occurs if:
+    /// - SL is set and current LTV% >= SL% , or
+    /// - TP is set and TP% > current LTV% .
+    ///
+    /// If the Liquidation% and SL% are surpassed simultaneously, and since the higher amount of liquidation and the stop-loss should be closed,
+    /// the protocol should take the SL event with precedence and act accordingly.
+    ///
+    /// The full position close implies that a trigger is consumed and no longer valid once fired.
+    ///
+    /// It's worth noting that since TP and SL are meant to be triggered on price changes, not past liquidations or payments,
+    /// the TP% is reset if a partial liquidation or a payment takes the position LTV below the TP%.
+    ChangeClosePolicy(ClosePolicyChange),
 
     /// Customer initiated position close
     ///

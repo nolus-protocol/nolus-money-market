@@ -8,12 +8,14 @@ use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timest
 
 use crate::{
     api::{
-        position::{FullClose, PositionClose},
+        position::{ClosePolicyChange, FullClose, PositionClose},
         query::StateResponse,
         DownpaymentCoin,
     },
     contract::{
-        cmd::{CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult},
+        cmd::{
+            ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
+        },
         state::{Handler, Response},
         Lease,
     },
@@ -165,6 +167,34 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.try_repay(querier, &env, info)
+    }
+
+    fn change_close_policy(
+        self,
+        change: ClosePolicyChange,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        access_control::check(&self.lease.lease.customer, &info.sender)
+            .map_err(Into::into)
+            .and_then(|()| {
+                let profit = self.lease.lease.loan.profit().clone();
+                let time_alarms = self.lease.lease.time_alarms.clone();
+                let reserve = self.lease.lease.reserve.clone();
+                self.lease
+                    .update(
+                        ChangeClosePolicy::new(
+                            change,
+                            &env.block.time,
+                            profit,
+                            time_alarms,
+                            reserve,
+                        ),
+                        querier,
+                    )
+                    .map(|(lease, batch)| Response::from(batch, Self::new(lease)))
+            })
     }
 
     fn close_position(

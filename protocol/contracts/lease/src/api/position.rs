@@ -25,16 +25,16 @@ pub struct PartialClose {
     pub amount: LeaseCoin,
 }
 
-#[derive(Deserialize, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq,))]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug,))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ChangeCmd {
     Reset,
     Set(Percent),
 }
 
-#[derive(Deserialize, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq,))]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug,))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ClosePolicyChange {
     pub stop_loss: Option<ChangeCmd>,

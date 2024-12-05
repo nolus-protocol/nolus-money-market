@@ -119,6 +119,9 @@ fn process_execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Repay() => state.repay(querier, env, info),
+        ExecuteMsg::ChangeClosePolicy(change) => {
+            state.change_close_policy(change, querier, env, info)
+        }
         ExecuteMsg::ClosePosition(spec) => state.close_position(spec, querier, env, info),
         ExecuteMsg::Close() => state.close(querier, env, info),
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(querier, env, info),

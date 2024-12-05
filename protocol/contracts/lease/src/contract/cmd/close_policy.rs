@@ -1,3 +1,4 @@
+use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, MemberOf};
@@ -9,10 +10,11 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseAssetCurrencies, LeaseCoin, LeasePaymentCurrencies},
+    api::{position::ClosePolicyChange, LeaseAssetCurrencies, LeaseCoin, LeasePaymentCurrencies},
+    contract::SplitDTOOut,
     error::{ContractError, ContractResult},
-    finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::{with_lease::WithLease, CloseStatus, Lease as LeaseDO},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
+    lease::{with_lease::WithLease, CloseStatus, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
     position::{Cause, CloseStrategy, Liquidation},
 };
 
@@ -33,10 +35,19 @@ where
         .and_then(|status| CloseStatusDTO::try_from_do(status, when, time_alarms, price_alarms))
 }
 
-pub(crate) struct Cmd<'a> {
+pub(crate) struct CheckCmd<'a> {
     now: &'a Timestamp,
     time_alarms: &'a TimeAlarmsRef,
     price_alarms: &'a OracleRef,
+}
+
+pub(crate) struct ChangeCmd<'a> {
+    change: ClosePolicyChange,
+    now: &'a Timestamp,
+    // LeaseDTO attributes
+    profit: ProfitRef,
+    reserve: ReserveRef,
+    time_alarms: TimeAlarmsRef,
 }
 
 pub(crate) enum CloseStatusDTO {
@@ -111,7 +122,7 @@ where
     }
 }
 
-impl<'a> Cmd<'a> {
+impl<'a> CheckCmd<'a> {
     pub fn new(
         now: &'a Timestamp,
         time_alarms: &'a TimeAlarmsRef,
@@ -125,7 +136,7 @@ impl<'a> Cmd<'a> {
     }
 }
 
-impl WithLease for Cmd<'_> {
+impl WithLease for CheckCmd<'_> {
     type Output = CloseStatusDTO;
 
     type Error = ContractError;
@@ -141,5 +152,60 @@ impl WithLease for Cmd<'_> {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         check(&lease, self.now, self.time_alarms, self.price_alarms)
+    }
+}
+
+impl<'a> ChangeCmd<'a> {
+    pub fn new(
+        change: ClosePolicyChange,
+        now: &'a Timestamp,
+        // LeaseDTO attributes follow
+        profit: ProfitRef,
+        time_alarms: TimeAlarmsRef,
+        reserve: ReserveRef,
+    ) -> Self {
+        Self {
+            change,
+            now,
+            profit,
+            reserve,
+            time_alarms,
+        }
+    }
+}
+
+impl WithLease for ChangeCmd<'_> {
+    type Output = IntoDTOResult;
+
+    type Error = ContractError;
+
+    fn exec<Asset, Loan, Oracle>(
+        self,
+        mut lease: LeaseDO<Asset, Loan, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
+    where
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+        Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
+            + Into<OracleRef>,
+    {
+        lease
+            .change_close_policy(self.change, self.now)
+            .and_then(|()| {
+                lease
+                    .try_into_dto(self.profit, self.time_alarms, self.reserve)
+                    .inspect(|res| {
+                        debug_assert!(res.batch.is_empty());
+                    })
+            })
+    }
+}
+
+impl SplitDTOOut for IntoDTOResult {
+    type Other = Batch;
+
+    fn split_into(self) -> (LeaseDTO, Self::Other) {
+        (self.lease, self.batch)
     }
 }
