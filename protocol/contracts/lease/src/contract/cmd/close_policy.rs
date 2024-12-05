@@ -16,7 +16,7 @@ use crate::{
     position::{Cause, CloseStrategy, Liquidation},
 };
 
-pub(crate) fn check_close<Asset, Lpp, Oracle>(
+pub(crate) fn check<Asset, Lpp, Oracle>(
     lease: &LeaseDO<Asset, Lpp, Oracle>,
     when: &Timestamp,
     time_alarms: &TimeAlarmsRef,
@@ -29,7 +29,7 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
-        .check_close(when)
+        .check_close_policy(when)
         .and_then(|status| CloseStatusDTO::try_from_do(status, when, time_alarms, price_alarms))
 }
 
@@ -140,6 +140,6 @@ impl WithLease for Cmd<'_> {
         Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
-        check_close(&lease, self.now, self.time_alarms, self.price_alarms)
+        check(&lease, self.now, self.time_alarms, self.price_alarms)
     }
 }

@@ -11,6 +11,11 @@ use crate::{
 use super::State;
 
 pub(crate) type Response = StateMachineResponse<State>;
+
+/// The Lease State Machine API
+///
+/// Most of the methods provide a default, `ContractError::UnsupportedOperation`, implementation
+/// since only a subset of the operations are supported by each Lease state.
 #[enum_dispatch]
 pub(crate) trait Handler
 where

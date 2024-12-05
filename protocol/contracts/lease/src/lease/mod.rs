@@ -15,11 +15,11 @@ use crate::{
 };
 
 pub(super) use self::{
-    check_close::CloseStatus, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
+    close_policy::CloseStatus, dto::LeaseDTO, paid::Lease as LeasePaid, state::State,
 };
 
-mod check_close;
 mod close;
+mod close_policy;
 mod dto;
 mod due;
 mod paid;

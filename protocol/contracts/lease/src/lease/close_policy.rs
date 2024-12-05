@@ -23,7 +23,7 @@ where
     /// Check if the position requires
     /// - partial or full close due to a bad dept, or
     /// - full close due to a Stop-Loss or Take-Profit trigger.
-    pub(crate) fn check_close(&self, now: &Timestamp) -> ContractResult<CloseStatus<Asset>> {
+    pub(crate) fn check_close_policy(&self, now: &Timestamp) -> ContractResult<CloseStatus<Asset>> {
         let due = self.loan.state(now);
 
         self.price_of_lease_currency().map(|asset_in_lpns| {
