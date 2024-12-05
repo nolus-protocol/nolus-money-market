@@ -1,4 +1,3 @@
-use opened::ClosePolicy;
 use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, percent::Percent};
@@ -10,6 +9,8 @@ use sdk::{
 use crate::finance::LpnCoinDTO;
 
 use super::{DownpaymentCoin, LeaseCoin};
+
+pub use opened::ClosePolicy;
 
 #[derive(Deserialize, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]

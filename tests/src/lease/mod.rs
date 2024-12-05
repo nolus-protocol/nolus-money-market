@@ -10,7 +10,7 @@ use finance::{
     percent::Percent,
     price::{self, Price},
 };
-use lease::api::query::{StateQuery, StateResponse};
+use lease::api::query::{ClosePolicy, StateQuery, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
@@ -425,6 +425,7 @@ where
             due,
         )
         .into(),
+        close_policy: ClosePolicy::default(),
         validity: block_time(test_case),
         in_progress: None,
     }

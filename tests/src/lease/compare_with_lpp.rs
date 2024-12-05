@@ -1,4 +1,4 @@
-use ::lease::api::query::StateResponse;
+use ::lease::api::query::{ClosePolicy, StateResponse};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -40,6 +40,7 @@ fn manual_calculation() {
         overdue_collect_in: Duration::default(),
         due_margin: Lpnoin::new(13_737_769_080).into(),
         due_interest: Lpnoin::new(32_054_794_520).into(),
+        close_policy: ClosePolicy::default(),
         validity: super::block_time(&test_case),
         in_progress: None,
     };

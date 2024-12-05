@@ -1,7 +1,5 @@
 use std::slice;
 
-use ::lease::api::{query::StateResponse, ExecuteMsg};
-use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use currency::CurrencyDef;
 use finance::{
@@ -13,12 +11,17 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
+use lease::api::{
+    query::{ClosePolicy, StateResponse},
+    ExecuteMsg,
+};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     cw_multi_test::AppResponse,
     testing,
 };
+use swap::testing::SwapRequest;
 
 use crate::common::{
     self, cwcoin, ibc,
@@ -180,6 +183,7 @@ fn full_repay_with_max_ltd() {
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
         due_margin: Lpnoin::ZERO.into(),
         due_interest: Lpnoin::ZERO.into(),
+        close_policy: ClosePolicy::default(),
         validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
