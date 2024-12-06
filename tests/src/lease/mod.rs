@@ -10,10 +10,14 @@ use finance::{
     percent::Percent,
     price::{self, Price},
 };
-use lease::api::query::{ClosePolicy, StateQuery, StateResponse};
+use lease::api::{
+    query::{ClosePolicy, StateQuery, StateResponse},
+    ExecuteMsg,
+};
 use leaser::msg::QuoteResponse;
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
+    cw_multi_test::AppResponse,
     testing,
 };
 
@@ -21,7 +25,11 @@ use crate::common::{
     self, cwcoin, cwcoin_dex,
     leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
     protocols::Registry,
-    test_case::{builder::Builder as TestCaseBuilder, response::RemoteChain, TestCase},
+    test_case::{
+        builder::Builder as TestCaseBuilder,
+        response::{RemoteChain, ResponseWithInterChainMsgs},
+        TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -75,6 +83,25 @@ pub(super) fn feed_price<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
 
     let payment_price = price_lpn_of::<PaymentCurrency>();
     common::oracle::feed_price_pair(test_case, testing::user(ADMIN), payment_price);
+}
+
+pub(super) fn deliver_new_price(
+    test_case: &mut LeaseTestCase,
+    lease: Addr,
+    base: LeaseCoin,
+    quote: LpnCoin,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+    common::oracle::feed_price(test_case, testing::user(ADMIN), base, quote);
+
+    test_case
+        .app
+        .execute(
+            test_case.address_book.oracle().clone(),
+            lease,
+            &ExecuteMsg::PriceAlarm(),
+            &[],
+        )
+        .unwrap()
 }
 
 pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase

@@ -1,7 +1,7 @@
 use currencies::{Lpns, PaymentGroup};
 use currency::CurrencyDef as _;
 use finance::{coin::Amount, percent::Percent};
-use lease::api::{query::StateResponse, ExecuteMsg};
+use lease::api::query::StateResponse;
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
     cosmwasm_std::{Addr, Event},
@@ -15,9 +15,9 @@ use crate::{
         self, cwcoin, ibc,
         leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{response::ResponseWithInterChainMsgs, TestCase},
-        CwCoin, ADMIN, USER,
+        CwCoin, USER,
     },
-    lease::{self as lease_mod, LeaseTestCase, LpnCurrency},
+    lease::{self as lease_mod, LpnCurrency},
 };
 
 use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
@@ -88,7 +88,7 @@ fn full_liquidation() {
     );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = deliver_new_price(
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = lease_mod::deliver_new_price(
         &mut test_case,
         lease_addr.clone(),
         (lease_amount - 2).into(),
@@ -176,7 +176,7 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
     let lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let response: AppResponse =
-        deliver_new_price(&mut test_case, lease, base, quote).unwrap_response();
+        lease_mod::deliver_new_price(&mut test_case, lease, base, quote).unwrap_response();
 
     let event = response
         .events
@@ -215,23 +215,4 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
         .expect("Lease Asset attribute not present!");
 
     assert_eq!(&attribute.value, LeaseCurrency::ticker());
-}
-
-fn deliver_new_price(
-    test_case: &mut LeaseTestCase,
-    lease: Addr,
-    base: LeaseCoin,
-    quote: LpnCoin,
-) -> ResponseWithInterChainMsgs<'_, AppResponse> {
-    common::oracle::feed_price(test_case, testing::user(ADMIN), base, quote);
-
-    test_case
-        .app
-        .execute(
-            test_case.address_book.oracle().clone(),
-            lease,
-            &ExecuteMsg::PriceAlarm(),
-            &[],
-        )
-        .unwrap()
 }
