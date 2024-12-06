@@ -3,7 +3,8 @@ use ::lease::{
         position::ChangeCmd,
         query::{ClosePolicy, StateResponse},
     },
-    error::{CloseStrategy, ContractError, PositionError},
+    error::{ContractError, PositionError},
+    CloseStrategy,
 };
 use finance::{coin::Coin, percent::Percent};
 use sdk::{cosmwasm_std::Addr, testing};

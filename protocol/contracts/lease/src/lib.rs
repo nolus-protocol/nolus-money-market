@@ -1,3 +1,6 @@
+#[cfg(feature = "contract")]
+pub use crate::position::CloseStrategy;
+
 pub mod api;
 #[cfg(feature = "contract")]
 pub mod contract;
