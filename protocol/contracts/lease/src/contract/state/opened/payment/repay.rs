@@ -4,7 +4,6 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        position::{FullClose, PositionClose},
         query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin,
     },
@@ -118,12 +117,7 @@ where
                 CloseStrategy::TakeProfit(_tp) => {
                     unimplemented!("a Take Profit past payment should have been ignored")
                 }
-                CloseStrategy::StopLoss(_sl) => customer_close::start(
-                    PositionClose::FullClose(FullClose {}),
-                    lease,
-                    env,
-                    querier,
-                ),
+                _ => customer_close::auto_start(strategy, lease, env, querier),
             },
         }
     }

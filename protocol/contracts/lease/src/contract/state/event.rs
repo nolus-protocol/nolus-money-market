@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::{
     api::LeaseCoin, contract::cmd::RepayEmitter, event::Type, loan::RepayReceipt, position::Cause,
+    CloseStrategy,
 };
 
 pub(crate) struct LiquidationEmitter<'liq, 'env> {
@@ -57,6 +58,17 @@ pub(super) fn emit_payment_int(
         .emit_coin_amount("due-loan-interest", receipt.due_interest_paid())
         .emit_coin_amount("principal", receipt.principal_paid())
         .emit_coin_amount("change", receipt.change())
+}
+
+pub(super) fn emit_auto_close(strategy: CloseStrategy, env: &Env, lease: &Addr) -> Emitter {
+    let emitter = Emitter::of_type(Type::AutoClosePosition)
+        .emit_tx_info(env)
+        .emit("to", lease);
+
+    match strategy {
+        CloseStrategy::TakeProfit(tp) => emitter.emit_percent_amount("take-profit", tp),
+        CloseStrategy::StopLoss(sl) => emitter.emit_percent_amount("stop-loss", sl),
+    }
 }
 
 fn emit_liquidation_cause(emitter: Emitter, cause: &Cause) -> Emitter {

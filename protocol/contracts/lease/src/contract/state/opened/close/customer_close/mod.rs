@@ -2,9 +2,14 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::position::PositionClose,
-    contract::{cmd::ValidateClosePosition, state::Response, Lease},
+    api::position::{FullClose, PositionClose},
+    contract::{
+        cmd::ValidateClosePosition,
+        state::{event, Response},
+        Lease,
+    },
     error::ContractResult,
+    position::CloseStrategy,
 };
 
 use super::ClosePositionTask;
@@ -28,4 +33,14 @@ pub(in super::super) fn start(
             spec.start(lease, MessageResponse::default(), env, querier)
         }
     }
+}
+
+pub(in super::super) fn auto_start(
+    strategy: CloseStrategy,
+    lease: Lease,
+    env: &Env,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<Response> {
+    let events = event::emit_auto_close(strategy, env, &lease.lease.addr);
+    FullClose {}.start(lease, events.into(), env, querier)
 }

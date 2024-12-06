@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timest
 
 use crate::{
     api::{
-        position::{ClosePolicyChange, FullClose, PositionClose},
+        position::{ClosePolicyChange, PositionClose},
         query::StateResponse,
         DownpaymentCoin,
     },
@@ -126,12 +126,9 @@ impl Active {
                 env,
                 querier,
             ),
-            CloseStatusDTO::CloseAsked(_strategy) => customer_close::start(
-                PositionClose::FullClose(FullClose {}),
-                self.lease,
-                env,
-                querier,
-            ),
+            CloseStatusDTO::CloseAsked(strategy) => {
+                customer_close::auto_start(strategy, self.lease, env, querier)
+            }
         }
     }
 

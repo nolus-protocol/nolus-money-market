@@ -11,6 +11,7 @@ pub enum Type {
     LiquidationSwap,
     Liquidation,
     ClosePosition,
+    AutoClosePosition,
 }
 
 impl Type {
@@ -29,6 +30,7 @@ impl Type {
             Self::LiquidationSwap => "ls-liquidation-swap",
             Self::Liquidation => "ls-liquidation",
             Self::ClosePosition => "ls-close-position",
+            Self::AutoClosePosition => "ls-auto-close-position",
         }
     }
 }
