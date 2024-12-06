@@ -1,17 +1,15 @@
 use ::lease::{
     api::{
-        position::{ChangeCmd, ClosePolicyChange},
+        position::ChangeCmd,
         query::{ClosePolicy, StateResponse},
-        ExecuteMsg,
     },
     error::{CloseStrategy, ContractError, PositionError},
 };
-use anyhow::Error;
 use finance::{coin::Coin, percent::Percent};
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
+use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::{
-    common::{oracle, test_case::response::ResponseWithInterChainMsgs, ADMIN, USER},
+    common::{oracle, ADMIN},
     lease::{
         self, LeaseCurrency, LeaseTestCase, LeaserInstantiator, LpnCurrency, PaymentCurrency,
         DOWNPAYMENT,
@@ -22,7 +20,7 @@ use crate::{
 fn by_another_user() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
-    change_unauthorized(&mut test_case, lease.clone());
+    super::change_unauthorized(&mut test_case, lease.clone());
 }
 
 #[test]
@@ -30,7 +28,7 @@ fn tp_zero() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    let err = change_err(
+    let err = super::change_err(
         &mut test_case,
         lease,
         Some(ChangeCmd::Set(Percent::ZERO)),
@@ -50,7 +48,7 @@ fn sl_zero() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    let err = change_err(
+    let err = super::change_err(
         &mut test_case,
         lease,
         Some(ChangeCmd::Reset),
@@ -72,7 +70,7 @@ fn tp_trigger() {
 
     let init_ltv = LeaserInstantiator::INITIAL_LTV;
     let tp_new = init_ltv + Percent::from_permille(1);
-    let err = change_err(
+    let err = super::change_err(
         &mut test_case,
         lease,
         Some(ChangeCmd::Set(tp_new)),
@@ -96,7 +94,7 @@ fn sl_trigger() {
 
     let init_ltv = LeaserInstantiator::INITIAL_LTV;
     let sl_new = init_ltv;
-    let err = change_err(
+    let err = super::change_err(
         &mut test_case,
         lease,
         Some(ChangeCmd::Reset),
@@ -120,7 +118,7 @@ fn liquidation_conflict() {
 
     let max_ltv = LeaserInstantiator::MAX_LTV;
     let sl_new = max_ltv;
-    let err = change_err(
+    let err = super::change_err(
         &mut test_case,
         lease.clone(),
         Some(ChangeCmd::Set(sl_new - Percent::from_permille(1))),
@@ -138,7 +136,7 @@ fn liquidation_conflict() {
     assert_eq!(&max_ltv, top_bound);
 
     assert!(matches!(
-        change_err(
+        super::change_err(
             &mut test_case,
             lease,
             Some(ChangeCmd::Set(sl_new)),
@@ -162,7 +160,7 @@ fn tp_set() {
     assert_eq!(ClosePolicy::default(), query_policy(&test_case, &lease));
 
     let tp = Percent::from_percent(28);
-    change_ok(
+    super::change_ok(
         &mut test_case,
         lease.clone(),
         Some(ChangeCmd::Set(tp)),
@@ -187,76 +185,4 @@ fn query_policy(test_case: &LeaseTestCase, lease: &Addr) -> ClosePolicy {
         unreachable!()
     };
     close_policy
-}
-
-fn change_ok(
-    test_case: &mut LeaseTestCase,
-    lease: Addr,
-    take_profit: Option<ChangeCmd>,
-    stop_loss: Option<ChangeCmd>,
-) {
-    send_change(
-        test_case,
-        USER,
-        lease,
-        ClosePolicyChange {
-            stop_loss,
-            take_profit,
-        },
-    )
-    .unwrap()
-    .ignore_response()
-    .unwrap_response()
-}
-
-fn change_err(
-    test_case: &mut LeaseTestCase,
-    lease: Addr,
-    take_profit: Option<ChangeCmd>,
-    stop_loss: Option<ChangeCmd>,
-) -> Error {
-    send_change(
-        test_case,
-        USER,
-        lease,
-        ClosePolicyChange {
-            stop_loss,
-            take_profit,
-        },
-    )
-    .unwrap_err()
-}
-
-fn change_unauthorized(test_case: &mut LeaseTestCase, lease: Addr) {
-    use access_control::error::Error;
-
-    let err = send_change(
-        test_case,
-        ADMIN,
-        lease,
-        ClosePolicyChange {
-            stop_loss: None,
-            take_profit: Some(ChangeCmd::Reset),
-        },
-    )
-    .unwrap_err();
-
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::Unauthorized(Error::Unauthorized {}))
-    );
-}
-
-fn send_change<'r>(
-    test_case: &'r mut LeaseTestCase,
-    sender: &str,
-    lease: Addr,
-    change: ClosePolicyChange,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>> {
-    test_case.app.execute(
-        testing::user(sender),
-        lease,
-        &ExecuteMsg::ChangeClosePolicy(change),
-        &[],
-    )
 }
