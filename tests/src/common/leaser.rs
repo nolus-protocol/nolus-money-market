@@ -27,19 +27,21 @@ impl Instantiator {
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
 
+    pub const INITIAL_LTV: Percent = Percent::from_permille(650);
     pub const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
     pub const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
+    pub const MAX_LTV: Percent = Percent::from_permille(800);
     pub const RECALC_TIME: Duration = Duration::from_hours(1);
 
     pub fn liability() -> Liability {
         Liability::new(
-            Percent::from_percent(65),
+            Self::INITIAL_LTV,
             Percent::from_percent(70),
             Self::FIRST_LIQ_WARN,
             Self::SECOND_LIQ_WARN,
             Self::THIRD_LIQ_WARN,
-            Percent::from_percent(80),
+            Self::MAX_LTV,
             Self::RECALC_TIME,
         )
     }
