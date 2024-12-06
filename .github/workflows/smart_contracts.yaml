@@ -34,7 +34,7 @@ defaults:
 env:
   CARGO_TERM_COLOR: "always"
   RELEASE_VERSION: "ci"
-  UPLOAD_ARTIFACTS: |-
+  upload-artifacts: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 jobs:
