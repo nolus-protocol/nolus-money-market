@@ -46,8 +46,8 @@ fn open_lease(test_case: &mut LeaseTestCase, tp: Option<Percent>, sl: Option<Per
     super::change_ok(
         test_case,
         lease.clone(),
-        tp.map(|p| ChangeCmd::Set(p)),
-        sl.map(|p| ChangeCmd::Set(p)),
+        tp.map(ChangeCmd::Set),
+        sl.map(ChangeCmd::Set),
     );
     lease
 }
