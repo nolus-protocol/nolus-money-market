@@ -5,7 +5,10 @@ use finance::{
     coin::{Amount, Coin},
     percent::Percent,
 };
-use sdk::cosmwasm_std::Addr;
+use sdk::{
+    cosmwasm_std::{Addr, Event},
+    cw_multi_test::AppResponse,
+};
 
 use crate::{
     common::swap,
@@ -25,7 +28,8 @@ fn trigger_tp() {
     let lease = open_lease(&mut test_case, Some(tp), None);
 
     // LeaseC/LpnC = 0.999999
-    trigger_close(test_case, lease, 999999, 1000000);
+    let resp = trigger_close(test_case, lease.clone(), 999999, 1000000);
+    assert_events(&resp, &lease, "take-profit-ltv", tp);
 }
 
 #[test]
@@ -36,7 +40,8 @@ fn trigger_sl() {
     let lease = open_lease(&mut test_case, None, Some(sl));
 
     // LeaseC/LpnC = 1.01
-    trigger_close(test_case, lease, 101, 100);
+    let resp = trigger_close(test_case, lease.clone(), 101, 100);
+    assert_events(&resp, &lease, "stop-loss-ltv", sl);
 }
 
 fn open_lease(test_case: &mut LeaseTestCase, tp: Option<Percent>, sl: Option<Percent>) -> Addr {
@@ -52,14 +57,18 @@ fn open_lease(test_case: &mut LeaseTestCase, tp: Option<Percent>, sl: Option<Per
     lease
 }
 
-fn trigger_close(mut test_case: LeaseTestCase, lease: Addr, base: Amount, quote: Amount) {
+fn trigger_close(
+    mut test_case: LeaseTestCase,
+    lease: Addr,
+    base: Amount,
+    quote: Amount,
+) -> AppResponse {
     let mut response = lease::deliver_new_price(
         &mut test_case,
-        lease,
+        lease.clone(),
         Coin::<LeaseCurrency>::from(base),
         Coin::<LpnCurrency>::from(quote),
-    )
-    .ignore_response();
+    );
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
         &mut response,
@@ -67,4 +76,15 @@ fn trigger_close(mut test_case: LeaseTestCase, lease: Addr, base: Amount, quote:
         TestCase::LEASE_ICA_ID,
     );
     assert_eq!(1, requests.len());
+
+    response.unwrap_response()
+}
+
+fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_ltv: Percent) {
+    platform::tests::assert_event(
+        &resp.events,
+        &Event::new("wasm-ls-auto-close-position")
+            .add_attribute("to", lease)
+            .add_attribute(exp_strategy_key, exp_ltv.units().to_string()),
+    );
 }

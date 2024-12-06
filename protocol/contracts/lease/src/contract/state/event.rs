@@ -66,8 +66,8 @@ pub(super) fn emit_auto_close(strategy: CloseStrategy, env: &Env, lease: &Addr) 
         .emit("to", lease);
 
     match strategy {
-        CloseStrategy::TakeProfit(tp) => emitter.emit_percent_amount("take-profit", tp),
-        CloseStrategy::StopLoss(sl) => emitter.emit_percent_amount("stop-loss", sl),
+        CloseStrategy::TakeProfit(tp) => emitter.emit_percent_amount("take-profit-ltv", tp),
+        CloseStrategy::StopLoss(sl) => emitter.emit_percent_amount("stop-loss-ltv", sl),
     }
 }
 

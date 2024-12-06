@@ -46,16 +46,16 @@ where
     }
 }
 
-pub(crate) fn expect_swap(
-    response: &mut ResponseWithInterChainMsgs<'_, ()>,
+pub(crate) fn expect_swap<T>(
+    response: &mut ResponseWithInterChainMsgs<'_, T>,
     connection_id: &str,
     ica_id: &str,
 ) -> Vec<SwapRequest<PaymentGroup, PaymentGroup>> {
-    expect_swap_with::<PaymentGroup, PaymentGroup>(response, connection_id, ica_id)
+    expect_swap_with::<T, PaymentGroup, PaymentGroup>(response, connection_id, ica_id)
 }
 
-pub(crate) fn expect_swap_with<GIn, GSwap>(
-    response: &mut ResponseWithInterChainMsgs<'_, ()>,
+pub(crate) fn expect_swap_with<T, GIn, GSwap>(
+    response: &mut ResponseWithInterChainMsgs<'_, T>,
     connection_id: &str,
     ica_id: &str,
 ) -> Vec<SwapRequest<GIn, GSwap>>
