@@ -83,8 +83,8 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
 
     pub const DEFAULT_LPP_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
-    pub fn ica_addr(local_addr: &str, id: &str) -> Addr {
-        testing::user(&format!("{local}-ica{id}", local = local_addr, id = id))
+    pub fn ica_addr(local: &Addr, id: &str) -> Addr {
+        testing::user(&format!("{local}-ica{id}"))
     }
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {

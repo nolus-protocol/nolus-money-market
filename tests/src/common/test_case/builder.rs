@@ -165,8 +165,7 @@ where
 
         test_case.app.update_block(next_block);
 
-        let profit_ica_addr: Addr =
-            TestCase::ica_addr(profit_addr.as_str(), TestCase::PROFIT_ICA_ID);
+        let profit_ica_addr: Addr = TestCase::ica_addr(&profit_addr, TestCase::PROFIT_ICA_ID);
 
         Builder {
             test_case: TestCase {
@@ -199,7 +198,7 @@ where
         test_case: &mut TestCase<ProtocolsRegistry, Addr, (), Reserve, Leaser, Lpp, Addr, Addr>,
         profit_addr: Addr,
     ) {
-        let ica_addr: Addr = TestCase::ica_addr(profit_addr.as_str(), TestCase::PROFIT_ICA_ID);
+        let ica_addr: Addr = TestCase::ica_addr(&profit_addr, TestCase::PROFIT_ICA_ID);
 
         test_case
             .app

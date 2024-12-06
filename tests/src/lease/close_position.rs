@@ -68,7 +68,7 @@ fn full_close() {
         exp_change,
         LeaseCoin::ZERO,
     );
-    let state = super::state_query(&test_case, lease.as_str());
+    let state = super::state_query(&test_case, &lease);
     assert_eq!(StateResponse::Closed(), state);
 
     assert_eq!(
@@ -112,7 +112,7 @@ fn partial_close_loan_not_closed() {
         exp_change,
         lease_amount - close_amount,
     );
-    let state = super::state_query(&test_case, lease.as_str());
+    let state = super::state_query(&test_case, &lease);
     assert_eq!(
         super::expected_open_state(
             &test_case,
@@ -163,7 +163,7 @@ fn partial_close_loan_closed() {
         exp_change,
         lease_amount - close_amount,
     );
-    let state = super::state_query(&test_case, lease.as_str());
+    let state = super::state_query(&test_case, &lease);
     assert_eq!(
         StateResponse::Paid {
             amount: (lease_amount - close_amount).into(),
@@ -298,7 +298,7 @@ fn do_close(
     let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
         &mut test_case.app,
         lease_addr.clone(),
-        TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID),
+        TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID),
         requests.into_iter(),
         |amount: Amount, _, _| {
             assert_eq!(amount, close_amount.into());
@@ -318,7 +318,7 @@ fn do_close(
 
     let response_transfer_in: AppResponse = ibc::do_transfer(
         &mut test_case.app,
-        TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID),
+        TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID),
         lease_addr.clone(),
         true,
         &transfer_amount,
@@ -353,10 +353,7 @@ fn do_close(
             test_case
                 .app
                 .query()
-                .query_all_balances(TestCase::ica_addr(
-                    lease_addr.as_str(),
-                    TestCase::LEASE_ICA_ID
-                ))
+                .query_all_balances(TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID))
                 .unwrap()
                 .as_slice(),
             &[to_cosmwasm_on_dex(exp_lease_amount_after)],

@@ -336,12 +336,12 @@ pub(super) fn state_query<
         Oracle,
         TimeAlarms,
     >,
-    contract_addr: &str,
+    lease: &Addr,
 ) -> StateResponse {
     test_case
         .app
         .query()
-        .query_wasm_smart(contract_addr, &StateQuery {})
+        .query_wasm_smart(lease, &StateQuery {})
         .unwrap()
 }
 

@@ -18,7 +18,7 @@ fn open_downpayment_lease_currency() {
     let downpayment = LeaseCoin::new(10_000);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease.clone().into_string());
+    let query_result = super::state_query(&test_case, &lease);
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(expected_result, query_result);
@@ -32,7 +32,7 @@ fn open_downpayment_different_than_lease_currency() {
     let downpayment = DOWNPAYMENT;
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease.clone().into_string());
+    let query_result = super::state_query(&test_case, &lease);
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);

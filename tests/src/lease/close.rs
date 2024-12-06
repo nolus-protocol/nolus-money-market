@@ -35,7 +35,7 @@ fn state_closed() {
 
     close(&mut test_case, lease_addr.clone(), lease_amount);
 
-    let query_result: StateResponse = super::state_query(&test_case, lease_addr.as_str());
+    let query_result: StateResponse = super::state_query(&test_case, &lease_addr);
     let expected_result: StateResponse = StateResponse::Closed();
 
     assert_eq!(query_result, expected_result);
@@ -67,7 +67,7 @@ fn close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, Time
     lease_addr: Addr,
     expected_funds: LeaseCoin,
 ) -> AppResponse {
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_close(test_case, lease_addr.clone());

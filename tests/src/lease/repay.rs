@@ -53,7 +53,7 @@ fn partial_repay() {
 
     repay(&mut test_case, lease_addr.clone(), partial_payment);
 
-    let query_result = super::state_query(&test_case, lease_addr.as_str());
+    let query_result = super::state_query(&test_case, &lease_addr);
 
     assert_eq!(query_result, expected_result);
 }
@@ -69,7 +69,7 @@ fn partial_repay_after_time() {
         LeaserInstantiator::REPAYMENT_PERIOD.nanos() >> 1,
     ));
 
-    let query_result = super::state_query(&test_case, lease_address.as_ref());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     let StateResponse::Opened {
         overdue_margin,
@@ -99,7 +99,7 @@ fn partial_repay_after_time() {
         ),
     );
 
-    let query_result = super::state_query(&test_case, lease_address.as_str());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     if let StateResponse::Opened {
         overdue_margin,
@@ -156,7 +156,7 @@ fn full_repay() {
         amount: LeaseCoin::into(expected_amount),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, lease_address.as_str());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     assert_eq!(query_result, expected_result);
 }
@@ -187,7 +187,7 @@ fn full_repay_with_max_ltd() {
         validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, lease_address.as_str());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     assert_eq!(query_result, expected_result);
 
@@ -204,7 +204,7 @@ fn full_repay_with_max_ltd() {
         amount: LeaseCoin::into(expected_amount),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, lease_address.as_str());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     assert_eq!(query_result, expected_result);
 }
@@ -224,7 +224,7 @@ fn full_repay_with_excess() {
 
     repay(&mut test_case, lease_address.clone(), payment);
 
-    let query_result = super::state_query(&test_case, lease_address.as_str());
+    let query_result = super::state_query(&test_case, &lease_address);
 
     assert_eq!(
         test_case
@@ -239,10 +239,7 @@ fn full_repay_with_excess() {
         test_case
             .app
             .query()
-            .query_all_balances(TestCase::ica_addr(
-                lease_address.as_str(),
-                TestCase::LEASE_ICA_ID
-            ))
+            .query_all_balances(TestCase::ica_addr(&lease_address, TestCase::LEASE_ICA_ID))
             .unwrap(),
         &[to_cosmwasm_on_dex(price::total(
             price::total(downpayment + borrowed, price_lpn_of()),
@@ -304,7 +301,7 @@ where
 
     let swap_out_lpn: LpnCoin = price::total(payment, price_lpn_of());
 
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = swap::do_swap(
         &mut test_case.app,
@@ -396,7 +393,7 @@ where
         .unwrap()
         .ignore_response();
 
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     let transfer_amount: CwCoin = ibc::expect_transfer(
         &mut response,

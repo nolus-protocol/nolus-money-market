@@ -77,7 +77,7 @@ fn full_liquidation() {
 
     let reserve: Addr = test_case.address_book.reserve().clone();
 
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     let lease_amount: Amount = 2857142857142;
     let borrowed_amount: Amount = 1857142857142;
@@ -159,7 +159,7 @@ fn full_liquidation() {
         &[],
     );
 
-    let state = lease_mod::state_query(&test_case, lease_addr.as_str());
+    let state = lease_mod::state_query(&test_case, &lease_addr);
     assert!(
         matches!(state, StateResponse::Liquidated()),
         "should have been in Liquidated state"

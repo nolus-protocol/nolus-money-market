@@ -209,7 +209,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
 {
     check_state_opening(app, lease_addr.clone());
 
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
     let ica_port: String = format!("icacontroller-{ica_addr}");
     let ica_channel: String = format!("channel-{ica_addr}");
 

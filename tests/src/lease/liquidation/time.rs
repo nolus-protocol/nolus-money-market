@@ -30,7 +30,7 @@ fn liquidation_time_alarm(
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    }: StateResponse = state_query(&test_case, lease_addr.as_ref())
+    }: StateResponse = state_query(&test_case, &lease_addr)
     else {
         unreachable!()
     };
@@ -65,7 +65,7 @@ fn liquidation_time_alarm(
 
     () = response.unwrap_response();
 
-    let ica_addr: Addr = TestCase::ica_addr(lease_addr.as_str(), TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
         &mut test_case.app,
@@ -118,7 +118,7 @@ fn liquidation_time_alarm(
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result: StateResponse = state_query(&test_case, lease_addr.as_str());
+    let query_result: StateResponse = state_query(&test_case, &lease_addr);
 
     let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
         .parse::<Amount>()

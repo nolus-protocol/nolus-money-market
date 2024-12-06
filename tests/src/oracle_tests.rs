@@ -263,7 +263,7 @@ fn overwrite_alarm_and_dispatch() {
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-pricealarm").add_attribute("receiver", lease.as_str()),
+        &Event::new("wasm-pricealarm").add_attribute("receiver", &lease),
     );
 
     platform::tests::assert_event(
