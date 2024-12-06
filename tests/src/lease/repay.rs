@@ -32,7 +32,7 @@ use crate::common::{
 };
 
 use super::{
-    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, LpnCoin, PaymentCoin,
+    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
     PaymentCurrency, DOWNPAYMENT,
 };
 

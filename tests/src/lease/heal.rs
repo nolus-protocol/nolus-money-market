@@ -12,7 +12,7 @@ use crate::{
         },
         USER,
     },
-    lease::{repay, LeaseCoin, LeaseCurrency, LpnCurrency, LpnCoin},
+    lease::{repay, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
 };
 
 #[test]

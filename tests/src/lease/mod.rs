@@ -26,6 +26,7 @@ use crate::common::{
 };
 
 mod close;
+mod close_policy;
 mod close_position;
 mod compare_with_lpp;
 mod heal;

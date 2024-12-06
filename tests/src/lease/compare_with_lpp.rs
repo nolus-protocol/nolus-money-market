@@ -9,7 +9,7 @@ use crate::{
     lease::{self, LeaseCoin},
 };
 
-use super::{LpnCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{LpnCoin, LpnCurrency, PaymentCurrency, DOWNPAYMENT};
 
 #[test]
 fn manual_calculation() {
