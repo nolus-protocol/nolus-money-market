@@ -34,7 +34,7 @@ mod open;
 mod repay;
 
 type LpnCurrency = Lpn;
-type Lpnoin = Coin<LpnCurrency>;
+type LpnCoin = Coin<LpnCurrency>;
 
 type LeaseCurrency = LeaseC2;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -246,7 +246,7 @@ pub(super) fn complete_init_lease<
         downpayment,
         max_ltd,
     );
-    let exp_borrow: Lpnoin = quote.borrow.try_into().unwrap();
+    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
     common::lease::complete_initialization(
         &mut test_case.app,
@@ -277,8 +277,8 @@ pub(super) fn quote_borrow<
         TimeAlarms,
     >,
     downpayment: PaymentCoin,
-) -> Lpnoin {
-    Lpnoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
+) -> LpnCoin {
+    LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
 pub(super) fn quote_query<
@@ -382,8 +382,8 @@ where
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: Lpnoin = price::total(total, price_lpn_of::<AssetC>());
-    let expected_principal: Lpnoin = total_lpn
+    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
+    let expected_principal: LpnCoin = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>())
         - price::total(payments, price_lpn_of::<PaymentC>());
     let due_period_start = (now - max_due).max(last_paid);

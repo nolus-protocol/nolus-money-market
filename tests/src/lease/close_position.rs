@@ -29,7 +29,7 @@ use crate::common::{
 };
 
 use super::{
-    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, Lpnoin, PaymentCoin, PaymentCurrency,
+    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, LpnCoin, PaymentCoin, PaymentCurrency,
     DOWNPAYMENT,
 };
 
@@ -91,7 +91,7 @@ fn full_close() {
 #[test]
 fn partial_close_loan_not_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: Lpnoin = price::total(lease_amount, super::price_lpn_of())
+    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
         - price::total(DOWNPAYMENT, super::price_lpn_of());
     let close_amount: LeaseCoin =
         price::total(principal - 1234567.into(), super::price_lpn_of().inv());
@@ -100,7 +100,7 @@ fn partial_close_loan_not_closed() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = false;
-    let exp_change = Lpnoin::ZERO;
+    let exp_change = LpnCoin::ZERO;
     let lease = do_close(
         &mut test_case,
         &customer,
@@ -130,7 +130,7 @@ fn partial_close_loan_not_closed() {
 
     assert_eq!(
         user_balance::<LpnCurrency>(&customer, &test_case),
-        Lpnoin::ZERO,
+        LpnCoin::ZERO,
     );
     assert_eq!(
         user_balance::<LeaseCurrency>(&customer, &test_case),
@@ -141,9 +141,9 @@ fn partial_close_loan_not_closed() {
 #[test]
 fn partial_close_loan_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: Lpnoin = price::total(lease_amount, super::price_lpn_of())
+    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
         - price::total(DOWNPAYMENT, super::price_lpn_of());
-    let exp_change: Lpnoin = 345.into();
+    let exp_change: LpnCoin = 345.into();
 
     let repay_principal = principal + exp_change;
     let close_amount: LeaseCoin = price::total(repay_principal, super::price_lpn_of().inv());
@@ -178,7 +178,7 @@ fn partial_close_loan_closed() {
     );
 
     assert_eq!(
-        Lpnoin::ZERO,
+        LpnCoin::ZERO,
         user_balance::<LpnCurrency>(&customer, &test_case)
     );
     assert_eq!(
@@ -271,7 +271,7 @@ fn do_close(
     close_amount: LeaseCoin,
     close_msg: PositionClose,
     exp_loan_close: bool,
-    exp_change: Lpnoin,
+    exp_change: LpnCoin,
     exp_lease_amount_after: LeaseCoin,
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
@@ -282,7 +282,7 @@ fn do_close(
         StateResponse::Opened { .. }
     ));
 
-    let close_amount_in_lpn: Lpnoin = price::total(close_amount, super::price_lpn_of());
+    let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of());
     let mut response_close: ResponseWithInterChainMsgs<'_, ()> = send_close(
         test_case,
         lease_addr.clone(),
