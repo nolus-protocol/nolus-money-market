@@ -14,9 +14,17 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
+//#[serde(untagged)]
 pub struct SpecDTO {
+    // TODO add the support of v0.7.5 representation == PositionSpecDTO as a fallback
+    // v0_8_0{
     r#const: PositionSpecDTO,
     close: ClosePolicy,
+    // },
+    // v0_7_5{
+    //#[serde(flatten)]
+    //spec: PositionSpecDTO,
+    //}
 }
 
 impl SpecDTO {
