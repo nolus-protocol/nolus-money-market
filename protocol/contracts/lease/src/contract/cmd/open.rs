@@ -17,7 +17,7 @@ use crate::{
     position::{Position, PositionDTO},
 };
 
-use super::{close_policy, CloseStatusDTO};
+use super::{close_policy::check, CloseStatusDTO};
 
 pub(crate) fn open_lease(
     form: NewLeaseForm,
@@ -85,18 +85,17 @@ impl WithLeaseDeps for LeaseFactory<'_> {
             Lease::new(self.lease_addr, self.form.customer, position, loan, oracle)
         };
 
-        let alarms =
-            match close_policy::check(&lease, self.now, &self.time_alarms, &self.price_alarms)? {
-                CloseStatusDTO::Paid => {
-                    unimplemented!("a freshly open lease should have some due amount")
-                }
-                CloseStatusDTO::None {
-                    current_liability: _, // TODO shouldn't we add warning zone events?
-                    alarms,
-                } => alarms,
-                CloseStatusDTO::NeedLiquidation(_) => todo!("TODO PR#116"),
-                CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
-            };
+        let alarms = match check::check(&lease, self.now, &self.time_alarms, &self.price_alarms)? {
+            CloseStatusDTO::Paid => {
+                unimplemented!("a freshly open lease should have some due amount")
+            }
+            CloseStatusDTO::None {
+                current_liability: _, // TODO shouldn't we add warning zone events?
+                alarms,
+            } => alarms,
+            CloseStatusDTO::NeedLiquidation(_) => todo!("TODO PR#116"),
+            CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
+        };
 
         lease
             .try_into_dto(self.profit, self.time_alarms, self.reserve)

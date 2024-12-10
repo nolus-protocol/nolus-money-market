@@ -22,7 +22,7 @@ use crate::{
     position::CloseStrategy,
 };
 
-use super::{close_policy, CloseStatusDTO};
+use super::{close_policy::check, CloseStatusDTO};
 
 pub(crate) trait RepayFn {
     fn do_repay<Asset, Lpp, Oracle, Profit>(
@@ -97,7 +97,7 @@ where
         Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
-        close_policy::check(lease, now, time_alarm, price_alarm).and_then(|close_status| {
+        check::check(lease, now, time_alarm, price_alarm).and_then(|close_status| {
             debug_assert!(!(receipt_close ^ matches!(close_status, CloseStatusDTO::Paid))); // receipt.close() <=> status is CloseStatusDTO::Paid
             if matches!(
                 close_status,
@@ -111,7 +111,7 @@ where
                         },
                         now,
                     )
-                    .and_then(|()| close_policy::check(lease, now, time_alarm, price_alarm))
+                    .and_then(|()| check::check(lease, now, time_alarm, price_alarm))
             } else {
                 Ok(close_status)
             }
