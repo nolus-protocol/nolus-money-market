@@ -111,7 +111,9 @@ impl Active {
         )?;
 
         match close_status {
-            CloseStatusDTO::Paid => Ok(Response::no_msgs(self)),
+            CloseStatusDTO::Paid => {
+                unimplemented!("the Active Opened Lease should always have some due amount")
+            }
             CloseStatusDTO::None {
                 current_liability,
                 alarms,
