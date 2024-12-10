@@ -6,6 +6,7 @@ use ::lease::{
     error::{ContractError, PositionError},
     CloseStrategy,
 };
+use anyhow::Error;
 use finance::{coin::Coin, percent::Percent};
 use sdk::{cosmwasm_std::Addr, testing};
 
@@ -78,14 +79,7 @@ fn tp_trigger() {
         Some(ChangeCmd::Reset),
     );
 
-    let Some(ContractError::PositionError(PositionError::TriggerClose {
-        lease_ltv: _,
-        strategy: CloseStrategy::TakeProfit(tp_trigger),
-    })) = err.downcast_ref::<ContractError>()
-    else {
-        unreachable!()
-    };
-    assert_eq!(&tp_new, tp_trigger);
+    assert_trigger_tp_error(err, tp_new);
 }
 
 #[test]
@@ -172,13 +166,20 @@ fn tp_set() {
         query_policy(&test_case, &lease)
     );
 
-    // LeaseC/LpnC = 2/1
+    // LeaseC/LpnC = 10/25
     oracle::feed_price(
         &mut test_case,
         testing::user(ADMIN),
-        Coin::<LeaseCurrency>::from(1),
-        Coin::<LpnCurrency>::from(45),
+        Coin::<LeaseCurrency>::from(10),
+        Coin::<LpnCurrency>::from(25),
     );
+    let err = super::change_err(
+        &mut test_case,
+        lease.clone(),
+        Some(ChangeCmd::Set(tp)),
+        Some(ChangeCmd::Reset),
+    );
+    assert_trigger_tp_error(err, tp)
 }
 
 fn query_policy(test_case: &LeaseTestCase, lease: &Addr) -> ClosePolicy {
@@ -186,4 +187,15 @@ fn query_policy(test_case: &LeaseTestCase, lease: &Addr) -> ClosePolicy {
         unreachable!()
     };
     close_policy
+}
+
+fn assert_trigger_tp_error(err: Error, exp_tp: Percent) {
+    let Some(ContractError::PositionError(PositionError::TriggerClose {
+        lease_ltv: _,
+        strategy: CloseStrategy::TakeProfit(tp_trigger),
+    })) = err.downcast_ref::<ContractError>()
+    else {
+        unreachable!()
+    };
+    assert_eq!(&exp_tp, tp_trigger);
 }
