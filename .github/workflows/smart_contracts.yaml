@@ -4,15 +4,15 @@ run-name: "Running workflow for smart contracts"
 on:
   workflow_dispatch:
     inputs:
-      upload-artifacts:
-        description: "Upload optimized builds as artifacts."
-        required: true
-        default: false
-        type: "boolean"
       check-dependencies-version:
         description: "Check dependencies' versions."
         required: true
         default: true
+        type: "boolean"
+      upload-artifacts:
+        description: "Upload optimized builds as artifacts."
+        required: true
+        default: false
         type: "boolean"
   push:
     branches:
