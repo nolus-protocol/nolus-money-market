@@ -76,6 +76,7 @@ impl DexContract for OpenIcaAccount {
 
     fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
         Ok(QueryStateResponse::Opening {
+            currency: self.new_lease.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,

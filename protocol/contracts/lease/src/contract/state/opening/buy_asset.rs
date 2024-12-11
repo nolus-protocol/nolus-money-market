@@ -101,6 +101,7 @@ impl BuyAsset {
         InP: FnOnce(String) -> OngoingTrx,
     {
         Ok(QueryStateResponse::Opening {
+            currency: self.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,

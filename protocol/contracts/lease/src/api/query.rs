@@ -1,3 +1,4 @@
+use currency::CurrencyDTO;
 use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, percent::Percent};
@@ -8,7 +9,7 @@ use sdk::{
 
 use crate::finance::LpnCoinDTO;
 
-use super::{DownpaymentCoin, LeaseCoin};
+use super::{DownpaymentCoin, LeaseAssetCurrencies, LeaseCoin};
 
 pub use opened::ClosePolicy;
 
@@ -25,6 +26,7 @@ pub struct StateQuery {}
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum StateResponse {
     Opening {
+        currency: CurrencyDTO<LeaseAssetCurrencies>,
         downpayment: DownpaymentCoin,
         loan: LpnCoinDTO,
         loan_interest_rate: Percent,
