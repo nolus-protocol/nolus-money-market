@@ -30,7 +30,7 @@ on:
 concurrency:
   cancel-in-progress: true
   group: |-
-    ${{ format('{0}-{1}-{2}', github.ref_name, github.ref_type, github.event_name, inputs.upload-artifacts) }}
+    ${{ format('{0}-{1}-{2}-{3}', github.ref_name, github.ref_type, github.event_name, inputs.check-dependencies-version, inputs.upload-artifacts) }}
 
 defaults:
   run:
