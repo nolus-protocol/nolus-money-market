@@ -14,6 +14,7 @@ pub struct State<Asset> {
     pub overdue_collect_in: Duration,
     pub due_margin: LpnCoin,
     pub due_interest: LpnCoin,
+    pub due_projection: Duration,
     // Intentionally not using the internal domain type close::Policy
     pub close_policy: ClosePolicy,
     pub validity: Timestamp,

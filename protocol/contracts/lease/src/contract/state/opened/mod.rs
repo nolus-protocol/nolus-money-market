@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
@@ -18,9 +19,10 @@ fn lease_state(
     lease: Lease,
     in_progress: Option<OngoingTrx>,
     now: Timestamp,
+    due_projection: Duration,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
     lease
         .lease
-        .execute(LeaseState::new(now, in_progress), querier)
+        .execute(LeaseState::new(now, due_projection, in_progress), querier)
 }

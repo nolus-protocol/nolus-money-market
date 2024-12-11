@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
@@ -10,7 +11,12 @@ use super::{drain::DrainAll, Handler, Response};
 pub struct Liquidated {}
 
 impl Handler for Liquidated {
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Liquidated())
     }
 

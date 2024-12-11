@@ -1,5 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
+use finance::duration::Duration;
 use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
@@ -24,7 +25,12 @@ pub(crate) trait Handler
 where
     Self: Sized,
 {
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse>;
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse>;
 
     fn reply(
         self,

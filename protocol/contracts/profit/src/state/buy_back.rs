@@ -6,7 +6,10 @@ use dex::{
     Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
     StateLocalOut, SwapTask,
 };
-use finance::coin::{Coin, CoinDTO};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+};
 use oracle::stub::SwapPath;
 use platform::{
     bank::{self, BankAccountView},
@@ -136,7 +139,12 @@ impl SwapTask for BuyBack {
 impl<DexState> ContractInSwap<DexState> for BuyBack {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
-    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> <Self as SwapTask>::StateResponse {
+    fn state(
+        self,
+        _: Timestamp,
+        _due_projection: Duration,
+        _: QuerierWrapper<'_>,
+    ) -> <Self as SwapTask>::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
         }

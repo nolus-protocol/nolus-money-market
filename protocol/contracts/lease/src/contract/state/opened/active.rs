@@ -2,7 +2,7 @@ use currency::never;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
-use finance::coin::IntoDTO;
+use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 
@@ -155,8 +155,13 @@ impl Active {
 }
 
 impl Handler for Active {
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        super::lease_state(self.lease, None, now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        super::lease_state(self.lease, None, now, due_projection, querier)
     }
 
     fn repay(

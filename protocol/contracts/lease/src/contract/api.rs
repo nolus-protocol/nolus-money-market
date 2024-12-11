@@ -1,5 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
+use finance::duration::Duration;
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
@@ -82,7 +83,12 @@ where
         err("heal")
     }
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse>;
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse>;
 
     fn reply(
         self,

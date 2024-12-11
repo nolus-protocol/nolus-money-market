@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::ser::Serialize;
 
 use platform::batch::Batch;
@@ -93,7 +94,12 @@ where
 {
     type StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse;
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse;
 }
 
 pub struct TransferOutState {}
@@ -110,7 +116,12 @@ where
 {
     type StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse;
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse;
 }
 
 /// The message that the integrating module should propagate to `Handler::on_inner`

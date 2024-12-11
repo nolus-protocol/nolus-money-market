@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
@@ -74,7 +75,12 @@ impl DexConnectable for OpenIcaAccount {
 impl DexContract for OpenIcaAccount {
     type StateResponse = ContractResult<QueryStateResponse>;
 
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         Ok(QueryStateResponse::Opening {
             currency: self.new_lease.form.currency,
             downpayment: self.downpayment,

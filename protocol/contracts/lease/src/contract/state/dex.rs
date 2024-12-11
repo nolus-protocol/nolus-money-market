@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
@@ -93,9 +94,10 @@ where
     fn state(
         self,
         now: Timestamp,
+        due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ContractStateResponse> {
-        self.handler.state(now, querier)
+        self.handler.state(now, due_projection, querier)
     }
 
     fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContractResult<Response> {

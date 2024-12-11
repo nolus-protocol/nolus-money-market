@@ -556,6 +556,7 @@ mod impl_handler {
 }
 
 mod impl_contract {
+    use finance::duration::Duration;
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
     use crate::impl_::{
@@ -588,18 +589,31 @@ mod impl_contract {
     {
         type StateResponse = OpenIca::StateResponse;
 
-        fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
+        fn state(
+            self,
+            now: Timestamp,
+            due_projection: Duration,
+            querier: QuerierWrapper<'_>,
+        ) -> Self::StateResponse {
             match self {
-                State::OpenIca(inner) => Contract::state(inner, now, querier),
-                State::OpenIcaRespDelivery(inner) => Contract::state(inner, now, querier),
-                State::TransferOut(inner) => Contract::state(inner, now, querier),
-                State::TransferOutRespDelivery(inner) => Contract::state(inner, now, querier),
-                State::SwapExactIn(inner) => Contract::state(inner, now, querier),
-                State::SwapExactInRespDelivery(inner) => Contract::state(inner, now, querier),
-                State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Contract::state(inner, now, querier)
+                State::OpenIca(inner) => Contract::state(inner, now, due_projection, querier),
+                State::OpenIcaRespDelivery(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
                 }
-                State::SwapExactInRecoverIca(inner) => Contract::state(inner, now, querier),
+                State::TransferOut(inner) => Contract::state(inner, now, due_projection, querier),
+                State::TransferOutRespDelivery(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
+                State::SwapExactIn(inner) => Contract::state(inner, now, due_projection, querier),
+                State::SwapExactInRespDelivery(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
+                State::SwapExactInRecoverIcaRespDelivery(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
+                State::SwapExactInRecoverIca(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
             }
         }
     }

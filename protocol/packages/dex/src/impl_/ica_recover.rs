@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
+use finance::duration::Duration;
 use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
@@ -91,8 +92,13 @@ where
 {
     type StateResponse = S::StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        self.state.state(now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.state.state(now, due_projection, querier)
     }
 }
 

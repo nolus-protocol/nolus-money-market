@@ -6,7 +6,7 @@ use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
     SwapTask, TransferOutState,
 };
-use finance::coin::CoinDTO;
+use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
@@ -173,7 +173,12 @@ impl SwapTask for BuyAsset {
 impl ContractInSwap<TransferOutState> for BuyAsset {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
         self.state(in_progress_fn)
     }
@@ -182,7 +187,12 @@ impl ContractInSwap<TransferOutState> for BuyAsset {
 impl ContractInSwap<SwapState> for BuyAsset {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
         self.state(in_progress_fn)
     }

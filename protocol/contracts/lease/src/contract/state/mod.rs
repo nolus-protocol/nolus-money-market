@@ -1,6 +1,7 @@
 use std::str;
 
 use enum_dispatch::enum_dispatch;
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};

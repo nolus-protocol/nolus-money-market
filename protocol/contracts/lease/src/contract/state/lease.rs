@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
@@ -28,8 +29,13 @@ impl<H> Contract for State<H>
 where
     H: LeaseHandler,
 {
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        self.handler.state(now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        self.handler.state(now, due_projection, querier)
     }
 
     fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContractResult<Response> {

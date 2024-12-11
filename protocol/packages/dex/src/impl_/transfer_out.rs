@@ -7,7 +7,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{Group, MemberOf};
-use finance::{coin::CoinDTO, zero::Zero};
+use finance::{coin::CoinDTO, duration::Duration, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
     message::Response as MessageResponse,
@@ -234,8 +234,13 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        self.spec.state(now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.spec.state(now, due_projection, querier)
     }
 }
 

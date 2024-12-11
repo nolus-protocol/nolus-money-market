@@ -27,6 +27,7 @@ impl StateResponse {
             overdue_collect_in: open_lease.overdue_collect_in,
             due_margin: open_lease.due_margin.into(),
             due_interest: open_lease.due_interest.into(),
+            due_projection: open_lease.due_projection,
             close_policy: open_lease.close_policy,
             validity: open_lease.validity,
             in_progress,

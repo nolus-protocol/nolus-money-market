@@ -1,7 +1,7 @@
 use platform::{bank::FixedAddressSender, batch::Batch};
 
 use currency::{CurrencyDef, MemberOf};
-use finance::coin::Coin;
+use finance::{coin::Coin, duration::Duration};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use reserve::stub::Reserve as ReserveTrait;
@@ -75,7 +75,7 @@ where
         Reserve: ReserveTrait<LpnCurrency>,
         ContractError: From<Reserve::Error>,
     {
-        let total_due = self.state(now).total_due();
+        let total_due = self.state(now, Duration::default()).total_due();
         let payment = if total_due > payment {
             reserve.cover_liquidation_losses(total_due - payment);
             total_due

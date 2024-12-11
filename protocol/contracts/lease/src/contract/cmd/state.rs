@@ -1,4 +1,5 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::duration::Duration;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -15,12 +16,17 @@ use crate::{
 
 pub struct LeaseState {
     now: Timestamp,
+    due_projection: Duration,
     in_progress: Option<OngoingTrx>,
 }
 
 impl LeaseState {
-    pub fn new(now: Timestamp, in_progress: Option<OngoingTrx>) -> Self {
-        Self { now, in_progress }
+    pub fn new(now: Timestamp, due_projection: Duration, in_progress: Option<OngoingTrx>) -> Self {
+        Self {
+            now,
+            due_projection,
+            in_progress,
+        }
     }
 }
 
@@ -40,7 +46,7 @@ impl WithLease for LeaseState {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         Ok(StateResponse::opened_from(
-            lease.state(self.now),
+            lease.state(self.now, self.due_projection),
             self.in_progress,
         ))
     }

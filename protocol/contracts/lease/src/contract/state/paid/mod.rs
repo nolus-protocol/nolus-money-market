@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
@@ -23,7 +24,12 @@ impl Active {
 }
 
 impl Handler for Active {
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::paid_from(self.lease.lease, None))
     }
 

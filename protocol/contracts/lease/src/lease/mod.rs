@@ -1,4 +1,5 @@
 use currency::{Currency, CurrencyDef, MemberOf};
+use finance::duration::Duration;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -93,8 +94,9 @@ where
         )
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> State<Asset> {
-        let loan = self.loan.state(&now);
+    pub(crate) fn state(&self, now: Timestamp, due_projection: Duration) -> State<Asset> {
+        let estimate_at = now + due_projection;
+        let loan = self.loan.state(&estimate_at);
         let overdue_collect_in = self.position.overdue_collection_in(&loan);
 
         State {
@@ -107,6 +109,7 @@ where
             overdue_collect_in,
             due_margin: loan.due_margin_interest,
             due_interest: loan.due_interest,
+            due_projection,
             close_policy: self.position.close_policy(),
             validity: now,
         }
@@ -159,7 +162,8 @@ pub mod tests {
     use currencies::{testing::PaymentC7, Lpn};
     use currency::{Currency, Group, MemberOf};
     use finance::{
-        coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
+        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability, percent::Percent,
+        price::Price,
     };
     use lpp::{
         error::{ContractError as LppError, Result as LppResult},
@@ -193,6 +197,7 @@ pub mod tests {
     pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
+    pub(super) const MIN_TRANSACTION: Coin<TestLpn> = Coin::new(10_000);
     pub(crate) type TestLpn = Lpn;
     pub(crate) type TestCurrency = PaymentC7;
     pub(crate) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
@@ -301,11 +306,8 @@ pub mod tests {
             Percent::from_percent(80),
             RECHECK_TIME,
         );
-        let position_spec = PositionSpec::no_close(
-            liability,
-            Coin::<TestLpn>::new(15_000_000),
-            Coin::<TestLpn>::new(10_000),
-        );
+        let position_spec =
+            PositionSpec::no_close(liability, Coin::<TestLpn>::new(15_000_000), MIN_TRANSACTION);
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
@@ -329,10 +331,11 @@ pub mod tests {
         let interest_rate = Percent::from_permille(50);
         let overdue_collect_in = Duration::from_days(500); //=min_transaction/principal_due/(interest+margin)*1000*365
 
+        let principal_due = lpn_coin(100_000);
         let loan = LoanResponse {
-            principal_due: lpn_coin(100_000),
+            principal_due,
             annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
+            interest_paid: LEASE_START,
         };
         let mut lease = open_lease(lease_amount, loan.clone());
 
@@ -348,21 +351,111 @@ pub mod tests {
                 &state_at,
             )
             .unwrap();
-        let res = lease.state(state_at);
-        let exp = State {
-            amount: lease_amount,
-            interest_rate,
-            interest_rate_margin: MARGIN_INTEREST_RATE,
-            principal_due: loan.principal_due,
-            overdue_margin: lpn_coin(0),
-            overdue_interest: lpn_coin(0),
-            overdue_collect_in,
-            due_margin: lpn_coin(0),
-            due_interest: lpn_coin(0),
-            close_policy: ClosePolicy::new(Some(take_profit), None),
-            validity: state_at,
-        };
 
-        assert_eq!(exp, res);
+        {
+            let due_projection = Duration::default();
+            assert_eq!(
+                State {
+                    amount: lease_amount,
+                    interest_rate,
+                    interest_rate_margin: MARGIN_INTEREST_RATE,
+                    principal_due: loan.principal_due,
+                    overdue_margin: lpn_coin(0),
+                    overdue_interest: lpn_coin(0),
+                    overdue_collect_in,
+                    due_margin: lpn_coin(0),
+                    due_interest: lpn_coin(0),
+                    due_projection,
+                    close_policy: ClosePolicy::new(Some(take_profit), None),
+                    validity: state_at,
+                },
+                lease.state(state_at, due_projection)
+            );
+        }
+
+        compare_now_vs_projected(&lease, state_at);
+
+        assert_state(
+            principal_due,
+            interest_rate,
+            lease_amount,
+            take_profit,
+            state_at,
+            &lease,
+            Duration::default(),
+        );
+
+        assert_state(
+            principal_due,
+            interest_rate,
+            lease_amount,
+            take_profit,
+            state_at,
+            &lease,
+            Duration::from_days(12),
+        );
+    }
+
+    fn assert_state(
+        principal_due: Coin<TestLpn>,
+        interest_rate: Percent,
+        lease_amount: Coin<TestCurrency>,
+        take_profit: Percent,
+        state_at: Timestamp,
+        lease: &TestLease,
+        due_projection: Duration,
+    ) {
+        let exp_due_margin =
+            due_projection.annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due));
+        let exp_due_interest = due_projection.annualized_slice_of(interest_rate.of(principal_due));
+        assert_eq!(
+            State {
+                amount: lease_amount,
+                interest_rate,
+                interest_rate_margin: MARGIN_INTEREST_RATE,
+                principal_due,
+                overdue_margin: lpn_coin(0),
+                overdue_interest: lpn_coin(0),
+                overdue_collect_in: Duration::YEAR.into_slice_per_ratio(
+                    MIN_TRANSACTION - exp_due_interest - exp_due_margin,
+                    (interest_rate + MARGIN_INTEREST_RATE).of(principal_due)
+                ),
+                due_margin: exp_due_margin,
+                due_interest: exp_due_interest,
+                due_projection,
+                close_policy: ClosePolicy::new(Some(take_profit), None),
+                validity: state_at,
+            },
+            lease.state(state_at, due_projection)
+        );
+    }
+
+    fn compare_now_vs_projected(lease: &TestLease, state_at: Timestamp) {
+        let due_projection = Duration::from_days(12);
+        let state_now = lease.state(state_at + due_projection, Duration::default());
+        let state_projected = lease.state(state_at, due_projection);
+        assert_eq!(state_now.amount, state_projected.amount);
+        assert_eq!(state_now.interest_rate, state_projected.interest_rate);
+        assert_eq!(
+            state_now.interest_rate_margin,
+            state_projected.interest_rate_margin
+        );
+        assert_eq!(state_now.overdue_margin, state_projected.overdue_margin);
+        assert_eq!(state_now.overdue_interest, state_projected.overdue_interest);
+        assert_eq!(
+            state_now.overdue_collect_in,
+            state_projected.overdue_collect_in
+        );
+        assert_eq!(state_now.due_margin, state_projected.due_margin);
+        assert_eq!(state_now.due_interest, state_projected.due_interest);
+        assert_eq!(
+            state_now.validity + state_now.due_projection,
+            state_projected.validity + state_projected.due_projection
+        );
+        assert_eq!(
+            state_now.validity,
+            state_projected.validity + state_projected.due_projection
+        );
+        assert_eq!(state_now.close_policy, state_projected.close_policy);
     }
 }

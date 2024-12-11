@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
@@ -169,8 +170,13 @@ where
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        self.spec.state(now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.spec.state(now, due_projection, querier)
     }
 }
 

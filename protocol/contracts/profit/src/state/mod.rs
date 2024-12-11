@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use currencies::PaymentGroup;
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -153,11 +154,16 @@ impl
 impl Contract for State {
     type StateResponse = ConfigResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         match self.0 {
-            StateEnum::OpenIca(open_ica) => open_ica.state(now, querier),
-            StateEnum::Idle(idle) => idle.state(now, querier),
-            StateEnum::BuyBack(buy_back) => buy_back.state(now, querier),
+            StateEnum::OpenIca(open_ica) => open_ica.state(now, due_projection, querier),
+            StateEnum::Idle(idle) => idle.state(now, due_projection, querier),
+            StateEnum::BuyBack(buy_back) => buy_back.state(now, due_projection, querier),
         }
     }
 }

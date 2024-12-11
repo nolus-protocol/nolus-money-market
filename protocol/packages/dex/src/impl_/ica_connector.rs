@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -152,8 +153,13 @@ where
 {
     type StateResponse = Connectee::StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        self.connectee.state(now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.connectee.state(now, due_projection, querier)
     }
 }
 

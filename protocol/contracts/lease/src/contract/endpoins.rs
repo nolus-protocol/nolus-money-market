@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -88,9 +89,15 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: StateQuery) -> ContractResult<Binary> {
     state::load(deps.storage)
-        .and_then(|state| state.state(env.block.time, deps.querier))
+        .and_then(|state| {
+            state.state(
+                env.block.time,
+                Duration::from_secs(msg.due_projection),
+                deps.querier,
+            )
+        })
         .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
         .inspect_err(platform_error::log(deps.api))
 }

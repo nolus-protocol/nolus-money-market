@@ -6,7 +6,7 @@ use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
-use finance::coin::CoinDTO;
+use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -65,6 +65,7 @@ impl BuyLpn {
         self,
         in_progress: RepayTrx,
         now: Timestamp,
+        due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ContractStateResponse> {
         let in_progress = OngoingTrx::Repayment {
@@ -72,7 +73,7 @@ impl BuyLpn {
             in_progress,
         };
 
-        opened::lease_state(self.lease, Some(in_progress), now, querier)
+        opened::lease_state(self.lease, Some(in_progress), now, due_projection, querier)
     }
 }
 
@@ -127,8 +128,13 @@ where
 {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
-    fn state(self, now: Timestamp, querier: QuerierWrapper<'_>) -> Self::StateResponse {
-        self.query(DexState::trx_in_progress(), now, querier)
+    fn state(
+        self,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.query(DexState::trx_in_progress(), now, due_projection, querier)
     }
 }
 

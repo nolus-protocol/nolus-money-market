@@ -1,7 +1,10 @@
 use currency::CurrencyDTO;
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, percent::Percent};
+use finance::{
+    duration::{Duration, Seconds},
+    percent::Percent,
+};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
@@ -16,7 +19,13 @@ pub use opened::ClosePolicy;
 #[derive(Deserialize, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct StateQuery {}
+pub struct StateQuery {
+    /// Ask for estimation of the due and overdue amounts and periods in that point of time
+    ///
+    /// The value is meaningfull only if the lease is in Opened state.
+    #[serde(default, rename = "due_projection_secs")]
+    pub due_projection: Seconds,
+}
 
 #[derive(Serialize)]
 #[cfg_attr(
@@ -42,6 +51,11 @@ pub enum StateResponse {
         overdue_collect_in: Duration,
         due_margin: LpnCoinDTO,
         due_interest: LpnCoinDTO,
+        /// Time offset ahead, past the `validity`, at which the due and overdue amounts and periods are estimated for.
+        ///
+        /// It always corresponds to the requested `StateQuery::due_projection` or 0 if not present.
+        #[serde(rename = "due_projection_ns")]
+        due_projection: Duration,
         close_policy: ClosePolicy,
         validity: Timestamp,
         in_progress: Option<opened::OngoingTrx>,

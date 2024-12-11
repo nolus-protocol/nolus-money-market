@@ -1,6 +1,6 @@
 use currencies::Nls;
 use dex::Contract;
-use finance::coin::Coin;
+use finance::{coin::Coin, duration::Duration};
 use platform::{
     bank::BankAccount,
     batch::{Emit as _, Emitter},
@@ -45,6 +45,6 @@ impl Profit {
         now: Timestamp,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ConfigResponse> {
-        State::load(storage).map(|state: State| state.state(now, querier))
+        State::load(storage).map(|state: State| state.state(now, Duration::default(), querier))
     }
 }

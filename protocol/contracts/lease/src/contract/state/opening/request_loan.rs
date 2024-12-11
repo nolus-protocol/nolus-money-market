@@ -1,3 +1,4 @@
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -98,6 +99,7 @@ impl Handler for RequestLoan {
     fn state(
         self,
         _now: Timestamp,
+        _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> ContractResult<QueryStateResponse> {
         unreachable!()

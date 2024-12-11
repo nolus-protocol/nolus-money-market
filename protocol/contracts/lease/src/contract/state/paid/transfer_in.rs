@@ -6,7 +6,7 @@ use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
-use finance::coin::CoinDTO;
+use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     bank,
     batch::{Emit, Emitter},
@@ -150,7 +150,12 @@ where
 {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
-    fn state(self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _now: Timestamp,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         self.state(DexState::trx_in_progress())
     }
 }

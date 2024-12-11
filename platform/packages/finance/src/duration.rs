@@ -19,6 +19,8 @@ use crate::{
 
 pub type Units = u64;
 
+pub type Seconds = u32;
+
 /// A more storage and compute optimal version of its counterpart in the std::time.
 /// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
 ///
@@ -32,9 +34,9 @@ impl Duration {
     const UNITS_IN_SECOND: Units = 1000 * 1000 * 1000;
     const UNITS_IN_DAY: Units = Self::UNITS_IN_SECOND * Self::SECONDS_IN_DAY as Units;
 
-    const SECONDS_IN_MINUTE: u32 = 60;
-    const SECONDS_IN_HOUR: u32 = Self::SECONDS_IN_MINUTE * Self::MINUTES_IN_HOUR as u32;
-    const SECONDS_IN_DAY: u32 = Self::SECONDS_IN_HOUR * Self::HOURS_IN_DAY as u32;
+    const SECONDS_IN_MINUTE: Seconds = 60;
+    const SECONDS_IN_HOUR: Seconds = Self::SECONDS_IN_MINUTE * Self::MINUTES_IN_HOUR as Seconds;
+    const SECONDS_IN_DAY: Seconds = Self::SECONDS_IN_HOUR * Self::HOURS_IN_DAY as Seconds;
 
     const MINUTES_IN_HOUR: u16 = 60;
     const HOURS_IN_DAY: u16 = 24;
@@ -49,16 +51,16 @@ impl Duration {
         Self(nanos)
     }
 
-    pub const fn from_secs(secs: u32) -> Self {
+    pub const fn from_secs(secs: Seconds) -> Self {
         Self::from_nanos(secs as Units * Self::UNITS_IN_SECOND)
     }
 
     pub const fn from_minutes(minutes: u16) -> Self {
-        Self::from_secs(minutes as u32 * Self::SECONDS_IN_MINUTE)
+        Self::from_secs(minutes as Seconds * Self::SECONDS_IN_MINUTE)
     }
 
     pub const fn from_hours(hours: u16) -> Self {
-        Self::from_secs(hours as u32 * Self::SECONDS_IN_HOUR)
+        Self::from_secs(hours as Seconds * Self::SECONDS_IN_HOUR)
     }
 
     pub const fn from_days(days: u16) -> Self {
@@ -206,7 +208,7 @@ impl Display for Duration {
 mod tests {
     use sdk::cosmwasm_std::Timestamp as T;
 
-    use crate::duration::{Duration as D, Units};
+    use crate::duration::{Duration as D, Seconds, Units};
 
     #[test]
     fn add() {
@@ -275,15 +277,15 @@ mod tests {
             D::from_nanos(Units::MAX)
         );
         assert_eq!(
-            D::from_nanos(Units::from(u32::MAX) * D::UNITS_IN_SECOND),
-            D::from_secs(u32::MAX)
+            D::from_nanos(Units::from(Seconds::MAX) * D::UNITS_IN_SECOND),
+            D::from_secs(Seconds::MAX)
         );
         assert_eq!(
-            D::from_secs(u32::from(u16::MAX) * D::SECONDS_IN_MINUTE),
+            D::from_secs(Seconds::from(u16::MAX) * D::SECONDS_IN_MINUTE),
             D::from_minutes(u16::MAX)
         );
         assert_eq!(
-            D::from_secs(u32::from(u16::MAX) * D::SECONDS_IN_HOUR),
+            D::from_secs(Seconds::from(u16::MAX) * D::SECONDS_IN_HOUR),
             D::from_hours(u16::MAX)
         );
         assert_eq!(

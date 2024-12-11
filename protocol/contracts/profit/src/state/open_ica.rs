@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
+use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, Contract, DexConnectable, IcaConnectee};
@@ -42,7 +43,12 @@ impl DexConnectable for OpenIca {
 impl Contract for OpenIca {
     type StateResponse = ConfigResponse;
 
-    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _: Timestamp,
+        _due_projection: Duration,
+        _: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
         }

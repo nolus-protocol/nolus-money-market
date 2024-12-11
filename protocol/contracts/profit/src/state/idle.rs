@@ -133,7 +133,12 @@ impl Enterable for Idle {
 impl Contract for Idle {
     type StateResponse = ConfigResponse;
 
-    fn state(self, _: Timestamp, _: QuerierWrapper<'_>) -> Self::StateResponse {
+    fn state(
+        self,
+        _: Timestamp,
+        _due_projection: Duration,
+        _: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
         }
