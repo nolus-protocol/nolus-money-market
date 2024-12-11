@@ -41,7 +41,7 @@ env:
   RELEASE_VERSION: "ci"
   check-dependencies-versions: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
-  UPLOAD_ARTIFACTS: |-
+  upload-artifacts: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 jobs:
@@ -499,28 +499,36 @@ jobs:
           do
             "build_and_pack" "${network:?}"
           done
-      - name: "Export protocol builder image"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Export protocol builder image"
         run: |-
           "docker" \
             "image" \
             "save" \
             --output "protocol-builder.tar" \
             "protocol-builder"
-      - name: "Upload test-net platform binaries"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload test-net platform binaries"
         uses: "actions/upload-artifact@v4"
         with:
           if-no-files-found: "error"
           name: "platform-test-net"
           path: |-
             ./artifacts-test-net/*
-      - name: "Upload production-net platform binaries"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload production-net platform binaries"
         uses: "actions/upload-artifact@v4"
         with:
           if-no-files-found: "error"
           name: "platform-production-net"
           path: |-
             ./artifacts-production-net/*
-      - name: "Upload protocol builder image"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload protocol builder image"
         uses: "actions/upload-artifact@v4"
         with:
           if-no-files-found: "error"
