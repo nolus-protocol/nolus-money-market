@@ -16,7 +16,7 @@ use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{
         swap::{SwapPath, SwapTarget},
-        AlarmsCount, MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
+        MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
     },
     result::ContractResult,
     ContractError,
@@ -35,7 +35,7 @@ use sdk::{
 use tree::HumanReadableTree;
 
 use crate::common::{
-    leaser as leaser_mod, oracle as oracle_mod,
+    leaser as leaser_mod, oracle as oracle_mod, oracle as oracle_common,
     protocols::Registry,
     test_case::{
         app::App,
@@ -45,6 +45,8 @@ use crate::common::{
     },
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
+
+const DISPACHER: &str = "unlisted_client";
 
 type LeaseCurrency = LeaseC1;
 type TheCoin = Coin<Lpn>;
@@ -250,16 +252,7 @@ fn overwrite_alarm_and_dispatch() {
         Coin::<Lpn>::new(5),
     );
 
-    let res: AppResponse = test_case
-        .app
-        .execute(
-            lease.clone(),
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::DispatchAlarms { max_count: 5 },
-            &[],
-        )
-        .unwrap()
-        .unwrap_response();
+    let res: AppResponse = oracle_common::dispatch(&mut test_case, lease.clone()).unwrap_response();
 
     platform::tests::assert_event(
         &res.events,
@@ -633,17 +626,6 @@ fn instantiate_dummy_contract(
     .unwrap_response()
 }
 
-fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
-    app.execute(
-        testing::user("unlisted_client"),
-        oracle,
-        &ExecuteMsg::DispatchAlarms { max_count },
-        &[],
-    )
-    .unwrap()
-    .unwrap_response()
-}
-
 fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
     () = app
         .execute(
@@ -695,11 +677,8 @@ fn price_alarm_rescheduling() {
         Coin::<Lpn>::new(1),
     );
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert!(
         response
@@ -726,11 +705,8 @@ fn price_alarm_rescheduling() {
         response.events
     );
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert_eq!(
         response
@@ -749,11 +725,8 @@ fn price_alarm_rescheduling() {
         Coin::<Lpn>::new(1),
     );
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert!(
         response
@@ -819,11 +792,8 @@ fn price_alarm_rescheduling_with_failing() {
         Coin::<Lpn>::new(1),
     );
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert_eq!(
         response
@@ -870,11 +840,8 @@ fn price_alarm_rescheduling_with_failing() {
 
     set_should_fail(&mut test_case.app, dummy_failing, false);
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert_eq!(
         response
@@ -903,11 +870,8 @@ fn price_alarm_rescheduling_with_failing() {
         response.events
     );
 
-    let response = dispatch_alarms(
-        &mut test_case.app,
-        test_case.address_book.oracle().clone(),
-        5,
-    );
+    let response =
+        oracle_common::dispatch(&mut test_case, testing::user(DISPACHER)).unwrap_response();
 
     assert_eq!(
         response

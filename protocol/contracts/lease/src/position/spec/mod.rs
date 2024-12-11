@@ -165,15 +165,23 @@ impl Spec {
         Due: DueTrait,
     {
         debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
-        let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
+        let due_assets = Self::to_assets(due.total_due(), asset_in_lpns);
 
-        self.may_ask_liquidation_liability(asset, total_due, asset_in_lpns)
+        self.may_ask_liquidation_liability(asset, due_assets, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
             .map(Debt::Bad)
             .unwrap_or_else(|| {
-                let asset_ltv = Percent::from_ratio(total_due, asset);
-                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen
-                self.no_liquidation(asset, due, asset_ltv.min(self.liability.third_liq_warn()))
+                let position_ltv = Percent::from_ratio(due_assets, asset);
+                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen,
+                // for example, the liquidated amount is less than the `min_transaction_amount`
+                let position_ltv_capped = self.liability.cap_to_zone(position_ltv);
+                let due_assets_capped = if position_ltv_capped < position_ltv {
+                    self.liability.max().of(asset) - Coin::new(1)
+                } else {
+                    due_assets
+                };
+
+                self.no_liquidation(asset, due, due_assets_capped, position_ltv_capped)
             })
     }
 
@@ -336,20 +344,24 @@ impl Spec {
         &self,
         asset: Coin<Asset>,
         due: &Due,
-        asset_ltv: Percent,
+        due_assets_capped: Coin<Asset>,
+        position_ltv_capped: Percent,
     ) -> Debt<Asset>
     where
         Asset: Currency,
         Due: DueTrait,
     {
-        debug_assert!(asset_ltv < self.liability.max());
+        debug_assert!(position_ltv_capped < self.liability.max());
         if due.total_due().is_zero() {
             Debt::No
         } else {
-            let zone = self.liability.zone_of(asset_ltv);
-            debug_assert!(zone.range().contains(&asset_ltv));
+            let zone = self.liability.zone_of(position_ltv_capped);
+            debug_assert!(zone.range().contains(&position_ltv_capped));
             let steady_within = self.close.no_close(zone.range());
-            debug_assert!(steady_within.contains(&asset_ltv));
+            debug_assert!(steady_within
+                .map(|ltv| ltv.of(asset))
+                .contains(&due_assets_capped));
+
             Debt::Ok {
                 zone,
                 steadiness: Steadiness::new(

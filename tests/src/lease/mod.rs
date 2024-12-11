@@ -10,10 +10,7 @@ use finance::{
     percent::Percent,
     price::{self, Price},
 };
-use lease::api::{
-    query::{ClosePolicy, StateQuery, StateResponse},
-    ExecuteMsg,
-};
+use lease::api::query::{ClosePolicy, StateQuery, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
@@ -87,21 +84,13 @@ pub(super) fn feed_price<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
 
 pub(super) fn deliver_new_price(
     test_case: &mut LeaseTestCase,
-    lease: Addr,
     base: LeaseCoin,
     quote: LpnCoin,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse> {
-    common::oracle::feed_price(test_case, testing::user(ADMIN), base, quote);
+    let sender = testing::user(ADMIN);
+    common::oracle::feed_price(test_case, sender.clone(), base, quote);
 
-    test_case
-        .app
-        .execute(
-            test_case.address_book.oracle().clone(),
-            lease,
-            &ExecuteMsg::PriceAlarm(),
-            &[],
-        )
-        .unwrap()
+    common::oracle::dispatch(test_case, sender)
 }
 
 pub(super) fn create_test_case<InitFundsC>() -> LeaseTestCase

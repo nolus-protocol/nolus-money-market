@@ -47,7 +47,7 @@ where
     }
 
     pub fn contains(&self, t: &T) -> bool {
-        self.start.map_or(true, |ref start| start <= t) && t < &self.end
+        self.may_above_or_equal().map_or(true, |start| start <= t) && t < &self.end
     }
 
     pub fn invert<R, MapFn>(self, mut map_fn: MapFn) -> RightOpenRange<R, Descending>
@@ -72,6 +72,15 @@ where
     pub fn cut_from(self, from: T) -> Self {
         let end = from.clamp(self.start.unwrap_or(from).min(self.end), self.end);
         Self::new_ascending(self.start, end)
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn map<F, U>(self, map_fn: F) -> RightOpenRange<U, Ascending>
+    where
+        F: Fn(T) -> U,
+        U: Copy + Ord,
+    {
+        RightOpenRange::new_ascending(self.start.map(&map_fn), map_fn(self.end))
     }
 
     fn invariant(&self) -> bool {

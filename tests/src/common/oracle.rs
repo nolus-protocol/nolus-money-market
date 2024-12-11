@@ -22,7 +22,7 @@ use sdk::{
 };
 
 use super::{
-    test_case::{app::App, TestCase},
+    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
     ADMIN,
 };
 
@@ -193,7 +193,7 @@ pub(crate) fn feed_price<
         Addr,
         TimeAlarms,
     >,
-    addr: Addr,
+    sender: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,
 ) -> AppResponse
@@ -203,5 +203,34 @@ where
     C2: CurrencyDef,
     C2::Group: MemberOf<PriceCurrencies>,
 {
-    feed_price_pair(test_case, addr, price::total_of(base).is(quote))
+    feed_price_pair(test_case, sender, price::total_of(base).is(quote))
+}
+
+pub(crate) fn dispatch<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Addr,
+        TimeAlarms,
+    >,
+    sender: Addr,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+    let oracle = test_case.address_book.oracle().clone();
+
+    test_case
+    .app
+    .execute_raw(
+        sender,
+        wasm_execute(
+            oracle,
+            &ExecuteMsg::<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>::DispatchAlarms { max_count: 32 },
+            vec![],
+        )
+        .unwrap(),
+    )
+    .expect("Oracle not properly connected!")
 }

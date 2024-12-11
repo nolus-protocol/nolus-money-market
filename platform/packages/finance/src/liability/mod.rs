@@ -51,6 +51,7 @@ pub struct Liability {
 
 impl Liability {
     const MAX_TOP_BOUND: Percent = Percent::HUNDRED;
+    const MIN_STEP_LTV: Percent = Percent::from_permille(1);
 
     #[track_caller]
     #[cfg(any(test, feature = "testing"))]
@@ -86,6 +87,10 @@ impl Liability {
 
     pub const fn max(&self) -> Percent {
         self.max
+    }
+
+    pub fn cap_to_zone(&self, ltv: Percent) -> Percent {
+        ltv.min(self.max - Self::MIN_STEP_LTV)
     }
 
     pub fn zone_of(&self, ltv: Percent) -> Zone {
@@ -372,6 +377,33 @@ mod test {
         amount_to_liquidate_int(liability, lease_amount, lease_amount, lease_amount);
         amount_to_liquidate_int(liability, lease_amount, lease_amount + 1, lease_amount);
         amount_to_liquidate_int(liability, lease_amount, lease_amount + 10, lease_amount);
+    }
+
+    #[test]
+    fn cap_to_zone() {
+        const MAX: Percent = Percent::from_permille(14);
+        let obj = Liability {
+            initial: Percent::from_percent(1),
+            healthy: Percent::from_percent(1),
+            first_liq_warn: Percent::from_permille(11),
+            second_liq_warn: Percent::from_permille(12),
+            third_liq_warn: Percent::from_permille(13),
+            max: MAX,
+            recalc_time: Duration::HOUR,
+        };
+        assert_eq!(
+            MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV)
+        );
+        assert_eq!(
+            MAX - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV)
+        );
+        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX));
+        assert_eq!(
+            MAX - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone(MAX + Liability::MIN_STEP_LTV)
+        );
     }
 
     #[track_caller]

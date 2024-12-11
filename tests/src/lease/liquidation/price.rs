@@ -90,7 +90,6 @@ fn full_liquidation() {
     // the base is chosen to be close to the asset amount to trigger a full liquidation
     let mut response: ResponseWithInterChainMsgs<'_, ()> = lease_mod::deliver_new_price(
         &mut test_case,
-        lease_addr.clone(),
         (lease_amount - 2).into(),
         borrowed_amount.into(),
     )
@@ -173,10 +172,10 @@ fn full_liquidation() {
 
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
     let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
-    let lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let _lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let response: AppResponse =
-        lease_mod::deliver_new_price(&mut test_case, lease, base, quote).unwrap_response();
+        lease_mod::deliver_new_price(&mut test_case, base, quote).unwrap_response();
 
     let event = response
         .events
