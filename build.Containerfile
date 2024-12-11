@@ -144,13 +144,20 @@ RUN ["cargo", "install", "--jobs", "1", "--force", "cosmwasm-check"]
 FROM builder-base AS builder
 
 RUN --mount=type=bind,source="./",target="/code/",readonly \
-  "cd" "/code/" && \
-    tag="$("git" "describe" --tags --abbrev="0")" && \
-    readonly tag && \
-    tag_commit="$("git" "show-ref" "${tag:?}" --hash --abbrev)" && \
-    readonly tag_commit && \
-    described="$("git" "describe" --tags --dirty)" && \
+  cd "/code/" && \
+    described="$("git" "describe" --tags)" && \
     readonly described && \
+    latest_tag="$("git" "describe" --tags --abbrev="0")" && \
+    readonly latest_tag && \
+    tag_commit="$(\
+      "git" \
+        "show-ref" \
+        "${latest_tag:?}" \
+        --abbrev \
+        --hash \
+        --tags\
+    )" && \
+    readonly tag_commit && \
     "printf" \
       "tag=%s / %s" \
       "${tag_commit:?}" \
