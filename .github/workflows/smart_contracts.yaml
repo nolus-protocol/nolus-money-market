@@ -4,6 +4,11 @@ run-name: "Running workflow for smart contracts"
 on:
   workflow_dispatch:
     inputs:
+      check-dependencies-version:
+        description: "Check dependencies' versions."
+        required: true
+        default: true
+        type: "boolean"
       upload-artifacts:
         description: "Upload optimized builds as artifacts."
         required: true
@@ -25,7 +30,7 @@ on:
 concurrency:
   cancel-in-progress: true
   group: |-
-    ${{ format('{0}-{1}-{2}', github.ref_name, github.ref_type, github.event_name, inputs.upload-artifacts) }}
+    ${{ format('{0}-{1}-{2}-{3}', github.ref_name, github.ref_type, github.event_name, inputs.check-dependencies-version, inputs.upload-artifacts) }}
 
 defaults:
   run:
@@ -34,6 +39,8 @@ defaults:
 env:
   CARGO_TERM_COLOR: "always"
   RELEASE_VERSION: "ci"
+  check-dependencies-versions: |-
+    ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
   UPLOAD_ARTIFACTS: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
@@ -157,7 +164,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - if: |-
-          github.ref_type == 'tag'
+          fromJSON(env.check-dependencies-versions)
         name: "Load configuration"
         run: |-
           "cargo" \
@@ -391,11 +398,22 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: "true"
+      - id: "builder-base-container-cache-key"
+        env:
+          check_deps_updated: |-
+            ${{ toJSON(env.check-dependencies-versions) }}
+        run: |-
+          echo \
+            "cache-key<<EOF
+          builder-base-container-[check-deps=${check_deps_updated:?}]
+          EOF" \
+            >>"${GITHUB_OUTPUT}"
       - id: "restore-builder-base-container-cache"
         name: "Restore builder base image from cache"
         uses: "actions/cache/restore@v4"
         with:
-          key: "builder-base-container"
+          key: |-
+            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
           path: |-
             builder-base-container.tar
       - if: |-
@@ -422,7 +440,8 @@ jobs:
         name: "Store builder base image to cache"
         uses: "actions/cache/save@v4"
         with:
-          key: "builder-base-container"
+          key: |-
+            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
           path: |-
             builder-base-container.tar
       - if: |-
@@ -433,6 +452,9 @@ jobs:
             "load" \
             --input "builder-base-container.tar"
       - name: "Produce builder images"
+        env:
+          CHECK_DEPS_UPDATED: |-
+            ${{ env.check-dependencies-versions }}
         run: |-
           set -eu
 
@@ -442,7 +464,7 @@ jobs:
             "docker" \
               "buildx" \
               "build" \
-              --build-arg "check_dependencies_updated=${UPLOAD_ARTIFACTS:?}" \
+              --build-arg "check_dependencies_updated=${CHECK_DEPS_UPDATED:?}" \
               --file "build.Containerfile" \
               --tag "${target:?}-builder" \
               --target "${target:?}-builder" \
