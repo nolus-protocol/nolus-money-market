@@ -344,7 +344,7 @@ impl Spec {
         &self,
         asset: Coin<Asset>,
         due: &Due,
-        due_assets_capped: Coin<Asset>,
+        _due_assets_capped: Coin<Asset>,
         position_ltv_capped: Percent,
     ) -> Debt<Asset>
     where
@@ -358,9 +358,10 @@ impl Spec {
             let zone = self.liability.zone_of(position_ltv_capped);
             debug_assert!(zone.range().contains(&position_ltv_capped));
             let steady_within = self.close.no_close(zone.range());
+            #[cfg(debug_assertions)]
             debug_assert!(steady_within
                 .map(|ltv| ltv.of(asset))
-                .contains(&due_assets_capped));
+                .contains(&_due_assets_capped));
 
             Debt::Ok {
                 zone,
