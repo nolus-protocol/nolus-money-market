@@ -164,10 +164,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - if: |-
-          github.ref_type == 'tag' || (
-            github.event_name == 'workflow_dispatch' &&
-              inputs.check-dependencies-version
-          )
+          fromJSON(env.check-dependencies-versions)
         name: "Load configuration"
         run: |-
           "cargo" \
