@@ -16,7 +16,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, FullUpdateOutput, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -39,7 +39,7 @@ mod oracle;
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+const CONTRACT_VERSION: Version = Version::new(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 type Oracle<'storage, S> =
     GenericOracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
@@ -91,7 +91,7 @@ pub fn migrate(
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => to_json_binary(&package_version!()),
+        QueryMsg::ContractVersion {} => to_json_binary(&PACKAGE_VERSION),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)

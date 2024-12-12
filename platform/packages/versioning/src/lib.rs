@@ -87,18 +87,6 @@ macro_rules! package_version {
     }};
 }
 
-// TODO [Edition=2024] Remove `#[expect]`.
-#[expect(edition_2024_expr_fragment_specifier)]
-#[macro_export]
-macro_rules! version {
-    ($storage: expr) => {{
-        $crate::Version::new($storage, $crate::package_version!())
-    }};
-    ($storage: expr, $version: expr) => {{
-        $crate::Version::new($storage, $version)
-    }};
-}
-
 const VERSION_STORAGE_KEY: Item<Version> = Item::new("contract_version");
 
 pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> {

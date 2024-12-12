@@ -15,7 +15,7 @@ use sdk::{
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, SemVer, Version, VersionSegment};
 
 use crate::{
     cmd::RewardCalculator,
@@ -29,7 +29,7 @@ use crate::{
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+const CONTRACT_VERSION: Version = Version::new(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(

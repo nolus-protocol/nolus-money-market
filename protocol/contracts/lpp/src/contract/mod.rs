@@ -18,7 +18,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
-use versioning::{package_version, version, SemVer, Version, VersionSegment};
+use versioning::{package_version, SemVer, Version, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
@@ -34,7 +34,7 @@ mod rewards;
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = version!(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+const CONTRACT_VERSION: Version = Version::new(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(
