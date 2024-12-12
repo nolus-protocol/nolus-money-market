@@ -212,7 +212,7 @@ fn check_events(
                     test_case.address_book.treasury().as_str()
                 ),
                 ("height", &test_case.app.block_info().height.to_string()),
-                ("at", &test_case.app.block_info().time.nanos().to_string()),
+                ("at", &crate::block_time(test_case).nanos().to_string()),
                 ("idx", "0"),
                 ("to", test_case.address_book.lpp().as_str()),
                 (

@@ -19,7 +19,7 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Event, Timestamp},
+    cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -33,7 +33,7 @@ use crate::common::{
     },
     lpp::{LppExecuteMsg, LppQueryMsg},
     protocols::Registry,
-    test_case::{app::App, builder::BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 type LeaseCurrency = LeaseC1;
@@ -713,7 +713,7 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         interest1.of(loan1).into()
     );
 
@@ -785,7 +785,7 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -817,7 +817,7 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         Coin::new(0)
     );
 
@@ -1084,7 +1084,7 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         interest1.of(loan1).into()
     );
 
@@ -1156,7 +1156,7 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -1188,7 +1188,7 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
-        loan1_resp.interest_due(&block_time(&test_case.app)),
+        loan1_resp.interest_due(&crate::block_time(&test_case)),
         Coin::new(0)
     );
 
@@ -1525,8 +1525,4 @@ where
     A: Into<Coin<Lpn>>,
 {
     cwcoin(amount)
-}
-
-fn block_time(app: &App) -> Timestamp {
-    app.block_info().time
 }

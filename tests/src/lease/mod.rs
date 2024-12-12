@@ -13,7 +13,7 @@ use finance::{
 use lease::api::query::{ClosePolicy, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::{
-    cosmwasm_std::{coin, Addr, Timestamp},
+    cosmwasm_std::{coin, Addr},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -391,8 +391,7 @@ where
     AssetC: CurrencyDef,
     AssetC::Group: MemberOf<LeaseGroup>,
 {
-    let now = block_time(test_case);
-    // test_case.app.block_info().time;
+    let now = crate::block_time(test_case);
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
@@ -482,28 +481,4 @@ where
         Coin::<LeaseCurrency>::default(),
         LeaserInstantiator::REPAYMENT_PERIOD,
     )
-}
-
-pub(super) fn block_time<
-    ProtocolsRegistry,
-    Treasury,
-    Profit,
-    Reserve,
-    Leaser,
-    Lpp,
-    Oracle,
-    TimeAlarms,
->(
-    test_case: &TestCase<
-        ProtocolsRegistry,
-        Treasury,
-        Profit,
-        Reserve,
-        Leaser,
-        Lpp,
-        Oracle,
-        TimeAlarms,
-    >,
-) -> Timestamp {
-    test_case.app.block_info().time
 }
