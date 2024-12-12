@@ -53,7 +53,7 @@ fn partial_repay() {
 
     repay(&mut test_case, lease_addr.clone(), partial_payment);
 
-    let query_result = super::state_query(&test_case, &lease_addr);
+    let query_result = super::state_query(&test_case, lease_addr);
 
     assert_eq!(query_result, expected_result);
 }
@@ -69,7 +69,7 @@ fn partial_repay_after_time() {
         LeaserInstantiator::REPAYMENT_PERIOD.nanos() >> 1,
     ));
 
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address.clone());
 
     let StateResponse::Opened {
         overdue_margin,
@@ -99,7 +99,7 @@ fn partial_repay_after_time() {
         ),
     );
 
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address);
 
     if let StateResponse::Opened {
         overdue_margin,
@@ -156,7 +156,7 @@ fn full_repay() {
         amount: LeaseCoin::into(expected_amount),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address);
 
     assert_eq!(query_result, expected_result);
 }
@@ -183,11 +183,12 @@ fn full_repay_with_max_ltd() {
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
         due_margin: LpnCoin::ZERO.into(),
         due_interest: LpnCoin::ZERO.into(),
+        due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),
         validity: Timestamp::from_nanos(1537237459879305533),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address.clone());
 
     assert_eq!(query_result, expected_result);
 
@@ -204,7 +205,7 @@ fn full_repay_with_max_ltd() {
         amount: LeaseCoin::into(expected_amount),
         in_progress: None,
     };
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address);
 
     assert_eq!(query_result, expected_result);
 }
@@ -224,7 +225,7 @@ fn full_repay_with_excess() {
 
     repay(&mut test_case, lease_address.clone(), payment);
 
-    let query_result = super::state_query(&test_case, &lease_address);
+    let query_result = super::state_query(&test_case, lease_address.clone());
 
     assert_eq!(
         test_case

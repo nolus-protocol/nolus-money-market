@@ -10,7 +10,7 @@ use finance::{
     percent::Percent,
     price::{self, Price},
 };
-use lease::api::query::{ClosePolicy, StateQuery, StateResponse};
+use lease::api::query::{ClosePolicy, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
@@ -352,13 +352,9 @@ pub(super) fn state_query<
         Oracle,
         TimeAlarms,
     >,
-    lease: &Addr,
+    lease: Addr,
 ) -> StateResponse {
-    test_case
-        .app
-        .query()
-        .query_wasm_smart(lease, &StateQuery {})
-        .unwrap()
+    common::lease::fetch_state(&test_case.app, lease)
 }
 
 pub(super) fn expected_open_state<
@@ -395,7 +391,8 @@ where
     AssetC: CurrencyDef,
     AssetC::Group: MemberOf<LeaseGroup>,
 {
-    let now = test_case.app.block_info().time;
+    let now = block_time(test_case);
+    // test_case.app.block_info().time;
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
@@ -442,8 +439,9 @@ where
             due,
         )
         .into(),
+        due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),
-        validity: block_time(test_case),
+        validity: now,
         in_progress: None,
     }
 }

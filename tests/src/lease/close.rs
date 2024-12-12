@@ -35,7 +35,7 @@ fn state_closed() {
 
     close(&mut test_case, lease_addr.clone(), lease_amount);
 
-    let query_result: StateResponse = super::state_query(&test_case, &lease_addr);
+    let query_result: StateResponse = super::state_query(&test_case, lease_addr.clone());
     let expected_result: StateResponse = StateResponse::Closed();
 
     assert_eq!(query_result, expected_result);

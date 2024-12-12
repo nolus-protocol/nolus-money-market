@@ -158,7 +158,7 @@ fn full_liquidation() {
         &[],
     );
 
-    let state = lease_mod::state_query(&test_case, &lease_addr);
+    let state = lease_mod::state_query(&test_case, lease_addr);
     assert!(
         matches!(state, StateResponse::Liquidated()),
         "should have been in Liquidated state"

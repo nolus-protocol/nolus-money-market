@@ -21,7 +21,7 @@ fn active_state() {
     let downpayment = LeaseCoin::new(10_000);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease);
+    let query_result = super::state_query(&test_case, lease.clone());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
@@ -36,7 +36,7 @@ fn active_state() {
             .is_zero()
     );
 
-    let query_result = super::state_query(&test_case, &lease);
+    let query_result = super::state_query(&test_case, lease.clone());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, unutilized_amount);
     assert_eq!(query_result, expected_result);
@@ -50,7 +50,7 @@ fn swap_on_repay() {
     let downpayment = LeaseCoin::new(10_000);
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let query_result = super::state_query(&test_case, &lease);
+    let query_result = super::state_query(&test_case, lease.clone());
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
     assert_eq!(query_result, expected_result);
@@ -80,7 +80,7 @@ fn swap_on_repay() {
         () = response.unwrap_response();
     });
 
-    let query_result = super::state_query(&test_case, &lease);
+    let query_result = super::state_query(&test_case, lease.clone());
     let expected_result = super::expected_newly_opened_state(&test_case, downpayment, payment);
     assert_eq!(query_result, expected_result);
 

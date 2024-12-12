@@ -30,7 +30,7 @@ fn liquidation_time_alarm(
     let StateResponse::Opened {
         amount: lease_amount,
         ..
-    }: StateResponse = state_query(&test_case, &lease_addr)
+    }: StateResponse = state_query(&test_case, lease_addr.clone())
     else {
         unreachable!()
     };
@@ -118,7 +118,7 @@ fn liquidation_time_alarm(
         .map(|attribute| (attribute.key, attribute.value))
         .collect();
 
-    let query_result: StateResponse = state_query(&test_case, &lease_addr);
+    let query_result: StateResponse = state_query(&test_case, lease_addr);
 
     let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
         .parse::<Amount>()

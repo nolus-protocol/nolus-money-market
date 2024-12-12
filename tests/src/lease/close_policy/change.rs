@@ -152,7 +152,10 @@ fn tp_set() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     // LeaseCLpnC = 1:1
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
-    assert_eq!(ClosePolicy::default(), query_policy(&test_case, &lease));
+    assert_eq!(
+        ClosePolicy::default(),
+        query_policy(&test_case, lease.clone())
+    );
 
     let tp = Percent::from_percent(28);
     super::change_ok(
@@ -163,7 +166,7 @@ fn tp_set() {
     );
     assert_eq!(
         ClosePolicy::new(Some(tp), None),
-        query_policy(&test_case, &lease)
+        query_policy(&test_case, lease.clone())
     );
 
     // LeaseC/LpnC = 10/25
@@ -182,7 +185,7 @@ fn tp_set() {
     assert_trigger_tp_error(err, tp)
 }
 
-fn query_policy(test_case: &LeaseTestCase, lease: &Addr) -> ClosePolicy {
+fn query_policy(test_case: &LeaseTestCase, lease: Addr) -> ClosePolicy {
     let StateResponse::Opened { close_policy, .. } = lease::state_query(test_case, lease) else {
         unreachable!()
     };

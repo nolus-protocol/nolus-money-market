@@ -68,7 +68,7 @@ fn full_close() {
         exp_change,
         LeaseCoin::ZERO,
     );
-    let state = super::state_query(&test_case, &lease);
+    let state = super::state_query(&test_case, lease.clone());
     assert_eq!(StateResponse::Closed(), state);
 
     assert_eq!(
@@ -112,7 +112,7 @@ fn partial_close_loan_not_closed() {
         exp_change,
         lease_amount - close_amount,
     );
-    let state = super::state_query(&test_case, &lease);
+    let state = super::state_query(&test_case, lease.clone());
     assert_eq!(
         super::expected_open_state(
             &test_case,
@@ -163,7 +163,7 @@ fn partial_close_loan_closed() {
         exp_change,
         lease_amount - close_amount,
     );
-    let state = super::state_query(&test_case, &lease);
+    let state = super::state_query(&test_case, lease.clone());
     assert_eq!(
         StateResponse::Paid {
             amount: (lease_amount - close_amount).into(),

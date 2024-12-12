@@ -1,6 +1,11 @@
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{Currency, CurrencyDTO, CurrencyDef};
-use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    coin::Coin,
+    duration::{Duration, Seconds},
+    liability::Liability,
+    percent::Percent,
+};
 use lease::{
     api::{
         open::{
@@ -342,8 +347,15 @@ fn send_open_ica_response<'r>(
 }
 
 #[track_caller]
-fn fetch_state(app: &mut App, lease: Addr) -> StateResponse {
-    app.query().query_wasm_smart(lease, &StateQuery {}).unwrap()
+pub(crate) fn fetch_state(app: &App, lease: Addr) -> StateResponse {
+    app.query()
+        .query_wasm_smart(
+            lease,
+            &StateQuery {
+                due_projection: Seconds::default(),
+            },
+        )
+        .unwrap()
 }
 
 #[track_caller]
