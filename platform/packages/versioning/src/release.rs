@@ -11,7 +11,6 @@ use super::{Version, VersionSegment};
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct Release(String);
-//TODO merge ReleaseLabel with Type and refactor the free functions into member functions of the new type Release
 
 impl Release {
     const RELEASE_LABEL: &'static str = env!(
@@ -28,8 +27,73 @@ impl Release {
         Self(Self::VOID_RELEASE.into())
     }
 
-    pub(crate) fn label() -> Self {
-        Self(Self::RELEASE_LABEL.into())
+    pub(crate) fn from_env() -> Self {
+        Self::instance(Self::RELEASE_LABEL)
+    }
+
+    fn instance<L>(label: L) -> Self
+    where
+        L: Into<String>,
+    {
+        Self(label.into())
+    }
+
+    pub fn allow_software_update(&self, current: &Version, new: &Version) -> Result<(), StdError> {
+        self.allow_software_update_type(current, new)
+    }
+
+    pub fn allow_software_and_storage_update<const FROM_STORAGE_VERSION: VersionSegment>(
+        &self,
+        current: &Version,
+        new: &Version,
+    ) -> Result<(), StdError> {
+        self.allow_software_and_storage_update_type::<FROM_STORAGE_VERSION>(current, new)
+    }
+
+    fn allow_software_update_type(&self, current: &Version, new: &Version) -> Result<(), StdError> {
+        if current.storage != new.storage {
+            return Err(StdError::generic_err(format!(
+            "The storage versions differ! The current storage version is {saved} whereas the storage version of the new software is {current}!",
+            saved = current.storage,
+            current = new.storage,
+        )));
+        }
+
+        self.allow_software_update_int(current, new)
+    }
+
+    fn allow_software_and_storage_update_type<const FROM_STORAGE_VERSION: VersionSegment>(
+        &self,
+        current: &Version,
+        new: &Version,
+    ) -> Result<(), StdError> {
+        if current.storage != FROM_STORAGE_VERSION {
+            return Err(StdError::generic_err(format!(
+                "The current storage version, {saved}, should match the expected one, {expected}!",
+                saved = current.storage,
+                expected = FROM_STORAGE_VERSION
+            )));
+        }
+
+        if current.storage.wrapping_add(1) == new.storage {
+            self.allow_software_update_int(current, new)
+        } else {
+            Err(StdError::generic_err(
+                "The storage version is not adjacent to the current one!",
+            ))
+        }
+    }
+
+    fn allow_software_update_int(&self, current: &Version, new: &Version) -> Result<(), StdError> {
+        if current.software < new.software
+            || (self.0 == Self::DEV_RELEASE && current.software == new.software)
+        {
+            Ok(())
+        } else {
+            Err(StdError::generic_err(
+                "The software version does not increase monotonically!",
+            ))
+        }
     }
 }
 
@@ -39,244 +103,187 @@ impl From<Release> for String {
     }
 }
 
-pub fn allow_software_update(current: &Version, new: &Version) -> Result<(), StdError> {
-    allow_software_update_type(release_type(), current, new)
-}
-
-pub fn allow_software_and_storage_update<const FROM_STORAGE_VERSION: VersionSegment>(
-    current: &Version,
-    new: &Version,
-) -> Result<(), StdError> {
-    allow_software_and_storage_update_type::<FROM_STORAGE_VERSION>(release_type(), current, new)
-}
-
-fn allow_software_update_type(
-    release_type: Type,
-    current: &Version,
-    new: &Version,
-) -> Result<(), StdError> {
-    if current.storage != new.storage {
-        return Err(StdError::generic_err(format!(
-            "The storage versions differ! The current storage version is {saved} whereas the storage version of the new software is {current}!",
-            saved = current.storage,
-            current = new.storage,
-        )));
-    }
-
-    allow_software_update_int(release_type, current, new)
-}
-
-fn allow_software_and_storage_update_type<const FROM_STORAGE_VERSION: VersionSegment>(
-    release_type: Type,
-    current: &Version,
-    new: &Version,
-) -> Result<(), StdError> {
-    if current.storage != FROM_STORAGE_VERSION {
-        return Err(StdError::generic_err(format!(
-            "The current storage version, {saved}, should match the expected one, {expected}!",
-            saved = current.storage,
-            expected = FROM_STORAGE_VERSION
-        )));
-    }
-
-    if current.storage.wrapping_add(1) == new.storage {
-        allow_software_update_int(release_type, current, new)
-    } else {
-        Err(StdError::generic_err(
-            "The storage version is not adjacent to the current one!",
-        ))
-    }
-}
-
-fn allow_software_update_int(
-    release_type: Type,
-    current: &Version,
-    new: &Version,
-) -> Result<(), StdError> {
-    if current.software < new.software
-        || (release_type == Type::Dev && current.software == new.software)
-    {
-        Ok(())
-    } else {
-        Err(StdError::generic_err(
-            "The software version does not increase monotonically!",
-        ))
-    }
-}
-
-#[derive(PartialEq, Eq)]
-enum Type {
-    Dev,
-    Prod,
-}
-
-fn release_type() -> Type {
-    if Release::RELEASE_LABEL == Release::DEV_RELEASE {
-        Type::Dev
-    } else {
-        Type::Prod
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::{SemVer, Version};
 
-    use super::{allow_software_and_storage_update_type, allow_software_update_type, Type};
+    use super::Release;
+
+    const PROD_RELEASE: &str = "v0.5.3";
 
     #[test]
     fn prod_software() {
         let current = Version::new(1, SemVer::parse("0.3.4"));
-        allow_software_update_type(Type::Prod, &current, &current).unwrap_err();
-        allow_software_update_type(
-            Type::Prod,
-            &current,
-            &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        let instance = Release::instance(PROD_RELEASE);
+        instance
+            .allow_software_update_type(&current, &current)
+            .unwrap_err();
+        instance
+            .allow_software_update_type(
+                &current,
+                &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_update_type(
-            Type::Prod,
-            &current,
-            &Version::new(current.storage, SemVer::parse("0.3.3")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_update_type(
+                &current,
+                &Version::new(current.storage, SemVer::parse("0.3.3")),
+            )
+            .unwrap_err();
 
         let new = Version::new(1, SemVer::parse("0.3.5"));
-        allow_software_update_type(Type::Prod, &current, &new).unwrap();
+        instance.allow_software_update_type(&current, &new).unwrap();
     }
 
     #[test]
     fn dev_software() {
+        let instance = Release::instance(Release::DEV_RELEASE);
         let current = Version::new(1, SemVer::parse("0.3.4"));
-        allow_software_update_type(Type::Dev, &current, &current).unwrap();
-        allow_software_update_type(
-            Type::Prod,
-            &current,
-            &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_update_type(&current, &current)
+            .unwrap();
+        instance
+            .allow_software_update_type(
+                &current,
+                &Version::new(current.storage + 1, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_update_type(
-            Type::Prod,
-            &current,
-            &Version::new(current.storage, SemVer::parse("0.3.3")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_update_type(
+                &current,
+                &Version::new(current.storage, SemVer::parse("0.3.3")),
+            )
+            .unwrap_err();
 
-        let new = Version::new(1, SemVer::parse("0.3.5"));
-        allow_software_update_type(Type::Prod, &current, &new).unwrap();
+        let new = Version::new(current.storage, SemVer::parse("0.3.5"));
+        instance.allow_software_update_type(&current, &new).unwrap();
     }
 
     #[test]
     fn prod_software_and_storage() {
+        let instance = Release::instance(PROD_RELEASE);
         let current = Version::new(1, SemVer::parse("0.3.4"));
-        allow_software_and_storage_update_type::<0>(Type::Prod, &current, &current).unwrap_err();
-        allow_software_and_storage_update_type::<1>(Type::Prod, &current, &current).unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<0>(&current, &current)
+            .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(&current, &current)
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<0>(
-            Type::Prod,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<0>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Prod,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
-        allow_software_and_storage_update_type::<1>(
-            Type::Prod,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.5")),
-        )
-        .unwrap();
-        allow_software_and_storage_update_type::<2>(
-            Type::Prod,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.5")),
+            )
+            .unwrap();
+        instance
+            .allow_software_and_storage_update_type::<2>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Prod,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.3")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.3")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Prod,
-            &current,
-            &Version::new(1, SemVer::parse("0.3.5")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(1, SemVer::parse("0.3.5")),
+            )
+            .unwrap_err();
 
         let new = Version::new(2, SemVer::parse("0.3.5"));
-        allow_software_and_storage_update_type::<1>(Type::Prod, &current, &new).unwrap();
-        allow_software_and_storage_update_type::<2>(
-            Type::Prod,
-            &Version::new(2, SemVer::parse("0.3.4")),
-            &new,
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(&current, &new)
+            .unwrap();
+        instance
+            .allow_software_and_storage_update_type::<2>(
+                &Version::new(2, SemVer::parse("0.3.4")),
+                &new,
+            )
+            .unwrap_err();
     }
 
     #[test]
     fn dev_software_and_storage() {
+        let instance = Release::instance(Release::DEV_RELEASE);
         let current = Version::new(1, SemVer::parse("0.3.4"));
-        allow_software_and_storage_update_type::<0>(Type::Dev, &current, &current).unwrap_err();
-        allow_software_and_storage_update_type::<1>(Type::Dev, &current, &current).unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<0>(&current, &current)
+            .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(&current, &current)
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<0>(
-            Type::Dev,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<0>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Dev,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap();
-        allow_software_and_storage_update_type::<1>(
-            Type::Dev,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.5")),
-        )
-        .unwrap();
-        allow_software_and_storage_update_type::<2>(
-            Type::Dev,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.4")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.5")),
+            )
+            .unwrap();
+        instance
+            .allow_software_and_storage_update_type::<2>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.4")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Dev,
-            &current,
-            &Version::new(2, SemVer::parse("0.3.3")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(2, SemVer::parse("0.3.3")),
+            )
+            .unwrap_err();
 
-        allow_software_and_storage_update_type::<1>(
-            Type::Dev,
-            &current,
-            &Version::new(1, SemVer::parse("0.3.5")),
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(
+                &current,
+                &Version::new(1, SemVer::parse("0.3.5")),
+            )
+            .unwrap_err();
 
         let new = Version::new(2, SemVer::parse("0.3.5"));
-        allow_software_and_storage_update_type::<1>(Type::Dev, &current, &new).unwrap();
-        allow_software_and_storage_update_type::<2>(
-            Type::Dev,
-            &Version::new(2, SemVer::parse("0.3.4")),
-            &new,
-        )
-        .unwrap_err();
+        instance
+            .allow_software_and_storage_update_type::<1>(&current, &new)
+            .unwrap();
+        instance
+            .allow_software_and_storage_update_type::<2>(
+                &Version::new(2, SemVer::parse("0.3.4")),
+                &new,
+            )
+            .unwrap_err();
     }
 }

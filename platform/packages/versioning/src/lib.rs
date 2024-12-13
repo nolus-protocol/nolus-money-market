@@ -102,9 +102,9 @@ where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
-        .and_then(|current| release::allow_software_update(&current, &new))
+        .and_then(|current| Release::from_env().allow_software_update(&current, &new))
         .and_then(|()| save_version(storage, &new))
-        .map(|()| Release::label())
+        .map(|()| Release::from_env())
         .map_err(map_error)
 }
 
@@ -132,13 +132,14 @@ where
 {
     load_version(storage)
         .and_then(|current| {
-            release::allow_software_and_storage_update::<FROM_STORAGE_VERSION>(&current, &new)
+            Release::from_env()
+                .allow_software_and_storage_update::<FROM_STORAGE_VERSION>(&current, &new)
         })
         .and_then(|()| save_version(storage, &new))
         .map_err(map_error)
         .and_then(|()| migrate_storage(storage))
         .map(|storage_migration_output| FullUpdateOutput {
-            release_label: Release::label(),
+            release_label: Release::from_env(),
             storage_migration_output,
         })
 }
