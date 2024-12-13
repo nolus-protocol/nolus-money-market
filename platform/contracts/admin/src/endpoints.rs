@@ -7,7 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, ReleaseLabel, SemVer, Version, VersionSegment};
+use versioning::{package_version, Release, SemVer, Version, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -284,7 +284,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             ContractState::AwaitContractsMigrationReply {
-                release: ReleaseLabel::void(),
+                release: Release::void(),
             }
             .store(storage)
             .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
@@ -292,17 +292,14 @@ fn deregister_protocol(
         })
 }
 
-fn migration_reply(msg: Reply, expected_release: ReleaseLabel) -> ContractResult<CwResponse> {
+fn migration_reply(msg: Reply, expected_release: Release) -> ContractResult<CwResponse> {
     platform::reply::from_execute(msg)?
         .ok_or(ContractError::NoMigrationResponseData {})
         .and_then(|reported_release| check_release_label(reported_release, expected_release))
         .map(|()| response::empty_response())
 }
 
-fn check_release_label(
-    reported_release: ReleaseLabel,
-    expected_release: ReleaseLabel,
-) -> ContractResult<()> {
+fn check_release_label(reported_release: Release, expected_release: Release) -> ContractResult<()> {
     ensure_eq!(
         reported_release,
         expected_release,

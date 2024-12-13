@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
-use versioning::ReleaseLabel;
+use versioning::Release;
 
 use crate::{
     error::Error,
@@ -20,7 +20,7 @@ use super::{
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_addr: Addr,
-    release: ReleaseLabel,
+    release: Release,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
     ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
