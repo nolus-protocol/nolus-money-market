@@ -7,7 +7,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-pub use self::release::ReleaseLabel;
+pub use self::release::Release;
 
 mod release;
 
@@ -97,19 +97,19 @@ pub fn update_software<ContractError, MapErrorFunctor>(
     storage: &mut dyn Storage,
     new: Version,
     map_error: MapErrorFunctor,
-) -> Result<ReleaseLabel, ContractError>
+) -> Result<Release, ContractError>
 where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     load_version(storage)
         .and_then(|current| release::allow_software_update(&current, &new))
         .and_then(|()| save_version(storage, &new))
-        .map(|()| ReleaseLabel::label())
+        .map(|()| Release::label())
         .map_err(map_error)
 }
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
-    pub release_label: ReleaseLabel,
+    pub release_label: Release,
     pub storage_migration_output: MigrateStorageOutput,
 }
 
@@ -138,7 +138,7 @@ where
         .map_err(map_error)
         .and_then(|()| migrate_storage(storage))
         .map(|storage_migration_output| FullUpdateOutput {
-            release_label: ReleaseLabel::label(),
+            release_label: Release::label(),
             storage_migration_output,
         })
 }

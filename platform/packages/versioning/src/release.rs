@@ -10,10 +10,10 @@ use super::{Version, VersionSegment};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct ReleaseLabel(String);
+pub struct Release(String);
 //TODO merge ReleaseLabel with Type and refactor the free functions into member functions of the new type Release
 
-impl ReleaseLabel {
+impl Release {
     const RELEASE_LABEL: &'static str = env!(
         "RELEASE_VERSION",
         "No release label provided as an environment variable! Please set \
@@ -33,8 +33,8 @@ impl ReleaseLabel {
     }
 }
 
-impl From<ReleaseLabel> for String {
-    fn from(value: ReleaseLabel) -> Self {
+impl From<Release> for String {
+    fn from(value: Release) -> Self {
         value.0
     }
 }
@@ -111,7 +111,7 @@ enum Type {
 }
 
 fn release_type() -> Type {
-    if ReleaseLabel::RELEASE_LABEL == ReleaseLabel::DEV_RELEASE {
+    if Release::RELEASE_LABEL == Release::DEV_RELEASE {
         Type::Dev
     } else {
         Type::Prod
