@@ -5,9 +5,7 @@ use currencies::{
 };
 use platform::{
     batch::{Emit, Emitter},
-    error as platform_error,
-    message::Response as MessageResponse,
-    response,
+    error as platform_error, response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -16,7 +14,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, FullUpdateOutput, SemVer, Version, VersionSegment};
+use versioning::{package_version, SemVer, Version, VersionSegment};
 
 use crate::{
     api::{
@@ -72,19 +70,13 @@ pub fn migrate(
     env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _, _>(
+    versioning::update_software(
         deps.storage,
         CONTRACT_VERSION,
-        try_clean_feeds,
         ContractError::UpdateSoftware,
     )
     .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
-    .and_then(
-        |FullUpdateOutput {
-             release_label,
-             storage_migration_output: (),
-         }| response::response_with_messages(release_label, MessageResponse::default()),
-    )
+    .and_then(response::response)
     .inspect_err(platform_error::log(deps.api))
 }
 
@@ -207,11 +199,6 @@ fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()>
                 .map_err(|e| ContractError::BrokenSwapTree(e.to_string()))
         })
         .map(std::mem::drop)
-}
-
-fn try_clean_feeds(store: &mut dyn Storage) -> ContractResult<()> {
-    Oracle::<'_, &mut dyn Storage>::wipe_out_v2(store);
-    Ok(())
 }
 
 fn to_json_binary<T>(data: &T) -> ContractResult<Binary>

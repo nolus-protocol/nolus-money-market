@@ -217,10 +217,6 @@ where
     const REPLY_ID: Id = 0;
     const EVENT_TYPE: &'static str = "pricealarm";
 
-    pub(super) fn wipe_out_v2(store: &mut dyn Storage) {
-        Feeds::<PriceG, BaseC, BaseG, Repo<'_, S, PriceG>>::wipe_out_v2(store)
-    }
-
     pub(super) fn try_feed_prices(
         &mut self,
         block_time: Timestamp,

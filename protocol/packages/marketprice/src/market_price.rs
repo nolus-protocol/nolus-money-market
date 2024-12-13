@@ -2,17 +2,14 @@ use std::{marker::PhantomData, mem};
 
 use currency::{
     self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith,
-    MemberOf, PairsGroup, PairsVisitor, PairsVisitorResult, SymbolStatic,
+    MemberOf, PairsGroup, PairsVisitor, PairsVisitorResult,
 };
 use finance::price::{
     base::BasePrice,
     dto::{with_price, PriceDTO, WithPrice},
     Price,
 };
-use sdk::{
-    cosmwasm_std::{Addr, Storage, Timestamp},
-    cw_storage_plus::Map,
-};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     config::Config,
@@ -27,11 +24,6 @@ pub struct PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
 }
 
 impl<'config, PriceG, ObservationsRepoImpl> PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
-    pub fn wipe_out_v2(store: &mut dyn Storage) {
-        const NAMESPACE: &str = "market_price";
-        Map::<(SymbolStatic, SymbolStatic), Vec<u8>>::new(NAMESPACE).clear(store);
-    }
-
     pub const fn new(observations_repo: ObservationsRepoImpl, config: &'config Config) -> Self {
         Self {
             observations_repo,

@@ -5,7 +5,7 @@ use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{
     config::Config, market_price::PriceFeeds, ObservationsReadRepo, ObservationsRepo,
 };
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
@@ -29,10 +29,6 @@ pub struct Feeds<'config, PriceG, BaseC, BaseG, Observations> {
 impl<'config, PriceG, BaseC, BaseG, Observations>
     Feeds<'config, PriceG, BaseC, BaseG, Observations>
 {
-    pub(crate) fn wipe_out_v2(store: &mut dyn Storage) {
-        PriceFeeds::<PriceG, Observations>::wipe_out_v2(store);
-    }
-
     pub(crate) fn with(config: &'config Config, observations: Observations) -> Self {
         Self {
             feeds: PriceFeeds::new(observations, config),
