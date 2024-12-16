@@ -39,13 +39,11 @@ impl Release {
     }
 
     pub fn allow_software_update(&self, current: &Version, new: &Version) -> Result<(), StdError> {
-        if current.storage != new.storage {
-            return Err(StdError::generic_err(format!(
-            "The storage versions differ! The current storage version is {saved} whereas the storage version of the new software is {current}!",
-            saved = current.storage,
-            current = new.storage,
-        )));
-        }
+        check_storage_match(
+            current.storage,
+            new.storage,
+            "the new software storage version",
+        )?;
 
         self.allow_software_update_int(current, new)
     }
@@ -55,13 +53,11 @@ impl Release {
         current: &Version,
         new: &Version,
     ) -> Result<(), StdError> {
-        if current.storage != FROM_STORAGE_VERSION {
-            return Err(StdError::generic_err(format!(
-                "The current storage version, {saved}, should match the expected one, {expected}!",
-                saved = current.storage,
-                expected = FROM_STORAGE_VERSION
-            )));
-        }
+        check_storage_match(
+            current.storage,
+            FROM_STORAGE_VERSION,
+            "the expected origin storage version",
+        )?;
 
         if current.storage.wrapping_add(1) == new.storage {
             self.allow_software_update_int(current, new)
@@ -82,6 +78,20 @@ impl Release {
                 "The software version does not increase monotonically!",
             ))
         }
+    }
+}
+
+fn check_storage_match(
+    current: VersionSegment,
+    reference: VersionSegment,
+    reference_descr: &str,
+) -> Result<(), StdError> {
+    if current != reference {
+        Err(StdError::generic_err(format!(
+        "The storage versions differ! The current storage version is {current} whereas {reference_descr} is {reference}!",
+    )))
+    } else {
+        Ok(())
     }
 }
 
