@@ -1,4 +1,5 @@
 use oracle::stub::SwapPath;
+use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
@@ -21,10 +22,10 @@ use crate::{
         DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
     },
     contract::{
-        cmd::{self, OpenLoanRespResult},
+        cmd::{CloseStatusDTO, LeaseFactory, OpenLeaseResult, OpenLoanRespResult},
         finalize::FinalizerRef,
         state::{
-            opened::active::Active,
+            opened::{active::Active, close::liquidation},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
             SwapClient, SwapResult,
         },
@@ -32,8 +33,9 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::{LppRef, OracleRef},
-    lease::IntoDTOResult,
+    finance::{LppRef, OracleRef, ReserveRef},
+    lease::with_lease_deps,
+    position::PositionDTO,
 };
 
 use super::open_ica::OpenIcaAccount;
@@ -49,7 +51,7 @@ pub(in super::super) type DexState = dex::StateRemoteOut<
     ForwardToDexEntryContinue,
 >;
 
-pub(in super::super::opening) fn start(
+pub(super) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
@@ -151,22 +153,45 @@ impl SwapTask for BuyAsset {
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> Self::Result {
-        let IntoDTOResult { lease, batch } = cmd::open_lease(
+        debug_assert_eq!(amount_out.currency(), self.form.currency);
+        debug_assert!(amount_out.amount() > 0);
+
+        let position = PositionDTO::new(amount_out, self.form.position_spec.into());
+        let profit = ProfitRef::new(self.form.loan.profit.clone(), &querier)?;
+        let reserve = ReserveRef::try_new(self.form.reserve.clone(), &querier)?;
+        let lease_addr = self.dex_account.owner().clone();
+        let cmd = LeaseFactory::new(
             self.form,
-            self.dex_account.owner().clone(),
+            lease_addr.clone(),
+            profit,
+            reserve,
+            (self.deps.2, self.deps.1.clone()),
             self.start_opening_at,
             &env.block.time,
-            amount_out,
-            querier,
-            (self.deps.0, self.deps.1, self.deps.2),
-        )?;
+        );
+        let OpenLeaseResult { lease, status } =
+            with_lease_deps::execute(cmd, lease_addr, position, self.deps.0, self.deps.1, querier)?;
 
-        let active = Active::new(Lease::new(lease, self.dex_account, self.deps.3));
+        let lease = Lease::new(lease, self.dex_account, self.deps.3);
+        let active = Active::new(lease);
         let emitter = active.emit_opened(env, self.downpayment, self.loan);
-        Ok(StateMachineResponse::from(
-            MessageResponse::messages_with_events(batch, emitter),
-            active,
-        ))
+
+        match status {
+            CloseStatusDTO::Paid => {
+                unimplemented!("a freshly open lease should have some due amount")
+            }
+            CloseStatusDTO::None {
+                current_liability: _, // TODO shouldn't we add warning zone events?
+                alarms,
+            } => Ok(StateMachineResponse::from(
+                MessageResponse::messages_with_events(alarms, emitter),
+                active,
+            )),
+            CloseStatusDTO::NeedLiquidation(liquidation) => {
+                liquidation::start(active.into(), liquidation, emitter.into(), env, querier)
+            }
+            CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
+        }
     }
 }
 

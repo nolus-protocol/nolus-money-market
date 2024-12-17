@@ -154,6 +154,12 @@ impl Active {
     }
 }
 
+impl From<Active> for Lease {
+    fn from(value: Active) -> Self {
+        value.lease
+    }
+}
+
 impl Handler for Active {
     fn state(
         self,

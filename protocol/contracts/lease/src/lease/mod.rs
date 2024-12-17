@@ -125,6 +125,8 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
         + Into<OracleRef>,
 {
+    // TODO add fn into_dto() without profit and use it when no payment has been done
+    // TODO rename this fn to try_into_dto_past_payments
     pub(super) fn try_into_dto(
         self,
         profit: ProfitRef,
