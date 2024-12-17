@@ -53,7 +53,7 @@ mod test {
 
     use crate::{
         loan::{Overdue, State},
-        position::DueTrait,
+        position::{DueTrait, OverdueCollection},
     };
 
     #[test]
@@ -229,5 +229,25 @@ mod test {
         assert_eq!(Duration::MAX, overdue_collection.start_in());
         assert_eq!(Coin::ZERO, overdue_collection.amount());
         assert_eq!(principal_due + total_interest, s.total_due());
+    }
+
+    #[test]
+    fn test_large_interest_accrual_period() {
+        let principal_due = 20.into();
+        let due_interest = 5.into();
+        let due_margin_interest = 1.into();
+        let till_due_end = Duration::from_days(1);
+        let s = State {
+            annual_interest: Percent::from_percent(15),
+            annual_interest_margin: Percent::from_percent(0),
+            principal_due,
+            due_interest,
+            due_margin_interest,
+            overdue: Overdue::StartIn(till_due_end),
+        };
+        assert_eq!(
+            OverdueCollection::StartIn(Duration::MAX),
+            s.overdue_collection(1_800.into())
+        );
     }
 }
