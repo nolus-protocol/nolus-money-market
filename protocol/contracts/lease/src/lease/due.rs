@@ -23,11 +23,19 @@ impl DueTrait for State {
                 self.principal_due,
                 Duration::YEAR,
             );
-            if total_interest_a_year.is_zero() {
+
+            // FIX for PR#294
+            let potential_overflow = overdue_left.checked_mul(total_interest_a_year.into());
+            if potential_overflow.is_none() {
                 Duration::MAX
             } else {
                 Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)
             }
+            // if total_interest_a_year.is_zero() && overdue_left > total_interest_a_year {
+            //     Duration::MAX
+            // } else {
+            //     Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)
+            // }
         };
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
         if time_to_collect == Duration::default() {
