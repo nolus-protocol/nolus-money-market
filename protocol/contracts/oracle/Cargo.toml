@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "oracle"
-version = "0.5.22"
+version = "0.5.23"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true

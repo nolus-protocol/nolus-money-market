@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "admin_contract"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "access-control",
  "currency",
@@ -962,7 +962,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "finance"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "currency",
  "gcd",
@@ -1177,7 +1177,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.9.4"
+version = "0.9.5"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1205,7 +1205,7 @@ checksum = "8e9489c2807c139ffd9c1794f4af0ebe86a828db53ecdc7fea2111d0fed085d1"
 
 [[package]]
 name = "lpp"
-version = "0.5.6"
+version = "0.5.7"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.4",
@@ -1333,7 +1333,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "oracle"
-version = "0.5.22"
+version = "0.5.23"
 dependencies = [
  "cosmwasm-std 2.1.4",
  "currencies",
@@ -1465,7 +1465,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.6.8"
+version = "0.6.9"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.4",
@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "reserve"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.4",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "platform",
  "sdk",
@@ -2179,7 +2179,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "versioning"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "sdk",
  "serde",

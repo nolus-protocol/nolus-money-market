@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "admin_contract"
-version = "0.5.3"
+version = "0.5.4"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
