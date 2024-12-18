@@ -222,3 +222,15 @@ impl ContractInSwap<SwapState> for BuyAsset {
         self.state(in_progress_fn)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::contract::state::State;
+
+    #[test]
+    fn parse_old() {
+        const STATE: &str = r#"{"BuyAsset":{"SwapExactInRespDelivery":{"handler":{"spec":{"form":{"customer":"nolus17rjgmry3w2xcc8yer4h4m8vuypkhkh8he3u8xv","currency":"LC1","max_ltd":250,"position_spec":{"liability":{"initial":600,"healthy":830,"first_liq_warn":850,"second_liq_warn":865,"third_liq_warn":880,"max":900,"recalc_time":7200000000000},"min_asset":{"amount":"15000000","ticker":"LPN"},"min_transaction":{"amount":"10000","ticker":"LPN"}},"loan":{"lpp":"nolus1qqcr7exupnymvg6m63eqwu8pd4n5x6r5t3pyyxdy7r97rcgajmhqy3gn94","profit":"nolus1udkxyfeh7kxjnzm0exfaq9hncqzm3rj59gut4qnll0gq2z4yff0sda5aw2","annual_margin_interest":40,"due_period":1209600000000000},"reserve":"nolus10hzky830fafe5ffzt6vqprmpxjsy0fk8gcq5wvnvgr6lt4s6he3s045c4n","time_alarms":"nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl","market_price_oracle":"nolus1jew4l5nq7m3xhkqzy8j7cc99083m5j8d9w004ayyv8xl3yv4h0dql2dd4e"},"dex_account":{"owner":"nolus1yhcph5r2x9rss6tluptttma736rknasjwn3659620ysu5fhmx2wq47gmch","host":"neutron1kdfwfa2pxf7jfth0pej3ds8v4fqa5nhc4nxdm6lr3ctqzvqjfg0shuxdcy","dex":{"connection_id":"connection-11","transfer_channel":{"local_endpoint":"channel-3839","remote_endpoint":"channel-44"}}},"downpayment":{"amount":"40000000","ticker":"LPN"},"loan":{"principal":{"amount":"10000000","ticker":"LPN"},"annual_interest_rate":87},"deps":[{"addr":"nolus1qqcr7exupnymvg6m63eqwu8pd4n5x6r5t3pyyxdy7r97rcgajmhqy3gn94"},{"addr":"nolus1jew4l5nq7m3xhkqzy8j7cc99083m5j8d9w004ayyv8xl3yv4h0dql2dd4e","base_currency":"LPN"},{"addr":"nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl"},{"addr":"nolus1et45v5gepxs44jxewfxah0hk4wqmw34m8pm4alf44ucxvj895kas5yrxd8"}],"start_opening_at":"1705072797559458289"}},"response":"Ek4KLC9jb3Ntd2FzbS53YXNtLnYxLk1zZ0V4ZWN1dGVDb250cmFjdFJlc3BvbnNlEh4KHHsicmV0dXJuX2Ftb3VudCI6IjI4ODgzNTQyIn0STQosL2Nvc213YXNtLndhc20udjEuTXNnRXhlY3V0ZUNvbnRyYWN0UmVzcG9uc2USHQobeyJyZXR1cm5fYW1vdW50IjoiNzIyMDgwOCJ9","_forward_to_inner_msg":null,"_delivery_adapter":null}}}"#;
+        let state: State = cosmwasm_std::from_json(STATE).unwrap();
+        assert!(matches!(state, State::BuyAsset(_)));
+    }
+}
