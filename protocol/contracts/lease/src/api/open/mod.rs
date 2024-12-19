@@ -210,14 +210,16 @@ mod test_position_spec {
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {
-        assert!(matches!( // TODO migrate to using assert_matches!() once stabilized
-            r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
-        ));
+        assert!(
+            matches!( // TODO migrate to using assert_matches!() once stabilized
+                r,
+                Err(StdError::ParseErr {
+                    target_type,
+                    msg: real_msg,
+                    backtrace: _,
+                }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
+            )
+        );
     }
 
     fn spec_dto() -> PositionSpecDTO {
