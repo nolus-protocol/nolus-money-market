@@ -60,7 +60,8 @@ thiserror = { version = "1", default-features = false }
 
 # CosmWasm
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { version = "2", default-features = false, features = [
+# TBD version = "<major>" only once address PR#469
+cosmwasm-std = { version = "~2.1", default-features = false, features = [
     "abort",
     "iterator",
     "std",

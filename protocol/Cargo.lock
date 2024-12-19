@@ -486,9 +486,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.2.0"
+version = "2.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4434e556b0aebff34bf082e75d175b5d7edbcf1d90d4cedb59623a1249fff567"
+checksum = "5165aa666dfa923b480babec2ddba16ab91617179d9fb404dfb600c3f0733cef"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -499,7 +499,6 @@ dependencies = [
  "derive_more",
  "hex",
  "rand_core 0.6.4",
- "rmp-serde",
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
@@ -664,7 +663,7 @@ dependencies = [
  "anyhow",
  "bech32 0.11.0",
  "cosmwasm-schema 2.2.0",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "cw-storage-plus 2.0.0",
  "cw-utils 2.0.0",
  "itertools 0.13.0",
@@ -703,7 +702,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f13360e9007f51998d42b1bc6b7fa0141f74feae61ed5fd1e5b0a89eec7b5de1"
 dependencies = [
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "schemars",
  "serde",
 ]
@@ -730,7 +729,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07dfee7f12f802431a856984a32bce1cb7da1e6c006b5409e3981035ce562dec"
 dependencies = [
  "cosmwasm-schema 2.2.0",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "schemars",
  "serde",
  "thiserror 1.0.69",
@@ -1156,7 +1155,7 @@ name = "lease"
 version = "0.10.0"
 dependencies = [
  "access-control",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "dex",
@@ -1183,7 +1182,7 @@ version = "0.9.5"
 dependencies = [
  "access-control",
  "admin_contract",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "finance",
@@ -1201,16 +1200,16 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.168"
+version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aaeb2981e0606ca11d79718f8bb01164f1d6ed75080182d3abf017e6d244b6d"
+checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "lpp"
 version = "0.5.7"
 dependencies = [
  "access-control",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "finance",
@@ -1263,7 +1262,7 @@ dependencies = [
  "bech32 0.9.1",
  "cosmos-sdk-proto 0.20.0",
  "cosmwasm-schema 2.2.0",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "prost 0.12.6",
  "prost-types 0.12.6",
  "protobuf",
@@ -1337,7 +1336,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 name = "oracle"
 version = "0.5.23"
 dependencies = [
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "finance",
@@ -1371,7 +1370,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd621cc2f26474c6fb689ccc114dc0d8b53369a322f1fa5f24802f3de3d3def3"
 dependencies = [
  "chrono",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "osmosis-std-derive",
  "prost 0.13.4",
  "prost-types 0.13.4",
@@ -1470,7 +1469,7 @@ name = "profit"
 version = "0.6.9"
 dependencies = [
  "access-control",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "dex",
@@ -1680,7 +1679,7 @@ name = "reserve"
 version = "0.1.7"
 dependencies = [
  "access-control",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "currencies",
  "currency",
  "finance",
@@ -1700,28 +1699,6 @@ checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
 dependencies = [
  "hmac",
  "subtle",
-]
-
-[[package]]
-name = "rmp"
-version = "0.8.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "228ed7c16fa39782c3b3468e974aec2795e9089153cd08ee2e9aefb3613334c4"
-dependencies = [
- "byteorder",
- "num-traits",
- "paste",
-]
-
-[[package]]
-name = "rmp-serde"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e599a477cf9840e92f2cde9a7189e67b42c57532749bf90aea6ec10facd4db"
-dependencies = [
- "byteorder",
- "rmp",
- "serde",
 ]
 
 [[package]]
@@ -1784,7 +1761,7 @@ dependencies = [
  "base64 0.22.1",
  "cosmos-sdk-proto 0.25.0",
  "cosmwasm-schema 2.2.0",
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "cw-multi-test",
  "cw-storage-plus 2.0.0",
  "ibc-proto",
@@ -2233,7 +2210,7 @@ dependencies = [
 name = "void"
 version = "0.0.2"
 dependencies = [
- "cosmwasm-std 2.2.0",
+ "cosmwasm-std 2.1.5",
  "platform",
  "sdk",
  "serde",
