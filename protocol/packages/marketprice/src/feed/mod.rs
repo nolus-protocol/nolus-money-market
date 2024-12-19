@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
 
-pub(crate) use self::observation::{valid_since, Observation};
+pub(crate) use self::observation::Observation;
 pub use self::{
     cw::Repo,
     observations::{ObservationsReadRepo, ObservationsRepo},
@@ -62,7 +62,8 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError> {
         let valid_since = config.feed_valid_since(at);
-        let observations = self.valid_observations(valid_since)?; //TODO integrate filtering and enough-feeders check into samples builder
+        // TODO avoid copy-ing observations by Iterator::skip_while
+        let observations = self.valid_observations(&valid_since)?;
 
         if !self.has_enough_feeders(observations.iter(), config, total_feeders) {
             return Err(PriceFeedsError::NoPrice {});
@@ -88,15 +89,14 @@ where
 
     fn valid_observations(
         &self,
-        since: Timestamp,
+        since: &Timestamp,
     ) -> Result<Vec<Observation<C, QuoteC>>, PriceFeedsError> {
-        let valid_observations = observation::valid_since(since);
         self.observations.as_iter().and_then(|mut items| {
             items.try_fold(
                 Vec::with_capacity(self.observations.len()),
                 |mut acc, may_item| {
                     may_item.map(|item| {
-                        if valid_observations(&item) {
+                        if item.valid_since(since) {
                             acc.push(item);
                         }
                         acc
@@ -137,9 +137,9 @@ where
         from: Addr,
         at: Timestamp,
         price: Price<C, QuoteC>,
-        valid_since: Timestamp,
+        valid_since: &Timestamp,
     ) -> Result<Self, PriceFeedsError> {
-        debug_assert!(valid_since < at, "{valid_since} >= {at}");
+        debug_assert!(valid_since < &at, "{valid_since} >= {at}");
         self.observations
             .retain(valid_since)
             .and_then(|()| {
@@ -198,7 +198,7 @@ mod test {
                 feeder1.clone(),
                 feed1_time,
                 feed1_price,
-                config.feed_valid_since(feed1_time),
+                &config.feed_valid_since(feed1_time),
             )
             .unwrap();
 
@@ -210,7 +210,7 @@ mod test {
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
         feed = feed
-            .add_observation(feeder1, feed2_time, feed2_price, feed1_time)
+            .add_observation(feeder1, feed2_time, feed2_price, &feed1_time)
             .unwrap();
         assert_eq!(
             Ok(feed2_price),
@@ -233,7 +233,7 @@ mod test {
                 feeder1,
                 feed1_time,
                 feed1_price,
-                block_time - validity_period,
+                &(block_time - validity_period),
             )
             .unwrap();
 
@@ -269,7 +269,7 @@ mod test {
                 feeder1,
                 feed1_time,
                 feed1_price,
-                feed1_time - validity_period,
+                &(feed1_time - validity_period),
             )
             .unwrap();
 
@@ -281,7 +281,7 @@ mod test {
                 feeder2,
                 feed2_time,
                 feed2_price,
-                feed2_time - validity_period,
+                &(feed2_time - validity_period),
             )
             .unwrap();
 
@@ -342,7 +342,7 @@ mod test {
                 feeder1.clone(),
                 s1,
                 price(19, 5160),
-                config.feed_valid_since(s1),
+                &config.feed_valid_since(s1),
             )
             .unwrap();
         feed = feed
@@ -350,7 +350,7 @@ mod test {
                 feeder1.clone(),
                 s21,
                 price(19, 5500),
-                config.feed_valid_since(s21),
+                &config.feed_valid_since(s21),
             )
             .unwrap();
         feed = feed
@@ -358,7 +358,7 @@ mod test {
                 feeder1.clone(),
                 s22,
                 price(19, 5000 + 10),
-                config.feed_valid_since(s22),
+                &config.feed_valid_since(s22),
             )
             .unwrap();
         feed = feed
@@ -366,11 +366,11 @@ mod test {
                 feeder2,
                 s22,
                 price(19, 5000 - 10),
-                config.feed_valid_since(s22),
+                &config.feed_valid_since(s22),
             )
             .unwrap();
         feed = feed
-            .add_observation(feeder1, s3, price(19, 5000), config.feed_valid_since(s3))
+            .add_observation(feeder1, s3, price(19, 5000), &config.feed_valid_since(s3))
             .unwrap();
 
         assert_eq!(

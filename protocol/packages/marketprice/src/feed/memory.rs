@@ -2,10 +2,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::error::PriceFeedsError;
 
-use super::{
-    observation::{self, Observation},
-    Observations, ObservationsRead,
-};
+use super::{observation::Observation, Observations, ObservationsRead};
 
 pub(crate) struct InMemoryObservations<C, QuoteC>(Vec<Observation<C, QuoteC>>)
 where
@@ -50,8 +47,8 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    fn retain(&mut self, valid_since: Timestamp) -> Result<(), PriceFeedsError> {
-        self.0.retain(observation::valid_since(valid_since));
+    fn retain(&mut self, valid_since: &Timestamp) -> Result<(), PriceFeedsError> {
+        self.0.retain(|o| o.valid_since(valid_since));
         Ok(())
     }
 

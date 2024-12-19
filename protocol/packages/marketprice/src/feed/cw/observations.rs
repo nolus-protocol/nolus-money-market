@@ -7,7 +7,7 @@ use sdk::{
 
 use crate::{
     error::PriceFeedsError,
-    feed::{self, Observation, Observations, ObservationsRead},
+    feed::{Observation, Observations, ObservationsRead},
 };
 
 pub(super) struct Deque<'storage, C, QuoteC, S>
@@ -72,8 +72,7 @@ where
     QuoteC: 'static,
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    fn retain(&mut self, valid_since: Timestamp) -> Result<(), PriceFeedsError> {
-        let valid_fn = feed::valid_since(valid_since);
+    fn retain(&mut self, valid_since: &Timestamp) -> Result<(), PriceFeedsError> {
         loop {
             match self
                 .storage
@@ -81,7 +80,7 @@ where
                 .map_err(PriceFeedsError::FeedRemove)
                 .and_then(|may_item| {
                     if let Some(item) = may_item {
-                        if valid_fn(&item) {
+                        if item.valid_since(valid_since) {
                             self.storage
                                 .push_back(self.store.deref_mut(), &item)
                                 .map_err(PriceFeedsError::FeedPush)

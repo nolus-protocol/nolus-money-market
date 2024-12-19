@@ -179,7 +179,7 @@ where
                 sender_raw.clone(),
                 at,
                 price,
-                self.config.feed_valid_since(at),
+                &self.config.feed_valid_since(at),
             )
         })
     }
@@ -189,10 +189,10 @@ where
         from: Addr,
         at: Timestamp,
         price: &PriceDTO<PriceG>,
-        valid_since: Timestamp,
+        valid_since: &Timestamp,
     ) -> Result<(), PriceFeedsError> {
-        debug_assert!(valid_since < at);
-        struct AddObservation<'feeds, G, ObservationsRepoImpl>
+        debug_assert!(valid_since < &at);
+        struct AddObservation<'feeds, 'since, G, ObservationsRepoImpl>
         where
             G: Group,
         {
@@ -201,11 +201,11 @@ where
             quote_c: CurrencyDTO<G>,
             from: Addr,
             at: Timestamp,
-            valid_since: Timestamp,
+            valid_since: &'since Timestamp,
             group: PhantomData<G>,
         }
 
-        impl<G, ObservationsRepoImpl> WithPrice for AddObservation<'_, G, ObservationsRepoImpl>
+        impl<G, ObservationsRepoImpl> WithPrice for AddObservation<'_, '_, G, ObservationsRepoImpl>
         where
             G: Group<TopG = G>,
             ObservationsRepoImpl: ObservationsRepo<Group = G>,
@@ -223,7 +223,7 @@ where
                     self.observations
                         .observations::<C, QuoteC>(&self.amount_c, &self.quote_c),
                 )
-                .add_observation(self.from, self.at, price, self.valid_since)
+                .add_observation(self.from, self.at, price, &self.valid_since)
                 .map(mem::drop)
             }
         }

@@ -23,7 +23,7 @@ where
     Self::C: 'static,
     Self::QuoteC: 'static,
 {
-    fn retain(&mut self, valid_since: Timestamp) -> Result<()>;
+    fn retain(&mut self, valid_since: &Timestamp) -> Result<()>;
 
     /// Register a newer observation
     ///

@@ -4,7 +4,7 @@ use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Observation<C, QuoteC>
 where
@@ -14,15 +14,6 @@ where
     feeder_addr: Addr,
     time: Timestamp,
     price: Price<C, QuoteC>,
-}
-
-#[track_caller]
-pub fn valid_since<C, QuoteC>(since: Timestamp) -> impl Fn(&Observation<C, QuoteC>) -> bool
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    move |o: &Observation<_, _>| o.time > since
 }
 
 impl<C, QuoteC> Observation<C, QuoteC> {
@@ -46,8 +37,12 @@ impl<C, QuoteC> Observation<C, QuoteC> {
         self.price
     }
 
-    pub fn seen(&self, before_or_at: Timestamp) -> bool {
-        self.time <= before_or_at
+    pub fn valid_since(&self, since: &Timestamp) -> bool {
+        &self.time > since
+    }
+
+    pub fn seen(&self, before_or_at: &Timestamp) -> bool {
+        &self.time <= before_or_at
     }
 }
 

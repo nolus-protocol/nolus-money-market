@@ -97,6 +97,10 @@ where
         }
     }
 
+    fn sample_end(&self) -> Timestamp {
+        self.sample_start + self.sample_span
+    }
+
     fn end_of_period(&mut self) {
         let prices_number = self.sample_prices.len();
         if prices_number > 0 {
@@ -108,10 +112,10 @@ where
             let sum = values.fold(*first, |acc, current| acc + *current);
             let part = Rational::new(1, prices_number);
             let avg = Fraction::<usize>::of(&part, sum);
-            self.last_sample = Sample { price: Some(avg) } //TODO migrate it from a member data to return value
+            self.last_sample = Sample { price: Some(avg) }
         }
         self.sample_prices.clear();
-        self.sample_start += self.sample_span;
+        self.sample_start = self.sample_end();
     }
 }
 
@@ -124,12 +128,14 @@ where
     type Item = Sample<C, QuoteC>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let sample_end = self.sample_end();
+
         let pipeline = self.consumed.into_iter().chain(&mut self.observations);
         self.consumed = None;
 
         for o in pipeline {
-            debug_assert!(!o.seen(self.sample_start));
-            if o.seen(self.sample_start + self.sample_span) {
+            debug_assert!(!o.seen(&self.sample_start));
+            if o.seen(&sample_end) {
                 self.sample_prices.insert(o.feeder(), o.price());
             } else {
                 self.consumed = Some(o);
