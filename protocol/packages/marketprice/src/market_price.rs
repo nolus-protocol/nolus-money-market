@@ -223,7 +223,7 @@ where
                     self.observations
                         .observations::<C, QuoteC>(&self.amount_c, &self.quote_c),
                 )
-                .add_observation(self.from, self.at, price, &self.valid_since)
+                .add_observation(self.from, self.at, price, self.valid_since)
                 .map(mem::drop)
             }
         }

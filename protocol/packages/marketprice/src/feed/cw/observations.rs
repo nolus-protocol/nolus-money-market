@@ -108,7 +108,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
+    use std::fmt::Debug;
 
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
     use finance::{
@@ -181,12 +181,14 @@ mod test {
         assert_eq!(0, deque.len());
     }
 
-    fn assert_elements<'storage, S>(
-        deque: &Deque<'storage, C1, C2, S>,
-        observation1: Observation<C1, C2>,
-        observation2: Observation<C1, C2>,
+    fn assert_elements<C, QuoteC, ObsRead>(
+        deque: &ObsRead,
+        observation1: Observation<C, QuoteC>,
+        observation2: Observation<C, QuoteC>,
     ) where
-        S: Deref<Target = dyn Storage + 'storage>,
+        ObsRead: ObservationsRead<C = C, QuoteC = QuoteC>,
+        C: Debug + PartialEq,
+        QuoteC: Debug + PartialEq,
     {
         let mut it = deque.as_iter().unwrap();
         assert_eq!(Some(Ok(observation1)), it.next());
