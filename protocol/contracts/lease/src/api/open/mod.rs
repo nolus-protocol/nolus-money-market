@@ -210,7 +210,7 @@ mod test_position_spec {
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {
-        assert!(matches!(
+        assert!(matches!( // TODO migrate to using assert_matches!() once stabilized
             r,
             Err(StdError::ParseErr {
                 target_type,

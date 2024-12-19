@@ -5,6 +5,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::payment::Group as PaymentGroup;
 
+// TODO use cfg_match! once gets stabilized
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
 pub(crate) use self::impl_mod::definitions::*;
