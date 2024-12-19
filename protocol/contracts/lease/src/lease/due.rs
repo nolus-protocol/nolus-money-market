@@ -24,13 +24,12 @@ impl DueTrait for State {
                 Duration::YEAR,
             );
 
-            // FIX for PR#294
-            let ratio_threshold = Duration::MAX.nanos() / Duration::YEAR.nanos();
-            if Some(overdue_left) >= total_interest_a_year.checked_mul(ratio_threshold.into()) {
-                Duration::MAX
-            } else {
-                Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)
-            }
+            // FIX for PR#370
+            Duration::YEAR
+                .into_slice_per_ratio_checked(overdue_left, total_interest_a_year)
+                .map_or(Duration::MAX, |time_to_accrue_min_amount| {
+                    time_to_accrue_min_amount
+                })
         };
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
         if time_to_collect == Duration::default() {
