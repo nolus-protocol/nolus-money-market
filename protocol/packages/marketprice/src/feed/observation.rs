@@ -40,7 +40,6 @@ impl<C, QuoteC> Observation<C, QuoteC> {
     pub fn valid_since(&self, since: &Timestamp) -> bool {
         since < &self.time
     }
-
 }
 
 #[cfg(any(test, feature = "testing"))]

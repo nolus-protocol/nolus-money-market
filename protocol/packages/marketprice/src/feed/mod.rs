@@ -66,7 +66,7 @@ where
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>> {
         let valid_since = config.feed_valid_since(at);
-        // a trade-off of eager loading of the observations from the persistence 
+        // a trade-off of eager loading of the observations from the persistence
         // vs. lazy-loading twice - checking the total number of unique feeders and samples generation
         let observations = self.valid_observations(&valid_since)?;
 
