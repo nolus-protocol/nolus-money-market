@@ -134,12 +134,12 @@ where
         self.consumed = None;
 
         for o in pipeline {
-            debug_assert!(!o.seen(&self.sample_start));
-            if o.seen(&sample_end) {
-                self.sample_prices.insert(o.feeder(), o.price());
-            } else {
+            debug_assert!(o.valid_since(&self.sample_start));
+            if o.valid_since(&sample_end) {
                 self.consumed = Some(o);
                 break;
+            } else {
+                self.sample_prices.insert(o.feeder(), o.price());
             }
         }
         self.end_of_period();

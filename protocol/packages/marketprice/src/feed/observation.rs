@@ -38,12 +38,9 @@ impl<C, QuoteC> Observation<C, QuoteC> {
     }
 
     pub fn valid_since(&self, since: &Timestamp) -> bool {
-        &self.time > since
+        since < &self.time
     }
 
-    pub fn seen(&self, before_or_at: &Timestamp) -> bool {
-        &self.time <= before_or_at
-    }
 }
 
 #[cfg(any(test, feature = "testing"))]
