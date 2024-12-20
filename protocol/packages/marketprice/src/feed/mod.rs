@@ -4,7 +4,11 @@ use finance::{fraction::Fraction, percent::Percent, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
+use crate::{
+    config::Config,
+    error::{PriceFeedsError, Result},
+    feed::sample::Sample,
+};
 
 pub(crate) use self::observation::Observation;
 pub use self::{
@@ -60,7 +64,7 @@ where
         config: &Config,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<Price<C, QuoteC>, PriceFeedsError> {
+    ) -> Result<Price<C, QuoteC>> {
         let valid_since = config.feed_valid_since(at);
         // TODO avoid copy-ing observations by Iterator::skip_while
         let observations = self.valid_observations(&valid_since)?;
@@ -87,10 +91,7 @@ where
             .ok_or(PriceFeedsError::NoPrice {})
     }
 
-    fn valid_observations(
-        &self,
-        since: &Timestamp,
-    ) -> Result<Vec<Observation<C, QuoteC>>, PriceFeedsError> {
+    fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {
         self.observations.as_iter().and_then(|mut items| {
             items.try_fold(
                 Vec::with_capacity(self.observations.len()),
@@ -138,7 +139,7 @@ where
         at: Timestamp,
         price: Price<C, QuoteC>,
         valid_since: &Timestamp,
-    ) -> Result<Self, PriceFeedsError> {
+    ) -> Result<Self> {
         debug_assert!(valid_since < &at, "{valid_since} >= {at}");
         self.observations
             .retain(valid_since)

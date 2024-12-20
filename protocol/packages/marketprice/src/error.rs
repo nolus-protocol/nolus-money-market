@@ -37,7 +37,9 @@ pub enum PriceFeedsError {
     FeedRemove(StdError),
 }
 
-pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<(), PriceFeedsError> {
+pub type Result<T> = std::result::Result<T, PriceFeedsError>;
+
+pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<()> {
     if check {
         Err(PriceFeedsError::Configuration(msg.into()))
     } else {

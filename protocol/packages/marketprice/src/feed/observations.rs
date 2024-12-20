@@ -1,11 +1,9 @@
 use currency::{CurrencyDTO, Group};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::error::PriceFeedsError;
+use crate::error::Result;
 
 use super::Observation;
-
-pub type Result<T> = std::result::Result<T, PriceFeedsError>;
 
 pub trait ObservationsRead {
     type C: 'static;
