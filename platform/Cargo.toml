@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "forbid" }
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
 
 [workspace.package]
 edition = "2021"
