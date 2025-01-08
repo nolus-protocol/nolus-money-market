@@ -11,7 +11,7 @@ combinations = [
 ]
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "forbid" }
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
 
 [features]
 dex-astroport_test = ["lease/dex-astroport_test", "profit/dex-astroport_test"]
