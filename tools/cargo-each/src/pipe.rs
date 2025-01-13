@@ -23,6 +23,7 @@ pub(crate) trait Pipe: Sized {
     where
         F: FnOnce(Self, T) -> Self,
     {
+        #[expect(if_let_rescope)]
         if let Some(value) = value {
             f(self, value)
         } else {
