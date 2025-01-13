@@ -40,7 +40,7 @@ impl PriceFeeders {
         self.0
             .may_load(storage)
             .map(|maybe_addrs: Option<HashSet<Addr>>| {
-                maybe_addrs.map_or(false, |addrs: HashSet<Addr>| addrs.contains(address))
+                maybe_addrs.is_some_and(|addrs: HashSet<Addr>| addrs.contains(address))
             })
     }
 
@@ -64,6 +64,8 @@ impl PriceFeeders {
             feeders
         };
 
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(feeders) = self.0.may_load(deps.storage).transpose() {
             feeders
                 .map(remove_address)
