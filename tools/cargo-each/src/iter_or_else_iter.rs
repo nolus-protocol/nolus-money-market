@@ -28,6 +28,7 @@ where
     type Item = Iter::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
+        #[expect(if_let_rescope)]
         if let Some(value) = self.iter.next() {
             self.alt_iter = None;
 
