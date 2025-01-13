@@ -63,13 +63,13 @@ mod test {
         GTop: Group,
     {
         pub fn first_visited(&self, a: Amount) -> bool {
-            self.0.map_or(false, |a_visit| a == a_visit)
+            self.0 == Some(a)
         }
         pub fn first_not_visited(&self) -> bool {
             self.0.is_none()
         }
         pub fn second_visited(&self, a: Amount) -> bool {
-            self.2.map_or(false, |a_visit| a == a_visit)
+            self.2 == Some(a)
         }
         pub fn second_not_visited(&self) -> bool {
             self.2.is_none()

@@ -96,12 +96,19 @@ where
 
         let mut result = self.next_alarm();
         while result.is_none() && self.alarm_iter.is_some() {
-            result = if let Err(error) = self.move_to_next_alarms() {
-                Some(Err(error))
-            } else if self.alarm_iter.is_none() {
-                None
-            } else {
-                self.next_alarm()
+            result = {
+                // TODO inline once stop linting with the 'rust-2024-compatibility' group
+                // due to tail-expr-drop-order lint
+                let moved_to_next_alarms = self.move_to_next_alarms();
+                #[expect(if_let_rescope)]
+                // TODO remove once stop linting with the 'rust-2024-compatibility' group
+                if let Err(error) = moved_to_next_alarms {
+                    Some(Err(error))
+                } else if self.alarm_iter.is_none() {
+                    None
+                } else {
+                    self.next_alarm()
+                }
             }
         }
         result

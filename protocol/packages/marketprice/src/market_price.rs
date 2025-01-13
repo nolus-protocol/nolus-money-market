@@ -126,6 +126,9 @@ where
                 .do_collect()
             }
         }
+
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(c) = leaf_to_base.next() {
             c.into_currency_type(CurrencyResolver {
                 _currencies_lifetime: PhantomData,
@@ -336,6 +339,8 @@ where
     }
 
     fn do_collect(mut self) -> Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError> {
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(next_currency) = self.leaf_to_base.next() {
             next_currency.into_pair_member_type(self)
         } else {
