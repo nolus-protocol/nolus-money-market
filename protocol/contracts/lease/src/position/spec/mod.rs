@@ -171,7 +171,7 @@ impl Spec {
             .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
             .map(Debt::Bad)
             .unwrap_or_else(|| {
-                let position_ltv = Percent::from_ratio(due_assets, asset);
+                let position_ltv = Self::ltv(due_assets, asset);
                 // The ltv can be above the max percent and due to other circumstances the liquidation may not happen,
                 // for example, the liquidated amount is less than the `min_transaction_amount`
                 let position_ltv_capped = self.liability.cap_to_zone(position_ltv);
