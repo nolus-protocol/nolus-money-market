@@ -44,7 +44,9 @@ pub type ICAOpenResponseDelivery<H, ForwardToInnerMsg> =
 pub struct ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery> {
     handler: H,
     response: R,
+    #[serde(skip)]
     _forward_to_inner_msg: PhantomData<ForwardToInnerMsg>,
+    #[serde(skip)]
     _delivery_adapter: PhantomData<Delivery>,
 }
 
