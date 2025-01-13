@@ -132,6 +132,10 @@ where
         Delivery::deliver_continue(self.handler, self.response, querier, env)
     }
 
+    fn do_redeliver(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+        Delivery::deliver_again(self.handler, self.response, querier, env).map_into()
+    }
+
     fn setup_next_delivery(self, now: Timestamp) -> ContinueResult<Self> {
         self.handler
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
@@ -176,7 +180,7 @@ where
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
         // we leave the error to escape since the time alarms delivery is reliable
-        self.do_deliver(querier, env)
+        self.do_redeliver(querier, env)
     }
 }
 

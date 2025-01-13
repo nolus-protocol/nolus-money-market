@@ -534,13 +534,13 @@ mod impl_handler {
             match self {
                 State::OpenIca(inner) => Handler::on_time_alarm(inner, querier, env).map_into(),
                 State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
-                State::TransferOut(inner) => Handler::on_inner(inner, querier, env).map_into(),
+                State::TransferOut(inner) => Handler::on_time_alarm(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_inner(inner, querier, env).map_into(),
+                State::SwapExactIn(inner) => Handler::on_time_alarm(inner, querier, env).map_into(),
                 State::SwapExactInRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env).map_into()
                 }
@@ -548,7 +548,7 @@ mod impl_handler {
                     Handler::on_time_alarm(inner, querier, env).map_into()
                 }
                 State::SwapExactInRecoverIcaRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
+                    Handler::on_time_alarm(inner, querier, env).map_into()
                 }
             }
         }
