@@ -77,7 +77,7 @@ where
                 break;
             }
             Err(cmd) => cmd,
-        }
+        };
     }
 
     may_res
