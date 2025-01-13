@@ -294,19 +294,12 @@ where
         'name: 'r;
 }
 
-impl<
-        'static_context,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        const MAYBE_VISIT: bool,
-    > PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const MAYBE_VISIT: bool>
+    PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
-        'static_context,
-        'protocol,
-        'host_currency,
+        '_,
+        '_,
+        '_,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
@@ -336,19 +329,12 @@ where
     }
 }
 
-impl<
-        'static_context,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        const MAYBE_VISIT: bool,
-    > PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const MAYBE_VISIT: bool>
+    PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
-        'static_context,
-        'protocol,
-        'host_currency,
+        '_,
+        '_,
+        '_,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
@@ -406,9 +392,6 @@ where
 }
 
 impl<
-        'static_context,
-        'protocol,
-        'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
@@ -416,9 +399,9 @@ impl<
         const PAIRS_GROUP: bool,
     > InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
-        'static_context,
-        'protocol,
-        'host_currency,
+        '_,
+        '_,
+        '_,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
