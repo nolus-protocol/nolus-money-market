@@ -68,15 +68,18 @@ where
     V: WithCoin<VisitedG>,
 {
     let mut may_res = None;
+
     for coin in cw_amount {
         cmd = match from_cosmwasm_any(coin, cmd) {
             Ok(res) => {
                 may_res = Some(res);
+
                 break;
             }
             Err(cmd) => cmd,
-        }
+        };
     }
+
     may_res
 }
 

@@ -27,6 +27,8 @@ where
 {
     let matcher;
 
+    #[expect(if_let_rescope)]
+    // TODO remove once stop linting with the 'rust-2024-compatibility' group
     if let Some(ticker) = parents.next() {
         matcher = "matcher";
 
