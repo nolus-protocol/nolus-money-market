@@ -24,11 +24,18 @@ where
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ResponseContinueResult<H> {
-        Err(response::err(
-            handler,
-            "deliver ica_open response, error or timeout",
-        ))
+        Err(response::err(handler, "deliver ica_open response"))
     }
+
+    /// Retry a previously failed response delivery
+    ///
+    /// Note that it is common for both scenarious - final and non-final DEX state.
+    fn deliver_again(
+        handler: H,
+        _response: Response,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ResponseResult<H>;
 }
 
 pub struct ResponseDeliveryAdapter();
@@ -44,6 +51,15 @@ where
     ) -> ResponseResult<H> {
         handler.on_response(response, querier, env)
     }
+
+    fn deliver_again(
+        handler: H,
+        response: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ResponseResult<H> {
+        Self::deliver(handler, response, querier, env)
+    }
 }
 
 pub struct ICAOpenDeliveryAdapter();
@@ -58,5 +74,14 @@ where
         env: Env,
     ) -> ResponseContinueResult<H> {
         handler.on_open_ica(counterparty_version, querier, env)
+    }
+
+    fn deliver_again(
+        handler: H,
+        response: String,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ResponseResult<H> {
+        Self::deliver_continue(handler, response, querier, env).into()
     }
 }
