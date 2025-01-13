@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{error::Error, result::Result};
 
-pub(crate) fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
+pub(crate) fn from_cosmwasm<C>(coin: &CosmWasmCoin) -> Result<Coin<C>>
 where
     C: CurrencyDef,
 {
@@ -17,7 +17,7 @@ where
 }
 
 pub(crate) fn from_cosmwasm_currency_not_definition<CDef, COut>(
-    coin: CosmWasmCoin,
+    coin: &CosmWasmCoin,
 ) -> Result<Coin<COut>>
 where
     CDef: CurrencyDef,
@@ -187,7 +187,7 @@ mod test {
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
+        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(&CosmWasmCoin::new(
             12u8,
             SuperGroupTestC2::bank(),
         ));
@@ -195,7 +195,7 @@ mod test {
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(CosmWasmCoin::new(
+        let c1 = super::from_cosmwasm::<SuperGroupTestC2>(&CosmWasmCoin::new(
             12u8,
             SuperGroupTestC1::bank(),
         ));
@@ -210,7 +210,7 @@ mod test {
             )),
         );
 
-        let c2 = super::from_cosmwasm::<SuperGroupTestC1>(CosmWasmCoin::new(
+        let c2 = super::from_cosmwasm::<SuperGroupTestC1>(&CosmWasmCoin::new(
             12u8,
             SuperGroupTestC2::bank(),
         ));
@@ -284,9 +284,9 @@ mod test {
     #[test]
     fn from_to_cosmwasm() {
         let c_nls = Coin::<SuperGroupTestC2>::new(24563);
-        assert_eq!(Ok(c_nls), super::from_cosmwasm(to_cosmwasm_impl(c_nls)));
+        assert_eq!(Ok(c_nls), super::from_cosmwasm(&to_cosmwasm_impl(c_nls)));
 
         let c_usdc = Coin::<SuperGroupTestC1>::new(u128::MAX);
-        assert_eq!(Ok(c_usdc), super::from_cosmwasm(to_cosmwasm_impl(c_usdc)));
+        assert_eq!(Ok(c_usdc), super::from_cosmwasm(&to_cosmwasm_impl(c_usdc)));
     }
 }
