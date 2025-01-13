@@ -70,7 +70,8 @@ impl<T> HumanReadableTree<T> {
     ) -> HrtNode<T> {
         let value = node.into_value();
 
-        #[expect(if_let_rescope)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(mut children) = child_nodes.remove(&index_mapping) {
             children.reverse();
 
@@ -118,7 +119,8 @@ impl<T> HrtNode<T> {
                 children
                     .into_iter()
                     .fold(vec![Node::new(parent, value)], |mut nodes, node| {
-                        #[expect(if_let_rescope)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
+                        #[expect(if_let_rescope)]
+                        // TODO remove once stop linting with the 'rust-2024-compatibility' group
                         if let Self::Leaf { value } = node {
                             nodes.push(Node::new(this, value));
                         } else {
