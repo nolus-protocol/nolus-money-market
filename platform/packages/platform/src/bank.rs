@@ -46,7 +46,7 @@ where
 }
 
 /// Ensure a single coin of the specified currency is received by a contract and return it
-pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
+pub fn received_one<C>(cw_amount: &[CwCoin]) -> Result<Coin<C>>
 where
     C: CurrencyDef,
 {
@@ -104,7 +104,9 @@ impl BankAccountView for BankView<'_> {
         self.querier
             .query_balance(self.account, C::definition().dto().definition().bank_symbol)
             .map_err(Error::CosmWasmQueryBalance)
-            .and_then(coin_legacy::from_cosmwasm_currency_not_definition::<C, C>)
+            .and_then(|ref cw_coin| {
+                coin_legacy::from_cosmwasm_currency_not_definition::<C, C>(cw_coin)
+            })
     }
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
@@ -264,10 +266,10 @@ where
 }
 
 fn received_one_impl<NoFundsErr, UnexpFundsErr>(
-    cw_amount: Vec<CwCoin>,
+    cw_amount: &[CwCoin],
     no_funds_err: NoFundsErr,
     unexp_funds_err: UnexpFundsErr,
-) -> Result<CwCoin>
+) -> Result<&CwCoin>
 where
     NoFundsErr: FnOnce() -> Error,
     UnexpFundsErr: FnOnce() -> Error,
