@@ -54,7 +54,7 @@ pub(crate) fn execute(
     load_and_run(storage, |contracts| contracts.execute(execute_messages))
         .map(MessageResponse::messages_only)
 }
-    
+
 pub(super) fn migrate_contract(
     migration_batch: &mut Batch,
     post_migration_execute_batch: &mut Batch,
