@@ -44,6 +44,8 @@ where
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(head_ticker) = tickers.next() {
             with_currencies_sources(
                 CurrencyDefinition::new(
