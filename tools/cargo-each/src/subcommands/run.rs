@@ -251,7 +251,7 @@ fn resolve_subcommand(
 
         if subcommand_as_path
             .parent()
-            .map_or(false, |parent| !parent.as_os_str().is_empty())
+            .is_some_and(|parent| !parent.as_os_str().is_empty())
         {
             subcommand = Path::new(&subcommand)
                 .canonicalize()
