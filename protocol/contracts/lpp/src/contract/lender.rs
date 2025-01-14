@@ -27,7 +27,7 @@ where
     Lpn: 'static + CurrencyDef,
 {
     let lender_addr = info.sender;
-    let pending_deposit = bank::received_one(info.funds)?;
+    let pending_deposit = bank::received_one(&info.funds)?;
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
 
