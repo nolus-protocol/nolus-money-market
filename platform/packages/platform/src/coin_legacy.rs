@@ -23,7 +23,7 @@ where
     CDef: CurrencyDef,
     COut: Currency,
 {
-    BankSymbols::<CDef::Group>::visit::<CDef, _>(&coin.denom, CoinTransformer(&coin, PhantomData))
+    BankSymbols::<CDef::Group>::visit::<CDef, _>(&coin.denom, CoinTransformer(coin, PhantomData))
 }
 
 pub(crate) fn from_cosmwasm_any<VisitedG, V>(

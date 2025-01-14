@@ -277,10 +277,7 @@ where
     match cw_amount.len() {
         0 => Err(no_funds_err()),
         1 => {
-            let first = cw_amount
-                .into_iter()
-                .next()
-                .expect("there is at least a coin");
+            let first = cw_amount.iter().next().expect("there is at least a coin");
             Ok(first)
         }
         _ => Err(unexp_funds_err()),
