@@ -21,7 +21,7 @@ pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
     info: MessageInfo,
 ) -> Result<MessageResponse> {
-    bank::received_one(info.funds)
+    bank::received_one(&info.funds)
         .map_err(Into::into)
         .and_then(|amount| Deposit::distribute_rewards(deps, amount))
         .map(|()| Default::default())

@@ -46,7 +46,7 @@ where
     Lpn: CurrencyDef,
 {
     let lease_addr = info.sender;
-    let repay_amount = bank::received_one(info.funds)?;
+    let repay_amount = bank::received_one(&info.funds)?;
 
     let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
