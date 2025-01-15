@@ -13,17 +13,17 @@ use super::Version;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct Id(String);
+pub struct ReleaseId(String);
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(test, derive(Debug))]
-pub struct Release {
-    id: Id,
+pub struct PackageRelease {
+    id: ReleaseId,
     code: Version,
 }
 
-impl Id {
+impl ReleaseId {
     const ID: &'static str = env!(
         "SOFTWARE_RELEASE_ID",
         "No software release identifier provided as an environment variable! Please set \
@@ -54,16 +54,16 @@ impl Id {
     }
 }
 
-impl Release {
+impl PackageRelease {
     pub fn void() -> Self {
         Self::instance(
-            Id::void(),
+            ReleaseId::void(),
             const { Version::new(0, SemVer::parse("0.0.0")) },
         )
     }
 
     pub(crate) fn this(code: Version) -> Self {
-        Self::instance(Id::this(), code)
+        Self::instance(ReleaseId::this(), code)
     }
 
     pub(crate) fn pull_prev(storage: &mut dyn Storage) -> Result<Self, StdError> {
@@ -72,11 +72,15 @@ impl Release {
         VERSION_STORAGE_KEY
             .load(storage)
             .inspect(|_| VERSION_STORAGE_KEY.remove(storage))
-            .map(|code| Self::instance(Id::prev(), code))
+            .map(|code| Self::instance(ReleaseId::prev(), code))
     }
 
-    const fn instance(id: Id, code: Version) -> Self {
+    const fn instance(id: ReleaseId, code: Version) -> Self {
         Self { id, code }
+    }
+
+    pub fn release(self) -> ReleaseId {
+        self.id
     }
 
     pub fn update_software(self, to: Self) -> Result<Self, StdError> {
@@ -91,7 +95,7 @@ impl Release {
 
     fn allow_software_update_int(&self, new: Self) -> Result<Self, StdError> {
         let current = self.code;
-        if current < new.code || (self.id == Id::dev() && current == new.code) {
+        if current < new.code || (self.id == ReleaseId::dev() && current == new.code) {
             Ok(new)
         } else {
             Err(StdError::generic_err(
@@ -122,15 +126,15 @@ impl Release {
     }
 }
 
-impl From<Id> for String {
-    fn from(value: Id) -> Self {
+impl From<ReleaseId> for String {
+    fn from(value: ReleaseId) -> Self {
         value.0
     }
 }
 
 // TODO remove once the admin has completed the issue#466
-impl From<Release> for Id {
-    fn from(value: Release) -> Self {
+impl From<PackageRelease> for ReleaseId {
+    fn from(value: PackageRelease) -> Self {
         value.id
     }
 }
@@ -139,27 +143,27 @@ impl From<Release> for Id {
 mod test {
     use crate::{SemVer, Version};
 
-    use super::{Id, Release};
+    use super::{PackageRelease, ReleaseId};
 
-    fn prod_id() -> Id {
-        Id("v0.5.3".into())
+    fn prod_id() -> ReleaseId {
+        ReleaseId("v0.5.3".into())
     }
 
     #[test]
     fn prod_software() {
         let current = Version::new(1, SemVer::parse("0.3.4"));
-        Release::instance(prod_id(), current)
-            .update_software(Release::instance(prod_id(), current))
+        PackageRelease::instance(prod_id(), current)
+            .update_software(PackageRelease::instance(prod_id(), current))
             .unwrap_err();
-        Release::instance(prod_id(), current)
-            .update_software(Release::instance(
+        PackageRelease::instance(prod_id(), current)
+            .update_software(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.storage + 1, current.software),
             ))
             .unwrap_err();
 
-        Release::instance(prod_id(), current)
-            .update_software(Release::instance(
+        PackageRelease::instance(prod_id(), current)
+            .update_software(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.storage, SemVer::parse("0.3.3")),
             ))
@@ -167,9 +171,9 @@ mod test {
 
         let next_code = Version::new(current.storage, SemVer::parse("0.3.5"));
         assert_eq!(
-            Ok(Release::instance(prod_id(), next_code)),
-            Release::instance(prod_id(), current)
-                .update_software(Release::instance(prod_id(), next_code,))
+            Ok(PackageRelease::instance(prod_id(), next_code)),
+            PackageRelease::instance(prod_id(), current)
+                .update_software(PackageRelease::instance(prod_id(), next_code,))
         );
     }
 
@@ -178,29 +182,29 @@ mod test {
         let current = Version::new(1, SemVer::parse("0.3.4"));
 
         assert_eq!(
-            Ok(Release::instance(Id::dev(), current)),
-            Release::instance(Id::dev(), current)
-                .update_software(Release::instance(Id::dev(), current))
+            Ok(PackageRelease::instance(ReleaseId::dev(), current)),
+            PackageRelease::instance(ReleaseId::dev(), current)
+                .update_software(PackageRelease::instance(ReleaseId::dev(), current))
         );
-        Release::instance(Id::dev(), current)
-            .update_software(Release::instance(
-                Id::dev(),
+        PackageRelease::instance(ReleaseId::dev(), current)
+            .update_software(PackageRelease::instance(
+                ReleaseId::dev(),
                 Version::new(current.storage + 1, SemVer::parse("0.3.4")),
             ))
             .unwrap_err();
 
-        Release::instance(Id::dev(), current)
-            .update_software(Release::instance(
-                Id::dev(),
+        PackageRelease::instance(ReleaseId::dev(), current)
+            .update_software(PackageRelease::instance(
+                ReleaseId::dev(),
                 Version::new(current.storage, SemVer::parse("0.3.3")),
             ))
             .unwrap_err();
 
         let next_code = Version::new(current.storage, SemVer::parse("0.3.5"));
         assert_eq!(
-            Ok(Release::instance(Id::dev(), next_code)),
-            Release::instance(Id::dev(), current)
-                .update_software(Release::instance(Id::dev(), next_code))
+            Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
+            PackageRelease::instance(ReleaseId::dev(), current)
+                .update_software(PackageRelease::instance(ReleaseId::dev(), next_code))
         );
     }
 
@@ -208,18 +212,18 @@ mod test {
     fn prod_software_and_storage() {
         let current = Version::new(1, SemVer::parse("0.3.4"));
 
-        Release::instance(prod_id(), current)
-            .update_software_and_storage(Release::instance(prod_id(), current))
+        PackageRelease::instance(prod_id(), current)
+            .update_software_and_storage(PackageRelease::instance(prod_id(), current))
             .unwrap_err();
 
-        Release::instance(prod_id(), current)
-            .update_software_and_storage(Release::instance(
+        PackageRelease::instance(prod_id(), current)
+            .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.storage + 1, SemVer::parse("0.3.3")),
             ))
             .unwrap_err();
-        Release::instance(prod_id(), current)
-            .update_software_and_storage(Release::instance(
+        PackageRelease::instance(prod_id(), current)
+            .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.storage + 1, current.software),
             ))
@@ -227,13 +231,13 @@ mod test {
 
         let next_code = Version::new(current.storage + 1, SemVer::parse("0.3.5"));
         assert_eq!(
-            Ok(Release::instance(prod_id(), next_code)),
-            Release::instance(prod_id(), current)
-                .update_software_and_storage(Release::instance(prod_id(), next_code))
+            Ok(PackageRelease::instance(prod_id(), next_code)),
+            PackageRelease::instance(prod_id(), current)
+                .update_software_and_storage(PackageRelease::instance(prod_id(), next_code))
         );
 
-        Release::instance(prod_id(), current)
-            .update_software_and_storage(Release::instance(
+        PackageRelease::instance(prod_id(), current)
+            .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.storage, SemVer::parse("0.3.5")),
             ))
@@ -244,26 +248,26 @@ mod test {
     fn dev_software_and_storage() {
         let current = Version::new(1, SemVer::parse("0.3.4"));
 
-        Release::instance(Id::dev(), current)
-            .update_software_and_storage(Release::instance(Id::dev(), current))
+        PackageRelease::instance(ReleaseId::dev(), current)
+            .update_software_and_storage(PackageRelease::instance(ReleaseId::dev(), current))
             .unwrap_err();
 
-        Release::instance(Id::dev(), current)
-            .update_software_and_storage(Release::instance(
-                Id::dev(),
+        PackageRelease::instance(ReleaseId::dev(), current)
+            .update_software_and_storage(PackageRelease::instance(
+                ReleaseId::dev(),
                 Version::new(current.storage + 1, SemVer::parse("0.3.3")),
             ))
             .unwrap_err();
         let next_code = Version::new(current.storage + 1, SemVer::parse("0.3.5"));
         assert_eq!(
-            Ok(Release::instance(Id::dev(), next_code)),
-            Release::instance(Id::dev(), current)
-                .update_software_and_storage(Release::instance(Id::dev(), next_code))
+            Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
+            PackageRelease::instance(ReleaseId::dev(), current)
+                .update_software_and_storage(PackageRelease::instance(ReleaseId::dev(), next_code))
         );
 
-        Release::instance(Id::dev(), current)
-            .update_software_and_storage(Release::instance(
-                Id::dev(),
+        PackageRelease::instance(ReleaseId::dev(), current)
+            .update_software_and_storage(PackageRelease::instance(
+                ReleaseId::dev(),
                 Version::new(current.storage, SemVer::parse("0.3.5")),
             ))
             .unwrap_err();

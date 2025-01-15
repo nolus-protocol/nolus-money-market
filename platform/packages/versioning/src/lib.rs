@@ -9,8 +9,7 @@ use sdk::cosmwasm_std::{StdError, StdResult, Storage};
 #[cfg(feature = "schema")]
 use sdk::schemars::{self, JsonSchema};
 
-//TODO issue#466 hide `Id`
-pub use self::release::{Id, Release};
+pub use self::release::{PackageRelease, ReleaseId};
 
 mod release;
 
@@ -73,14 +72,15 @@ impl Display for SemVer {
     }
 }
 
-// #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-/// A reference type representing a software package
+/// A 'reference type' representing a software package
 // TODO rename to SoftwarePackage
 pub struct Version {
+    // TODO add `name: &str`, the Cargo package name
     storage: VersionSegment,
     /// the reference identification attribute
+    // TODO rename to version
     software: SemVer,
 }
 
@@ -149,20 +149,21 @@ pub fn update_legacy_software<ContractError, MapErrorFunctor>(
     storage: &mut dyn Storage,
     new: Version,
     map_error: MapErrorFunctor,
-) -> Result<Release, ContractError>
+) -> Result<ReleaseId, ContractError>
 where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
-    Release::pull_prev(storage)
+    PackageRelease::pull_prev(storage)
         .and_then(|prev_release| {
-            let this_release = Release::this(new);
+            let this_release = PackageRelease::this(new);
             prev_release.update_software(this_release)
         })
         .map_err(map_error)
+        .map(PackageRelease::release)
 }
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
-    pub to: Release,
+    pub to: ReleaseId,
     pub storage_migration_output: MigrateStorageOutput,
 }
 
@@ -182,15 +183,15 @@ where
         FnOnce(&mut dyn Storage) -> Result<StorageMigrationOutput, ContractError>,
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
-    Release::pull_prev(storage)
+    PackageRelease::pull_prev(storage)
         .and_then(|prev_release| {
-            let this_release = Release::this(new);
+            let this_release = PackageRelease::this(new);
             prev_release.update_software_and_storage(this_release)
         })
         .map_err(map_error)
         .and_then(|new_release| {
             migrate_storage(storage).map(|storage_migration_output| FullUpdateOutput {
-                to: new_release,
+                to: new_release.release(),
                 storage_migration_output,
             })
         })
