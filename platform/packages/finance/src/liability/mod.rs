@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     duration::Duration,
     error::{Error, Result},
-    fraction::Fraction,
     fractionable::Percentable,
-    percent::{Percent, Units},
-    ratio::Rational,
+    percent::Percent,
+    ratio::{CheckedMul, Rational},
     zero::Zero,
 };
 
@@ -109,7 +108,7 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Option<P>
     where
         P: Percentable + Ord + Copy + PartialOrd,
     {
@@ -117,31 +116,34 @@ impl Liability {
         debug_assert!(self.initial < Percent::HUNDRED);
 
         let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
-        let default_borrow = default_ltd.of(downpayment);
-        may_max_ltd
-            .map(|max_ltd| max_ltd.of(downpayment))
-            .map(|requested_borrow| requested_borrow.min(default_borrow))
-            .unwrap_or(default_borrow)
+        default_ltd
+            .checked_mul(downpayment)
+            .and_then(|default_borrow| {
+                may_max_ltd
+                    .map(|max_ltd| max_ltd.of(downpayment)) //max_ltd.checked_mul(downpayment)
+                    .map(|requested_borrow| requested_borrow.min(default_borrow))
+                    .unwrap_or(default_borrow)
+            })
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
     {
         if total_due < self.max.of(lease_amount) {
-            return P::ZERO;
+            return Some(P::ZERO);
         }
         if lease_amount <= total_due {
-            return lease_amount;
+            return Some(lease_amount);
         }
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
         let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        Fraction::<Units>::of(&multiplier, extra_liability_lpn)
+        multiplier.checked_mul(extra_liability_lpn)
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -190,7 +192,6 @@ mod test {
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::Fraction,
         percent::{Percent, Units},
         zero::Zero,
     };
@@ -406,7 +407,7 @@ mod test {
 
     #[track_caller]
     fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
-        let liq = liability.amount_to_liquidate(lease, due);
+        let liq = liability.amount_to_liquidate(lease, due).unwrap();
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
@@ -450,7 +451,8 @@ mod test {
             third_liq_warn: Percent::from_permille(998),
             recalc_time: Duration::from_secs(20000),
         }
-        .init_borrow_amount(downpayment, max_p);
+        .init_borrow_amount(downpayment, max_p)
+        .unwrap();
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
     }
