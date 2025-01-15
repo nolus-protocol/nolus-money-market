@@ -7,7 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, Release, SemVer, Version, VersionSegment};
+use versioning::{package_version, PackageRelease, ReleaseId, SemVer, Version, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -58,9 +58,9 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
-        |reported_label| {
-            check_release_label(reported_label.clone(), release.clone())
+    versioning::update_legacy_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
+        |reported_release| {
+            check_release_label(reported_release.clone(), release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(
                         deps.storage,
@@ -69,7 +69,7 @@ pub fn migrate(
                         migration_spec,
                     )
                 })
-                .and_then(|messages| response::response_with_messages(reported_label, messages))
+                .and_then(|messages| response::response_with_messages(reported_release, messages))
         },
     )
 }
@@ -284,7 +284,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             ContractState::AwaitContractsMigrationReply {
-                release: Release::void(),
+                release: PackageRelease::void().release(),
             }
             .store(storage)
             .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
@@ -292,14 +292,17 @@ fn deregister_protocol(
         })
 }
 
-fn migration_reply(msg: Reply, expected_release: Release) -> ContractResult<CwResponse> {
+fn migration_reply(msg: Reply, expected_release: ReleaseId) -> ContractResult<CwResponse> {
     platform::reply::from_execute(msg)?
         .ok_or(ContractError::NoMigrationResponseData {})
         .and_then(|reported_release| check_release_label(reported_release, expected_release))
         .map(|()| response::empty_response())
 }
 
-fn check_release_label(reported_release: Release, expected_release: Release) -> ContractResult<()> {
+fn check_release_label(
+    reported_release: ReleaseId,
+    expected_release: ReleaseId,
+) -> ContractResult<()> {
     ensure_eq!(
         reported_release,
         expected_release,
