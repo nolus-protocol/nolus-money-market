@@ -207,12 +207,11 @@ mod test {
         assert_eq!(exp, deserialized);
     }
 
-    #[expect(tail_expr_drop_order)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
     #[test]
     fn below_price_ok() {
         let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
         let exp_res = Ok(Alarm::new(exp_price, None));
-        assert_eq!(exp_res, from_below(exp_price))
+        assert_eq!(exp_res, from_below(exp_price));
     }
 
     #[test]
