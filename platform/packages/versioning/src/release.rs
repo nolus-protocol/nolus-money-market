@@ -56,7 +56,10 @@ impl Id {
 
 impl Release {
     pub fn void() -> Self {
-        Self::instance(Id::void(), Version::new(0, SemVer::parse("0.0.0")))
+        Self::instance(
+            Id::void(),
+            const { Version::new(0, SemVer::parse("0.0.0")) },
+        )
     }
 
     pub(crate) fn this(code: Version) -> Self {
@@ -72,7 +75,7 @@ impl Release {
             .map(|code| Self::instance(Id::prev(), code))
     }
 
-    fn instance(id: Id, code: Version) -> Self {
+    const fn instance(id: Id, code: Version) -> Self {
         Self { id, code }
     }
 
