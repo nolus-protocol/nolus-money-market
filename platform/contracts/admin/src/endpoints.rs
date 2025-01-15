@@ -60,8 +60,7 @@ pub fn migrate(
 ) -> ContractResult<CwResponse> {
     versioning::update_legacy_software(deps.storage, CONTRACT_VERSION, Into::into).and_then(
         |reported_release| {
-            // TODO issue#466 check releses instead of labels
-            check_release_label(reported_release.clone().into(), release.clone())
+            check_release_label(reported_release.clone(), release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(
                         deps.storage,
@@ -285,7 +284,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             ContractState::AwaitContractsMigrationReply {
-                release: PackageRelease::void().into(),
+                release: PackageRelease::void().release(),
             }
             .store(storage)
             .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))

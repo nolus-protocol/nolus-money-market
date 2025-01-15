@@ -83,25 +83,32 @@ impl PackageRelease {
         self.id
     }
 
-    pub fn update_software(self, to: Self) -> Result<Self, StdError> {
-        self.check_storage_match(to.code)
-            .and_then(|()| self.allow_software_update_int(to))
+    pub(crate) fn update_software(self, to: Self) -> Result<Self, StdError> {
+        self.check_software_update_allowed(to, Self::check_storage_match)
     }
 
-    pub fn update_software_and_storage(self, to: Self) -> Result<Self, StdError> {
-        self.check_storage_adjacent(to.code)
-            .and_then(|()| self.allow_software_update_int(to))
+    pub(crate) fn update_software_and_storage(self, to: Self) -> Result<Self, StdError> {
+        self.check_software_update_allowed(to, Self::check_storage_adjacent)
     }
 
-    fn allow_software_update_int(&self, new: Self) -> Result<Self, StdError> {
-        let current = self.code;
-        if current < new.code || (self.id == ReleaseId::dev() && current == new.code) {
-            Ok(new)
-        } else {
-            Err(StdError::generic_err(
-                "The software version does not increase monotonically!",
-            ))
-        }
+    fn check_software_update_allowed<F>(
+        &self,
+        new: Self,
+        storage_check: F,
+    ) -> Result<Self, StdError>
+    where
+        F: FnOnce(&Self, Version) -> Result<(), StdError>,
+    {
+        storage_check(self, new.code).and_then(|()| {
+            let current = self.code;
+            if current < new.code || (self.id == ReleaseId::dev() && current == new.code) {
+                Ok(new)
+            } else {
+                Err(StdError::generic_err(
+                    "The software version does not increase monotonically!",
+                ))
+            }
+        })
     }
 
     fn check_storage_match(&self, other: Version) -> Result<(), StdError> {
@@ -129,13 +136,6 @@ impl PackageRelease {
 impl From<ReleaseId> for String {
     fn from(value: ReleaseId) -> Self {
         value.0
-    }
-}
-
-// TODO remove once the admin has completed the issue#466
-impl From<PackageRelease> for ReleaseId {
-    fn from(value: PackageRelease) -> Self {
-        value.id
     }
 }
 
