@@ -155,7 +155,7 @@ where
 {
     PackageRelease::pull_prev(storage)
         .and_then(|prev_release| {
-            let this_release = PackageRelease::this(new);
+            let this_release = PackageRelease::current(new);
             prev_release.update_software(this_release)
         })
         .map_err(map_error)
@@ -185,7 +185,7 @@ where
 {
     PackageRelease::pull_prev(storage)
         .and_then(|prev_release| {
-            let this_release = PackageRelease::this(new);
+            let this_release = PackageRelease::current(new);
             prev_release.update_software_and_storage(this_release)
         })
         .map_err(map_error)

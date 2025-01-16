@@ -37,7 +37,7 @@ impl ReleaseId {
 
     const VOID: &'static str = "void-release";
 
-    fn this() -> Self {
+    fn current() -> Self {
         Self(Self::ID.into())
     }
 
@@ -62,8 +62,8 @@ impl PackageRelease {
         )
     }
 
-    pub(crate) fn this(code: Version) -> Self {
-        Self::instance(ReleaseId::this(), code)
+    pub(crate) fn current(code: Version) -> Self {
+        Self::instance(ReleaseId::current(), code)
     }
 
     pub(crate) fn pull_prev(storage: &mut dyn Storage) -> Result<Self, StdError> {
@@ -100,8 +100,11 @@ impl PackageRelease {
         F: FnOnce(&Self, Version) -> Result<(), StdError>,
     {
         storage_check(self, new.code).and_then(|()| {
-            let current = self.code;
-            if current < new.code || (self.id == ReleaseId::dev() && current == new.code) {
+            let current_software = self.code;
+            let new_software = new.code;
+            if current_software < new_software
+                || (self.id == ReleaseId::dev() && current_software == new_software)
+            {
                 Ok(new)
             } else {
                 Err(StdError::generic_err(
