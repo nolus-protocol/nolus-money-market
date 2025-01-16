@@ -34,40 +34,27 @@ impl ReleaseId {
         \"SOFTWARE_RELEASE_ID\" environment variable!",
     );
 
+    const CURRENT: Self = Self(Cow::Borrowed(Self::ID));
+
     //TODO delete once deliver a version with contracts that take the current release as input
-    const PREV: &'static str = "v0.7.6";
+    const PREV: Self = Self(Cow::Borrowed("v0.7.6"));
 
-    const DEV: &'static str = "dev-release";
+    // TODO delete
+    const DEV: Self = Self(Cow::Borrowed("dev-release"));
 
-    const VOID: &'static str = "void-release";
-
-    const fn current() -> Self {
-        Self(Cow::Borrowed(Self::ID))
-    }
-
-    const fn prev() -> Self {
-        Self(Cow::Borrowed(Self::PREV))
-    }
-
-    const fn dev() -> Self {
-        Self(Cow::Borrowed(Self::DEV))
-    }
-
-    const fn void() -> Self {
-        Self(Cow::Borrowed(Self::VOID))
-    }
+    const VOID: Self = Self(Cow::Borrowed("void-release"));
 }
 
 impl PackageRelease {
     pub const fn void() -> Self {
         Self::instance(
-            ReleaseId::void(),
+            ReleaseId::VOID,
             const { Version::new(SemVer::parse("0.0.0"), 0) },
         )
     }
 
     pub(crate) const fn current(code: Version) -> Self {
-        Self::instance(ReleaseId::current(), code)
+        Self::instance(ReleaseId::CURRENT, code)
     }
 
     pub(crate) fn pull_prev(storage: &mut dyn Storage) -> Result<Self, StdError> {
@@ -76,7 +63,7 @@ impl PackageRelease {
         VERSION_STORAGE_KEY
             .load(storage)
             .inspect(|_| VERSION_STORAGE_KEY.remove(storage))
-            .map(|code| Self::instance(ReleaseId::prev(), code))
+            .map(|code| Self::instance(ReleaseId::PREV, code))
     }
 
     const fn instance(id: ReleaseId, code: Version) -> Self {
@@ -107,7 +94,7 @@ impl PackageRelease {
             let current_software = self.code;
             let new_software = new.code;
             if current_software < new_software
-                || (self.id == ReleaseId::dev() && current_software == new_software)
+                || (self.id == ReleaseId::DEV && current_software == new_software)
             {
                 Ok(new)
             } else {
