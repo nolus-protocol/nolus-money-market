@@ -39,9 +39,6 @@ impl ReleaseId {
     //TODO delete once deliver a version with contracts that take the current release as input
     const PREV: Self = Self(Cow::Borrowed("v0.7.6"));
 
-    // TODO delete
-    const DEV: Self = Self(Cow::Borrowed("dev-release"));
-
     const VOID: Self = Self(Cow::Borrowed("void-release"));
 }
 
@@ -93,9 +90,7 @@ impl PackageRelease {
         storage_check(self, new.code).and_then(|()| {
             let current_software = self.code;
             let new_software = new.code;
-            if current_software < new_software
-                || (self.id == ReleaseId::DEV && current_software == new_software)
-            {
+            if current_software <= new_software {
                 Ok(new)
             } else {
                 Err(StdError::generic_err(
@@ -146,17 +141,21 @@ mod test {
     #[test]
     fn prod_software() {
         let current = Version::new(SemVer::parse("0.3.4"), 1);
-        PackageRelease::instance(prod_id(), current)
-            .update_software(PackageRelease::instance(prod_id(), current))
-            .unwrap_err();
-        PackageRelease::instance(prod_id(), current)
+        let instance = PackageRelease::instance(prod_id(), current);
+        assert_eq!(
+            Ok(instance.clone()),
+            instance.clone().update_software(instance.clone())
+        );
+        instance
+            .clone()
             .update_software(PackageRelease::instance(
                 prod_id(),
                 Version::new(current.version, current.storage + 1),
             ))
             .unwrap_err();
 
-        PackageRelease::instance(prod_id(), current)
+        instance
+            .clone()
             .update_software(PackageRelease::instance(
                 prod_id(),
                 Version::new(SemVer::parse("0.3.3"), current.storage),
@@ -166,102 +165,40 @@ mod test {
         let next_code = Version::new(SemVer::parse("0.3.5"), current.storage);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
-            PackageRelease::instance(prod_id(), current)
-                .update_software(PackageRelease::instance(prod_id(), next_code,))
-        );
-    }
-
-    #[test]
-    fn dev_software() {
-        let current = Version::new(SemVer::parse("0.3.4"), 1);
-
-        assert_eq!(
-            Ok(PackageRelease::instance(ReleaseId::dev(), current)),
-            PackageRelease::instance(ReleaseId::dev(), current)
-                .update_software(PackageRelease::instance(ReleaseId::dev(), current))
-        );
-        PackageRelease::instance(ReleaseId::dev(), current)
-            .update_software(PackageRelease::instance(
-                ReleaseId::dev(),
-                Version::new(SemVer::parse("0.3.4"), current.storage + 1),
-            ))
-            .unwrap_err();
-
-        PackageRelease::instance(ReleaseId::dev(), current)
-            .update_software(PackageRelease::instance(
-                ReleaseId::dev(),
-                Version::new(SemVer::parse("0.3.3"), current.storage),
-            ))
-            .unwrap_err();
-
-        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage);
-        assert_eq!(
-            Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
-            PackageRelease::instance(ReleaseId::dev(), current)
-                .update_software(PackageRelease::instance(ReleaseId::dev(), next_code))
+            instance.update_software(PackageRelease::instance(prod_id(), next_code,))
         );
     }
 
     #[test]
     fn prod_software_and_storage() {
         let current = Version::new(SemVer::parse("0.3.4"), 1);
+        let instance = PackageRelease::instance(prod_id(), current);
 
-        PackageRelease::instance(prod_id(), current)
-            .update_software_and_storage(PackageRelease::instance(prod_id(), current))
+        instance
+            .clone()
+            .update_software_and_storage(instance.clone())
             .unwrap_err();
 
-        PackageRelease::instance(prod_id(), current)
+        instance
+            .clone()
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
                 Version::new(SemVer::parse("0.3.3"), current.storage + 1),
-            ))
-            .unwrap_err();
-        PackageRelease::instance(prod_id(), current)
-            .update_software_and_storage(PackageRelease::instance(
-                prod_id(),
-                Version::new(current.version, current.storage + 1),
             ))
             .unwrap_err();
 
         let next_code = Version::new(SemVer::parse("0.3.5"), current.storage + 1);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
-            PackageRelease::instance(prod_id(), current)
+            instance
+                .clone()
                 .update_software_and_storage(PackageRelease::instance(prod_id(), next_code))
         );
 
-        PackageRelease::instance(prod_id(), current)
+        instance
+            .clone()
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(SemVer::parse("0.3.5"), current.storage),
-            ))
-            .unwrap_err();
-    }
-
-    #[test]
-    fn dev_software_and_storage() {
-        let current = Version::new(SemVer::parse("0.3.4"), 1);
-
-        PackageRelease::instance(ReleaseId::dev(), current)
-            .update_software_and_storage(PackageRelease::instance(ReleaseId::dev(), current))
-            .unwrap_err();
-
-        PackageRelease::instance(ReleaseId::dev(), current)
-            .update_software_and_storage(PackageRelease::instance(
-                ReleaseId::dev(),
-                Version::new(SemVer::parse("0.3.3"), current.storage + 1),
-            ))
-            .unwrap_err();
-        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage + 1);
-        assert_eq!(
-            Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
-            PackageRelease::instance(ReleaseId::dev(), current)
-                .update_software_and_storage(PackageRelease::instance(ReleaseId::dev(), next_code))
-        );
-
-        PackageRelease::instance(ReleaseId::dev(), current)
-            .update_software_and_storage(PackageRelease::instance(
-                ReleaseId::dev(),
                 Version::new(SemVer::parse("0.3.5"), current.storage),
             ))
             .unwrap_err();

@@ -124,7 +124,9 @@ impl PartialEq for Version {
 
 impl PartialOrd for Version {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.version.partial_cmp(&other.version)
+        let res = self.version.partial_cmp(&other.version);
+        debug_assert_eq!(res == Some(Ordering::Equal), self.eq(other));
+        res
     }
 }
 
