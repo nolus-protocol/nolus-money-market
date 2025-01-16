@@ -62,7 +62,7 @@ impl PackageRelease {
     pub const fn void() -> Self {
         Self::instance(
             ReleaseId::void(),
-            const { Version::new(0, SemVer::parse("0.0.0")) },
+            const { Version::new(SemVer::parse("0.0.0"), 0) },
         )
     }
 
@@ -158,25 +158,25 @@ mod test {
 
     #[test]
     fn prod_software() {
-        let current = Version::new(1, SemVer::parse("0.3.4"));
+        let current = Version::new(SemVer::parse("0.3.4"), 1);
         PackageRelease::instance(prod_id(), current)
             .update_software(PackageRelease::instance(prod_id(), current))
             .unwrap_err();
         PackageRelease::instance(prod_id(), current)
             .update_software(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.storage + 1, current.software),
+                Version::new(current.version, current.storage + 1),
             ))
             .unwrap_err();
 
         PackageRelease::instance(prod_id(), current)
             .update_software(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.storage, SemVer::parse("0.3.3")),
+                Version::new(SemVer::parse("0.3.3"), current.storage),
             ))
             .unwrap_err();
 
-        let next_code = Version::new(current.storage, SemVer::parse("0.3.5"));
+        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
             PackageRelease::instance(prod_id(), current)
@@ -186,7 +186,7 @@ mod test {
 
     #[test]
     fn dev_software() {
-        let current = Version::new(1, SemVer::parse("0.3.4"));
+        let current = Version::new(SemVer::parse("0.3.4"), 1);
 
         assert_eq!(
             Ok(PackageRelease::instance(ReleaseId::dev(), current)),
@@ -196,18 +196,18 @@ mod test {
         PackageRelease::instance(ReleaseId::dev(), current)
             .update_software(PackageRelease::instance(
                 ReleaseId::dev(),
-                Version::new(current.storage + 1, SemVer::parse("0.3.4")),
+                Version::new(SemVer::parse("0.3.4"), current.storage + 1),
             ))
             .unwrap_err();
 
         PackageRelease::instance(ReleaseId::dev(), current)
             .update_software(PackageRelease::instance(
                 ReleaseId::dev(),
-                Version::new(current.storage, SemVer::parse("0.3.3")),
+                Version::new(SemVer::parse("0.3.3"), current.storage),
             ))
             .unwrap_err();
 
-        let next_code = Version::new(current.storage, SemVer::parse("0.3.5"));
+        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage);
         assert_eq!(
             Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
             PackageRelease::instance(ReleaseId::dev(), current)
@@ -217,7 +217,7 @@ mod test {
 
     #[test]
     fn prod_software_and_storage() {
-        let current = Version::new(1, SemVer::parse("0.3.4"));
+        let current = Version::new(SemVer::parse("0.3.4"), 1);
 
         PackageRelease::instance(prod_id(), current)
             .update_software_and_storage(PackageRelease::instance(prod_id(), current))
@@ -226,17 +226,17 @@ mod test {
         PackageRelease::instance(prod_id(), current)
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.storage + 1, SemVer::parse("0.3.3")),
+                Version::new(SemVer::parse("0.3.3"), current.storage + 1),
             ))
             .unwrap_err();
         PackageRelease::instance(prod_id(), current)
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.storage + 1, current.software),
+                Version::new(current.version, current.storage + 1),
             ))
             .unwrap_err();
 
-        let next_code = Version::new(current.storage + 1, SemVer::parse("0.3.5"));
+        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage + 1);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
             PackageRelease::instance(prod_id(), current)
@@ -246,14 +246,14 @@ mod test {
         PackageRelease::instance(prod_id(), current)
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.storage, SemVer::parse("0.3.5")),
+                Version::new(SemVer::parse("0.3.5"), current.storage),
             ))
             .unwrap_err();
     }
 
     #[test]
     fn dev_software_and_storage() {
-        let current = Version::new(1, SemVer::parse("0.3.4"));
+        let current = Version::new(SemVer::parse("0.3.4"), 1);
 
         PackageRelease::instance(ReleaseId::dev(), current)
             .update_software_and_storage(PackageRelease::instance(ReleaseId::dev(), current))
@@ -262,10 +262,10 @@ mod test {
         PackageRelease::instance(ReleaseId::dev(), current)
             .update_software_and_storage(PackageRelease::instance(
                 ReleaseId::dev(),
-                Version::new(current.storage + 1, SemVer::parse("0.3.3")),
+                Version::new(SemVer::parse("0.3.3"), current.storage + 1),
             ))
             .unwrap_err();
-        let next_code = Version::new(current.storage + 1, SemVer::parse("0.3.5"));
+        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage + 1);
         assert_eq!(
             Ok(PackageRelease::instance(ReleaseId::dev(), next_code)),
             PackageRelease::instance(ReleaseId::dev(), current)
@@ -275,7 +275,7 @@ mod test {
         PackageRelease::instance(ReleaseId::dev(), current)
             .update_software_and_storage(PackageRelease::instance(
                 ReleaseId::dev(),
-                Version::new(current.storage, SemVer::parse("0.3.5")),
+                Version::new(SemVer::parse("0.3.5"), current.storage),
             ))
             .unwrap_err();
     }

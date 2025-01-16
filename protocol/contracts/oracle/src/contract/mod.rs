@@ -37,7 +37,7 @@ mod oracle;
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = Version::new(CONTRACT_STORAGE_VERSION, PACKAGE_VERSION);
+const CONTRACT_VERSION: Version = Version::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 
 type Oracle<'storage, S> =
     GenericOracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;

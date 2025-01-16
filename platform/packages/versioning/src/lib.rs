@@ -77,16 +77,15 @@ impl Display for SemVer {
 /// A 'reference type' representing a software package
 // TODO rename to SoftwarePackage
 pub struct Version {
+    /// the reference identification attribute
+    version: SemVer,
     // TODO add `name: &str`, the Cargo package name
     storage: VersionSegment,
-    /// the reference identification attribute
-    // TODO rename to version
-    software: SemVer,
 }
 
 impl Version {
-    pub const fn new(storage: VersionSegment, software: SemVer) -> Self {
-        Self { storage, software }
+    pub const fn new(version: SemVer, storage: VersionSegment) -> Self {
+        Self { version, storage }
     }
 
     pub const fn same_storage(&self, other: &Self) -> bool {
@@ -106,7 +105,7 @@ impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!(
             "version: {}, storage: {}",
-            self.software, self.storage
+            self.version, self.storage
         ))
     }
 }
@@ -115,7 +114,7 @@ impl Eq for Version {}
 
 impl PartialEq for Version {
     fn eq(&self, other: &Self) -> bool {
-        let res = self.software == other.software;
+        let res = self.version == other.version;
         if res {
             debug_assert_eq!(self.storage, other.storage);
         }
@@ -125,7 +124,7 @@ impl PartialEq for Version {
 
 impl PartialOrd for Version {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.software.partial_cmp(&other.software)
+        self.version.partial_cmp(&other.version)
     }
 }
 
