@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -13,7 +15,9 @@ use super::Version;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct ReleaseId(String);
+// The two usecases, building the current release, and deserializing a release, call for `&'static str` and String, respectively.
+// We use Cow since it is an enum of the two. We do not need to mutate it.
+pub struct ReleaseId(Cow<'static, str>);
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -37,32 +41,32 @@ impl ReleaseId {
 
     const VOID: &'static str = "void-release";
 
-    fn current() -> Self {
-        Self(Self::ID.into())
+    const fn current() -> Self {
+        Self(Cow::Borrowed(Self::ID))
     }
 
-    fn prev() -> Self {
-        Self(Self::PREV.into())
+    const fn prev() -> Self {
+        Self(Cow::Borrowed(Self::PREV))
     }
 
-    fn dev() -> Self {
-        Self(Self::DEV.into())
+    const fn dev() -> Self {
+        Self(Cow::Borrowed(Self::DEV))
     }
 
-    fn void() -> Self {
-        Self(Self::VOID.into())
+    const fn void() -> Self {
+        Self(Cow::Borrowed(Self::VOID))
     }
 }
 
 impl PackageRelease {
-    pub fn void() -> Self {
+    pub const fn void() -> Self {
         Self::instance(
             ReleaseId::void(),
             const { Version::new(0, SemVer::parse("0.0.0")) },
         )
     }
 
-    pub(crate) fn current(code: Version) -> Self {
+    pub(crate) const fn current(code: Version) -> Self {
         Self::instance(ReleaseId::current(), code)
     }
 
@@ -138,7 +142,7 @@ impl PackageRelease {
 
 impl From<ReleaseId> for String {
     fn from(value: ReleaseId) -> Self {
-        value.0
+        value.0.to_string()
     }
 }
 
