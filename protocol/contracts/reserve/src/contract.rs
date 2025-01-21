@@ -18,7 +18,7 @@ use sdk::{
         self, entry_point, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
     },
 };
-use versioning::{package_version, Package, SemVer, PackageRelease, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     api::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
@@ -28,8 +28,6 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -51,7 +49,6 @@ pub fn instantiate(
             .grant_to(&lease_code_admin)
             .map_err(Into::into)
         })
-        .and_then(|()| versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(Into::into))
         .and_then(|()| {
             Code::try_new(new_reserve.lease_code.into(), &deps.querier).map_err(Into::into)
         })

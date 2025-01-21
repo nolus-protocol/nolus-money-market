@@ -1,14 +1,10 @@
-use sdk::cosmwasm_std::{StdError, StdResult, Storage};
+use sdk::cosmwasm_std::{StdError, Storage};
 
-pub use self::software::{Package, PackageRelease, ReleaseId, SemVer, VersionSegment};
+#[cfg(feature = "schema")]
+pub use self::software::SemVer;
+pub use self::software::{PackageRelease, ReleaseId, VersionSegment};
 
 mod software;
-
-pub fn initialize(_storage: &mut dyn Storage, _version: Package) -> StdResult<()> {
-    // no op
-    // TBD remove from the stack upward
-    Ok(())
-}
 
 pub fn update_legacy_software<ContractError, MapErrorFunctor>(
     storage: &mut dyn Storage,

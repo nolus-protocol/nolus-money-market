@@ -76,6 +76,10 @@ impl PackageRelease {
         self.id
     }
 
+    pub const fn version(&self) -> SemVer {
+        self.code.version()
+    }
+
     pub(crate) fn update_software(self, to: Self) -> Result<Self, StdError> {
         self.check_software_update_allowed(to, Self::check_storage_match)
     }

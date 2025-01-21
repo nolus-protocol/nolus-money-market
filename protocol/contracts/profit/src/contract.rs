@@ -14,7 +14,7 @@ use sdk::{
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -26,8 +26,6 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -41,8 +39,6 @@ pub fn instantiate(
     platform::contract::validate_addr(deps.querier, &msg.treasury)?;
     platform::contract::validate_addr(deps.querier, &msg.oracle)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
-
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 

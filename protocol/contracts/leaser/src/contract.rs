@@ -16,7 +16,7 @@ use sdk::{
         QuerierWrapper, Reply,
     },
 };
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -28,8 +28,6 @@ use crate::{
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 4;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -47,8 +45,6 @@ pub fn instantiate(
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
     deps.api.addr_validate(msg.protocols_registry.as_str())?;
-
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 

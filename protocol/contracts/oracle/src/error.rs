@@ -15,9 +15,6 @@ pub type Result<T> = StdResult<T, ContractError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Oracle] Failed to initialize versioning module! Cause: {0}")]
-    InitializeVersioning(StdError),
-
     #[error("[Oracle] Failed to validate address while trying to register feeder! Cause: {0}")]
     RegisterFeederAddressValidation(StdError),
 

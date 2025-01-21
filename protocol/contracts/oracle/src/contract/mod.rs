@@ -14,7 +14,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     api::{
@@ -36,8 +36,6 @@ mod oracle;
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -51,9 +49,6 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, CONTRACT_VERSION)
-        .map_err(ContractError::InitializeVersioning)?;
-
     msg.config
         .store(deps.storage)
         .and_then(|()| {
@@ -81,7 +76,7 @@ pub fn migrate(
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => to_json_binary(&PACKAGE_VERSION),
+        QueryMsg::ContractVersion {} => to_json_binary(&CURRENT_RELEASE.version()),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)

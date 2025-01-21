@@ -18,7 +18,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     error::{ContractError, Result},
@@ -33,8 +33,6 @@ mod rewards;
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -46,8 +44,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
-
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),

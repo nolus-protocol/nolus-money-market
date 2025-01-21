@@ -25,6 +25,10 @@ impl Package {
         Self { version, storage }
     }
 
+    pub const fn version(&self) -> SemVer {
+        self.version
+    }
+
     pub const fn same_storage(&self, other: &Self) -> bool {
         self.check_storage(other.storage)
     }

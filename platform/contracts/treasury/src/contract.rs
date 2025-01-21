@@ -15,7 +15,7 @@ use sdk::{
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     cmd::RewardCalculator,
@@ -28,8 +28,6 @@ use crate::{
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -40,7 +38,6 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, CONTRACT_VERSION).map_err(ContractError::InitVersion)?;
     setup_dispatching(deps.storage, deps.querier, deps.api, env, msg)
         .map(response::response_only_messages)
 }

@@ -8,7 +8,7 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
@@ -20,8 +20,6 @@ use super::state::{self, Response, State};
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 const CURRENT_RELEASE: PackageRelease =
     PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
@@ -40,8 +38,6 @@ pub fn instantiate(
     platform::contract::validate_addr(deps.querier, &new_lease.form.market_price_oracle)?;
     platform::contract::validate_addr(deps.querier, &new_lease.form.loan.lpp)?;
     platform::contract::validate_addr(deps.querier, &new_lease.form.loan.profit)?;
-
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
 
     state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))

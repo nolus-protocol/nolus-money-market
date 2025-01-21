@@ -7,7 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, Package, PackageRelease, ReleaseId, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, ReleaseId, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -24,9 +24,8 @@ use crate::{
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease =
+    PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(
@@ -38,8 +37,6 @@ pub fn instantiate(
         contracts,
     }: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
-
     ContractOwnerAccess::new(deps.branch().storage).grant_to(dex_admin)?;
 
     contracts.validate(deps.querier)?;

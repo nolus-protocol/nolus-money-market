@@ -9,7 +9,7 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
+use versioning::{package_version, PackageRelease, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -19,19 +19,16 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
-const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease =
+    PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(
-    deps: DepsMut<'_>,
+    _deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, CONTRACT_VERSION)?;
-
     Ok(response::empty_response())
 }
 
@@ -74,7 +71,7 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwRes
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_json_binary(&PACKAGE_VERSION)?),
+        QueryMsg::ContractVersion {} => Ok(to_json_binary(&CURRENT_RELEASE.version())?),
         QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
