@@ -9,7 +9,7 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_version, SemVer, Version, VersionSegment};
+use versioning::{package_version, Package, SemVer, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -20,7 +20,7 @@ use crate::{
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = Version::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
+const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(

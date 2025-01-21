@@ -7,7 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, PackageRelease, ReleaseId, SemVer, Version, VersionSegment};
+use versioning::{package_version, Package, PackageRelease, ReleaseId, SemVer, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -25,7 +25,7 @@ use crate::{
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
 const PACKAGE_VERSION: SemVer = package_version!();
-const CONTRACT_VERSION: Version = Version::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
+const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(

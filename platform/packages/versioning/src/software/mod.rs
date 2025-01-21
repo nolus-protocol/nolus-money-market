@@ -8,9 +8,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::SemVer;
+pub use package::Package;
+pub use version::{SemVer, VersionSegment};
 
-use super::Version;
+mod package;
+mod version;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[repr(transparent)]
@@ -24,7 +26,7 @@ pub struct ReleaseId(Cow<'static, str>);
 #[cfg_attr(test, derive(Debug))]
 pub struct PackageRelease {
     id: ReleaseId,
-    code: Version,
+    code: Package,
 }
 
 impl ReleaseId {
@@ -46,16 +48,16 @@ impl PackageRelease {
     pub const fn void() -> Self {
         Self::instance(
             ReleaseId::VOID,
-            const { Version::new(SemVer::parse("0.0.0"), 0) },
+            const { Package::new(SemVer::parse("0.0.0"), 0) },
         )
     }
 
-    pub(crate) const fn current(code: Version) -> Self {
+    pub(crate) const fn current(code: Package) -> Self {
         Self::instance(ReleaseId::CURRENT, code)
     }
 
     pub(crate) fn pull_prev(storage: &mut dyn Storage) -> Result<Self, StdError> {
-        const VERSION_STORAGE_KEY: Item<Version> = Item::new("contract_version");
+        const VERSION_STORAGE_KEY: Item<Package> = Item::new("contract_version");
 
         VERSION_STORAGE_KEY
             .load(storage)
@@ -63,7 +65,7 @@ impl PackageRelease {
             .map(|code| Self::instance(ReleaseId::PREV, code))
     }
 
-    const fn instance(id: ReleaseId, code: Version) -> Self {
+    const fn instance(id: ReleaseId, code: Package) -> Self {
         Self { id, code }
     }
 
@@ -85,7 +87,7 @@ impl PackageRelease {
         storage_check: F,
     ) -> Result<Self, StdError>
     where
-        F: FnOnce(&Self, Version) -> Result<(), StdError>,
+        F: FnOnce(&Self, Package) -> Result<(), StdError>,
     {
         storage_check(self, new.code).and_then(|()| {
             let current_software = self.code;
@@ -100,7 +102,7 @@ impl PackageRelease {
         })
     }
 
-    fn check_storage_match(&self, other: Version) -> Result<(), StdError> {
+    fn check_storage_match(&self, other: Package) -> Result<(), StdError> {
         if self.code.same_storage(&other) {
             Ok(())
         } else {
@@ -110,7 +112,7 @@ impl PackageRelease {
         }
     }
 
-    fn check_storage_adjacent(&self, next: Version) -> Result<(), StdError> {
+    fn check_storage_adjacent(&self, next: Package) -> Result<(), StdError> {
         if self.code.next_storage(&next) {
             Ok(())
         } else {
@@ -130,9 +132,11 @@ impl From<ReleaseId> for String {
 
 #[cfg(test)]
 mod test {
-    use crate::{SemVer, Version};
 
-    use super::{PackageRelease, ReleaseId};
+    use super::{version::VersionSegment, Package, PackageRelease, ReleaseId, SemVer};
+
+    const CURRENT_STORAGE: VersionSegment = 1;
+    const CURRENT_VERSION: SemVer = SemVer::parse("0.3.4");
 
     fn prod_id() -> ReleaseId {
         ReleaseId("v0.5.3".into())
@@ -140,7 +144,7 @@ mod test {
 
     #[test]
     fn prod_software() {
-        let current = Version::new(SemVer::parse("0.3.4"), 1);
+        let current = Package::new(CURRENT_VERSION, CURRENT_STORAGE);
         let instance = PackageRelease::instance(prod_id(), current);
         assert_eq!(
             Ok(instance.clone()),
@@ -150,7 +154,7 @@ mod test {
             .clone()
             .update_software(PackageRelease::instance(
                 prod_id(),
-                Version::new(current.version, current.storage + 1),
+                Package::new(CURRENT_VERSION, CURRENT_STORAGE + 1),
             ))
             .unwrap_err();
 
@@ -158,11 +162,11 @@ mod test {
             .clone()
             .update_software(PackageRelease::instance(
                 prod_id(),
-                Version::new(SemVer::parse("0.3.3"), current.storage),
+                Package::new(SemVer::parse("0.3.3"), CURRENT_STORAGE),
             ))
             .unwrap_err();
 
-        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage);
+        let next_code = Package::new(SemVer::parse("0.3.5"), CURRENT_STORAGE);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
             instance.update_software(PackageRelease::instance(prod_id(), next_code,))
@@ -171,7 +175,7 @@ mod test {
 
     #[test]
     fn prod_software_and_storage() {
-        let current = Version::new(SemVer::parse("0.3.4"), 1);
+        let current = Package::new(CURRENT_VERSION, CURRENT_STORAGE);
         let instance = PackageRelease::instance(prod_id(), current);
 
         instance
@@ -183,11 +187,11 @@ mod test {
             .clone()
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(SemVer::parse("0.3.3"), current.storage + 1),
+                Package::new(SemVer::parse("0.3.3"), CURRENT_STORAGE + 1),
             ))
             .unwrap_err();
 
-        let next_code = Version::new(SemVer::parse("0.3.5"), current.storage + 1);
+        let next_code = Package::new(SemVer::parse("0.3.5"), CURRENT_STORAGE + 1);
         assert_eq!(
             Ok(PackageRelease::instance(prod_id(), next_code)),
             instance
@@ -199,7 +203,7 @@ mod test {
             .clone()
             .update_software_and_storage(PackageRelease::instance(
                 prod_id(),
-                Version::new(SemVer::parse("0.3.5"), current.storage),
+                Package::new(SemVer::parse("0.3.5"), CURRENT_STORAGE),
             ))
             .unwrap_err();
     }
