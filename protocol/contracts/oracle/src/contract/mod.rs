@@ -14,7 +14,7 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, PackageRelease, VersionSegment};
 
 use crate::{
     api::{
@@ -36,8 +36,11 @@ mod oracle;
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const CURRENT_RELEASE: PackageRelease =
-    PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+    package_name!(),
+    package_version!(),
+    CONTRACT_STORAGE_VERSION,
+);
 
 type Oracle<'storage, S> =
     GenericOracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
@@ -67,10 +70,15 @@ pub fn migrate(
     env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, CURRENT_RELEASE, ContractError::UpdateSoftware)
-        .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
-        .and_then(response::response)
-        .inspect_err(platform_error::log(deps.api))
+    versioning::update_legacy_software(
+        deps.storage,
+        package_name!(),
+        CURRENT_RELEASE,
+        ContractError::UpdateSoftware,
+    )
+    .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
+    .and_then(response::response)
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

@@ -8,13 +8,14 @@ mod software;
 
 pub fn update_legacy_software<ContractError, MapErrorFunctor>(
     storage: &mut dyn Storage,
+    prev_name: &'static str,
     current: PackageRelease,
     map_error: MapErrorFunctor,
 ) -> Result<ReleaseId, ContractError>
 where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
-    PackageRelease::pull_prev(storage)
+    PackageRelease::pull_prev(prev_name, storage)
         .and_then(|prev_release| prev_release.update_software(current))
         .map_err(map_error)
         .map(PackageRelease::release)
@@ -32,6 +33,7 @@ pub fn update_legacy_software_and_storage<
     MapErrorFunctor,
 >(
     storage: &mut dyn Storage,
+    prev_name: &'static str,
     current: PackageRelease,
     migrate_storage: MigrateStorageFunctor,
     map_error: MapErrorFunctor,
@@ -41,7 +43,7 @@ where
         FnOnce(&mut dyn Storage) -> Result<StorageMigrationOutput, ContractError>,
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
-    PackageRelease::pull_prev(storage)
+    PackageRelease::pull_prev(prev_name, storage)
         .and_then(|prev_release| prev_release.update_software_and_storage(current))
         .map_err(map_error)
         .and_then(|new_release| {

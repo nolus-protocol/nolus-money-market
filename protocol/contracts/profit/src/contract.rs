@@ -14,7 +14,7 @@ use sdk::{
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, PackageRelease, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -26,8 +26,11 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-const CURRENT_RELEASE: PackageRelease =
-    PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+    package_name!(),
+    package_version!(),
+    CONTRACT_STORAGE_VERSION,
+);
 
 #[entry_point]
 pub fn instantiate(
@@ -69,7 +72,7 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, CURRENT_RELEASE, Into::into)
+    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
         .and_then(response::response)
 }
 

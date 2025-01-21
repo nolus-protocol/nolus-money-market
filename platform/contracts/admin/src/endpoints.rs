@@ -7,7 +7,7 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_version, PackageRelease, ReleaseId, VersionSegment};
+use versioning::{package_name, package_version, PackageRelease, ReleaseId, VersionSegment};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -24,8 +24,11 @@ use crate::{
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const CURRENT_RELEASE: PackageRelease =
-    PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+    package_name!(),
+    package_version!(),
+    CONTRACT_STORAGE_VERSION,
+);
 
 #[entry_point]
 pub fn instantiate(
@@ -56,8 +59,8 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, CURRENT_RELEASE, Into::into).and_then(
-        |reported_release| {
+    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+        .and_then(|reported_release| {
             check_release_label(reported_release.clone(), release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(
@@ -68,8 +71,7 @@ pub fn migrate(
                     )
                 })
                 .and_then(|messages| response::response_with_messages(reported_release, messages))
-        },
-    )
+        })
 }
 
 #[entry_point]
@@ -282,7 +284,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             ContractState::AwaitContractsMigrationReply {
-                release: PackageRelease::void().release(),
+                release: ReleaseId::VOID,
             }
             .store(storage)
             .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
