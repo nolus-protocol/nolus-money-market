@@ -9,7 +9,7 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_version, Package, SemVer, VersionSegment};
+use versioning::{package_version, Package, PackageRelease, SemVer, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -21,6 +21,7 @@ use crate::{
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
 const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
+const CURRENT_RELEASE: PackageRelease = PackageRelease::current(package_version!(), CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
 pub fn instantiate(
@@ -40,7 +41,7 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, CONTRACT_VERSION, Into::into)
+    versioning::update_legacy_software(deps.storage, CURRENT_RELEASE, Into::into)
         .and_then(response::response)
 }
 

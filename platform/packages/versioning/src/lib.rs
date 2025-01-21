@@ -12,17 +12,14 @@ pub fn initialize(_storage: &mut dyn Storage, _version: Package) -> StdResult<()
 
 pub fn update_legacy_software<ContractError, MapErrorFunctor>(
     storage: &mut dyn Storage,
-    new: Package,
+    current: PackageRelease,
     map_error: MapErrorFunctor,
 ) -> Result<ReleaseId, ContractError>
 where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     PackageRelease::pull_prev(storage)
-        .and_then(|prev_release| {
-            let this_release = PackageRelease::current(new);
-            prev_release.update_software(this_release)
-        })
+        .and_then(|prev_release| prev_release.update_software(current))
         .map_err(map_error)
         .map(PackageRelease::release)
 }
@@ -39,7 +36,7 @@ pub fn update_legacy_software_and_storage<
     MapErrorFunctor,
 >(
     storage: &mut dyn Storage,
-    new: Package,
+    current: PackageRelease,
     migrate_storage: MigrateStorageFunctor,
     map_error: MapErrorFunctor,
 ) -> Result<FullUpdateOutput<StorageMigrationOutput>, ContractError>
@@ -49,10 +46,7 @@ where
     MapErrorFunctor: FnOnce(StdError) -> ContractError,
 {
     PackageRelease::pull_prev(storage)
-        .and_then(|prev_release| {
-            let this_release = PackageRelease::current(new);
-            prev_release.update_software_and_storage(this_release)
-        })
+        .and_then(|prev_release| prev_release.update_software_and_storage(current))
         .map_err(map_error)
         .and_then(|new_release| {
             migrate_storage(storage).map(|storage_migration_output| FullUpdateOutput {

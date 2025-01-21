@@ -52,8 +52,11 @@ impl PackageRelease {
         )
     }
 
-    pub(crate) const fn current(code: Package) -> Self {
-        Self::instance(ReleaseId::CURRENT, code)
+    pub const fn current(version: &str, storage: VersionSegment) -> Self {
+        Self::instance(
+            ReleaseId::CURRENT,
+            Package::new(SemVer::parse(version), storage),
+        )
     }
 
     pub(crate) fn pull_prev(storage: &mut dyn Storage) -> Result<Self, StdError> {
