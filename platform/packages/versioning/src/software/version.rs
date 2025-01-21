@@ -17,12 +17,11 @@ pub struct SemVer {
 
 #[macro_export]
 macro_rules! package_version {
-    //TODO leave only the env! invocation
     () => {{
-        $crate::SemVer::parse(::core::env!(
+        ::core::env!(
             "CARGO_PKG_VERSION",
             "Cargo package version is not set as an environment variable!"
-        ))
+        )
     }};
 }
 

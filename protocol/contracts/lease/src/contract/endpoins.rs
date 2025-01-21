@@ -20,7 +20,7 @@ use super::state::{self, Response, State};
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
-const PACKAGE_VERSION: SemVer = package_version!();
+const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
 const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 
 #[entry_point]

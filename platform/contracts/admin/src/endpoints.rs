@@ -24,7 +24,7 @@ use crate::{
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const PACKAGE_VERSION: SemVer = package_version!();
+const PACKAGE_VERSION: SemVer = SemVer::parse(package_version!());
 const CONTRACT_VERSION: Package = Package::new(PACKAGE_VERSION, CONTRACT_STORAGE_VERSION);
 
 #[entry_point]
