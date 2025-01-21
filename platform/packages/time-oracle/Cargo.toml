@@ -12,9 +12,6 @@ combinations = [
     { tags = ["ci", "@agnostic"], include-rest = true },
 ]
 
-[features]
-migrate = []
-
 [dependencies]
 sdk = { workspace = true, features = ["storage"] }
 

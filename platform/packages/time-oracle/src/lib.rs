@@ -6,9 +6,6 @@ pub use crate::alarms::Alarms;
 
 mod alarms;
 
-#[cfg(feature = "migrate")]
-pub mod migrate_v1;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum AlarmError {
     #[error("{0}")]
