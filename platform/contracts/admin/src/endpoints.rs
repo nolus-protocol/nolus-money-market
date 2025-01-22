@@ -7,7 +7,9 @@ use sdk::{
         MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
-use versioning::{package_name, package_version, PackageRelease, ReleaseId, VersionSegment};
+use versioning::{
+    package_name, package_version, PlatformPackageRelease, ReleaseId, VersionSegment,
+};
 
 use crate::{
     contracts::{MigrationSpec, Protocol, ProtocolContracts},
@@ -24,7 +26,7 @@ use crate::{
 // version info for migration info
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: PlatformPackageRelease = PlatformPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -59,7 +61,11 @@ pub fn migrate(
             },
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
+        .map_err(Into::into)
+        .and_then(|previous| {
+            versioning::update_legacy_software(previous, CURRENT_RELEASE, Into::into)
+        })
         .and_then(|reported_release| {
             check_release_label(reported_release.clone(), release.clone())
                 .and_then(|()| {

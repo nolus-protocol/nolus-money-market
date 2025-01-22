@@ -5,14 +5,14 @@ use thiserror::Error;
 use currency::error::Error as CurrencyError;
 use dex::Error as DexError;
 use finance::error::Error as FinanceError;
-use lpp::error::ContractError as LppError;
+use lpp::error::Error as LppError;
 use oracle::api::alarms::Error as OracleAlarmError;
 use oracle_platform::error::Error as OracleError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
-use reserve::error::Error as ReserveError;
+use reserve::stub::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
-use timealarms::error::ContractError as TimeAlarmsError;
+use timealarms::stub::Error as TimeAlarmsError;
 
 pub use crate::position::PositionError;
 
@@ -32,6 +32,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     PlatformError(#[from] PlatformError),
+
+    #[error("[Lease] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
 
     #[error("[Lease] {0}")]
     LppError(#[from] LppError),

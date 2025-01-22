@@ -3,8 +3,7 @@ use thiserror::Error;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum Error {
-    //yes
+pub enum ContractError {
     #[error("[Lpp] [Std] {0}")]
     Std(#[from] StdError),
 
@@ -23,24 +22,21 @@ pub enum Error {
     #[error("[Lpp] {0}")]
     Finance(#[from] finance::error::Error),
 
-    //yes
     #[error("[Lpp] {0}")]
     Platform(#[from] platform::error::Error),
+
+    #[error("[Lpp] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
 
     #[error("[Lpp] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
-    //yes
     #[error("[Lpp] Unknown currency, details '{0}'")]
     UnknownCurrency(currency::error::Error),
 
     #[error("[Lpp] No liquidity")]
     NoLiquidity {},
 
-    #[error("[Lpp] The loan exists")]
-    LoanExists {},
-
-    //yes
     #[error("[Lpp] The loan does not exist")]
     NoLoan {},
 
@@ -77,9 +73,8 @@ pub enum Error {
     #[error("[Lpp] {0}")]
     OverflowError(&'static str),
 
-    //yes
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, ContractError>;

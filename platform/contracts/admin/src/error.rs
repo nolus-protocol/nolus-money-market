@@ -13,6 +13,8 @@ pub enum Error {
     AccessControl(#[from] access_control::error::Error),
     #[error("[Admin] {0}")]
     Platform(#[from] platform::error::Error),
+    #[error("[Admin] {0}")]
+    Versioning(#[from] versioning::Error),
     #[error("[Admin] No data in migration response!")]
     NoMigrationResponseData {},
     #[error(

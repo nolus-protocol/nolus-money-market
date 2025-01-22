@@ -10,6 +10,9 @@ pub enum ContractError {
     #[error("[TimeAlarms] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[TimeAlarms] {0}")]
+    Versioning(#[from] versioning::Error),
+
     #[error("[TimeAlarms] Unauthorized")]
     Unauthorized {},
 

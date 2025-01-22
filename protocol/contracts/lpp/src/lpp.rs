@@ -13,7 +13,7 @@ use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
-    error::{ContractError, Result},
+    contract::error::{Result, ContractError},
     loan::Loan,
     msg::{LppBalanceResponse, PriceResponse},
     state::{Config, Deposit, Total},
@@ -349,7 +349,7 @@ mod test {
 
     use crate::{
         borrow::InterestRate,
-        error::ContractError,
+        contract::error::ContractError,
         loan::Loan,
         state::{Config, Deposit, Total},
     };

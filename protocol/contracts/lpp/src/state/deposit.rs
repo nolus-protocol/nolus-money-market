@@ -13,7 +13,7 @@ use sdk::{
 };
 
 use crate::{
-    error::{ContractError, Result},
+    contract::error::{ContractError, Result},
     lpp::NTokenPrice,
 };
 

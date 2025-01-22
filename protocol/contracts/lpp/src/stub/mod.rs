@@ -7,7 +7,7 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::{ContractError, Result},
+    error::Error,
     msg::{LoanResponse, QueryLoanResponse, QueryMsg},
 };
 
@@ -35,13 +35,13 @@ where
     Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
-    pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
+    pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
-            .map_err(ContractError::from)
+            .map_err(Error::from)
             .and_then(|lpn: CurrencyDTO<Lpns>| {
                 lpn.of_currency(&currency::dto::<Lpn, _>())
-                    .map_err(ContractError::UnknownCurrency)
+                    .map_err(Error::UnknownCurrency)
             })
             .map(|()| Self {
                 addr,
@@ -67,7 +67,7 @@ where
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLoan<Lpn, Lpns>,
-        ContractError: Into<Cmd::Error>,
+        Error: Into<Cmd::Error>,
     {
         self.into_loan(lease, querier)
             .map_err(Into::into)
@@ -81,12 +81,12 @@ where
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender<Lpn, Lpns>,
-        ContractError: Into<Cmd::Error>,
+        Error: Into<Cmd::Error>,
     {
         cmd.exec(self.into_lender(querier))
     }
 
-    fn into_loan<A>(self, lease: A, querier: QuerierWrapper<'_>) -> Result<LppLoanImpl<Lpn, Lpns>>
+    fn into_loan<A>(self, lease: A, querier: QuerierWrapper<'_>) -> Result<LppLoanImpl<Lpn, Lpns>, Error>
     where
         A: Into<Addr>,
     {
@@ -98,7 +98,7 @@ where
                 },
             )
             .map_err(Into::into)
-            .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(ContractError::NoLoan {}))
+            .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(Error::NoLoan {}))
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 

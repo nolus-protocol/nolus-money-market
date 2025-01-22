@@ -1,7 +1,7 @@
-pub use crate::error::ContractError;
-
-pub mod error;
+#[cfg(feature = "contract")]
+mod error;
 pub mod msg;
+#[cfg(feature = "contract")]
 pub mod result;
 
 #[cfg(any(feature = "stub", test))]

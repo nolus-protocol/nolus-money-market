@@ -22,8 +22,11 @@ pub enum ContractError {
     #[error("[Profit] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
+    #[error("[Profit] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
+
     #[error("[Profit] {0}")]
-    TimeAlarm(#[from] timealarms::ContractError),
+    TimeAlarm(#[from] timealarms::stub::Error),
 
     #[error("[Profit] Invalid contract address {0}")]
     InvalidContractAddress(Addr),

@@ -3,11 +3,11 @@ use std::result::Result as StdResult;
 use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, contract};
-use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper, StdError as SdkError, Timestamp};
 
-use crate::{msg::ExecuteMsg, ContractError};
+use crate::msg::ExecuteMsg;
 
-pub type Result<T> = StdResult<T, ContractError>;
+pub type Result<T> = StdResult<T, Error>;
 
 pub trait TimeAlarms
 where
@@ -25,6 +25,15 @@ pub trait WithTimeAlarms {
         TA: TimeAlarms;
 }
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("[TimeAlarms Stub] [Sdk] {0}")]
+    Sdk(#[from] SdkError),
+
+    #[error("[TimeAlarms Stub] Invalid address, cause: \"{0}\".")]
+    InvalidAddress(platform::error::Error),
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct TimeAlarmsRef {
@@ -33,9 +42,9 @@ pub struct TimeAlarmsRef {
 
 impl TimeAlarmsRef {
     pub fn new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        contract::validate_addr(querier, &addr)?;
-
-        Ok(Self { addr })
+        contract::validate_addr(querier, &addr)
+            .map_err(Error::InvalidAddress)
+            .map(|()| Self { addr })
     }
 
     pub fn owned_by(&self, addr: &Addr) -> bool {

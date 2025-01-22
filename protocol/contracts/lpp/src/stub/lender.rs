@@ -9,7 +9,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 
 use crate::{
-    error::{ContractError, Result},
+    error::Error,
     msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse},
 };
 
@@ -20,10 +20,10 @@ where
     Lpns: Group,
     Self: Into<LppBatch<LppRef<Lpn, Lpns>>>,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
-    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<(), Error>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>, Error>;
 
-    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error>;
 }
 
 pub trait WithLppLender<Lpn, Lpns>
@@ -71,7 +71,7 @@ where
     Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<(), Error> {
         self.batch
             .schedule_execute_wasm_reply_on_success_no_funds(
                 self.id().clone(),
@@ -80,24 +80,24 @@ where
                 },
                 Self::OPEN_LOAN_REQ_ID,
             )
-            .map_err(ContractError::from)
+            .map_err(Error::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>, Error> {
         debug_assert_eq!(resp.id, Self::OPEN_LOAN_REQ_ID);
 
         reply::from_execute(resp)
             .map_err(Into::into)
-            .and_then(|maybe_data| maybe_data.ok_or(ContractError::NoResponseStubError))
+            .and_then(|maybe_data| maybe_data.ok_or(Error::NoResponseStubError))
     }
 
-    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error> {
         let msg = QueryMsg::<Lpns>::Quote {
             amount: amount.into(),
         };
         self.querier
             .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
+            .map_err(Error::from)
     }
 }
 

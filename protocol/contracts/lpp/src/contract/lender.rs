@@ -11,12 +11,12 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128};
 
 use crate::{
-    error::{ContractError, Result},
     event,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
     state::Deposit,
 };
+use super::error::{ContractError, Result};
 
 pub(super) fn try_deposit<Lpn>(
     deps: DepsMut<'_>,

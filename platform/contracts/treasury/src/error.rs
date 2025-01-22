@@ -7,6 +7,9 @@ pub enum ContractError {
     #[error("[Treasury] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[Treasury] {0}")]
+    Versioning(#[from] versioning::Error),
+
     #[error("[Treasury] Failed to serialize! Cause: {0}")]
     Serialize(StdError),
 
@@ -56,10 +59,10 @@ pub enum ContractError {
     ConvertRewardsToNLS(oracle_platform::error::Error),
 
     #[error("[Treasury] Failed to setup a time alarms stub! Cause: {0}")]
-    SetupTimeAlarmStub(timealarms::error::ContractError),
+    SetupTimeAlarmStub(timealarms::stub::Error),
 
     #[error("[Treasury] Failed to setup a time alarm! Cause: {0}")]
-    SetupTimeAlarm(timealarms::error::ContractError),
+    SetupTimeAlarm(timealarms::stub::Error),
 
     #[error("[Treasury] {0}")]
     Unauthorized(#[from] access_control::error::Error),

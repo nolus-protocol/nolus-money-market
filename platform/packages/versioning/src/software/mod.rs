@@ -3,13 +3,16 @@ use std::borrow::Cow;
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{StdError, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
 
-use package::Package;
-pub use version::{SemVer, VersionSegment};
+pub use self::{
+    package::Package,
+    version::{SemVer, VersionSegment},
+};
+
+use crate::{Error, UpdatablePackage};
 
 mod package;
 mod version;
@@ -45,17 +48,10 @@ impl ReleaseId {
 }
 
 impl PackageRelease {
-    pub const fn current(name: &'static str, version: &str, storage: VersionSegment) -> Self {
-        Self::instance(
-            ReleaseId::CURRENT,
-            Package::new(name, SemVer::parse(version), storage),
-        )
-    }
-
-    pub(crate) fn pull_prev(
+    pub fn pull_prev(
         name: &'static str,
-        storage: &mut dyn Storage,
-    ) -> Result<Self, StdError> {
+        storage: &mut dyn sdk::cosmwasm_std::Storage,
+    ) -> Result<Self, Error> {
         #[derive(Deserialize)]
         pub struct LegacyPackage {
             storage: VersionSegment,
@@ -80,8 +76,16 @@ impl PackageRelease {
 
         VERSION_STORAGE_KEY
             .load(storage)
+            .map_err(Error::loading)
             .inspect(|_| VERSION_STORAGE_KEY.remove(storage))
             .map(|code| Self::instance(ReleaseId::PREV, code.migrate_to(name)))
+    }
+
+    pub const fn current(name: &'static str, version: &str, storage: VersionSegment) -> Self {
+        Self::instance(
+            ReleaseId::CURRENT,
+            Package::new(name, SemVer::parse(version), storage),
+        )
     }
 
     const fn instance(id: ReleaseId, code: Package) -> Self {
@@ -96,62 +100,56 @@ impl PackageRelease {
         self.code.version()
     }
 
-    pub(crate) fn update_software(self, to: Self) -> Result<Self, StdError> {
-        self.check_software_update_allowed(to, Self::check_storage_match)
-    }
-
-    pub(crate) fn update_software_and_storage(self, to: Self) -> Result<Self, StdError> {
-        self.check_software_update_allowed(to, Self::check_storage_adjacent)
-    }
-
-    fn check_software_update_allowed<F>(&self, to: Self, storage_check: F) -> Result<Self, StdError>
+    fn check_software_update_allowed<F>(&self, to: &Self, storage_check: F) -> Result<(), Error>
     where
-        F: FnOnce(&Self, &Package) -> Result<(), StdError>,
+        F: FnOnce(&Self, &Package) -> Result<(), Error>,
     {
         self.check_name_match(&to.code)
             .and_then(|()| self.check_code_same_or_newer(&to.code))
             .and_then(|()| storage_check(self, &to.code))
-            .map(|()| to)
     }
 
-    fn check_name_match(&self, other: &Package) -> Result<(), StdError> {
+    fn check_name_match(&self, other: &Package) -> Result<(), Error> {
         if self.code.same_name(other) {
             Ok(())
         } else {
-            Err(StdError::generic_err(format!(
-                "The package names do not match! The new package is \"{other}\".",
-            )))
+            Err(Error::package_names_mismatch(&self.code, other))
         }
     }
-    fn check_code_same_or_newer(&self, other: &Package) -> Result<(), StdError> {
+    fn check_code_same_or_newer(&self, other: &Package) -> Result<(), Error> {
         if &self.code <= other {
             Ok(())
         } else {
-            Err(StdError::generic_err(format!(
-                "The software version does not increase monotonically! The new package is \"{other}\"."
-            )))
+            Err(Error::older_package_code(&self.code, other))
         }
     }
 
-    fn check_storage_match(&self, other: &Package) -> Result<(), StdError> {
+    fn check_storage_match(&self, other: &Package) -> Result<(), Error> {
         if self.code.same_storage(other) {
             Ok(())
         } else {
-            Err(StdError::generic_err(format!(
-                "The storage versions do not match! The new package is \"{other}\".",
-            )))
+            Err(Error::package_storage_versions_mismatch(&self.code, other))
         }
     }
 
-    fn check_storage_adjacent(&self, next: &Package) -> Result<(), StdError> {
+    fn check_storage_adjacent(&self, next: &Package) -> Result<(), Error> {
         if self.code.next_storage(next) {
             Ok(())
         } else {
-            Err(StdError::generic_err(format!(
-                "The new version \"{next}\" is not adjacent to the current one \"{current}\"!",
-                current = self.code
-            )))
+            Err(Error::package_storage_version_not_adjacent(
+                &self.code, next,
+            ))
         }
+    }
+}
+
+impl UpdatablePackage for PackageRelease {
+    fn update_software(&self, to: &Self) -> Result<(), Error> {
+        self.check_software_update_allowed(to, Self::check_storage_match)
+    }
+
+    fn update_software_and_storage(&self, to: &Self) -> Result<(), Error> {
+        self.check_software_update_allowed(to, Self::check_storage_adjacent)
     }
 }
 
@@ -163,6 +161,8 @@ impl From<ReleaseId> for String {
 
 #[cfg(test)]
 mod test {
+
+    use crate::UpdatablePackage;
 
     use super::{version::VersionSegment, Package, PackageRelease, ReleaseId, SemVer};
 
@@ -181,13 +181,10 @@ mod test {
     fn prod_software() {
         let current = Package::new(CURRENT_NAME, CURRENT_VERSION, CURRENT_STORAGE);
         let instance = PackageRelease::instance(prod_id(), current);
-        assert_eq!(
-            Ok(instance.clone()),
-            instance.clone().update_software(instance.clone())
-        );
+        assert_eq!(Ok(()), instance.clone().update_software(&instance));
         instance
             .clone()
-            .update_software(PackageRelease::instance(
+            .update_software(&PackageRelease::instance(
                 prod_id(),
                 Package::new(OTHER_NAME, CURRENT_VERSION, CURRENT_STORAGE),
             ))
@@ -195,7 +192,7 @@ mod test {
 
         instance
             .clone()
-            .update_software(PackageRelease::instance(
+            .update_software(&PackageRelease::instance(
                 prod_id(),
                 Package::new(CURRENT_NAME, SemVer::parse("0.3.3"), CURRENT_STORAGE),
             ))
@@ -203,15 +200,15 @@ mod test {
 
         let next_code = Package::new(CURRENT_NAME, NEWER_VERSION, CURRENT_STORAGE);
         assert_eq!(
-            Ok(PackageRelease::instance(prod_id(), next_code.clone())),
+            Ok(()),
             instance
                 .clone()
-                .update_software(PackageRelease::instance(prod_id(), next_code,))
+                .update_software(&PackageRelease::instance(prod_id(), next_code,))
         );
 
         instance
             .clone()
-            .update_software(PackageRelease::instance(
+            .update_software(&PackageRelease::instance(
                 prod_id(),
                 Package::new(OTHER_NAME, NEWER_VERSION, CURRENT_STORAGE),
             ))
@@ -225,12 +222,12 @@ mod test {
 
         instance
             .clone()
-            .update_software_and_storage(instance.clone())
+            .update_software_and_storage(&instance)
             .unwrap_err();
 
         instance
             .clone()
-            .update_software_and_storage(PackageRelease::instance(
+            .update_software_and_storage(&PackageRelease::instance(
                 prod_id(),
                 Package::new(OTHER_NAME, CURRENT_VERSION, CURRENT_STORAGE),
             ))
@@ -238,7 +235,7 @@ mod test {
 
         instance
             .clone()
-            .update_software_and_storage(PackageRelease::instance(
+            .update_software_and_storage(&PackageRelease::instance(
                 prod_id(),
                 Package::new(CURRENT_NAME, SemVer::parse("0.3.3"), CURRENT_STORAGE + 1),
             ))
@@ -246,23 +243,21 @@ mod test {
 
         let next_code = Package::new(CURRENT_NAME, NEWER_VERSION, CURRENT_STORAGE + 1);
         assert_eq!(
-            Ok(PackageRelease::instance(prod_id(), next_code.clone())),
+            Ok(()),
             instance
                 .clone()
-                .update_software_and_storage(PackageRelease::instance(prod_id(), next_code))
+                .update_software_and_storage(&PackageRelease::instance(prod_id(), next_code))
         );
 
         instance
-            .clone()
-            .update_software_and_storage(PackageRelease::instance(
+            .update_software_and_storage(&PackageRelease::instance(
                 prod_id(),
                 Package::new(OTHER_NAME, NEWER_VERSION, CURRENT_STORAGE + 1),
             ))
             .unwrap_err();
 
         instance
-            .clone()
-            .update_software_and_storage(PackageRelease::instance(
+            .update_software_and_storage(&PackageRelease::instance(
                 prod_id(),
                 Package::new(CURRENT_NAME, NEWER_VERSION, CURRENT_STORAGE),
             ))

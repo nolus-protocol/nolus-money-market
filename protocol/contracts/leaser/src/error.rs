@@ -16,13 +16,16 @@ pub enum ContractError {
     Finance(#[from] finance::error::Error),
 
     #[error("[Leaser] {0}")]
-    Lpp(#[from] lpp::error::ContractError),
+    Lpp(#[from] lpp::error::Error),
 
     #[error("[Leaser] {0}")]
     PriceOracle(#[from] oracle_platform::error::Error),
 
     #[error("[Leaser] {0}")]
     Platform(#[from] platform::error::Error),
+
+    #[error("[Leaser] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
 
     #[error("[Leaser] {0}")]
     Unauthorized(#[from] access_control::error::Error),
@@ -31,7 +34,7 @@ pub enum ContractError {
     ParseError { err: String },
 
     #[error("[Leaser] {0}")]
-    Reserve(#[from] reserve::error::Error),
+    Reserve(#[from] reserve::stub::Error),
 
     #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},

@@ -2,12 +2,9 @@ use currency::{CurrencyDef, MemberOf};
 use finance::coin::Coin;
 use platform::batch::Batch;
 
-use crate::{
-    api::{ExecuteMsg, LpnCurrencies},
-    error::Error,
-};
+use crate::api::{ExecuteMsg, LpnCurrencies};
 
-use super::Ref;
+use super::{error::Error, Ref};
 
 pub trait Reserve<Lpn>
 where

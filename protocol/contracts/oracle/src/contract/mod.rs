@@ -14,7 +14,10 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, protocol_name, protocol_network, ProtocolPackageRelease,
+    ProtocolRelease, SoftwarePackageRelease, VersionSegment,
+};
 
 use crate::{
     api::{
@@ -34,13 +37,16 @@ mod config;
 pub mod exec;
 mod oracle;
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
-const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
+const CURRENT_PROTOCOL: ProtocolRelease =
+    ProtocolRelease::current(protocol_name!(), protocol_network!());
+const CURRENT_PACKAGE: SoftwarePackageRelease = SoftwarePackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
+const CURRENT_RELEASE: ProtocolPackageRelease =
+    ProtocolPackageRelease::new(CURRENT_PACKAGE, CURRENT_PROTOCOL);
 
 type Oracle<'storage, S> =
     GenericOracle<'storage, S, PriceCurrencies, BaseCurrency, BaseCurrencies>;
@@ -70,21 +76,20 @@ pub fn migrate(
     env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(
-        deps.storage,
-        package_name!(),
-        CURRENT_RELEASE,
-        ContractError::UpdateSoftware,
-    )
-    .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
-    .and_then(response::response)
-    .inspect_err(platform_error::log(deps.api))
+    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage, CURRENT_PROTOCOL)
+        .and_then(|previous_release| {
+            versioning::update_legacy_software(previous_release, CURRENT_RELEASE)
+        })
+        .map_err(ContractError::UpdateSoftware)
+        .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
+        .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => to_json_binary(&CURRENT_RELEASE.version()),
+        QueryMsg::ContractVersion {} => to_json_binary(&CURRENT_PACKAGE.version()),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)

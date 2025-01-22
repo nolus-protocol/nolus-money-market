@@ -22,7 +22,7 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
-use timealarms::result::ContractResult as TimeAlarmsResult;
+use timealarms::stub::Result as TimeAlarmsResult;
 
 use crate::{
     error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,

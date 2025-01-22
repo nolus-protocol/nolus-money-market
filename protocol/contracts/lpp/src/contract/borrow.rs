@@ -8,7 +8,6 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
-    error::Result,
     loan::Loan,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},

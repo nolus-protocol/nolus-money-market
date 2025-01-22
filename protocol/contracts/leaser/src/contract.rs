@@ -16,7 +16,10 @@ use sdk::{
         QuerierWrapper, Reply,
     },
 };
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, protocol_name, protocol_network, ProtocolPackageRelease,
+    ProtocolRelease, SoftwarePackageRelease, VersionSegment,
+};
 
 use crate::{
     cmd::Borrow,
@@ -28,10 +31,15 @@ use crate::{
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 4;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
-    package_name!(),
-    package_version!(),
-    CONTRACT_STORAGE_VERSION,
+const CURRENT_PROTOCOL: ProtocolRelease =
+    ProtocolRelease::current(protocol_name!(), protocol_network!());
+const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::new(
+    SoftwarePackageRelease::current(
+        package_name!(),
+        package_version!(),
+        CONTRACT_STORAGE_VERSION,
+    ),
+    CURRENT_PROTOCOL,
 );
 
 #[entry_point]
@@ -65,7 +73,11 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<Response> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage, CURRENT_PROTOCOL)
+        .and_then(|previous_release| {
+            versioning::update_legacy_software(previous_release, CURRENT_RELEASE)
+        })
+        .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }

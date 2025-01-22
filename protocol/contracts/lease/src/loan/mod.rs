@@ -240,7 +240,7 @@ mod tests {
     pub use currencies::Lpn;
     use finance::{duration::Duration, percent::Percent};
     use lpp::{
-        error::{ContractError as LppError, Result as LppResult},
+        error::{Error as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
         stub::{loan::LppLoan as LppLoanTrait, LppBatch},
