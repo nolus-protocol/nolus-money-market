@@ -29,9 +29,7 @@ impl PairsGroup for Stable {
     }
 }
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 /// A 'platform'-only 'dex-independent' representation of Nls.
 ///
 /// Intended to be used *only* until the TODO below gets done, and *only* in dex-independent usecases:
