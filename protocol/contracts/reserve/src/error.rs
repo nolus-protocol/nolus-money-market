@@ -7,9 +7,6 @@ pub enum Error {
     #[error("[Reserve] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("[Reserve] [Stub] Failed to obtain contract's Lpn. Cause: {0}")]
-    QueryReserveFailure(StdError),
-
     #[error("[Reserve] {0}")]
     Finance(#[from] finance::error::Error),
 
@@ -21,9 +18,6 @@ pub enum Error {
 
     #[error("[Reserve] Insufficient balance")]
     InsufficientBalance,
-
-    #[error("[Reserve][Stub] Contacted a reserve contract with unexpected Lpn. Cause: {0}")]
-    UnexpectedLpn(currency::error::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

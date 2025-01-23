@@ -10,7 +10,7 @@ use oracle::api::alarms::Error as OracleAlarmError;
 use oracle_platform::error::Error as OracleError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
-use reserve::error::Error as ReserveError;
+use reserve::stub::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::stub::Error as TimeAlarmsError;
 

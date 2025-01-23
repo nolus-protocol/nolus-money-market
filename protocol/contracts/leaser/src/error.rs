@@ -31,7 +31,7 @@ pub enum ContractError {
     ParseError { err: String },
 
     #[error("[Leaser] {0}")]
-    Reserve(#[from] reserve::error::Error),
+    Reserve(#[from] reserve::stub::Error),
 
     #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},
