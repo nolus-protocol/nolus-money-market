@@ -20,7 +20,7 @@ pub enum Error {
     OracleSwapError(#[from] oracle::api::swap::Error),
 
     #[error("[Dex] {0}")]
-    TimeAlarmError(#[from] timealarms::error::ContractError),
+    TimeAlarmError(#[from] timealarms::stub::Error),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

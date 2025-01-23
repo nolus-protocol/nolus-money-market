@@ -63,7 +63,7 @@ impl LeaseDTO {
         Cmd::Error:
             From<lpp::error::ContractError> + From<finance::error::Error> + From<PositionError>,
         currency::error::Error: Into<Cmd::Error>,
-        timealarms::error::ContractError: Into<Cmd::Error>,
+        timealarms::stub::Error: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,
     {
         let lease = self.addr.clone();

@@ -12,7 +12,7 @@ use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
 use reserve::error::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
-use timealarms::error::ContractError as TimeAlarmsError;
+use timealarms::stub::Error as TimeAlarmsError;
 
 pub use crate::position::PositionError;
 

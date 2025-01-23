@@ -23,7 +23,7 @@ pub enum ContractError {
     Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Profit] {0}")]
-    TimeAlarm(#[from] timealarms::ContractError),
+    TimeAlarm(#[from] timealarms::stub::Error),
 
     #[error("[Profit] Invalid contract address {0}")]
     InvalidContractAddress(Addr),
