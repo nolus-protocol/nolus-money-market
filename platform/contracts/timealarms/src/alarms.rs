@@ -9,9 +9,9 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
 use time_oracle::Alarms;
 
 use crate::{
+    error::ContractError,
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
     result::ContractResult,
-    ContractError,
 };
 
 const ALARMS_NAMESPACE: &str = "alarms";
@@ -124,7 +124,7 @@ mod tests {
         Addr, QuerierWrapper, Timestamp,
     };
 
-    use crate::ContractError;
+    use crate::error::ContractError;
 
     use super::TimeAlarms;
 
