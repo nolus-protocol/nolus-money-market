@@ -2125,15 +2125,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "time-oracle"
-version = "0.2.0"
-dependencies = [
- "sdk",
- "serde",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "timealarms"
 version = "0.4.10"
 dependencies = [
@@ -2141,7 +2132,6 @@ dependencies = [
  "sdk",
  "serde",
  "thiserror 1.0.69",
- "time-oracle",
 ]
 
 [[package]]
