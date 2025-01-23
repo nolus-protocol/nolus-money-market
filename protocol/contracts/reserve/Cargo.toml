@@ -19,16 +19,17 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 contract = [
-    "stub",
-    "sdk/contract",
-    "dep:cosmwasm-std",
+    "dep:access-control",
     "dep:versioning",
+    "dep:cosmwasm-std",
+    "sdk/contract",
+    "stub",
 ]
 stub = []
 testing = []
 
 [dependencies]
-access-control = { workspace = true }
+access-control = { workspace = true, optional = true }
 currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
