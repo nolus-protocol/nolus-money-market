@@ -3,8 +3,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::percent::{bound::BoundToHundredPercent, Percent};
 use lpp::{
     borrow::InterestRate,
-    contract::sudo,
-    error::ContractError,
+    contract::{sudo, ContractError},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use platform::contract::{Code, CodeId};

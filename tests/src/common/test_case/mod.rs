@@ -29,13 +29,13 @@ pub mod response;
 type OptionalLppEndpoints = Option<
     CwContractWrapper<
         lpp::msg::ExecuteMsg<Lpns>,
-        lpp::error::ContractError,
+        lpp::contract::ContractError,
         lpp::msg::InstantiateMsg,
-        lpp::error::ContractError,
+        lpp::contract::ContractError,
         lpp::msg::QueryMsg<Lpns>,
-        lpp::error::ContractError,
+        lpp::contract::ContractError,
         lpp::msg::SudoMsg,
-        lpp::error::ContractError,
+        lpp::contract::ContractError,
     >,
 >;
 

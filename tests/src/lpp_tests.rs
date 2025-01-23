@@ -10,7 +10,7 @@ use finance::{
 };
 use lpp::{
     borrow::InterestRate,
-    error::ContractError,
+    contract::ContractError,
     msg::{
         BalanceResponse, LppBalanceResponse, PriceResponse, QueryLoanResponse, QueryQuoteResponse,
         RewardsResponse, SudoMsg,

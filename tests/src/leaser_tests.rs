@@ -411,10 +411,10 @@ fn open_loans_lpp_fails() {
         env: Env,
         info: MessageInfo,
         msg: LppExecuteMsg,
-    ) -> Result<Response, lpp::error::ContractError> {
+    ) -> Result<Response, lpp::contract::ContractError> {
         match msg {
             lpp::msg::ExecuteMsg::OpenLoan { amount: _ } => {
-                Err(lpp::error::ContractError::InsufficientBalance)
+                Err(lpp::contract::ContractError::InsufficientBalance)
             }
             _ => Ok(lpp::contract::execute(deps, env, info, msg)?),
         }
