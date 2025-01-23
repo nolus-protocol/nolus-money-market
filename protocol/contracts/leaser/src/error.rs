@@ -16,7 +16,7 @@ pub enum ContractError {
     Finance(#[from] finance::error::Error),
 
     #[error("[Leaser] {0}")]
-    Lpp(#[from] lpp::error::ContractError),
+    Lpp(#[from] lpp::error::Error),
 
     #[error("[Leaser] {0}")]
     PriceOracle(#[from] oracle_platform::error::Error),

@@ -13,8 +13,9 @@ use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
-    error::{ContractError, Result},
+    contract::{ContractError, Result},
     loan::Loan,
+    loans::Repo,
     msg::{LppBalanceResponse, PriceResponse},
     state::{Config, Deposit, Total},
 };
@@ -247,7 +248,7 @@ where
             interest_paid: now,
         };
 
-        Loan::open(deps.storage, lease_addr, &loan)?;
+        Repo::open(deps.storage, lease_addr, &loan)?;
 
         self.total
             .borrow(now, amount, annual_interest_rate)?
@@ -264,10 +265,10 @@ where
         lease_addr: Addr,
         repay_amount: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
-        let mut loan = Loan::load(deps.storage, lease_addr.clone())?;
+        let mut loan = Repo::load(deps.storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
         let payment = loan.repay(&env.block.time, repay_amount);
-        Loan::save(deps.storage, lease_addr, loan)?;
+        Repo::save(deps.storage, lease_addr, loan)?;
 
         self.total
             .repay(
@@ -349,8 +350,8 @@ mod test {
 
     use crate::{
         borrow::InterestRate,
-        error::ContractError,
-        loan::Loan,
+        contract::ContractError,
+        loans::Repo,
         state::{Config, Deposit, Total},
     };
 
@@ -515,7 +516,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         // doesn't exist
-        let loan_response = Loan::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
+        let loan_response = Repo::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan");
         assert_eq!(loan_response, None);
 
@@ -532,7 +533,7 @@ mod test {
             .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
-        let loan = Loan::query(deps.as_ref().storage, lease_addr.clone())
+        let loan = Repo::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -553,7 +554,7 @@ mod test {
 
         assert_eq!(repay, 0u128.into());
 
-        let loan = Loan::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
+        let loan = Repo::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -570,7 +571,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(10 + 2 * Duration::YEAR.nanos() / 10);
 
         // pay everything + excess
-        let payment = Loan::query(deps.as_ref().storage, lease_addr.clone())
+        let payment = Repo::query(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query the loan")
             .expect("should exist")
             .interest_due(&env.block.time)
@@ -684,7 +685,7 @@ mod test {
             .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let loan_before = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
+        let loan_before = Repo::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -692,7 +693,7 @@ mod test {
         lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
             .expect("can't repay loan");
 
-        let loan_after = Loan::query(deps.as_ref().storage, loan)
+        let loan_after = Repo::query(deps.as_ref().storage, loan)
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -740,7 +741,7 @@ mod test {
             .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let payment = Loan::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
+        let payment = Repo::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
             .interest_due(&env.block.time);
@@ -754,7 +755,7 @@ mod test {
 
         // Should be closed
         let loan_response =
-            Loan::<TheCurrency>::query(deps.as_ref().storage, loan).expect("can't query loan");
+            Repo::<TheCurrency>::query(deps.as_ref().storage, loan).expect("can't query loan");
         assert_eq!(loan_response, None);
     }
 

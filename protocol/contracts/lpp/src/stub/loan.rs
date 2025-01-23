@@ -6,7 +6,7 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    error::ContractError,
+    error::Error,
     loan::{Loan, RepayShares},
     msg::ExecuteMsg,
 };
@@ -16,7 +16,7 @@ use super::{LppBatch, LppRef};
 pub trait LppLoan<Lpn, Lpns>
 where
     Lpns: Group,
-    Self: TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = ContractError>,
+    Self: TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = Error>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
@@ -91,7 +91,7 @@ where
     Lpn::Group: MemberOf<Lpns>,
     Lpns: Group,
 {
-    type Error = ContractError;
+    type Error = Error;
 
     fn try_from(stub: LppLoanImpl<Lpn, Lpns>) -> StdResult<Self, Self::Error> {
         let mut batch = Batch::default();

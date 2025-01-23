@@ -9,7 +9,7 @@ use lpp_platform::NLpn;
 use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::{borrow::InterestRate, error::Result, msg::InstantiateMsg};
+use crate::{borrow::InterestRate, contract::Result, msg::InstantiateMsg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {

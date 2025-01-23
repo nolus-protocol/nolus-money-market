@@ -11,11 +11,12 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
-    error::{ContractError, Result},
     lpp::{LiquidityPool, LppBalances},
     msg::RewardsResponse,
     state::Deposit,
 };
+
+use super::error::{ContractError, Result};
 
 pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
@@ -86,10 +87,10 @@ mod test {
     use crate::{
         borrow::InterestRate,
         contract::{
+            error::ContractError,
             lender, rewards,
             test::{self, TheCurrency},
         },
-        error::ContractError,
         lpp::LiquidityPool,
         state::Config,
     };

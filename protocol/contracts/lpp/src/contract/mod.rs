@@ -21,13 +21,15 @@ use sdk::{
 use versioning::{package_name, package_version, PackageRelease, VersionSegment};
 
 use crate::{
-    error::{ContractError, Result},
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
 };
 
+pub use self::error::{ContractError, Result};
+
 mod borrow;
+mod error;
 mod lender;
 mod rewards;
 

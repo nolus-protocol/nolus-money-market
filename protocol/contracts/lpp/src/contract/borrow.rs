@@ -8,11 +8,12 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
-    error::Result,
-    loan::Loan,
+    loans::Repo,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
+
+use super::Result;
 
 pub(super) fn try_open_loan<Lpn>(
     mut deps: DepsMut<'_>,
@@ -82,5 +83,5 @@ pub fn query_loan<Lpn>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryL
 where
     Lpn: 'static + Currency,
 {
-    Loan::query(storage, lease_addr)
+    Repo::query(storage, lease_addr)
 }

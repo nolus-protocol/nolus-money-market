@@ -8,6 +8,8 @@ pub mod error;
 pub mod event;
 pub mod loan;
 #[cfg(feature = "contract")]
+mod loans;
+#[cfg(feature = "contract")]
 mod lpp;
 pub mod msg;
 #[cfg(feature = "contract")]

@@ -15,7 +15,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::error::ContractError;
+use crate::contract::ContractError;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(bound(serialize = "", deserialize = ""))]

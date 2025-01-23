@@ -168,7 +168,7 @@ pub mod tests {
         price::Price,
     };
     use lpp::{
-        error::{ContractError as LppError, Result as LppResult},
+        error::{Error as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},

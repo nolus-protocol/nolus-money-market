@@ -37,7 +37,7 @@ pub fn execute<Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::ContractError> + From<finance::error::Error> + From<PositionError>,
+    Cmd::Error: From<lpp::error::Error> + From<finance::error::Error> + From<PositionError>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
     position.with_position(FactoryStage1 {
@@ -60,7 +60,7 @@ struct FactoryStage1<'r, Cmd> {
 impl<Cmd> WithPosition for FactoryStage1<'_, Cmd>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::ContractError>,
+    Cmd::Error: From<lpp::error::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
@@ -95,7 +95,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-    lpp::error::ContractError: Into<Cmd::Error>,
+    lpp::error::Error: Into<Cmd::Error>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;

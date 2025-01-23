@@ -5,7 +5,7 @@ use thiserror::Error;
 use currency::error::Error as CurrencyError;
 use dex::Error as DexError;
 use finance::error::Error as FinanceError;
-use lpp::error::ContractError as LppError;
+use lpp::error::Error as LppError;
 use oracle::api::alarms::Error as OracleAlarmError;
 use oracle_platform::error::Error as OracleError;
 use platform::error::Error as PlatformError;
