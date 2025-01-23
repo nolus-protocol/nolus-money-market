@@ -1,6 +1,6 @@
 use platform::{
     batch::{Emit, Emitter},
-    response,
+    error as platform_error, response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -9,7 +9,7 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, PlatformPackageRelease, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -19,7 +19,7 @@ use crate::{
 
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: PlatformPackageRelease = PlatformPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -41,8 +41,11 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
+        .and_then(|previous| versioning::update_software(previous, CURRENT_RELEASE))
+        .map_err(Into::into)
         .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -64,6 +67,7 @@ pub fn execute(
                 response::response_with_messages(DispatchAlarmsResponse(total), resp)
             }),
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -79,6 +83,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

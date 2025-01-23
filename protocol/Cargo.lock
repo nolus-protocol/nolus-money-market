@@ -2194,6 +2194,7 @@ version = "0.2.1"
 dependencies = [
  "sdk",
  "serde",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

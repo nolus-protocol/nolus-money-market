@@ -33,6 +33,9 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     PlatformError(#[from] PlatformError),
 
+    #[error("[Lease] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
+
     #[error("[Lease] {0}")]
     LppError(#[from] LppError),
 

@@ -7,6 +7,9 @@ pub enum ContractError {
     #[error("[Treasury] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[Treasury] {0}")]
+    Versioning(#[from] versioning::Error),
+
     #[error("[Treasury] Failed to serialize! Cause: {0}")]
     Serialize(StdError),
 

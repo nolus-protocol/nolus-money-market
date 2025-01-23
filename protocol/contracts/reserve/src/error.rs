@@ -13,6 +13,9 @@ pub enum Error {
     #[error("[Reserve] {0}")]
     Platform(#[from] platform::error::Error),
 
+    #[error("[Reserve] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
+
     #[error("[Reserve] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 

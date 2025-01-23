@@ -1,24 +1,31 @@
-use sdk::cosmwasm_std::{StdError, Storage};
+use release::UpdatablePackage;
+use sdk::cosmwasm_std::Storage;
 
 #[cfg(feature = "schema")]
-pub use self::software::SemVer;
-pub use self::software::{PackageRelease, ReleaseId, VersionSegment};
+pub use crate::software::SemVer;
+pub use crate::{
+    error::Error,
+    protocol::Release as ProtocolRelease,
+    release::{PlatformPackageRelease, ProtocolPackageRelease},
+    software::{PackageRelease as SoftwarePackageRelease, ReleaseId, VersionSegment},
+};
 
+mod error;
+mod protocol;
+mod release;
 mod software;
 
-pub fn update_legacy_software<ContractError, MapErrorFunctor>(
-    storage: &mut dyn Storage,
-    prev_name: &'static str,
+pub fn update_software<PackageRelease>(
+    previous: PackageRelease,
     current: PackageRelease,
-    map_error: MapErrorFunctor,
-) -> Result<ReleaseId, ContractError>
+) -> Result<ReleaseId, Error>
 where
-    MapErrorFunctor: FnOnce(StdError) -> ContractError,
+    PackageRelease: UpdatablePackage,
 {
-    PackageRelease::pull_prev(prev_name, storage)
-        .and_then(|prev_release| prev_release.update_software(current))
-        .map_err(map_error)
-        .map(PackageRelease::release)
+    previous
+        .update_software(&current)
+        //TODO remove the return value!!!
+        .map(|()| ReleaseId::VOID)
 }
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
@@ -26,29 +33,31 @@ pub struct FullUpdateOutput<MigrateStorageOutput> {
     pub storage_migration_output: MigrateStorageOutput,
 }
 
-pub fn update_legacy_software_and_storage<
+pub fn update_software_and_storage<
+    PackageRelease,
     ContractError,
     MigrateStorageFunctor,
     StorageMigrationOutput,
     MapErrorFunctor,
 >(
     storage: &mut dyn Storage,
-    prev_name: &'static str,
+    previous: PackageRelease,
     current: PackageRelease,
     migrate_storage: MigrateStorageFunctor,
     map_error: MapErrorFunctor,
 ) -> Result<FullUpdateOutput<StorageMigrationOutput>, ContractError>
 where
+    PackageRelease: UpdatablePackage,
     MigrateStorageFunctor:
         FnOnce(&mut dyn Storage) -> Result<StorageMigrationOutput, ContractError>,
-    MapErrorFunctor: FnOnce(StdError) -> ContractError,
+    MapErrorFunctor: FnOnce(Error) -> ContractError,
 {
-    PackageRelease::pull_prev(prev_name, storage)
-        .and_then(|prev_release| prev_release.update_software_and_storage(current))
+    previous
+        .update_software_and_storage(&current)
         .map_err(map_error)
-        .and_then(|new_release| {
+        .and_then(|()| {
             migrate_storage(storage).map(|storage_migration_output| FullUpdateOutput {
-                to: new_release.release(),
+                to: ReleaseId::VOID, //TODO remove the release return value!!!
                 storage_migration_output,
             })
         })

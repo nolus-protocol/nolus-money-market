@@ -18,7 +18,7 @@ use sdk::{
         self, entry_point, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
     },
 };
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
 
 use crate::{
     api::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
@@ -26,9 +26,8 @@ use crate::{
     state::Config,
 };
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -62,7 +61,9 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
+        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .map_err(Error::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }

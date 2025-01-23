@@ -8,19 +8,18 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
 
 use crate::{
     api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
     contract::api::Contract,
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::state::{self, Response, State};
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 8;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -54,7 +53,9 @@ pub fn migrate(
     _env: Env,
     MigrateMsg {}: MigrateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
+        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }

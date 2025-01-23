@@ -18,7 +18,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
 
 use crate::{
     lpp::{LiquidityPool, LppBalances},
@@ -33,9 +33,8 @@ mod error;
 mod lender;
 mod rewards;
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -70,7 +69,9 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
+        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }

@@ -18,4 +18,5 @@ schema = ["sdk/schema"]
 [dependencies]
 sdk = { workspace = true, features = ["schema", "storage"] }
 
+thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

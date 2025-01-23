@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("[Lpp] {0}")]
     Platform(#[from] platform::error::Error),
 
+    #[error("[Lpp] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
+
     #[error("[Lpp] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 

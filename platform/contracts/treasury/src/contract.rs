@@ -6,7 +6,9 @@ use admin_contract::msg::{
 };
 use currency::platform::PlatformGroup;
 use finance::{duration::Duration, percent::Percent};
-use platform::{batch::Batch, message::Response as MessageResponse, response};
+use platform::{
+    batch::Batch, error as platform_error, message::Response as MessageResponse, response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
@@ -15,7 +17,7 @@ use sdk::{
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_name, package_version, PackageRelease, VersionSegment};
+use versioning::{package_name, package_version, PlatformPackageRelease, VersionSegment};
 
 use crate::{
     cmd::RewardCalculator,
@@ -28,7 +30,7 @@ use crate::{
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = CONTRACT_STORAGE_VERSION_FROM + 1;
-const CURRENT_RELEASE: PackageRelease = PackageRelease::current(
+const CURRENT_RELEASE: PlatformPackageRelease = PlatformPackageRelease::current(
     package_name!(),
     package_version!(),
     CONTRACT_STORAGE_VERSION,
@@ -43,12 +45,16 @@ pub fn instantiate(
 ) -> ContractResult<CwResponse> {
     setup_dispatching(deps.storage, deps.querier, deps.api, env, msg)
         .map(response::response_only_messages)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_legacy_software(deps.storage, package_name!(), CURRENT_RELEASE, Into::into)
+    PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
+        .and_then(|previous| versioning::update_software(previous, CURRENT_RELEASE))
+        .map_err(Into::into)
         .and_then(response::response)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -66,9 +72,11 @@ pub fn execute(
             )
             .check(&info.sender)?;
 
-            try_dispatch(deps, &env, info.sender).map(response::response_only_messages)
+            try_dispatch(deps.storage, deps.querier, &env, info.sender)
+                .map(response::response_only_messages)
         }
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -82,6 +90,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
             Config::update_tvl_to_apr(deps.storage, tvl_to_apr).map(|()| response::empty_response())
         }
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -93,6 +102,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
             .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
     }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 fn try_load_config(storage: &dyn Storage) -> ContractResult<Config> {
@@ -136,22 +146,27 @@ fn query_reward_apr(
         .map(|rewards| rewards.apr())
 }
 
-fn try_dispatch(deps: DepsMut<'_>, env: &Env, timealarm: Addr) -> ContractResult<MessageResponse> {
+fn try_dispatch(
+    storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
+    env: &Env,
+    timealarm: Addr,
+) -> ContractResult<MessageResponse> {
     let now = env.block.time;
 
-    let config = try_load_config(deps.storage)?;
+    let config = try_load_config(storage)?;
     let setup_alarm = setup_alarm(
         timealarm,
         &now,
         Duration::from_hours(config.cadence_hours),
-        deps.querier,
+        querier,
     )?;
 
-    let last_dispatch = DispatchLog::last_dispatch(deps.storage);
-    DispatchLog::update(deps.storage, env.block.time)?;
+    let last_dispatch = DispatchLog::last_dispatch(storage);
+    DispatchLog::update(storage, env.block.time)?;
     let rewards_span = Duration::between(&last_dispatch, &now);
 
-    try_build_reward(config, deps.querier, env)
+    try_build_reward(config, querier, env)
         .and_then(|reward| reward.distribute(rewards_span))
         .map(|dispatch_res| dispatch_res.merge_with(MessageResponse::messages_only(setup_alarm)))
 }

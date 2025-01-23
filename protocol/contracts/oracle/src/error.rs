@@ -9,6 +9,7 @@ use currency::{SymbolOwned, SymbolStatic};
 use finance::price::dto::PriceDTO;
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
+use versioning::Error as VersioningError;
 
 //TODO migrate to the same type defined at oracle::result
 pub type Result<T> = StdResult<T, ContractError>;
@@ -22,7 +23,7 @@ pub enum ContractError {
     UnregisterFeederAddressValidation(StdError),
 
     #[error("[Oracle] Failed to update software! Cause: {0}")]
-    UpdateSoftware(StdError),
+    UpdateSoftware(VersioningError),
 
     #[error("[Oracle] The configured swap tree does not conform to the code! Cause: {0}")]
     BrokenSwapTree(String),

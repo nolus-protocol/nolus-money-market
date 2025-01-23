@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("[Leaser] {0}")]
     Platform(#[from] platform::error::Error),
 
+    #[error("[Leaser] Failed to update software! Cause: {0}")]
+    UpdateSoftware(versioning::Error),
+
     #[error("[Leaser] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
