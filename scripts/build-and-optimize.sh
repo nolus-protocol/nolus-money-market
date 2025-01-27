@@ -467,6 +467,14 @@ then
   "error" "Failed to write checksums to artifacts directory!"
 fi
 
+case "${PROTOCOL_NETWORK+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_NETWORK:?}" \
+      >"/artifacts/protocol-network.txt"
+esac
+
 case "${PROTOCOL_RELEASE_ID+"set"}" in
   ("set")
     "printf" \
