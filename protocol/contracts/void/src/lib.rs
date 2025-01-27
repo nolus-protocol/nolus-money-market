@@ -8,7 +8,7 @@ use sdk::{
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use timealarms::msg::ExecuteAlarmMsg;
-use versioning::{self, package_name, package_version, SoftwarePackageRelease, VersionSegment};
+use versioning::{self, ReleaseId};
 
 #[derive(Serialize, Deserialize)]
 pub struct EmptyMsg {}
@@ -29,14 +29,7 @@ pub fn migrate(
     _env: Env,
     EmptyMsg {}: EmptyMsg,
 ) -> Result<CwResponse, platform::error::Error> {
-    const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
-    const CURRENT_RELEASE: SoftwarePackageRelease = SoftwarePackageRelease::current(
-        package_name!(),
-        package_version!(),
-        CONTRACT_STORAGE_VERSION,
-    );
-
-    response::response(CURRENT_RELEASE.release())
+    response::response(ReleaseId::VOID)
 }
 
 #[entry_point]

@@ -35,7 +35,7 @@ currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true }
-versioning = { workspace = true, optional = true }
+versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true, optional = true }

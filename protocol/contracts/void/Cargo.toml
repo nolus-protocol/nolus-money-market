@@ -20,7 +20,7 @@ crate-type = ["cdylib", "rlib"]
 platform = { workspace = true }
 sdk = { workspace = true }
 timealarms = { workspace = true }
-versioning = { workspace = true }
+versioning = { workspace = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }

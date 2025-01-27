@@ -1,50 +1,26 @@
-use std::borrow::Cow;
-
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
-};
+use sdk::cw_storage_plus::Item;
+
+#[cfg(feature = "schema")]
+use sdk::schemars::{self, JsonSchema};
 
 pub use self::{
     package::Package,
     version::{SemVer, VersionSegment},
 };
 
-use crate::{Error, UpdatablePackage};
+use crate::{release::Id, Error, UpdatablePackage};
 
 mod package;
 mod version;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
-#[repr(transparent)]
-#[serde(transparent)]
-// The two usecases, building the current release, and deserializing a release, call for `&'static str` and String, respectively.
-// We use Cow since it is an enum of the two. We do not need to mutate it.
-pub struct ReleaseId(Cow<'static, str>);
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(test, derive(Debug))]
 pub struct PackageRelease {
-    id: ReleaseId,
+    id: Id,
     code: Package,
-}
-
-impl ReleaseId {
-    const ID: &'static str = env!(
-        "SOFTWARE_RELEASE_ID",
-        "No software release identifier provided as an environment variable! Please set \
-        \"SOFTWARE_RELEASE_ID\" environment variable!",
-    );
-
-    const CURRENT: Self = Self(Cow::Borrowed(Self::ID));
-
-    //TODO delete once deliver a version with contracts that take the current release as input
-    const PREV: Self = Self(Cow::Borrowed("v0.7.6"));
-
-    pub const VOID: Self = Self(Cow::Borrowed("void-release"));
 }
 
 impl PackageRelease {
@@ -59,6 +35,7 @@ impl PackageRelease {
         }
 
         const VERSION_STORAGE_KEY: Item<LegacyPackage> = Item::new("contract_version");
+        const PREV_ID: Id = Id::new_static("v0.7.6");
 
         impl LegacyPackage {
             fn migrate_to(self, name: &'static str) -> Package {
@@ -78,22 +55,24 @@ impl PackageRelease {
             .load(storage)
             .map_err(Error::loading)
             .inspect(|_| VERSION_STORAGE_KEY.remove(storage))
-            .map(|code| Self::instance(ReleaseId::PREV, code.migrate_to(name)))
+            .map(|code| Self::instance(PREV_ID, code.migrate_to(name)))
     }
 
     pub const fn current(name: &'static str, version: &str, storage: VersionSegment) -> Self {
+        const ID: &str = env!(
+            "SOFTWARE_RELEASE_ID",
+            "No software release identifier provided as an environment variable! Please set \
+            \"SOFTWARE_RELEASE_ID\" environment variable!",
+        );
+
         Self::instance(
-            ReleaseId::CURRENT,
+            Id::new_static(ID),
             Package::new(name, SemVer::parse(version), storage),
         )
     }
 
-    const fn instance(id: ReleaseId, code: Package) -> Self {
+    const fn instance(id: Id, code: Package) -> Self {
         Self { id, code }
-    }
-
-    pub fn release(self) -> ReleaseId {
-        self.id
     }
 
     pub const fn version(&self) -> SemVer {
@@ -153,18 +132,12 @@ impl UpdatablePackage for PackageRelease {
     }
 }
 
-impl From<ReleaseId> for String {
-    fn from(value: ReleaseId) -> Self {
-        value.0.to_string()
-    }
-}
-
 #[cfg(test)]
 mod test {
 
-    use crate::UpdatablePackage;
+    use crate::{release::Id, UpdatablePackage};
 
-    use super::{version::VersionSegment, Package, PackageRelease, ReleaseId, SemVer};
+    use super::{version::VersionSegment, Package, PackageRelease, SemVer};
 
     const CURRENT_NAME: &str = "package_A";
     const CURRENT_VERSION: SemVer = SemVer::parse("0.3.4");
@@ -173,8 +146,8 @@ mod test {
     const OTHER_NAME: &str = "package_B";
     const NEWER_VERSION: SemVer = SemVer::parse("0.3.5");
 
-    fn prod_id() -> ReleaseId {
-        ReleaseId("v0.5.3".into())
+    fn prod_id() -> Id {
+        Id::new_static("v0.5.3")
     }
 
     #[test]

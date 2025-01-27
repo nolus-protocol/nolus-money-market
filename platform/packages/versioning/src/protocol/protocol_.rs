@@ -44,7 +44,7 @@ macro_rules! protocol_network {
 }
 
 impl Protocol {
-    pub const fn new(name: &'static str, network: &'static str) -> Self {
+    pub const fn new_static(name: &'static str, network: &'static str) -> Self {
         Self {
             name: Cow::Borrowed(name),
             network: Cow::Borrowed(network),

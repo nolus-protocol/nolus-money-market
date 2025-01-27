@@ -47,7 +47,7 @@ oracle-platform = { workspace = true, optional = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 tree = { workspace = true, features = ["schema"] }
-versioning = { workspace = true, optional = true, features = ["schema"] }
+versioning = { workspace = true, optional = true, features = ["protocol_contract", "schema"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true, optional = true }

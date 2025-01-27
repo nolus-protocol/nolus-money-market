@@ -1,4 +1,4 @@
-use release::UpdatablePackage;
+use release::{Id, UpdatablePackage};
 use sdk::cosmwasm_std::Storage;
 
 #[cfg(feature = "schema")]
@@ -6,8 +6,8 @@ pub use crate::software::SemVer;
 pub use crate::{
     error::Error,
     protocol::Release as ProtocolRelease,
-    release::{PlatformPackageRelease, ProtocolPackageRelease},
-    software::{PackageRelease as SoftwarePackageRelease, ReleaseId, VersionSegment},
+    release::{Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease},
+    software::{PackageRelease as SoftwarePackageRelease, VersionSegment},
 };
 
 mod error;
@@ -18,18 +18,18 @@ mod software;
 pub fn update_software<PackageRelease>(
     previous: PackageRelease,
     current: PackageRelease,
-) -> Result<ReleaseId, Error>
+) -> Result<Id, Error>
 where
     PackageRelease: UpdatablePackage,
 {
     previous
         .update_software(&current)
         //TODO remove the return value!!!
-        .map(|()| ReleaseId::VOID)
+        .map(|()| Id::VOID)
 }
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
-    pub to: ReleaseId,
+    pub to: Id,
     pub storage_migration_output: MigrateStorageOutput,
 }
 
@@ -57,7 +57,7 @@ where
         .map_err(map_error)
         .and_then(|()| {
             migrate_storage(storage).map(|storage_migration_output| FullUpdateOutput {
-                to: ReleaseId::VOID, //TODO remove the release return value!!!
+                to: Id::VOID, //TODO remove the release return value!!!
                 storage_migration_output,
             })
         })

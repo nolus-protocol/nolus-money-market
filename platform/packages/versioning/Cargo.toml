@@ -13,6 +13,7 @@ combinations = [
 ]
 
 [features]
+protocol_contract = []
 schema = ["sdk/schema"]
 
 [dependencies]
