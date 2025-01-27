@@ -66,6 +66,13 @@ else
   "error" "Failed to read release version!"
 fi
 
+case "${PROTOCOL_NETWORK+"set"}" in
+  ("set")
+    readonly PROTOCOL_NETWORK
+    export PROTOCOL_NETWORK
+    ;;
+esac
+
 case "${PROTOCOL_RELEASE_ID+"set"}" in
   ("set")
     readonly PROTOCOL_RELEASE_ID
