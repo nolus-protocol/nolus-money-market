@@ -469,7 +469,7 @@ fi
 
 "cp" \
   "/binaryen-version.txt" \
-  "/release-version.txt" \
+  "/software-release-version.txt" \
   "/rust-version.txt" \
   "/artifacts/"
 
