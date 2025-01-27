@@ -2132,6 +2132,7 @@ dependencies = [
  "sdk",
  "serde",
  "thiserror 1.0.69",
+ "versioning",
 ]
 
 [[package]]

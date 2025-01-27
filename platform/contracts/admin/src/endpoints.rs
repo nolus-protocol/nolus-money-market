@@ -8,7 +8,8 @@ use sdk::{
     },
 };
 use versioning::{
-    package_name, package_version, PlatformPackageRelease, ReleaseId, VersionSegment,
+    package_name, package_version, PlatformPackageRelease, ReleaseId, UpdatablePackage,
+    VersionSegment,
 };
 
 use crate::{
@@ -59,13 +60,15 @@ pub fn migrate(
                 release,
                 migration_spec,
             },
+        to_release,
     }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| versioning::update_software(previous, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Into::into)
-        .and_then(|reported_release| {
-            check_release_label(reported_release.clone(), release.clone())
+        .and_then(|()| {
+            //TODO remove the check!!!
+            check_release_label(ReleaseId::VOID, release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(
                         deps.storage,
@@ -74,7 +77,7 @@ pub fn migrate(
                         migration_spec,
                     )
                 })
-                .and_then(|messages| response::response_with_messages(reported_release, messages))
+                .map(response::response_only_messages)
         })
 }
 

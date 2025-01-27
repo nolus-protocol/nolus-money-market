@@ -4,6 +4,7 @@ use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
 };
+use versioning::ReleaseId;
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
@@ -14,7 +15,9 @@ pub struct InstantiateMsg {}
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub to_release: ReleaseId,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

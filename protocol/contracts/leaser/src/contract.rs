@@ -16,7 +16,10 @@ use sdk::{
         QuerierWrapper, Reply,
     },
 };
-use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, ProtocolPackageRelease, ProtocolPackageReleaseId,
+    UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     cmd::Borrow,
@@ -63,10 +66,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { to_release }: MigrateMsg,
 ) -> ContractResult<Response> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
@@ -105,16 +108,23 @@ pub fn execute(
         ExecuteMsg::MigrateLeases {
             new_code_id,
             max_leases,
+            to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, deps.querier))
             .and_then(|new_lease_code| {
-                leaser::try_migrate_leases(deps.storage, new_lease_code, max_leases, migrate_msg)
+                leaser::try_migrate_leases(
+                    deps.storage,
+                    new_lease_code,
+                    max_leases,
+                    migrate_msg(to_release),
+                )
             }),
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
+            to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
@@ -124,7 +134,7 @@ pub fn execute(
                     deps.storage,
                     next_customer_validated,
                     max_leases,
-                    migrate_msg,
+                    migrate_msg(to_release),
                 )
             }),
     }
@@ -154,7 +164,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
                 deps.storage,
                 new_lease_code,
                 MaxLeases::MAX,
-                migrate_msg,
+                migrate_msg(ProtocolPackageReleaseId::void()),
                 protocols_registry_load,
                 migration_spec,
                 force,
@@ -236,8 +246,10 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-fn migrate_msg() -> LeaseMigrateMsg {
-    LeaseMigrateMsg {}
+fn migrate_msg(to_release: ProtocolPackageReleaseId) -> impl Fn() -> LeaseMigrateMsg {
+    move || LeaseMigrateMsg {
+        to_release: to_release.clone(),
+    }
 }
 
 fn finalizer(env: Env) -> Addr {

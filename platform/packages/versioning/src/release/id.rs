@@ -1,4 +1,7 @@
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    fmt::{Display, Formatter, Result as FmtResult},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -15,15 +18,26 @@ impl Id {
     pub(crate) const fn new_static(id: &'static str) -> Self {
         Self(Cow::Borrowed(id))
     }
+
+    #[cfg(feature = "testing")]
+    pub const fn new_test(id: &'static str) -> Self {
+        Self::new_static(id)
+    }
 }
 
 impl Id {
-    pub const VOID: Self = Self(Cow::Borrowed("void-release"));
+    pub const VOID: Self = Self::new_static("void-release");
 }
 
 // TODO get rid of when the check in the admin gets removed
 impl From<Id> for String {
     fn from(value: Id) -> Self {
         value.0.to_string()
+    }
+}
+
+impl Display for Id {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_str(&self.0)
     }
 }

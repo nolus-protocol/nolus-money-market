@@ -2,12 +2,15 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-use crate::{protocol::Protocol, software::Package};
+use crate::{protocol::Protocol, software::Package, ReleaseId};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Versioning] {0}")]
     LoadPrevVersion(StdError),
+
+    #[error("[Versioning] The package release does not match the currently migration target! The current package's release is \"{0}\", the release beeing migrated to is \"{1}\".")]
+    ReleaseMismatch(String, String),
 
     // TODO consider keeping &Package instead of String
     #[error("[Versioning] The package names do not match! The current package is \"{0}\", the new package is \"{1}\".")]
@@ -29,6 +32,10 @@ pub enum Error {
 impl Error {
     pub fn loading(cause: StdError) -> Self {
         Self::LoadPrevVersion(cause)
+    }
+
+    pub fn release_mismatch(current: &ReleaseId, expected: &ReleaseId) -> Self {
+        Self::ReleaseMismatch(current.to_string(), expected.to_string())
     }
 
     pub fn package_names_mismatch(current: &Package, new: &Package) -> Self {

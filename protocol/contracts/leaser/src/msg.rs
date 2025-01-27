@@ -11,6 +11,7 @@ use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
 };
+use versioning::ProtocolPackageReleaseId;
 
 use crate::finance::LeaseCurrencies;
 pub use crate::state::config::Config;
@@ -34,7 +35,9 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub to_release: ProtocolPackageReleaseId,
+}
 
 pub type MaxLeases = u32;
 
@@ -64,13 +67,26 @@ pub enum ExecuteMsg {
     MigrateLeases {
         // Since this is an external system API we should not use [Code].
         new_code_id: Uint64,
+        /// The release ID the new lease code is part of.
+        ///
+        /// Most of the times this matches the release of the leaser.
+        to_release: ProtocolPackageReleaseId,
         max_leases: MaxLeases,
     },
     /// Continue a Lease migration
     ///
     /// It migrates the next batch of up to `max_leases` number of Lease instances
     /// and emits the status as specified in `MigrateLeases`.
-    MigrateLeasesCont { key: Addr, max_leases: MaxLeases },
+    MigrateLeasesCont {
+        key: Addr,
+        /// The release ID the new lease code is part of.
+        ///
+        /// Most of the times this matches the release of the leaser.
+        /// Provided again on each batch to confirm the release, to avoid its persisting,
+        /// and to avoid implementing a complex removal strategy
+        to_release: ProtocolPackageReleaseId,
+        max_leases: MaxLeases,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]

@@ -53,7 +53,6 @@ contract = [
     "dep:swap",
     "dep:timealarms",
     "dep:thiserror",
-    "dep:versioning",
 ]
 stub = [
     "dep:platform",
@@ -73,7 +72,7 @@ platform = { workspace = true, optional = true }
 sdk = { workspace = true }
 swap = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
-versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
+versioning = { workspace = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true, optional = true }

@@ -8,7 +8,9 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
@@ -51,10 +53,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { to_release }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))

@@ -15,6 +15,7 @@ combinations = [
 [features]
 protocol_contract = []
 schema = ["sdk/schema"]
+testing = []
 
 [dependencies]
 sdk = { workspace = true, features = ["schema", "storage"] }

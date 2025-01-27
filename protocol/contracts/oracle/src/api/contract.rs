@@ -8,6 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 use tree::HumanReadableTree;
+use versioning::ProtocolPackageReleaseId;
 
 pub use super::alarms::Alarm;
 use super::swap::SwapTarget;
@@ -28,7 +29,9 @@ where
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub to_release: ProtocolPackageReleaseId,
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]

@@ -8,6 +8,7 @@ use sdk::{
     cosmwasm_std::Uint64,
     schemars::{self, JsonSchema},
 };
+use versioning::ProtocolPackageReleaseId;
 
 pub type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
 pub type LpnCoin = CoinDTO<LpnCurrencies>;
@@ -23,7 +24,9 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub to_release: ProtocolPackageReleaseId,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

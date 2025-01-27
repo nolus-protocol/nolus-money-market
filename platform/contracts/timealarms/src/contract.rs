@@ -9,7 +9,9 @@ use sdk::{
         SubMsgResult,
     },
 };
-use versioning::{package_name, package_version, PlatformPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, PlatformPackageRelease, UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     alarms::TimeAlarms,
@@ -17,7 +19,6 @@ use crate::{
     result::ContractResult,
 };
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 const CURRENT_RELEASE: PlatformPackageRelease = PlatformPackageRelease::current(
     package_name!(),
@@ -39,10 +40,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { to_release }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| versioning::update_software(previous, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Into::into)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))

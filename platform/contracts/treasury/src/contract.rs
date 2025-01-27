@@ -17,7 +17,9 @@ use sdk::{
     },
 };
 use timealarms::stub::TimeAlarmsRef;
-use versioning::{package_name, package_version, PlatformPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, PlatformPackageRelease, UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     cmd::RewardCalculator,
@@ -49,9 +51,13 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg { to_release }: MigrateMsg,
+) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| versioning::update_software(previous, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Into::into)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))

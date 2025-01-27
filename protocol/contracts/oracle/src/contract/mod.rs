@@ -14,7 +14,9 @@ use sdk::{
     },
 };
 use serde::Serialize;
-use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     api::{
@@ -65,10 +67,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     env: Env,
-    MigrateMsg {}: MigrateMsg,
+    MigrateMsg { to_release }: MigrateMsg,
 ) -> ContractResult<CwResponse> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(ContractError::UpdateSoftware)
         .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
         .and_then(response::response)

@@ -24,6 +24,10 @@ pub struct InstantiateMsg {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateMsg {
+    /// The release the Admin contract is migrated to.
+    ///
+    // TODO deduce this data from `MigrateContracts` once it gets refactored to carry on platform and protocol release Id-s.
+    pub to_release: ReleaseId,
     pub migrate_contracts: MigrateContracts,
 }
 

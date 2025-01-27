@@ -203,6 +203,7 @@ mod test {
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
+    use versioning::{ProtocolPackageReleaseId, ReleaseId};
 
     use crate::{
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
@@ -325,6 +326,11 @@ mod test {
     }
 
     fn migrate_msg() -> MigrateMsg {
-        MigrateMsg {}
+        MigrateMsg {
+            to_release: ProtocolPackageReleaseId::sample(
+                ReleaseId::new_test("v0.5.4"),
+                ReleaseId::new_test("v0.2.1"),
+            ),
+        }
     }
 }

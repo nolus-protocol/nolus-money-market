@@ -18,7 +18,9 @@ use sdk::{
         self, entry_point, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
     },
 };
-use versioning::{package_name, package_version, ProtocolPackageRelease, VersionSegment};
+use versioning::{
+    package_name, package_version, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
+};
 
 use crate::{
     api::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
@@ -60,9 +62,13 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, MigrateMsg {}: MigrateMsg) -> Result<CwResponse> {
+pub fn migrate(
+    deps: DepsMut<'_>,
+    _env: Env,
+    MigrateMsg { to_release }: MigrateMsg,
+) -> Result<CwResponse> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous_release| versioning::update_software(previous_release, CURRENT_RELEASE))
+        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Error::UpdateSoftware)
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
