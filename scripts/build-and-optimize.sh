@@ -73,6 +73,13 @@ case "${PROTOCOL_NETWORK+"set"}" in
     ;;
 esac
 
+case "${PROTOCOL_NAME+"set"}" in
+  ("set")
+    readonly PROTOCOL_NAME
+    export PROTOCOL_NAME
+    ;;
+esac
+
 case "${PROTOCOL_RELEASE_ID+"set"}" in
   ("set")
     readonly PROTOCOL_RELEASE_ID
