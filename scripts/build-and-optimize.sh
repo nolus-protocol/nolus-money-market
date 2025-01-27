@@ -66,6 +66,13 @@ else
   "error" "Failed to read release version!"
 fi
 
+case "${PROTOCOL_RELEASE_ID+"set"}" in
+  ("set")
+    readonly PROTOCOL_RELEASE_ID
+    export PROTOCOL_RELEASE_ID
+    ;;
+esac
+
 if cosmwasm_capabilities="$("cat" "/configuration/cosmwasm_capabilities")"
 then
   readonly cosmwasm_capabilities
