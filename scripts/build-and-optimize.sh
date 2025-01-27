@@ -475,6 +475,14 @@ case "${PROTOCOL_NETWORK+"set"}" in
       >"/artifacts/protocol-network.txt"
 esac
 
+case "${PROTOCOL_NAME+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_NAME:?}" \
+      >"/artifacts/protocol-name.txt"
+esac
+
 case "${PROTOCOL_RELEASE_ID+"set"}" in
   ("set")
     "printf" \
