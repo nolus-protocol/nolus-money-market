@@ -467,6 +467,14 @@ then
   "error" "Failed to write checksums to artifacts directory!"
 fi
 
+case "${PROTOCOL_RELEASE_ID+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_RELEASE_ID:?}" \
+      >"/artifacts/protocol-release-version.txt"
+esac
+
 "cp" \
   "/binaryen-version.txt" \
   "/software-release-version.txt" \
