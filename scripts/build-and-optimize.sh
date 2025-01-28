@@ -55,7 +55,7 @@ RUSTFLAGS="${RUSTFLAGS:+"${RUSTFLAGS:?} "}-C link-arg=-s"
 readonly RUSTFLAGS
 export RUSTFLAGS
 
-if SOFTWARE_RELEASE_ID="$("cat" "/release-version.txt")"
+if SOFTWARE_RELEASE_ID="$("cat" "/software-release-version.txt")"
 then
   readonly SOFTWARE_RELEASE_ID
 
