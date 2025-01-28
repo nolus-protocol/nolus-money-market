@@ -162,7 +162,7 @@ RUN --mount=type=bind,source="./",target="/code/",readonly \
       "tag=%s / %s" \
       "${tag_commit:?}" \
       "${described:?}" \
-      >"/release-version.txt"
+      >"/software-release-version.txt"
 
 ARG check_dependencies_updated="true"
 
