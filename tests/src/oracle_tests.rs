@@ -33,6 +33,7 @@ use sdk::{
     testing::{self, CwContractWrapper},
 };
 use tree::HumanReadableTree;
+use versioning::{ProtocolPackageReleaseId, ReleaseId};
 
 use crate::common::{
     leaser as leaser_mod, oracle as oracle_mod, oracle as oracle_common,
@@ -468,7 +469,12 @@ fn migrate_invalid_swap_tree() {
         .migrate(
             test_case.address_book.protocols_registry().clone(),
             test_case.address_book.oracle().clone(),
-            &MigrateMsg {},
+            &MigrateMsg {
+                to_release: ProtocolPackageReleaseId::sample(
+                    ReleaseId::new_test("v0.7.6"),
+                    ReleaseId::new_test("v0.2.0"),
+                ),
+            },
             5, // must be equal to the stored code
         )
         .unwrap_err();

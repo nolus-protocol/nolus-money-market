@@ -1131,6 +1131,7 @@ dependencies = [
  "timealarms",
  "treasury",
  "tree",
+ "versioning",
 ]
 
 [[package]]

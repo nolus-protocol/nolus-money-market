@@ -38,8 +38,9 @@ lpp-platform = { path = "../platform/packages/lpp", features = ["testing"] }
 marketprice = { path = "../protocol/packages/marketprice", features = ["testing"] }
 platform = { path = "../platform/packages/platform", features = ["testing"] }
 sdk = { path = "../platform/packages/sdk", features = ["neutron", "testing"] }
-tree = { path = "../platform/packages/tree", features = ["testing"] }
 swap = { path = "../protocol/packages/swap", features = ["testing"] }
+tree = { path = "../platform/packages/tree", features = ["testing"] }
+versioning ={ path = "../platform/packages/versioning", features = ["testing"] }
 
 anyhow = "1"
 thiserror = "1"
