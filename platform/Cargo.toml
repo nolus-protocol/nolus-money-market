@@ -39,7 +39,7 @@ anyhow = "1"
 base64 = { version = "0.22", default-features = false }
 gcd = "2"
 serde = { version = "1", default-features = false }
-thiserror = { version = "1", default-features = false }
+thiserror = { version = "2", default-features = false }
 
 # CosmWasm
 # TBD version = "<major>" only once address PR#469

@@ -19,32 +19,32 @@ dex-astroport_main = ["lease/dex-astroport_main", "profit/dex-astroport_main"]
 dex-osmosis = ["lease/dex-osmosis", "profit/dex-osmosis"]
 
 [dev-dependencies]
-admin_contract = { path = "../platform/contracts/admin", features = ["contract"] }
-lease = { path = "../protocol/contracts/lease", features = ["contract", "testing"] }
-leaser = { path = "../protocol/contracts/leaser", features = ["testing"] }
-lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"] }
-oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"] }
-profit = { path = "../protocol/contracts/profit", features = ["contract", "testing"] }
-reserve = { path = "../protocol/contracts/reserve", features = ["contract", "testing"] }
-timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"] }
-treasury = { path = "../platform/contracts/treasury" }
+admin_contract = { path = "../platform/contracts/admin", features = ["contract"], default-features = false }
+lease = { path = "../protocol/contracts/lease", features = ["contract", "testing"], default-features = false }
+leaser = { path = "../protocol/contracts/leaser", features = ["testing"], default-features = false }
+lpp = { path = "../protocol/contracts/lpp", features = ["contract", "testing"], default-features = false }
+oracle = { path = "../protocol/contracts/oracle", features = ["contract", "testing"], default-features = false }
+profit = { path = "../protocol/contracts/profit", features = ["contract", "testing"], default-features = false }
+reserve = { path = "../protocol/contracts/reserve", features = ["contract", "testing"], default-features = false }
+timealarms = { path = "../platform/contracts/timealarms", features = ["contract", "testing"], default-features = false }
+treasury = { path = "../platform/contracts/treasury", default-features = false }
 
-access-control = { path = "../platform/packages/access-control" }
-currencies = { path = "../protocol/packages/currencies", features = ["testing"] }
-currency = { path = "../platform/packages/currency", features = ["testing"] }
-dex = { path = "../protocol/packages/dex", features = ["testing"] }
-finance = { path = "../platform/packages/finance", features = ["testing"] }
-lpp-platform = { path = "../platform/packages/lpp", features = ["testing"] }
-marketprice = { path = "../protocol/packages/marketprice", features = ["testing"] }
-platform = { path = "../platform/packages/platform", features = ["testing"] }
-sdk = { path = "../platform/packages/sdk", features = ["neutron", "testing"] }
-swap = { path = "../protocol/packages/swap", features = ["testing"] }
-tree = { path = "../platform/packages/tree", features = ["testing"] }
-versioning ={ path = "../platform/packages/versioning", features = ["testing"] }
+access-control = { path = "../platform/packages/access-control", default-features = false }
+currencies = { path = "../protocol/packages/currencies", features = ["testing"], default-features = false }
+currency = { path = "../platform/packages/currency", features = ["testing"], default-features = false }
+dex = { path = "../protocol/packages/dex", features = ["testing"], default-features = false }
+finance = { path = "../platform/packages/finance", features = ["testing"], default-features = false }
+lpp-platform = { path = "../platform/packages/lpp", features = ["testing"], default-features = false }
+marketprice = { path = "../protocol/packages/marketprice", features = ["testing"], default-features = false }
+platform = { path = "../platform/packages/platform", features = ["testing"], default-features = false }
+sdk = { path = "../platform/packages/sdk", features = ["neutron", "testing"], default-features = false }
+swap = { path = "../protocol/packages/swap", features = ["testing"], default-features = false }
+tree = { path = "../platform/packages/tree", features = ["testing"], default-features = false }
+versioning ={ path = "../platform/packages/versioning", features = ["testing"], default-features = false }
 
 anyhow = "1"
-thiserror = "1"
-serde = { version = "1", features = ["derive"] }
+thiserror = { version = "2", default-features = false }
+serde = { version = "1", features = ["derive"], default-features = false }
 
 [profile.dev.build-override]
 opt-level = 3

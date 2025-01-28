@@ -7,7 +7,7 @@ name = "access-control"
 version = "0.1.0"
 dependencies = [
  "sdk",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -23,7 +23,7 @@ dependencies = [
  "sdk",
  "serde",
  "serde_test",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
  "versioning",
 ]
 
@@ -415,7 +415,7 @@ version = "0.6.1"
 dependencies = [
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -643,7 +643,7 @@ dependencies = [
  "gcd",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -822,7 +822,7 @@ dependencies = [
  "platform",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -912,7 +912,7 @@ dependencies = [
  "finance",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -942,7 +942,7 @@ dependencies = [
  "finance",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -1150,7 +1150,7 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 name = "schema"
 version = "0.1.0"
 dependencies = [
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -1191,7 +1191,7 @@ dependencies = [
  "ibc-proto",
  "neutron-sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -1487,7 +1487,7 @@ version = "0.2.0"
 dependencies = [
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -1499,7 +1499,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
  "time-oracle",
  "versioning",
 ]
@@ -1519,7 +1519,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
  "timealarms",
  "versioning",
 ]
@@ -1562,7 +1562,7 @@ version = "0.2.1"
 dependencies = [
  "sdk",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
