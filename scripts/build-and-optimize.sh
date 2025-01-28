@@ -66,6 +66,27 @@ else
   "error" "Failed to read release version!"
 fi
 
+case "${PROTOCOL_NETWORK+"set"}" in
+  ("set")
+    readonly PROTOCOL_NETWORK
+    export PROTOCOL_NETWORK
+    ;;
+esac
+
+case "${PROTOCOL_NAME+"set"}" in
+  ("set")
+    readonly PROTOCOL_NAME
+    export PROTOCOL_NAME
+    ;;
+esac
+
+case "${PROTOCOL_RELEASE_ID+"set"}" in
+  ("set")
+    readonly PROTOCOL_RELEASE_ID
+    export PROTOCOL_RELEASE_ID
+    ;;
+esac
+
 if cosmwasm_capabilities="$("cat" "/configuration/cosmwasm_capabilities")"
 then
   readonly cosmwasm_capabilities
@@ -446,9 +467,33 @@ then
   "error" "Failed to write checksums to artifacts directory!"
 fi
 
+case "${PROTOCOL_NETWORK+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_NETWORK:?}" \
+      >"/artifacts/protocol-network.txt"
+esac
+
+case "${PROTOCOL_NAME+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_NAME:?}" \
+      >"/artifacts/protocol-name.txt"
+esac
+
+case "${PROTOCOL_RELEASE_ID+"set"}" in
+  ("set")
+    "printf" \
+      "%s" \
+      "${PROTOCOL_RELEASE_ID:?}" \
+      >"/artifacts/protocol-release-version.txt"
+esac
+
 "cp" \
   "/binaryen-version.txt" \
-  "/release-version.txt" \
+  "/software-release-version.txt" \
   "/rust-version.txt" \
   "/artifacts/"
 
