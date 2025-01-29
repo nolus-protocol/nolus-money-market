@@ -179,6 +179,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Quote {
             downpayment,
             lease_asset,

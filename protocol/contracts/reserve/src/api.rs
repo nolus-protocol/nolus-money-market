@@ -49,6 +49,8 @@ pub enum QueryMsg {
     ReserveLpn(), // the name contains the contract name to help distinguish from simmilar queries to other contracts
     /// Return a [ConfigResponse]
     Config(),
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

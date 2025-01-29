@@ -94,6 +94,8 @@ where
     Lpns: Group,
 {
     Config(),
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
     /// Report the Lpn currency as [CurrencyDTO<Lpns>]
     Lpn(),
     Quote {

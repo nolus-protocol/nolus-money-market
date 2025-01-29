@@ -224,6 +224,9 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             .and_then(|ref protocol| {
                 cosmwasm_std::to_json_binary::<ProtocolQueryResponse>(protocol).map_err(Into::into)
             }),
+        QueryMsg::PlatformPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        }
     }
 }
 

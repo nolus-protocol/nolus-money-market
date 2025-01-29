@@ -93,10 +93,15 @@ where
     Uint64: Into<CodeId>,
     CodeId: Into<Uint64>,
 {
-    InstantiateAddress { code_id: Uint64, protocol: String },
+    InstantiateAddress {
+        code_id: Uint64,
+        protocol: String,
+    },
     Protocols {},
     Platform {},
     Protocol(String),
+    /// Implementation of [versioning::query::PlatformPackage::Release]
+    PlatformPackageRelease {},
 }
 
 pub type ProtocolsQueryResponse = Vec<String>;

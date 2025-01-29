@@ -81,6 +81,7 @@ pub fn migrate(
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => to_json_binary(CURRENT_VERSION),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)

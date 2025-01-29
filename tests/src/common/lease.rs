@@ -12,7 +12,7 @@ use lease::{
             ConnectionParams, Ics20Channel, LoanForm, NewLeaseContract, NewLeaseForm,
             PositionSpecDTO,
         },
-        query::{StateQuery, StateResponse},
+        query::{QueryMsg, StateResponse},
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
@@ -351,7 +351,7 @@ pub(crate) fn fetch_state(app: &App, lease: Addr) -> StateResponse {
     app.query()
         .query_wasm_smart(
             lease,
-            &StateQuery {
+            &QueryMsg::State {
                 due_projection: Seconds::default(),
             },
         )

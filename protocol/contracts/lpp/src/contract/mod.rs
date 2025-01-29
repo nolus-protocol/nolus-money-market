@@ -156,6 +156,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<CwResponse> {
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<Binary> {
     match msg {
         QueryMsg::Config() => Config::load(deps.storage).and_then(|ref resp| to_json_binary(resp)),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Lpn() => to_json_binary(LpnCurrency::definition().dto()),
         QueryMsg::Balance { address } => {
             lender::query_balance(deps.storage, address).and_then(|ref resp| to_json_binary(resp))

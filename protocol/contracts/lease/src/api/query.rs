@@ -19,12 +19,18 @@ pub use opened::ClosePolicy;
 #[derive(Deserialize, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct StateQuery {
+pub enum QueryMsg {
     /// Ask for estimation of the due and overdue amounts and periods in that point of time
     ///
+    /// Return a [StateResponse]
+    ///
     /// The value is meaningfull only if the lease is in Opened state.
-    #[serde(default, rename = "due_projection_secs")]
-    pub due_projection: Seconds,
+    State {
+        #[serde(default, rename = "due_projection_secs")]
+        due_projection: Seconds,
+    },
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
 }
 
 #[derive(Serialize)]

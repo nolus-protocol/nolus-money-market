@@ -222,6 +222,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             env.block.time,
             deps.querier,
         )?),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
     }
     .map_err(Into::into)
 }

@@ -42,6 +42,8 @@ pub enum SudoMsg {}
 pub enum QueryMsg {
     ContractVersion {},
     AlarmsStatus {},
+    /// Implementation of [versioning::query::PlatformPackage::Release]
+    PlatformPackageRelease {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, JsonSchema)]

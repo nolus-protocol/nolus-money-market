@@ -87,6 +87,9 @@ where
     // Returns contract's semantic version as a package, which is set in `Cargo.toml`.
     ContractVersion {},
 
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
+
     // returns the contract configuration
     Config {},
 

@@ -107,6 +107,9 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         }
         QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
             .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
+        QueryMsg::PlatformPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        }
     }
     .inspect_err(platform_error::log(deps.api))
 }

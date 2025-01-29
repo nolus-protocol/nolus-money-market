@@ -9,6 +9,7 @@ pub use self::id::Id;
 #[cfg(feature = "protocol_contract")]
 mod current;
 mod id;
+pub mod query;
 
 pub trait UpdatablePackage
 where
@@ -26,12 +27,15 @@ where
 }
 
 pub type PlatformPackageRelease = SoftwarePackageRelease;
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageRelease {
     software: SoftwarePackageRelease,
     protocol: ProtocolRelease,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageReleaseId {
     software: Id,
     protocol: Id,
