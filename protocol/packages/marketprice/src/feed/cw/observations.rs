@@ -56,7 +56,7 @@ where
     fn as_iter(
         &self,
     ) -> Result<
-        impl Iterator<Item = Result<Observation<C, QuoteC>, PriceFeedsError>>,
+        impl Iterator<Item = Result<Observation<C, QuoteC>, PriceFeedsError>> + '_,
         PriceFeedsError,
     > {
         self.storage

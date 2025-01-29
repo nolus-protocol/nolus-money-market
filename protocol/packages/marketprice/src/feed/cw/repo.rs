@@ -53,11 +53,11 @@ where
 {
     type Group = G;
 
-    fn observations_read<C, QuoteC>(
-        &self,
+    fn observations_read<'self_, C, QuoteC>(
+        &'self_ self,
         c: &currency::CurrencyDTO<Self::Group>,
         quote_c: &currency::CurrencyDTO<Self::Group>,
-    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
+    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC> + 'self_
     where
         C: 'static,
         QuoteC: 'static,
@@ -72,11 +72,11 @@ where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
 {
-    fn observations<C, QuoteC>(
-        &mut self,
+    fn observations<'self_, C, QuoteC>(
+        &'self_ mut self,
         c: &CurrencyDTO<Self::Group>,
         quote_c: &CurrencyDTO<Self::Group>,
-    ) -> impl Observations<C = C, QuoteC = QuoteC>
+    ) -> impl Observations<C = C, QuoteC = QuoteC> + 'self_
     where
         C: 'static,
         QuoteC: 'static,

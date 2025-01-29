@@ -12,7 +12,9 @@ pub trait ObservationsRead {
 
     fn len(&self) -> usize;
 
-    fn as_iter(&self) -> Result<impl Iterator<Item = Result<Observation<Self::C, Self::QuoteC>>>>;
+    fn as_iter(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<Observation<Self::C, Self::QuoteC>>> + '_>;
 }
 
 pub trait Observations
@@ -32,11 +34,11 @@ where
 pub trait ObservationsReadRepo {
     type Group: Group;
 
-    fn observations_read<C, QuoteC>(
-        &self,
+    fn observations_read<'self_, C, QuoteC>(
+        &'self_ self,
         c: &CurrencyDTO<Self::Group>,
         quote_c: &CurrencyDTO<Self::Group>,
-    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC>
+    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC> + 'self_
     where
         C: 'static,
         QuoteC: 'static;
@@ -46,11 +48,11 @@ pub trait ObservationsRepo
 where
     Self: ObservationsReadRepo,
 {
-    fn observations<C, QuoteC>(
-        &mut self,
+    fn observations<'self_, C, QuoteC>(
+        &'self_ mut self,
         c: &CurrencyDTO<Self::Group>,
         quote_c: &CurrencyDTO<Self::Group>,
-    ) -> impl Observations<C = C, QuoteC = QuoteC>
+    ) -> impl Observations<C = C, QuoteC = QuoteC> + 'self_
     where
         C: 'static,
         QuoteC: 'static;
