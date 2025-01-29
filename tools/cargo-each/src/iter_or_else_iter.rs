@@ -1,29 +1,29 @@
 pub(crate) struct IterOrElseIter<Iter, AltIter>
 where
-    Iter: Iterator,
-    AltIter: Iterator<Item = Iter::Item>,
+    Iter: IntoIterator,
+    AltIter: IntoIterator<Item = Iter::Item>,
 {
-    iter: Iter,
-    alt_iter: Option<AltIter>,
+    iter: Iter::IntoIter,
+    alt_iter: Option<AltIter::IntoIter>,
 }
 
 impl<Iter, AltIter> IterOrElseIter<Iter, AltIter>
 where
-    Iter: Iterator,
-    AltIter: Iterator<Item = Iter::Item>,
+    Iter: IntoIterator,
+    AltIter: IntoIterator<Item = Iter::Item>,
 {
     pub fn new(iter: Iter, alt_iter: AltIter) -> Self {
         Self {
-            iter,
-            alt_iter: Some(alt_iter),
+            iter: iter.into_iter(),
+            alt_iter: Some(alt_iter.into_iter()),
         }
     }
 }
 
 impl<Iter, AltIter> Iterator for IterOrElseIter<Iter, AltIter>
 where
-    Iter: Iterator,
-    AltIter: Iterator<Item = Iter::Item>,
+    Iter: IntoIterator,
+    AltIter: IntoIterator<Item = Iter::Item>,
 {
     type Item = Iter::Item;
 
