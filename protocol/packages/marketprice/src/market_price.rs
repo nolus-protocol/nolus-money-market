@@ -345,6 +345,7 @@ where
             next_currency.into_pair_member_type(self)
         } else {
             debug_assert_eq!(self.current_c, &currency::dto::<BaseC, BaseG>());
+
             Ok((self.price * Price::<CurrentC, BaseC>::identity()).into())
         }
     }
@@ -376,6 +377,7 @@ where
     type Pivot = CurrentC;
 
     type Output = BasePrice<G, BaseC, BaseG>;
+
     type Error = PriceFeedsError;
 
     fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> PairsVisitorResult<Self>
