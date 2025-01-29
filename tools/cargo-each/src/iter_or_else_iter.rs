@@ -3,7 +3,7 @@ where
     Iter: IntoIterator,
     AltIter: IntoIterator<Item = Iter::Item>,
 {
-    iter: Iter::IntoIter,
+    iter: Option<Iter::IntoIter>,
     alt_iter: Option<AltIter::IntoIter>,
 }
 
@@ -14,7 +14,7 @@ where
 {
     pub fn new(iter: Iter, alt_iter: AltIter) -> Self {
         Self {
-            iter: iter.into_iter(),
+            iter: Some(iter.into_iter()),
             alt_iter: Some(alt_iter.into_iter()),
         }
     }
@@ -28,13 +28,23 @@ where
     type Item = Iter::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        #[expect(if_let_rescope)]
-        if let Some(value) = self.iter.next() {
-            self.alt_iter = None;
+        if let Some(ref mut iter) = self.iter {
+            let item = iter.next();
 
-            Some(value)
+            if item.is_some() {
+                self.alt_iter = None;
+
+                return item;
+            } else {
+                self.iter = None;
+            }
+        }
+
+        #[expect(if_let_rescope)]
+        if let Some(ref mut alt_iter) = self.alt_iter {
+            alt_iter.next()
         } else {
-            self.alt_iter.as_mut().and_then(Iterator::next)
+            None
         }
     }
 }
