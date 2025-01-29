@@ -136,7 +136,6 @@ where
                     below_price: &self.below,
                 },
             )
-            .map_err(Into::into)
         })
     }
 }

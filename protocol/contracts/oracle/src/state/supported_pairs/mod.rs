@@ -351,8 +351,8 @@ mod tests {
             .unwrap()
             .collect();
         assert_eq!(
-            resp,
-            vec![
+            resp.as_slice(),
+            [
                 &currency_dto::<LeaseC5>(),
                 &currency_dto::<LeaseC1>(),
                 &currency_dto::<LeaseC2>(),
@@ -512,7 +512,7 @@ mod tests {
 
         assert_eq!(
             listed_currencies.as_slice(),
-            &[
+            [
                 api::Currency::new(currency_dto::<Lpn>().definition(), api::CurrencyGroup::Lpn),
                 api::Currency::new(
                     currency_dto::<LeaseC1>().definition(),
