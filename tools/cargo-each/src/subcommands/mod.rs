@@ -54,7 +54,7 @@ fn find_package_by_name<'r>(metadata: &'r Metadata, package_name: &str) -> Resul
 fn filtered_workspace_members(
     metadata: &Metadata,
     current_dir: PathBuf,
-) -> impl Iterator<Item = &Package> {
+) -> impl Iterator<Item = &Package> + use<'_> {
     metadata
         .workspace_packages()
         .into_iter()

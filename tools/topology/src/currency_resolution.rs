@@ -228,7 +228,7 @@ where
     ) -> (
         symbol::Builder,
         impl Iterator<Item = [&'traversed_network_id network::Id; 2]>
-            + Captures<&'traversed_networks [&'traversed_network_id network::Id]>,
+            + use<'traversed_networks, 'traversed_network_id>,
     ) {
         let mut bank_symbol = symbol::Builder::NEW;
 
@@ -272,7 +272,7 @@ where
         symbol::Builder,
         [&'network_id network::Id; 2],
     ) -> Result<symbol::Builder, error::ResolveCurrency>
-           + Captures<&'channels Channels> {
+           + use<'channels, 'network_id> {
         |mut bank_symbol, [source_network, remote_network]| {
             channels
                 .get(source_network)
@@ -301,21 +301,6 @@ where
     traversed_networks: Vec<&'network network::Id>,
     dex_symbol: symbol::Builder,
     currency: &'currency Currency,
-}
-
-// TODO [1.82]
-//  Remove in favour of precise capturing syntax, `impl Trait + uses<...>`.
-trait Captures<T>
-where
-    T: ?Sized,
-{
-}
-
-impl<T, U> Captures<U> for T
-where
-    T: ?Sized,
-    U: ?Sized,
-{
 }
 
 fn trampoline<Continue, Break, F>(mut value: Continue, mut f: F) -> Break

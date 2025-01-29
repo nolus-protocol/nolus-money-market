@@ -23,7 +23,9 @@ pub(crate) struct ConnectedNetworks(BTreeMap<network::Id, channel::Id>);
 
 impl ConnectedNetworks {
     #[inline]
-    pub fn iter(&self) -> impl DoubleEndedIterator<Item = (&network::Id, &channel::Id)> + '_ {
+    pub fn iter(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = (&network::Id, &channel::Id)> + '_ + use<'_> {
         self.0.iter()
     }
 

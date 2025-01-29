@@ -59,10 +59,13 @@ where
             .map_err(ContractError::StoreSupportedPairs)
     }
 
-    pub fn load_path(
-        &self,
+    pub fn load_path<'r>(
+        &'r self,
         currency: &CurrencyDTO<PriceG>,
-    ) -> Result<impl DoubleEndedIterator<Item = &CurrencyDTO<PriceG>> + '_, ContractError> {
+    ) -> Result<
+        impl DoubleEndedIterator<Item = &'r CurrencyDTO<PriceG>> + 'r + use<'r, PriceG, BaseC>,
+        ContractError,
+    > {
         self.internal_load_path(currency)
             .map(|iter| iter.map(|node| &node.value().target))
     }
@@ -134,11 +137,13 @@ where
         self.tree
     }
 
-    fn internal_load_path(
-        &self,
+    fn internal_load_path<'r>(
+        &'r self,
         query: &CurrencyDTO<PriceG>,
-    ) -> Result<impl DoubleEndedIterator<Item = NodeRef<'_, SwapTarget<PriceG>>> + '_, ContractError>
-    {
+    ) -> Result<
+        impl DoubleEndedIterator<Item = NodeRef<'r, SwapTarget<PriceG>>> + 'r + use<'r, PriceG, BaseC>,
+        ContractError,
+    > {
         self.tree
             .find_by(|target| &target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))

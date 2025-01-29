@@ -40,7 +40,7 @@ impl IntoIterator for Transaction {
     }
 }
 
-pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any>> {
+pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any> + use<>> {
     TxMsgData::decode(data)
         .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter())
         .map_err(Into::into)
@@ -95,7 +95,7 @@ mod test {
         assert!(responses.next().is_none());
     }
 
-    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> {
+    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> + use<> {
         let resp = general_purpose::STANDARD.decode(resp_base64).unwrap();
         super::decode_msg_responses(&resp).unwrap()
     }

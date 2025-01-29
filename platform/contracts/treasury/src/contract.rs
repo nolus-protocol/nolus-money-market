@@ -180,7 +180,7 @@ fn try_dispatch(
 fn protocols(
     protocols_registry: Addr,
     querier: QuerierWrapper<'_>,
-) -> ContractResult<impl IntoIterator<Item = ProtocolQueryResponse>> {
+) -> ContractResult<impl IntoIterator<Item = ProtocolQueryResponse> + use<>> {
     querier
         .query_wasm_smart(protocols_registry.clone(), &ProtocolsRegistry::Protocols {})
         .map_err(ContractError::QueryProtocols)
@@ -220,7 +220,7 @@ fn setup_dispatching(
     api: &dyn Api,
     env: Env,
     msg: InstantiateMsg,
-) -> ContractResult<impl Into<MessageResponse>> {
+) -> ContractResult<impl Into<MessageResponse> + use<>> {
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
     api.addr_validate(msg.protocols_registry.as_str())
