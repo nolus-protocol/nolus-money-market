@@ -16,7 +16,9 @@ impl Currencies {
     }
 
     #[inline]
-    pub fn iter(&self) -> impl DoubleEndedIterator<Item = (&currency::Id, &Currency)> + '_ {
+    pub fn iter(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = (&currency::Id, &Currency)> + '_ + use<'_> {
         self.0.iter()
     }
 

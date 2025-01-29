@@ -5,7 +5,7 @@ use topology::{CurrencyDefinition, Topology};
 fn currency_definitions_generator(
     source: &str,
     dex: &str,
-) -> impl Iterator<Item = CurrencyDefinition> {
+) -> impl Iterator<Item = CurrencyDefinition> + use<> {
     let currency_definitions = serde_json::from_str::<'_, Topology>(source)
         .expect("Failed to deserialize testing JSON!")
         .currency_definitions(dex)

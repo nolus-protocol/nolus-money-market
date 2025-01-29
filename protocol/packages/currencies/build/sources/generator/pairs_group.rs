@@ -238,7 +238,10 @@ impl<
 }
 
 impl<'dex_currencies> VisitEntryTemplate<'_, '_, 'dex_currencies, '_, '_> {
-    fn apply(&self, ticker: &str) -> Result<impl IntoIterator<Item = &'dex_currencies str>> {
+    fn apply(
+        &self,
+        ticker: &str,
+    ) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
         ResolvedCurrency::resolve(
             self.current_module,
             self.protocol,
