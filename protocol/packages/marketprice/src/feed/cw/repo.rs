@@ -38,10 +38,11 @@ where
         }
     }
 
-    fn storage_ns(&self, c: &currency::CurrencyDTO<G>, quote_c: &currency::CurrencyDTO<G>) -> String
-    where
-        G: Group,
-    {
+    fn storage_ns(
+        &self,
+        c: &currency::CurrencyDTO<G>,
+        quote_c: &currency::CurrencyDTO<G>,
+    ) -> String {
         format!("{}_{}_{}", self.root_ns, c.first_key(), quote_c.first_key())
     }
 }
@@ -61,7 +62,6 @@ where
     where
         C: 'static,
         QuoteC: 'static,
-        G: Group,
     {
         Deque::new(self.storage.deref(), self.storage_ns(c, quote_c))
     }
@@ -80,7 +80,6 @@ where
     where
         C: 'static,
         QuoteC: 'static,
-        G: Group,
     {
         let namespace = self.storage_ns(c, quote_c);
         Deque::new(self.storage.deref_mut(), namespace)
