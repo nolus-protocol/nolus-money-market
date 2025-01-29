@@ -346,8 +346,8 @@ mod tests {
             .unwrap()
             .collect();
         assert_eq!(
-            resp,
-            vec![
+            resp.as_slice(),
+            [
                 &currency_dto::<LeaseC5>(),
                 &currency_dto::<LeaseC1>(),
                 &currency_dto::<LeaseC2>(),
