@@ -48,3 +48,43 @@ where
         }
     }
 }
+
+#[test]
+fn test_neither() {
+    assert_eq!(IterOrElseIter::new(None::<()>, None).next(), None);
+}
+
+#[test]
+fn test_primary_only() {
+    let mut iter = IterOrElseIter::new([1_u8, 2], None);
+
+    assert_eq!(iter.next(), Some(1));
+
+    assert_eq!(iter.next(), Some(2));
+
+    assert_eq!(iter.next(), None);
+}
+
+#[test]
+fn test_secondary_only() {
+    let mut iter = IterOrElseIter::new(None, [3_u8, 4, 5]);
+
+    assert_eq!(iter.next(), Some(3));
+
+    assert_eq!(iter.next(), Some(4));
+
+    assert_eq!(iter.next(), Some(5));
+
+    assert_eq!(iter.next(), None);
+}
+
+#[test]
+fn test_both() {
+    let mut iter = IterOrElseIter::new([1_u8, 2], [3, 4, 5]);
+
+    assert_eq!(iter.next(), Some(1));
+
+    assert_eq!(iter.next(), Some(2));
+
+    assert_eq!(iter.next(), None);
+}
