@@ -1,11 +1,11 @@
 use std::iter;
 
 use anyhow::Result;
+use either::Either;
 
 use topology::HostCurrency;
 
 use crate::{
-    either::Either,
     protocol::Protocol,
     sources::resolved_currency::{CurrentModule, ResolvedCurrency},
     subtype_lifetime::SubtypeLifetime,

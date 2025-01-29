@@ -52,6 +52,7 @@ topology = { path = "../tools/topology" }
 # General
 anyhow = "1"
 base64 = { version = "0.22", default-features = false }
+either = { version = "1", default-features = false }
 enum_dispatch = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = "1"

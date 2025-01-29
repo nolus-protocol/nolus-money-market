@@ -34,5 +34,6 @@ currency = { workspace = true, features = ["testing"] }
 topology = { workspace = true }
 
 anyhow = { workspace = true }
+either = { workspace = true, features = ["use_std"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
