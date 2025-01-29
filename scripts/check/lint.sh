@@ -34,6 +34,7 @@ append_lint_flags() {
     --deny "rust-2021-compatibility" \
     --deny "rust-2024-compatibility" \
     --allow "impl-trait-overcaptures" \
+    --forbid "unfulfilled_lint_expectations" \
     --deny "unused" \
     --deny "warnings"
 }
