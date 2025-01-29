@@ -14,6 +14,7 @@ combinations = [
 
 [dependencies]
 anyhow = { workspace = true }
+either = { workspace = true }
 cargo_metadata = { workspace = true }
 clap = { workspace = true, features = ["env"] }
 serde = { workspace = true }
