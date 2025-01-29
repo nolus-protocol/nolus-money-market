@@ -16,6 +16,7 @@ where
     type PriceG: Group;
 
     type Output;
+
     type Error;
 
     fn exec<C>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>

@@ -350,6 +350,7 @@ mod tests {
             .load_path(&currency_dto::<LeaseC5>())
             .unwrap()
             .collect();
+
         assert_eq!(
             resp.as_slice(),
             [
