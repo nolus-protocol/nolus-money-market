@@ -59,21 +59,16 @@ impl PriceFeeders {
     }
 
     pub fn remove(&self, deps: DepsMut<'_>, feeder: &Addr) -> Result<(), PriceFeedersError> {
-        let remove_address = |mut feeders: HashSet<Addr>| -> HashSet<Addr> {
-            feeders.remove(feeder);
-            feeders
-        };
+        self.0
+            .may_load(deps.storage)
+            .and_then(|feeders| {
+                feeders.map_or(const { Ok(()) }, |mut feeders| {
+                    feeders.remove(feeder);
 
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
-        if let Some(feeders) = self.0.may_load(deps.storage).transpose() {
-            feeders
-                .map(remove_address)
-                .and_then(|new_feeders| self.0.save(deps.storage, &new_feeders))
-                .map_err(Into::into)
-        } else {
-            Ok(())
-        }
+                    self.0.save(deps.storage, &feeders)
+                })
+            })
+            .map_err(Into::into)
     }
 }
 
