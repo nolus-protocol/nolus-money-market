@@ -62,3 +62,19 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub cadence_hours: CadenceHours,
 }
+
+#[cfg(test)]
+mod test {
+
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+    }
+}

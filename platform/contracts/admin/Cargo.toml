@@ -34,5 +34,7 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+platform = { workspace = true, features = ["testing"] }
+
 schema = { workspace = true }
 serde_test = { workspace = true }

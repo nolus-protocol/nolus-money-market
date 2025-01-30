@@ -1,5 +1,7 @@
-use sdk::cosmwasm_std::{from_json, Binary, Event};
-use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+
+use sdk::cosmwasm_std::{self, from_json, Binary, Event, StdError};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub trait EventSource<'a> {
     type EventIter: Iterator<Item = &'a Event>;
@@ -33,4 +35,12 @@ where
 {
     resp.as_ref()
         .map(|data| from_json(data).expect("deserialization succeed"))
+}
+
+pub fn ser_de<T, R>(obj: &T) -> Result<R, StdError>
+where
+    T: Serialize,
+    R: Debug + for<'a> Deserialize<'a> + PartialEq,
+{
+    cosmwasm_std::from_json(cosmwasm_std::to_json_vec(obj).expect("serialization succeed"))
 }

@@ -42,7 +42,7 @@ pub enum ExecuteMsg {
 pub enum SudoMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
-#[cfg_attr(feature = "testing", derive(Debug))]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Return a [LpnCurrencyDTO] of the Lpn this reserve holds
@@ -64,5 +64,21 @@ impl ConfigResponse {
         Self {
             lease_code_id: CodeId::from(lease).into(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
     }
 }

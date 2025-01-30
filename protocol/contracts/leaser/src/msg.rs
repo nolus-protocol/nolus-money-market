@@ -159,20 +159,34 @@ pub struct QuoteResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::msg::ExecuteMsg;
     use lease::api::FinalizerExecuteMsg;
+    use platform::tests as platform_tests;
     use sdk::cosmwasm_std::Addr;
+
+    use crate::msg::ExecuteMsg;
+
+    use super::QueryMsg;
 
     #[test]
     fn finalize_api_match() {
-        use sdk::cosmwasm_std::{from_json, to_json_vec};
-
         let customer = Addr::unchecked("c");
-        let finalize_bin = to_json_vec(&ExecuteMsg::FinalizeLease {
-            customer: customer.clone(),
-        })
-        .expect("serialization passed");
-        let msg_out: FinalizerExecuteMsg = from_json(finalize_bin).expect("deserialization passed");
-        assert_eq!(FinalizerExecuteMsg::FinalizeLease { customer }, msg_out);
+
+        assert_eq!(
+            Ok(FinalizerExecuteMsg::FinalizeLease {
+                customer: customer.clone()
+            }),
+            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }),
+        );
+    }
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+
+        platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
+            .unwrap_err();
     }
 }

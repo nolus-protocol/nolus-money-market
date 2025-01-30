@@ -39,6 +39,7 @@ serde = { workspace = true, features = ["derive"] }
 currency = { workspace = true, features = ["testing"] }
 lpp-platform = { workspace = true, features = ["testing"] }
 oracle-platform = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"] }
 
 schema = { workspace = true }
 sdk = { workspace = true, default-features = false, features = ["testing"] }

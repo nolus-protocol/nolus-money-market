@@ -274,3 +274,23 @@ where
         Deserialize::deserialize(deserializer).map(|(from, to)| Self { from, to })
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::QueryMsg;
+    use currencies::Lpns;
+    use platform::tests as platform_tests;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+
+        platform_tests::ser_de::<_, QueryMsg<Lpns>>(
+            &versioning::query::PlatformPackage::Release {},
+        )
+        .unwrap_err();
+    }
+}

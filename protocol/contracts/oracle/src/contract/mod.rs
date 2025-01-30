@@ -210,9 +210,10 @@ where
 mod tests {
     use currencies::{
         testing::{LeaseC1, PaymentC1, PaymentC9},
-        LeaseGroup, Lpn, Lpns,
+        LeaseGroup, Lpn, Lpns, PaymentGroup,
     };
     use finance::{duration::Duration, percent::Percent, price};
+    use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
@@ -304,6 +305,14 @@ mod tests {
         assert_eq!(
             ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, Lpn, Lpns> { alarm },
             query_api
+        );
+    }
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
         );
     }
 }
