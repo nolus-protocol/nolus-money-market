@@ -5,7 +5,6 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
-use versioning::ProtocolPackageReleaseId;
 
 use crate::typedefs::CadenceHours;
 
@@ -22,9 +21,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub to_release: ProtocolPackageReleaseId,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -65,7 +62,6 @@ pub struct ConfigResponse {
 
 #[cfg(test)]
 mod test {
-
     use platform::tests as platform_tests;
 
     use super::QueryMsg;

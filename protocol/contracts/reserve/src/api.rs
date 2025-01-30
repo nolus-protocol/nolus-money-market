@@ -1,14 +1,13 @@
-pub(crate) use currencies::Lpns as LpnCurrencies;
-use currency::CurrencyDTO;
-use platform::contract::{Code, CodeId};
 use serde::{Deserialize, Serialize};
 
+pub(crate) use currencies::Lpns as LpnCurrencies;
+use currency::CurrencyDTO;
 use finance::coin::CoinDTO;
+use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::Uint64,
     schemars::{self, JsonSchema},
 };
-use versioning::ProtocolPackageReleaseId;
 
 pub type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
 pub type LpnCoin = CoinDTO<LpnCurrencies>;
@@ -24,9 +23,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub to_release: ProtocolPackageReleaseId,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -69,7 +66,6 @@ impl ConfigResponse {
 
 #[cfg(test)]
 mod test {
-
     use platform::tests as platform_tests;
 
     use super::QueryMsg;

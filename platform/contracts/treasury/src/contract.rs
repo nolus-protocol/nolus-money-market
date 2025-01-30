@@ -18,7 +18,8 @@ use sdk::{
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{
-    package_name, package_version, PlatformPackageRelease, UpdatablePackage, VersionSegment,
+    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
+    UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -54,7 +55,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { to_release }: MigrateMsg,
+    PlatformMigrationMessage {
+        to_release,
+        message: MigrateMsg {},
+    }: PlatformMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))

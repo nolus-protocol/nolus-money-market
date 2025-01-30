@@ -8,8 +8,8 @@ use sdk::{
     },
 };
 use versioning::{
-    package_name, package_version, PlatformPackageRelease, ReleaseId, UpdatablePackage,
-    VersionSegment,
+    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease, ReleaseId,
+    UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -54,27 +54,25 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     env: Env,
-    MigrateMsg {
-        migrate_contracts:
-            MigrateContracts {
-                release,
-                migration_spec,
-            },
+    PlatformMigrationMessage {
         to_release,
-    }: MigrateMsg,
+        message: MigrateMsg {
+            contracts_migration,
+        },
+    }: PlatformMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Into::into)
         .and_then(|()| {
             //TODO remove the check!!!
-            check_release_label(ReleaseId::VOID, release.clone())
+            check_release_label(ReleaseId::VOID, to_release.clone())
                 .and_then(|()| {
                     crate::contracts::migrate(
                         deps.storage,
                         env.contract.address,
-                        release,
-                        migration_spec,
+                        to_release,
+                        contracts_migration,
                     )
                 })
                 .map(response::response_only_messages)
@@ -327,7 +325,6 @@ fn check_release_label(
 
 #[cfg(test)]
 mod test {
-
     use platform::tests as platform_tests;
 
     use super::QueryMsg;

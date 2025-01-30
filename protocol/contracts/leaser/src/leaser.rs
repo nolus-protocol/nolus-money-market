@@ -13,6 +13,7 @@ use platform::{
 };
 use reserve::api::ExecuteMsg as ReserveExecuteMsg;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
+use versioning::ProtocolMigrationMessage;
 
 use crate::{
     cmd::Quote,
@@ -93,7 +94,7 @@ pub(super) fn try_migrate_leases<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
 {
     Config::update_lease_code(storage, new_lease)?;
 
@@ -112,7 +113,7 @@ pub(super) fn try_migrate_leases_cont<MsgFactory>(
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
 {
     let lease_code = Config::load(storage)?.lease_code;
 
@@ -132,7 +133,7 @@ pub(super) fn try_close_protocol<ProtocolsRegistryLoader, MsgFactory>(
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
     ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
 {
     match force {
@@ -203,7 +204,7 @@ mod test {
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
-    use versioning::{ProtocolPackageReleaseId, ReleaseId};
+    use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
 
     use crate::{
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
@@ -325,12 +326,15 @@ mod test {
         }
     }
 
-    fn migrate_msg() -> MigrateMsg {
-        MigrateMsg {
-            to_release: ProtocolPackageReleaseId::sample(
-                ReleaseId::new_test("v0.5.4"),
-                ReleaseId::new_test("v0.2.1"),
-            ),
+    const fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
+        const {
+            ProtocolMigrationMessage {
+                to_release: ProtocolPackageReleaseId::sample(
+                    ReleaseId::new_test("v0.5.4"),
+                    ReleaseId::new_test("v0.2.1"),
+                ),
+                message: MigrateMsg {},
+            }
         }
     }
 }

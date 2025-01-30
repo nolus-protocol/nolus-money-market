@@ -19,7 +19,8 @@ use sdk::{
     cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
 use versioning::{
-    package_name, package_version, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
+    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
+    UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -73,7 +74,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { to_release }: MigrateMsg,
+    ProtocolMigrationMessage {
+        to_release,
+        message: MigrateMsg {},
+    }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> Result<CwResponse> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))

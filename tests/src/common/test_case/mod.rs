@@ -10,6 +10,7 @@ use sdk::{
     cw_multi_test::{AppResponse, Executor as _},
     testing::{self, InterChainMsgReceiver, InterChainMsgSender},
 };
+use versioning::ProtocolMigrationMessage;
 
 use super::{
     lease::{
@@ -50,7 +51,7 @@ type OptionalOracleWrapper = Option<
         oracle::api::SudoMsg<PriceCurrencies>,
         oracle::ContractError,
         oracle::ContractError,
-        oracle::api::MigrateMsg,
+        ProtocolMigrationMessage<oracle::api::MigrateMsg>,
         oracle::ContractError,
     >,
 >;

@@ -4,7 +4,6 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
-use versioning::ReleaseId;
 
 use crate::state::{reward_scale::RewardScale, CadenceHours};
 
@@ -19,9 +18,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub to_release: ReleaseId,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -56,7 +53,6 @@ pub type RewardScaleResponse = RewardScale;
 
 #[cfg(test)]
 mod test {
-
     use platform::tests as platform_tests;
 
     use super::QueryMsg;
