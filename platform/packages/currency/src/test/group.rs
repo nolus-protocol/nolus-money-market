@@ -4,7 +4,7 @@ use crate::{
     from_symbol_any::InPoolWith,
     group::MemberOf,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
-    AnyVisitor, Currency, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
+    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;
@@ -19,8 +19,6 @@ pub type SubGroupTestC10 = impl_::TestC10;
 pub struct SuperGroup {}
 
 pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
-
-impl Currency for SuperGroup {} // TODO delete once migrate of `impl PairsGroup for Group`
 
 impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
