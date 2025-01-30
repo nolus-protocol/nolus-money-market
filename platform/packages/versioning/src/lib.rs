@@ -13,9 +13,16 @@ pub use crate::{
 };
 
 mod error;
+mod migration;
 mod protocol;
 mod release;
 mod software;
+
+pub type PlatformMigrationMessage<ContractMsg> =
+    migration::MigrationMessage<PlatformPackageRelease, ContractMsg>;
+
+pub type ProtocolMigrationMessage<ContractMsg> =
+    migration::MigrationMessage<ProtocolPackageRelease, ContractMsg>;
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
     pub to: ReleaseId,
