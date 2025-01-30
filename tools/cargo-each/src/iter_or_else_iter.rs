@@ -28,24 +28,21 @@ where
     type Item = Iter::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(ref mut iter) = self.iter {
-            let item = iter.next();
-
-            if item.is_some() {
-                self.alt_iter = None;
-
-                return item;
-            } else {
-                self.iter = None;
-            }
+        #[inline]
+        fn next_and_clear_other<Iter, Other>(
+            iter: &mut Option<Iter>,
+            other: &mut Option<Other>,
+        ) -> Option<Iter::Item>
+        where
+            Iter: Iterator,
+        {
+            iter.as_mut().and_then(Iterator::next).inspect(|_| {
+                *other = None;
+            })
         }
 
-        #[expect(if_let_rescope)]
-        if let Some(ref mut alt_iter) = self.alt_iter {
-            alt_iter.next()
-        } else {
-            None
-        }
+        next_and_clear_other(&mut self.iter, &mut self.alt_iter)
+            .or_else(|| next_and_clear_other(&mut self.alt_iter, &mut self.iter))
     }
 }
 
