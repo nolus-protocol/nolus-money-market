@@ -7,7 +7,6 @@ use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
-use versioning::ProtocolPackageReleaseId;
 
 use self::position::PositionClose;
 
@@ -28,9 +27,7 @@ pub type LpnCoinDTO = crate::finance::LpnCoinDTO;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub to_release: ProtocolPackageReleaseId,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

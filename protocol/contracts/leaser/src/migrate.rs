@@ -1,6 +1,7 @@
 use lease::api::MigrateMsg;
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
+use versioning::ProtocolMigrationMessage;
 
 use crate::{msg::MaxLeases, result::ContractResult};
 
@@ -33,7 +34,7 @@ pub fn migrate_leases<I, LI, MsgFactory>(
 where
     I: Iterator<Item = MaybeCustomer<LI>>,
     LI: ExactSizeIterator<Item = Addr>,
-    MsgFactory: Fn() -> MigrateMsg,
+    MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
 {
     let mut msgs = MigrateBatch::new(lease_code, max_leases);
 
@@ -89,7 +90,7 @@ impl MigrateBatch {
     ) -> Option<ContractResult<()>>
     where
         Leases: ExactSizeIterator<Item = Addr>,
-        MsgFactory: Fn() -> MigrateMsg,
+        MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
         match maybe_leases_nb {
@@ -119,7 +120,7 @@ impl MigrateBatch {
     ) -> Option<ContractResult<Addr>>
     where
         LI: ExactSizeIterator<Item = Addr>,
-        MsgFactory: Fn() -> MigrateMsg,
+        MsgFactory: Fn() -> ProtocolMigrationMessage<MigrateMsg>,
     {
         self.migrate_leases(customer.leases, migrate_msg)
             .map(|completed| completed.map(|()| customer.customer))
@@ -139,7 +140,7 @@ mod test {
     use lease::api::MigrateMsg;
     use platform::contract::Code;
     use sdk::cosmwasm_std::Addr;
-    use versioning::{ProtocolPackageReleaseId, ReleaseId};
+    use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
 
     use crate::{
         migrate::{Customer, MigrationResult},
@@ -341,12 +342,15 @@ mod test {
         vec![Ok(cust1), Ok(cust2), Ok(cust3), Ok(cust4)].into_iter()
     }
 
-    fn migrate_msg() -> MigrateMsg {
-        MigrateMsg {
-            to_release: ProtocolPackageReleaseId::sample(
-                ReleaseId::new_test("v0.7.6"),
-                ReleaseId::new_test("v0.0.5"),
-            ),
+    const fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
+        const {
+            ProtocolMigrationMessage {
+                to_release: ProtocolPackageReleaseId::sample(
+                    ReleaseId::new_test("v0.7.6"),
+                    ReleaseId::new_test("v0.0.5"),
+                ),
+                message: MigrateMsg {},
+            }
         }
     }
 }

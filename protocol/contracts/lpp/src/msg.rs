@@ -13,7 +13,6 @@ use sdk::{
     cosmwasm_std::{Addr, Uint128, Uint64},
     schemars::{self, JsonSchema},
 };
-use versioning::ProtocolPackageReleaseId;
 
 use crate::{borrow::InterestRate, loan::Loan};
 
@@ -32,9 +31,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub to_release: ProtocolPackageReleaseId,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]

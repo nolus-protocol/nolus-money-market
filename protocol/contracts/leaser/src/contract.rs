@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::ContractOwnerAccess;
-use cosmwasm_std::Storage;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
     contract::{self, Code, CodeId},
@@ -13,12 +12,12 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
         entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Reply,
+        QuerierWrapper, Reply, Storage,
     },
 };
 use versioning::{
-    package_name, package_version, ProtocolPackageRelease, ProtocolPackageReleaseId,
-    UpdatablePackage, VersionSegment,
+    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
+    ProtocolPackageReleaseId, UpdatablePackage, VersionSegment,
 };
 
 use crate::{
@@ -66,7 +65,10 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    MigrateMsg { to_release }: MigrateMsg,
+    ProtocolMigrationMessage {
+        to_release,
+        message: MigrateMsg {},
+    }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
@@ -247,9 +249,12 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-fn migrate_msg(to_release: ProtocolPackageReleaseId) -> impl Fn() -> LeaseMigrateMsg {
-    move || LeaseMigrateMsg {
+fn migrate_msg(
+    to_release: ProtocolPackageReleaseId,
+) -> impl Fn() -> ProtocolMigrationMessage<LeaseMigrateMsg> {
+    move || ProtocolMigrationMessage {
         to_release: to_release.clone(),
+        message: LeaseMigrateMsg {},
     }
 }
 
