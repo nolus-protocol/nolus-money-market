@@ -83,6 +83,9 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
+        QueryMsg::PlatformPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        }
     }
     .inspect_err(platform_error::log(deps.api))
 }

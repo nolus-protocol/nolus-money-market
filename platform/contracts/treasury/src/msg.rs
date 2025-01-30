@@ -41,6 +41,8 @@ pub enum SudoMsg {
 pub enum QueryMsg {
     Config {},
     CalculateRewards {},
+    /// Implementation of [versioning::query::PlatformPackage::Release]
+    PlatformPackageRelease {},
 }
 
 // We define a custom struct for each query response
@@ -51,3 +53,19 @@ pub struct ConfigResponse {
 }
 
 pub type RewardScaleResponse = RewardScale;
+
+#[cfg(test)]
+mod test {
+
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::PlatformPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+        );
+    }
+}

@@ -83,7 +83,7 @@ pub enum SudoMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
-#[cfg_attr(feature = "testing", derive(Debug))]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
@@ -94,6 +94,8 @@ where
     Lpns: Group,
 {
     Config(),
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
     /// Report the Lpn currency as [CurrencyDTO<Lpns>]
     Lpn(),
     Quote {
@@ -175,4 +177,24 @@ where
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct RewardsResponse {
     pub rewards: Coin<Nls>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::QueryMsg;
+    use currencies::Lpns;
+    use platform::tests as platform_tests;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+
+        platform_tests::ser_de::<_, QueryMsg<Lpns>>(
+            &versioning::query::PlatformPackage::Release {},
+        )
+        .unwrap_err();
+    }
 }

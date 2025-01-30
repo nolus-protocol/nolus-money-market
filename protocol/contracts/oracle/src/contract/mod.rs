@@ -81,6 +81,7 @@ pub fn migrate(
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => to_json_binary(CURRENT_VERSION),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
         QueryMsg::Feeders {} => Feeders::get(deps.storage)
             .map_err(ContractError::LoadFeeders)
@@ -209,9 +210,10 @@ where
 mod tests {
     use currencies::{
         testing::{LeaseC1, PaymentC1, PaymentC9},
-        LeaseGroup, Lpn, Lpns,
+        LeaseGroup, Lpn, Lpns, PaymentGroup,
     };
     use finance::{duration::Duration, percent::Percent, price};
+    use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
@@ -303,6 +305,14 @@ mod tests {
         assert_eq!(
             ExecuteMsgApi::AddPriceAlarm::<LeaseGroup, Lpn, Lpns> { alarm },
             query_api
+        );
+    }
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
         );
     }
 }

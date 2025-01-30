@@ -51,6 +51,8 @@ pub enum ExecuteMsg {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
 }
 
 // We define a custom struct for each query response
@@ -59,4 +61,20 @@ pub enum QueryMsg {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ConfigResponse {
     pub cadence_hours: CadenceHours,
+}
+
+#[cfg(test)]
+mod test {
+
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+    }
 }

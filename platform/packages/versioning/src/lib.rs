@@ -6,8 +6,8 @@ pub use crate::{
     error::Error,
     protocol::Release as ProtocolRelease,
     release::{
-        Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
-        UpdatablePackage,
+        query, Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease,
+        ProtocolPackageReleaseId, UpdatablePackage,
     },
     software::{PackageRelease as SoftwarePackageRelease, VersionSegment},
 };

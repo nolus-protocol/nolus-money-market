@@ -17,14 +17,23 @@ use super::{DownpaymentCoin, LeaseAssetCurrencies, LeaseCoin};
 pub use opened::ClosePolicy;
 
 #[derive(Deserialize, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug, Serialize))]
+#[cfg_attr(
+    any(test, feature = "testing"),
+    derive(Clone, Debug, PartialEq, Serialize)
+)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct StateQuery {
+pub enum QueryMsg {
     /// Ask for estimation of the due and overdue amounts and periods in that point of time
     ///
+    /// Return a [StateResponse]
+    ///
     /// The value is meaningfull only if the lease is in Opened state.
-    #[serde(default, rename = "due_projection_secs")]
-    pub due_projection: Seconds,
+    State {
+        #[serde(default, rename = "due_projection_secs")]
+        due_projection: Seconds,
+    },
+    /// Implementation of [versioning::query::ProtocolPackage::Release]
+    ProtocolPackageRelease {},
 }
 
 #[derive(Serialize)]
@@ -179,5 +188,22 @@ pub(crate) mod paid {
     pub enum ClosingTrx {
         TransferInInit,
         TransferInFinish,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+
+        platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
+            .unwrap_err();
     }
 }

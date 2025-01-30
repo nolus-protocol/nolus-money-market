@@ -13,7 +13,7 @@ use versioning::{
 };
 
 use crate::{
-    api::{open::NewLeaseContract, query::StateQuery, ExecuteMsg, MigrateMsg},
+    api::{open::NewLeaseContract, query::QueryMsg, ExecuteMsg, MigrateMsg},
     contract::api::Contract,
     error::{ContractError, ContractResult},
 };
@@ -93,17 +93,20 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: StateQuery) -> ContractResult<Binary> {
-    state::load(deps.storage)
-        .and_then(|state| {
-            state.state(
-                env.block.time,
-                Duration::from_secs(msg.due_projection),
-                deps.querier,
-            )
-        })
-        .and_then(|resp| to_json_binary(&resp).map_err(Into::into))
-        .inspect_err(platform_error::log(deps.api))
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+    match msg {
+        QueryMsg::State { due_projection } => state::load(deps.storage)
+            .and_then(|state| {
+                state.state(
+                    env.block.time,
+                    Duration::from_secs(due_projection),
+                    deps.querier,
+                )
+            })
+            .and_then(|resp| to_json_binary(&resp).map_err(Into::into)),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE).map_err(Into::into),
+    }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 fn process_lease<ProcFn>(

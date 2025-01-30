@@ -38,10 +38,13 @@ pub enum ExecuteMsg {
 pub enum SudoMsg {}
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     ContractVersion {},
     AlarmsStatus {},
+    /// Implementation of [versioning::query::PlatformPackage::Release]
+    PlatformPackageRelease {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, JsonSchema)]
@@ -62,4 +65,20 @@ pub struct DispatchAlarmsResponse(pub AlarmsCount);
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct AlarmsStatusResponse {
     pub remaining_alarms: bool,
+}
+
+#[cfg(test)]
+mod test {
+
+    use platform::tests as platform_tests;
+
+    use super::QueryMsg;
+
+    #[test]
+    fn release() {
+        assert_eq!(
+            Ok(QueryMsg::PlatformPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+        );
+    }
 }
