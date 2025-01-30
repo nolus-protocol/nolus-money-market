@@ -38,11 +38,7 @@ where
         }
     }
 
-    fn storage_ns(
-        &self,
-        c: &currency::CurrencyDTO<G>,
-        quote_c: &currency::CurrencyDTO<G>,
-    ) -> String {
+    fn storage_ns(&self, c: &CurrencyDTO<G>, quote_c: &CurrencyDTO<G>) -> String {
         format!("{}_{}_{}", self.root_ns, c.first_key(), quote_c.first_key())
     }
 }
@@ -56,8 +52,8 @@ where
 
     fn observations_read<'self_, C, QuoteC>(
         &'self_ self,
-        c: &currency::CurrencyDTO<Self::Group>,
-        quote_c: &currency::CurrencyDTO<Self::Group>,
+        c: &CurrencyDTO<Self::Group>,
+        quote_c: &CurrencyDTO<Self::Group>,
     ) -> impl ObservationsRead<C = C, QuoteC = QuoteC> + 'self_
     where
         C: 'static,
