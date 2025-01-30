@@ -69,7 +69,7 @@ cosmwasm-std = { version = "~2.1", default-features = false, features = [
 
 # Other
 astroport = { version = "5", default-features = false }
-osmosis-std = { version = "0.26", default-features = false }
+osmosis-std = { version = "0.27.0", default-features = false }
 
 [profile.dev.build-override]
 opt-level = 3
