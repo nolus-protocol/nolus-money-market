@@ -18,8 +18,7 @@ use super::{
     timeout,
     transfer_in_finish::TransferInFinish,
     trx::IBC_TIMEOUT,
-    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitRecoverIca,
-    TransferInInitState,
+    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitState,
 };
 
 /// Transfer in a coin from DEX
@@ -95,7 +94,6 @@ where
     SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
-    SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
 {
     fn on_response(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         let finish: TransferInFinish<SwapTask, SEnum> =
@@ -128,7 +126,6 @@ where
     SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
-    SEnum: From<TransferInInitRecoverIca<SwapTask, SEnum>>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -142,10 +139,9 @@ where
         self.on_response(querier, env)
     }
 
-    fn on_timeout(self, _querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
-        let timealarms = self.spec.time_alarm().clone();
-        timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
+        timeout::on_timeout_retry(self, state_label, querier, env)
     }
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         self.on_response(querier, env)

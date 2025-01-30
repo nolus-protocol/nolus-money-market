@@ -241,16 +241,10 @@ where
     }
 }
 
-impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
+impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_local::State<
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >,
+        super::out_local::State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>,
         SwapGroup,
         SwapClient,
     >
@@ -260,13 +254,7 @@ where
     SwapClient: ExactAmountIn,
     ForwardToInnerMsg: ForwardToInner,
 {
-    type Response = super::out_local::State<
-        SwapTask,
-        SwapGroup,
-        SwapClient,
-        ForwardToInnerMsg,
-        ForwardToInnerContinueMsg,
-    >;
+    type Response = super::out_local::State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn on_response(
@@ -286,10 +274,9 @@ where
             .into()
     }
 
-    fn on_timeout(self, _querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
-        let timealarms = self.spec.time_alarm().clone();
-        timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
+        timeout::on_timeout_retry(self, state_label, querier, env)
     }
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
@@ -340,10 +327,9 @@ where
             )
     }
 
-    fn on_timeout(self, _querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
-        let timealarms = self.spec.time_alarm().clone();
-        timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
+        timeout::on_timeout_retry(self, state_label, querier, env)
     }
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {

@@ -23,11 +23,7 @@ use crate::{
     },
     contract::{
         cmd::Close,
-        state::{
-            closed::Closed,
-            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapClient, SwapResult,
-        },
+        state::{closed::Closed, resp_delivery::ForwardToDexEntry, SwapClient, SwapResult},
         Lease,
     },
     error::ContractResult,
@@ -36,20 +32,10 @@ use crate::{
 };
 
 type AssetGroup = LeaseAssetCurrencies;
-pub(super) type StartState = StartTransferInState<
-    TransferIn,
-    LeasePaymentCurrencies,
-    SwapClient,
-    ForwardToDexEntry,
-    ForwardToDexEntryContinue,
->;
-pub(in super::super) type DexState = dex::StateLocalOut<
-    TransferIn,
-    LeasePaymentCurrencies,
-    SwapClient,
-    ForwardToDexEntry,
-    ForwardToDexEntryContinue,
->;
+pub(super) type StartState =
+    StartTransferInState<TransferIn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
+pub(in super::super) type DexState =
+    dex::StateLocalOut<TransferIn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
 
 pub(in super::super) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);

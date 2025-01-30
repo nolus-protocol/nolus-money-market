@@ -8,10 +8,7 @@ use crate::{
         LeaseCoin, LeasePaymentCurrencies,
     },
     contract::{
-        state::{
-            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            Response, State, SwapClient,
-        },
+        state::{resp_delivery::ForwardToDexEntry, Response, State, SwapClient},
         Lease,
     },
     error::ContractResult,
@@ -33,13 +30,8 @@ pub(crate) trait Closable {
 }
 
 type Task<RepayableT> = SellAsset<RepayableT>;
-type DexState<Repayable> = dex::StateLocalOut<
-    Task<Repayable>,
-    LeasePaymentCurrencies,
-    SwapClient,
-    ForwardToDexEntry,
-    ForwardToDexEntryContinue,
->;
+type DexState<Repayable> =
+    dex::StateLocalOut<Task<Repayable>, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
 
 trait IntoRepayable
 where

@@ -21,9 +21,8 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
-    idle::Idle,
-    resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-    Config, ConfigManagement, ProfitCurrencies, State, StateEnum, SwapClient,
+    idle::Idle, resp_delivery::ForwardToDexEntry, Config, ConfigManagement, ProfitCurrencies,
+    State, StateEnum, SwapClient,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -151,16 +150,7 @@ impl<DexState> ContractInSwap<DexState> for BuyBack {
     }
 }
 
-impl ConfigManagement
-    for StateLocalOut<
-        BuyBack,
-        ProfitCurrencies,
-        SwapClient,
-        ForwardToDexEntry,
-        ForwardToDexEntryContinue,
-    >
-{
-}
+impl ConfigManagement for StateLocalOut<BuyBack, ProfitCurrencies, SwapClient, ForwardToDexEntry> {}
 
 trait TryFind
 where

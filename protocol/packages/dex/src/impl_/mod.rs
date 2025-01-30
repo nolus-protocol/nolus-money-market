@@ -13,7 +13,6 @@ pub use self::{
         Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
     },
-    ica_recover::InRecovery,
     out_local::{
         start_local_local, start_remote_local, StartLocalLocalState, StartRemoteLocalState,
         StartTransferInState, State as StateLocalOut,
@@ -37,7 +36,6 @@ mod coin_index;
 mod connectable;
 mod filter;
 mod ica_connector;
-mod ica_recover;
 #[cfg(feature = "migration")]
 mod migration;
 mod out_local;
@@ -60,32 +58,8 @@ pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, Forward
 pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
     ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
 
-pub type SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient> = IcaConnector<
-    InRecovery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, SEnum>,
-    <SwapTask as SwapTaskT>::Result,
->;
-
-pub type SwapExactInRecoverIcaRespDelivery<
-    SwapTask,
-    SEnum,
-    SwapGroup,
-    SwapClient,
-    ForwardToInnerMsg,
-> = ICAOpenResponseDelivery<
-    SwapExactInRecoverIca<SwapTask, SEnum, SwapGroup, SwapClient>,
-    ForwardToInnerMsg,
->;
-
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;
-
-pub type TransferInInitRecoverIca<SwapTask, SEnum> = IcaConnector<
-    InRecovery<TransferInInit<SwapTask, SEnum>, SEnum>,
-    <SwapTask as SwapTaskT>::Result,
->;
-
-pub type TransferInInitRecoverIcaRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
-    ICAOpenResponseDelivery<TransferInInitRecoverIca<SwapTask, SEnum>, ForwardToInnerMsg>;
 
 /// Contract during DEX
 pub trait Contract
