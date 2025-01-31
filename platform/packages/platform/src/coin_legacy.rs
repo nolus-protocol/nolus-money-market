@@ -26,7 +26,11 @@ where
     BankSymbols::<CDef::Group>::visit::<CDef, _>(&coin.denom, CoinTransformer(coin, PhantomData))
 }
 
-pub(crate) fn from_cosmwasm_any<VisitedG, V>(
+/// Transform CW coin to Nolus coin and then return the [WithCoin] result
+///
+/// If seeking for the corresponding Nolus coin is not successfull an `Err(v)` is returned.
+/// Otherwise, an `Ok(v.on(Nolus_coin))` is returned
+pub(crate) fn from_cosmwasm_seek_any<VisitedG, V>(
     coin: &CosmWasmCoin,
     v: V,
 ) -> StdResult<WithCoinResult<VisitedG, V>, V>
@@ -232,7 +236,7 @@ mod test {
         type TheCurrency = SuperGroupTestC1;
         assert_eq!(
             Ok(Ok(true)),
-            super::from_cosmwasm_any(
+            super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
@@ -246,14 +250,14 @@ mod test {
         type AnotherCurrency = SuperGroupTestC2;
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any(
+            super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount + 1, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
             Ok(Ok(false)),
-            super::from_cosmwasm_any(
+            super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
@@ -261,7 +265,7 @@ mod test {
         let with_coin = coin::Expect(Coin::<TheCurrency>::from(amount));
         assert_eq!(
             Err(with_coin.clone()),
-            super::from_cosmwasm_any(
+            super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::dex()),
                 with_coin
             )

@@ -1,12 +1,12 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     batch::Batch,
-    coin_legacy::{self, from_cosmwasm_any, maybe_from_cosmwasm_any, to_cosmwasm_impl},
+    coin_legacy::{self, from_cosmwasm_seek_any, maybe_from_cosmwasm_any, to_cosmwasm_impl},
     error::Error,
     result::Result,
 };
@@ -70,7 +70,7 @@ where
     let mut may_res = None;
 
     for coin in cw_amount {
-        cmd = match from_cosmwasm_any(coin, cmd) {
+        cmd = match from_cosmwasm_seek_any(coin, cmd) {
             Ok(res) => {
                 may_res = Some(res);
 
@@ -92,6 +92,15 @@ impl<'a> BankView<'a> {
     fn account(account: &'a Addr, querier: QuerierWrapper<'a>) -> Self {
         Self { account, querier }
     }
+
+    fn cw_balance<G>(&self, currency: &CurrencyDTO<G>) -> Result<CwCoin>
+    where
+        G: Group,
+    {
+        self.querier
+            .query_balance(self.account, currency.definition().bank_symbol)
+            .map_err(Error::CosmWasmQueryBalance)
+    }
 }
 
 impl BankAccountView for BankView<'_> {
@@ -101,9 +110,7 @@ impl BankAccountView for BankView<'_> {
         C::Group: MemberOf<G>,
         G: Group,
     {
-        self.querier
-            .query_balance(self.account, C::definition().dto().definition().bank_symbol)
-            .map_err(Error::CosmWasmQueryBalance)
+        self.cw_balance(C::definition().dto())
             .and_then(|ref cw_coin| {
                 coin_legacy::from_cosmwasm_currency_not_definition::<C, C>(cw_coin)
             })
