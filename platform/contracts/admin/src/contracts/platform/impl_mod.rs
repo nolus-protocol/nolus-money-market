@@ -21,11 +21,11 @@ impl<T> AsRef for PlatformContracts<T> {
 impl<T> TryForEach for PlatformContracts<T> {
     type Item = T;
 
-    fn try_for_each<F, Err>(self, mut f: F) -> Result<(), Err>
+    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
     where
         F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        f(self.timealarms).and_then(|()| f(self.treasury))
+        [self.timealarms, self.treasury].into_iter().try_for_each(f)
     }
 }
 
@@ -41,9 +41,12 @@ impl<T> ForEachPair for PlatformContracts<T> {
     ) where
         F: FnMut(Self::Item, CounterpartUnit),
     {
-        f(self.timealarms, counterpart.timealarms);
-
-        f(self.treasury, counterpart.treasury)
+        [
+            (self.timealarms, counterpart.timealarms),
+            (self.treasury, counterpart.treasury),
+        ]
+        .into_iter()
+        .for_each(|(unit, counter_part)| f(unit, counter_part))
     }
 }
 

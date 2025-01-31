@@ -49,15 +49,19 @@ impl<T> AsRef for ProtocolContracts<T> {
 impl<T> TryForEach for ProtocolContracts<T> {
     type Item = T;
 
-    fn try_for_each<F, Err>(self, mut f: F) -> Result<(), Err>
+    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
     where
         F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        f(self.leaser)
-            .and_then(|()| f(self.lpp))
-            .and_then(|()| f(self.oracle))
-            .and_then(|()| f(self.profit))
-            .and_then(|()| f(self.reserve))
+        [
+            self.leaser,
+            self.lpp,
+            self.oracle,
+            self.profit,
+            self.reserve,
+        ]
+        .into_iter()
+        .try_for_each(f)
     }
 }
 
@@ -73,15 +77,15 @@ impl<T> ForEachPair for ProtocolContracts<T> {
     ) where
         F: FnMut(T, CounterpartUnit),
     {
-        f(self.leaser, counterpart.leaser);
-
-        f(self.lpp, counterpart.lpp);
-
-        f(self.oracle, counterpart.oracle);
-
-        f(self.profit, counterpart.profit);
-
-        f(self.reserve, counterpart.reserve)
+        [
+            (self.leaser, counterpart.leaser),
+            (self.lpp, counterpart.lpp),
+            (self.oracle, counterpart.oracle),
+            (self.profit, counterpart.profit),
+            (self.reserve, counterpart.reserve),
+        ]
+        .into_iter()
+        .for_each(|(unit, counter_part)| f(unit, counter_part));
     }
 }
 
