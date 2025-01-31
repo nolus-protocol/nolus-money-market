@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use crate::{
-    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
     group::MemberOf,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
@@ -24,6 +24,19 @@ impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
     type TopG = Self;
+
+    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
+        [
+            SuperGroupTestC1::dto(),
+            SuperGroupTestC2::dto(),
+            SuperGroupTestC3::dto(),
+            SuperGroupTestC4::dto(),
+            SuperGroupTestC5::dto(),
+        ]
+        .into_iter()
+        .map(ToOwned::to_owned)
+        .chain(SubGroup::currencies().map(CurrencyDTO::into_super_group))
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
@@ -163,6 +176,15 @@ impl MemberOf<SuperGroup> for SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
     type TopG = SuperGroup;
+
+    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
+        [
+            SubGroupTestC6::dto(),
+            SubGroupTestC10::dto(),
+        ]
+        .into_iter()
+        .map(ToOwned::to_owned)
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
