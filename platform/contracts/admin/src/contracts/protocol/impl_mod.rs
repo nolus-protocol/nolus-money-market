@@ -18,14 +18,12 @@ impl ProtocolContracts<Addr> {
         let mut post_migration_execute_batch = Batch::default();
 
         self.try_for_each_pair(migration_msgs, |address, migration_spec| {
-            () = migrate_contract(
+            migrate_contract(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
                 address,
                 migration_spec,
-            );
-
-            Ok(())
+            )
         })
         .map(|()| migration_batch.merge(post_migration_execute_batch))
     }

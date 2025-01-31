@@ -60,23 +60,26 @@ pub(super) fn migrate_contract(
     post_migration_execute_batch: &mut Batch,
     address: Addr,
     migrate: MigrationSpec,
-) {
-    if let Some(post_migrate_execute_msg) = migrate.post_migrate_execute_msg {
-        execute_contract(
-            post_migration_execute_batch,
-            address.clone(),
-            post_migrate_execute_msg,
-        )
-    }
-
-    migration_batch.schedule_execute_reply_on_success(
-        WasmMsg::Migrate {
-            contract_addr: address.into_string(),
-            new_code_id: migrate.code_id.u64(),
-            msg: Binary::new(migrate.migrate_msg.into_bytes()),
-        },
-        0,
-    );
+) -> Result<()> {
+    migrate
+        .post_migrate_execute_msg
+        .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
+            execute_contract(
+                post_migration_execute_batch,
+                address.clone(),
+                post_migrate_execute_msg,
+            )
+        })
+        .map(|()| {
+            migration_batch.schedule_execute_reply_on_success(
+                WasmMsg::Migrate {
+                    contract_addr: address.into_string(),
+                    new_code_id: migrate.code_id.u64(),
+                    msg: Binary::new(migrate.migrate_msg.into_bytes()),
+                },
+                0,
+            )
+        })
 }
 
 impl Contracts {
@@ -231,14 +234,12 @@ trait MigrateContracts: TryForEachPair<Item = Addr> + Sized {
         migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<MigrationSpec>,
     ) -> Result<()> {
         self.try_for_each_pair(migration_msgs, |address, migration_spec| {
-            () = migrate_contract(
+            migrate_contract(
                 migration_batch,
                 post_migration_execute_batch,
                 address,
                 migration_spec,
-            );
-
-            Ok(())
+            )
         })
     }
 
@@ -248,17 +249,15 @@ trait MigrateContracts: TryForEachPair<Item = Addr> + Sized {
         post_migration_execute_batch: &mut Batch,
         migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<Option<MigrationSpec>>,
     ) -> Result<()> {
-        self.try_for_each_pair(migration_msgs, |address, migration_spec| {
-            if let Some(migration_spec) = migration_spec {
-                () = migrate_contract(
+        self.try_for_each_pair(migration_msgs, |address, migration_spec: Option<_>| {
+            migration_spec.map_or(const { Ok(()) }, |migration_spec| {
+                migrate_contract(
                     migration_batch,
                     post_migration_execute_batch,
                     address,
                     migration_spec,
-                );
-            }
-
-            Ok(())
+                )
+            })
         })
     }
 }
@@ -270,23 +269,19 @@ trait ExecuteContracts: TryForEachPair<Item = Addr> + Sized {
         execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<String>,
     ) -> Result<()> {
         self.try_for_each_pair(execute_messages, |address, migration_spec| {
-            () = execute_contract(batch, address, migration_spec);
-
-            Ok(())
+            execute_contract(batch, address, migration_spec)
         })
     }
 
     fn maybe_execute(
         self,
         batch: &mut Batch,
-        execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<Option<String>>,
+        messages: <Self::HigherOrderType as HigherOrderType>::Of<Option<String>>,
     ) -> Result<()> {
-        self.try_for_each_pair(execute_messages, |address, migration_spec| {
-            if let Some(migration_spec) = migration_spec {
-                () = execute_contract(batch, address, migration_spec);
-            }
-
-            Ok(())
+        self.try_for_each_pair(messages, |address, message: Option<_>| {
+            message.map_or(const { Ok(()) }, |message| {
+                execute_contract(batch, address, message)
+            })
         })
     }
 }
@@ -302,12 +297,14 @@ where
     state_contracts::load_all(storage).and_then(f)
 }
 
-fn execute_contract(batch: &mut Batch, address: Addr, execute_message: String) {
+fn execute_contract(batch: &mut Batch, address: Addr, message: String) -> Result<()> {
     batch.schedule_execute_no_reply(WasmMsg::Execute {
         contract_addr: address.into_string(),
-        msg: Binary::new(execute_message.into_bytes()),
+        msg: Binary::new(message.into_bytes()),
         funds: vec![],
     });
+
+    Ok(())
 }
 
 struct Batches {
